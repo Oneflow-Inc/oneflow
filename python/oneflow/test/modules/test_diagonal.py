@@ -31,10 +31,10 @@ class TestDiagonal(flow.unittest.TestCase):
 
         x = random_pytorch_tensor(
             ndim=4,
-            dim1 = random(4, 6),
-            dim2 = random(4, 6),
-            dim3 = random(4, 6),
-            dim4 = random(4, 6),
+            dim1=random(4, 6),
+            dim2=random(4, 6),
+            dim3=random(4, 6),
+            dim4=random(4, 6),
         ).to(device)
         z = torch.diagonal(x, offset, dim1, dim2)
         return z

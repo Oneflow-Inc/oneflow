@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
-
 namespace oneflow {
 namespace {
 
@@ -67,7 +66,7 @@ class CpuDiagonalKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const T* in_buf = in->dptr<T>();
     T* out_buf = out->mut_dptr<T>();
-   
+
     int32_t size = out_shape.At(out_shape.NumAxes() - 1);
     int32_t dim1 = in_shape.At(1);
     int32_t dim2 = 0;
@@ -76,7 +75,7 @@ class CpuDiagonalKernel final : public user_op::OpKernel {
     } else {
       dim2 = in_shape.Count(2, in_shape.NumAxes());
     }
-    
+
     int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
     in_buf += offset_in_bufer;
     DiagonalFunctor<T>()(ctx->stream(), out_buf, in_buf, size, dim1, dim2);
@@ -118,14 +117,14 @@ class CpuDiagonalBackwardKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIAGONAL_KERNELS(dtype)                                        \
-  REGISTER_USER_KERNEL("diagonal")                                                      \
-      .SetCreateFn<CpuDiagonalKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
+#define REGISTER_DIAGONAL_KERNELS(dtype)                                                 \
+  REGISTER_USER_KERNEL("diagonal")                                                       \
+      .SetCreateFn<CpuDiagonalKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("diagonal_grad")                                                 \
-      .SetCreateFn<CpuDiagonalBackwardKernel<dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
+  REGISTER_USER_KERNEL("diagonal_grad")                                                  \
+      .SetCreateFn<CpuDiagonalBackwardKernel<dtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_DIAGONAL_KERNELS(float);

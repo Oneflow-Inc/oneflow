@@ -26,7 +26,7 @@ namespace {
 template<typename T>
 __global__ void forward_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                                         int32_t dim2) {
-  int32_t offset_index = (dim1 + 1) * dim2;                                
+  int32_t offset_index = (dim1 + 1) * dim2;
   CUDA_1D_KERNEL_LOOP(index, size * dim2) {
     int32_t i = index / dim2;
     int32_t j = index - i * dim2;
@@ -50,8 +50,9 @@ struct DiagonalFunctor final {
   void operator()(ep::Stream* stream, T* out_buf, const T* in_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     if (size * dim2 > 0) {
-      forward_diagonal_kernel<T><<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
-                stream->As<ep::CudaStream>()->cuda_stream()>>>(out_buf, in_buf, size, dim1, dim2);
+      forward_diagonal_kernel<T>
+          <<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(out_buf, in_buf, size, dim1, dim2);
     }
   }
 };
@@ -61,8 +62,9 @@ struct DiagonalGradFunctor final {
   void operator()(ep::Stream* stream, T* dx_buf, const T* dy_buf, int32_t size, int32_t dim1,
                   int32_t dim2) {
     if (size * dim2 > 0) {
-      backward_diagonal_kernel<T><<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
-              stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, dy_buf, size, dim1, dim2);
+      backward_diagonal_kernel<T>
+          <<<BlocksNum4ThreadsNum(size * dim2), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, dy_buf, size, dim1, dim2);
     }
   }
 };
@@ -84,7 +86,7 @@ class GpuDiagonalKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const T* in_buf = in->dptr<T>();
     T* out_buf = out->mut_dptr<T>();
-    
+
     int32_t size = out_shape.At(out_shape.NumAxes() - 1);
     int32_t dim1 = in_shape.At(1);
     int32_t dim2 = 0;
@@ -96,9 +98,8 @@ class GpuDiagonalKernel final : public user_op::OpKernel {
 
     int32_t offset_in_bufer = (offset >= 0 ? offset * dim2 : -offset * dim1 * dim2);
     in_buf += offset_in_bufer;
-    
+
     DiagonalFunctor<T>()(ctx->stream(), out_buf, in_buf, size, dim1, dim2);
-   
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -137,15 +138,15 @@ class GpuDiagonalBackwardKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIAGONAL_KERNELS(dtype)                                        \
-  REGISTER_USER_KERNEL("diagonal")                                                      \
-      .SetCreateFn<GpuDiagonalKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                              \
+#define REGISTER_DIAGONAL_KERNELS(dtype)                                                 \
+  REGISTER_USER_KERNEL("diagonal")                                                       \
+      .SetCreateFn<GpuDiagonalKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("diagonal_grad")                                                 \
-      .SetCreateFn<GpuDiagonalBackwardKernel<dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                              \
-                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+  REGISTER_USER_KERNEL("diagonal_grad")                                                  \
+      .SetCreateFn<GpuDiagonalBackwardKernel<dtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_DIAGONAL_KERNELS(half);
 REGISTER_DIAGONAL_KERNELS(float);
