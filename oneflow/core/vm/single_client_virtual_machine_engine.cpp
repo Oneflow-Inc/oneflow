@@ -220,7 +220,7 @@ void VirtualMachineEngine::SingleClientHandlePending() {
       SingleClientRunInstructionInAdvance(instr_msg);
     } else {
       SingleClientForEachNewInstruction(instr_msg, [&](Instruction* instruction) {
-        instructions.push_back(intrusive::shared_ptr<Instruction>(instruction));
+        instructions.emplace_back(intrusive::shared_ptr<Instruction>(instruction));
         SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
       });
     }
