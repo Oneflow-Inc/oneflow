@@ -86,7 +86,7 @@ class NewObjectInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
-    const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
+    const auto& parallel_desc = CHECK_JUST(vm->SingleClientGetInstructionParallelDesc(*instr_msg));
     CHECK(static_cast<bool>(parallel_desc));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
@@ -135,7 +135,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
-    const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
+    const auto& parallel_desc = CHECK_JUST(vm->SingleClientGetInstructionParallelDesc(*instr_msg));
     FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
     const RwMutexedObject* sole_rw_mutexed_object = nullptr;
     {
@@ -206,7 +206,7 @@ class ReplaceMirroredInstructionType final : public InstructionType {
         }
       }
     };
-    const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
+    const auto& parallel_desc = CHECK_JUST(vm->SingleClientGetInstructionParallelDesc(*instr_msg));
     CHECK(static_cast<bool>(parallel_desc));
     ForEachMachineIdAndDeviceIdInRange(
         *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
@@ -249,7 +249,8 @@ class DeleteObjectInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachineEngine* vm, Instruction* instruction) const {
     auto* instr_msg = instruction->mut_instr_msg();
-    const auto* parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg)).get();
+    const auto* parallel_desc =
+        CHECK_JUST(vm->SingleClientGetInstructionParallelDesc(*instr_msg)).get();
     if (parallel_desc && !parallel_desc->ContainingMachineId(vm->this_machine_id())) { return; }
     FlatMsgView<DeleteObjectInstruction> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->object_size()) {

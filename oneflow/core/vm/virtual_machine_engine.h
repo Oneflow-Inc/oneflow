@@ -102,9 +102,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   void Schedule();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
-  Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
-  MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
-  const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
 
   int64_t this_machine_id() const;
   int64_t this_start_global_device_id() const {
@@ -126,18 +123,38 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseFinishedInstructions();
   void HandlePending();
-  void HandleSingleClientPending(InstructionMsgList*);
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
-  template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
+  template<typename DoEachInstructionT>
   void ForEachNewInstruction(InstructionMsg* instr_msg, Stream* stream,
-                             const std::shared_ptr<const ParallelDesc>& pd);
-  template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
-  void ForEachNewInstruction(InstructionMsg*);
-  void RunInstructionInAdvance(InstructionMsg* instr_msg);
+                             const std::shared_ptr<const ParallelDesc>& pd,
+                             const DoEachInstructionT& DoEachInstruction);
+  template<typename DoEachInstructionT>
+  void ForEachNewInstruction(InstructionMsg*, const DoEachInstructionT&);
+  void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
+  void ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access);
+  void ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access);
+  RwMutexedObjectAccess* AccessMirroredObject(OperandAccessType access_type,
+                                              MirroredObject* mirrored_object,
+                                              Instruction* instrution);
+  void ConsumeMirroredObjects(Instruction* instruction);
+  void DispatchInstruction(Instruction* instruction);
+
+  bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
+  bool Dispatchable(Instruction* instruction) const;
+  void TryDispatchReadyInstructions();
+
+  // deprecated single-client functions
+ public:
+  void SingleClientSchedule();
+  Maybe<const ParallelDesc> SingleClientGetInstructionParallelDesc(const InstructionMsg&);
+  MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
+  const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
+
+ private:
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
@@ -168,25 +185,14 @@ class VirtualMachineEngine final : public intrusive::Base {
       const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
       int64_t global_device_id, const DoEachT& DoEach);
 
-  void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  void ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access);
-  void ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access);
-  RwMutexedObjectAccess* AccessMirroredObject(OperandAccessType access_type,
-                                              MirroredObject* mirrored_object,
-                                              Instruction* instrution);
-  void ConsumeAndTryDispatch(Instruction* instruction);
-  void ConsumeMirroredObjects(Instruction* instruction);
-  void DispatchInstruction(Instruction* instruction);
-  void TryDeleteLogicalObjects();
-
-  bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
-  bool Dispatchable(Instruction* instruction) const;
-  void TryDispatchReadyInstructions();
-
-  // deprecated single-client functions
-  template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
-  void SingleClientForEachNewInstruction(InstructionMsg*);
-  void SingleClientConsumeAndTryDispatch(Instruction* instruction);
+  void SingleClientForEachNewInstruction(
+      InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& pd,
+      const std::function<void(Instruction*)>& DoEachInstruction);
+  void SingleClientHandlePending();
+  void SingleClientRunInstructionInAdvance(InstructionMsg* instr_msg);
+  void SingleClientTryDeleteLogicalObjects();
+  void SingleClientForEachNewInstruction(
+      InstructionMsg*, const std::function<void(Instruction*)>& DoEachInstruction);
   void SingleClientConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                           Instruction* instruction);
 

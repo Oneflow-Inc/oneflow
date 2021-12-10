@@ -56,7 +56,7 @@ TEST(ControlStreamType, new_object) {
   ASSERT_TRUE(vm->pending_msg_list().empty());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
@@ -72,7 +72,7 @@ TEST(ControlStreamType, delete_object) {
   ASSERT_TRUE(vm->pending_msg_list().empty());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }

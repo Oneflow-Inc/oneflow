@@ -53,7 +53,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
   auto* logical_object = vm->mut_id2logical_object()->FindPtr(vm::IdUtil::GetTypeId(symbol_id));

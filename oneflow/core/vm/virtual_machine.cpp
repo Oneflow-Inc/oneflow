@@ -97,6 +97,8 @@ VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id
     : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
   OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Main");
+  scheduler_ = CHECK_JUST(IsMultiClient()) ? &vm::VirtualMachineEngine::Schedule
+                                           : &vm::VirtualMachineEngine::SingleClientSchedule;
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
@@ -147,8 +149,9 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     }
-    JUST(vm_->Receive(instr_list));
-    while (!vm_->Empty()) { vm_->Schedule(); }
+    auto* vm = mut_vm();
+    JUST(vm->Receive(instr_list));
+    while (!vm->Empty()) { (vm->*scheduler_)(); }
   } else {
     if (JUST(vm_->Receive(instr_list))) {
       // old pending_instruction_list is empty.
@@ -197,12 +200,12 @@ void VirtualMachine::Loop(const std::function<void()>& Initializer) {
         //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
         // used
         //  here, because VirtualMachine::Loop is more likely to get the mutex lock.
-        do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
+        do { (vm->*scheduler_)(); } while (!vm->ThreadUnsafeEmpty());
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
-  while (!vm->Empty()) { vm->Schedule(); }
+  while (!vm->Empty()) { (vm->*scheduler_)(); }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_pending_instruction_list()->Close();
     return Maybe<void>::Ok();

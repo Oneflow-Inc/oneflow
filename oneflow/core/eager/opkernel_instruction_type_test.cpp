@@ -127,7 +127,7 @@ TEST(OpkernelInstructionType, new_opkernel) {
   auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
@@ -156,7 +156,7 @@ TEST(OpkernelInstructionType, delete_opkernel) {
   auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
@@ -201,7 +201,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
@@ -279,7 +279,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
@@ -328,7 +328,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }
@@ -405,7 +405,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   auto vm = intrusive::make_shared<vm::VirtualMachineEngine>(vm_desc.Get());
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
 }

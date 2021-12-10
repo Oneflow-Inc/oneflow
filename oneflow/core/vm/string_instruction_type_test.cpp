@@ -44,7 +44,7 @@ TEST(StringStreamType, init_string_object) {
   list.EmplaceBack(NewInstruction("InitStringSymbol")->add_init_symbol_operand(symbol_id));
   CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
-    vm->Schedule();
+    vm->SingleClientSchedule();
     INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
   }
   auto* logical_object = vm->mut_id2logical_object()->FindPtr(IdUtil::GetTypeId(symbol_id));

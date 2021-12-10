@@ -50,6 +50,7 @@ class VirtualMachine final {
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
   Notifier notifier_;
+  void (vm::VirtualMachineEngine::*scheduler_)();
 };
 
 }  // namespace oneflow

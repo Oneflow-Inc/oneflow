@@ -89,7 +89,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   BlockingCounter bc(1);
   std::thread t([&]() {
     while (!compute_finished) {
-      vm->Schedule();
+      vm->SingleClientSchedule();
       INTRUSIVE_FOR_EACH_PTR(t, vm->mut_thread_ctx_list()) { t->TryReceiveAndRun(); }
     }
     bc.Decrease();
