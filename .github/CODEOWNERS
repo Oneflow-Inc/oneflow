@@ -11,6 +11,7 @@
 /oneflow/core/ep @liujuncheng
 /oneflow/core/rpc @jackalcooper
 /oneflow/core/stream @liujuncheng
+/oneflow/core/hardware @liujuncheng
 /oneflow/core/transport @chengtbf
 /oneflow/core/vm @lixinqi
 /oneflow/xrt @hjchen2
