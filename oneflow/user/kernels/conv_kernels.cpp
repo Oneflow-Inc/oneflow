@@ -319,19 +319,19 @@ std::shared_ptr<ConvOpKernelCache<T>> CreateConvOpKernelCache(user_op::KernelCac
                                                               const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
-  std::shared_ptr<ConvOpKernelCache<T>> state(new ConvOpKernelCache<T>());
+  std::shared_ptr<ConvOpKernelCache<T>> cache(new ConvOpKernelCache<T>());
   if (data_format == "channels_first") {
-    state->im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
-    state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
-    state->forward_func_ = Gemm4ChannelFirst;
-    state->is_out_diff_need_trans_ = CblasNoTrans;
-    state->idx_offset_ = 2;
+    cache->im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
+    cache->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
+    cache->forward_func_ = Gemm4ChannelFirst;
+    cache->is_out_diff_need_trans_ = CblasNoTrans;
+    cache->idx_offset_ = 2;
   } else {
-    state->im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
-    state->col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
-    state->forward_func_ = Gemm4ChannelLast;
-    state->is_out_diff_need_trans_ = CblasTrans;
-    state->idx_offset_ = 1;
+    cache->im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
+    cache->col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
+    cache->forward_func_ = Gemm4ChannelLast;
+    cache->is_out_diff_need_trans_ = CblasTrans;
+    cache->idx_offset_ = 1;
   }
 
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
@@ -340,32 +340,34 @@ std::shared_ptr<ConvOpKernelCache<T>> CreateConvOpKernelCache(user_op::KernelCac
     ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
     return Shape(ret_vec);
   };
-  state->in_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), state->idx_offset_);
-  state->out_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), state->idx_offset_);
-  state->weight_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), state->idx_offset_);
+  const auto* in_tensor = ctx->TensorDesc4ArgNameAndIndex(in_name, 0);
+  const auto& in_shape = in_tensor->shape();
+  cache->in_5d_shape_ =
+      Gen5DShape(in_shape, cache->idx_offset_);
+  cache->out_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), cache->idx_offset_);
+  cache->weight_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), cache->idx_offset_);
 
   auto Gen3DVec = [](const std::vector<int32_t>& origin_vec) -> std::vector<int32_t> {
     std::vector<int32_t> ret_vec = origin_vec;
     ret_vec.insert(ret_vec.begin(), 3 - ret_vec.size(), 1);
     return ret_vec;
   };
-  state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
-  state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
-  state->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
+  cache->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
+  cache->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
+  cache->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
   const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());
     if (index < 0) {
-      state->padding_before_3d_.emplace_back(0);
+      cache->padding_before_3d_.emplace_back(0);
     } else {
-      state->padding_before_3d_.emplace_back(padding_before.at(index));
+      cache->padding_before_3d_.emplace_back(padding_before.at(index));
     }
   }
 
-  return state;
+  return cache;
 }
 
 template<typename T>
@@ -486,7 +488,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+    return CreateConvOpKernelCache<T>(ctx, "dx", "dy", "filter");
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -567,7 +569,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+    return CreateConvOpKernelCache<T>(ctx, "x", "dy", "filter_diff");
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
