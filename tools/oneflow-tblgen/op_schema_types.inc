@@ -1,5 +1,5 @@
-OP_SCHEMA(SI32Attr, std::int32_t)
-OP_SCHEMA(SI64Attr, std::int64_t)
+OP_SCHEMA(SI32Attr, int32_t)
+OP_SCHEMA(SI64Attr, int64_t)
 OP_SCHEMA(BoolAttr, bool)
 OP_SCHEMA(F32Attr, float)
 OP_SCHEMA(F64Attr, double)
