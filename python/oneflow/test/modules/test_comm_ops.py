@@ -190,6 +190,7 @@ class TestReduce(flow.unittest.TestCase):
         dist.destroy_process_group()
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllToAll(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_all_to_all_1n4d(test_case):
