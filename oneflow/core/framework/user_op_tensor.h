@@ -30,7 +30,12 @@ namespace user_op {
 
 class Tensor {
  public:
-  virtual ~Tensor() = default;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+  // NOTE: Performance will be degraded if the destructor is virtual.
+  //       So please do NOT implement custom destructor in any child classes of user_op::Tensor.
+  ~Tensor() = default;
+#pragma GCC diagnostic pop
 
   virtual const ShapeView& shape() const = 0;
   virtual MutShapeView* mut_shape() = 0;
