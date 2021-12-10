@@ -275,10 +275,9 @@ struct DeconvOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-std::shared_ptr<DeconvOpKernelState<T>> CreateDeconvOpKernelState(user_op::KernelComputeContext* ctx,
-                                                              const std::string& in_name,
-                                                              const std::string& out_name,
-                                                              const std::string& weight_name) {
+std::shared_ptr<DeconvOpKernelState<T>> CreateDeconvOpKernelState(
+    user_op::KernelComputeContext* ctx, const std::string& in_name, const std::string& out_name,
+    const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 <<<<<<< HEAD
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
