@@ -39,7 +39,7 @@ set(ONEFLOW_OP_GROUPS
     "UPSAMPLE"
 )
 foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
-    message(STATUS "Enable OneFlow MLIR op group: ${OP_GROUP_NAME}")
+    # message(STATUS "Enable OneFlow MLIR op group: ${OP_GROUP_NAME}")
     list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-DGET_ONEFLOW_${OP_GROUP_NAME}_OP_DEFINITIONS")
 endforeach()
 
@@ -63,7 +63,7 @@ add_custom_command(
     COMMAND oneflow_tblgen
     ARGS --gen-op-schema-cpp ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS}
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
-    DEPENDS oneflow_tblgen #GenUserOpODS
+    DEPENDS oneflow_tblgen GenUserOpODS
     VERBATIM
 )
 set_source_files_properties(
