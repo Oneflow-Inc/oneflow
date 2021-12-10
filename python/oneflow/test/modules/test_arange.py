@@ -77,6 +77,16 @@ class TestArange(flow.unittest.TestCase):
         x.to(device)
         return x
 
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=False)
+    def test_arange_with_float_delta(test_case):
+        start = random().to(int)
+        end = start + random().to(int)
+        step = random(0, end - start).to(float)
+        x = torch.arange(start=start, end=end, step=step)
+        device = random_device()
+        x.to(device)
+        return x
+
     def test_consistent_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
