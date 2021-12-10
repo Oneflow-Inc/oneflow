@@ -37,8 +37,8 @@ class Shape final {
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
 
-  bool operator==(const Shape& rhs) const;
-  bool operator!=(const Shape& rhs) const;
+  [[nodiscard]] bool operator==(const Shape& rhs) const;
+  [[nodiscard]] bool operator!=(const Shape& rhs) const;
 
   void Set(int64_t index, int64_t val);
 

@@ -39,8 +39,8 @@ class Device final {
   [[nodiscard]] const std::string& type() const;
   [[nodiscard]] int64_t device_id() const;
 
-  bool operator==(const Device& rhs) const;
-  bool operator!=(const Device& rhs) const;
+  [[nodiscard]] bool operator==(const Device& rhs) const;
+  [[nodiscard]] bool operator!=(const Device& rhs) const;
 
  private:
   std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
