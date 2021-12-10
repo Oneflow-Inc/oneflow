@@ -279,12 +279,8 @@ std::shared_ptr<DeconvOpKernelState<T>> CreateDeconvOpKernelState(
     user_op::KernelComputeContext* ctx, const std::string& in_name, const std::string& out_name,
     const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
-<<<<<<< HEAD
-  std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
-=======
 
   std::shared_ptr<DeconvOpKernelState<T>> state(new DeconvOpKernelState<T>());
->>>>>>> 4eeb1de49 (add groups test)
   if (data_format == "channels_first") {
     state->col2im_func_ = DeconvKernelUtil<T>::NCDHWCol2Im;
     state->is_out_diff_need_trans_ = CblasNoTrans;
@@ -365,13 +361,8 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     const int32_t n = deconv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
     const int32_t k = deconv_state->weight_5d_shape_.At(0) / deconv_state->groups;
 
-<<<<<<< HEAD
-    conv_state->Update(in->shape(), out->shape());
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), out->mut_dptr<T>(), 0,
-=======
     deconv_state->Update(in->shape(), out->shape());
     Memset<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), 0,
->>>>>>> 4eeb1de49 (add groups test)
                              out->shape().elem_cnt() * sizeof(T));
     FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {
       const T* input_ptr = GetImgDptr<T>(in, i);

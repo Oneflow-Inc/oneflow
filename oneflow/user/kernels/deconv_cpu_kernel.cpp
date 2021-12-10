@@ -327,11 +327,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<DeconvOpKernelState<T>> DoCreateOpKernelState(
       user_op::KernelComputeContext* ctx) const {
-<<<<<<< HEAD
-    return CreateConvOpKernelState<T>(ctx, "out", "in", "weight");
-=======
     return CreateDeconvOpKernelState<T>(ctx, "out", "in", "weight");
->>>>>>> 4eeb1de49 (add groups test)
   }
 
  private:
