@@ -24,17 +24,22 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/attr_value.h"
-#include "oneflow/core/framework/nd_sbp.h"
+// #include "oneflow/core/framework/attr_value.h"
+// #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_attrs.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+// #include "oneflow/core/job/parallel_desc.h"
+// #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 
 using user_op::AttrVal;
 template<typename T>
 using TypedAttrValRef = user_op::TypedAttrValRef<T>;
+namespace cfg {
+class NdSbp;
+}
+class ParallelDesc;
+class Device;
 
 namespace user_op {
 class OpKernelState;
@@ -77,7 +82,8 @@ class OpInterpCtx {
 
 template<typename T>
 inline Maybe<AttrVal> CastAttr(const T* attr_val) {
-  return std::static_pointer_cast<AttrVal>(std::make_shared<TypedAttrValRef<T>>(attr_val));
+  // return std::static_pointer_cast<AttrVal>(std::make_shared<TypedAttrValRef<T>>(attr_val));
+  return std::shared_ptr<AttrVal>();
 }
 
 class FakeOpInterpCtx : public OpInterpCtx {
