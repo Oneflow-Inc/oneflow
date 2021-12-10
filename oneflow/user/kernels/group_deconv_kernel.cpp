@@ -384,13 +384,6 @@ class DeconvCpuKernel final : public user_op::OpKernel {
             ShapeView(deconv_state->weight_5d_shape_), ShapeView(deconv_state->out_5d_shape_),
             deconv_state->strides_3d_.data(), deconv_state->dilation_rate_3d_.data(),
             deconv_state->padding_before_3d_.data(), output_ptr);
-
-        deconv_state->col2im_func_(
-            col_buf->mut_dptr<T>(), ShapeView(deconv_state->in_5d_shape_),
-            ShapeView(deconv_state->weight_5d_shape_), ShapeView(deconv_state->out_5d_shape_),
-            deconv_state->strides_3d_.data(), deconv_state->dilation_rate_3d_.data(),
-            deconv_state->padding_before_3d_.data(), output_ptr);
-
         input_ptr += input_step;
         weight_ptr += weight_step;
         output_ptr += output_step;
