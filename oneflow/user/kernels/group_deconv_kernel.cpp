@@ -243,7 +243,8 @@ struct DeconvKernelUtil final {
 
 template<typename T>
 struct DeconvOpKernelState final : public user_op::OpKernelState {
-  Col2ImFunc<T> col2im_func_=DeconvKernelUtil<T>::NCDHWCol2Im;;
+  Col2ImFunc<T> col2im_func_ = DeconvKernelUtil<T>::NCDHWCol2Im;
+  ;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -402,7 +403,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_name)                                                         \
       .SetCreateFn<DeconvCpuKernel<dtype>>()                                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
-                       && (user_op::HobAttr<int32_t>("groups") > 1)                     \
+                       && (user_op::HobAttr<int32_t>("groups") > 1)                      \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                      \
         size_t tmp_buffer_size = 0;                                                      \
