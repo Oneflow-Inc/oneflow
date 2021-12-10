@@ -96,7 +96,6 @@ class ReadOneRecFunctor {
                            const bool verify_example,
                            const Optional<Symbol<ParallelDesc>>& placement,
                            const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp) const {
-    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
     JUST(attrs.SetAttr<int32_t>("batch_size", batch_size));
@@ -107,6 +106,7 @@ class ReadOneRecFunctor {
     JUST(attrs.SetAttr<bool>("verify_example", verify_example));
 
     if (placement.has_value()) {
+      JUST(CheckDeviceIdsIsValid(placement));
       CHECK_OR_RETURN(sbp.has_value())
           << "placement is not None, but sbp is None. It's not allowed.";
       AttrMap attrmap(attrs);
