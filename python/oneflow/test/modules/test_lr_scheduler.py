@@ -237,11 +237,8 @@ class TestLrScheduler(flow.unittest.TestCase):
         optimizer = flow.optim.SGD([param])
         cosine_scheduler = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
         lr_scheduler = flow.optim.lr_scheduler.WarmUpLR(
-                cosine_scheduler,
-                warmup_factor=0,
-                warmup_iters=5,
-                warmup_method="linear",
-            )
+            cosine_scheduler, warmup_factor=0, warmup_iters=5, warmup_method="linear",
+        )
         for _ in range(random.randint(1, 10)):
             lr_scheduler.step()
         # save
@@ -254,19 +251,20 @@ class TestLrScheduler(flow.unittest.TestCase):
         optimizer2 = flow.optim.SGD([param])
         cosine_scheduler2 = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
         lr_scheduler2 = flow.optim.lr_scheduler.WarmUpLR(
-                cosine_scheduler2,
-                warmup_factor=0,
-                warmup_iters=5,
-                warmup_method="linear",
-            )
+            cosine_scheduler2, warmup_factor=0, warmup_iters=5, warmup_method="linear",
+        )
         lr_scheduler2.load_state_dict(state_dict)
 
         # compare warm up scheduler
         for attr in ["warmup_iters", "warmup_factor", "warmup_method", "last_step"]:
-            test_case.assertEqual(getattr(lr_scheduler, attr), getattr(lr_scheduler2, attr))
+            test_case.assertEqual(
+                getattr(lr_scheduler, attr), getattr(lr_scheduler2, attr)
+            )
         # compare cosine_annealing_lr
         for attr in ["T_max", "eta_min", "last_step"]:
-            test_case.assertEqual(getattr(cosine_scheduler, attr), getattr(cosine_scheduler2, attr))
+            test_case.assertEqual(
+                getattr(cosine_scheduler, attr), getattr(cosine_scheduler2, attr)
+            )
 
 
 if __name__ == "__main__":

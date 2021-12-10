@@ -123,7 +123,7 @@ class WarmUpLrScheduler(LrScheduler):
     def state_dict(self):
         """Return the state of the scheduler as a :class:`dict`.
         """
-        state =  {
+        state = {
             key: value for (key, value) in self.__dict__.items() if key != "_optimizer"
         }
         if self._inner_lr_sch is not None:
