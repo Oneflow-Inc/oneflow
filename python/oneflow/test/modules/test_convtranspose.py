@@ -366,7 +366,6 @@ class TestConvTranspose(flow.unittest.TestCase):
         y = m(x)
         return y
 
-
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=30)
     def test_deconv3d_group_with_random_data(test_case):
@@ -390,7 +389,6 @@ class TestConvTranspose(flow.unittest.TestCase):
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
-
 
 
 if __name__ == "__main__":

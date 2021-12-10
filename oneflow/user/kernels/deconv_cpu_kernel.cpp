@@ -355,7 +355,6 @@ class DeconvCpuKernel final : public user_op::OpKernel {
           deconv_state->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
-
       // out = col2im(col_buf')
       deconv_state->col2im_func_(
           col_buf->dptr<T>(), ShapeView(deconv_state->in_5d_shape_),
