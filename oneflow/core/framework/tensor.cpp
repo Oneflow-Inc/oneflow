@@ -112,7 +112,7 @@ Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
   CHECK_NOTNULL_OR_RETURN(consistent_tensor);
   JUST(WithConsistencyChecked(consistent_tensor,
                               [&]() -> Maybe<void> { return Maybe<void>::Ok(); }));
-  
+
   bool old_requires_grad = requires_grad();
   impl_ = consistent_tensor->impl_;
   set_requires_grad(old_requires_grad);
