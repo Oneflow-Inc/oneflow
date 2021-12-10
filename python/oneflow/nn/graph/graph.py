@@ -16,6 +16,7 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
+import time
 
 import oneflow
 import oneflow._oneflow_internal
@@ -27,8 +28,8 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import Block, BlockType
-from oneflow.nn.graph.config import GraphConfig
+from oneflow.nn.graph.block import Block, BlockType, get_block_cls
+from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
@@ -269,9 +270,9 @@ class Graph(object):
 
     def debug(
         self,
-        mode: bool = True,
         v_level: int = 0,
         ranks: Optional[Union[int, List[int]]] = None,
+        mode: bool = True,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -279,6 +280,8 @@ class Graph(object):
         printed. Otherwise, only errors will be printed.
 
         Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 1.
+        ``v_level`` 0 will print warning and graph creating stages. ``v_level`` 1 will additionally
+        print graph build info of each module.
         
         Use ``ranks`` to choose which rank to print the debug information.
 
@@ -289,11 +292,12 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            mode (bool): whether to set debug mode ("True") or not (``False``). Default: ``True``.
             v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
+            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
         """
+        assert isinstance(v_level, int)
         assert isinstance(mode, bool)
 
         if ranks is None:
@@ -313,7 +317,7 @@ class Graph(object):
                 self._debug_max_v_level = v_level
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(mode, v_level, ranks)
+                block.debug(v_level, ranks, mode)
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -440,14 +444,22 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph.")
+            self._print(0, 0, self._shallow_repr() + " Start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
-
+            build_graph_start = time.perf_counter()
             eager_outputs = self._build_graph(*args)
-
-            self._print(0, 0, self._shallow_repr() + " end building graph.")
+            build_graph_end = time.perf_counter()
+            self._print(
+                0,
+                0,
+                self._shallow_repr()
+                + " Done! cost time: "
+                + str(round(build_graph_end - build_graph_start, 2))
+                + "s."
+                + "\n",
+            )
         except:
             self._print(
                 2,
@@ -464,15 +476,24 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime.",
+                self._shallow_repr() + " Start compiling plan and init graph runtime.",
             )
-
+            compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
-
+            compile_and_init_end = time.perf_counter()
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime.",
+                self._shallow_repr()
+                + " Done! cost time: "
+                + str(round(compile_and_init_end - compile_and_init_start, 2))
+                + "s."
+                + "\n"
+                + self._shallow_repr()
+                + " The total time consumed to complete build graph, compiling plan and init graph runtime: "
+                + str(round(compile_and_init_end - build_graph_start, 2))
+                + "s."
+                + "\n",
             )
         except:
             self._print(
@@ -480,8 +501,8 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg(),
+                + " compiling plan or initialing graph runtime got error: "
+                + sys_exc_error_msg(),
             )
             raise
 
@@ -498,17 +519,32 @@ class Graph(object):
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
+            self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
             arg_op_names, lazy_args, self._args_repr, _ = self._build_io(
                 "input", graph_build_util.build_graph_input_arg, *args
             )
+            self._print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with parameter and buffer
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " start building graph parameters and buffers.",
+            )
             state_op_names, self._states_tensor_tuple = self._build_states()
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " end building graph parameters and buffers.",
+            )
 
             # Deal with module in self.build(*args)
+            self._print(0, 1, self._shallow_repr() + " start building graph modules.")
             outputs = self.build(*lazy_args)
+            self._print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
+            self._print(0, 1, self._shallow_repr() + " start building graph outputs.")
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
                     outputs = ()
@@ -522,15 +558,38 @@ class Graph(object):
                 out2name,
             ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
 
+            self._print(0, 1, self._shallow_repr() + " end building graph outputs.")
+
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
+
+            self._print(
+                0,
+                1,
+                self._shallow_repr() + " start building graph with compile passes.",
+            )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
+            self._print(
+                0, 1, self._shallow_repr() + " end building graph with compile passes."
+            )
 
             # Re-build outputs accoring to full graph and outputs buffer config.
+            self._print(
+                0,
+                1,
+                self._shallow_repr()
+                + " start re-building graph outputs for optimizatioin.",
+            )
             self._rebuild_outputs(out2name)
+            self._print(
+                0,
+                1,
+                self._shallow_repr()
+                + " end re-building graph outputs for optimizatioin.",
+            )
 
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
@@ -653,7 +712,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " run got error : "
+                + " run got error: "
                 + sys_exc_error_msg(),
             )
             raise
@@ -930,15 +989,23 @@ class Graph(object):
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._blocks[name] = Block("", name, module)
+
+        self._blocks[name] = get_block_cls(module)("", name, module)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', "
-                "please use add_optimizer(...) instead.".format(
+                "'{}' nn.Graph is not allowed to set Optimizer attribute named '{}'. "
+                "Please use add_optimizer(...) instead.".format(
+                    type(self).__name__, name
+                )
+            )
+        elif isinstance(value, Tensor):
+            raise AttributeError(
+                "'{}' nn.Graph is not allowed to set Tensor attribute named '{}'. "
+                "Please use nn.Module to hold the tensor, then add the nn.Module to nn.Graph.".format(
                     type(self).__name__, name
                 )
             )

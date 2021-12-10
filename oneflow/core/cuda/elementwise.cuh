@@ -91,8 +91,36 @@ constexpr int PackSize() {
   return Min(PackSize<T>(), PackSize<U, Args...>());
 }
 
+template<typename T>
+class HasApply2 {
+  typedef char one;
+  struct two {
+    char x[2];
+  };
+
+  template<typename C>
+  static one test(decltype(&C::Apply2));
+  template<typename C>
+  static two test(...);
+
+ public:
+  enum { value = sizeof(test<T>(0)) == sizeof(char) };
+};
+
 template<int pack_size, typename FunctorT, typename R, typename... IN>
-__device__ PackType<R, pack_size> ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
+__device__ typename std::enable_if<HasApply2<FunctorT>::value == true && pack_size % 2 == 0,
+                                   PackType<R, pack_size>>::type
+ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
+  Pack<R, pack_size> ret;
+#pragma unroll
+  for (int j = 0; j < pack_size; j += 2) { functor.Apply2(ret.elem + j, (in + j)...); }
+  return ret.storage;
+}
+
+template<int pack_size, typename FunctorT, typename R, typename... IN>
+__device__
+    typename std::enable_if<HasApply2<FunctorT>::value == false, PackType<R, pack_size>>::type
+    ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
   Pack<R, pack_size> ret;
 #pragma unroll
   for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in[j])...); }

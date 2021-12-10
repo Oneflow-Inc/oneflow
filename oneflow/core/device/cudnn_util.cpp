@@ -25,6 +25,9 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   if (val == GetDataType<type_cpp>::value) { return type_cudnn; }
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDNN_DATA_TYPE_SEQ);
 #undef MAKE_ENTRY
+#if CUDNN_VERSION >= 8100
+  if (val == kBFloat16) { return CUDNN_DATA_BFLOAT16; }
+#endif
   UNIMPLEMENTED();
 }
 
@@ -158,6 +161,12 @@ size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
 #if CUDNN_VERSION > 7200
     case CUDNN_DATA_INT8x32: {
       byte_size = 32;
+      break;
+    }
+#endif
+#if CUDNN_VERSION >= 8100
+    case CUDNN_DATA_BFLOAT16: {
+      byte_size = 2;
       break;
     }
 #endif

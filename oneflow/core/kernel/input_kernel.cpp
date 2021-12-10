@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -31,7 +32,7 @@ class InputKernel final : public Kernel {
 
  private:
   void ForwardDataContent(KernelContext* ctx) const override {
-    if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    if (CHECK_JUST(IsMultiClient())) {
       CHECK(this->op_conf().input_conf().has_job_name());
       const auto& job_name = this->op_conf().input_conf().job_name();
       const auto& op_name = this->op_conf().name();
@@ -41,7 +42,7 @@ class InputKernel final : public Kernel {
       BufferStatus buffer_status = buffer->TryReceive(&job_instance);
       CHECK_NE(buffer_status, kBufferStatusEmpty);
       if (buffer_status == kBufferStatusSuccess) {
-        OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("out"));
+        OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
         job_instance->PushBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
       }
     }

@@ -18,7 +18,7 @@ limitations under the License.
 
 #define DEPRECATED __attribute__((deprecated))
 
-#include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/channel.h"
 

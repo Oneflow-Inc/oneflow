@@ -16,9 +16,9 @@ limitations under the License.
 #ifdef __linux__
 
 #include "oneflow/core/eager/transport_blob_instruction_type.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/control/ctrl_client.h"

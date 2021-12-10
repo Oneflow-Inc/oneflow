@@ -96,6 +96,7 @@ class TestSoftmax(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [
             (10, 10, 20, 30),
+            (11, 31),
             (10, 20, 13),
             (10, 20, 30),
             (10, 20),

@@ -18,17 +18,16 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-
-from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
-
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
+
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestSinh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_sinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -38,11 +37,22 @@ class TestSinh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSin(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_sin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = torch.sin(x)
+        y = x.sin()
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestInplaceSin(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_flow_inplace_sin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1  # transform to non-leaf tensor
+        y.sin_()
         return y
 
 
@@ -82,78 +92,23 @@ class TestCos(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_log_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return torch.log(x)
 
 
-def _test_std(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    of_out = flow.std(input, dim=2)
-    np_out = np.std(np_arr, axis=2)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-
-def _test_std_dim1(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    of_out = flow.std(input, dim=1)
-    np_out = np.std(np_arr, axis=1)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-
-def _test_std_negative_dim(test_case, shape, device):
-    np_arr = np.random.randn(4, 2, 3, 5)
-    input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    of_out = input.std(dim=(-2, -1, -3), keepdim=False)
-    np_out = np.std(np_arr, axis=(-2, -1, -3))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-
-@flow.unittest.skip_unless_1n1d()
-class TestStd(flow.unittest.TestCase):
-    def test_std(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_std, _test_std_dim1, _test_std_negative_dim]
-        arg_dict["shape"] = [(2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-    @unittest.skip("std has bug")
-    @autotest()
-    def test_std_flow_with_random_data(test_case):
-        device = random_device()
-        all_dim = random().to(int)
-        dim = random(low=0, high=all_dim).to(int)
-        x = random_pytorch_tensor(ndim=all_dim).to(device)
-        z = torch.std(x, dim=dim)
-        return z
-
-    @unittest.skip("std has bug")
-    @autotest()
-    def test_std_tensor_with_random_data(test_case):
-        device = random_device()
-        all_dim = random().to(int)
-        dim = random(low=0, high=all_dim).to(int)
-        x = random_pytorch_tensor(ndim=all_dim).to(device)
-        z = x.std(dim=dim)
-        return z
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_sqrt_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         z = torch.sqrt(x)
         return z
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_sqrt_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -163,7 +118,7 @@ class TestSqrt(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestExp(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_exp_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -173,7 +128,7 @@ class TestExp(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_rsqrt_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -183,14 +138,14 @@ class TestRsqrt(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_square_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         z = torch.square(x)
         return z
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_square_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -200,28 +155,28 @@ class TestSquare(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_pow_scalar_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = random().to(float)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_pow_elementwise_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
         y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_pow_broadcast_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
         y = random_pytorch_tensor(ndim=2, dim1=1).to(device)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_pow_broadcast_with_random_data_reverse(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=1).to(device)
@@ -231,14 +186,14 @@ class TestPow(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_asin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = torch.asin(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_arcsin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
@@ -248,14 +203,14 @@ class TestAsin(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsinh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_asinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.asinh(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_arcsinh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -265,7 +220,7 @@ class TestAsinh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTan(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_tan_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -275,21 +230,21 @@ class TestTan(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_atan_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.atan(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_arctan_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.arctan(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_atan2_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
@@ -297,14 +252,14 @@ class TestAtan(flow.unittest.TestCase):
         z = torch.atan2(x, y)
         return z
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_atanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = torch.atanh(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_arctanh_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
@@ -314,7 +269,7 @@ class TestAtan(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTopk(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_flow_topk_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
@@ -330,14 +285,14 @@ class TestTopk(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_pow_scalar_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = random().to(float)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_pow_elementwise_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
@@ -354,8 +309,28 @@ class TestPow(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestArccos(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_arccos_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2, high=3).to(device)
+        y = torch.arccos(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAcos(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_acos_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=2, high=3).to(device)
+        y = torch.acos(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_arccosh_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=2, high=3).to(device)
@@ -365,7 +340,7 @@ class TestArccosh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_acosh_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(low=2, high=3).to(device)
@@ -375,7 +350,7 @@ class TestAcosh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_atan2_with_random_data(test_case):
         device = random_device()
         x1 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
@@ -386,7 +361,7 @@ class TestAtan2(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMinimum(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_elementwise_minimum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -394,7 +369,7 @@ class TestMinimum(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
         return torch.minimum(x, y)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_broadcast_minimum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -405,7 +380,7 @@ class TestMinimum(flow.unittest.TestCase):
 
 
 class TestMaximum(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_elementwise_mximum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -413,7 +388,7 @@ class TestMaximum(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
         return torch.maximum(x, y)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_broadcast_maximum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -424,8 +399,8 @@ class TestMaximum(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFloordiv(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
+class TestFloorDiv(flow.unittest.TestCase):
+    @autotest(auto_backward=False, check_graph=False)
     def test_elementwise_floordiv_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
@@ -433,7 +408,7 @@ class TestFloordiv(flow.unittest.TestCase):
 
         return torch.floor_divide(x, y)
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_tensor_floordiv_scalar_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)

@@ -23,8 +23,30 @@ import oneflow.framework.graph_build_util as graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
+from oneflow.nn.modules.container import *
+from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
+from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return
+
+
+def get_block_cls(item):
+    if isinstance(item, Sequential):
+        return SequentialBlock
+    elif isinstance(item, ModuleList):
+        return ModuleListBlock
+    elif isinstance(item, ModuleDict):
+        return ModuleDictBlock
+    elif isinstance(item, ParameterList):
+        return ParameterListBlock
+    elif isinstance(item, ParameterDict):
+        return ParameterDictBlock
+    elif isinstance(item, Module):
+        return ModuleBlock
+    elif isinstance(item, Tensor):
+        return TensorBlock
+    else:
+        raise NotImplementedError()
 
 
 class BlockType:
@@ -36,46 +58,15 @@ class BlockType:
 
 class Block(object):
     def __init__(
-        self,
-        prefix: str = "",
-        name: str = "",
-        value: Union[Module, Parameter, Tensor] = None,
+        self, prefix: str = "", name: str = "",
     ):
-        assert not isinstance(value, Block)
         self._name = name
         self._name_prefix = prefix
         self._type = BlockType.NONE
-        self._origin = value
-        self.config = BlockConfig()
+        self._origin = None
         self._scope = None
         self._prev_scope = None
-        self._debug = False
-        self._debug_min_s_level = 2
-        self._debug_max_v_level = 0
-        if isinstance(value, Module):
-            self._type = BlockType.MODULE
-            self._is_executing_forward = False
-            self._modules = OrderedDict()
-            self._parameters = OrderedDict()
-            self._buffers = OrderedDict()
-            for (n, m) in list(value.named_children()):
-                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, m))
-            for (n, p) in list(value.named_parameters("", False)):
-                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, p))
-            for (n, b) in list(value.named_buffers("", False)):
-                self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
-            self._args_repr = []
-            self._outs_repr = []
-        elif isinstance(value, Parameter):
-            self._type = BlockType.PARAMETER
-            self._lazy_origin = None
-            self._lazy_origin_builder = None
-        elif isinstance(value, Tensor):
-            self._type = BlockType.BUFFER
-            self._lazy_origin = None
-            self._lazy_origin_builder = None
-        else:
-            raise NotImplementedError()
+        self.config = BlockConfig()
 
     @property
     def name(self):
@@ -90,29 +81,6 @@ class Block(object):
         return self._type
 
     @property
-    def origin(self):
-        return self._origin
-
-    @property
-    def lazy_origin(self):
-        assert (
-            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin"
-        return self._lazy_origin
-
-    def lazy_origin_builder(self):
-        assert (
-            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
-        return self._lazy_origin_builder
-
-    def set_lazy_origin_builder(self, fn=None):
-        assert (
-            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
-        self._lazy_origin_builder = fn
-
-    @property
     def prev_scope(self):
         if self._prev_scope is None:
             self._prev_scope = oneflow._oneflow_internal.GetCurrentScope()
@@ -124,13 +92,58 @@ class Block(object):
             self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
         return self._scope
 
+    def scope_context(self):
+        return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
+
+
+class ModuleBlock(Block):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: Module = None,
+    ):
+        assert not isinstance(origin, Block)
+        super().__init__(prefix, name)
+        self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
+        self._type = BlockType.MODULE
+        self._is_executing_forward = False
+        self._modules = OrderedDict()
+        self._parameters = OrderedDict()
+        self._buffers = OrderedDict()
+        self._args_repr = []
+        self._outs_repr = []
+        self.set_origin(origin)
+
+    @property
+    def origin(self):
+        return self._origin
+
+    def set_origin(self, origin):
+        self._origin = origin
+        if origin is None:
+            return
+        assert isinstance(origin, Module)
+        for (n, m) in list(origin.named_children()):
+            self.__setattr__(
+                n, get_block_cls(m)(self._name_prefix + self._name + ".", n, m)
+            )
+        for (n, p) in list(origin.named_parameters("", False)):
+            self.__setattr__(
+                n, get_block_cls(p)(self._name_prefix + self._name + ".", n, p)
+            )
+        for (n, b) in list(origin.named_buffers("", False)):
+            self.__setattr__(
+                n, get_block_cls(b)(self._name_prefix + self._name + ".", n, b)
+            )
+
     def debug(
         self,
-        mode: bool = True,
         v_level: int = 0,
         ranks: Optional[Union[int, List[int]]] = None,
+        mode: bool = True,
     ) -> None:
         assert isinstance(mode, bool)
+        assert isinstance(v_level, int)
 
         if ranks is None:
             rank_list = [0]
@@ -151,14 +164,9 @@ class Block(object):
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.debug(mode, v_level, ranks)
+                        n.debug(v_level, ranks, mode)
 
                 _set_child(self._modules)
-                _set_child(self._parameters)
-                _set_child(self._buffers)
-
-    def scope_context(self):
-        return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
@@ -191,7 +199,11 @@ class Block(object):
             _print_state(self._parameters)
             _print_state(self._buffers)
 
-        result = self._origin.__class__.__call__(self, *args)
+        # NOTE: The original nn.Moudle's __call__ method is ignored, which means
+        # that hooks of nn.Modules are ignored. It is not recommended
+        # to use hooks of nn.Module in nn.Graph for the moment.
+        # result = self._origin.__class__.__call__(self, *args)
+        result = self.__block_forward(*args)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -219,22 +231,17 @@ class Block(object):
 
         return result
 
-    def __iter__(self) -> Iterator["Block"]:
-        assert self._type == BlockType.MODULE
-        return iter(self._modules.values())
-
-    def forward(self, *args):
-        assert self._type == BlockType.MODULE
+    def __block_forward(self, *args):
         self._is_executing_forward = True
-        args = self._pre_forward_mapping_out_scope(*args)
+        args = self.__pre_forward_mapping_out_scope(*args)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args)
-        result = self._post_forward_mapping_out_scope(result)
+        result = self.__post_forward_mapping_out_scope(result)
         result = seq_to_func_return(result)
         self._is_executing_forward = False
         return result
 
-    def _pre_forward_mapping_out_scope(self, *args):
+    def __pre_forward_mapping_out_scope(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
@@ -247,11 +254,13 @@ class Block(object):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self._mapping_io("input", insert_identity, "insert_identity", *args,)
+            args = self.__mapping_io(
+                "input", insert_identity, "insert_identity", *args,
+            )
 
         return args
 
-    def _post_forward_mapping_out_scope(self, *args):
+    def __post_forward_mapping_out_scope(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
@@ -261,10 +270,22 @@ class Block(object):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self._mapping_io(
+            args = self.__mapping_io(
                 "output", insert_identity, "insert_identity", *args,
             )
         return args
+
+    def add_module(self, name: str, module: Optional[Module]) -> None:
+        self.__setattr__(
+            name,
+            get_block_cls(module)(self._name_prefix + self._name + ".", name, module),
+        )
+
+    def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
+        self.__setattr__(
+            name,
+            get_block_cls(param)(self._name_prefix + self._name + ".", name, param),
+        )
 
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
@@ -279,7 +300,7 @@ class Block(object):
                 for m in module.modules(memo):
                     yield m
 
-    def _mapping_io(self, io_type, func, func_desc, *args):
+    def __mapping_io(self, io_type, func, func_desc, *args):
         assert isinstance(func_desc, str)
         assert io_type in ("input", "output")
         mapped_args = []
@@ -292,7 +313,7 @@ class Block(object):
             if isinstance(arg, list):
                 seq_args = list()
                 for i in range(len(arg)):
-                    is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                    is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
                         arg[i], io_type, idx, i
                     )
                     if is_tensor:
@@ -311,7 +332,7 @@ class Block(object):
                         seq_args.append(arg[i])
                 mapped_args.append(seq_args)
             elif isinstance(arg, Tensor):
-                is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
                     arg, io_type, idx
                 )
                 assert is_tensor
@@ -322,7 +343,7 @@ class Block(object):
                     f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
                 )
             else:
-                is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
                     arg, io_type, idx
                 )
                 assert not is_tensor
@@ -335,7 +356,7 @@ class Block(object):
 
         return tuple(mapped_args)
 
-    def _io_tensor_check_and_gen(self, item, io_type, idx, second_idx=None):
+    def __io_tensor_check_and_gen(self, item, io_type, idx, second_idx=None):
         assert io_type in ("input", "output")
         name = (
             "_"
@@ -364,7 +385,7 @@ class Block(object):
             )
             return False, name, repr_str
 
-    def _members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
+    def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
         memo = set()
         modules = self.modules() if recurse else [self]
@@ -378,13 +399,13 @@ class Block(object):
 
     def parameters(self, recurse: bool = True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
-        gen = self._members(lambda module: module._parameters.items(), recurse=recurse)
+        gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
     def buffers(self, recurse: bool = True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
-        gen = self._members(lambda module: module._buffers.items(), recurse=recurse)
+        gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
@@ -421,33 +442,41 @@ class Block(object):
     def __getattr__(self, name: str):
         if name in self.__dict__:
             return self.__dict__[name]
-        if self._type == BlockType.MODULE:
-            # support get module
-            if "_modules" in self.__dict__:
-                modules = self.__dict__["_modules"]
-                if name in modules:
-                    return modules[name]
-            # support get parameter
-            p_state = self._get_in_states(name, "_parameters")
-            if p_state is not None:
-                return p_state
-            # support get buffer
-            b_state = self._get_in_states(name, "_buffers")
-            if b_state is not None:
-                return b_state
-            # support get normal attr
-            if name in self._origin.__dict__:
-                return self._origin.__dict__[name]
-            # support get function
-            if hasattr(self._origin, name):
-                return partial(getattr(self._origin.__class__, name), self)
+        # support get module
+        if "_modules" in self.__dict__:
+            modules = self.__dict__["_modules"]
+            if name in modules:
+                return modules[name]
+        # support get parameter
+        p_state = self._get_from_states(name, "_parameters")
+        if p_state is not None:
+            return p_state
+        # support get buffer
+        b_state = self._get_from_states(name, "_buffers")
+        if b_state is not None:
+            return b_state
+        # support none parameter or buffer
+        if name in self._origin._parameters:
+            p_none = self._origin._parameters[name]
+            assert p_none is None
+            return None
+        if name in self._origin._buffers:
+            b_none = self._origin._buffers[name]
+            assert b_none is None
+            return None
+        # support get normal attr
+        if name in self._origin.__dict__:
+            return self._origin.__dict__[name]
+        # support get function
+        if hasattr(self._origin, name):
+            return partial(getattr(self._origin.__class__, name), self)
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
                 self._type, type(self).__name__, self._name_prefix + self.name, name
             )
         )
 
-    def _get_in_states(self, name, states_name):
+    def _get_from_states(self, name, states_name):
         if states_name not in self.__dict__:
             return None
 
@@ -480,37 +509,50 @@ class Block(object):
 
     def __repr__(self):
         lines = None
-        if self._type == BlockType.MODULE:
-            child_lines = []
-            if not self.config._is_null:
-                child_lines.append(add_indent(repr(self.config), 2))
-            if len(self._args_repr) > 0:
-                for in_str in self._args_repr:
-                    input_str = add_indent(in_str, 2)
-                    child_lines.append(input_str)
+        child_lines = []
+        if (self.config is not None) and (not self.config._is_null):
+            child_lines.append(add_indent(repr(self.config), 2))
+        if len(self._args_repr) > 0:
+            for in_str in self._args_repr:
+                input_str = add_indent(in_str, 2)
+                child_lines.append(input_str)
 
-            def _append_child(d):
-                for (_, n) in d.items():
-                    n_str = repr(n)
-                    n_str = add_indent(n_str, 2)
-                    child_lines.append(n_str)
+        def _append_child(d):
+            for (_, n) in d.items():
+                n_str = repr(n)
+                n_str = add_indent(n_str, 2)
+                child_lines.append(n_str)
 
-            _append_child(self._parameters)
-            _append_child(self._buffers)
-            _append_child(self._modules)
+        _append_child(self._parameters)
+        _append_child(self._buffers)
+        _append_child(self._modules)
 
-            if len(self._outs_repr) > 0:
-                for out_str in self._outs_repr:
-                    output_str = add_indent(out_str, 2)
-                    child_lines.append(output_str)
+        if len(self._outs_repr) > 0:
+            for out_str in self._outs_repr:
+                output_str = add_indent(out_str, 2)
+                child_lines.append(output_str)
 
-            if len(child_lines) > 0:
-                lines = child_lines
+        if len(child_lines) > 0:
+            lines = child_lines
+
         main_str = self._shallow_repr() + ": ("
         if lines is not None:
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
+
+    def _shallow_repr(self):
+        shallow_repr = (
+            "("
+            + self._type
+            + ":"
+            + self._name_prefix
+            + self._name
+            + ":"
+            + self._origin._shallow_repr()
+            + ")"
+        )
+        return shallow_repr
 
     def _print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
@@ -522,6 +564,57 @@ class Block(object):
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg)
 
+
+class TensorBlock(Block):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: Union[Parameter, Tensor] = None,
+    ):
+        assert not isinstance(origin, Block)
+        super().__init__(prefix, name)
+        if isinstance(origin, Parameter):
+            self._type = BlockType.PARAMETER
+        elif isinstance(origin, Tensor):
+            self._type = BlockType.BUFFER
+        else:
+            raise NotImplementedError()
+        self._lazy_origin = None
+        self._lazy_origin_builder = None
+        self.set_origin(origin)
+
+    @property
+    def origin(self):
+        return self._origin
+
+    def set_origin(self, origin):
+        self._origin = origin
+
+    @property
+    def lazy_origin(self):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin"
+        return self._lazy_origin
+
+    def lazy_origin_builder(self):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        return self._lazy_origin_builder
+
+    def set_lazy_origin_builder(self, fn=None):
+        assert (
+            self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
+        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        self._lazy_origin_builder = fn
+
+    def __repr__(self):
+        lines = None
+        main_str = self._shallow_repr() + ": ("
+        if lines is not None:
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
+        return main_str
+
     def _shallow_repr(self):
         shallow_repr = (
             "("
@@ -530,73 +623,79 @@ class Block(object):
             + self._name_prefix
             + self._name
             + ":"
-            + (
-                self._origin._shallow_repr()
-                if self._type == BlockType.MODULE
-                else (self._origin._meta_repr())
-            )
+            + self._origin._meta_repr()
             + ")"
         )
         return shallow_repr
 
 
-class BlockConfig(object):
-    r"""Configurations on Block in nn.Graph.
-    """
+class SequentialBlock(get_seq(ModuleBlock)):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: Sequential = None,
+    ):
+        super().__init__()
+        self._name_prefix = prefix
+        self._name = name
+        self.set_origin(origin)
 
-    def __init__(self):
-        self._is_null = True
-        self._stage_id = None
-        self._activation_checkpointing = None
 
-    @property
-    def stage_id(self):
-        r"""Get stage id of Block in pipeline parallelism.
-        """
-        return self._stage_id
+class ModuleListBlock(get_list(ModuleBlock)):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: ModuleList = None,
+    ):
+        super().__init__()
+        self._name_prefix = prefix
+        self._name = name
+        self.set_origin(origin)
+        # MoudleList is a container without forward() method,
+        # so it will not be executed or has an execution config.
+        self.config = None
 
-    @stage_id.setter
-    def stage_id(self, value: int = None):
-        r"""Set stage id of Block in pipeline parallelism.
-        Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
-        """
-        self._is_null = False
-        self._stage_id = value
 
-    @property
-    def activation_checkpointing(self):
-        r"""Get whether do activation checkpointing in this Block.
-        """
-        return self._activation_checkpointing
+class ModuleDictBlock(get_dict(ModuleBlock)):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: ModuleDict = None,
+    ):
+        super().__init__()
+        self._name_prefix = prefix
+        self._name = name
+        self.set_origin(origin)
 
-    @activation_checkpointing.setter
-    def activation_checkpointing(self, value: bool = False):
-        r"""Set whether do activation checkpointing in this Block.
-        """
-        self._is_null = False
-        self._activation_checkpointing = value
 
-    def __repr__(self):
-        main_str = (
-            "("
-            + "CONFIG"
-            + ":config:"
-            + self.__class__.__name__
-            + "("
-            + (
-                ("stage_id=" + str(self.stage_id) + ", ")
-                if self.stage_id is not None
-                else ""
-            )
-            + (
-                (
-                    "activation_checkpointing="
-                    + str(self.activation_checkpointing)
-                    + ", "
-                )
-                if self.activation_checkpointing is not None
-                else ""
-            )
-            + "))"
-        )
-        return main_str
+class ParameterListBlock(get_para_list(ModuleBlock)):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: ParameterList = None,
+    ):
+        super().__init__()
+        self._name_prefix = prefix
+        self._name = name
+        self.set_origin(origin)
+        self._is_executing_forward = True
+
+    def __getitem__(self, idx):
+        assert isinstance(idx, int)
+        idx = self._get_abs_string_index(idx)
+        key = str(idx)
+        p_state = self._get_from_states(key, "_parameters")
+        if p_state is not None:
+            return p_state
+        else:
+            raise AttributeError("ParameterList dosen't contain ", key)
+
+
+class ParameterDictBlock(get_para_dict(ModuleBlock)):
+    def __init__(
+        self, prefix: str = "", name: str = "", origin: ParameterDict = None,
+    ):
+        super().__init__()
+        self._name_prefix = prefix
+        self._name = name
+        self.set_origin(origin)
+        self._is_executing_forward = True
+
+    def __getitem__(self, key: str):
+        p_state = self._get_from_states(key, "_parameters")
+        if p_state is not None:
+            return p_state
+        else:
+            raise AttributeError("ParameterDict dosen't contain key ", key)

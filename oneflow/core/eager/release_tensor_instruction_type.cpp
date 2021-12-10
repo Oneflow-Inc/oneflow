@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/cuda_stream_type.h"

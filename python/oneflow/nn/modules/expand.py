@@ -15,19 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.modules.utils import _single
-
-
-def _input_args_is_int(args):
-    return all((isinstance(x, int) for x in args))
-
-
-def _input_args_is_tuple_int(args):
-    return all((_input_args_is_int(x) for x in args))
-
-
-def _input_args_is_flow_size(args):
-    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 
 @register_tensor_op("expand")
@@ -64,18 +51,7 @@ def expand_op(input, *sizes):
         oneflow.Size([1, 3, 2, 2])
 
     """
-    if _input_args_is_int(sizes):
-        expand_size = _single(sizes)
-    elif _input_args_is_tuple_int(sizes):
-        expand_size = _single(*sizes)
-    elif _input_args_is_flow_size(sizes):
-        expand_size = _single(*sizes)[0]
-    else:
-        raise ValueError("input sizes parameter is not illegal!")
-
-    if input.dtype == flow.int8:
-        input = flow.cast(input, flow.int32)
-    return flow._C.expand(input, expand_size)
+    return flow._C.expand(input, sizes)
 
 
 if __name__ == "__main__":

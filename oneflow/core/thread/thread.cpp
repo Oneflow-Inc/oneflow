@@ -16,26 +16,27 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/light_actor.h"
-#include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/stream/execution_context_hook.h"
-#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/lazy/actor/actor.h"
+#include "oneflow/core/lazy/actor/light_actor.h"
+#include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/stream/include/stream_context.h"
 
 namespace oneflow {
 
-Thread::Thread(const StreamId& stream_id) : thrd_id_(SerializeStreamIdToInt64(stream_id)) {
+Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(stream_id)) {
   local_msg_queue_enabled_ =
       ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
   light_actor_enabled_ = ParseBooleanFromEnv("ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR", false);
   StreamContext* stream_ctx =
       NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
   stream_ctx_.reset(stream_ctx);
-  actor_thread_ = std::thread([this]() {
-    auto* hook = dynamic_cast<ExecutionContextHook*>(stream_ctx_.get());
-    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextSetup()); }
+  actor_thread_ = std::thread([this, &stream_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_" + DeviceTypeName(stream_id.device_id().device_type())
+                                      + std::to_string(stream_id.device_id().device_index())
+                                      + "_actor");
+    CHECK_JUST(stream_ctx_->stream()->OnExecutionContextSetup());
     PollMsgChannel();
-    if (hook != nullptr) { CHECK_JUST(hook->OnExecutionContextTeardown()); }
+    CHECK_JUST(stream_ctx_->stream()->OnExecutionContextTeardown());
   });
 }
 
@@ -71,7 +72,7 @@ void Thread::PollMsgChannel() {
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     CHECK(actor_it != id2actor_ptr_.end());
-    int process_msg_ret = actor_it->second->ProcessMsg(msg);
+    int process_msg_ret = actor_it->second.second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
       auto job_id_it = id2job_id_.find(actor_id);
@@ -88,18 +89,21 @@ void Thread::PollMsgChannel() {
 void Thread::ConstructActor(int64_t actor_id) {
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
-  std::unique_ptr<ActorBase> actor_ptr;
   const TaskProto& task = task_it->second;
-  if (light_actor_enabled_) { actor_ptr = TryNewLightActor(task, stream_ctx_.get()); }
+  std::unique_ptr<ActorContext> actor_ctx = NewActorContext(task, stream_ctx_.get());
+  CHECK(actor_ctx);
+  std::unique_ptr<ActorBase> actor_ptr;
+  if (light_actor_enabled_) { actor_ptr = TryNewLightActor(actor_ctx.get()); }
   if (!actor_ptr) {
-    actor_ptr = NewActor(task, stream_ctx_.get());
+    actor_ptr = NewActor(actor_ctx.get());
     LOG(INFO) << "Thread " << thrd_id_ << " construct Actor " << TaskType_Name(task.task_type())
               << " " << actor_id;
   } else {
     LOG(INFO) << "Thread " << thrd_id_ << " construct LightActor "
               << TaskType_Name(task.task_type()) << " " << actor_id;
   }
-  CHECK(id2actor_ptr_.emplace(actor_id, std::move(actor_ptr)).second);
+  CHECK(id2actor_ptr_.emplace(actor_id, std::make_pair(std::move(actor_ctx), std::move(actor_ptr)))
+            .second);
   CHECK(id2job_id_.emplace(actor_id, task.job_id()).second);
   id2task_.erase(task_it);
   Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");

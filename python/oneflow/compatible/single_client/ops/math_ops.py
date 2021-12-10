@@ -2101,7 +2101,7 @@ def range(
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("Range_")
             )
-            .Op("range")
+            .Op("arange")
             .Attr("float_start", float(start))
             .Attr("float_delta", float(delta))
             .Attr("float_limit", float(limit))
@@ -2116,7 +2116,7 @@ def range(
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("Range_")
             )
-            .Op("range")
+            .Op("arange")
             .Attr("integer_start", int(start))
             .Attr("integer_delta", int(delta))
             .Attr("integer_limit", int(limit))

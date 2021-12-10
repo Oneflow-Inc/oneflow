@@ -136,7 +136,7 @@ optional_argument_type_aliases = {
     "Sbp": "const Optional<Symbol<SbpParallel>>&",
     "SbpList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
     "PyObject*": "const Optional<PyObject*>&",
-    **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
+    **{k: "const Optional<{0}>&".format(v) for k, v in generic_type_aliases.items()},
 }
 
 return_type_aliases = {

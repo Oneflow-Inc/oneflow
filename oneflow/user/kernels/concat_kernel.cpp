@@ -14,13 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type, typename T>
+template<typename Context>
+std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
+  return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 2);
+}
+
 class ConcatKernel final : public user_op::OpKernel {
  public:
   ConcatKernel() = default;
@@ -56,6 +60,9 @@ class ConcatKernel final : public user_op::OpKernel {
     const int64_t out_cols = out_tensor->shape().Count(axis);
     const int64_t rows = out_tensor->shape().elem_cnt() / out_cols;
     CHECK_GT(rows, 0);
+
+    auto primitive = NewCopyNdPrimitive(ctx);
+    CHECK(primitive);
     int64_t out_col_offset = 0;
     for (const auto& in_arg_pair : ctx->inputs()) {
       const user_op::Tensor* in_tensor =
@@ -64,9 +71,14 @@ class ConcatKernel final : public user_op::OpKernel {
       const int64_t in_cols = in_tensor->shape().Count(axis);
       CHECK_EQ(in_tensor->shape().elem_cnt(), rows * in_cols);
       if (in_cols > 0) {
-        NewKernelUtil<device_type>::CopyColsRegion(
-            ctx->device_ctx(), rows, in_cols, in_tensor->dptr<T>(), 0, in_cols,
-            out_tensor->mut_dptr<T>(), out_col_offset, out_cols);
+        DimVector dst_shape = {rows, out_cols};
+        DimVector dst_pos_vec = {0, out_col_offset};
+        DimVector src_shape = {rows, in_cols};
+        DimVector src_pos_vec = {0, 0};
+        DimVector extent_vec = {rows, in_cols};
+        primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
+                          dst_shape.data(), dst_pos_vec.data(), in_tensor->dptr(), src_shape.data(),
+                          src_pos_vec.data(), extent_vec.data());
       }
       out_col_offset += in_cols;
     }
@@ -76,25 +88,16 @@ class ConcatKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) -> bool {
+                            return NewCopyNdPrimitive(&ctx).operator bool();
+                          });
+}
+
 }  // namespace
 
-#define REGISTER_CONCAT_KERNEL(device, dtype)                                                \
-  REGISTER_USER_KERNEL("concat").SetCreateFn<ConcatKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-
-#define REGISTER_CONCAT_KERNEL_WITH_DEVICE(device) \
-  REGISTER_CONCAT_KERNEL(device, float)            \
-  REGISTER_CONCAT_KERNEL(device, double)           \
-  REGISTER_CONCAT_KERNEL(device, uint8_t)          \
-  REGISTER_CONCAT_KERNEL(device, int8_t)           \
-  REGISTER_CONCAT_KERNEL(device, int32_t)          \
-  REGISTER_CONCAT_KERNEL(device, int64_t)
-
-REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_CONCAT_KERNEL(DeviceType::kGPU, float16)
-#endif
+REGISTER_USER_KERNEL("concat").SetCreateFn<ConcatKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
+                                                                           == true);
 
 }  // namespace oneflow

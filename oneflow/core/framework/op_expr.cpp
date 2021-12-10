@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/framework/op_expr.h"
-
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -676,6 +676,13 @@ Maybe<OpExprGradClosure> SelectTopNOpExpr::GetOrCreateOpGradClosure() const {
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+void FunctionOpExpr::reset_state() const { state_.reset(new FunctionAutoGradCaptureState); }
+
+Maybe<OpExprGradClosure> FunctionOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_) { op_grad_func_.reset(new FunctionOpExprGradFunction(backward_fn_)); }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_, state_);
 }
 
 }  // namespace one

@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -56,8 +57,6 @@ class EagerPToSOpKernelState final : public user_op::OpKernelState {
   ~EagerPToSOpKernelState() override = default;
 
   int64_t elem_cnt_per_chunk() const { return elem_cnt_per_chunk_; }
-
-  MemoryCopier* memory_copier() const { return memory_copier_.get(); }
 
   const std::vector<std::shared_ptr<TensorSliceCopier>>& sorted_in_tensor_slice_copier() const {
     return sorted_in_tensor_slice_copier_;
@@ -100,16 +99,14 @@ class EagerPToSOpKernelState final : public user_op::OpKernelState {
         CHECK(!intersection.IsEmpty());
         sorted_p2p_pair_.emplace_back(std::make_pair(src, dst));
         sorted_in_tensor_slice_copier_.emplace_back(
-            std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type));
+            std::make_shared<TensorSliceCopier>(intersection, in_slice, data_type, device_type));
       }
     }
-    memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   }
 
   int64_t elem_cnt_per_chunk_;
   std::vector<std::shared_ptr<TensorSliceCopier>> sorted_in_tensor_slice_copier_;
   std::vector<std::pair<int64_t, int64_t>> sorted_p2p_pair_;
-  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -125,7 +122,7 @@ size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<typename T, DeviceType device_type>
+template<DeviceType device_type>
 class EagerPToSKernel final : public user_op::OpKernel {
  public:
   EagerPToSKernel() = default;
@@ -149,48 +146,43 @@ class EagerPToSKernel final : public user_op::OpKernel {
     int64_t elem_cnt_per_chunk = kernel_state->elem_cnt_per_chunk();
     const auto& sorted_in_tensor_slice_copier = kernel_state->sorted_in_tensor_slice_copier();
     const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
-    MemoryCopier* memory_copier = kernel_state->memory_copier();
     CHECK_EQ(sorted_in_tensor_slice_copier.size(), sorted_p2p_pair.size());
 
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         elem_cnt_per_chunk * GetSizeOfDataType(out->data_type()));
-
+    std::unique_ptr<ep::primitive::Add> add_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
+    CHECK(add_primitive);
     for (int64_t i = 0; i < sorted_p2p_pair.size(); ++i) {
       const auto& p2p_pair = sorted_p2p_pair.at(i);
       int64_t src = p2p_pair.first;
       int64_t dst = p2p_pair.second;
       if (GlobalProcessCtx::Rank() == src) {
         const auto& tensor_slice_copier = sorted_in_tensor_slice_copier.at(i);
-        tensor_slice_copier->Copy(ctx->device_ctx(), *memory_copier, tmp_buffer_ptr, in_ptr);
+        tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
         CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr),
-                                     elem_cnt_per_chunk, in->data_type(), dst, ctx->device_ctx()));
+                                     elem_cnt_per_chunk, in->data_type(), dst, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_cnt_per_chunk, out->data_type(), src,
-                                     ctx->device_ctx()));
-        NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), elem_cnt_per_chunk, static_cast<T>(1),
-                                         reinterpret_cast<const T*>(tmp_buffer_ptr), 1,
-                                         out->mut_dptr<T>(), 1);
+                                     ctx->stream()));
+        add_primitive->Launch(ctx->stream(), out->dptr(), tmp_buffer_ptr, out->mut_dptr(),
+                              elem_cnt_per_chunk);
       }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_S_KERNEL(dtype, device)                                     \
-  REGISTER_USER_KERNEL("eager_p_to_s")                                                  \
-      .SetCreateFn<EagerPToSKernel<dtype, device>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_EAGER_P_TO_S_KERNEL(device)                 \
+  REGISTER_USER_KERNEL("eager_p_to_s")                       \
+      .SetCreateFn<EagerPToSKernel<device>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)) \
       .SetInferTmpSizeFn(InferEagerPToSKernelTmpBufferSize);
 
-REGISTER_EAGER_P_TO_S_KERNEL(float, DeviceType::kCPU)
-REGISTER_EAGER_P_TO_S_KERNEL(double, DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_S_KERNEL(float16, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_S_KERNEL(float, DeviceType::kGPU)
-REGISTER_EAGER_P_TO_S_KERNEL(double, DeviceType::kGPU)
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_P_TO_S_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

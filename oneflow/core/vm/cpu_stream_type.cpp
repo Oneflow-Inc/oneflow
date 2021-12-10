@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/thread_ctx.msg.h"
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -47,6 +48,9 @@ bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
 }
 
 void CpuStreamType::Compute(Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH(
+      "S:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
@@ -54,14 +58,15 @@ void CpuStreamType::Compute(Instruction* instruction) const {
   }
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  OF_PROFILER_RANGE_POP();
 }
 
-ObjectMsgPtr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,
-                                                       int64_t this_machine_id) const {
-  if (!resource.has_cpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
+intrusive::shared_ptr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,
+                                                                int64_t this_machine_id) const {
+  if (!resource.has_cpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.cpu_device_num();
-  auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CpuStreamType>());
+  auto ret = intrusive::make_shared<StreamDesc>();
+  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CpuStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

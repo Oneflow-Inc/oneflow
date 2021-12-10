@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -41,6 +41,16 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
+class TensorViewInstructionType : public vm::InstructionType {
+ public:
+  TensorViewInstructionType() = default;
+  ~TensorViewInstructionType() override = default;
+
+  void Compute(vm::Instruction* instruction) const override;
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+
 class AccessBlobByCallbackInstructionType : public vm::InstructionType {
  public:
   AccessBlobByCallbackInstructionType() = default;
@@ -56,9 +66,7 @@ class RecordEventInstructionType : public vm::InstructionType {
   RecordEventInstructionType() = default;
   ~RecordEventInstructionType() override = default;
 
-  void Compute(vm::Instruction* instruction) const override {
-    instruction->set_has_event_record(true);
-  }
+  void Compute(vm::Instruction* instruction) const override {}
 
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };

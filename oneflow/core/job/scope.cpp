@@ -26,9 +26,7 @@ limitations under the License.
 namespace oneflow {
 
 Scope::Scope(const ScopeProto& scope_proto)
-    : auto_increment_id_(0),
-      symbol_id_(Error::SymbolIdUninitializedError()),
-      scope_proto_(scope_proto) {
+    : auto_increment_id_(0), symbol_id_(NullOpt), scope_proto_(scope_proto) {
   CHECK_OK(Init()) << scope_proto_.DebugString();
 }
 

@@ -228,22 +228,116 @@ class AdaptivePoolNdGradFunctor {
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
+class SparseCrossEntropyGradFunctor {
+ public:
+  SparseCrossEntropyGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_grad")
+                         .Input("prediction")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SparseCrossEntropyMsGradFunctor {
+ public:
+  SparseCrossEntropyMsGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_cross_entropy_ms_grad")
+                         .Input("prediction")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SparseSoftmaxCrossEntropyGrad {
+ public:
+  SparseSoftmaxCrossEntropyGrad() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_grad")
+                         .Input("prob")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& prob,
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("smooth_l1_loss_grad")
-                         .Input("loss_grad")
-                         .Input("prediction")
-                         .Input("label")
-                         .Output("prediction_grad")
+                         .Input("dy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("dx")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& loss_grad,
-                           const std::shared_ptr<one::Tensor>& prediction,
-                           const std::shared_ptr<one::Tensor>& label, const float& beta) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target, const float& beta) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {loss_grad, prediction, label}, attrs);
+
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class KLDivLossGradFunctor {
+ public:
+  KLDivLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("kl_div_loss_grad")
+                         .Input("input")
+                         .Input("target")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const bool log_target) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("log_target", log_target));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, attrs);
   }
 
  private:
@@ -274,10 +368,10 @@ class NllLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& total_weight,
-                           const int64_t ignore_index, const std::string& reduction) const {
+                           const int64_t ignore_index) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *op_weight_, {input, target, total_weight, JUST(weight), dy}, attrs);
@@ -290,6 +384,7 @@ class NllLossGradFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> op_weight_;
 };
+
 class BinaryCrossEntropyLossGradFunctor {
  public:
   BinaryCrossEntropyLossGradFunctor() {
@@ -310,10 +405,9 @@ class BinaryCrossEntropyLossGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight,
-                           const std::string& reduction) const {
+                           const Optional<one::Tensor>& weight) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
                                                  attrs);
@@ -363,10 +457,9 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
-                           const Optional<one::Tensor>& pos_weight,
-                           const std::string& reduction) const {
+                           const Optional<one::Tensor>& pos_weight) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
 
     if (weight) {
@@ -458,6 +551,40 @@ class GridSampleGradFunctor {
     JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {doutput, input, grid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CtcLossGradFunctor {
+ public:
+  CtcLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_loss_grad")
+                         .Input("grad_out")
+                         .Input("log_probs")
+                         .Input("targets")
+                         .Input("input_lengths")
+                         .Input("target_lengths")
+                         .Input("loss")
+                         .Input("alpha")
+                         .Output("grad")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+                           const std::shared_ptr<one::Tensor>& log_probs,
+                           const std::shared_ptr<one::Tensor>& targets,
+                           const std::shared_ptr<one::Tensor>& input_lengths,
+                           const std::shared_ptr<one::Tensor>& target_lengths,
+                           const std::shared_ptr<one::Tensor>& loss,
+                           const std::shared_ptr<one::Tensor>& alpha, const int32_t& blank,
+                           const bool& zero_infinity, const int64_t& max_target_length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("blank", blank));
+    JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
+    return OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, attrs);
   }
 
  private:
@@ -708,6 +835,80 @@ class BroadcastMatmulGradBFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
+ public:
+  FusedScaleTrilSoftmaxMaskScaleGradFunctor() {
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale_grad")
+                               .Input("softmax_y")
+                               .Input("dy")
+                               .Input("mask")
+                               .Output("dx")
+                               .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
+                           const float tril_scale_value, const float mask_scale_value) const {
+    MutableAttrMap fused_attrs;
+    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {softmax_y, dy, mask}, fused_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+};
+
+class FusedScaleMaskSoftmaxGradFunctor {
+ public:
+  FusedScaleMaskSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_grad")
+                         .Input("y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap attrs_;
+    JUST(attrs_.SetAttr<float>("scale_value", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, attrs_);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedScaleMaskSoftmaxDropoutGradFunctor {
+ public:
+  FusedScaleMaskSoftmaxDropoutGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_mask_softmax_dropout_grad")
+                         .Input("softmax_y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Input("dropout_mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const std::shared_ptr<one::Tensor>& dropout_mask, const float& scale,
+                           const float& dropout_scale) const {
+    MutableAttrMap attrs_;
+    JUST(attrs_.SetAttr<float>("scale_value", scale));
+    JUST(attrs_.SetAttr<float>("dropout_scale_value", dropout_scale));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, attrs_);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -716,10 +917,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
+  m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
   m.add_functor<impl::NllLossGradFunctor>("NllLossGrad");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsLossGrad");
+  m.add_functor<impl::SparseCrossEntropyGradFunctor>("SparseCrossEntropyGrad");
+  m.add_functor<impl::SparseCrossEntropyMsGradFunctor>("SparseCrossEntropyMsGrad");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyGrad>("SparseSoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
@@ -733,6 +938,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
+  m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
+  m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
+      "FusedScaleTrilSoftmaxMaskScaleGrad");
+  m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
+  m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
 };
 
 }  // namespace functional

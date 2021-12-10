@@ -53,7 +53,7 @@ void ComputeTopK(const T* in_ptr, int32_t* indices_ptr, const Range& range, int3
 }
 
 template<typename T>
-void CpuTopK(DeviceCtx* ctx, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
+void CpuTopK(ep::Stream* /*stream*/, const T* in_ptr, int32_t* indices_ptr, int32_t instance_num,
              int32_t instance_size, int32_t k, bool sorted, int32_t* out_ptr) {
   const int32_t num_thread = std::min(instance_num, Global<ThreadPool>::Get()->thread_num());
   const BalancedSplitter bs(instance_num, num_thread);
@@ -83,6 +83,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    if (in->shape().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
@@ -90,7 +91,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
     const int32_t instance_num = in->shape().elem_cnt() / instance_size;
     const int32_t k = std::min(ctx->Attr<int32_t>("k"), instance_size);
     int32_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int32_t>() : nullptr;
-    CpuTopK(ctx->device_ctx(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
+    CpuTopK(ctx->stream(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
             ctx->Attr<bool>("sorted"), out->mut_dptr<int32_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -99,8 +100,8 @@ class TopKCpuKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_TOP_K_KERNEL(dtype)                                                \
   REGISTER_USER_KERNEL("top_k")                                                         \
       .SetCreateFn<TopKCpuKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                               \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
         const Shape& in_shape = ctx->InputShape("in", 0);                               \
         return ctx->Attr<int32_t>("k") > 1 ? in_shape.elem_cnt() * sizeof(int32_t) : 0; \

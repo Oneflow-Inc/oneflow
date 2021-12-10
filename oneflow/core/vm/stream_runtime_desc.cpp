@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_runtime_desc.msg.h"
+#include "oneflow/core/vm/stream_runtime_desc.h"
 
 namespace oneflow {
 namespace vm {
@@ -21,7 +21,7 @@ namespace vm {
 void StreamRtDesc::__Init__(StreamDesc* stream_desc) {
   const StreamTypeId& stream_type_id = stream_desc->stream_type_id();
   reset_stream_desc(stream_desc);
-  mutable_stream_type_id()->CopyFrom(stream_type_id);
+  mut_stream_type_id()->CopyFrom(stream_type_id);
 }
 
 const StreamType& StreamRtDesc::stream_type() const { return stream_type_id().stream_type(); }

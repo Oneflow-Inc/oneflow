@@ -58,8 +58,8 @@ class FunctionNode {
   const std::string op_type_name_;
   std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>> next_functions_;
 
-  std::vector<std::shared_ptr<AutogradMeta>> input_meta_datas_;
-  std::vector<std::shared_ptr<AutogradMeta>> output_meta_datas_;
+  std::vector<std::shared_ptr<AutogradMeta>> input_meta_data_;
+  std::vector<std::shared_ptr<AutogradMeta>> output_meta_data_;
   std::vector<TensorInfo> output_tensor_infos_;
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>

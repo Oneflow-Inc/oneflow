@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/object_msg/flat_msg.h"
+#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
 
@@ -61,12 +61,13 @@ class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
 
 // clang-format off
 FLAT_MSG_BEGIN(FlatTensorConsistency);
-  OF_PUBLIC static Maybe<FlatTensorConsistency> New() {
+ public:
+  static Maybe<FlatTensorConsistency> New() {
     const auto& consistency = std::make_shared<FlatTensorConsistency>();
     consistency->clear();
     return consistency;
   }
-  OF_PUBLIC static Maybe<FlatTensorConsistency> New(
+  static Maybe<FlatTensorConsistency> New(
       Symbol<one::ConsistentTensorMeta> tensor_meta,
       const Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint,
                                           const TransportToken& tensor_transport_token) {
@@ -76,7 +77,7 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
     return consistency;
   }
 
-  OF_PUBLIC Maybe<void> Check(Symbol<one::ConsistentTensorMeta> tensor_meta,
+  Maybe<void> Check(Symbol<one::ConsistentTensorMeta> tensor_meta,
     const Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint,
                     const TransportToken& tensor_transport_token) {
     const auto& this_synced_tensor_meta =
@@ -96,7 +97,8 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
     return Maybe<void>::Ok();
   }
 
-  OF_PRIVATE Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
+ private:
+  Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
     const Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint,
                    const TransportToken& tensor_transport_token) {
     this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(

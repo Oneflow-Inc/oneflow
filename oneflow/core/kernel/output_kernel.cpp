@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -32,7 +33,7 @@ class OutputKernel final : public Kernel {
 };
 
 void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(IsMultiClient())) {
     CHECK(this->op_conf().output_conf().has_job_name());
     const auto& job_name = this->op_conf().output_conf().job_name();
     const auto& op_name = this->op_conf().name();
@@ -42,19 +43,19 @@ void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
     BufferStatus buffer_status = buffer->TryReceive(&job_instance);
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+      OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("in"));
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {
-    AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
+    AutoMemcpy(ctx->stream(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
   }
 }
 
 void OutputKernel::ForwardHeader(KernelContext* ctx) const {
-  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+  if (CHECK_JUST(IsMultiClient())) {
     // Do nothing.
   } else {
-    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));
   }
 }
 

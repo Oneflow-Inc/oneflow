@@ -152,7 +152,7 @@ perf_t CudnnConvAlgoGetOrInfer(const CudnnConvParams& params,
       if (perf_it != key_it->second.cend()) { return perf_it->second; }
     }
     perf_t perf = InferFn(p);
-    (*store)[params_without_ws].push_back(std::make_pair(p.max_ws_size, perf));
+    (*store)[params_without_ws].emplace_back(std::make_pair(p.max_ws_size, perf));
     return perf;
   };
   return ThreadLocalCachedCall(cache_size, InferWithCache, params);
@@ -209,7 +209,17 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
   }
   const int32_t groups = ctx.Attr<int32_t>("groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
+  bool use_tensor_op_math;
   if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    use_tensor_op_math = true;
+#if CUDNN_VERSION >= 8100
+  } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
+    use_tensor_op_math = true;
+#endif
+  } else {
+    use_tensor_op_math = false;
+  }
+  if (use_tensor_op_math) {
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
   }
 }
@@ -238,7 +248,17 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
   }
   const int32_t groups = ctx.Attr<int32_t>("groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
+  bool use_tensor_op_math;
   if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    use_tensor_op_math = true;
+#if CUDNN_VERSION >= 8100
+  } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
+    use_tensor_op_math = true;
+#endif
+  } else {
+    use_tensor_op_math = false;
+  }
+  if (use_tensor_op_math) {
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
   }
 }

@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -79,7 +76,7 @@ class TensorScalarSub : public TensorScalarAddOrSub {
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       const auto& reduce_sum =
           JUST(functional::ReduceSum(out_grads.at(0), axes_vec, /*keepdims=*/false));
-      in_grads->at(1) = JUST(functional::ScalarMul(reduce_sum, /*other=*/1.0));
+      in_grads->at(1) = JUST(functional::ScalarMul(reduce_sum, /*other=*/1.0, false));
     }
     return Maybe<void>::Ok();
   }
@@ -148,10 +145,6 @@ class TensorScalarDiv : public OpExprGradFunction<TensorScalarCaptureState> {
 Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  const std::string& op_name = fw_op_expr->op_name();
-  tensor_scalar_div_op_ = JUST(op_expr_helper::ScalarDivByTensorOp(GradientOpName(op_name + "_x")));
-  broadcast_div_grad_op_ =
-      JUST(op_expr_helper::BroadcastDivGradOp(GradientOpName(op_name + "_scalar")));
   return Maybe<void>::Ok();
 }
 
@@ -171,14 +164,12 @@ Maybe<void> TensorScalarDiv::Apply(const TensorScalarCaptureState* ctx,
   in_grads->resize(2);
   if (ctx->x_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
-    in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*tensor_scalar_div_op_, {out_grads.at(0), scalar}));
+    in_grads->at(0) = JUST(functional::Div(out_grads.at(0), scalar));
   }
   if (ctx->scalar_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
-    in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_div_grad_op_, {out_grads.at(0), y, scalar}));
+    in_grads->at(1) = JUST(functional::DivGrad(out_grads.at(0), y, scalar));
   }
   return Maybe<void>::Ok();
 }
