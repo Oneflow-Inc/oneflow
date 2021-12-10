@@ -399,7 +399,6 @@ class BroadcastLikeFunctor {
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& broadcast_axes) const {
     MutableAttrMap attrs;
-
     JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
@@ -1953,8 +1952,8 @@ class ChunkFunctor {
         << x->ndim() - 1 << "], but got " << dim;
     if ((split_size * chunks) != x->shape()->At(dim)) {
       std::vector<int64_t> sections;
-      for (int i = 0; i < chunks - 1; ++i) { sections.push_back(split_size); }
-      sections.push_back(x->shape()->At(dim) - split_size * (chunks - 1));
+      for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
+      sections.emplace_back(x->shape()->At(dim) - split_size * (chunks - 1));
       int64_t num_splits = sections.size();
       TensorTuple splits(num_splits);
       int64_t start_idx = 0;
