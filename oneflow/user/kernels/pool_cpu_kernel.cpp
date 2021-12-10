@@ -29,7 +29,7 @@ struct PoolOpKernelCache final : public user_op::OpKernelCache {
 };
 
 std::shared_ptr<PoolOpKernelCache> InitPoolOpKernelCache(user_op::KernelCacheContext* ctx,
-                                                             const int32_t& dim) {
+                                                         const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::string& padding = ctx->Attr<std::string>("padding");

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
-#include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 
 namespace oneflow {
@@ -65,12 +65,17 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
+            // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
-
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                    MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_LOGICAL_OP_SEQ,
-                    CPU_PRIMITIVE_NATIVE_TYPE_SEQ, CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+            // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_FLOATING_MATH_OP_SEQ,
+                                             CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
+            // For Logical OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_LOGICAL_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,
+                                             CPU_PRIMITIVE_INT8_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
 
