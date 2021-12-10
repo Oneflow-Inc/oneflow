@@ -254,7 +254,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // TODO(chengcheng): CHECK job valid for each rank.
   JUST(CreateAndRegisterNewVariableOpInJobPass());
 
-  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph build.
+  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
 
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.

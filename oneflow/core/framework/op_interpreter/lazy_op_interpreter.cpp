@@ -261,7 +261,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
 
   const std::string& opt_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (!opt_lbn.empty()) {
-    // NOTE(chengcheng): This eager tensor has been feed as variable op before, so we just use the
+    // NOTE(chengcheng): This eager tensor has been fed as variable op before, so we just use the
     //  lbn, and will NOT create duplicate variable op again.
     (*outputs)[0] = input_tensor;
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
