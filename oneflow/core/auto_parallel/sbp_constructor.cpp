@@ -59,7 +59,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   sbp_graph_.RandomSbpSignature(use_sbp_collector_);
   double ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Initial cost: " << ori_cost;
-  StealSbpSignatureFromOpNode(op_graph, job);
+  JUST(StealSbpSignatureFromOpNode(op_graph, job));
   ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();
@@ -375,11 +375,10 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     // Print out SBP information for input operator
     for (int32_t j : str_order) {
       const auto& ibn = op_input_bns[j];
-      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
-      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const auto& producer_node = op_node->SrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node.op().op_name() << ": " << ibn;
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp()[ibn];
       std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
-      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
       if (IsSameSBP(op_node, ibn)) { std::cout << ", same SBP"; }
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
