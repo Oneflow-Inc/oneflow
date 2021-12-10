@@ -300,7 +300,7 @@ class Optimizer(object):
         return False
 
     def _generate_indexed_slices_optimizer_conf(self, job_conf, vars_conf):
-        if self.support_sparse:
+        if not self.support_sparse:
             raise ValueError("This Optimizer do not support sparse updating")
 
         for param_group in self.param_groups:
