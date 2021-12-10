@@ -289,6 +289,7 @@ if (WITH_MLIR)
   include_directories(${MLIR_INCLUDE_DIRS})
   include_directories(${ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS})
   include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
+  add_subdirectory(${PROJECT_SOURCE_DIR}/tools/oneflow-tblgen)
 endif()
 
 if(APPLE)
