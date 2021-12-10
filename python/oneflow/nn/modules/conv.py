@@ -553,12 +553,8 @@ class Conv3d(Module):
 
     def forward(self, x):
         if x.shape[1] != self.in_channels:
-<<<<<<< HEAD
-            raise ValueError("The input channels should be equal to self.in_channels")
-=======
             raise ValueError(
                 "The input channels should be equal to self.in_channels")
->>>>>>> c68dfde87 (add cpu group deconve impl)
         return flow._C.conv3d(
             x,
             self.weight,
