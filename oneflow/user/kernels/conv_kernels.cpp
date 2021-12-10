@@ -342,8 +342,7 @@ std::shared_ptr<ConvOpKernelCache<T>> CreateConvOpKernelCache(user_op::KernelCac
   };
   const auto* in_tensor = ctx->TensorDesc4ArgNameAndIndex(in_name, 0);
   const auto& in_shape = in_tensor->shape();
-  cache->in_5d_shape_ =
-      Gen5DShape(in_shape, cache->idx_offset_);
+  cache->in_5d_shape_ = Gen5DShape(in_shape, cache->idx_offset_);
   cache->out_5d_shape_ =
       Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), cache->idx_offset_);
   cache->weight_5d_shape_ =
