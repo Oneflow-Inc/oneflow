@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 
 namespace oneflow {
 
@@ -102,6 +103,21 @@ bool ConsistentTensor::is_cuda() const {
 Maybe<Tensor> ConsistentTensor::detach() const {
   std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
+}
+
+Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
+  CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+  const auto& consistent_tensor =
+      std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor);
+  JUST(WithConsistencyChecked(consistent_tensor,
+                              [&]() -> Maybe<void> { return Maybe<void>::Ok(); }));
+  
+  bool old_requires_grad = requires_grad();
+  impl_ = consistent_tensor->impl_;
+  set_requires_grad(old_requires_grad);
+  grad_fn_node_ = nullptr;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one
