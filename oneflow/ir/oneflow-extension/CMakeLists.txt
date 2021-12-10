@@ -7,9 +7,9 @@ oneflow_add_llvm_library(MLIROneFlowExtension
   extension.cpp
   ir_pass.cpp
   DEPENDS
+  MLIRLinalg # for generated .h.inc files
 	LINK_LIBS PUBLIC
 	MLIRIR
-
 )
 
 llvm_update_compile_flags(MLIROneFlowExtension)

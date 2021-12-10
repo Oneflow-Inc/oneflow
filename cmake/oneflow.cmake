@@ -304,7 +304,7 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
-target_link_libraries(oneflow-gen-ods ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+target_link_libraries(oneflow-gen-ods -Wl,--no-as-needed ${of_libs} -Wl,--as-needed)
 if (BUILD_CUDA)
   target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
