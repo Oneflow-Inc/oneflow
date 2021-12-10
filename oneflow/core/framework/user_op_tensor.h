@@ -33,7 +33,8 @@ class Tensor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
   // NOTE: Performance will be degraded if the destructor is virtual.
-  //       So please do NOT implement custom destructor in any child classes of user_op::Tensor.
+  //       So please do NOT implement custom destructor in any child classes of user_op::Tensor,
+  //       and every fields of child classes should be of POD type.
   ~Tensor() = default;
 #pragma GCC diagnostic pop
 

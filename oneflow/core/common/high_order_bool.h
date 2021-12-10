@@ -35,7 +35,8 @@ struct BaseExpr {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
   // NOTE: Performance will be degraded if the destructor is virtual.
-  //       So please do NOT implement custom destructor in any child classes of BaseExpr.
+  //       So please do NOT implement custom destructor in any child classes of BaseExpr,
+  //       and every fields of child classes should be of POD type.
   ~BaseExpr() = default;
 #pragma GCC diagnostic pop
   ALWAYS_INLINE virtual scalar_or_const_ref_t<ValueT> get(const Context&) const = 0;
