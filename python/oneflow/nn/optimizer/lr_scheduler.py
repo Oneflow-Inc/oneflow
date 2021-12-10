@@ -37,7 +37,7 @@ class LrScheduler(object):
         self.step()
 
     def state_dict(self):
-        """Returns the state of the scheduler as a :class:`dict`.
+        """Return the state of the scheduler as a :class:`dict`.
 
         It contains an entry for every variable in self.__dict__ which
         is not the optimizer.
@@ -47,7 +47,7 @@ class LrScheduler(object):
         }
 
     def load_state_dict(self, state_dict):
-        """Loads the schedulers state.
+        """Load the schedulers state.
 
         Arguments:
             state_dict (dict): scheduler state. Should be an object returned
@@ -61,7 +61,7 @@ class LrScheduler(object):
         raise NotImplementedError
 
     def get_last_lr(self):
-        """ Return last computed learning rate by current scheduler.
+        """Return last computed learning rate by current scheduler.
         """
         return [group["lr"] for group in self._optimizer.param_groups]
 
@@ -121,7 +121,7 @@ class WarmUpLrScheduler(LrScheduler):
             self.last_step = self._inner_lr_sch.last_step
 
     def state_dict(self):
-        """Returns the state of the scheduler as a :class:`dict`.
+        """Return the state of the scheduler as a :class:`dict`.
         """
         state =  {
             key: value for (key, value) in self.__dict__.items() if key != "_optimizer"
@@ -131,7 +131,7 @@ class WarmUpLrScheduler(LrScheduler):
         return state
 
     def load_state_dict(self, state_dict):
-        """Loads the schedulers state.
+        """Load the schedulers state.
 
         Arguments:
             state_dict (dict): scheduler state. Should be an object returned
@@ -142,6 +142,6 @@ class WarmUpLrScheduler(LrScheduler):
             inner_lr_sch_state = state_dict.pop("_inner_lr_sch")
             self._inner_lr_sch.load_state_dict(inner_lr_sch_state)
         self.__dict__.update(state_dict)
-        # resume _inner_lr_sch
+        # Resume _inner_lr_sch because that we should not change `state_dict`
         if self._inner_lr_sch is not None:
             state_dict["_inner_lr_sch"] = inner_lr_sch_state
