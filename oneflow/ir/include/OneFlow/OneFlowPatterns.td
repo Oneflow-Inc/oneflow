@@ -33,7 +33,7 @@ def MulCastPattern : Pat<
   ]
 >;
 
-def OutlineConv2D : NativeCodeCall<"::mlir::oneflow::Conv2DOp($_builder, $0)">;
+def OutlineConv2D : NativeCodeCall<"::mlir::oneflow::OutlineConv2D($_builder, $0)">;
 def Conv2DPattern : Pat<
   (
     OneFlow_Conv2DOp : $conv2d_op
@@ -48,6 +48,7 @@ def Conv2DPattern : Pat<
     $strides,
     $dilation_rate,
     $group,
+    $operand_segment_sizes,
     $conv2d_op_name,
     $conv2d_device_tag,
     $conv2d_device_name,

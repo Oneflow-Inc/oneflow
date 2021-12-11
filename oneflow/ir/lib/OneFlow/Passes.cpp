@@ -38,6 +38,7 @@ limitations under the License.
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
@@ -75,7 +76,9 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   argument_types.reserve(operands.size());
   SmallVector<Type, 4> result_types;
   argument_types.reserve(results.size());
+  std::cout << "here1" << std::endl;
   for (auto argument : operands) { argument_types.push_back(argument.getType()); }
+  std::cout << "here2" << std::endl;
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
   auto first_op = *ops.begin();
@@ -148,6 +151,29 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       cast_op.erase();
       return created->getResults();
     }
+  }
+  return {};
+}
+
+::llvm::SmallVector<::mlir::Value, 4> OutlineConv2D(::mlir::PatternRewriter& rewriter,
+                                                    mlir::OpResult conv2d_res) {
+  if (auto conv2d_op = llvm::dyn_cast<Conv2DOp>(conv2d_res.getDefiningOp())) {
+    auto op_name = conv2d_op.op_name();
+    SmallVector<::mlir::Value, 4> operands;
+    operands.push_back(conv2d_op.in());
+    operands.push_back(conv2d_op.weight());
+    operands.push_back(conv2d_op.bias());
+    operands.push_back(conv2d_op.bias_multiplier());
+    SmallVector<::mlir::Value, 1> results;
+    results.push_back(conv2d_op.out());
+    NamedAttrList attributes =
+        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), conv2d_op);
+    SmallVector<Operation*, 4> ops = {conv2d_op};
+    auto function =
+        GetOrInsertFuncOp(rewriter, conv2d_op->getLoc(), op_name, operands, results, ops);
+    auto created = rewriter.create<MlirJitOp>(conv2d_op.getLoc(), function, attributes, operands);
+    assert(DumpAssembly(rewriter, created).succeeded());
+    return created->getResults();
   }
   return {};
 }
