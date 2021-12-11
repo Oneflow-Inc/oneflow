@@ -44,8 +44,6 @@ Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(te
 Tensor::Tensor(const Tensor& tensor) : tensor_(tensor.tensor_) {}
 Tensor::Tensor(Tensor&& tensor) noexcept : tensor_(std::move(tensor.tensor_)) {}
 
-Tensor::~Tensor() {}
-
 Tensor& Tensor::operator=(const Tensor& tensor) {
   if (&tensor == this) { return *this; }
   tensor_ = tensor.tensor_;

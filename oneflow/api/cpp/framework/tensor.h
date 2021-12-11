@@ -41,7 +41,7 @@ class Tensor final {
   Tensor(const Tensor& tensor);
   Tensor(Tensor&& tensor) noexcept;
 
-  ~Tensor();
+  ~Tensor() = default;
 
   Tensor& operator=(const Tensor& tensor);
   Tensor& operator=(Tensor&& tensor) noexcept;
