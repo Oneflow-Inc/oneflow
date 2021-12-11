@@ -292,49 +292,6 @@ class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {
 }
 
-class OneFlow_JobOp<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [FunctionLike, Symbol])> {
-  let regions = (region AnyRegion:$body);
-
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    TypeAttr:$type,
-    OptionalAttr<StrAttr>:$sym_visibility
-  );
-
-  let builders = [OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type)
-  >];
-
-  let extraClassDeclaration = [{
-    // FuncOp clone(BlockAndValueMapping &mapper);
-    // FuncOp clone();
-
-    // void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
-
-    // ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
-
-    // ArrayRef<Type> getCallableResults() { return getType().getResults(); }
-
-    // bool isDeclaration() { return isExternal(); }
-
-  private:
-    friend class OpTrait::FunctionLike<Job>;
-
-    unsigned getNumFuncArguments() { return getType().getInputs().size(); }
-
-    unsigned getNumFuncResults() { return getType().getResults().size(); }
-
-    LogicalResult verifyType() {
-      auto type = getTypeAttr().getValue();
-      if (!type.isa<FunctionType>())
-        return emitOpError("requires '" + getTypeAttrName() +
-                           "' attribute of function type");
-      return success();
-    }
-  }];
-}
-
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
 include "OneFlow/OneFlowUserOpGen.td"
 

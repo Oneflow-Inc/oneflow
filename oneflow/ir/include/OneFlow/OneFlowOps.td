@@ -156,7 +156,42 @@ def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
   );
 }
 
-def OneFlow_Job : OneFlow_JobOp<"job", []>;
+def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionLike, IsolatedFromAbove, Symbol]>  {
+  let regions = (region AnyRegion:$body);
+
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttr:$type,
+    OptionalAttr<StrAttr>:$sym_visibility
+  );
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type)
+  >];
+
+  let extraClassDeclaration = [{
+    bool isDeclaration() { return isExternal(); }
+
+  private:
+    friend class OpTrait::FunctionLike<Job>;
+
+    unsigned getNumFuncArguments() { return getType().getInputs().size(); }
+
+    unsigned getNumFuncResults() { return getType().getResults().size(); }
+
+    LogicalResult verifyType() {
+      auto type = getTypeAttr().getValue();
+      if (!type.isa<FunctionType>())
+        return emitOpError("requires '" + getTypeAttrName() +
+                           "' attribute of function type");
+      return success();
+    }
+  }];
+
+  let parser = [{ return ::mlir::oneflow::parseJob(parser, result); }];
+  let printer = [{ return ::mlir::oneflow::print(*this, p); }];
+  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+}
 
 def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
                                 MemRefsNormalizable, ReturnLike, Terminator]> {
