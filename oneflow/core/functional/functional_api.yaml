@@ -536,17 +536,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Device device=None) => Arange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=None, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -1685,6 +1685,12 @@
   signature: [
     "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
     "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+  ]
+  bind_python: True
+
+- name: "chunk"
+  signature: [
+    "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
   ]
   bind_python: True
 
