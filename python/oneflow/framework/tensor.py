@@ -39,7 +39,7 @@ def _tensor_numpy(eager_local_tensor):
             eager_local_tensor, shapes, dtypes
         )
         return [t.numpy() for t in tensors]
-    method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
+    method_name = eager_local_tensor._get_copy_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
 
     ndarray = np.empty(

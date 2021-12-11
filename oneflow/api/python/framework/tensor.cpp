@@ -54,8 +54,9 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 }
 
 template<typename T>
-void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), BlobNumpyCopyUtil<T>::To, "const",
+void ApiCopyTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
+  CopyBetweenMirroredTensorAndNumpy<T>(CHECK_JUST(GetMirroredTensor(tensor)), array.ptr(),
+                                       BlobNumpyCopyUtil<T>::To, "const",
                                        /*block_host_until_done=*/true)
       .GetOrThrow();
 }
@@ -73,8 +74,8 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::a
   Py_DECREF(copied_array);
 }
 
-const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()->data_type()).GetPtrOrThrow();
+const std::string& ApiGetCopyTensorToNumpyFuncName(const Tensor& tensor) {
+  return *GetCopyTensorToNumpyFuncName(tensor.dtype()->data_type()).GetPtrOrThrow();
 }
 
 const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tensor) {
@@ -198,12 +199,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<one::Tensor>& tensor) {
              return CheckMetaConsistency(tensor).GetOrThrow();
            })
-#define DEFINE_TENSOR_METHOD(T, type_proto)                    \
-  .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
+#define DEFINE_TENSOR_METHOD(T, type_proto)            \
+  .def("_copy_to_numpy_" #T, &ApiCopyTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
           OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
-      .def("_get_copy_mirrored_tensor_to_numpy_func_name", &ApiGetCopyMirroredTensorToNumpyFuncName)
+      .def("_get_copy_tensor_to_numpy_func_name", &ApiGetCopyTensorToNumpyFuncName)
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
       // consistent tensor only

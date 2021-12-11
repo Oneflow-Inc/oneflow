@@ -59,7 +59,7 @@ Maybe<void> CopyMirroredTensorFromUntypedArray(const std::shared_ptr<Tensor>& te
                                               /*block_host_until_done=*/false);
 }
 
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
+Maybe<std::string> GetCopyTensorToNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \

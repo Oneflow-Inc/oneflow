@@ -38,6 +38,22 @@ namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
+inline Maybe<Tensor> GetMirroredTensor(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_local()) { return tensor; }
+  const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(tensor->consistent_tensor_meta());
+  const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
+  CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
+  cfg::SbpParallel broadcast_sbp;
+  broadcast_sbp.mutable_broadcast_parallel();
+  std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
+                                                  SymbolOf(broadcast_sbp));
+  std::vector<Symbol<cfg::SbpParallel>> none;
+  const auto& consistent_tensor =
+      JUST(functional::ToConsistent(tensor, tensor_meta->parallel_desc(), sbp_tuple, none));
+  std::shared_ptr<Tensor> mirrored_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
+  return mirrored_tensor;
+}
+
 template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
@@ -96,7 +112,7 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   return Maybe<void>::Ok();
 }
 
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype);
+Maybe<std::string> GetCopyTensorToNumpyFuncName(DataType dtype);
 
 Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype);
 
