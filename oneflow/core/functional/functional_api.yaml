@@ -536,17 +536,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Device device=None) => Arange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=None, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -1688,6 +1688,12 @@
   ]
   bind_python: True
 
+- name: "chunk"
+  signature: [
+    "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
+  ]
+  bind_python: True
+
 - name: "split_like"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
@@ -1807,7 +1813,7 @@
   bind_python: True
 
 - name: "read_onerec"
-  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True) => ReadOneRec"
+  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => ReadOneRec"
   bind_python: True
 
 - name: "dot"

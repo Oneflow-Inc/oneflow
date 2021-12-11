@@ -614,7 +614,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
   assert(
       GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes).succeeded());
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
-  int32_t result_idx = 0;
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
     auto result_size = std::get<1>(tuple);
@@ -622,7 +621,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
     for (int32_t i = 0; i < result_size; i++) {
       auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
       *(out_s_ptr) = op_name + "/" + name + "_" + std::to_string(i);
-      result_idx += 1;
     }
   }
   return success();

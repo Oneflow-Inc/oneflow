@@ -13,13 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/device_register_cuda.h"
+#include "oneflow/core/ep/include/device_manager_factory.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/ep/cuda/cuda_device_manager.h"
 
 #ifdef WITH_CUDA
+
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <nccl.h>
+
+namespace oneflow {
+
+namespace ep {
+
 namespace {
+
 std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
 }
@@ -35,9 +44,9 @@ bool GetCudnnVersion(libraryPropertyType type, int* version) {
 }
 
 bool GetCudnnVersionString(std::string* version) {
-  int version_major;
-  int version_minor;
-  int version_patch;
+  int version_major = 0;
+  int version_minor = 0;
+  int version_patch = 0;
   if (!GetCudnnVersion(libraryPropertyType::MAJOR_VERSION, &version_major)) { return false; }
   if (!GetCudnnVersion(libraryPropertyType::MINOR_VERSION, &version_minor)) { return false; }
   if (!GetCudnnVersion(libraryPropertyType::PATCH_LEVEL, &version_patch)) { return false; }
@@ -45,12 +54,10 @@ bool GetCudnnVersionString(std::string* version) {
              + std::to_string(version_patch);
   return true;
 }
-}  // namespace
 
-namespace oneflow {
 void CudaDumpVersionInfo() {
   {
-    int cuda_runtime_version;
+    int cuda_runtime_version = 0;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
     if (err == cudaSuccess) {
       LOG(INFO) << "CUDA runtime version: " << GetCudaVersionString(cuda_runtime_version);
@@ -67,7 +74,7 @@ void CudaDumpVersionInfo() {
   }
 
   {
-    int nccl_version;
+    int nccl_version = 0;
     ncclResult_t result = ncclGetVersion(&nccl_version);
     if (result == ncclSuccess) {
       int nccl_version_major =
@@ -82,5 +89,31 @@ void CudaDumpVersionInfo() {
     }
   }
 }
+
+class CudaDeviceManagerFactory : public DeviceManagerFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceManagerFactory);
+  CudaDeviceManagerFactory() = default;
+  ~CudaDeviceManagerFactory() override = default;
+
+  std::unique_ptr<DeviceManager> NewDeviceManager() override {
+    return std::make_unique<CudaDeviceManager>();
+  }
+
+  DeviceType device_type() const override { return DeviceType::kCUDA; }
+
+  std::string device_type_name() const override { return "gpu"; }
+
+  void DumpVersionInfo() const override { CudaDumpVersionInfo(); }
+};
+
+COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
+    std::make_unique<CudaDeviceManagerFactory>()))
+
+}  // namespace
+
+}  // namespace ep
+
 }  // namespace oneflow
+
 #endif  // WITH_CUDA

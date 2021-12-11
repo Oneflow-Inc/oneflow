@@ -56,7 +56,7 @@ bool IsLastIRPassForIRPassType<kAfterAD>() {
 template<IRPassType ir_pass_type>
 class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrapperInterface {
  public:
-  RoundTripOneFlowJobWrapper(::oneflow::Job* job)
+  explicit RoundTripOneFlowJobWrapper(::oneflow::Job* job)
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
 
   const Job* job() const override { return job_; }
@@ -98,7 +98,7 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
     std::unordered_set<std::string> ret{};
     auto node = op_graph_.OpNode4OpName(op_name);
     for (auto e : node->out_edges()) {
-      for (auto lbi : e->lbis()) { ret.insert(GenLogicalBlobName(lbi)); }
+      for (const auto& lbi : e->lbis()) { ret.insert(GenLogicalBlobName(lbi)); }
     }
     return {ret.begin(), ret.end()};
   }

@@ -1938,6 +1938,52 @@ class SplitFunctor {
   }
 };
 
+class ChunkFunctor {
+ public:
+  ChunkFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& chunks,
+                                const int64_t& dim) const {
+    int64_t axis = dim;
+    int64_t split_size = x->shape()->At(dim) / chunks;
+    int64_t dim_size = x->shape()->At(axis);
+    if (axis < 0) { axis += x->ndim(); }
+    CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
+        << "Dimension out of range (expected to be in range of [" << -(x->ndim()) << ", "
+        << x->ndim() - 1 << "], but got " << dim;
+    if ((split_size * chunks) != x->shape()->At(dim)) {
+      std::vector<int64_t> sections;
+      for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
+      sections.emplace_back(x->shape()->At(dim) - split_size * (chunks - 1));
+      int64_t num_splits = sections.size();
+      TensorTuple splits(num_splits);
+      int64_t start_idx = 0;
+      for (int i = 0; i < num_splits; ++i) {
+        int64_t length = sections[i];
+        CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
+                                         "non-negative entries, but split_sizes["
+                                      << i << "] = " << length;
+        splits[i] = JUST(Narrow(x, axis, start_idx, length));
+        start_idx += length;
+      }
+      CHECK_EQ_OR_RETURN(start_idx, dim_size)
+          << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
+          << " (input tensor's size at dimension " << axis << "), "
+          << "but got sum(split_sizes)=" << start_idx;
+      return splits;
+    }
+    CHECK_GE_OR_RETURN(split_size, 0)
+        << "split expects split_size be non-negative, but got split_size=" << split_size;
+    int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
+    TensorTuple splits(num_splits);
+    int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
+    for (int i = 0; i < num_splits; ++i) {
+      int64_t length = i < num_splits - 1 ? split_size : last_split_size;
+      splits[i] = JUST(Narrow(x, axis, i * split_size, length));
+    }
+    return splits;
+  }
+};
+
 class SplitLikeFunctor {
  public:
   SplitLikeFunctor() {
@@ -2326,6 +2372,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::ChunkFunctor>("Chunk");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
