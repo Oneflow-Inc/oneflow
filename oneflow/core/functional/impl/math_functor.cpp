@@ -678,19 +678,34 @@ class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
-                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    const DataType range_dtype = dtype->data_type();
-    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
-    if (IsIntegralDataType(range_dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    if (dtype.has_value()) {
+      const DataType range_dtype = JUST(dtype)->data_type();
+      if (IsIntegralDataType(range_dtype)) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      }
     } else {
-      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+      if (delta.IsIntegral()) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Int64()->data_type()));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
+      }
     }
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
@@ -703,7 +718,7 @@ class ArangeFunctor {
 
 class Arange2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     return Arange(Scalar(0), limit, Scalar(1), dtype, device);
   }
@@ -713,21 +728,36 @@ class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
-                           const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
-    const DataType range_dtype = dtype->data_type();
-    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
-    if (IsIntegralDataType(range_dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    if (dtype.has_value()) {
+      const DataType range_dtype = JUST(dtype)->data_type();
+      if (IsIntegralDataType(range_dtype)) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      }
     } else {
-      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+      if (delta.IsIntegral()) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Int64()->data_type()));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
+      }
     }
-
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
