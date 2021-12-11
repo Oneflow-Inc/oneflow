@@ -339,7 +339,7 @@ if (BUILD_CPP_API)
   file(GLOB_RECURSE of_cpp_api_files 
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
-  if(BUILD_MONOLITHIC_LIBONEFLOW)
+  if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
     oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
   else()
     oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
