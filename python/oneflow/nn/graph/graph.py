@@ -35,6 +35,7 @@ from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
@@ -212,7 +213,7 @@ class Graph(object):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optim, Optimizer
+            optim, (Optimizer, SparseOptimizer)
         ), "optimizer must be an instance of Optimizer"
         opt_dict["optim"] = optim
         if lr_sch is not None:
@@ -224,33 +225,6 @@ class Graph(object):
         self._opts.append(opt_dict)
         # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:
-            self.config._train(True)
-
-    def add_sparse_optimizer(
-        self, optimizer: Optimizer, *, lr_scheduler: Optional[LrScheduler] = None,
-    ):
-        r"""
-        """
-        if not isinstance(optimizer, Optimizer):
-            raise ValueError("optimizer is not an instance of Optimizer")
-
-        opt_dict = dict()
-        opt_dict["optim"] = optimizer
-        opt_dict["is_sparse"] = True
-
-        if lr_scheduler is not None:
-            if not isinstance(lr_scheduler, LrScheduler):
-                raise ValueError("lr_scheduler is not an instance of LrScheduler")
-
-            if lr_scheduler._optimizer is not optimizer:
-                raise ValueError("lr_scheduler's optimizer is not same with optimizer")
-
-            opt_dict["lr_sch"] = lr_scheduler
-
-        self._opts.append(opt_dict)
-
-        # Set the training config when there's at least an optimizer in graph
-        if len(self._opts) > 0:
             self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
@@ -462,6 +436,7 @@ class Graph(object):
                 self._variables_conf[state_block.origin] = VariableConfig(
                     state_block.name_prefix + state_block.name
                 )
+
         for opt in self._opts:
             opt_dict = OptDict(opt)
             self.config._generate_optimizer_and_variable_configs(

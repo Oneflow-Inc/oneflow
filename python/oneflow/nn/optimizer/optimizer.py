@@ -299,6 +299,19 @@ class Optimizer(object):
     def support_sparse(self):
         return False
 
+    def _check_variables_optimizer_bound(self, vars_conf):
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                if vars_conf[param].bound_optimizer is None:
+                    vars_conf[param].bound_optimizer = self
+                else:
+                    raise ValueError(
+                        f'Parameter "{vars_conf[param].name}" is already bound to an optimizer'
+                    )
+
     def _generate_indexed_slices_optimizer_conf(self, job_conf, vars_conf):
         if not self.support_sparse:
             raise ValueError("This Optimizer do not support sparse updating")
