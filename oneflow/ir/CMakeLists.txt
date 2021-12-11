@@ -51,6 +51,9 @@ function(oneflow_add_mlir_dialect_library)
   set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
+find_package(Threads REQUIRED)
+set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)
