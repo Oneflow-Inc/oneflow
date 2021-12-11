@@ -42,12 +42,12 @@ set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
 )
 
 function(oneflow_add_llvm_library)
-  add_mlir_library(${ARGV} DISABLE_INSTALL)
+  add_mlir_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
 function(oneflow_add_mlir_dialect_library)
-  add_mlir_dialect_library(${ARGV} DISABLE_INSTALL)
+  add_mlir_dialect_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 

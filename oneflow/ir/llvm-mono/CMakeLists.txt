@@ -44,6 +44,8 @@ set(MLIR_INCLUDE_DIRS "${MLIR_INCLUDE_DIR};${MLIR_GENERATED_INCLUDE_DIR}" PARENT
 PARENT_SCOPE)
 
 set(llvm_monorepo_BINARY_DIR ${llvm_monorepo_BINARY_DIR} PARENT_SCOPE)
+install(TARGETS oneflow of_protoobj of_cfgobj of_functional_obj EXPORT oneflow DESTINATION lib)
+install(EXPORT oneflow DESTINATION lib/oneflow)
 add_subdirectory(${llvm_monorepo_SOURCE_DIR}/llvm ${llvm_monorepo_BINARY_DIR})
 set(LLVM_INCLUDE_DIRS ${LLVM_MAIN_SRC_DIR}/include;${llvm_monorepo_BINARY_DIR}/include PARENT_SCOPE)
 set(LLVM_EXTERNAL_LIT "${llvm_monorepo_BINARY_DIR}/bin/llvm-lit" CACHE STRING "" FORCE)
