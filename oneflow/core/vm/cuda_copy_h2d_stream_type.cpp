@@ -65,9 +65,8 @@ intrusive::shared_ptr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(
   std::size_t device_num = resource.gpu_device_num();
   auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyH2DStreamType>());
-  ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
-  ret->set_num_streams_per_thread(1);
+  ret->set_num_streams_per_thread(device_num);
   return ret;
 }
 
