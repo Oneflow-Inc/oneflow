@@ -171,12 +171,13 @@ class TestReduce(flow.unittest.TestCase):
             np_arr = np.array([[1, 2], [3, 4]])
         elif flow.env.get_rank() == 1:
             np_arr = np.array([[4, 5], [6, 7]])
-        of_tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        of_tensor = flow.tensor(np_arr, device="cpu", dtype=flow.int32)
         flow.comm.reduce(of_tensor, 0)
 
         if not torch.distributed.is_initialized():
-            dist.init_process_group("gloo")
-        torch_tensor = torch.tensor(np_arr, dtype=torch.int32)
+            dist.init_process_group("nccl")
+        torch.cuda.set_device(dist.get_rank())
+        torch_tensor = torch.tensor(np_arr, dtype=torch.int32, device="cuda")
         dist.reduce(torch_tensor, 0)
 
         if flow.env.get_rank() == 0:
