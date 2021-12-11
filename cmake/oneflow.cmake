@@ -290,22 +290,25 @@ if (WITH_MLIR)
   include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
 endif()
 
-if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
-elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
-elseif(WIN32)
-  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
-endif()
 
-target_link_libraries(oneflow-gen-ods ${of_libs} glog_imported ${oneflow_third_party_libs}
-  $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--no-as-needed>
-  protobuf_imported
-  $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--as-needed>
+target_link_options(oneflow
+  PUBLIC $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--whole-archive>
+  PUBLIC $<$<BOOL:${APPLE}>:-Wl,-force_load>
 )
+target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj)
+target_link_options(oneflow
+  PUBLIC $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--no-whole-archive>
+)
+target_link_options(oneflow
+  PUBLIC $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--no-as-needed>
+)
+target_link_libraries(oneflow ${oneflow_third_party_libs})
+target_link_options(oneflow
+PUBLIC $<$<AND:$<BOOL:${UNIX}>,$<NOT:$<BOOL:${APPLE}>>>:-Wl,--as-needed>
+)
+target_link_libraries(oneflow dl rt)
+
+target_link_libraries(oneflow-gen-ods oneflow ${oneflow_exe_third_party_libs})
 if (BUILD_CUDA)
   target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
@@ -366,7 +369,7 @@ file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_B
 if(BUILD_TESTING)
   if (of_all_test_cc)
     oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+    target_link_libraries(oneflow_testexe oneflow ${oneflow_exe_third_party_libs})
     if (BUILD_CUDA)
       target_link_libraries(oneflow_testexe CUDA::cudart_static)
     endif()
