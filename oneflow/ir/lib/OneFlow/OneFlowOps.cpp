@@ -287,33 +287,30 @@ void Job::build(OpBuilder& builder, OperationState& state, StringRef name, Funct
   state.addRegion();
 }
 
-static ParseResult parseJob(OpAsmParser &parser, OperationState &result) {
-  auto buildFuncType = [](Builder &builder, ArrayRef<Type> argTypes,
-                          ArrayRef<Type> results,
-                          function_like_impl::VariadicFlag, std::string &) {
-    return builder.getFunctionType(argTypes, results);
-  };
+static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
+  auto buildFuncType = [](Builder& builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+                          function_like_impl::VariadicFlag,
+                          std::string&) { return builder.getFunctionType(argTypes, results); };
 
-  return function_like_impl::parseFunctionLikeOp(
-      parser, result, /*allowVariadic=*/false, buildFuncType);
+  return function_like_impl::parseFunctionLikeOp(parser, result, /*allowVariadic=*/false,
+                                                 buildFuncType);
 }
 
-static void print(Job op, OpAsmPrinter &p) {
+static void print(Job op, OpAsmPrinter& p) {
   FunctionType fnType = op.getType();
-  function_like_impl::printFunctionLikeOp(
-      p, op, fnType.getInputs(), /*isVariadic=*/false, fnType.getResults());
+  function_like_impl::printFunctionLikeOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
+                                          fnType.getResults());
 }
 
 static LogicalResult verify(Job op) {
   // If this function is external there is nothing to do.
-  if (op.isExternal())
-    return success();
+  if (op.isExternal()) return success();
 
   // Verify that the argument list of the function and the arg list of the entry
   // block line up.  The trait already verified that the number of arguments is
   // the same between the signature and the block.
   auto fnInputTypes = op.getType().getInputs();
-  Block &entryBlock = op.front();
+  Block& entryBlock = op.front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
     if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
       return op.emitOpError("type of entry block argument #")

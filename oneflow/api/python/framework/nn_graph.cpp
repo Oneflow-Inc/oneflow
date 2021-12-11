@@ -66,18 +66,17 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
         });
   m.def("AddTensorAsGraphLoss",
         [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });
-  m.def("SaveJobToIR",
-        [](const std::string& serialized_job, const std::string& path) {
-          Job job;
-          CHECK(TxtString2PbMessage(serialized_job, &job));
-          return SaveJobToIR(&job, path).GetOrThrow();;
-        });
-  m.def("LoadSerializedJobFromIR",
-        [](const std::string& path) {
-          Job job;
-          LoadJobFromIR(&job, path).GetOrThrow();
-          return py::bytes(job.SerializeAsString());
-        });
+  m.def("SaveJobToIR", [](const std::string& serialized_job, const std::string& path) {
+    Job job;
+    CHECK(TxtString2PbMessage(serialized_job, &job));
+    return SaveJobToIR(&job, path).GetOrThrow();
+    ;
+  });
+  m.def("LoadSerializedJobFromIR", [](const std::string& path) {
+    Job job;
+    LoadJobFromIR(&job, path).GetOrThrow();
+    return py::bytes(job.SerializeAsString());
+  });
 }
 
 }  // namespace oneflow

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 #include "OneFlow/OneFlowOps.h"
@@ -55,6 +56,9 @@ LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor
                                  ::oneflow::OperatorConf* op_conf);
 LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
                                   ::oneflow::OperatorConf* op_conf);
+
+LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
+Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 
 class Importer {
  public:

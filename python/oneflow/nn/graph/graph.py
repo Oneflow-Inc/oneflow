@@ -321,23 +321,6 @@ class Graph(object):
                 assert block.type == BlockType.MODULE
                 block.debug(v_level, ranks, mode)
 
-    def save(self, path: str):
-        r"""
-        """
-        if not self._is_compiled:
-            raise RuntimeError("graph must be compiled first.")
-
-        if os.path.exists(path):
-            if not os.path.isdir(path):
-                raise RuntimeError(f"{path} is not a directory.")
-        else:
-            os.mkdir(path)
-
-        # TODO: save model parameters
-        serialized_job = str(text_format.MessageToString(self._forward_job_proto))
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, path)
-
-
     def __repr__(self):
         r"""For printing the graph structure.
 

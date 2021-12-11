@@ -380,20 +380,7 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
   }
   // attr nd_sbp
   if (op_conf.input_conf().blob_conf().has_nd_sbp()) {
-    std::vector<StringRef> nd_sbp_strref_vec;
-    nd_sbp_strref_vec.reserve(op_conf.input_conf().blob_conf().nd_sbp().sbp_parallel_size());
-    for (const auto& sbp : op_conf.input_conf().blob_conf().nd_sbp().sbp_parallel()) {
-      if (sbp.has_split_parallel()) {
-        nd_sbp_strref_vec.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
-      } else if (sbp.has_broadcast_parallel()) {
-        nd_sbp_strref_vec.emplace_back("B");
-      } else if (sbp.has_partial_sum_parallel()) {
-        nd_sbp_strref_vec.emplace_back("P");
-      } else {
-        GetModule().emitError("unsupported sbp");
-      }
-    }
-    auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_strref_vec));
+    auto nd_sbp_attr = ConvertNdSbpToAttr(GetBuilder(), op_conf.input_conf().blob_conf().nd_sbp());
     attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
   }
   // attr job_name
@@ -475,20 +462,7 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
   }
   // attr nd_sbp
   if (op_conf.output_conf().blob_conf().has_nd_sbp()) {
-    std::vector<StringRef> nd_sbp_strref_vec;
-    nd_sbp_strref_vec.reserve(op_conf.output_conf().blob_conf().nd_sbp().sbp_parallel_size());
-    for (const auto& sbp : op_conf.output_conf().blob_conf().nd_sbp().sbp_parallel()) {
-      if (sbp.has_split_parallel()) {
-        nd_sbp_strref_vec.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
-      } else if (sbp.has_broadcast_parallel()) {
-        nd_sbp_strref_vec.emplace_back("B");
-      } else if (sbp.has_partial_sum_parallel()) {
-        nd_sbp_strref_vec.emplace_back("P");
-      } else {
-        GetModule().emitError("unsupported sbp");
-      }
-    }
-    auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_strref_vec));
+    auto nd_sbp_attr = ConvertNdSbpToAttr(GetBuilder(), op_conf.output_conf().blob_conf().nd_sbp());
     attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
   }
   // attr job_name
@@ -866,8 +840,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
     std::string mlir;
     llvm::raw_string_ostream os_mlir(mlir);
     module->print(os_mlir);
-    const auto& job_name = job->job_conf().job_name();
-    std::string filename = path + "/" + job_name + ".mlir";
+    std::string filename = path + "/model.mlir";
     std::ofstream fs(filename, std::ios::trunc);
     if (!fs.is_open()) {
       llvm::errs() << "fail to open file " << filename;
@@ -876,7 +849,8 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
     fs << mlir;
     fs.close();
   } else {
-    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
+    const auto& job_name = job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job_name << "\n";
     exit(EXIT_FAILURE);
   }
 }

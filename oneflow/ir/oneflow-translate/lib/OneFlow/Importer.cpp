@@ -56,7 +56,6 @@ limitations under the License.
 
 #include <google/protobuf/text_format.h>
 
-
 namespace mlir {
 
 namespace oneflow {
@@ -351,6 +350,49 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
     return llvm::None;
   }
+}
+
+LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp) {
+  for (const auto& sbp_attr : nd_sbp_attr) {
+    auto sbp_str_attr = sbp_attr.dyn_cast<StringAttr>();
+    if (!sbp_str_attr) {
+      llvm::errs() << "nd_sbp attr is not a StrArrayAttr";
+      return failure();
+    }
+    auto sbp_strref = sbp_str_attr.getValue();
+    if (sbp_strref.startswith("S")) {
+      if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
+        llvm::errs() << "invalid sbp S(x) string value: " << sbp_strref;
+        return failure();
+      }
+      auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
+      nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(split_axis);
+    } else if (sbp_strref == "B") {
+      nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    } else if (sbp_strref == "P") {
+      nd_sbp->add_sbp_parallel()->mutable_partial_sum_parallel();
+    } else {
+      llvm::errs() << "unspported nd_sbp string value: " << sbp_strref;
+      return failure();
+    }
+  }
+  return success();
+}
+
+Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
+  llvm::SmallVector<StringRef, 2> sbp_strrefs;
+  for (const auto& sbp : nd_sbp.sbp_parallel()) {
+    if (sbp.has_split_parallel()) {
+      sbp_strrefs.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
+    } else if (sbp.has_broadcast_parallel()) {
+      sbp_strrefs.emplace_back("B");
+    } else if (sbp.has_partial_sum_parallel()) {
+      sbp_strrefs.emplace_back("P");
+    } else {
+      llvm::errs() << "unsupported sbp";
+    }
+  }
+  return builder.getStrArrayAttr(makeArrayRef(sbp_strrefs));
 }
 
 LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
@@ -781,7 +823,7 @@ LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& a
   auto* var_op_conf = op_conf->mutable_variable_conf();
   var_op_conf->set_out("out");
 
-  for (auto elem : adaptor.shape()) {
+  for (const auto& elem : adaptor.shape()) {
     var_op_conf->mutable_shape()->mutable_dim()->Add(elem.getSExtValue());
   }
 
@@ -850,24 +892,9 @@ LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor
   }
 
   if (op->hasAttr("nd_sbp")) {
-    auto* nd_sbp = input_op_conf->mutable_blob_conf()->mutable_nd_sbp()->mutable_sbp_parallel();
-    for (const auto& sbp : adaptor.nd_sbp()) {
-      auto sbp_strref = sbp.cast<StringAttr>().getValue();
-      if (sbp_strref.startswith("S")) {
-        if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
-          op->emitError("invalid sbp S(x) string value: " + sbp_strref);
-          return failure();
-        }
-        auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
-        nd_sbp->Add()->mutable_split_parallel()->set_axis(split_axis);
-      } else if (sbp_strref == "B") {
-        nd_sbp->Add()->mutable_broadcast_parallel();
-      } else if (sbp_strref == "P") {
-        nd_sbp->Add()->mutable_partial_sum_parallel();
-      } else {
-        op->emitError("unspported nd_sbp string value: " + sbp_strref);
-        return failure();
-      }
+    if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
+                                  input_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
+      return failure();
     }
   }
 
@@ -909,24 +936,9 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   }
 
   if (op->hasAttr("nd_sbp")) {
-    auto* nd_sbp = output_op_conf->mutable_blob_conf()->mutable_nd_sbp()->mutable_sbp_parallel();
-    for (const auto& sbp : adaptor.nd_sbp()) {
-      auto sbp_strref = sbp.cast<StringAttr>().getValue();
-      if (sbp_strref.startswith("S")) {
-        if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
-          op->emitError("invalid sbp S(x) string value: " + sbp_strref);
-          return failure();
-        }
-        auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
-        nd_sbp->Add()->mutable_split_parallel()->set_axis(split_axis);
-      } else if (sbp_strref == "B") {
-        nd_sbp->Add()->mutable_broadcast_parallel();
-      } else if (sbp_strref == "P") {
-        nd_sbp->Add()->mutable_partial_sum_parallel();
-      } else {
-        op->emitError("unspported nd_sbp string value: " + sbp_strref);
-        return failure();
-      }
+    if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
+                                  output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
+      return failure();
     }
   }
 
