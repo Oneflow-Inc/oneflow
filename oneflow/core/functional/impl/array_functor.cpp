@@ -399,6 +399,23 @@ class BroadcastLikeFunctor {
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& broadcast_axes) const {
     MutableAttrMap attrs;
+    if (broadcast_axes.empty()) {
+      int64_t num_prepend = like->shape()->NumAxes() - x->shape()->NumAxes();
+      std::vector<int64_t> prepend_shape(num_prepend, 1);
+      std::vector<int64_t> broadcast_axes;
+      for (int i = 0; i < x->shape()->NumAxes(); ++i) {
+        prepend_shape.emplace_back(x->shape()->At(i));
+      }
+      for (int i = 0; i < num_prepend; ++i) { broadcast_axes.emplace_back(i); }
+      for (int i = num_prepend; i < prepend_shape.size(); ++i) {
+        if (prepend_shape[i] != like->shape()->At(i)) {
+          if (prepend_shape[i] == 1) { broadcast_axes.emplace_back(i); }
+          CHECK_GE_OR_RETURN(prepend_shape[i], 1)
+              << "output with shape " << x->shape()->ToString()
+              << " doesn't match the broadcast shape " << like->shape()->ToString();
+        }
+      }
+    }
     JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
