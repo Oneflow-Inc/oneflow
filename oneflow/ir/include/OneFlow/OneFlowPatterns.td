@@ -57,6 +57,7 @@ def Conv2DPattern : Pat<
   ),
   (OutlineConv2D $conv2d_op),
   [
+    (IsNotNestedInJit $conv2d_op)
   ]
 >;
 
