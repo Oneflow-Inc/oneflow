@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
-#include <iostream>
-#include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
-#include "llvm/ADT/STLExtras.h"
+
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -50,6 +48,11 @@ limitations under the License.
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
+
+#include "llvm/ADT/STLExtras.h"
+
+#include <iostream>
+#include <string>
 
 namespace mlir {
 
