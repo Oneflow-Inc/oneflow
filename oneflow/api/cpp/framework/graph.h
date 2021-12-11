@@ -66,6 +66,7 @@ class Graph final {
   oneflow::Maybe<void> RegisterTensors();
 
   std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
+  const std::string model_path_;
   bool is_compiled_ = false;
   int batch_size_ = 0;
   XrtKind xrt_kind_ = XrtKind::kOneflow;

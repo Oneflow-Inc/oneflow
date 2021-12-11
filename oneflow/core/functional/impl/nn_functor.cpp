@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
@@ -1597,17 +1598,6 @@ class FoldFunctor {
   std::shared_ptr<OpExpr> fold_op_;
 };
 
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
-
 class OneHotFunctor {
  public:
   OneHotFunctor() {
@@ -1846,7 +1836,7 @@ class FusedBiasAddDropoutFunctor {
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
-    float scale = 0.0;
+    float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
@@ -1956,7 +1946,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
         *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
 
-    float dropout_scale = 0.0;
+    float dropout_scale = 1.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
     MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
     JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));

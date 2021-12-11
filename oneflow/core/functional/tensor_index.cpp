@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -29,17 +30,6 @@ namespace one {
 namespace functional {
 
 namespace {
-
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
 
 int64_t CountSpecifiedDims(const TensorIndex& index) {
   int64_t specified_ndims = 0;
@@ -132,7 +122,7 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
   return expanded_indices;
 }
 
-Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
+Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
   int token = 0;
   for (int i = 0; i < indices.size(); ++i) {
     if (indices.at(i) && !token) {
@@ -321,7 +311,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   CHECK_GE_OR_RETURN(input->shape()->NumAxes(), indices.size())
       << "Too many indices for tensor of dimension " << input->shape()->NumAxes();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
-  bool is_continuos_subspace = JUST(IsContinuousSubspace(indices));
+  bool is_continuos_subspace = JUST(IsContinuosSubspace(indices));
 
   // Since the start dimension cannot be specified for `gather_nd`, so we should
   // transpose the input as long as the first indice is null.

@@ -29,6 +29,7 @@ import oneflow._oneflow_internal
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
+import oneflow.nn.graph.graph as graph_util
 import pickle
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
@@ -302,6 +303,22 @@ def save(
             disk I/O.
     """
     path: Path = Path(path)
+
+    if isinstance(obj, graph_util.Graph):
+        graph: graph_util.Graph = obj
+        if not graph._is_compiled:
+            raise RuntimeError("graph must be compiled first.")
+
+        path.mkdir(exist_ok=True)
+
+        model_pb_path = path / 'model.pb'
+        model_pb_path.write_bytes(graph._graph_proto.SerializeToString())
+
+        for x in graph._state():
+            _save_tensor_to_disk(x.origin, path / f'{x.name_prefix}{x.name}')
+
+        return
+
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
     with tensor_pickling_context(path, consistent_dst_rank):
         pickled_bytes = pickle.dumps(obj)

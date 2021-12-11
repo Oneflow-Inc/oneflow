@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/graph.h"
@@ -41,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
@@ -120,12 +122,14 @@ std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& has
 
 }  // namespace
 
-Graph::Graph(const std::string& model_path, const Device& device) : device_(device) {
+Graph::Graph(const std::string& model_path, const Device& device)
+    : model_path_(model_path), device_(device) {
   // TODO(zzk0): model_path is a directory, need to concatenate filename
   // we need a mlir model name.
   {
-    std::ifstream input(model_path);
-    job_.ParseFromIstream(&input);
+    std::ifstream input(model_path + "/model.pb");
+    CHECK(input.is_open());
+    CHECK(job_.ParseFromIstream(&input));
   }
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
@@ -180,7 +184,8 @@ of::Maybe<void> Graph::AddOp(of::OperatorConf op_conf) {
 }
 
 of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
-  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(), xrt_kind_);
+  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
+                                 xrt_kind_);
   {
     // TODO(zzk0): remove this; used for input tensor order
     int input_tensor_order = 0;
@@ -228,7 +233,30 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::LoadCheckpoint() { return of::Maybe<void>::Ok(); }
+of::Maybe<void> Graph::LoadCheckpoint() {
+  for (const auto& variable_op_name_and_tensor : variable_op_name_to_tensor_) {
+    const auto& variable_op_name = variable_op_name_and_tensor.first;
+    const auto& variable_tensor = variable_op_name_and_tensor.second;
+    const std::string variable_filename = model_path_ + "/" + variable_op_name + "/out";
+    const std::string buffer = [&variable_filename]() {
+      std::ifstream variable_file(variable_filename, std::ios::binary);
+      CHECK(variable_file.is_open());
+      std::stringstream ss;
+      ss << variable_file.rdbuf();
+      return ss.str();
+    }();
+    const auto& callback =
+        std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+          CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
+              of_blob_ptr, buffer.data(),
+              variable_tensor->shape()->elem_cnt()
+                  * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+        });
+    JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
+  }
+
+  return of::Maybe<void>::Ok();
+}
 
 of::Maybe<void> Graph::RegisterTensors() {
   {
