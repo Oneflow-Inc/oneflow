@@ -21,6 +21,7 @@ class SparseOptimizer(object):
     in graph mode, use SparseOptimizer to wrap the instance of Optimizer and add SparseOptimizer
     to graph through nn.Graph.add_optimizer.
     """
+
     def __init__(self, optimizer: Optimizer):
         self._nested_optim = optimizer
 
