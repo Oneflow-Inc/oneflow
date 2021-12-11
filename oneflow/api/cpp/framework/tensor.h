@@ -46,9 +46,9 @@ class Tensor final {
   Tensor& operator=(const Tensor& tensor);
   Tensor& operator=(Tensor&& tensor) noexcept;
 
-  [[nodiscard]] const Shape shape() const;
-  [[nodiscard]] const Device device() const;
-  [[nodiscard]] const DType dtype() const;
+  [[nodiscard]] Shape shape() const;
+  [[nodiscard]] Device device() const;
+  [[nodiscard]] DType dtype() const;
 
   void zeros_();
 

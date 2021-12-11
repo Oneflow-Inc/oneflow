@@ -79,16 +79,16 @@ class IValue {
 
   ~IValue() { Destory(); }
 
-  bool IsNone();
-  bool IsInt();
-  bool IsDouble();
-  bool IsBool();
-  bool IsTensor();
-  bool IsTensorVector();
+  bool IsNone() const;
+  bool IsInt() const;
+  bool IsDouble() const;
+  bool IsBool() const;
+  bool IsTensor() const;
+  bool IsTensorVector() const;
 
-  const int64_t ToInt() const;
-  const double ToDouble() const;
-  const bool ToBool() const;
+  int64_t ToInt() const;
+  double ToDouble() const;
+  bool ToBool() const;
   const Tensor& ToTensor() const;
   const std::vector<Tensor>& ToTensorVector() const;
 

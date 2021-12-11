@@ -47,27 +47,27 @@ Tensor::Tensor(Tensor&& tensor) noexcept : tensor_(std::move(tensor.tensor_)) {}
 Tensor::~Tensor() {}
 
 Tensor& Tensor::operator=(const Tensor& tensor) {
-  tensor_.reset();
+  if (&tensor == this) { return *this; }
   tensor_ = tensor.tensor_;
   return *this;
 }
 Tensor& Tensor::operator=(Tensor&& tensor) noexcept {
-  tensor_.reset();
+  if (&tensor == this) { return *this; }
   tensor_ = std::move(tensor.tensor_);
   return *this;
 }
 
-const Shape Tensor::shape() const {
+Shape Tensor::shape() const {
   const auto shape_ = tensor_->shape();
   return Shape(std::vector<int64_t>(shape_->dim_vec().begin(), shape_->dim_vec().end()));
 }
 
-const Device Tensor::device() const {
+Device Tensor::device() const {
   const auto device_ = tensor_->device().GetOrThrow();
   return Device(device_->type(), device_->device_id());
 }
 
-const DType Tensor::dtype() const { return static_cast<DType>(tensor_->dtype()->data_type()); }
+DType Tensor::dtype() const { return static_cast<DType>(tensor_->dtype()->data_type()); }
 
 void Tensor::zeros_() {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
