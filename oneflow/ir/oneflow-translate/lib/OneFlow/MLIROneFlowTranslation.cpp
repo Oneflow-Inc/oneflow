@@ -93,7 +93,6 @@ class JobImporter : Importer {
 
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
   Type GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf);
-  Type GetDataTypeType(::oneflow::DataType dt);
 
  private:
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
@@ -718,42 +717,10 @@ LogicalResult JobImporter::ConvertOutputOp(Operation* op, ::oneflow::Job& job) {
 Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
   if (!blob_conf.has_data_type()) { return Type{}; }
   if (!blob_conf.has_shape()) { return Type{}; }
-  auto data_type = GetDataTypeType(blob_conf.data_type());
-  if (!data_type) { return Type{}; }
+  auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type());
+  if (!data_type.hasValue()) { return Type{}; }
   return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
-                               data_type);
-}
-
-Type JobImporter::GetDataTypeType(::oneflow::DataType dt) {
-  switch (dt) {
-    case ::oneflow::DataType::kDouble: {
-      return GetBuilder().getF64Type();
-    }
-    case ::oneflow::DataType::kFloat: {
-      return GetBuilder().getF32Type();
-    }
-    case ::oneflow::DataType::kFloat16: {
-      return GetBuilder().getF16Type();
-    }
-    case ::oneflow::DataType::kBFloat16: {
-      return GetBuilder().getBF16Type();
-    }
-    case ::oneflow::DataType::kInt32: {
-      return GetBuilder().getI32Type();
-    }
-    case ::oneflow::DataType::kInt64: {
-      return GetBuilder().getI64Type();
-    }
-    case ::oneflow::DataType::kInt8: {
-      return GetBuilder().getI8Type();
-    }
-    case ::oneflow::DataType::kUInt8: {
-      return GetBuilder().getIntegerType(8, false);
-    }
-    default: {
-      return Type{};
-    }
-  }
+                               *data_type);
 }
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
