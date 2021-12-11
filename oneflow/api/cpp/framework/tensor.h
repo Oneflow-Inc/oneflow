@@ -46,20 +46,20 @@ class Tensor final {
   Tensor& operator=(const Tensor& tensor);
   Tensor& operator=(Tensor&& tensor) noexcept;
 
-  const Shape shape() const;
-  const Device device() const;
-  const DType dtype() const;
+  [[nodiscard]] const Shape shape() const;
+  [[nodiscard]] const Device device() const;
+  [[nodiscard]] const DType dtype() const;
 
   void zeros_();
 
   // You should never call __internal_tensor() directly.
-  const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
+  [[nodiscard]] const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
 
   template<typename T>
   void copy_to(T* buffer);
 
-  static Tensor from_buffer(const void* buffer, const Shape& shape, const Device& device,
-                            const DType& dtype);
+  [[nodiscard]] static Tensor from_buffer(const void* buffer, const Shape& shape,
+                                          const Device& device, const DType& dtype);
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;

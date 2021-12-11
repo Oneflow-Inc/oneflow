@@ -20,6 +20,7 @@ from oneflow.compatible import single_client as flow
 from oneflow.core.common import data_type_pb2 as data_type_pb2
 
 _dtypes = [
+    flow.bool,
     flow.char,
     flow.float,
     flow.float32,
@@ -45,6 +46,7 @@ def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
 
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
+    flow.bool: np.bool,
     flow.char: np.byte,
     flow.float: np.float32,
     flow.float16: np.float16,

@@ -75,6 +75,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flatten,
+    """
+    See :func:`oneflow.flatten`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.floor,
+    """
+    See :func:`oneflow.floor`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
@@ -316,6 +330,19 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.bmm,
+    """
+    See :func:`oneflow.bmm`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.chunk,
+    """
+    See :func:`oneflow.chunk`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.cast,
@@ -323,7 +350,6 @@ add_docstr(
     See :func:`oneflow.cast`
     """,
 )
-
 
 add_docstr(
     oneflow.Tensor.diag,
@@ -649,6 +675,16 @@ add_docstr(
         >>> output = input.to(dtype=flow.float32)
         >>> np.array_equal(arr.astype(np.float32), output.numpy())
         True
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.gather,
+    """
+    oneflow.Tensor.gather(dim, index) -> Tensor
+
+    See :func:`oneflow.gather`
 
     """,
 )
