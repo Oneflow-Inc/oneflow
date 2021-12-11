@@ -72,6 +72,7 @@ from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
+from oneflow._C import chunk
 from oneflow._C import sign
 from oneflow._C import sinh
 from oneflow._C import tan
@@ -284,7 +285,6 @@ from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
-from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
