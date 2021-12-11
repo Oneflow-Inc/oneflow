@@ -27,4 +27,4 @@ Tensor relu(const Tensor& tensor);
 
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_NN_FUNCTIONAL_ACTIVATION_H_
+#endif  // ONEFLOW_API_CPP_NN_FUNCTIONAL_ACTIVATION_H_
