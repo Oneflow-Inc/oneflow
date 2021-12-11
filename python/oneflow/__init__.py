@@ -118,6 +118,7 @@ from oneflow._C import clamp
 from oneflow._C import clamp as clip
 from oneflow._C import cos
 from oneflow._C import cosh
+from oneflow._C import diagonal
 from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
