@@ -36,7 +36,7 @@ class AccKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Add> primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), in->dptr(), out->dptr(), out->mut_dptr(),
+    primitive->Launch(ctx->stream(), out->dptr(), in->dptr(), out->mut_dptr(),
                       in->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

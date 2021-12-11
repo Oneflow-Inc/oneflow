@@ -105,7 +105,7 @@ class CMNAttr final : public user_op::OpKernelState {
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     CHECK(mean_vec_.size() == 1 || mean_vec_.size() == C);
     CHECK(std_vec.size() == 1 || std_vec.size() == C);
-    for (float elem : std_vec) { inv_std_vec_.push_back(1.0f / elem); }
+    for (float elem : std_vec) { inv_std_vec_.emplace_back(1.0f / elem); }
     if (mean_vec_.size() == 1) { mean_vec_.resize(C, mean_vec_.at(0)); }
     if (inv_std_vec_.size() == 1) { inv_std_vec_.resize(C, inv_std_vec_.at(0)); }
   }

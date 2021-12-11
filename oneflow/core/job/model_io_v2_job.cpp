@@ -106,7 +106,8 @@ void MakeModelInitJob(
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
     const ParallelBlobConf& parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
-    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].push_back(variable_op_conf);
+    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].emplace_back(
+        variable_op_conf);
     OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf});
   }
@@ -148,7 +149,8 @@ void MakeModelLoadJob(
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
     const ParallelBlobConf& parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
-    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].push_back(variable_op_conf);
+    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].emplace_back(
+        variable_op_conf);
     OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf});
   }
@@ -192,7 +194,8 @@ void MakeModelSaveJob(
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
     const auto& parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
-    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].push_back(variable_op_conf);
+    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].emplace_back(
+        variable_op_conf);
     OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf});
   }

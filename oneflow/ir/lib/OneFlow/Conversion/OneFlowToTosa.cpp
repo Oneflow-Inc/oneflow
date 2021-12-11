@@ -37,8 +37,9 @@ limitations under the License.
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
-using namespace mlir;
-using namespace mlir::oneflow;
+namespace mlir {
+
+namespace oneflow {
 
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
@@ -70,8 +71,8 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
   LogicalResult matchAndRewrite(CastOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<tosa::CastOp>(op,
-                                              /* output */ op.y().getType(),
-                                              /* input */ op.x());
+                                              /* output */ op.out().getType(),
+                                              /* input */ op.in());
     return success();
   }
 };
@@ -82,7 +83,7 @@ struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLowe
 };
 }  // namespace
 
-std::unique_ptr<Pass> mlir::oneflow::createLowerOneFlowToTosaPass() {
+std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
   return std::make_unique<OneFlowLoweringToTosaPass>();
 }
 
@@ -97,3 +98,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
     signalPassFailure();
   }
 }
+
+}  // namespace oneflow
+
+}  // namespace mlir
