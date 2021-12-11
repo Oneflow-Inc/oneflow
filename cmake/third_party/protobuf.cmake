@@ -45,7 +45,6 @@ if (THIRD_PARTY)
 
 ExternalProject_Add(protobuf
     PREFIX protobuf
-    DEPENDS zlib
     URL ${PROTOBUF_URL}
     URL_MD5 ${PROTOBUF_MD5}
     UPDATE_COMMAND ""
@@ -61,6 +60,7 @@ ExternalProject_Add(protobuf
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
         -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
+        -Dprotobuf_WITH_ZLIB:BOOL=${WITH_ZLIB}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DBUILD_SHARED_LIBS:BOOL=${PROTOBUF_BUILD_SHARED_LIBS}
         -Dprotobuf_BUILD_SHARED_LIBS:BOOL=${PROTOBUF_BUILD_SHARED_LIBS}
@@ -72,6 +72,9 @@ ExternalProject_Add(protobuf
         -Dprotobuf_DEBUG_POSTFIX:STRING=
         ${PROTOBUF_ADDITIONAL_CMAKE_OPTIONS}
 )
+if (WITH_ZLIB)
+  add_dependencies(protobuf zlib)
+endif()
 else()
 add_custom_target(protobuf)
 endif(THIRD_PARTY)
