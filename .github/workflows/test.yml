@@ -538,6 +538,8 @@ jobs:
         run: |
           chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
           docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
+          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
       - name: Build documentation
         timeout-minutes: 10
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
