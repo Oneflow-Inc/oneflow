@@ -50,6 +50,8 @@ class Shape final {
 
  private:
   std::shared_ptr<oneflow::Shape> shape_ = nullptr;
+
+  friend std::ostream& operator<<(std::ostream&, const Shape&);
 };
 }  // namespace oneflow_api
 

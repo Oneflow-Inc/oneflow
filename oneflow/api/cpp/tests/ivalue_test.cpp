@@ -55,7 +55,7 @@ TEST(Api, ivalue_tensor) {
   const auto shape = RandomShape();
   const auto dtype = DType::kDouble;
 
-  const auto i_tensor = IValue(Tensor(shape, device, dtype));
+  const IValue i_tensor(Tensor(shape, device, dtype));
   const auto& tensor = i_tensor.ToTensor();
 
   ASSERT_EQ(tensor.shape(), shape);
@@ -80,6 +80,53 @@ TEST(Api, ivalue_tensor_vector) {
     ASSERT_EQ(v_tensor_vector[i].shape(), tensor_vector[i].shape());
     ASSERT_EQ(v_tensor_vector[i].dtype(), tensor_vector[i].dtype());
   }
+}
+
+TEST(Api, ivalue_copy) {
+  EnvScope scope;
+
+  const auto device = Device("cpu");
+  const auto shape = RandomShape();
+  const auto dtype = DType::kDouble;
+
+  const IValue i_tensor(Tensor(shape, device, dtype));
+  const auto i_tensor_a = i_tensor;  // NOLINT
+
+  ASSERT_EQ(i_tensor_a.ToTensor().shape(), shape);
+  ASSERT_EQ(i_tensor_a.ToTensor().device(), device);
+  ASSERT_EQ(i_tensor_a.ToTensor().dtype(), dtype);
+
+  IValue i_tensor_b;
+  i_tensor_b = i_tensor;
+
+  ASSERT_EQ(i_tensor_b.ToTensor().shape(), shape);
+  ASSERT_EQ(i_tensor_b.ToTensor().device(), device);
+  ASSERT_EQ(i_tensor_b.ToTensor().dtype(), dtype);
+}
+
+TEST(Api, ivalue_move) {
+  EnvScope scope;
+
+  const auto device = Device("cpu");
+  const auto shape = RandomShape();
+  const auto dtype = DType::kDouble;
+
+  IValue i_tensor_a = IValue(Tensor(shape, device, dtype));
+  IValue i_tensor_b = IValue(Tensor(shape, device, dtype));
+
+  IValue i_tensor_c = std::move(i_tensor_a);
+  ASSERT_EQ(i_tensor_c.ToTensor().shape(), shape);
+  ASSERT_EQ(i_tensor_c.ToTensor().device(), device);
+  ASSERT_EQ(i_tensor_c.ToTensor().dtype(), dtype);
+
+  IValue i_tensor_d;
+  i_tensor_d = std::move(i_tensor_b);
+  ASSERT_EQ(i_tensor_d.ToTensor().shape(), shape);
+  ASSERT_EQ(i_tensor_d.ToTensor().device(), device);
+  ASSERT_EQ(i_tensor_d.ToTensor().dtype(), dtype);
+
+  ASSERT_EQ(i_tensor_a.IsNone(), true);
+  ASSERT_EQ(i_tensor_b.IsNone(), true);
 }
 
 }  // namespace oneflow_api

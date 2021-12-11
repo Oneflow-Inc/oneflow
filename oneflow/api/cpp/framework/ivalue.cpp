@@ -25,6 +25,8 @@ std::ostream& operator<<(std::ostream& os, const IValue::Tag& tag) {
   return os;
 }
 
+bool IValue::IsNone() { return tag_ == Tag::kNone; }
+
 bool IValue::IsInt() { return tag_ == Tag::kInt; }
 
 bool IValue::IsDouble() { return tag_ == Tag::kDouble; }

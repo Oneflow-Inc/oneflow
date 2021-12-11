@@ -25,6 +25,7 @@ namespace oneflow_api {
 
 class IValue {
  public:
+  IValue() : tag_(IValue::Tag::kNone) {}
   explicit IValue(int value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
 
   explicit IValue(int64_t value) : tag_(IValue::Tag::kInt) { payload_.i.v_int = value; }
@@ -51,19 +52,34 @@ class IValue {
 
   IValue(const IValue& value) : tag_(value.tag_) {
     if (IsTensor()) {
-      new (&payload_.v_tensor) Tensor(value.ToTensor());
+      new (&payload_.v_tensor) Tensor(value.payload_.v_tensor);
     } else if (IsTensorVector()) {
-      new (&payload_.v_tensor_vector) std::vector<Tensor>(value.ToTensorVector());
+      new (&payload_.v_tensor_vector) std::vector<Tensor>(value.payload_.v_tensor_vector);
     } else {
       payload_.i = value.payload_.i;
     }
   }
 
-  ~IValue() {
-    if (IsTensor()) { payload_.v_tensor.~Tensor(); }
-    if (IsTensorVector()) { payload_.v_tensor_vector.~vector(); }
+  IValue(IValue&& value) noexcept : tag_(value.tag_) { MoveFrom(std::move(value)); }
+
+  IValue& operator=(const IValue& value) {
+    if (&value == this) { return *this; }
+    this->tag_ = value.tag_;
+    *this = IValue(value);
+    return *this;
   }
 
+  IValue& operator=(IValue&& value) noexcept {
+    if (&value == this) { return *this; }
+    Destory();
+    this->tag_ = value.tag_;
+    MoveFrom(std::move(value));
+    return *this;
+  }
+
+  ~IValue() { Destory(); }
+
+  bool IsNone();
   bool IsInt();
   bool IsDouble();
   bool IsBool();
@@ -77,7 +93,7 @@ class IValue {
   const std::vector<Tensor>& ToTensorVector() const;
 
  private:
-  enum class Tag { kInt = 0, kDouble = 1, kBool = 2, kTensor = 3, kTensorVector = 4 };
+  enum class Tag { kNone = 0, kInt = 1, kDouble = 2, kBool = 3, kTensor = 4, kTensorVector = 5 };
   friend std::ostream& operator<<(std::ostream&, const Tag&);
 
   union Payload {  // NOLINT
@@ -98,6 +114,29 @@ class IValue {
 
   Payload payload_;
   Tag tag_;
+
+  inline void Destory() {
+    if (IsTensor()) { payload_.v_tensor.~Tensor(); }
+    if (IsTensorVector()) { payload_.v_tensor_vector.~vector(); }
+  }
+
+  inline void MoveFrom(IValue&& value) {
+    if (IsTensor()) {
+      new (&payload_.v_tensor) Tensor(std::move(value.payload_.v_tensor));
+    } else if (IsTensorVector()) {
+      new (&payload_.v_tensor_vector)
+          std::vector<Tensor>(std::move(value.payload_.v_tensor_vector));
+    } else {
+      payload_.i = value.payload_.i;
+    }
+    value.ClearToNone();
+  }
+
+  inline void ClearToNone() {
+    Destory();
+    payload_.i.v_int = 0;
+    tag_ = Tag::kNone;
+  }
 };
 
 }  // namespace oneflow_api
