@@ -580,6 +580,10 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
+def _chunk(self, chunks=None, dim=None):
+    return flow._C.chunk(self, chunks, dim)
+
+
 def _all(self, dim=None, keepdim=False):
     return flow.all(self, dim, keepdim)
 
@@ -869,6 +873,7 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.bmm = _bmm
+    Tensor.chunk = _chunk
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
