@@ -50,7 +50,7 @@ class CriticalSectionWaitTickOp final : public Operator {
 };
 
 Maybe<void> CriticalSectionWaitTickOp::InitFromOpConf() {
-  CHECK(op_conf().has_critical_section_wait_tick_conf());
+  CHECK_OR_RETURN(op_conf().has_critical_section_wait_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
   return Maybe<void>::Ok();
