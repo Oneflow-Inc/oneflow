@@ -79,12 +79,17 @@ class IValue {
 
   ~IValue() { Destory(); }
 
-  bool IsNone() const;
-  bool IsInt() const;
-  bool IsDouble() const;
-  bool IsBool() const;
-  bool IsTensor() const;
-  bool IsTensorVector() const;
+  bool IsNone() const { return tag_ == Tag::kNone; }
+
+  bool IsInt() const { return tag_ == Tag::kInt; }
+
+  bool IsDouble() const { return tag_ == Tag::kDouble; }
+
+  bool IsBool() const { return tag_ == Tag::kBool; }
+
+  bool IsTensor() const { return tag_ == Tag::kTensor; }
+
+  bool IsTensorVector() const { return tag_ == Tag::kTensorVector; }
 
   int64_t ToInt() const;
   double ToDouble() const;

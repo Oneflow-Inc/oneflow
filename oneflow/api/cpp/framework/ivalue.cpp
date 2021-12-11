@@ -25,18 +25,6 @@ std::ostream& operator<<(std::ostream& os, const IValue::Tag& tag) {
   return os;
 }
 
-bool IValue::IsNone() const { return tag_ == Tag::kNone; }
-
-bool IValue::IsInt() const { return tag_ == Tag::kInt; }
-
-bool IValue::IsDouble() const { return tag_ == Tag::kDouble; }
-
-bool IValue::IsBool() const { return tag_ == Tag::kBool; }
-
-bool IValue::IsTensor() const { return tag_ == Tag::kTensor; }
-
-bool IValue::IsTensorVector() const { return tag_ == Tag::kTensorVector; }
-
 int64_t IValue::ToInt() const {
   CHECK_EQ(tag_, Tag::kInt) << "Current value is not an int.";
   return payload_.i.v_int;
