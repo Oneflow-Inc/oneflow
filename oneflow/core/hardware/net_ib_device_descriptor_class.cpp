@@ -14,20 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/device/device_descriptor_class.h"
-#include "oneflow/core/device/cuda_device_descriptor.h"
-#include "oneflow/core/device/basic_device_descriptor_list.h"
+#include "oneflow/core/hardware/device_descriptor_class.h"
+#include "oneflow/core/hardware/net_ib_device_descriptor.h"
+#include "oneflow/core/hardware/basic_device_descriptor_list.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/common/str_util.h"
 #include <json.hpp>
 
-#ifdef WITH_CUDA
+#ifdef WITH_RDMA
 
 namespace oneflow {
 
-namespace device {
+namespace hardware {
 
 namespace {
 
@@ -35,36 +34,48 @@ constexpr char kJsonKeyDevices[] = "devices";
 
 }  // namespace
 
-class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
+class NetIBDeviceDescriptorClass : public DeviceDescriptorClass {
  public:
-  CudaDeviceDescriptorClass() = default;
-  ~CudaDeviceDescriptorClass() override = default;
+  NetIBDeviceDescriptorClass() = default;
+  ~NetIBDeviceDescriptorClass() override = default;
 
   std::shared_ptr<const DeviceDescriptorList> QueryDeviceDescriptorList() const override {
-    int n_dev;
-    cudaError_t err = cudaGetDeviceCount(&n_dev);
-    if (err != cudaSuccess) {
-      LOG(WARNING) << cudaGetErrorString(err);
-      return std::make_shared<const BasicDeviceDescriptorList>(
-          std::vector<std::shared_ptr<const DeviceDescriptor>>());
+    std::vector<std::shared_ptr<const DeviceDescriptor>> devices;
+    int num_devices;
+    if (!ibv::IsAvailable()) { return std::make_shared<const BasicDeviceDescriptorList>(devices); }
+    ibv_device** device_list = ibv::wrapper.ibv_get_device_list(&num_devices);
+    if (device_list == nullptr) {
+      return std::make_shared<const BasicDeviceDescriptorList>(devices);
     }
-    OF_CUDA_CHECK(err);
-    std::vector<std::shared_ptr<const DeviceDescriptor>> devices(n_dev);
-    for (int dev = 0; dev < n_dev; ++dev) { devices.at(dev) = CudaDeviceDescriptor::Query(dev); }
+    for (int i = 0; i < num_devices; ++i) {
+      ibv_device* device = device_list[i];
+      ibv_context* context = ibv::wrapper.ibv_open_device(device);
+      if (context == nullptr) { continue; }
+      ibv_device_attr device_attr{};
+      if (ibv::wrapper.ibv_query_device(context, &device_attr) != 0) {
+        CHECK_EQ(ibv::wrapper.ibv_close_device(context), 0);
+      }
+      for (int port = 1; port <= device_attr.phys_port_cnt; ++port) {
+        auto device_desc =
+            NetIBDeviceDescriptor::Query(static_cast<int32_t>(devices.size()), context, port);
+        if (device_desc) { devices.emplace_back(device_desc); }
+      }
+    }
+    ibv::wrapper.ibv_free_device_list(device_list);
     return std::make_shared<const BasicDeviceDescriptorList>(devices);
   }
 
-  std::string Name() const override { return kCudaDeviceDescriptorClassName; }
+  std::string Name() const override { return kNetIBDeviceDescriptorClassName; }
 
   void SerializeDeviceDescriptorList(const std::shared_ptr<const DeviceDescriptorList>& list,
                                      std::string* serialized) const override {
     std::vector<std::string> serialized_devices;
     serialized_devices.reserve(list->DeviceCount());
     for (size_t i = 0; i < list->DeviceCount(); ++i) {
-      auto cuda_device = std::dynamic_pointer_cast<const CudaDeviceDescriptor>(list->GetDevice(i));
-      CHECK(cuda_device);
+      auto ib_device = std::dynamic_pointer_cast<const NetIBDeviceDescriptor>(list->GetDevice(i));
+      CHECK(ib_device);
       std::string serialized_device;
-      cuda_device->Serialize(&serialized_device);
+      ib_device->Serialize(&serialized_device);
       serialized_devices.emplace_back(std::move(serialized_device));
     }
     nlohmann::json json_object;
@@ -78,7 +89,7 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
     std::vector<std::string> serialized_devices = json_object[kJsonKeyDevices];
     std::vector<std::shared_ptr<const DeviceDescriptor>> devices(serialized_devices.size());
     for (int i = 0; i < serialized_devices.size(); ++i) {
-      devices.at(i) = CudaDeviceDescriptor::Deserialize(serialized_devices.at(i));
+      devices.at(i) = NetIBDeviceDescriptor::Deserialize(serialized_devices.at(i));
     }
     return std::make_shared<const BasicDeviceDescriptorList>(devices);
   }
@@ -86,20 +97,20 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
   void DumpDeviceDescriptorListSummary(const std::shared_ptr<const DeviceDescriptorList>& list,
                                        const std::string& path) const override {
     for (size_t i = 0; i < list->DeviceCount(); ++i) {
-      auto cuda_device = std::dynamic_pointer_cast<const CudaDeviceDescriptor>(list->GetDevice(i));
-      CHECK(cuda_device);
+      auto ib_device = std::dynamic_pointer_cast<const NetIBDeviceDescriptor>(list->GetDevice(i));
+      CHECK(ib_device);
       auto stream = TeePersistentLogStream::Create(JoinPath(path, std::to_string(i) + ".json"));
       std::string serialized;
-      cuda_device->Serialize(&serialized);
+      ib_device->Serialize(&serialized);
       stream << serialized;
     }
   }
 };
 
-COMMAND(DeviceDescriptorClass::RegisterClass(std::make_shared<CudaDeviceDescriptorClass>()));
+COMMAND(DeviceDescriptorClass::RegisterClass(std::make_shared<NetIBDeviceDescriptorClass>()));
 
-}  // namespace device
+}  // namespace hardware
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA
+#endif  // WITH_RDMA

@@ -672,3 +672,13 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.gather,
+    """
+    oneflow.Tensor.gather(dim, index) -> Tensor
+
+    See :func:`oneflow.gather`
+
+    """,
+)

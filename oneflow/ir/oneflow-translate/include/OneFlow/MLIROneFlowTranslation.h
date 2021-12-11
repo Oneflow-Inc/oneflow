@@ -34,6 +34,8 @@ using UserOpArgDefs = const ::google::protobuf::RepeatedPtrField<::oneflow::User
 
 namespace mlir {
 
+namespace oneflow {
+
 // TODO: wrap in a helper namespace
 
 LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
@@ -45,7 +47,8 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 ResultRange GetDataOutputResults(Operation* op);
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
 llvm::Optional<std::string> GetOutputLbn(OpResult result);
-LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified);
+llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
+                                                            ::oneflow::DataType oneflow_value);
 LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
                                     ::oneflow::OperatorConf* op_conf);
 LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
@@ -151,6 +154,8 @@ void registerFromOneFlowJobTranslation();
 
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
+
+}  // namespace oneflow
 
 }  // namespace mlir
 

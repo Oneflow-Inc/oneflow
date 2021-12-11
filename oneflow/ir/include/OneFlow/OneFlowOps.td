@@ -1,11 +1,10 @@
 #ifndef ONEFLOW_OPS
 #define ONEFLOW_OPS
 
-include "OneFlowDialect.td"
-include "OneFlowEnums.td"
-include "OneFlowInterfaces.td"
-include "OneFlowBase.td"
-
+include "OneFlow/OneFlowDialect.td"
+include "OneFlow/OneFlowEnums.td"
+include "OneFlow/OneFlowInterfaces.td"
+include "OneFlow/OneFlowBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
@@ -95,8 +94,8 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 }
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible, 
-        OneFlow_IsImportCompatible, 
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
+        OneFlow_IsImportCompatible,
         DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
   let input = (ins);
   let output = (ins);
@@ -113,10 +112,11 @@ class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
 
 def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
   let summary = "";
+  let input = (ins);
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     AnyI64ElementsAttr:$shape,
-    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
     DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
     DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
@@ -131,11 +131,16 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     OptionalAttr<AnyI64ElementsAttr>:$shape,
-    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     OptionalAttr<BoolAttr>:$is_dynamic,
     OptionalAttr<StrArrayAttr>:$nd_sbp,
     OptionalAttr<StrAttr>:$job_name
   );
+  let builders = [
+    OpBuilder<(ins
+      "::oneflow::OperatorConf":$op_conf
+    )>
+  ];
 }
 
 def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
@@ -144,7 +149,7 @@ def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
     OptionalAttr<AnyI64ElementsAttr>:$shape,
-    OptionalAttr<StrAttr>:$data_type,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     OptionalAttr<BoolAttr>:$is_dynamic,
     OptionalAttr<StrArrayAttr>:$nd_sbp,
     OptionalAttr<StrAttr>:$job_name
@@ -178,9 +183,9 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 
-  let printer = [{ return ::print(p, *this); }];
-  let verifier = [{ return ::verify(*this); }];
-  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::mlir::oneflow::print(p, *this); }];
+  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+  let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
 }
 
 #endif // ONEFLOW_OPS

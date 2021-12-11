@@ -54,7 +54,7 @@ bool IsLastIRPassForIRPassType<kAfterAD>() {
 }
 
 template<IRPassType ir_pass_type>
-class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
+class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrapperInterface {
  public:
   RoundTripOneFlowJobWrapper(::oneflow::Job* job)
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
@@ -72,7 +72,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
   }
 
-  const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
+  const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
     return job_builder_.ParallelConf4OpName(op_name);
   }
   const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const override {
@@ -132,7 +132,8 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
        blob_desc.data_type());
   }
 
-  void TopoForEachOpConf(std::function<void(const ::oneflow::OperatorConf*)> Handler) const override {
+  void TopoForEachOpConf(
+      std::function<void(const ::oneflow::OperatorConf*)> Handler) const override {
     op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
@@ -161,7 +162,7 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
   RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
   TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
       ->Write(*job);
-  mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
+  mlir::oneflow::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
     // TODO: It is not clear how to define if extra boxing is introduced
     TODO();
     return true;
@@ -180,14 +181,14 @@ Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
     TeePersistentLogStream::Create("saved_job")->Write(*job);
   }
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
-  ::mlir::SaveJobToIR(job_wrapper, path);
+  ::mlir::oneflow::SaveJobToIR(job_wrapper, path);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
   job->Clear();
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
-  ::mlir::LoadJobFromIR(job_wrapper, path);
+  ::mlir::oneflow::LoadJobFromIR(job_wrapper, path);
   return Maybe<void>::Ok();
 }
 

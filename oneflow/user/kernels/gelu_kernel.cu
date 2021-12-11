@@ -24,13 +24,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct GeluFunctor {
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return static_cast<T>(0.5) * x * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x));
-  }
-};
-
-template<typename T>
 struct GeluGradFunctor {
   const T coef = std::sqrt(static_cast<T>(2.0) / std::acos(static_cast<T>(-1.0)));
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
@@ -38,14 +31,6 @@ struct GeluGradFunctor {
            * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
               + x * coef * exp(static_cast<T>(-0.5) * x * x))
            * dy;
-  }
-};
-
-template<>
-struct GeluFunctor<half> {
-  GeluFunctor<float> float_functor;
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
   }
 };
 
@@ -58,35 +43,6 @@ struct GeluGradFunctor<half> {
 };
 
 }  // namespace
-
-template<typename T>
-class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  GpuGeluKernel() = default;
-  ~GpuGeluKernel() override = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK(
-        (cuda::elementwise::Unary(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(), x->dptr<T>(),
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
-  };
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_CUDA_GELU_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("gelu").SetCreateFn<GpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCUDA)                               \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
-
-REGISTER_CUDA_GELU_KERNEL(float)
-REGISTER_CUDA_GELU_KERNEL(double)
-REGISTER_CUDA_GELU_KERNEL(half)
 
 template<typename T>
 class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
