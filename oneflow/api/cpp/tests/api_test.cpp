@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/api/cpp/tests/api_test.h"
-#include <cstdint>
 #include <random>
 
 namespace oneflow_api {
