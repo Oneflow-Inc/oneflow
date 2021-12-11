@@ -26,10 +26,11 @@ struct ScaleMaskLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) {
     cuda::softmax::Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -53,9 +54,10 @@ struct ScaleMaskStore {
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -64,7 +66,7 @@ struct ScaleMaskStore {
         pack.elem[i] = static_cast<DST>(src[i]) * static_cast<DST>(scale);
       }
     }
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
   const int8_t* mask;
@@ -80,10 +82,11 @@ struct DropoutLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask_pack.elem[i])
@@ -104,18 +107,19 @@ struct DropoutStore {
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> softmax_y_pack;
     cuda::softmax::Pack<DST, N> dst_pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       softmax_y_pack.elem[i] = static_cast<DST>(src[i]);
       dst_pack.elem[i] =
           static_cast<DST>(src[i]) * static_cast<DST>(mask_pack.elem[i]) * static_cast<DST>(scale);
     }
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_y + offset) =
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_y) + offset) =
         softmax_y_pack.storage;
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
   }
   DST* dst;
   DST* softmax_y;
