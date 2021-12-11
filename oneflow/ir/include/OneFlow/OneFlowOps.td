@@ -5,6 +5,7 @@ include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowEnums.td"
 include "OneFlow/OneFlowInterfaces.td"
 include "OneFlow/OneFlowBase.td"
+
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"

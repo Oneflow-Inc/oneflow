@@ -3,7 +3,6 @@
 
 include "mlir/IR/OpBase.td"
 
-
 def OneFlow_Dialect : Dialect {
     let name = "oneflow";
     let summary = "OneFlow MLIR dialect.";

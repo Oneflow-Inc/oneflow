@@ -13,6 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/interface_blob_conf.pb.h"
+
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
+
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -42,29 +55,7 @@ limitations under the License.
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OneFlowOps.h"
-#include "OneFlow/MLIROneFlowTranslation.h"
-#include "OneFlow/Passes.h"
-
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/operator/interface_blob_conf.pb.h"
-
-#include <cstddef>
-#include <cstdint>
 #include <google/protobuf/text_format.h>
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <map>
-#include <new>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 namespace mlir {
 

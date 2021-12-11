@@ -16,15 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
 #define ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/MLIRContext.h"
-
-#include "OneFlow/OneFlowOps.h"
-
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+
+#include "OneFlow/OneFlowOps.h"
+
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/MLIRContext.h"
 
 #include <functional>
 #include <string>
