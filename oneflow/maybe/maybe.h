@@ -190,57 +190,57 @@ struct OF_MAYBE_NODISCARD_TYPE Maybe : private details::MaybeStorage<T, E> {
  public:
   using Base::Base;
 
-  bool IsOk() const { return Base::IsOk(); }
-  bool IsErr() const { return !Base::IsOk(); }
+  OF_MAYBE_NODISCARD_FUNC bool IsOk() const { return Base::IsOk(); }
+  OF_MAYBE_NODISCARD_FUNC bool IsErr() const { return !Base::IsOk(); }
   explicit operator bool() const { return IsOk(); }
 
-  decltype(auto) GetStackedError() & {
+  OF_MAYBE_NODISCARD_FUNC decltype(auto) GetStackedError() & {
     OF_MAYBE_ASSERT(IsErr());
     return StackedError();
   }
 
-  decltype(auto) GetStackedError() const& {
+  OF_MAYBE_NODISCARD_FUNC decltype(auto) GetStackedError() const& {
     OF_MAYBE_ASSERT(IsErr());
     return StackedError();
   }
 
-  decltype(auto) GetStackedError() && {
+  OF_MAYBE_NODISCARD_FUNC decltype(auto) GetStackedError() && {
     OF_MAYBE_ASSERT(IsErr());
     return std::move(*this).StackedError();
   }
 
-  decltype(auto) GetError() & {
+  OF_MAYBE_NODISCARD_FUNC decltype(auto) GetError() & {
     OF_MAYBE_ASSERT(IsErr());
     return Error();
   }
 
-  decltype(auto) GetError() const& {
+  OF_MAYBE_NODISCARD_FUNC decltype(auto) GetError() const& {
     OF_MAYBE_ASSERT(IsErr());
     return Error();
   }
 
-  decltype(auto) GetError() && {
+  OF_MAYBE_NODISCARD_FUNC decltype(auto) GetError() && {
     OF_MAYBE_ASSERT(IsErr());
     return std::move(*this).Error();
   }
 
   template<typename F>
-  auto Map(F&& f) const& {
+  OF_MAYBE_NODISCARD_FUNC auto Map(F&& f) const& {
     return details::MaybePrivateScope::Map(*this, std::forward<F>(f));
   }
 
   template<typename F>
-  auto Map(F&& f) && {
+  OF_MAYBE_NODISCARD_FUNC auto Map(F&& f) && {
     return details::MaybePrivateScope::Map(std::move(*this), std::forward<F>(f));
   }
 
   template<typename F>
-  auto Bind(F&& f) const& {
+  OF_MAYBE_NODISCARD_FUNC auto Bind(F&& f) const& {
     return details::MaybePrivateScope::Bind(*this, std::forward<F>(f));
   }
 
   template<typename F>
-  auto Bind(F&& f) && {
+  OF_MAYBE_NODISCARD_FUNC auto Bind(F&& f) && {
     return details::MaybePrivateScope::Bind(std::move(*this), std::forward<F>(f));
   }
 };

@@ -91,7 +91,7 @@ TEST(Just, MaybeVoid) {
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
       CHECK_JUST(h(x)), R"(not in range.*lambda.*f\(x\).*lambda.*g\(x\).*TestBody.*h\(x\))");
 
-  h(x);  // NOLINT
+  [[maybe_unused]] auto _ = h(x);  // NOLINT
   ASSERT_EQ(x, 13);
 }
 

@@ -237,7 +237,7 @@ struct OptionalPrivateScope {
 // unlike Variant, type arguments can be cv qualified or lvalue referenced
 // this Optional DO NOT guarantee exception safty
 template<typename T>
-struct Optional {
+struct OF_MAYBE_NODISCARD_TYPE Optional {
  protected:
   details::OptionalStorage<T> storage_;
 
@@ -310,7 +310,7 @@ struct Optional {
     return *this;
   }
 
-  bool HasValue() const { return storage_.HasValue(); }
+  OF_MAYBE_NODISCARD_FUNC bool HasValue() const { return storage_.HasValue(); }
   explicit operator bool() const { return HasValue(); }
 
   bool operator==(const Optional& opt) const {
@@ -450,32 +450,32 @@ struct Optional {
   void Reset() { storage_.Reset(); }
 
   template<typename F>
-  auto Map(F&& f) const& {
+  OF_MAYBE_NODISCARD_FUNC auto Map(F&& f) const& {
     return details::OptionalPrivateScope::Map(*this, std::forward<F>(f));
   }
 
   template<typename F>
-  auto Map(F&& f) && {
+  OF_MAYBE_NODISCARD_FUNC auto Map(F&& f) && {
     return details::OptionalPrivateScope::Map(std::move(*this), std::forward<F>(f));
   }
 
   template<typename F>
-  auto Bind(F&& f) const& {
+  OF_MAYBE_NODISCARD_FUNC auto Bind(F&& f) const& {
     return details::OptionalPrivateScope::Bind(*this, std::forward<F>(f));
   }
 
   template<typename F>
-  auto Bind(F&& f) && {
+  OF_MAYBE_NODISCARD_FUNC auto Bind(F&& f) && {
     return details::OptionalPrivateScope::Bind(std::move(*this), std::forward<F>(f));
   }
 
   template<typename F>
-  auto OrElse(F&& f) const& {
+  OF_MAYBE_NODISCARD_FUNC auto OrElse(F&& f) const& {
     return details::OptionalPrivateScope::OrElse(*this, std::forward<F>(f));
   }
 
   template<typename F>
-  auto OrElse(F&& f) && {
+  OF_MAYBE_NODISCARD_FUNC auto OrElse(F&& f) && {
     return details::OptionalPrivateScope::OrElse(std::move(*this), std::forward<F>(f));
   }
 };

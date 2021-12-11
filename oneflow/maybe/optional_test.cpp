@@ -281,7 +281,7 @@ TEST(Optional, Monadic) {
             Optional<bool>(true));
 
   int x = 0;
-  b.OrElse([&] { x++; }).OrElse([&] { x *= 2; });
+  [[maybe_unused]] auto _ = b.OrElse([&] { x++; }).OrElse([&] { x *= 2; });
   ASSERT_EQ(x, 2);
   ASSERT_EQ(b.OrElse([] { return Optional<int>(3); }).Map([](int x) { return x - 1; }), c);
 }
