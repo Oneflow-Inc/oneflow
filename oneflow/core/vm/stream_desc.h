@@ -59,22 +59,20 @@ class StreamId final {
 class StreamDesc final : public intrusive::Base {
  public:
   // Getters
-  int32_t num_machines() const { return num_machines_; }
   int32_t num_streams_per_machine() const { return num_streams_per_machine_; }
   int32_t num_streams_per_thread() const { return num_streams_per_thread_; }
   const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
   // Setters
-  void set_num_machines(int32_t val) { num_machines_ = val; }
   void set_num_streams_per_machine(int32_t val) { num_streams_per_machine_ = val; }
   void set_num_streams_per_thread(int32_t val) { num_streams_per_thread_ = val; }
   StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
 
   // methods
   void __Init__() {}
-  void __Init__(const StreamTypeId& stream_type_id, int32_t num_machines,
-                int32_t num_streams_per_machine, int32_t num_streams_per_thread);
+  void __Init__(const StreamTypeId& stream_type_id, int32_t num_streams_per_machine,
+                int32_t num_streams_per_thread);
   int32_t num_threads() const;
-  int32_t parallel_num() const { return num_machines() * num_streams_per_machine(); }
+  int32_t parallel_num() const { return num_streams_per_machine(); }
 
  private:
   friend class intrusive::Ref;
@@ -82,13 +80,11 @@ class StreamDesc final : public intrusive::Base {
 
   StreamDesc()
       : intrusive_ref_(),
-        num_machines_(),
         num_streams_per_machine_(),
         num_streams_per_thread_(),
         stream_type_id_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  int32_t num_machines_;
   int32_t num_streams_per_machine_;
   int32_t num_streams_per_thread_;
 
