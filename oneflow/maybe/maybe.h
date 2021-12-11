@@ -157,7 +157,7 @@ struct MaybePrivateScope {
 
 // A type which can be either a value typed T, or a stacked error typed E
 template<typename T, typename E>
-struct Maybe : private details::MaybeStorage<T, E> {
+struct OF_MAYBE_NODISCARD_TYPE Maybe : private details::MaybeStorage<T, E> {
   static_assert(!std::is_reference<E>::value, "error type cannot be reference");
   static_assert(!(std::is_const<E>::value || std::is_volatile<E>::value),
                 "error type cannot be cv-qualified");

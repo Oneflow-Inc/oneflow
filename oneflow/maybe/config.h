@@ -54,4 +54,13 @@ limitations under the License.
 // `__builtin_expect` exists at least since GCC 4 / Clang 3
 #define OF_MAYBE_EXPECT_FALSE(x) (__builtin_expect((x), 0))
 
+#if __has_cpp_attribute(nodiscard)
+#define OF_MAYBE_NODISCARD_FUNC [[nodiscard]]
+#define OF_MAYBE_NODISCARD_TYPE [[nodiscard]]
+#elif __has_attribute(warn_unused_result)
+#define OF_MAYBE_NODISCARD_FUNC \
+  __attribute__((warn_unused_result))  // or [[gnu::warn_unused_result]]
+#define OF_MAYBE_NODISCARD_TYPE
+#endif
+
 #endif  // ONEFLOW_MAYBE_CONFIG_H_
