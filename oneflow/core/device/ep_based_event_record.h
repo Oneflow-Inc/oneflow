@@ -23,7 +23,7 @@ namespace oneflow {
 
 class EpBasedEventRecord : public EventRecord {
  public:
-  OF_DISALLOW_COPY(EpBasedEventRecord);
+  OF_DISALLOW_COPY_AND_MOVE(EpBasedEventRecord);
   EpBasedEventRecord(ep::Event* event, ep::Device* device) : event_(event), device_(device) {}
   ~EpBasedEventRecord() {
     ep::ActiveDeviceGuard guard(device_);

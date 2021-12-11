@@ -50,7 +50,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 
   void Compute(vm::Instruction* instruction) const override {
-    OF_PROFILER_RANGE_PUSH("CriticalSectionBegin");
+    OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
       auto ptr = instruction->instr_msg().phy_instr_operand();
       auto phy_instr_operand = std::dynamic_pointer_cast<CriticalSectionBeginPhyInstrOperand>(ptr);
@@ -78,7 +78,6 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
       auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
       status_querier->SetLaunched(std::make_shared<NaiveEventRecord>());
     }
-    OF_PROFILER_RANGE_POP();  // CriticalSectionBegin
   }
 
  private:
