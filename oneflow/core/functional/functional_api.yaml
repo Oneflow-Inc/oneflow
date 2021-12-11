@@ -1696,6 +1696,12 @@
   ]
   bind_python: True
 
+- name: "chunk"
+  signature: [
+    "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
+  ]
+  bind_python: True
+
 - name: "split_like"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
