@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/OneFlowEnums.h.inc"
+#include "OneFlow/OneFlowOpTraits.h"
 
 namespace mlir {
 
@@ -53,6 +54,6 @@ inline std::string GetOpTypeName(T op) {
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 #define GET_OP_CLASSES
-#include "OneFlow/OneFlow.Ops.h.inc"
+#include "OneFlow/OneFlow.gen_ops.h.inc"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_
