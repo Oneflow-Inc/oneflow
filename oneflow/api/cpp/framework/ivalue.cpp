@@ -38,27 +38,27 @@ bool IValue::IsTensor() { return tag_ == Tag::kTensor; }
 bool IValue::IsTensorVector() { return tag_ == Tag::kTensorVector; }
 
 const int64_t IValue::ToInt() const {
-  CHECK_EQ(tag_, Tag::kInt) << "Current value is not int.";
+  CHECK_EQ(tag_, Tag::kInt) << "Current value is not an int.";
   return payload_.i.v_int;
 }
 
 const double IValue::ToDouble() const {
-  CHECK_EQ(tag_, Tag::kDouble) << "Current value is not double.";
+  CHECK_EQ(tag_, Tag::kDouble) << "Current value is not a double.";
   return payload_.i.v_double;
 }
 
 const bool IValue::ToBool() const {
-  CHECK_EQ(tag_, Tag::kBool) << "Current value is not bool.";
+  CHECK_EQ(tag_, Tag::kBool) << "Current value is not a bool.";
   return payload_.i.v_bool;
 }
 
 const Tensor& IValue::ToTensor() const {
-  CHECK_EQ(tag_, Tag::kTensor) << "Current value is not tensor.";
+  CHECK_EQ(tag_, Tag::kTensor) << "Current value is not a tensor.";
   return payload_.v_tensor;
 }
 
 const std::vector<Tensor>& IValue::ToTensorVector() const {
-  CHECK_EQ(tag_, Tag::kTensorVector) << "Current value is not vector of tensor.";
+  CHECK_EQ(tag_, Tag::kTensorVector) << "Current value is not a vector of tensor.";
   return payload_.v_tensor_vector;
 }
 

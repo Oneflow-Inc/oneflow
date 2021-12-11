@@ -34,19 +34,19 @@ class IValue {
 
   explicit IValue(bool value) : tag_(IValue::Tag::kBool) { payload_.i.v_bool = value; }
 
-  explicit IValue(const Tensor& value) : tag_(IValue::Tag::kTensor) {
+  IValue(const Tensor& value) : tag_(IValue::Tag::kTensor) {  // NOLINT
     new (&payload_.v_tensor) Tensor(value);
   }
 
-  explicit IValue(Tensor&& value) : tag_(IValue::Tag::kTensor) {
+  IValue(Tensor&& value) : tag_(IValue::Tag::kTensor) {  // NOLINT
     new (&payload_.v_tensor) Tensor(std::move(value));
   }
 
-  explicit IValue(const std::vector<Tensor>& value) : tag_(IValue::Tag::kTensorVector) {
+  IValue(const std::vector<Tensor>& value) : tag_(IValue::Tag::kTensorVector) {  // NOLINT
     new (&payload_.v_tensor_vector) std::vector<Tensor>(value);
   }
 
-  explicit IValue(std::vector<Tensor>&& value) : tag_(IValue::Tag::kTensorVector) {
+  IValue(std::vector<Tensor>&& value) : tag_(IValue::Tag::kTensorVector) {  // NOLINT
     new (&payload_.v_tensor_vector) std::vector<Tensor>(std::move(value));
   }
 
