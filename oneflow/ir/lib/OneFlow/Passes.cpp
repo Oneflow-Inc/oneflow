@@ -76,9 +76,7 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   argument_types.reserve(operands.size());
   SmallVector<Type, 4> result_types;
   argument_types.reserve(results.size());
-  std::cout << "here1" << std::endl;
   for (auto argument : operands) { argument_types.push_back(argument.getType()); }
-  std::cout << "here2" << std::endl;
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
   auto first_op = *ops.begin();
@@ -162,8 +160,8 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
     SmallVector<::mlir::Value, 4> operands;
     operands.push_back(conv2d_op.in());
     operands.push_back(conv2d_op.weight());
-    operands.push_back(conv2d_op.bias());
-    operands.push_back(conv2d_op.bias_multiplier());
+    // operands.push_back(conv2d_op.bias());
+    // operands.push_back(conv2d_op.bias_multiplier());
     SmallVector<::mlir::Value, 1> results;
     results.push_back(conv2d_op.out());
     NamedAttrList attributes =
