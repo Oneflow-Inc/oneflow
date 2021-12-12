@@ -196,7 +196,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 1);
+    return CreateOpKernelCache(ctx, 2);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -232,7 +232,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 1);
+    return CreateOpKernelCache(ctx, 2);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -270,7 +270,7 @@ class MaxPool3dKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 1);
+    return CreateOpKernelCache(ctx, 3);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -306,7 +306,7 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 1);
+    return CreateOpKernelCache(ctx, 3);
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
