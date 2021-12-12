@@ -71,21 +71,17 @@ void VirtualMachineEngine::HandlePending() {
   INTRUSIVE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (likely(instr_msg->phy_instr_operand())) {
       ForEachNewInstruction(instr_msg, ConsumeAndTryDispatch);
-      tmp_pending_msg_list.Erase(instr_msg);
-    }
-  }
-  // TODO(lixinqi): Remove these urgly code once the vm symbols creation is disabled in nn.Graph.
-  if (unlikely(tmp_pending_msg_list.size())) {
-    const auto& SingleClientConsumeAndTryDispatch = [&](Instruction* instruction) {
-      SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
-      if (likely(Dispatchable(instruction))) { DispatchInstruction(instruction); }
-    };
-    INTRUSIVE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
-      if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
-        SingleClientRunInstructionInAdvance(instr_msg);
-      } else {
-        SingleClientForEachNewInstruction(instr_msg, SingleClientConsumeAndTryDispatch);
-      }
+    } else if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
+      // TODO(lixinqi): Remove these urgly code once the vm symbols creation is disabled in
+      // nn.Graph.
+      SingleClientRunInstructionInAdvance(instr_msg);
+    } else {
+      // TODO(lixinqi): Remove these urgly code once the vm symbols creation is disabled in
+      // nn.Graph.
+      SingleClientForEachNewInstruction(instr_msg, [&](Instruction* instruction) {
+        SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
+        if (likely(Dispatchable(instruction))) { DispatchInstruction(instruction); }
+      });
     }
   }
   OF_PROFILER_RANGE_POP();
