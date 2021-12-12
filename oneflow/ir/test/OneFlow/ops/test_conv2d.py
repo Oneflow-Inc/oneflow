@@ -30,7 +30,7 @@ class TestConv2DMLIR(oneflow.unittest.TestCase):
         data = np.random.randn(94, 32, 112, 122)
         x = flow.tensor(data, dtype=flow.float32)
 
-        conv2d = flow.nn.Conv2d(32, 64, 3, stride=2)
+        conv2d = flow.nn.Conv2d(32, 64, 3, stride=2, bias=False)
         y_eager = conv2d(x)
 
         class Conv2DGraph(flow.nn.Graph):
