@@ -214,20 +214,17 @@ void VirtualMachineEngine::SingleClientHandlePending() {
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-  std::list<intrusive::shared_ptr<Instruction>> instructions;
   INTRUSIVE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
       SingleClientRunInstructionInAdvance(instr_msg);
     } else {
       SingleClientForEachNewInstruction(instr_msg, [&](Instruction* instruction) {
-        instructions.emplace_back(intrusive::shared_ptr<Instruction>(instruction));
         SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
+        if (likely(Dispatchable(instruction))) {
+          mut_ready_instruction_list()->PushBack(instruction);
+        }
       });
     }
-  }
-  for (auto& instruction_elem : instructions) {
-    auto* instruction = instruction_elem.Mutable();
-    if (likely(Dispatchable(instruction))) { mut_ready_instruction_list()->PushBack(instruction); }
   }
   OF_PROFILER_RANGE_POP();
 }

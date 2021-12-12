@@ -66,7 +66,7 @@ void VirtualMachineEngine::HandlePending() {
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
   const auto& ConsumeAndTryDispatch = [&](Instruction* instruction) {
     ConsumeMirroredObjects(instruction);
-    if (likely(Dispatchable(instruction))) { DispatchInstruction(instruction); }
+    if (likely(Dispatchable(instruction))) { mut_ready_instruction_list()->PushBack(instruction); }
   };
   INTRUSIVE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (likely(instr_msg->phy_instr_operand())) {
@@ -80,7 +80,9 @@ void VirtualMachineEngine::HandlePending() {
       // nn.Graph.
       SingleClientForEachNewInstruction(instr_msg, [&](Instruction* instruction) {
         SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
-        if (likely(Dispatchable(instruction))) { DispatchInstruction(instruction); }
+        if (likely(Dispatchable(instruction))) {
+          mut_ready_instruction_list()->PushBack(instruction);
+        }
       });
     }
   }
