@@ -38,3 +38,4 @@ from .meshgrid import *
 from .dataset import *
 from .bmm import *
 from .flatten import *
+from .chunk import *
