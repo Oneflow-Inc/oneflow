@@ -23,6 +23,7 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 
@@ -255,16 +256,18 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
   // attr output_lbns
   auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
-  attr_vec.emplace_back(GetBuilder().getNamedAttr("output_lbns", output_lbns_attr));
+  attr_vec.emplace_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
   // attr shape
   auto shape_attr = GetBuilder().getI64VectorAttr(
       {op_conf.variable_conf().shape().dim().begin(), op_conf.variable_conf().shape().dim().end()});
-  auto shape_named_attr = GetBuilder().getNamedAttr("shape", shape_attr);
+  auto shape_named_attr =
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr);
   attr_vec.emplace_back(shape_named_attr);
   // attr data_type
   if (op_conf.variable_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
-        "data_type",
+        OpTrait::TensorSource<void>::getDataTypeAttrName(),
         GetDataTypeAttr(GetMLIRContext(), op_conf.variable_conf().data_type()).getValue()));
   }
   // attr model_name
@@ -297,11 +300,8 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   const std::vector<StringRef> nd_sbp_str_vec{op_conf.variable_conf().nd_sbp().begin(),
                                               op_conf.variable_conf().nd_sbp().end()};
   auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_str_vec));
-  attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
-  // trait_attr operand_segment_sizes
-  // if (failed(AddOperandSegmentSizes(0, op_conf.ctrl_in_op_name_size(), attr_vec))) {
-  //   return failure();
-  // }
+  attr_vec.emplace_back(
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
   // add attrs
   state.addAttributes(attr_vec);
   // operands
@@ -357,30 +357,34 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
   if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
   // attr output_lbns
   auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
-  attr_vec.emplace_back(GetBuilder().getNamedAttr("output_lbns", output_lbns_attr));
+  attr_vec.emplace_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
   // attr shape
   if (op_conf.input_conf().blob_conf().has_shape()) {
     auto shape_attr =
         GetBuilder().getI64VectorAttr({op_conf.input_conf().blob_conf().shape().dim().begin(),
                                        op_conf.input_conf().blob_conf().shape().dim().end()});
-    attr_vec.emplace_back(GetBuilder().getNamedAttr("shape", shape_attr));
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr));
   }
   // attr data_type
   if (op_conf.input_conf().blob_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
-        "data_type", GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type())
-                         .getValue()));
+        OpTrait::TensorSource<void>::getDataTypeAttrName(),
+        GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type())
+            .getValue()));
   }
   // attr is_dynamic
   if (op_conf.input_conf().blob_conf().has_is_dynamic()) {
     bool is_dynamic = op_conf.input_conf().blob_conf().is_dynamic();
-    attr_vec.emplace_back(
-        GetBuilder().getNamedAttr("is_dynamic", GetBuilder().getBoolAttr(is_dynamic)));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getIsDynamicAttrName(), GetBuilder().getBoolAttr(is_dynamic)));
   }
   // attr nd_sbp
   if (op_conf.input_conf().blob_conf().has_nd_sbp()) {
     auto nd_sbp_attr = ConvertNdSbpToAttr(GetBuilder(), op_conf.input_conf().blob_conf().nd_sbp());
-    attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
   }
   // attr job_name
   if (op_conf.input_conf().has_job_name()) {
@@ -438,31 +442,34 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
   if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
   // attr output_lbns
   auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
-  attr_vec.emplace_back(GetBuilder().getNamedAttr("output_lbns", output_lbns_attr));
+  attr_vec.emplace_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
   // attr shape
   if (op_conf.output_conf().blob_conf().has_shape()) {
     auto shape_attr =
         GetBuilder().getI64VectorAttr({op_conf.output_conf().blob_conf().shape().dim().begin(),
                                        op_conf.output_conf().blob_conf().shape().dim().end()});
-    attr_vec.emplace_back(GetBuilder().getNamedAttr("shape", shape_attr));
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr));
   }
   // attr data_type
   if (op_conf.output_conf().blob_conf().has_data_type()) {
     attr_vec.emplace_back(GetBuilder().getNamedAttr(
-        "data_type",
+        OpTrait::TensorSource<void>::getDataTypeAttrName(),
         GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type())
             .getValue()));
   }
   // attr is_dynamic
   if (op_conf.output_conf().blob_conf().has_is_dynamic()) {
     bool is_dynamic = op_conf.output_conf().blob_conf().is_dynamic();
-    attr_vec.emplace_back(
-        GetBuilder().getNamedAttr("is_dynamic", GetBuilder().getBoolAttr(is_dynamic)));
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getIsDynamicAttrName(), GetBuilder().getBoolAttr(is_dynamic)));
   }
   // attr nd_sbp
   if (op_conf.output_conf().blob_conf().has_nd_sbp()) {
     auto nd_sbp_attr = ConvertNdSbpToAttr(GetBuilder(), op_conf.output_conf().blob_conf().nd_sbp());
-    attr_vec.emplace_back(GetBuilder().getNamedAttr("nd_sbp", nd_sbp_attr));
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
   }
   // attr job_name
   if (op_conf.output_conf().has_job_name()) {

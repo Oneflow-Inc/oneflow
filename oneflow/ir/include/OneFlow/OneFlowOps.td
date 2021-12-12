@@ -111,7 +111,7 @@ class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
+def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSource]> {
   let summary = "";
   let input = (ins);
   let output = (outs AnyType:$output);
@@ -126,7 +126,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", []> {
   );
 }
 
-def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
+def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", [OneFlow_TensorSource]> {
   let summary = "";
   let input = (ins AnyType:$input);
   let output = (outs AnyType:$output);
@@ -144,7 +144,7 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", []> {
   ];
 }
 
-def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", []> {
+def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", [OneFlow_TensorSource]> {
   let summary = "";
   let input = (ins AnyType:$input);
   let output = (outs AnyType:$output);
