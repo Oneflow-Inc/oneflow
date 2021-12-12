@@ -209,6 +209,11 @@ void VirtualMachineEngine::SingleClientRunInstructionInAdvance(InstructionMsg* i
   }
 }
 
+void VirtualMachineEngine::SingleClientConsumeAndTryMoveReady(Instruction* instruction) {
+  SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
+  if (likely(Dispatchable(instruction))) { mut_ready_instruction_list()->PushBack(instruction); }
+}
+
 void VirtualMachineEngine::SingleClientHandlePending() {
   OF_PROFILER_RANGE_PUSH("SingleClientHandlePending");
   InstructionMsgList tmp_pending_msg_list;
@@ -218,12 +223,8 @@ void VirtualMachineEngine::SingleClientHandlePending() {
     if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
       SingleClientRunInstructionInAdvance(instr_msg);
     } else {
-      SingleClientForEachNewInstruction(instr_msg, [&](Instruction* instruction) {
-        SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
-        if (likely(Dispatchable(instruction))) {
-          mut_ready_instruction_list()->PushBack(instruction);
-        }
-      });
+      SingleClientForEachNewInstruction(instr_msg,
+                                        &VirtualMachineEngine::SingleClientConsumeAndTryMoveReady);
     }
   }
   OF_PROFILER_RANGE_POP();
@@ -265,7 +266,7 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 void VirtualMachineEngine::SingleClientForEachNewInstruction(
     InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& pd,
-    const std::function<void(Instruction*)>& DoEachInstruction) {
+    void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)) {
   intrusive::shared_ptr<Instruction> instruction = stream->NewInstruction(instr_msg, pd);
   mut_lively_instruction_list()->PushBack(instruction.Mutable());
   const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
@@ -273,12 +274,12 @@ void VirtualMachineEngine::SingleClientForEachNewInstruction(
   if (unlikely(is_barrier_instruction)) {
     mut_barrier_instruction_list()->PushBack(instruction.Mutable());
   } else {
-    DoEachInstruction(instruction.Mutable());
+    (this->*DoEachInstruction)(instruction.Mutable());
   }
 }
 
 void VirtualMachineEngine::SingleClientForEachNewInstruction(
-    InstructionMsg* instr_msg, const std::function<void(Instruction*)>& DoEachInstruction) {
+    InstructionMsg* instr_msg, void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)) {
   const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
   const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
   auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);

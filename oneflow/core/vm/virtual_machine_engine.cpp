@@ -59,18 +59,19 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   }
 }
 
+void VirtualMachineEngine::ConsumeAndTryMoveReady(Instruction* instruction) {
+  ConsumeMirroredObjects(instruction);
+  if (likely(Dispatchable(instruction))) { mut_ready_instruction_list()->PushBack(instruction); }
+}
+
 void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_PUSH("HandlePending");
   InstructionMsgList tmp_pending_msg_list;
   // MoveTo is under a lock.
   mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-  const auto& ConsumeAndTryDispatch = [&](Instruction* instruction) {
-    ConsumeMirroredObjects(instruction);
-    if (likely(Dispatchable(instruction))) { mut_ready_instruction_list()->PushBack(instruction); }
-  };
   INTRUSIVE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
     if (likely(instr_msg->phy_instr_operand())) {
-      ForEachNewInstruction(instr_msg, ConsumeAndTryDispatch);
+      ForEachNewInstruction<&VirtualMachineEngine::ConsumeAndTryMoveReady>(instr_msg);
     } else if (instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap()) {
       // TODO(lixinqi): Remove these urgly code once the vm symbols creation is disabled in
       // nn.Graph.
@@ -78,12 +79,8 @@ void VirtualMachineEngine::HandlePending() {
     } else {
       // TODO(lixinqi): Remove these urgly code once the vm symbols creation is disabled in
       // nn.Graph.
-      SingleClientForEachNewInstruction(instr_msg, [&](Instruction* instruction) {
-        SingleClientConsumeMirroredObjects(mut_id2logical_object(), instruction);
-        if (likely(Dispatchable(instruction))) {
-          mut_ready_instruction_list()->PushBack(instruction);
-        }
-      });
+      SingleClientForEachNewInstruction(instr_msg,
+                                        &VirtualMachineEngine::SingleClientConsumeAndTryMoveReady);
     }
   }
   OF_PROFILER_RANGE_POP();
@@ -110,10 +107,9 @@ int64_t VirtualMachineEngine::this_machine_id() const {
   return machine_id_range().begin();
 }
 
-template<typename DoEachInstructionT>
+template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
 void VirtualMachineEngine::ForEachNewInstruction(InstructionMsg* instr_msg, Stream* stream,
-                                                 const std::shared_ptr<const ParallelDesc>& pd,
-                                                 const DoEachInstructionT& DoEachInstruction) {
+                                                 const std::shared_ptr<const ParallelDesc>& pd) {
   intrusive::shared_ptr<Instruction> instruction = stream->NewInstruction(instr_msg, pd);
   mut_lively_instruction_list()->PushBack(instruction.Mutable());
   const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
@@ -121,15 +117,14 @@ void VirtualMachineEngine::ForEachNewInstruction(InstructionMsg* instr_msg, Stre
   if (unlikely(is_barrier_instruction)) {
     mut_barrier_instruction_list()->PushBack(instruction.Mutable());
   } else {
-    DoEachInstruction(instruction.Mutable());
+    (this->*DoEachInstruction)(instruction.Mutable());
   }
 }
 
-template<typename DoEachInstructionT>
-void VirtualMachineEngine::ForEachNewInstruction(InstructionMsg* instr_msg,
-                                                 const DoEachInstructionT& DoEachInstruction) {
-  ForEachNewInstruction(instr_msg, CHECK_NOTNULL(instr_msg->phy_instr_stream()),
-                        instr_msg->phy_instr_parallel_desc(), DoEachInstruction);
+template<void (VirtualMachineEngine::*DoEachInstruction)(Instruction*)>
+void VirtualMachineEngine::ForEachNewInstruction(InstructionMsg* instr_msg) {
+  ForEachNewInstruction<DoEachInstruction>(instr_msg, CHECK_NOTNULL(instr_msg->phy_instr_stream()),
+                                           instr_msg->phy_instr_parallel_desc());
 }
 
 RwMutexedObjectAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
