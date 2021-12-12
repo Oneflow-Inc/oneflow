@@ -53,6 +53,7 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     auto padding_before = op.padding_before();
     auto stride = op.strides();
     auto dilation = op.dilation_rate();
+    std::cout << "111" << std::endl;
     rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(
         op,
         /* output */ op->getResultTypes().front().cast<TensorType>(),
@@ -62,6 +63,7 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
         /* pad  */ padding_before,
         /* stride*/ stride,
         /* dilation*/ dilation);
+    std::cout << "222" << std::endl;
     return success();
   }
 };
