@@ -17,20 +17,9 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_GRAPH_H_
 #define ONEFLOW_API_CPP_GRAPH_H_
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
 #include "oneflow/api/cpp/framework/device.h"
-#include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
-#include "oneflow/core/common/hash_container.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+#include "iostream"
 
 namespace oneflow {
 
@@ -40,41 +29,21 @@ class NNGraph;
 
 namespace oneflow_api {
 
-enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVINO = 2 };
+class Graph {
+ private:
+  class GraphImpl;
 
-class Graph final {
  public:
   explicit Graph(const std::string& model_path, const Device& device);
   explicit Graph(const std::string& model_path);
+  explicit Graph(const std::shared_ptr<GraphImpl>& graph);
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
-  void set_batch_size(int batch_size) { batch_size_ = batch_size; }
-  void enable_openvino() { xrt_kind_ = XrtKind::kTensorRT; }
-  void enable_tensorrt() { xrt_kind_ = XrtKind::kOpenVINO; }
-
-  // not must, better if provided
-  // void To(const Device& device);
+  void set_batch_size(int batch_size);
+  void enable_openvino();
+  void enable_tensorrt();
 
  private:
-  oneflow::Maybe<void> Compile(const std::vector<Tensor>& inputs);
-  oneflow::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
-  oneflow::Maybe<void> AddOp(oneflow::OperatorConf op_conf);
-  oneflow::Maybe<void> BuildGraph(const std::vector<Tensor>& inputs);
-  oneflow::Maybe<void> LoadCheckpoint();
-  oneflow::Maybe<void> RegisterTensors();
-
-  std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
-  const std::string model_path_;
-  bool is_compiled_ = false;
-  int batch_size_ = 0;
-  XrtKind xrt_kind_ = XrtKind::kNone;
-  Device device_;
-  oneflow::Job job_;
-
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> input_name_to_tensor_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
-  std::shared_ptr<oneflow::one::TensorTuple> output_tensor_tuple_;
-  std::shared_ptr<oneflow::one::TensorTuple> parameter_tensor_tuple_;
+  std::shared_ptr<GraphImpl> graph_;
 };
 
 Graph Load(const std::string& model_path, const Device& device);

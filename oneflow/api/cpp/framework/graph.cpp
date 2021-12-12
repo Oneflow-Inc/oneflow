@@ -62,6 +62,8 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
+enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVINO = 2 };
+
 namespace {
 
 class CompileScope {
@@ -122,7 +124,56 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
 
 }  // namespace
 
+class Graph::GraphImpl final {
+ public:
+  explicit GraphImpl(const std::string& model_path, const Device& device);
+  explicit GraphImpl(const std::string& model_path);
+  std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
+  void set_batch_size(int batch_size) { batch_size_ = batch_size; }
+  void enable_openvino() { xrt_kind_ = XrtKind::kTensorRT; }
+  void enable_tensorrt() { xrt_kind_ = XrtKind::kOpenVINO; }
+
+ private:
+  oneflow::Maybe<void> Compile(const std::vector<Tensor>& inputs);
+  oneflow::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
+  oneflow::Maybe<void> AddOp(oneflow::OperatorConf op_conf);
+  oneflow::Maybe<void> BuildGraph(const std::vector<Tensor>& inputs);
+  oneflow::Maybe<void> LoadCheckpoint();
+  oneflow::Maybe<void> RegisterTensors();
+
+  std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
+  const std::string model_path_;
+  bool is_compiled_ = false;
+  int batch_size_ = 0;
+  XrtKind xrt_kind_ = XrtKind::kNone;
+  Device device_;
+  oneflow::Job job_;
+
+  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> input_name_to_tensor_;
+  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
+  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
+  std::shared_ptr<oneflow::one::TensorTuple> output_tensor_tuple_;
+  std::shared_ptr<oneflow::one::TensorTuple> parameter_tensor_tuple_;
+};
+
+std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
+  return graph_->Forward(inputs);
+}
+
 Graph::Graph(const std::string& model_path, const Device& device)
+    : graph_(std::make_shared<GraphImpl>(model_path, device)) {}
+
+Graph::Graph(const std::string& model_path) : graph_(std::make_shared<GraphImpl>(model_path)) {}
+
+Graph::Graph(const std::shared_ptr<GraphImpl>& graph) : graph_(graph) {}
+
+void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
+
+void Graph::enable_openvino() { graph_->enable_openvino(); }
+
+void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
+
+Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   // TODO(zzk0): model_path is a directory, need to concatenate filename
   // we need a mlir model name.
@@ -135,9 +186,9 @@ Graph::Graph(const std::string& model_path, const Device& device)
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
 
-Graph::Graph(const std::string& model_path) : Graph(model_path, Device("cpu")) {}
+Graph::GraphImpl::GraphImpl(const std::string& model_path) : GraphImpl(model_path, Device("cpu")) {}
 
-std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
+std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
     Compile(inputs).GetOrThrow();
     is_compiled_ = true;
@@ -145,7 +196,7 @@ std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
   return Run(inputs).GetOrThrow();
 }
 
-of::Maybe<void> Graph::Compile(const std::vector<Tensor>& inputs) {
+of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
   JUST(BuildGraph(inputs));
   JUST(LoadCheckpoint());
   JUST(RegisterTensors());
@@ -153,7 +204,7 @@ of::Maybe<void> Graph::Compile(const std::vector<Tensor>& inputs) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<std::vector<Tensor>> Graph::Run(const std::vector<Tensor>& inputs) const {
+of::Maybe<std::vector<Tensor>> Graph::GraphImpl::Run(const std::vector<Tensor>& inputs) const {
   const auto input_tensor_tuple = std::make_shared<of::one::TensorTuple>();
   for (const auto& tensor : inputs) { input_tensor_tuple->emplace_back(tensor.tensor_); }
 
@@ -166,7 +217,7 @@ of::Maybe<std::vector<Tensor>> Graph::Run(const std::vector<Tensor>& inputs) con
   return outputs;
 }
 
-of::Maybe<void> Graph::AddOp(of::OperatorConf op_conf) {
+of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
   {
     const std::shared_ptr<of::Scope> scope = JUST(of::GetCurrentScope());
     op_conf.set_scope_symbol_id(scope->symbol_id().value_or(0));
@@ -183,7 +234,7 @@ of::Maybe<void> Graph::AddOp(of::OperatorConf op_conf) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
+of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) {
   CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
                                  xrt_kind_);
   {
@@ -197,14 +248,12 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
         // TODO(zzk0): input tensor order
         input_name_to_tensor_[op_conf.name()] = inputs.at(input_tensor_order++).tensor_;
       } else if (op_conf.has_variable_conf()) {
-        // TODO(zzk0): load from local path, this branch maybe removed
         const of::LazyMode::Guard lazy_mode_disabled_guard{false};
         const of::VariableOpConf variable_conf = op_conf.variable_conf();
-        variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Rand(
+        variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(variable_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(variable_conf.data_type()))),
-            *device_.device_, nullptr, false));
-        PrintTensor(Tensor(variable_op_name_to_tensor_[op_conf.name()]));
+            *device_.device_));
       }
       return of::Maybe<void>::Ok();
     }));
@@ -223,8 +272,6 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
             of::Shape(blob_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(blob_conf.data_type()))),
             *device_.device_));
-        std::cout << "Print output conf" << std::endl;
-        PrintTensor(Tensor(output_name_to_tensor_[op_conf.name()]));
       }
       return of::Maybe<void>::Ok();
     }));
@@ -232,7 +279,7 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::LoadCheckpoint() {
+of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
   for (const auto& variable_op_name_and_tensor : variable_op_name_to_tensor_) {
     const auto& variable_op_name = variable_op_name_and_tensor.first;
     const auto& variable_tensor = variable_op_name_and_tensor.second;
@@ -257,7 +304,7 @@ of::Maybe<void> Graph::LoadCheckpoint() {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::RegisterTensors() {
+of::Maybe<void> Graph::GraphImpl::RegisterTensors() {
   {
     const auto pair = Unzip(input_name_to_tensor_);
     const std::vector<std::string>& input_op_names = pair.first;

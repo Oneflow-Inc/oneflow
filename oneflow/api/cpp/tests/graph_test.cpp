@@ -56,7 +56,7 @@ TEST(Api, graph_test) {
 namespace {
 
 inline Graph LoadGraph(const Device& device) {
-  Graph graph = Load("/home/zhouzekai/models/job_linear/saved_model.pb", device);
+  Graph graph = Load("/home/zhouzekai/models/large_linear", device);
   return graph;
 }
 
