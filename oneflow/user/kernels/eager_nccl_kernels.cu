@@ -78,6 +78,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
   ~EagerNcclAllReduceKernel() override = default;
 
  private:
+  using user_op::OpKernel::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
@@ -109,6 +110,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   ~EagerNcclBroadcastKernel() override = default;
 
  private:
+  using user_op::OpKernel::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
@@ -148,6 +150,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
   ~EagerNcclReduceKernel() override = default;
 
  private:
+  using user_op::OpKernel::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
@@ -184,6 +187,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
   ~EagerNcclReduceScatterKernel() override = default;
 
  private:
+  using user_op::OpKernel::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
@@ -221,6 +225,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
   ~EagerNcclAllGatherKernel() override = default;
 
  private:
+  using user_op::OpKernel::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);
@@ -252,6 +257,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   ~EagerNcclS2SKernel() override = default;
 
  private:
+  using user_op::OpKernel::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache) const override {
     InitEagerNcclOpKernelCache(ctx, cache);

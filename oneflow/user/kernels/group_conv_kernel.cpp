@@ -515,7 +515,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+    return CreateConvOpKernelCache<T>(ctx, "dx", "dy", "filter");
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
@@ -613,7 +613,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
  private:
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
+    return CreateConvOpKernelCache<T>(ctx, "x", "dy", "filter_diff");
   }
 
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
