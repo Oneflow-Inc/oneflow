@@ -81,6 +81,8 @@ inline void OfBlob::CopyStaticShapeTo(int64_t* ptr, int64_t num_axis) const {
 
 template<typename T>
 inline void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
+  CHECK_NOTNULL(blob_);
+  if (len > 0) { CHECK_NOTNULL(blob_->dptr()); }
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
   SyncAutoMemcpy(stream_, ptr, blob_->dptr(), len * sizeof(T), mem_case_, blob_->mem_case());
