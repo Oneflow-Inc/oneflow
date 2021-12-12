@@ -338,12 +338,18 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.chunk,
+    """
+    See :func:`oneflow.chunk`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`
     """,
 )
-
 
 add_docstr(
     oneflow.Tensor.diag,
