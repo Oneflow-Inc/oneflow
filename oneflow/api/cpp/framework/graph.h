@@ -17,8 +17,10 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_GRAPH_H_
 #define ONEFLOW_API_CPP_GRAPH_H_
 
+#include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/shape.h"
@@ -27,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
@@ -37,22 +40,16 @@ class NNGraph;
 
 namespace oneflow_api {
 
-enum class XrtKind : int { kOneflow = 0, kTensorrt = 1, kOpenvino = 2 };
+enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVINO = 2 };
 
 class Graph final {
  public:
   explicit Graph(const std::string& model_path, const Device& device);
   explicit Graph(const std::string& model_path);
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
-  void set_batch_size(int batch_size) {
-    batch_size_ = batch_size;
-  }
-  void enable_openvino() {
-    xrt_kind_ = XrtKind::kOpenvino;
-  }
-  void enable_tensorrt() {
-    xrt_kind_ = XrtKind::kTensorrt;
-  }
+  void set_batch_size(int batch_size) { batch_size_ = batch_size; }
+  void enable_openvino() { xrt_kind_ = XrtKind::kTensorRT; }
+  void enable_tensorrt() { xrt_kind_ = XrtKind::kOpenVINO; }
 
   // not must, better if provided
   // void To(const Device& device);
@@ -68,7 +65,7 @@ class Graph final {
   std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
   bool is_compiled_ = false;
   int batch_size_ = 0;
-  XrtKind xrt_kind_ = XrtKind::kOneflow;
+  XrtKind xrt_kind_ = XrtKind::kNone;
   Device device_;
   oneflow::Job job_;
 

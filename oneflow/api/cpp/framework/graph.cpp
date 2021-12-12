@@ -65,17 +65,17 @@ namespace {
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config, const of::Device& device, XrtKind kind) {
-    std::shared_ptr<of::Scope> scope = CHECK_JUST(of::MakeScope(job_config, device));
+    const std::shared_ptr<of::Scope> scope = CHECK_JUST(of::MakeScope(job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
     of::cfg::JobConfigProto job_config_cfg(job_config);
 #ifdef WITH_OPENVINO
-    if (kind == XrtKind::kOpenvino) {
+    if (kind == XrtKind::kOpenVINO) {
       *(job_config_cfg.mutable_xrt_config()->mutable_use_openvino()) = true;
     }
 #endif
 #ifdef WITH_TENSORRT
-    if (kind == XrtKind::kTensorrt) {
+    if (kind == XrtKind::kTensorRT) {
       *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
     }
 #endif
@@ -100,15 +100,15 @@ std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(
 }
 
 std::string GetDeviceTag(const Device& device) {
-  if (device.type() == "cpu") {
-    return device.type();
-  } else {
+  if (device.type() == "cuda") {
     return "gpu";
+  } else {
+    return "cpu";
   }
 }
 
 template<class T1, class T2>
-std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& hash_map) {
+const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& hash_map) {
   std::vector<T1> vec1;
   std::vector<T2> vec2;
   for (const auto& entry : hash_map) {
@@ -150,7 +150,7 @@ of::Maybe<void> Graph::Compile(const std::vector<Tensor>& inputs) {
 }
 
 of::Maybe<std::vector<Tensor>> Graph::Run(const std::vector<Tensor>& inputs) const {
-  auto input_tensor_tuple = std::make_shared<of::one::TensorTuple>();
+  const auto input_tensor_tuple = std::make_shared<of::one::TensorTuple>();
   for (const auto& tensor : inputs) { input_tensor_tuple->emplace_back(tensor.tensor_); }
 
   JUST(of::RunLazyNNGraph(*input_tensor_tuple, *output_tensor_tuple_, *parameter_tensor_tuple_,
@@ -164,7 +164,7 @@ of::Maybe<std::vector<Tensor>> Graph::Run(const std::vector<Tensor>& inputs) con
 
 of::Maybe<void> Graph::AddOp(of::OperatorConf op_conf) {
   {
-    std::shared_ptr<of::Scope> scope = JUST(of::GetCurrentScope());
+    const std::shared_ptr<of::Scope> scope = JUST(of::GetCurrentScope());
     op_conf.set_scope_symbol_id(scope->symbol_id().value_or(0));
   }
   op_conf.set_device_tag(GetDeviceTag(device_));
@@ -180,11 +180,12 @@ of::Maybe<void> Graph::AddOp(of::OperatorConf op_conf) {
 }
 
 of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
-  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(), xrt_kind_);
+  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
+                                 xrt_kind_);
   {
     // TODO(zzk0): remove this; used for input tensor order
     int input_tensor_order = 0;
-    of::OpGraph op_graph(job_);
+    const of::OpGraph op_graph(job_);
     JUST(op_graph.ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
       const of::OperatorConf& op_conf = node.op().op_conf();
       JUST(AddOp(op_conf));
@@ -193,9 +194,8 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
         input_name_to_tensor_[op_conf.name()] = inputs.at(input_tensor_order++).tensor_;
       } else if (op_conf.has_variable_conf()) {
         // TODO(zzk0): load from local path, this branch maybe removed
-        of::LazyMode::Guard lazy_mode_disabled_guard{false};
-
-        of::VariableOpConf variable_conf = op_conf.variable_conf();
+        const of::LazyMode::Guard lazy_mode_disabled_guard{false};
+        const of::VariableOpConf variable_conf = op_conf.variable_conf();
         variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Rand(
             of::Shape(variable_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(variable_conf.data_type()))),
@@ -208,13 +208,13 @@ of::Maybe<void> Graph::BuildGraph(const std::vector<Tensor>& inputs) {
   JUST(of::CurJobBuildAndInferCtx_Complete());
   JUST(of::CurJobBuildAndInferCtx_Rebuild());
   {
-    std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
-    of::OpGraph complete_graph(*complete_job);
+    const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
+    const of::OpGraph complete_graph(*complete_job);
     JUST(complete_graph.ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
-      of::LazyMode::Guard lazy_mode_disabled_guard{false};
+      const of::LazyMode::Guard lazy_mode_disabled_guard{false};
       const of::OperatorConf& op_conf = node.op().op_conf();
       if (op_conf.has_output_conf()) {
-        of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
+        const of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
         output_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(blob_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(blob_conf.data_type()))),
@@ -232,20 +232,20 @@ of::Maybe<void> Graph::LoadCheckpoint() { return of::Maybe<void>::Ok(); }
 
 of::Maybe<void> Graph::RegisterTensors() {
   {
-    auto pair = Unzip(input_name_to_tensor_);
+    const auto pair = Unzip(input_name_to_tensor_);
     const std::vector<std::string>& input_op_names = pair.first;
     const std::vector<std::shared_ptr<of::one::Tensor>>& input_tensors = pair.second;
     JUST(graph_->RegisterInputOpNamesAndTensors(input_op_names, input_tensors));
   }
   {
-    auto pair = Unzip(output_name_to_tensor_);
+    const auto pair = Unzip(output_name_to_tensor_);
     const std::vector<std::string>& output_op_names = pair.first;
-    std::vector<std::shared_ptr<of::one::Tensor>>& output_tensors = pair.second;
+    const std::vector<std::shared_ptr<of::one::Tensor>>& output_tensors = pair.second;
     JUST(graph_->RegisterOutputOpNamesAndTensors(output_op_names, output_tensors));
     output_tensor_tuple_ = ConvertToTensorTuple(output_tensors);
   }
   {
-    auto pair = Unzip(variable_op_name_to_tensor_);
+    const auto pair = Unzip(variable_op_name_to_tensor_);
     const std::vector<std::string>& variable_op_names = pair.first;
     const std::vector<std::shared_ptr<of::one::Tensor>>& variable_tensors = pair.second;
     JUST(graph_->RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors));
@@ -260,7 +260,7 @@ Graph Load(const std::string& model_path, const Device& device) {
 }
 
 Graph Load(const std::string& model_path) {
-  Device device = Device("cpu");
+  const Device device = Device("cpu");
   return Load(model_path, device);
 }
 
