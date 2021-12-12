@@ -40,4 +40,4 @@ enum class DType {
 
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_FRAMEWORK_DTYPE_H_
+#endif  // ONEFLOW_API_CPP_FRAMEWORK_DTYPE_H_
