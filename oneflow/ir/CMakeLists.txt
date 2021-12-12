@@ -41,14 +41,24 @@ set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
   -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
 )
 
-function(oneflow_add_llvm_library)
+function(oneflow_add_mlir_library)
   add_mlir_library(${ARGV})
-  set_compile_options_to_oneflow_target(${ARGV0})
+  set_compile_options_to_oneflow_target(${ARGV0} EXCLUDE_FROM_LIBMLIR)
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    BUILD_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
 endfunction()
 
 function(oneflow_add_mlir_dialect_library)
   add_mlir_dialect_library(${ARGV})
-  set_compile_options_to_oneflow_target(${ARGV0})
+  set_compile_options_to_oneflow_target(${ARGV0} EXCLUDE_FROM_LIBMLIR)
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
 endfunction()
 
 find_package(Threads REQUIRED)
