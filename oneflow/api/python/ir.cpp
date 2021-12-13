@@ -115,7 +115,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 
   py::class_<jit::Module, std::shared_ptr<jit::Module>>(m, "JitModule")
       .def(py::init<py::object>())
-      .def("__call__", &jit::Module::forward);
+      .def("__call__", &jit::Module::forward)
+      .def("dump_ir", &jit::Module::dump_ir);
 }
 
 }  // namespace oneflow

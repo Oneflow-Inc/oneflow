@@ -58,6 +58,9 @@ class JitModule(object):
     def __call__(self, *args, **kwargs):
         return self.jit_module.__call__(*args, **kwargs)
 
+    def dump_ir(self):
+        self.jit_module.dump_ir()
+
     def __getattr__(self, name):
         return getattr(self.py_module, name)
 
