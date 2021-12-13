@@ -1456,6 +1456,14 @@
   signature: "Tensor (Tensor dy, Tensor in, Int32 diagonal=0) => DiagGrad"
   bind_python: False
 
+- name: "diagonal"
+  signature: "Tensor (Tensor x, Int32 offset=0, Int32 dim1=0, Int32 dim2=1) => Diagonal"
+  bind_python: True
+
+- name: "diagonal_grad"
+  signature: "Tensor (Tensor dy, Tensor in, Int32 offset=0) => DiagonalGrad"
+  bind_python: False
+
 - name: "tensor_getitem"
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
   bind_python: True
@@ -1685,6 +1693,12 @@
   signature: [
     "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
     "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+  ]
+  bind_python: True
+
+- name: "chunk"
+  signature: [
+    "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
   ]
   bind_python: True
 
