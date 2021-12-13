@@ -581,19 +581,20 @@ class TransposeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
-    CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    int32_t ndims = input->shape()->NumAxes();
-    for (int i = 0; i < permute.size(); i++) {
-      int32_t dim = permute.at(i);
-      if (dim < 0) { dim += ndims; }
-      CHECK_GE_OR_RETURN(dim, 0)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
-          << ndims << " ] but got " << ndims;
-      CHECK_LT_OR_RETURN(dim, ndims)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
-          << ndims << " ] but got " << ndims;
+    auto ndim = input->ndim();
+    CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
+
+    // handle negative permute value here, because of permute is const,
+    // so copy it to local var and do modification.
+    auto positive_perm = permute;
+    for (auto i = 0; i < positive_perm.size(); i++) {
+      if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
+      CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+          << ndim << " ) but got " << positive_perm[i];
     }
+
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -684,19 +685,34 @@ class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
-                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
-    const DataType range_dtype = dtype->data_type();
-    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
-    if (IsIntegralDataType(range_dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    if (dtype.has_value()) {
+      const DataType range_dtype = JUST(dtype)->data_type();
+      if (IsIntegralDataType(range_dtype)) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      }
     } else {
-      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+      if (delta.IsIntegral()) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Int64()->data_type()));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
+      }
     }
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
@@ -709,7 +725,7 @@ class ArangeFunctor {
 
 class Arange2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     return Arange(Scalar(0), limit, Scalar(1), dtype, device);
   }
@@ -719,21 +735,36 @@ class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
-                           const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
-    const DataType range_dtype = dtype->data_type();
-    JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
-    if (IsIntegralDataType(range_dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+    if (dtype.has_value()) {
+      const DataType range_dtype = JUST(dtype)->data_type();
+      if (IsIntegralDataType(range_dtype)) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
+      }
     } else {
-      JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-      JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-      JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+      if (delta.IsIntegral()) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Int64()->data_type()));
+      } else {
+        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
+        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
+        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
+      }
     }
-
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
