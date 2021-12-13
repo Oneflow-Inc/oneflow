@@ -195,7 +195,10 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFree(table_));
   }
 
-  void Encode(ep::Stream* stream, uint32_t num_keys, const void* keys, uint64_t* context) {}
+  void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, uint64_t* context) {
+    RUN_CUDA_KERNEL((OrdinalEncodingKernel<Key>), stream, num_keys, capacity_, table_, table_size_,
+                    num_keys, keys, context);
+  }
 
  private:
   int device_index_{};
