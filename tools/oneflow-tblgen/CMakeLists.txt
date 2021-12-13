@@ -1,3 +1,6 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+)
 include(FetchContent)
 
 FetchContent_Declare(
