@@ -55,6 +55,9 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     output,
     ctrl_output
   );
+
+  // Custom sbp
+  code infer_nd_sbp = ?;
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :

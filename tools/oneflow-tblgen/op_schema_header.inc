@@ -15,6 +15,12 @@ class {{opname}}InterpCtx : public OpInterpCtx {
 
   {% endfor %}{%- endif -%}
   const HashSet<std::string>& AttrNames() const override;
+
+  static Maybe<void> InferNdSbp(user_op::InferNdSbpFnContext* ctx);
+  static Maybe<void> GetSbp(user_op::SbpContext* ctx);
+  static Maybe<void> InferLogicalTensorDesc(user_op::InferContext* ctx);
+  static Maybe<void> InferTensorDesc(user_op::InferContext* ctx);
+  static Maybe<void> InferDataType(user_op::InferContext* ctx);
 };
 
 template <typename Provider>
