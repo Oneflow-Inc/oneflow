@@ -38,6 +38,14 @@ class TestFromNumpy(flow.unittest.TestCase):
         res = tensor ** 2
         test_case.assertTrue(np.allclose(np_arr ** 2, res.numpy()))
 
+    def test_more_dtype(test_case):
+        for dtype in [np.float64, np.float32, np.float16, np.int64, np.int32, np.int8, np.uint8]:
+            np_arr = np.ones((2, 3), dtype=dtype)
+            tensor = flow.from_numpy(np_arr)
+            # TODO(wyg): oneflow.float16 do not support to copy from tensor to numpy
+            if tensor.dtype not in [flow.float16]:
+                test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()
