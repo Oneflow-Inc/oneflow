@@ -22,6 +22,7 @@ endif()
 
 project(oneflow-dialect LANGUAGES CXX C)
 
+include(llvm-in-tree.cmake)
 set(MLIR_TABLEGEN_EXE mlir-tblgen)
 
 include_directories(${LLVM_INCLUDE_DIRS})
