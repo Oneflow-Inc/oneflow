@@ -201,7 +201,6 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
   jpeg_destroy_decompress(&cinfo);
 
   cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
-
   cv::Rect roi;
   cv::Mat cropped;
 
@@ -216,7 +215,6 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
   }
 
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
-
   cv::resize(cropped, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
 
   return 0;
