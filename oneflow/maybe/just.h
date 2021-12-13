@@ -177,7 +177,7 @@ auto JustGetValue(T&& v)
     return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);              \
   }(__PRETTY_FUNCTION__))
 
-#define JUST_OPT(...)                                                                   \
+#define OPT_JUST(...)                                                                   \
   ::oneflow::maybe::details::JustGetValue(::oneflow::maybe::details::RemoveRValConst(({ \
     auto&& _just_value_to_check_ = JUST_STACK_CHECK_I(__VA_ARGS__);                     \
     if (OF_MAYBE_EXPECT_FALSE(!_just_value_to_check_)) { return NullOpt; }              \

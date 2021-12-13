@@ -259,7 +259,7 @@ TEST(Just, JustOpt) {
     return x + 1;
   };
 
-  auto g = [&f](int x) -> Optional<int> { return JUST_OPT(f(x)) * 2; };
+  auto g = [&f](int x) -> Optional<int> { return OPT_JUST(f(x)) * 2; };
 
   ASSERT_EQ(CHECK_JUST(g(2)), 6);
   ASSERT_FALSE(g(11));
@@ -267,7 +267,7 @@ TEST(Just, JustOpt) {
   auto h = [&](int x) -> Optional<int> {
     if (x == 10) return NullOpt;
 
-    return JUST_OPT(g(x)) + JUST_OPT(f(x + 2));
+    return OPT_JUST(g(x)) + OPT_JUST(f(x + 2));
   };
 
   ASSERT_FALSE(h(10));
