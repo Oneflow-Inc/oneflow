@@ -4,30 +4,15 @@
 include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowInterfaces.td"
 
-def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr,
-                                      "signed 32-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int32_t v) -> Attribute { return builder_.getSI32IntegerAttr($0); })))";
-}
+def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
-def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr,
-                                      "signed 64-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int64_t v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
-}
+def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
 
-def ShapeAttr : TypedArrayAttrBase<SI64Attr,
-                                      ""> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int64_t v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
-}
+def ShapeAttr : TypedArrayAttrBase<SI64Attr, ""> {}
 
-def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType,
-                                      "signed 64-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return DataTypeAttr::get($0); })))";
-}
+def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, "signed 64-bit integer array attribute"> {}
 
-def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr,
-                                      ""> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
-}
+def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
