@@ -13,13 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.ops.array_ops import parse_slice_tuple_list
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-
-@register_tensor_op("chunk")
-def chunk_op(input, chunks, dim: int = 0):
+add_docstr(
+    oneflow.chunk,
     """Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
 
     Args:
@@ -59,16 +57,5 @@ def chunk_op(input, chunks, dim: int = 0):
         >>> of_out_shape
         [(5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 3)]
 
-    """
-    split_size = input.shape[dim] // chunks
-    if split_size * chunks != input.shape[dim]:
-        split_size = [split_size] * (chunks - 1) + [
-            input.shape[dim] - split_size * (chunks - 1)
-        ]
-    return flow._C.split(input, split_size=split_size, dim=dim)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
