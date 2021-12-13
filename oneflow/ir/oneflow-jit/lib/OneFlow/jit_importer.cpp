@@ -17,17 +17,17 @@ limitations under the License.
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Dialect/JIT/IR/OneFlowJITDialect.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/Passes.h"
 #include "OneFlow/jit_op_interpreter.h"
+#include "OneFlow/Passes.h"
+#include "mlir/Transforms/Passes.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/user_op_def.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "OneFlow/Passes.h"
 
 namespace mlir {
 
