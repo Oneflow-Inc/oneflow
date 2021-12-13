@@ -164,9 +164,14 @@ REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
 
 namespace {
 
-int JpegPartialDecode(const unsigned char* data, size_t length,
-                      RandomCropGenerator* random_crop_gen, const std::string& color_space,
-                      TensorBuffer* buffer) {
+enum class JpegReturnType {
+  kOk = 0,
+  kError = 1,
+};
+
+JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
+                                 RandomCropGenerator* random_crop_gen,
+                                 const std::string& color_space, TensorBuffer* buffer) {
   struct jpeg_decompress_struct cinfo = {};
   struct jpeg_error_mgr jerr = {};
   int rc = 0;
@@ -174,10 +179,19 @@ int JpegPartialDecode(const unsigned char* data, size_t length,
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo);
+  if (cinfo.err->msg_code != 0) { return JpegReturnType::kError; }
+
   jpeg_mem_src(&cinfo, data, length);
+  if (cinfo.err->msg_code != 0) {
+    jpeg_destroy_decompress(&cinfo);
+    return JpegReturnType::kError;
+  }
 
   rc = jpeg_read_header(&cinfo, TRUE);
-  if (rc != 1) { return -1; }
+  if (rc != 1) {
+    jpeg_destroy_decompress(&cinfo);
+    return JpegReturnType::kError;
+  }
 
   jpeg_start_decompress(&cinfo);
   int width = cinfo.output_width;
@@ -204,10 +218,12 @@ int JpegPartialDecode(const unsigned char* data, size_t length,
     tmp_w = u_crop_w;
   }
 
-  printf("||c_x = %d, c_w = %d,  diff=%d,--  \n", u_crop_x, u_crop_w, width- (u_crop_w+u_crop_x));
   jpeg_crop_scanline(&cinfo, &u_crop_x, &tmp_w);
   int row_stride = tmp_w * pixel_size;
-  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) { return -2; }
+  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) {
+    jpeg_destroy_decompress(&cinfo);
+    return JpegReturnType::kError;
+  }
 
   while (cinfo.output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
@@ -246,7 +262,7 @@ int JpegPartialDecode(const unsigned char* data, size_t length,
   CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
   CHECK_EQ(image_shape.elem_cnt(), cropped.total() * cropped.elemSize());
   memcpy(buffer->mut_data<uint8_t>(), cropped.ptr(), image_shape.elem_cnt());
-  return 0;
+  return JpegReturnType::kOk;
 }
 
 void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,
@@ -260,7 +276,7 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
 
   if (JpegPartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
                         color_space, buffer)
-      == 0) {
+      == JpegReturnType::kOk) {
     return;
   }
 

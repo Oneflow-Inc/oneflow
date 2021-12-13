@@ -148,20 +148,35 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenerator* crop_generator,
-                      unsigned char* workspace, size_t workspace_size, unsigned char* dst,
-                      int target_width, int target_height) {
+enum class JpegReturnType {
+  kOk = 0,
+  kError = 1,
+};
+
+JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
+                                 RandomCropGenerator* crop_generator, unsigned char* workspace,
+                                 size_t workspace_size, unsigned char* dst, int target_width,
+                                 int target_height) {
   struct jpeg_decompress_struct cinfo = {};
   struct jpeg_error_mgr jerr = {};
   int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
   unsigned char* crop_buf = nullptr;
-
   cinfo.err = jpeg_std_error(&jerr);
+
   jpeg_create_decompress(&cinfo);
+  if (cinfo.err->msg_code != 0) { return JpegReturnType::kError; }
+
   jpeg_mem_src(&cinfo, data, length);
+  if (cinfo.err->msg_code != 0) {
+    jpeg_destroy_decompress(&cinfo);
+    return JpegReturnType::kError;
+  }
 
   rc = jpeg_read_header(&cinfo, TRUE);
-  if (rc != 1) { return -1; }
+  if (rc != 1) {
+    jpeg_destroy_decompress(&cinfo);
+    return JpegReturnType::kError;
+  }
 
   jpeg_start_decompress(&cinfo);
   int width = cinfo.output_width;
@@ -188,7 +203,10 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
 
   jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
   int row_stride = u_crop_w * pixel_size;
-  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) { return -2; }
+  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) {
+    jpeg_destroy_decompress(&cinfo);
+    return JpegReturnType::kError;
+  }
 
   while (cinfo.output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
@@ -216,8 +234,7 @@ int JpegPartialDecode(const unsigned char* data, size_t length, RandomCropGenera
 
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
   cv::resize(cropped, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
-
-  return 0;
+  return JpegReturnType::kOk;
 }
 
 void OpencvPartialDecode(const unsigned char* data, size_t length,
@@ -245,11 +262,13 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              unsigned char* workspace, size_t workspace_size,
                                              unsigned char* dst, int target_width,
                                              int target_height) {
-  int ret = JpegPartialDecode(data, length, crop_generator, workspace, workspace_size, dst,
-                              target_width, target_height);
-  if (ret != 0) {
-    OpencvPartialDecode(data, length, crop_generator, dst, target_width, target_height);
+  if (JpegPartialDecode(data, length, crop_generator, workspace, workspace_size, dst, target_width,
+                        target_height)
+      == JpegReturnType::kOk) {
+    return;
   }
+
+  OpencvPartialDecode(data, length, crop_generator, dst, target_width, target_height);
 }
 
 template<>
