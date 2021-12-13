@@ -23,9 +23,104 @@ namespace embedding {
 namespace {
 
 template<typename Key>
-__global__ void PrefetchPlainEncodingKernel(Key num_shards, uint32_t num_keys, const Key* keys,
-                                            uint64_t* context) {
+__global__ void PlainEncodingKernel(Key num_shards, uint32_t num_keys, const Key* keys,
+                                    uint64_t* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) { context[i] = keys[i] / num_shards; }
+}
+
+template<typename Key, typename Index>
+struct alignas(2 * std::max(sizeof(Key), sizeof(Index))) TableEntry {
+  Key key;
+  Index index;
+};
+
+using CuInt64T = unsigned long long int;
+
+__device__ __inline__ int32_t AtomicCAS(int32_t* address, int32_t compare, int32_t val) {
+  return atomicCAS(address, compare, val);
+}
+
+__device__ __inline__ int64_t AtomicCAS(int64_t* address, int64_t compare, int64_t val) {
+  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
+  return static_cast<int64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
+                                        static_cast<CuInt64T>(compare),
+                                        static_cast<CuInt64T>(val)));
+}
+
+__device__ __inline__ int32_t AtomicAdd(int32_t* address, int32_t val) {
+  return atomicAdd(address, val);
+}
+
+__device__ __inline__ int32_t AtomicAdd(uint32_t* address, uint32_t val) {
+  return atomicAdd(address, val);
+}
+
+__device__ __inline__ int32_t AtomicAdd(uint64_t* address, uint64_t val) {
+  return atomicAdd(reinterpret_cast<unsigned long long int*>(address), val);
+}
+
+__device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
+  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
+  return static_cast<int64_t>(
+      atomicAdd(reinterpret_cast<CuInt64T*>(address), static_cast<CuInt64T>(val)));
+}
+
+template<typename Key, typename Index>
+__device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint64_t* table_size,
+                               Key key, uint64_t* out) {
+  Key old_entry_key = AtomicCAS(entry_key, static_cast<Key>(0), key);
+  if (old_entry_key == 0) {
+    Index index = AtomicAdd(table_size, 1) + 1;
+    *entry_index = index;
+    *out = index;
+    return true;
+  } else if (old_entry_key == key) {
+    while (true) {
+      Index index = *entry_index;
+      if (index != 0) {
+        *out = index;
+        break;
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename Key, typename Index>
+__device__ bool GetOrInsertOne(const size_t capacity, TableEntry<Key, Index>* table,
+                               uint64_t* table_size, Key key, size_t hash, uint64_t* out) {
+  const size_t start_idx = hash % capacity;
+  // fast path
+  {
+    TableEntry<Key, Index> entry = table[start_idx];
+    if (entry.key == key && entry.index != 0) {
+      *out = entry.index;
+      return true;
+    }
+  }
+  for (size_t count = 0; count < capacity; ++count) {
+    const size_t idx = (start_idx + count) % capacity;
+    Key* entry_key = &table[idx].key;
+    Index* entry_index = &table[idx].index;
+    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, table_size, key, hash, out)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template<typename Key, typename Index>
+__global__ void OrdinalEncodingKernel(uint64_t capacity, TableEntry<Key, Index>* table,
+                                      uint64_t* table_size, uint32_t num_keys, const Key* keys,
+                                      uint64_t* context) {
+  CUDA_1D_KERNEL_LOOP(i, num_keys) {
+    Key key = keys[i];
+    uint64_t hash = keys[i];
+    bool success = GetOrInsertOne<Key, Index>(capacity, table, table_size, key, hash, context + i);
+    assert(success);
+  }
 }
 
 template<typename Elem>
@@ -78,25 +173,35 @@ class PlainEncoder {
   ~PlainEncoder() = default;
 
   void Encode(ep::Stream* stream, uint32_t num_keys, const void* keys, uint64_t* context) {
-    RUN_CUDA_KERNEL((PrefetchPlainEncodingKernel<Key>), stream, num_keys, num_shards_, num_keys,
+    RUN_CUDA_KERNEL((PlainEncodingKernel<Key>), stream, num_keys, num_shards_, num_keys,
                     static_cast<const Key*>(keys), context);
   }
-
-  size_t WorkspaceSize() const { return 0; }
 
  private:
   uint32_t num_shards_;
 };
 
-template<typename Key>
+template<typename Key, typename Index>
 class OrdinalEncoder {
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
-  OrdinalEncoder() = default;
-  ~OrdinalEncoder() = default;
+  explicit OrdinalEncoder(uint64_t capacity) : capacity_(capacity) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
+    OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
+  }
+  ~OrdinalEncoder() {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFree(table_size_));
+    OF_CUDA_CHECK(cudaFree(table_));
+  }
 
   void Encode(ep::Stream* stream, uint32_t num_keys, const void* keys, uint64_t* context) {}
 
-  size_t WorkspaceSize() const { return 0; }
+ private:
+  int device_index_{};
+  TableEntry<Key, Index>* table_;
+  uint64_t capacity_;
+  uint64_t* table_size_{};
 };
 
 template<typename Encoder, typename Key, typename Elem>
