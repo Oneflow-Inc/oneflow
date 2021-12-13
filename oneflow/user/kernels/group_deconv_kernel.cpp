@@ -30,19 +30,19 @@ using Col2ImFunc = void (*)(const T* col_buf, const ShapeView& in_shape,
                             const int32_t* padding_before, T* in_diff_ptr);
 
 template<typename T>
-void Gemm4ChannelFirst(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                       const T alpha, const T* a, const T* b, const T beta, T* c) {
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+void Gemm4ChannelFirst(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
+                       const int n, const int k, const T alpha, const T* a, const T* b,
+                       const T beta, T* c) {
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 template<typename T>
-void Gemm4ChannelLast(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                      const T alpha, const T* a, const T* b, const T beta, T* c) {
+void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
+                      const int n, const int k, const T alpha, const T* a, const T* b, const T beta,
+                      T* c) {
   trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
   trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
 }
 
 template<typename T>
@@ -89,13 +89,13 @@ class ColBufWriter {
  protected:
   const T* src_ptr_;
   T* dst_ptr_;
-  int64_t c_size_;
-  int64_t id_size_;
-  int64_t ih_size_;
-  int64_t iw_size_;
-  int64_t od_size_;
-  int64_t oh_size_;
-  int64_t ow_size_;
+  int64_t c_size_ = 0;
+  int64_t id_size_ = 0;
+  int64_t ih_size_ = 0;
+  int64_t iw_size_ = 0;
+  int64_t od_size_ = 0;
+  int64_t oh_size_ = 0;
+  int64_t ow_size_ = 0;
 };
 
 template<typename T>
@@ -126,14 +126,18 @@ template<typename T>
 class ColBufUtil final {
  public:
   ColBufUtil(const ShapeView& in_shape, const ShapeView& out_shape, int32_t dhw_offset,
-             const int32_t* strides, const int32_t* dilation_rate, const int32_t* padding_before)
-      : strides_(strides), dilation_rate_(dilation_rate), padding_before_(padding_before) {
-    id_num_ = in_shape.At(dhw_offset);
-    ih_num_ = in_shape.At(dhw_offset + 1);
-    iw_num_ = in_shape.At(dhw_offset + 2);
-    od_num_ = out_shape.At(dhw_offset);
-    oh_num_ = out_shape.At(dhw_offset + 1);
-    ow_num_ = out_shape.At(dhw_offset + 2);
+             const int32_t* strides, const int32_t* dilation_rate, const int32_t* padding_before,
+             const int32_t id_num, const int32_t ih_num, const int32_t iw_num, const int32_t od_num,
+             const int32_t oh_num, const int32_t ow_num)
+      : strides_(strides),
+        dilation_rate_(dilation_rate),
+        padding_before_(padding_before),
+        id_num_(id_num),
+        ih_num_(ih_num),
+        iw_num_(iw_num),
+        od_num_(od_num),
+        oh_num_(oh_num),
+        ow_num_(ow_num) {
     if (dhw_offset == 2) {
       dhw_valid_func_ = &ColBufWriter<T>::CDHWWrite;
     } else {
@@ -169,16 +173,16 @@ class ColBufUtil final {
   }
 
  private:
-  int64_t id_num_;
-  int64_t ih_num_;
-  int64_t iw_num_;
-  int64_t od_num_;
-  int64_t oh_num_;
-  int64_t ow_num_;
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
   DHWValidFunc<T> dhw_valid_func_;
+  int64_t id_num_ = 0;
+  int64_t ih_num_ = 0;
+  int64_t iw_num_ = 0;
+  int64_t od_num_ = 0;
+  int64_t oh_num_ = 0;
+  int64_t ow_num_ = 0;
 };
 
 template<typename T>
@@ -188,7 +192,9 @@ struct DeconvKernelUtil final {
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
                           const int32_t* padding_before, T* in_diff_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
+    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before,
+                               in_shape.At(2), in_shape.At(3), in_shape.At(4), out_shape.At(2),
+                               out_shape.At(3), out_shape.At(4));
     Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(3),
                                    in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
     DoNCDWHFunc(weight_shape, col_buf_util, &col_buf_writer);
@@ -198,7 +204,9 @@ struct DeconvKernelUtil final {
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
                           const int32_t* padding_before, T* in_diff_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
+    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before,
+                               in_shape.At(2), in_shape.At(3), in_shape.At(4), out_shape.At(2),
+                               out_shape.At(3), out_shape.At(4));
     Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(2),
                                    in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
                                    out_shape.Count(3, 4), 1);
@@ -234,8 +242,9 @@ struct DeconvKernelUtil final {
 };
 
 template<typename T>
-struct DeconvOpKernelCache final : public user_op::OpKernelCache {
-  Col2ImFunc<T> col2im_func_ = nullptr;
+struct DeconvOpKernelState final : public user_op::OpKernelState {
+  Col2ImFunc<T> col2im_func_ = DeconvKernelUtil<T>::NCDHWCol2Im;
+  ;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -248,6 +257,7 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
   enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
   int32_t idx_offset_ = 0;
   bool is_dynamic_ = false;
+  int32_t groups = 1;
 
   void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
     auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
@@ -266,21 +276,20 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
 };
 
 template<typename T>
-std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelState(user_op::KernelCacheContext* ctx,
-                                                        const std::string& in_name,
-                                                        const std::string& out_name,
-                                                        const std::string& weight_name) {
+std::shared_ptr<DeconvOpKernelState<T>> CreateDeconvOpKernelState(
+    user_op::KernelComputeContext* ctx, const std::string& in_name, const std::string& out_name,
+    const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
-  std::shared_ptr<DeconvOpKernelCache<T>> cache(new DeconvOpKernelCache<T>());
+  std::shared_ptr<DeconvOpKernelState<T>> state(new DeconvOpKernelState<T>());
   if (data_format == "channels_first") {
-    cache->col2im_func_ = DeconvKernelUtil<T>::NCDHWCol2Im;
-    cache->is_out_diff_need_trans_ = CblasNoTrans;
-    cache->idx_offset_ = 2;
+    state->col2im_func_ = DeconvKernelUtil<T>::NCDHWCol2Im;
+    state->is_out_diff_need_trans_ = CblasNoTrans;
+    state->idx_offset_ = 2;
   } else {
-    cache->col2im_func_ = DeconvKernelUtil<T>::NDHWCCol2Im;
-    cache->is_out_diff_need_trans_ = CblasTrans;
-    cache->idx_offset_ = 1;
+    state->col2im_func_ = DeconvKernelUtil<T>::NDHWCCol2Im;
+    state->is_out_diff_need_trans_ = CblasTrans;
+    state->idx_offset_ = 1;
   }
 
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
@@ -289,32 +298,34 @@ std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelState(user_op::Kerne
     ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
     return Shape(ret_vec);
   };
-  cache->in_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), cache->idx_offset_);
-  cache->out_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), cache->idx_offset_);
-  cache->weight_5d_shape_ =
-      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), cache->idx_offset_);
+  state->groups = ctx->Attr<int32_t>("groups");
+
+  state->in_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), state->idx_offset_);
+  state->out_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(out_name, 0)->shape(), state->idx_offset_);
+  state->weight_5d_shape_ =
+      Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(weight_name, 0)->shape(), state->idx_offset_);
 
   auto Gen3DVec = [](const std::vector<int32_t>& origin_vec) -> std::vector<int32_t> {
     std::vector<int32_t> ret_vec = origin_vec;
     ret_vec.insert(ret_vec.begin(), 3 - ret_vec.size(), 1);
     return ret_vec;
   };
-  cache->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
-  cache->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
-  cache->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
+  state->strides_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("strides"));
+  state->dilation_rate_3d_ = Gen3DVec(ctx->Attr<std::vector<int32_t>>("dilation_rate"));
+  state->is_dynamic_ = ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->is_dynamic();
   const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - padding_before.size());
     if (index < 0) {
-      cache->padding_before_3d_.push_back(0);
+      state->padding_before_3d_.emplace_back(0);
     } else {
-      cache->padding_before_3d_.push_back(padding_before.at(index));
+      state->padding_before_3d_.emplace_back(padding_before.at(index));
     }
   }
 
-  return cache;
+  return state;
 }
 
 template<typename T>
@@ -326,42 +337,57 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
+  std::shared_ptr<DeconvOpKernelState<T>> DoCreateOpKernelState(
+      user_op::KernelComputeContext* ctx) const {
     return CreateDeconvOpKernelState<T>(ctx, "out", "in", "weight");
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto deconv_cache = dynamic_cast<const DeconvOpKernelCache<T>*>(cache);
-    CHECK_NOTNULL(deconv_cache);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto deconv_state = DoCreateOpKernelState(ctx);
+    CHECK_NOTNULL(deconv_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
+    int32_t idx_offset = deconv_state->idx_offset_;
+    const int32_t input_group_interval = in->shape().At(1) / deconv_state->groups;
+    const int32_t weight_group_interval = weight->shape().At(0) / deconv_state->groups;
+    const int32_t output_group_interval = out->shape().At(1) / deconv_state->groups;
+    const int32_t input_step = input_group_interval * in->shape().Count(2);
+    const int32_t weight_step = weight_group_interval * weight->shape().Count(1);
+    const int32_t output_step = output_group_interval * out->shape().Count(2);
+    const int32_t m = deconv_state->weight_5d_shape_.Count(1);
+    const int32_t n = deconv_state->out_5d_shape_.Count(idx_offset, idx_offset + 3);
+    const int32_t k = deconv_state->weight_5d_shape_.At(0) / deconv_state->groups;
+
+    deconv_state->Update(in->shape(), out->shape());
     Memset<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), 0,
                              out->shape().elem_cnt() * sizeof(T));
-
     FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {
-      // channels first:  col_buf' = weight(T) * in[i]'
-      // channels last :  col_buf' = weight(T) * in[i]'(T)
-      // m, n, k
-      int32_t idx_offset = deconv_cache->idx_offset_;
-      NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          ctx->stream(), CblasTrans, deconv_cache->is_out_diff_need_trans_,
-          deconv_cache->weight_5d_shape_.Count(1),
-          deconv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),
-          deconv_cache->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
-          GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
+      const T* input_ptr = GetImgDptr<T>(in, i);
+      const T* weight_ptr = weight->dptr<T>();
+      T* output_ptr = GetImgMutDptr<T>(out, i);
 
-      // out = col2im(col_buf')
-      deconv_cache->col2im_func_(col_buf->dptr<T>(), ShapeView(deconv_cache->in_5d_shape_),
-                               ShapeView(deconv_cache->weight_5d_shape_),
-                               ShapeView(deconv_cache->out_5d_shape_), deconv_cache->strides_3d_.data(),
-                               deconv_cache->dilation_rate_3d_.data(),
-                               deconv_cache->padding_before_3d_.data(), GetImgMutDptr<T>(out, i));
+      FOR_RANGE(int64_t, g, 0, deconv_state->groups) {
+        NewKernelUtil<DeviceType::kCPU>::OFGemm(
+            ctx->stream(), CblasTrans, deconv_state->is_out_diff_need_trans_,
+
+            m,  //  (co / groups) * kd * kh * kw
+            n,  //  od * oh * ow
+            k,  //  filter / groups
+            static_cast<T>(1), weight_ptr, input_ptr, static_cast<T>(0), col_buf->mut_dptr<T>());
+        // out = col2im(col_buf')
+        deconv_state->col2im_func_(
+            col_buf->mut_dptr<T>(), ShapeView(deconv_state->in_5d_shape_),
+            ShapeView(deconv_state->weight_5d_shape_), ShapeView(deconv_state->out_5d_shape_),
+            deconv_state->strides_3d_.data(), deconv_state->dilation_rate_3d_.data(),
+            deconv_state->padding_before_3d_.data(), output_ptr);
+        input_ptr += input_step;
+        weight_ptr += weight_step;
+        output_ptr += output_step;
+      }
     }
   }
 };
@@ -370,7 +396,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(#op_name)                                                         \
       .SetCreateFn<DeconvCpuKernel<dtype>>()                                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
-                       && (user_op::HobAttr<int32_t>("groups") == 1)                     \
+                       && (user_op::HobAttr<int32_t>("groups") > 1)                      \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                      \
         size_t tmp_buffer_size = 0;                                                      \
