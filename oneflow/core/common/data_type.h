@@ -20,14 +20,32 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
-#include "oneflow/core/common/fp16_data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
+#include <half.hpp>
 
 namespace oneflow {
+
+typedef half_float::half float16;
+
+template<typename T>
+struct IsFloat16;
+
+template<>
+struct IsFloat16<float16> : std::true_type {};
+
+#ifdef WITH_CUDA
+
+template<>
+struct IsFloat16<half> : std::true_type {};
+
+#endif  // WITH_CUDA
+
+template<typename T>
+struct IsFloat16 : std::false_type {};
 
 // Type Trait: IsFloating
 template<typename T>
