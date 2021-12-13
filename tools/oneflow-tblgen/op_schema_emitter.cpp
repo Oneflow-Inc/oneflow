@@ -110,7 +110,7 @@ template<OpSchemaTarget Target>
 void OpSchemaEmitter<Target>::run(raw_ostream& os) {
   using inja::json;
   emitSourceFileHeader("oneflow op schema", os);
-  json ops;
+  json ops = json::object();
   for (const auto& def : records.getAllDerivedDefinitions("OneFlow_BaseOp")) {
     auto name = def->getValueAsString("opName");
     if (name.empty()) {  // NOLINT
