@@ -175,10 +175,6 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& out_nd_sbp = JUST(ctx.nd_sbp);
   const auto& out_parallel_desc = JUST(ctx.parallel_desc);
-  if (JUST(input->nd_sbp()) == out_nd_sbp && JUST(input->parallel_desc()) == out_parallel_desc) {
-    outputs->at(0) = input;
-    return Maybe<void>::Ok();
-  }
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   const auto& tensor =
