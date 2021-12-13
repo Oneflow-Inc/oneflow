@@ -57,10 +57,12 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
     for (int64_t i = contiguous_dim; i!= -1; --i) {
       out_stride[i] = element_count;
       element_count *= in_shape.At(i);
+    }
+    for (int64_t i = contiguous_dim; i!= -1; --i) {
       if (block_size == in_stride[i]) {
         block_size *= in_shape.At(i);
       } else {
-        continue;
+        break;
       }
     }
   }

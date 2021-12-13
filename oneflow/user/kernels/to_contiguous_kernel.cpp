@@ -31,12 +31,24 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
       // 0-dim tensor
       std::memcpy(out_dptr, in_dptr, block_size * dsize);
     } else {
-      std::fill(index.begin(), index.end(), 0);
-      while (true) {
-        std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-                    block_size * dsize);
+      // if input tensor's strides equals to output's, than just return copyed tensor
+      bool is_same = true;
+      for (int64_t i = contiguous_dim; i != -1; --i) {
+        if(out_stride[i] != in_stride[i]){
+          is_same = false;
+          break;
+        }
+      }
+      if(is_same){
+        std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize);
+      }else{
+        std::fill(index.begin(), index.end(), 0);
+        while (true) {
+          std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+                      block_size * dsize);
 
-        if (finish_stride()) break;
+          if (finish_stride()) break;
+        }
       }
     }
   }
