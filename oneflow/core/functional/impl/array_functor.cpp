@@ -1663,7 +1663,7 @@ class DiagonalFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x->contiguous()}, attrs);
   }
 
  private:
