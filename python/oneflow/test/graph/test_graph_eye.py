@@ -13,15 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import unittest
+import numpy as np
+import random
+import oneflow as flow
 import oneflow.unittest
+from test_util import generate_graph
 
 
-class Test1NodeMixin:
-    def test_1n1c(self):
-        self.run_net(1)
-        self.print_and_check_result("1n1c")
+@flow.unittest.skip_unless_1n1d()
+class TestEyeGraph(oneflow.unittest.TestCase):
+    def test_eye_graph(test_case):
+        n = random.randint(1, 10)
+        m = random.randint(1, 10)
 
-    def test_1n4c(self):
-        self.run_net(4)
-        self.print_and_check_result("1n4c")
+        eye_fn = lambda: flow.eye(n, m)
+        y_eager = eye_fn()
+        eye_graph = generate_graph(eye_fn)
+        y_lazy = eye_graph()
+        test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
+
+
+if __name__ == "__main__":
+    unittest.main()
