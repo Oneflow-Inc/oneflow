@@ -31,7 +31,7 @@ def _test_fused_scale_mask_softmax(
 
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
     mask = np.random.randint(
-        0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.uint8
+        0, 2, size=(batch_size, 1, seq_length, seq_length), dtype=np.uint8
     )
 
     fused_x_tensor = flow.tensor(x).to("cuda")
