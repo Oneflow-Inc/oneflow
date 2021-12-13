@@ -8,7 +8,6 @@ oneflow_add_mlir_library(MLIROneFlowTranslation
 	LINK_LIBS PUBLIC
 	MLIRIR
 )
-llvm_update_compile_flags(MLIROneFlowTranslation)
 
 target_link_libraries(MLIROneFlowTranslation
   PRIVATE
