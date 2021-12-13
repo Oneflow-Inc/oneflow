@@ -38,7 +38,7 @@ class TestReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_relu_module_with_0shape_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
