@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 
@@ -44,7 +45,10 @@ Device::Device(const std::string& type, int64_t device_id)
       device_id_(device_id),
       hash_value_(HashDevice(type, device_id)),
       transport_local_dep_object_(),
-      schedule_local_dep_object_(nullptr) {}
+      schedule_local_dep_object_(nullptr),
+      extra_allocator_device_() {}
+
+Maybe<const Optional<std::string>&> GetExtraAllocatorDeviceType(const std::string& type);
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
@@ -58,6 +62,13 @@ Maybe<void> Device::Init() {
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
   schedule_local_dep_object_ =
       JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+  const auto& opt_extra_allocator_device_type = JUST(GetExtraAllocatorDeviceType(type_));
+  if (opt_extra_allocator_device_type.has_value()) {
+    const auto& extra_allocator_device_type = *JUST(opt_extra_allocator_device_type);
+    CHECK_NE_OR_RETURN(extra_allocator_device_type, type_);
+    extra_allocator_device_ = JUST(New(extra_allocator_device_type, device_id_));
+    CHECK_OR_RETURN(!extra_allocator_device_->has_extra_allocator_device());
+  }
   return Maybe<void>::Ok();
 }
 
@@ -129,6 +140,21 @@ Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
       {"critical_section", "critical_section"},
   };
   return MapAt(type2type_for_shared_local_dep_object, type());
+}
+
+Maybe<const Optional<std::string>&> GetExtraAllocatorDeviceType(const std::string& type) {
+  static const HashMap<std::string, Optional<std::string>> type2extr_allocator_device_type{
+      {"cpu", NullOpt},
+      {"gpu", NullOpt},
+      {"cuda", NullOpt},
+      {"cuda_h2d", "cuda"},
+      {"cuda_d2h", NullOpt},
+      {"comm_net", NullOpt},
+      {"sync_launched_nccl", "cuda"},
+      {"async_launched_nccl", "cuda"},
+      {"critical_section", NullOpt},
+  };
+  return MapAt(type2extr_allocator_device_type, type);
 }
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {

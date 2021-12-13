@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -28,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
+#include "oneflow/core/eager/allocate_outputs_phy_instr_operand.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -537,6 +539,17 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction));
+}
+
+void AllocateOutputsInstructionType::Compute(vm::Instruction* instruction) const {
+  auto* operand = CHECK_NOTNULL(instruction->instr_msg().phy_instr_operand().get());
+  auto* phy_instr_operand = CHECK_NOTNULL(dynamic_cast<AllocateOutputsPhyInstrOperand*>(operand));
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  for (const auto& blob_object : *phy_instr_operand->outputs()) {
+    CHECK_NOTNULL(blob_object);
+    CHECK_JUST(blob_object->TryInitBlob());
+    CHECK_JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
+  }
 }
 
 const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(

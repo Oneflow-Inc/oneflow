@@ -45,6 +45,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
+#include "oneflow/core/eager/allocate_outputs_phy_instr_operand.h"
 
 namespace oneflow {
 
@@ -779,6 +780,14 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
   const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
+  if (unlikely(op_device->has_extra_allocator_device())) {
+    auto phy_instr_operand =
+        std::make_shared<vm::AllocateOutputsPhyInstrOperand>(output_eager_blob_objects);
+    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+        Global<VirtualMachine>::Get()->mut_vm(),
+        parallel_desc_sym->device_tag() + ".AllocateOutputs", parallel_desc_sym, phy_instr_operand);
+    instruction_list_->EmplaceBack(std::move(instruction));
+  }
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
     if (blob_last_used_device != op_device) {

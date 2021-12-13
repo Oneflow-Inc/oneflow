@@ -42,6 +42,16 @@ class LocalCallOpKernelInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
+class AllocateOutputsInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  AllocateOutputsInstructionType() = default;
+  virtual ~AllocateOutputsInstructionType() = default;
+};
+
 class CallOpKernelInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;

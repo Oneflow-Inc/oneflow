@@ -75,6 +75,12 @@ class Device final {
 
   Maybe<bool> need_soft_sync_stream() const;
 
+  bool has_extra_allocator_device() const { return static_cast<bool>(extra_allocator_device_); }
+  Maybe<Symbol<Device>> GetExtraAllocatorDevice() const {
+    CHECK_OR_RETURN(has_extra_allocator_device());
+    return extra_allocator_device_;
+  }
+
  private:
   Device(const std::string& type, int64_t device_id);
   Maybe<void> Init();
@@ -86,6 +92,7 @@ class Device final {
   std::shared_ptr<MemoryCase> mem_case_;
   Optional<LocalDepObject*> transport_local_dep_object_;
   LocalDepObject* schedule_local_dep_object_;
+  Symbol<Device> extra_allocator_device_;
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);

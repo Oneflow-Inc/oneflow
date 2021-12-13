@@ -40,6 +40,15 @@ class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstru
 };
 COMMAND(vm::RegisterInstructionType<CpuLocalCallOpKernelInstructionType>("cpu.LocalCallOpKernel"));
 
+class CpuAllocateOutputsInstructionType final : public AllocateOutputsInstructionType {
+ public:
+  CpuAllocateOutputsInstructionType() = default;
+  ~CpuAllocateOutputsInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CpuAllocateOutputsInstructionType>("cpu.AllocateOutputs"));
+
 class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType {
  public:
   CpuCallOpKernelInstructionType() = default;

@@ -92,7 +92,6 @@ void VirtualMachineEngine::HandlePending() {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
   }
-  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
     if (likely(Dispatchable(instruction))) {
@@ -459,7 +458,6 @@ bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instru
 
 bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
   if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
-  const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
     const auto* src_instruction = &edge->src_instruction();
     if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }

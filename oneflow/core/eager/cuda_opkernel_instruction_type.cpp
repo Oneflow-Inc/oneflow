@@ -45,6 +45,15 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
 };
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
+class CudaAllocateOutputsInstructionType final : public AllocateOutputsInstructionType {
+ public:
+  CudaAllocateOutputsInstructionType() = default;
+  ~CudaAllocateOutputsInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CudaAllocateOutputsInstructionType>("gpu.AllocateOutputs"));
+
 class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
   AsyncCudaLocalCallOpKernelInstructionType() = default;
