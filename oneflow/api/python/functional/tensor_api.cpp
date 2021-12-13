@@ -238,13 +238,13 @@ class LocalTensorSharedNumpyDataFunctor {
     Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
     auto element_size_in_bytes = PyArray_ITEMSIZE(array);
-    auto tensor_buffer = std::make_shared<vm::TensorBuffer>();
-    tensor_buffer->set_blob_dptr(
+    auto tensor_data = std::make_shared<vm::TensorStorage>();
+    tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
         element_size_in_bytes);
 
     // Build TensorStorage: decrease ndarray reference count before releasing
-    auto tensor_storage = std::make_shared<TensorStorage>(tensor_buffer);
+    auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
 
     // Build Tensor
     auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor_storage,
@@ -253,8 +253,7 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(JUST(GetLocalDepObject4Device(*device))));
-    JUST(JUST(tensor_impl->eager_blob_object())->compute_local_dep_object())
-        ->set_last_used_device(device);
+    JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
