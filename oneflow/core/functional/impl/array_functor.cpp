@@ -399,6 +399,23 @@ class BroadcastLikeFunctor {
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& broadcast_axes) const {
     MutableAttrMap attrs;
+    if (broadcast_axes.empty()) {
+      int64_t like_ndim = like->shape()->NumAxes();
+      int64_t x_ndim = x->shape()->NumAxes();
+      int64_t num_prepend = like_ndim - x_ndim;
+      std::vector<int64_t> prepend_shape(num_prepend, 1);
+      std::vector<int64_t> broadcast_axes;
+      for (int i = 0; i < x_ndim; ++i) { prepend_shape.emplace_back(x->shape()->At(i)); }
+      for (int i = 0; i < num_prepend; ++i) { broadcast_axes.emplace_back(i); }
+      for (int i = num_prepend; i < prepend_shape.size(); ++i) {
+        if (prepend_shape[i] != like->shape()->At(i)) {
+          if (prepend_shape[i] == 1) { broadcast_axes.emplace_back(i); }
+          CHECK_GE_OR_RETURN(prepend_shape[i], 1)
+              << "output with shape " << x->shape()->ToString()
+              << " doesn't match the broadcast shape " << like->shape()->ToString();
+        }
+      }
+    }
     JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
@@ -894,7 +911,9 @@ class ReshapeFunctor {
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
-      if (shape.At(i) == -1) {
+      if (shape.At(i) < -1) {
+        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+      } else if (shape.At(i) == -1) {
         CHECK_EQ_OR_RETURN(need_infer_axis, -1)
             << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
         need_infer_axis = i;
