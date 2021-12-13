@@ -13,13 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.comm.comm_ops import all_reduce
-from oneflow.comm.comm_ops import all_gather
-from oneflow.comm.comm_ops import broadcast
-from oneflow.comm.comm_ops import scatter
-from oneflow.comm.comm_ops import reduce
-from oneflow.comm.comm_ops import all_to_all
-from oneflow.comm.comm_ops import barrier
-from oneflow.comm.comm_ops import reduce_scatter
-from oneflow.comm.comm_ops import gather
-from oneflow._C import send, recv
+import unittest
+import numpy as np
+import random
+import oneflow as flow
+import oneflow.unittest
+from test_util import generate_graph
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestEyeGraph(oneflow.unittest.TestCase):
+    def test_eye_graph(test_case):
+        n = random.randint(1, 10)
+        m = random.randint(1, 10)
+
+        eye_fn = lambda: flow.eye(n, m)
+        y_eager = eye_fn()
+        eye_graph = generate_graph(eye_fn)
+        y_lazy = eye_graph()
+        test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
+
+
+if __name__ == "__main__":
+    unittest.main()
