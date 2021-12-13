@@ -24,6 +24,7 @@ import oneflow.unittest
 import torch
 import torch.distributed as dist
 
+
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestAllReduce(flow.unittest.TestCase):
@@ -47,6 +48,7 @@ class TestAllReduce(flow.unittest.TestCase):
         tensor = flow.tensor(np_arr, device="cuda")
         flow.comm.all_reduce(tensor)
         test_case.assertTrue(np.allclose(tensor.numpy(), np_arr * 4))
+
 
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -76,6 +78,7 @@ class TestAllGather(flow.unittest.TestCase):
         )
         dist.destroy_process_group()
 
+
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestBroadCast(flow.unittest.TestCase):
@@ -102,6 +105,7 @@ class TestBroadCast(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy()))
         dist.destroy_process_group()
 
+
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestScatter(flow.unittest.TestCase):
@@ -126,6 +130,7 @@ class TestScatter(flow.unittest.TestCase):
             dist.scatter(torch_output, src=1)
             test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.numpy()))
         dist.destroy_process_group()
+
 
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -162,6 +167,7 @@ class TestGather(flow.unittest.TestCase):
 
         dist.destroy_process_group()
 
+
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestReduce(flow.unittest.TestCase):
@@ -189,6 +195,7 @@ class TestReduce(flow.unittest.TestCase):
                 np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy())
             )
         dist.destroy_process_group()
+
 
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -223,6 +230,7 @@ class TestAllToAll(flow.unittest.TestCase):
             )
         dist.destroy_process_group()
 
+
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestReduceScatter(flow.unittest.TestCase):
@@ -248,6 +256,7 @@ class TestReduceScatter(flow.unittest.TestCase):
 
         test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.cpu().numpy()))
         dist.destroy_process_group()
+
 
 @unittest.skip("comm test case has bug")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
