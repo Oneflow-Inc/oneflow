@@ -47,6 +47,13 @@ __device__ __inline__ int64_t AtomicCAS(int64_t* address, int64_t compare, int64
                                         static_cast<CuInt64T>(val)));
 }
 
+__device__ __inline__ uint64_t AtomicCAS(uint64_t* address, uint64_t compare, uint64_t val) {
+  static_assert(sizeof(uint64_t) == sizeof(CuInt64T), "size error");
+  return static_cast<uint64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
+                                         static_cast<CuInt64T>(compare),
+                                         static_cast<CuInt64T>(val)));
+}
+
 __device__ __inline__ int32_t AtomicAdd(int32_t* address, int32_t val) {
   return atomicAdd(address, val);
 }
