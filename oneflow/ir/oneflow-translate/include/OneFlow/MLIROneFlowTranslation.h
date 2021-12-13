@@ -16,13 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
 #define ONEFLOW_IR_ONEFLOW_TRANSLATE_INCLUDE_ONEFLOW_MLIRONEFLOWTRANSLATION_H_
 
+#include "oneflow/core/framework/user_op_def.pb.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+
+#include "OneFlow/OneFlowOps.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
-#include "OneFlow/OneFlowOps.h"
-#include "oneflow/core/framework/user_op_def.pb.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
+
 #include <functional>
 #include <string>
 
@@ -47,6 +51,17 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result);
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
+llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
+                                                            ::oneflow::DataType oneflow_value);
+LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
+                                    ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
+                                 ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
+                                  ::oneflow::OperatorConf* op_conf);
+
+LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
+Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 
 class Importer {
  public:
@@ -141,7 +156,11 @@ class RoundTripOneFlowJobWrapperInterface {
 void RoundTripOneFlowJob(
     RoundTripOneFlowJobWrapperInterface& job_wrapper,
     const std::function<bool(::oneflow::Job* job, std::string& reason)>& is_legit_job);
+
 void registerFromOneFlowJobTranslation();
+
+void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
+void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 
 }  // namespace oneflow
 

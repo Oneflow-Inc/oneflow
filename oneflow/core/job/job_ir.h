@@ -13,26 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_
-#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_
+#ifndef ONEFLOW_CORE_JOB_JOB_IR_H_
+#define ONEFLOW_CORE_JOB_JOB_IR_H_
 
-#include <type_traits>
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/device_registry_manager.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/job.pb.h"
 
 namespace oneflow {
-#ifdef WITH_CUDA
-#include <cuda_fp16.h>
 
-void CudaDumpVersionInfo();
+Maybe<void> SaveJobToIR(Job* job, const std::string& path);
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path);
 
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<half> : std::true_type {};
-
-REGISTER_DEVICE(DeviceType::kCUDA).SetDumpVersionInfoFn(CudaDumpVersionInfo).SetDeviceTag("gpu");
-#endif  // WITH_CUDA
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_CUDA_H_
+
+#endif  // ONEFLOW_CORE_JOB_JOB_IR_H_

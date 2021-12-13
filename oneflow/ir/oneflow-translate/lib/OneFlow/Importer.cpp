@@ -13,6 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
+
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -41,28 +54,7 @@ limitations under the License.
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OneFlowOps.h"
-#include "OneFlow/MLIROneFlowTranslation.h"
-#include "OneFlow/Passes.h"
-#include "OneFlow/OneFlowSupport.h"
-
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/framework/user_op_def.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
-#include <cstddef>
-#include <cstdint>
 #include <google/protobuf/text_format.h>
-#include <iostream>
-#include <iterator>
-#include <map>
-#include <new>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 namespace mlir {
 
@@ -124,8 +116,7 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   if (op.has_user_conf() == false) return failure();
   const auto& user_conf = op.user_conf();
   const ::oneflow::UserOpDef& op_def = GetUserOpDef(op.user_conf().op_type_name());
-  const auto UserOpOperationName =
-      OperationName(oneflow::UserOp::getOperationName(), GetMLIRContext());
+  const auto UserOpOperationName = OperationName(UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
       oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
       GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
@@ -363,6 +354,49 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
   }
 }
 
+LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp) {
+  for (const auto& sbp_attr : nd_sbp_attr) {
+    auto sbp_str_attr = sbp_attr.dyn_cast<StringAttr>();
+    if (!sbp_str_attr) {
+      llvm::errs() << "nd_sbp attr is not a StrArrayAttr";
+      return failure();
+    }
+    auto sbp_strref = sbp_str_attr.getValue();
+    if (sbp_strref.startswith("S")) {
+      if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
+        llvm::errs() << "invalid sbp S(x) string value: " << sbp_strref;
+        return failure();
+      }
+      auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
+      nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(split_axis);
+    } else if (sbp_strref == "B") {
+      nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    } else if (sbp_strref == "P") {
+      nd_sbp->add_sbp_parallel()->mutable_partial_sum_parallel();
+    } else {
+      llvm::errs() << "unspported nd_sbp string value: " << sbp_strref;
+      return failure();
+    }
+  }
+  return success();
+}
+
+Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
+  llvm::SmallVector<StringRef, 2> sbp_strrefs;
+  for (const auto& sbp : nd_sbp.sbp_parallel()) {
+    if (sbp.has_split_parallel()) {
+      sbp_strrefs.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
+    } else if (sbp.has_broadcast_parallel()) {
+      sbp_strrefs.emplace_back("B");
+    } else if (sbp.has_partial_sum_parallel()) {
+      sbp_strrefs.emplace_back("P");
+    } else {
+      llvm::errs() << "unsupported sbp";
+    }
+  }
+  return builder.getStrArrayAttr(makeArrayRef(sbp_strrefs));
+}
+
 LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   if (op.has_user_conf() == false) {
     GetModule().emitError("Not a user op. op name: " + op.name());
@@ -403,7 +437,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   }
   bool has_ctrl_out = AppendCtrlOutType(out_types).succeeded();
   OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
-                       oneflow::UserOp::getOperationName());
+                       UserOp::getOperationName());
   uint32_t data_input_size = 0;
   uint32_t data_output_size = 0;
   for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
@@ -621,7 +655,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
   assert(
       GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes).succeeded());
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
-  int32_t result_idx = 0;
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
     auto result_size = std::get<1>(tuple);
@@ -629,7 +662,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
     for (int32_t i = 0; i < result_size; i++) {
       auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
       *(out_s_ptr) = op_name + "/" + name + "_" + std::to_string(i);
-      result_idx += 1;
     }
   }
   return success();
@@ -670,20 +702,6 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     auto id = id_attr.first;
     // mlir only attrs
     // TODO: find a way to skip attrs like callee in a declarative way
-    {
-      std::vector<std::string> keys{};
-      std::vector<int32_t> sizes{};
-      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
-                 .succeeded());
-      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
-    }
-    {
-      std::vector<std::string> keys{};
-      std::vector<int32_t> sizes{};
-      assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
-                 .succeeded());
-      for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
-    }
     if (id.strref().equals("callee")
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
@@ -783,6 +801,168 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       }
       (*user_conf->mutable_attr())[id.str()] = user_attr;
     }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
+               .succeeded());
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
+               .succeeded());
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+  }
+  return success();
+}
+
+LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
+                                    ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* var_op_conf = op_conf->mutable_variable_conf();
+  var_op_conf->set_out("out");
+
+  for (const auto& elem : adaptor.shape()) {
+    var_op_conf->mutable_shape()->mutable_dim()->Add(elem.getSExtValue());
+  }
+
+  if (op->hasAttr("data_type")) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    var_op_conf->set_data_type(dt);
+  }
+
+  if (op->hasAttr("model_name")) {
+    var_op_conf->set_model_name(adaptor.model_name().getValue().str());
+  }
+
+  if (op->hasAttr("l1_regularization")) {
+    var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l1(
+        adaptor.l1_regularization().getValue().convertToFloat());
+  }
+
+  if (op->hasAttr("l2_regularization")) {
+    var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(
+        adaptor.l2_regularization().getValue().convertToFloat());
+  }
+
+  if (op->hasAttr("trainable")) { var_op_conf->set_trainable(adaptor.trainable().getValue()); }
+
+  for (const auto& sbp : adaptor.nd_sbp()) {
+    var_op_conf->add_nd_sbp(sbp.cast<StringAttr>().getValue().str());
+  }
+
+  // all operands are ctrl_inputs
+  for (const auto& operand : op->getOperands()) {
+    op_conf->add_ctrl_in_op_name(
+        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+
+  // empty initializer
+  var_op_conf->mutable_initializer()->mutable_empty_conf();
+
+  return success();
+}
+
+LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
+                                 ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* input_op_conf = op_conf->mutable_input_conf();
+  input_op_conf->set_out("out");
+
+  if (op->hasAttr("shape")) {
+    for (auto elem : adaptor.shape()) {
+      input_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
+    }
+  }
+
+  if (op->hasAttr("data_type")) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    input_op_conf->mutable_blob_conf()->set_data_type(dt);
+  }
+
+  if (op->hasAttr("is_dynamic")) {
+    input_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
+  }
+
+  if (op->hasAttr("nd_sbp")) {
+    if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
+                                  input_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
+      return failure();
+    }
+  }
+
+  if (op->hasAttr("job_name")) { input_op_conf->set_job_name(adaptor.job_name().getValue().str()); }
+
+  // operand 0 is block argument, others are ctrl_inputs
+  for (size_t i = 1; i < op->getNumOperands(); ++i) {
+    op_conf->add_ctrl_in_op_name(
+        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+
+  return success();
+}
+
+LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
+                                  ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* output_op_conf = op_conf->mutable_output_conf();
+  output_op_conf->set_out("out");
+
+  if (op->hasAttr("shape")) {
+    for (auto elem : adaptor.shape()) {
+      output_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
+    }
+  }
+
+  if (op->hasAttr("data_type")) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    output_op_conf->mutable_blob_conf()->set_data_type(dt);
+  }
+
+  if (op->hasAttr("is_dynamic")) {
+    output_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
+  }
+
+  if (op->hasAttr("nd_sbp")) {
+    if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
+                                  output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
+      return failure();
+    }
+  }
+
+  if (op->hasAttr("job_name")) {
+    output_op_conf->set_job_name(adaptor.job_name().getValue().str());
+  }
+
+  if (op->getNumOperands() == 0) {
+    op->emitError("output op has at least one input.");
+    return failure();
+  }
+  auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
+  auto* producer_op = result.getDefiningOp();
+  auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
+  output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
+  for (size_t i = 1; i < op->getNumOperands(); ++i) {
+    op_conf->add_ctrl_in_op_name(
+        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
   }
   return success();
 }

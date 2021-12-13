@@ -182,7 +182,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@canary-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-clang-12
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -228,7 +228,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -242,7 +242,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@canary-release
+      - uses: Oneflow-Inc/get-oneflow@support-clang-12
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -263,7 +263,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@canary-release
+      - uses: Oneflow-Inc/get-oneflow@support-clang-12
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -284,7 +284,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@canary-release
+      - uses: Oneflow-Inc/get-oneflow@support-clang-12
         name: Build manylinux cu101_xla
         id: build-xla
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
@@ -306,7 +306,7 @@ jobs:
             3.6
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@canary-release
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-clang-12
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -317,7 +317,7 @@ jobs:
           dst-dir: bin
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@canary-release
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-clang-12
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -331,6 +331,11 @@ jobs:
     name: Build with clang
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: [self-hosted, linux, build]
+    env:
+      ONEFLOW_SRC: .
+      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/clang13
+      CUDA_VERSION: "10.1"
+      WHEELHOUSE_DIR: ./wheelhouse
     steps:
       - name: Fix permissions
         run: |
@@ -338,7 +343,7 @@ jobs:
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -347,25 +352,26 @@ jobs:
           entry: build-with-clang
           digest-type: build
           mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      - name: Checkout Oneflow-Inc/conda-env
+      - name: Build with Clang
+        uses: Oneflow-Inc/get-oneflow@support-clang-12
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        uses: actions/checkout@v2
         with:
-          repository: Oneflow-Inc/conda-env
-          ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
-          path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@canary-release
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
-        name: Build with clang10
-        with:
-          cmake-init-cache: cmake/caches/ci/gh-hosted/cpu-clang.cmake
-          oneflow-src: .
-          oneflow-build-env: conda
-          conda-env-file: conda-env/dev/clang10/environment-v2.yml
-          conda-env-name: oneflow-dev-clang10-v2
-          conda-installer-url: https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
-          conda-prefix: ~/miniconda3-prefixes/py39_4.10.3
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/llvm/cuda-75-clang.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/clang/build-llvm.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: llvm
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
           self-hosted: true
+          cuda-version: ${{ env.CUDA_VERSION }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: false
+          retry-failed-build: true
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
+          wheel-audit: false
+          python-versions: |
+            3.8
 
   find-test-cache:
     name: "Find test cache"
@@ -382,7 +388,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@canary-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-clang-12
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -424,7 +430,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -440,7 +446,7 @@ jobs:
           exit 1
       - name: Download wheel and binary
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (!fromJson(matrix.is-xla) || (fromJson(matrix.is-xla) && needs.changed_files.outputs.should_run_single_client_tests == '1')) }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@canary-release
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-clang-12
         id: download-digest
         timeout-minutes: 10
         with:
@@ -744,7 +750,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@canary-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
