@@ -36,7 +36,7 @@ class TestLinspace(flow.unittest.TestCase):
         device = random_device()
         x.to(device)
         return x
-    
+
     @autotest(n=30, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=False)
     def test_linspace_float_with_random_data(test_case):
         start = random()
