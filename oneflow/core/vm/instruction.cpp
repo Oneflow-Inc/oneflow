@@ -363,8 +363,8 @@ void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
 void Instruction::Delete() {
   instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
   clear_instr_msg();
-  mut_in_edges()->Clear();
-  mut_out_edges()->Clear();
+  CHECK_EQ(mut_in_edges()->size(), 0);
+  CHECK_EQ(mut_out_edges()->size(), 0);
 }
 
 bool Instruction::Done() const {

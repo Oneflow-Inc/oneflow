@@ -234,6 +234,10 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
   }
+  INTRUSIVE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+    edge->mut_src_instruction()->mut_out_edges()->Erase(edge);
+    instruction->mut_in_edges()->Erase(edge);
+  }
   OF_PROFILER_RANGE_POP();
 }
 
