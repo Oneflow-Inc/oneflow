@@ -113,7 +113,7 @@ Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
 
   bool old_requires_grad = requires_grad();
   impl_ = consistent_tensor->impl_;
-  set_requires_grad(old_requires_grad);
+  JUST(set_requires_grad(old_requires_grad));
   grad_fn_node_ = nullptr;
   return Maybe<void>::Ok();
 }
