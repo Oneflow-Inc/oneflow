@@ -172,9 +172,9 @@ class PlainEncoder {
       : num_shards_(options.num_shards) {}
   ~PlainEncoder() = default;
 
-  void Encode(ep::Stream* stream, uint32_t num_keys, const void* keys, uint64_t* context) {
-    RUN_CUDA_KERNEL((PlainEncodingKernel<Key>), stream, num_keys, num_shards_, num_keys,
-                    static_cast<const Key*>(keys), context);
+  void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, uint64_t* context) {
+    RUN_CUDA_KERNEL((PlainEncodingKernel<Key>), stream, num_keys, num_shards_, num_keys, keys,
+                    context);
   }
 
  private:
@@ -183,8 +183,10 @@ class PlainEncoder {
 
 template<typename Key, typename Index>
 class OrdinalEncoder {
+ public:
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
-  explicit OrdinalEncoder(uint64_t capacity) : capacity_(capacity) {
+  explicit OrdinalEncoder(const CudaInMemoryKeyValueStoreOptions& options)
+      : capacity_(options.num_embeddings) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
     OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
@@ -257,7 +259,7 @@ class KeyValueStoreImpl : public KeyValueStore {
 template<typename Encoder, typename Key, typename Elem>
 void KeyValueStoreImpl<Encoder, Key, Elem>::Prefetch(ep::Stream* stream, uint32_t num_keys,
                                                      const void* keys, uint64_t* context) {
-  encoder_.Encode(stream, num_keys, keys, context);
+  encoder_.Encode(stream, num_keys, static_cast<const Key*>(keys), context);
 }
 
 template<typename Encoder, typename Key, typename Elem>
@@ -286,7 +288,10 @@ std::unique_ptr<KeyValueStore> NewCudaInMemoryKeyValueStore(
     const CudaInMemoryKeyValueStoreOptions& options) {
   if (options.encoding_type == CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain) {
     return std::unique_ptr<KeyValueStore>(
-        new KeyValueStoreImpl<PlainEncoder<int64_t>, int64_t, float>(options));
+        new KeyValueStoreImpl<PlainEncoder<uint64_t>, uint64_t, float>(options));
+  } else if (options.encoding_type == CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal) {
+    return std::unique_ptr<KeyValueStore>(
+        new KeyValueStoreImpl<OrdinalEncoder<uint64_t, uint64_t>, uint64_t, float>(options));
   } else {
     UNIMPLEMENTED();
     return nullptr;
