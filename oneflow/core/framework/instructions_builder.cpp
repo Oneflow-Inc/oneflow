@@ -787,6 +787,13 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
         Global<VirtualMachine>::Get()->mut_vm(),
         parallel_desc_sym->device_tag() + ".AllocateOutputs", parallel_desc_sym, phy_instr_operand);
     instruction_list_->EmplaceBack(std::move(instruction));
+    const auto& producer_op_device =
+        JUST(Device::New(parallel_desc_sym->device_tag(), op_device->device_id()));
+    for (const auto& eager_blob_object : *output_eager_blob_objects) {
+      if (!eager_blob_object->producer_op_device().has_value()) {
+        JUST(eager_blob_object->init_producer_op_device(producer_op_device));
+      }
+    }
   }
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
