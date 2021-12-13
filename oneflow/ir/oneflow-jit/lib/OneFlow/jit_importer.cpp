@@ -276,7 +276,7 @@ FuncOp JitImporter::FinalizeProcessFunction(
   auto function = symbol_table.lookup<FuncOp>(func_name);
   if (!function) { LOG(FATAL) << "function not found: " << func_name; }
 
-  auto return_op = GetBuilder().create<ReturnOp>(GetModule()->getLoc(), return_values);
+  auto return_op = GetBuilder().create<mlir::ReturnOp>(GetModule()->getLoc(), return_values);
   CHECK(return_op);
 
   llvm::SmallVector<Type, 8> out_types{};
@@ -294,12 +294,12 @@ FuncOp JitImporter::FinalizeProcessFunction(
   llvm::errs() << function.sym_name() << ", "
                << "hash: " << function_hash << "\n";
 
-  mlir::PassManager pm(GetMLIRContext(), /*operationName=*/"builtin.func");
+  mlir::PassManager pm(GetMLIRContext());
   pm.addPass(::mlir::createCanonicalizerPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createReturnAllLeaveResultPass());
   // pm.addNestedPass<mlir::FuncOp>(::mlir::oneflow::createCreateComputeCtxPass());
   pm.addPass(::mlir::oneflow::createFuseIntoExistingOpPass());
-  CHECK(pm.run(function).succeeded());
+  CHECK(pm.run(GetModule()).succeeded());
 
   func_hash_symbol_mapping_.insert({function_hash, function});
   return function;
