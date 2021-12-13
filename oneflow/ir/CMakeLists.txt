@@ -88,6 +88,8 @@ if(NOT llvm_monorepo_POPULATED)
   set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 endif()
 
+if (WITH_MLIR)
+
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
@@ -131,7 +133,6 @@ function(oneflow_add_mlir_dialect_library)
   set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
-if (WITH_MLIR)
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)
