@@ -1138,8 +1138,6 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   const auto& parallel_desc = GetParallelDesc(tensor);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
-  const auto& last_used_device = JUST(eager_blob_object->last_used_device());
-  JUST(SoftSyncStream(compute_local_dep_object, modifier, last_used_device));
   const auto& phy_instr_operand = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(

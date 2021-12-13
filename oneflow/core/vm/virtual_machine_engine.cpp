@@ -224,10 +224,7 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH(
-      "D:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
-      + ":" + instruction->instr_msg().instr_type_name());
+  OF_PROFILER_RANGE_PUSH("D:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }

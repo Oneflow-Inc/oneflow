@@ -56,6 +56,12 @@ void InitFromProto(InstructionMsg* that, const T& proto) {
 
 }  // namespace
 
+std::string InstructionMsg::DebugName() const {
+  const std::string& op_type_name = instr_type_id().instruction_type().DebugOpTypeName(*this);
+  if (!op_type_name.empty()) { return op_type_name; }
+  return instr_type_name();
+}
+
 InstructionOperand* InstructionMsg::add_instr_operand() {
   auto* operand_vec = mut_operand();
   operand_vec->emplace_back();

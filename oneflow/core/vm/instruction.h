@@ -71,6 +71,7 @@ class InstructionMsg final : public intrusive::Base {
   }
   const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
   Stream* phy_instr_stream() const { return phy_instr_stream_; }
+  std::string DebugName() const;
   // Setters
   void set_parallel_desc_symbol_id(int64_t val) { parallel_desc_symbol_id_ = val; }
   InstructionOperandList* mut_operand_list() {
