@@ -37,7 +37,11 @@ for gpu in gpus:
 class TestLayerNorm(flow.unittest.TestCase):
     def test_layer_norm(_):
         confs = [
+            {"x_shape": (40, 1023)},
             {"x_shape": (40, 1024)},
+            {"x_shape": (40, 2047)},
+            {"x_shape": (40, 2048)},
+            {"x_shape": (40, 16384)},
         ]
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -64,6 +68,8 @@ class TestLayerNorm(flow.unittest.TestCase):
             if device_type == "cpu" and fuse_add_to_output == True:
                 continue
             x_shape = confs["x_shape"]
+            if device_type == "cpu" and x_shape[1] != 1024:
+                continue
             begin_norm_axis = 1
             begin_params_axis = 1
             flow.clear_default_session()
@@ -86,6 +92,8 @@ class TestLayerNorm(flow.unittest.TestCase):
                 if data_type == "float16":
                     x_tf = tf.cast(x_tf, dtype=tf.float16)
                     tf.keras.backend.set_floatx("float16")
+                else:
+                    tf.keras.backend.set_floatx("float32")
                 layer = tf.keras.layers.LayerNormalization(
                     axis=begin_norm_axis,
                     epsilon=epsilon,
