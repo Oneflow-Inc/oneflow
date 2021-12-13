@@ -10,7 +10,7 @@ def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array at
 
 def ShapeAttr : TypedArrayAttrBase<SI64Attr, ""> {}
 
-def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, "signed 64-bit integer array attribute"> {}
+def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, ""> {}
 
 def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
