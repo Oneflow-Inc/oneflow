@@ -307,14 +307,14 @@ class Optimizer(object):
 
                 if vars_conf[param].bound_optimizer is None:
                     vars_conf[param].bound_optimizer = self
-                else:
+                elif vars_conf[param].bound_optimizer is not self:
                     raise ValueError(
-                        f'Parameter "{vars_conf[param].name}" is already bound to an optimizer'
+                        f"<{vars_conf[param].name}> is already bound to another optimizer."
                     )
 
     def _generate_indexed_slices_optimizer_conf(self, job_conf, vars_conf):
         if not self.support_sparse:
-            raise ValueError("This Optimizer do not support sparse updating")
+            raise ValueError(f"{self.__class__} does not support sparse updating.")
 
         for param_group in self.param_groups:
             for param in param_group.parameters:

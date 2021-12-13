@@ -32,18 +32,18 @@ class OptDict(object):
                 self._is_sparse = True
             else:
                 raise ValueError(
-                    'opt_dict["optim"] is not an instance of Optimizer or SparseOptimizer'
+                    'opt_dict["optim"] is not an instance of Optimizer or SparseOptimizer.'
                 )
         else:
-            raise ValueError("opt_dict has not key 'optim'")
+            raise ValueError("opt_dict doesn't have the key 'optim'.")
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
             if not isinstance(opt_dict["lr_sch"], LrScheduler):
-                raise ValueError('opt_dict["lr_sch"] is not an instance of LrScheduler')
+                raise ValueError('opt_dict["lr_sch"] is not an instance of LrScheduler.')
 
             if opt_dict["lr_sch"]._optimizer is not self._optimizer:
-                raise ValueError("lr_scheduler's optimizer is not same with optimizer")
+                raise ValueError("lr_scheduler doesn't match optimizer.")
 
             self._lr_scheduler = opt_dict["lr_sch"]
 

@@ -1,0 +1,77 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import os
+import unittest
+
+import oneflow as flow
+import oneflow.unittest
+
+P = flow.placement("cuda", {0: [0]})
+SBP = flow.sbp.broadcast
+
+
+class MyModule(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        w = flow.randn(10, 10, placement=P, sbp=SBP)
+        self.weight = flow.nn.Parameter(w)
+        print(self.weight)
+
+    def forward(self, input):
+        print(self.weight)
+        return flow._C.gather(self.weight, input, 0)
+
+
+class MyGraph(flow.nn.Graph):
+    def __init__(self, module):
+        super().__init__()
+        self.m = module
+        sgd = flow.optim.SGD(module.parameters(), lr=1e-3)
+        self.add_optimizer(flow.optim.utils.SparseOptimizer(sgd))
+
+    def build(self, input):
+        result = self.m(input)
+        result.mean().backward()
+
+
+def _rand_input():
+    generator = flow.Generator()
+    generator.manual_seed(0)
+    return flow.randint(0, 10, (8, ), generator=generator, placement=P, sbp=SBP)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
+class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
+    def test(test_case):
+        m = MyModule()
+        graph = MyGraph(m)
+        graph._compile(_rand_input())
+
+        sparse_optimizer_found = False
+        for op in graph._full_graph_proto.net.op:
+            print("==>", op.name)
+            if op.HasField("user_conf"):
+                print("  -->", op.user_conf.op_type_name)
+                if op.user_conf.op_type_name == "indexed_slices_sgd_update":
+                    sparse_optimizer_found = True
+                    break
+
+        test_case.assertTrue(sparse_optimizer_found)
+
+
+if __name__ == "__main__":
+    unittest.main()
