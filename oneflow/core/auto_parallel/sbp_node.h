@@ -267,15 +267,25 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
         }
       }
     }
-    if (MergedSigId2ChildrenSigId.size() <= 0) {
-      std::cout << "0 size for merge child edge, min cost: " << min_cost << std::endl;
-    }
+    CHECK(MergedSigId2ChildrenSigId.size() > 0)
+        << "0 size for merge child edge, min cost: " << min_cost;
   } else {
     for (int32_t i = 0; i < first->Cost.size(); i++) {
       for (int32_t j = 0; j < second->Cost.size(); j++) {
         MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
         Cost.emplace_back(first->Cost[i] + second->Cost[j]);
       }
+    }
+  }
+
+  // Initialize default sbp choice
+  // If the original sbp pair does not go through, then use 0 as default.
+  FinalSbpSignatureId = 0;
+  // Track the original strategy
+  for (int32_t sig_id = 0; sig_id < MergedSigId2ChildrenSigId.size(); sig_id++) {
+    if (MergedSigId2ChildrenSigId[sig_id].first == first->FinalSbpSignatureId
+        && MergedSigId2ChildrenSigId[sig_id].second == second->FinalSbpSignatureId) {
+      FinalSbpSignatureId = sig_id;
     }
   }
 
@@ -320,9 +330,6 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
       RemoveFrom<SbpEdge<SbpSignature>*>(EdgesOut, k);
     }
   }
-
-  // Initialize default sbp choice
-  FinalSbpSignatureId = 0;
 }
 
 template<class SbpSignature>
