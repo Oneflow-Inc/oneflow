@@ -128,7 +128,7 @@ class ConsistentRandFunctor {
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -200,7 +200,7 @@ class ConsistentRandNFunctor {
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -284,7 +284,7 @@ class ConsistentRandIntFunctor {
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -353,7 +353,7 @@ class ConsistentRandPermFunctor {
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
