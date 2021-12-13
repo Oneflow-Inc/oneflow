@@ -657,14 +657,14 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
   // Go down from the tail to the head, since we might drop the tail.
-  for (int32_t sbp_id = nd_sbp_sig_list.size() - 1; sbp_id >= 0; sbp_id--) {
-    bool not_valid = false;
+  auto FilterSbp4Blobs = [&](const PbRpf<std::string>& bns,
+                             const cfg::NdSbpSignature& nd_sbp_sig) -> Maybe<bool> {
     // {in_0 : (S(6), B), in_1 : (S(0), S(1)), out : (B, S(1))}
     // look through input blob name in_0 and in_1
-    for (const auto& ibn : input_bns()) {
-      const auto& nd_sbp_it = nd_sbp_sig_list[sbp_id].bn_in_op2nd_sbp().find(ibn);
+    for (const auto& ibn : bns) {
+      const auto& nd_sbp_it = nd_sbp_sig.bn_in_op2nd_sbp().find(ibn);
       // Find an unexpected blob name
-      CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sig_list[sbp_id].bn_in_op2nd_sbp().end());
+      CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end());
       const auto& nd_sbp = nd_sbp_it->second;
       const auto& logical_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       const auto& parallel_hierarchy = parallel_desc.hierarchy();
@@ -676,16 +676,16 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
           const int64_t axis = sbp_parallel.split_parallel().axis();
           // No need to CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes()),
           // since we have already do so in FilterAndCheckValidSbpSignatureListByLogicalShape()
-          if (logical_shape.At(axis) < parallel_hierarchy->At(dim_sbp)) {
-            not_valid = true;
-            break;
-          }
+          if (logical_shape.At(axis) < parallel_hierarchy->At(dim_sbp)) { return true; }
         }
       }
-      if (not_valid) { break; }
     }
+    return false;
+  };
+  for (int32_t sbp_id = nd_sbp_sig_list.size() - 1; sbp_id >= 0; sbp_id--) {
     // Remove the Nd SBP candidate
-    if (not_valid) {
+    if (JUST(FilterSbp4Blobs(input_bns(), nd_sbp_sig_list[sbp_id]))
+        || JUST(FilterSbp4Blobs(output_bns(), nd_sbp_sig_list[sbp_id]))) {
       nd_sbp_sig_list[sbp_id] = nd_sbp_sig_list[nd_sbp_sig_list.size() - 1];
       nd_sbp_sig_list.pop_back();
     }

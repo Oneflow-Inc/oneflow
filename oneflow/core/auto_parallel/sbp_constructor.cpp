@@ -155,12 +155,16 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
   // const JobParallelViewConf& job_parallel_view_conf(job.job_parallel_view_conf());
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     HashMap<std::string, const BlobDesc*> ibn2blob_desc;
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-      OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
-      const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-      ibn2blob_desc.emplace(ibn, logical_blob_desc);
-    }
+    auto FindShape4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
+      for (const std::string& ibn : bns) {
+        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+        const BlobDesc* logical_blob_desc = &op_node->LogicalBlobDesc4Lbi(lbi);
+        ibn2blob_desc.emplace(ibn, logical_blob_desc);
+      }
+      return Maybe<void>::Ok();
+    };
+    JUST(FindShape4Blobs(op_node->op().input_bns()));
+    JUST(FindShape4Blobs(op_node->op().output_bns()));
     // Get logical blob description
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       auto it = ibn2blob_desc.find(ibn);
