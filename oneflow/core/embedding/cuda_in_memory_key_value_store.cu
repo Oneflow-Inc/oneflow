@@ -104,9 +104,7 @@ __device__ bool GetOrInsertOne(const size_t capacity, TableEntry<Key, Index>* ta
     const size_t idx = (start_idx + count) % capacity;
     Key* entry_key = &table[idx].key;
     Index* entry_index = &table[idx].index;
-    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, table_size, key, hash, out)) {
-      return true;
-    }
+    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, table_size, key, out)) { return true; }
   }
   return false;
 }
