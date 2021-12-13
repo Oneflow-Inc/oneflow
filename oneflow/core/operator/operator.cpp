@@ -656,7 +656,7 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
 Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
-  // Go down from the tail to the head, since we might drop the tail.
+  
   auto FilterSbp4Blobs = [&](const PbRpf<std::string>& bns,
                              const cfg::NdSbpSignature& nd_sbp_sig) -> Maybe<bool> {
     // {in_0 : (S(6), B), in_1 : (S(0), S(1)), out : (B, S(1))}
@@ -666,22 +666,38 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
       // Find an unexpected blob name
       CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sig.bn_in_op2nd_sbp().end());
       const auto& nd_sbp = nd_sbp_it->second;
-      const auto& logical_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
+      Shape logical_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       const auto& parallel_hierarchy = parallel_desc.hierarchy();
-      // For in_0, look through S(6) and B
-      for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
-        const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+      // Treat 1D sbp and nD sbp differently. Please refer to 
+      // JobBuildAndInferCtx::CheckOpBlobSplitability
+      // for more details.
+      if (nd_sbp.sbp_parallel_size() == 1) {
+        // Checking 1D sbp
+        const auto& sbp_parallel = nd_sbp.sbp_parallel(0);
         if (sbp_parallel.has_split_parallel()) {
-          // For S(6) in (S(6), B) of {in_0 : (S(6), B)}, axis = 0
           const int64_t axis = sbp_parallel.split_parallel().axis();
-          // No need to CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes()),
-          // since we have already do so in FilterAndCheckValidSbpSignatureListByLogicalShape()
-          if (logical_shape.At(axis) < parallel_hierarchy->At(dim_sbp)) { return true; }
+          if (logical_shape.At(axis) < parallel_hierarchy->At(0)) { return true; }
+        }
+      } else {
+        // Checking nD sbp
+        // For in_0, look through S(6) and B
+        for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+          const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+          if (sbp_parallel.has_split_parallel()) {
+            // For S(6) in (S(6), B) of {in_0 : (S(6), B)}, axis = 0
+            const int64_t axis = sbp_parallel.split_parallel().axis();
+            // No need to CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes()),
+            // since we have already do so in FilterAndCheckValidSbpSignatureListByLogicalShape()
+            CHECK_GT_OR_RETURN(logical_shape.At(axis), 0);
+            if (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) > 0) { return true; }
+            logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
+          }
         }
       }
     }
     return false;
   };
+  // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list.size() - 1; sbp_id >= 0; sbp_id--) {
     // Remove the Nd SBP candidate
     if (JUST(FilterSbp4Blobs(input_bns(), nd_sbp_sig_list[sbp_id]))
