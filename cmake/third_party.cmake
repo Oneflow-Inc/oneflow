@@ -3,7 +3,9 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-include(zlib)
+if (WITH_ZLIB)
+  include(zlib)
+endif()
 include(protobuf)
 include(googletest)
 include(gflags)
@@ -140,7 +142,6 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    zlib_imported
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -155,6 +156,10 @@ if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
 endif()
 
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_libs zlib_imported)
+endif()
+
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
@@ -162,7 +167,6 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib
   protobuf
   gflags
   glog
@@ -181,7 +185,9 @@ set(oneflow_third_party_dependencies
 if (WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
 endif()
-
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_dependencies zlib)
+endif()
 
 if (WITH_COCOAPI)
   list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
