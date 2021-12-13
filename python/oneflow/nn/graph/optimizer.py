@@ -35,7 +35,7 @@ class OptDict(object):
                     'opt_dict["optim"] is not an instance of Optimizer or SparseOptimizer.'
                 )
         else:
-            raise ValueError("opt_dict doesn't have the key 'optim'.")
+            raise ValueError("Key 'optim' doesn't exist in opt_dict.")
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
