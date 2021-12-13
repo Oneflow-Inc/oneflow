@@ -57,7 +57,7 @@ def linspace_op(
         
         >>> y = flow.linspace(3, 10, steps=5)
         >>> y
-        tensor([  3.0000,   4.7500,   6.5000,   8.2500,  10.0000], dtype=oneflow.float32)
+        tensor([ 3.0000,  4.7500,  6.5000,  8.2500, 10.0000], dtype=oneflow.float32)
 
     """
     step = 1.0
