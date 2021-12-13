@@ -14,14 +14,19 @@ def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr,
   let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int64_t v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
 }
 
+def ShapeAttr : TypedArrayAttrBase<SI64Attr,
+                                      ""> {
+  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int64_t v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
+}
+
 def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType,
                                       "signed 64-bit integer array attribute"> {
   let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return DataTypeAttr::get($0); })))";
 }
 
-def ShapeArrayAttr : TypedArrayAttrBase<AnyI64ElementsAttr,
+def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr,
                                       ""> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return DenseIntElementsAttr::get($0); })))";
+  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
 }
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;

@@ -64,7 +64,7 @@ std::string GetMLIRAttrTypeName(const AttrType& attr_type) {
   } else if (attr_type == ::oneflow::kAtString) {
     return "StrAttr";
   } else if (attr_type == ::oneflow::kAtShape) {
-    return "AnyI64ElementsAttr";
+    return "ShapeAttr";
   } else if (attr_type == ::oneflow::kAtDataType) {
     return "OneFlow_DataType";
   } else if (attr_type == ::oneflow::kAtListInt32) {

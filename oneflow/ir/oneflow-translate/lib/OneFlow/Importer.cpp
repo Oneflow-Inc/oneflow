@@ -199,17 +199,14 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
   }
 }
 
-DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape) {
-  ArrayRef<int64_t> values = {shape.dim().begin(), shape.dim().end()};
-  RankedTensorType tt = RankedTensorType::get({static_cast<int64_t>(values.size())},
-                                              GetBuilder().getIntegerType(64, true));
-  ;
-  return DenseIntElementsAttr::get(tt, values);
+ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
+  return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
+      shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
-void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
-    shape->add_dim(int_v);
+void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
 }
 
@@ -244,8 +241,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     DEFINE_ONE_ELIF(at_string, getStringAttr)
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_shape()) {
-      attr_vec.emplace_back(
-          GetBuilder().getNamedAttr(name, DenseIntElementsAttrFromShape(value.at_shape())));
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(name, GetAttrFromShape(value.at_shape())));
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
@@ -285,9 +281,9 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
           name, GetBuilder().getArrayAttr(llvm::to_vector<8>(dt_attr_list))));
     }
     else if (value.has_at_list_shape()) {
-      auto dense_attr_list = llvm::map_range(
-          value.at_list_shape().val(),
-          [&](const ::oneflow::ShapeProto& s) { return DenseIntElementsAttrFromShape(s); });
+      auto dense_attr_list =
+          llvm::map_range(value.at_list_shape().val(),
+                          [&](const ::oneflow::ShapeProto& s) { return GetAttrFromShape(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
@@ -718,7 +714,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       } else if (attr_type == ::oneflow::kAtString) {
         user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
       } else if (attr_type == ::oneflow::kAtShape) {
-        WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
+        WriteAttrToShape(attr, user_attr.mutable_at_shape());
       } else if (attr_type == ::oneflow::kAtDataType) {
         ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
         if (succeeded(ConvertDT(attr, dt))) {
@@ -757,11 +753,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
           }
         }
       } else if (attr_type == ::oneflow::kAtListShape) {
-        for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+        for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
-            shape_ptr->mutable_dim()->Add(int_v);
-          }
+          WriteAttrToShape(shape_attr, shape_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
