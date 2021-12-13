@@ -150,7 +150,7 @@ Maybe<const Optional<std::string>&> GetExtraAllocatorDeviceType(const std::strin
       {"cuda_h2d", "cuda"},
       {"cuda_d2h", NullOpt},
       {"comm_net", NullOpt},
-      {"sync_launched_nccl", "cuda"},
+      {"sync_launched_nccl", NullOpt}, // "sync_launched_nccl" is actually the cuda compute stream. 
       {"async_launched_nccl", "cuda"},
       {"critical_section", NullOpt},
   };
