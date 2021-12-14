@@ -23,7 +23,7 @@ jobs:
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
       WHEELHOUSE_DIR: manylinux-wheelhouse
       COMPUTE_PLATFORM: cu112
-      CUDA_VERSION: "11.2"
+      CUDA_VERSION: "10.1"
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
