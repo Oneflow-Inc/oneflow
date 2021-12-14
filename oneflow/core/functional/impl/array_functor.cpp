@@ -2113,9 +2113,10 @@ class MeshgridFunctor {
     Shape grids_shape(grids_vec);
     
     DimVector view_shape_vec(size, 1);
+    Shape view_shape;
     for (int i = 0; i < size; ++i) {
       view_shape_vec[i] = -1;
-      Shape view_shape(view_shape_vec);
+      view_shape.assign(view_shape_vec);
       std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensor_consts.at(i), view_shape));
       grids[i] = JUST(Expand(reshaped, grids_shape));
       view_shape_vec[i] = 1;
