@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/transport_stream_type.h"
+#include "oneflow/core/common/multi_client.h"
 
 namespace oneflow {
 namespace vm {
@@ -51,16 +52,19 @@ template<typename DerivedT>
 intrusive::shared_ptr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   std::size_t device_num = 0;
-  if (resource.has_cpu_device_num()) {
-    device_num = std::max<std::size_t>(device_num, resource.cpu_device_num());
-  }
-  if (resource.has_gpu_device_num()) {
-    device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
+  if (!CHECK_JUST(IsMultiClient())) {
+    if (resource.has_cpu_device_num()) {
+      device_num = std::max<std::size_t>(device_num, resource.cpu_device_num());
+    }
+    if (resource.has_gpu_device_num()) {
+      device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
+    }
+  } else {
+    // Keep device_num = 0. TransportStreamType is not used in multi-client mode.
   }
   auto ret = intrusive::make_shared<StreamDesc>();
   ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
   // TODO(lixinqi): remove this ugly field
-  ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   // TODO(lixinqi): refactor to a num_threads_per_machine field
   ret->set_num_streams_per_thread(1);

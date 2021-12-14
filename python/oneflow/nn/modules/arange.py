@@ -24,7 +24,7 @@ def arange_op(
     start: int = 0,
     end: int = None,
     step: int = 1,
-    dtype: flow.dtype = flow.int64,
+    dtype: flow.dtype = None,
     device: Union[str, flow.device] = None,
     placement: flow.placement = None,
     sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,

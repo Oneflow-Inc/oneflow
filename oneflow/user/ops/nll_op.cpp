@@ -104,7 +104,8 @@ REGISTER_USER_OP("nll")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
+                                                  user_op::SbpContext* ctx) {
       builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
@@ -118,7 +119,8 @@ REGISTER_USER_OP("nll_grad")
     .Attr<int64_t>("ignore_index")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
+                                                   user_op::SbpContext* ctx) {
       builder.PartialSum(user_op::OpArg("total_weight", 0));
     }));
 
