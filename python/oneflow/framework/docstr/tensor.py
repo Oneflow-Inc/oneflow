@@ -52,6 +52,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.from_numpy,
+    r"""
+    Creates a ``Tensor`` from a ``numpy.ndarray``.
+
+    The returned tensor and ndarray share the same memory. Modifications to the tensor
+    will be reflected in the ndarray and vice versa.
+
+    It currently accepts ndarray with dtypes of numpy.float64, numpy.float32, numpy.float16,
+    numpy.int64, numpy.int32, numpy.int8, numpy.uint8.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.arange(6).reshape(2, 3)
+        >>> t = flow.from_numpy(np_arr)
+        >>> t
+        tensor([[0, 1, 2],
+                [3, 4, 5]], dtype=oneflow.int64)
+        >>> np_arr[0, 0] = -1
+        >>> t
+        tensor([[-1,  1,  2],
+                [ 3,  4,  5]], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atan2,
     r"""
     See :func:`oneflow.atan2`
