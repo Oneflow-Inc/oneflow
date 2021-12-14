@@ -13,17 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_FP16_DATA_TYPE_H_
-#define ONEFLOW_CORE_COMMON_FP16_DATA_TYPE_H_
-#include <type_traits>
-
-// auto generated header included
-#include "oneflow/core/framework/auto_gen_device_registry.h"
+#include "oneflow/core/job/job_ir.h"
 
 namespace oneflow {
-// Type Trait: IsFloat16
-template<typename T>
-struct IsFloat16 : std::false_type {};
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_FP16_DATA_TYPE_H_
+#ifndef WITH_MLIR
+
+Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
+  UNIMPLEMENTED_THEN_RETURN() << "SaveJobToIR is only supported WITH_MLIR";
+}
+
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
+  UNIMPLEMENTED_THEN_RETURN() << "LoadJobFromIR is only supported WITH_MLIR";
+}
+
+#endif
+
+}  // namespace oneflow
