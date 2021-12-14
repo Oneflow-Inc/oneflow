@@ -190,17 +190,14 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
   }
 }
 
-DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape) {
-  ArrayRef<int64_t> values = {shape.dim().begin(), shape.dim().end()};
-  RankedTensorType tt = RankedTensorType::get({static_cast<int64_t>(values.size())},
-                                              GetBuilder().getIntegerType(64, true));
-  ;
-  return DenseIntElementsAttr::get(tt, values);
+ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
+  return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
+      shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
-void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
-    shape->add_dim(int_v);
+void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
 }
 
@@ -235,8 +232,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     DEFINE_ONE_ELIF(at_string, getStringAttr)
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_shape()) {
-      attr_vec.emplace_back(
-          GetBuilder().getNamedAttr(name, DenseIntElementsAttrFromShape(value.at_shape())));
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(name, GetAttrFromShape(value.at_shape())));
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
@@ -276,9 +272,9 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
           name, GetBuilder().getArrayAttr(llvm::to_vector<8>(dt_attr_list))));
     }
     else if (value.has_at_list_shape()) {
-      auto dense_attr_list = llvm::map_range(
-          value.at_list_shape().val(),
-          [&](const ::oneflow::ShapeProto& s) { return DenseIntElementsAttrFromShape(s); });
+      auto dense_attr_list =
+          llvm::map_range(value.at_list_shape().val(),
+                          [&](const ::oneflow::ShapeProto& s) { return GetAttrFromShape(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
@@ -738,7 +734,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       } else if (attr_type == ::oneflow::kAtString) {
         user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
       } else if (attr_type == ::oneflow::kAtShape) {
-        WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
+        WriteAttrToShape(attr, user_attr.mutable_at_shape());
       } else if (attr_type == ::oneflow::kAtDataType) {
         ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
         if (succeeded(ConvertDT(attr, dt))) {
@@ -777,11 +773,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
           }
         }
       } else if (attr_type == ::oneflow::kAtListShape) {
-        for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+        for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
-            shape_ptr->mutable_dim()->Add(int_v);
-          }
+          WriteAttrToShape(shape_attr, shape_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
@@ -823,11 +817,12 @@ LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& a
   auto* var_op_conf = op_conf->mutable_variable_conf();
   var_op_conf->set_out("out");
 
-  for (const auto& elem : adaptor.shape()) {
-    var_op_conf->mutable_shape()->mutable_dim()->Add(elem.getSExtValue());
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, var_op_conf->mutable_shape());
   }
 
-  if (op->hasAttr("data_type")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
     var_op_conf->set_data_type(dt);
@@ -875,23 +870,22 @@ LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor
   auto* input_op_conf = op_conf->mutable_input_conf();
   input_op_conf->set_out("out");
 
-  if (op->hasAttr("shape")) {
-    for (auto elem : adaptor.shape()) {
-      input_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
-    }
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, input_op_conf->mutable_blob_conf()->mutable_shape());
   }
 
-  if (op->hasAttr("data_type")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
     input_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
-  if (op->hasAttr("is_dynamic")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
     input_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
   }
 
-  if (op->hasAttr("nd_sbp")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
     if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
                                   input_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
       return failure();
@@ -919,23 +913,22 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   auto* output_op_conf = op_conf->mutable_output_conf();
   output_op_conf->set_out("out");
 
-  if (op->hasAttr("shape")) {
-    for (auto elem : adaptor.shape()) {
-      output_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
-    }
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, output_op_conf->mutable_blob_conf()->mutable_shape());
   }
 
-  if (op->hasAttr("data_type")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
     output_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
-  if (op->hasAttr("is_dynamic")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
     output_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
   }
 
-  if (op->hasAttr("nd_sbp")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
     if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
                                   output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
       return failure();
