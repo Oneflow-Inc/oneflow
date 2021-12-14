@@ -336,28 +336,28 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(dtype, mask_dtype)      \
+#define REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(dtype, mask_dtype)      \
   REGISTER_USER_KERNEL("fused_scale_mask_softmax_dropout")                            \
       .SetCreateFn<FusedScaleMaskSoftmaxDropoutKernel<dtype, mask_dtype>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("mask", 0) == GetDataType<mask_dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(half, int8_t)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(float, int8_t)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(double, int8_t)
-#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(half, int8_t)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(float, int8_t)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(double, int8_t)
+#undef REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(dtype, mask_dtype)       \
+#define REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(dtype, mask_dtype)       \
   REGISTER_USER_KERNEL("fused_scale_mask_softmax_dropout_grad")                        \
       .SetCreateFn<FusedScaleMaskSoftmaxDropoutGradKernel<dtype, mask_dtype>>()        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("mask", 0) == GetDataType<mask_dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(half, int8_t)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(float, int8_t)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(double, int8_t)
-#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(half, int8_t)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(float, int8_t)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(double, int8_t)
+#undef REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL
 
 }  // namespace oneflow
