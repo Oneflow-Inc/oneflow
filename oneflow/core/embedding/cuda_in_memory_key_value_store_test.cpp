@@ -26,65 +26,63 @@ namespace {
 
 #ifdef WITH_CUDA
 
-TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
+bool HasCudaDevice() {
   int device_count = 0;
-  if (cudaGetDeviceCount(&device_count) != cudaSuccess) { return; }
-  if (device_count <= 0) { return; }
+  if (cudaGetDeviceCount(&device_count) != cudaSuccess) { return false; }
+  if (device_count <= 0) { return false; }
+  return true;
+}
 
+void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_embeddings,
+                       size_t embedding_vec_size, size_t num_shards) {
   std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
       new ep::DeviceManagerRegistry());
   auto device = device_manager_registry->GetDevice(DeviceType::kCUDA, 0);
   ep::Stream* stream = device->CreateStream();
-
-  CudaInMemoryKeyValueStoreOptions options{};
-  options.num_shards = 4;
-  options.embedding_vec_size = 128;
-  options.num_embeddings = 1024 * 4;
-  options.num_device_embeddings = 1024;
-  options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain;
-  std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
 
   uint64_t* keys = nullptr;
   float* values = nullptr;
   uint64_t* keys_host = nullptr;
   float* values_host = nullptr;
   uint64_t* context = nullptr;
-  size_t keys_size = sizeof(uint64_t) * options.num_embeddings;
-  size_t values_size = sizeof(float) * options.embedding_vec_size * options.num_embeddings;
-  size_t context_size = sizeof(uint64_t) * options.num_embeddings;
+  size_t keys_size = sizeof(uint64_t) * num_embeddings;
+  size_t values_size = sizeof(float) * embedding_vec_size * num_embeddings;
+  size_t context_size = sizeof(uint64_t) * num_embeddings;
   OF_CUDA_CHECK(cudaMalloc(&keys, keys_size));
   OF_CUDA_CHECK(cudaMalloc(&values, values_size));
   OF_CUDA_CHECK(cudaMalloc(&context, context_size));
   OF_CUDA_CHECK(cudaMallocHost(&keys_host, keys_size));
   OF_CUDA_CHECK(cudaMallocHost(&values_host, values_size));
-  for (size_t i = 0; i < options.num_embeddings; ++i) {
-    uint64_t key = i * options.num_shards + 3;
+  for (size_t i = 0; i < num_embeddings; ++i) {
+    uint64_t key = i * num_shards + 3;
     keys_host[i] = key;
-    for (size_t j = 0; j < options.embedding_vec_size; j++) {
-      values_host[i * options.embedding_vec_size + j] = key;
+    for (size_t j = 0; j < embedding_vec_size; j++) {
+      values_host[i * embedding_vec_size + j] = key;
     }
   }
   OF_CUDA_CHECK(cudaMemcpy(keys, keys_host, keys_size, cudaMemcpyDefault));
   OF_CUDA_CHECK(cudaMemcpy(values, values_host, values_size, cudaMemcpyDefault));
-  size_t batch_size = 128;
-  for (size_t offset = 0; offset < options.num_embeddings; offset += batch_size) {
-    store->Prefetch(stream, batch_size, keys + offset, context + offset);
-    store->Update(stream, batch_size, keys + offset, context + offset,
-                  values + offset * options.embedding_vec_size);
+  const size_t batch_size = 128;
+  for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
+    const size_t num_keys = std::min(batch_size, test_embeddings - offset);
+    store->Prefetch(stream, num_keys, keys + offset, context + offset);
+    store->Update(stream, num_keys, keys + offset, context + offset,
+                  values + offset * embedding_vec_size);
   }
   OF_CUDA_CHECK(cudaMemset(values_host, 0, values_size));
   OF_CUDA_CHECK(cudaMemset(values, 0, values_size));
-  for (size_t offset = 0; offset < options.num_embeddings; offset += batch_size) {
-    store->Prefetch(stream, batch_size, keys + offset, context + offset);
-    store->Lookup(stream, batch_size, keys + offset, context + offset,
-                  values + offset * options.embedding_vec_size);
+  for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
+    const size_t num_keys = std::min(batch_size, test_embeddings - offset);
+    store->Prefetch(stream, num_keys, keys + offset, context + offset);
+    store->Lookup(stream, num_keys, keys + offset, context + offset,
+                  values + offset * embedding_vec_size);
   }
   OF_CUDA_CHECK(cudaMemcpy(values_host, values, values_size, cudaMemcpyDefault));
   OF_CUDA_CHECK(cudaDeviceSynchronize());
-  for (size_t i = 0; i < options.num_embeddings; ++i) {
+  for (size_t i = 0; i < test_embeddings; ++i) {
     uint64_t key = keys_host[i];
-    for (size_t j = 0; j < options.embedding_vec_size; j++) {
-      ASSERT_EQ(values_host[i * options.embedding_vec_size + j], key);
+    for (size_t j = 0; j < embedding_vec_size; j++) {
+      ASSERT_EQ(values_host[i * embedding_vec_size + j], key);
     }
   }
   OF_CUDA_CHECK(cudaDeviceSynchronize());
@@ -96,6 +94,20 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
 
   CHECK_JUST(stream->Sync());
   device->DestroyStream(stream);
+}
+
+TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
+  if (!HasCudaDevice()) { return; }
+  CudaInMemoryKeyValueStoreOptions options{};
+  options.num_shards = 4;
+  options.embedding_vec_size = 128;
+  options.num_embeddings = 1024 * 4;
+  options.num_device_embeddings = 1024;
+  options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain;
+  std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
+
+  TestKeyValueStore(store.get(), options.num_embeddings, options.num_embeddings,
+                    options.embedding_vec_size, options.num_shards);
 }
 
 #endif  // WITH_CUDA
