@@ -75,8 +75,8 @@ add_docstr(
                 [3, 4, 5]], dtype=oneflow.int64)
         >>> np_arr[0, 0] = -1
         >>> t
-        tensor([[-1, 1, 2],
-                [3, 4, 5]], dtype=oneflow.int64)
+        tensor([[-1,  1,  2],
+                [ 3,  4,  5]], dtype=oneflow.int64)
     """,
 )
 
