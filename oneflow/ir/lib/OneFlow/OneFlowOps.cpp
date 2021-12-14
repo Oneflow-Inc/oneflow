@@ -228,6 +228,25 @@ struct ConcreteSystemOpPattern : public OpRewritePattern<OpType> {
   }
 };
 
+template<>
+struct ConcreteSystemOpPattern<VariableOp> : public OpRewritePattern<VariableOp> {
+  explicit ConcreteSystemOpPattern(MLIRContext* context)
+      : OpRewritePattern<VariableOp>(context, /*benefit=*/1) {}
+  LogicalResult matchAndRewrite(VariableOp op, PatternRewriter& rewriter) const override {
+    if (op.ctrl_output() && op.ctrl_output().use_empty()) {
+      NamedAttrList attributes(op->getAttrDictionary());
+      if (auto created = rewriter.create<VariableWithoutCtrlOp>(op->getLoc(), op.output().getType(),
+                                                 op->getOperands(), attributes)) {
+        op.output().replaceAllUsesWith(
+            created->getResult(op.output().template cast<OpResult>().getResultNumber()));
+        op->erase();
+        return success();
+      }
+    }
+    return failure();
+  }
+};
+
 void VariableOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<ConcreteSystemOpPattern<VariableOp>>(context);
 }
@@ -337,6 +356,12 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
                             << " in function @" << job.getName();
 
   return success();
+}
+
+OpFoldResult VariableWithoutCtrlOp::fold(ArrayRef<Attribute> operands) {
+}
+
+OpFoldResult BroadcastAddOp::fold(ArrayRef<Attribute> operands) {
 }
 
 }  // namespace oneflow

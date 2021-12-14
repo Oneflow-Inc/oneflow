@@ -476,6 +476,13 @@ void PrintHasCanonicalizer(const std::string& op_name) {
   }
 }
 
+void PrintHasFolder(const std::string& op_name) {
+  if (op_name == "broadcast_add") {
+    std::cout << "  let hasFolder = 1;"
+              << "\n";
+  }
+}
+
 void PrintTraitAttrs(const ::oneflow::UserOpDef& op_def) {
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
   const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
@@ -550,6 +557,7 @@ void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   PrintTraitAttrs(op_def);
   PrintExtraClassDeclaration(op_def);
   PrintHasCanonicalizer(r.op_type_name);
+  PrintHasFolder(r.op_type_name);
   std::cout << "}"
             << "\n";
 }

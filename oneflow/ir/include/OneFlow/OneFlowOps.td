@@ -124,6 +124,27 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
     StrArrayAttr:$nd_sbp
   );
+
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_VariableWithoutCtrlOp : OneFlow_BaseOp<"variable_without_ctrl", [NoSideEffect, ConstantLike]> {
+  let summary = "";
+  let input = (ins);
+  let output = (outs AnyType:$output);
+
+  let attrs = (ins
+    StrArrayAttr:$output_lbns,
+    AnyI64ElementsAttr:$shape,
+    OptionalAttr<OneFlow_DataType>:$data_type,
+    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
+    DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    StrArrayAttr:$nd_sbp
+  );
+
+  let hasFolder = 1;
 }
 
 def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", [OneFlow_TensorSource]> {
