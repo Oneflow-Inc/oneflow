@@ -89,7 +89,8 @@ CudaStream::CudaStream(CudaDevice* device)
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
 #if CUBLAS_VERSION >= 11000
-  if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
+  if (Global<ResourceDesc, ForSession>::Get() != nullptr
+      && Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
