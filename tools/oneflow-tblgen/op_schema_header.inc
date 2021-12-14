@@ -1,4 +1,9 @@
 R"OP_SCHEMA_INC(
+#include <string>
+#include <vector>
+
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/op_base.h"
 
 namespace oneflow {

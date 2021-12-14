@@ -4,6 +4,7 @@ R"OP_SCHEMA_INC(
 {% endif %}
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
@@ -21,7 +22,7 @@ const HashSet<std::string>& {{opname}}::AttrNames() const {
 namespace schema {
 Maybe<AttrVal> {{opname}}::GetAttr(const std::string& attr_name) const {
   {% for name, attr in op.attrs %}if(attr_name == "{{name}}") {
-    return CastAttrValue(&internal_->{{name}});
+    return CastAttrValue(&{{name}}_);
   }
   {% endfor -%}
   return Error::RuntimeError() << "{{op.name}} op has no attribute named " << attr_name;

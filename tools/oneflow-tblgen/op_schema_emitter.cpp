@@ -152,7 +152,7 @@ void OpSchemaEmitter<Target>::emitInputAndOutput(const Record* def, json* op) co
   }
   const auto* output = def->getValueAsDag("output");
   for (size_t i = 0; i < output->getNumArgs(); ++i) {
-    const auto* A = dyn_cast<DefInit>(input->getArg(i))->getDef();
+    const auto* A = dyn_cast<DefInit>(output->getArg(i))->getDef();
     bool is_optional = A->isSubClassOf("Optional");
     auto NS = output->getArgName(i)->getAsUnquotedString();
     (*op)["output"][NS] = {{"is_optional", is_optional}, {"size", 1}};

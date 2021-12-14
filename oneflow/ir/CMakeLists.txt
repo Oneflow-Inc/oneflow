@@ -16,6 +16,10 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
+if(POLICY CMP0116)
+  cmake_policy(SET CMP0116 OLD)
+endif()
+
 project(oneflow-dialect LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
@@ -60,6 +64,8 @@ if(NOT llvm_monorepo_POPULATED)
     -DLLVM_ENABLE_BINDINGS=OFF
     -DMLIR_ENABLE_CUDA_RUNNER=${WITH_MLIR_CUDA_CODEGEN}
     -DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}
+    -DLLVM_EXTERNAL_PROJECTS=OneFlowTableGen
+    -DLLVM_EXTERNAL_ONEFLOWTABLEGEN_SOURCE_DIR=${PROJECT_SOURCE_DIR}/../../tools/oneflow-tblgen
     -G ${CMAKE_GENERATOR}
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret)
@@ -68,14 +74,10 @@ if(NOT llvm_monorepo_POPULATED)
   endif()
   include(ProcessorCount)
   ProcessorCount(PROC_NUM)
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM}
-    WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
-    RESULT_VARIABLE ret
-  )
-  if(ret EQUAL "1")
-      message( FATAL_ERROR "Bad exit status")
+  if(WITH_MLIR)
+    set(INSTALL_ALL "install")
   endif()
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target install
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target ${INSTALL_ALL} install-oneflow-tblgen
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret
   )
@@ -85,6 +87,8 @@ if(NOT llvm_monorepo_POPULATED)
   set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
   set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 endif()
+
+if (WITH_MLIR)
 
 find_package(MLIR REQUIRED CONFIG)
 
@@ -119,9 +123,20 @@ set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
   -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
 )
 
+function(oneflow_add_llvm_library)
+  add_llvm_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
+function(oneflow_add_mlir_dialect_library)
+  add_mlir_dialect_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)
 add_subdirectory(oneflow-opt)
 add_subdirectory(oneflow-translate)
 add_subdirectory(oneflow-extension)
+endif()

@@ -58,12 +58,12 @@ add_custom_command(
     OUTPUT ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP}
     COMMAND ${CMAKE_COMMAND}
     ARGS -E make_directory ${GENERATED_OP_SCHEMA_DIR}
-    COMMAND oneflow_tblgen
+    COMMAND ${LLVM_INSTALL_DIR}/bin/oneflow_tblgen
     ARGS --gen-op-schema-h ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS} -o ${GENERATED_OP_SCHEMA_H}
-    COMMAND oneflow_tblgen
+    COMMAND ${LLVM_INSTALL_DIR}/bin/oneflow_tblgen
     ARGS --gen-op-schema-cpp ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS}
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
-    DEPENDS oneflow_tblgen GenUserOpODS
+    DEPENDS ${LLVM_INSTALL_DIR}/bin/oneflow_tblgen ${ONEFLOW_ODS}
     VERBATIM
 )
 set_source_files_properties(

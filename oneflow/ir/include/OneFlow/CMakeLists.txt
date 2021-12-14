@@ -19,7 +19,7 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS_USED_IN_PATTERNS)
 endforeach()
 mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
-add_dependencies(MLIROneFlowPatternsIncGen GenUserOpODS)
+#add_dependencies(MLIROneFlowPatternsIncGen GenUserOpODS)
 
 # NOTE: seperate conversion and opt with --name
 set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
@@ -42,12 +42,12 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
     mlir_tablegen(${CPP_INC_FILE} -gen-op-defs)
 endforeach()
 add_public_tablegen_target(MLIROneFlowOpGroupDefsIncGen)
-add_dependencies(MLIROneFlowOpGroupDefsIncGen GenUserOpODS)
+#add_dependencies(MLIROneFlowOpGroupDefsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "${FULL_LLVM_TABLEGEN_FLAGS}")
 mlir_tablegen(OneFlow.Ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROneFlowOpGroupDeclsIncGen)
-add_dependencies(MLIROneFlowOpGroupDeclsIncGen GenUserOpODS)
+#add_dependencies(MLIROneFlowOpGroupDeclsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
