@@ -55,12 +55,12 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   }
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start InitCopyCost" << std::endl;
   JUST(InitCopyCost(op_graph));
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
-  sbp_graph_.RandomSbpSignature(use_sbp_collector_);
-  double ori_cost = sbp_graph_.ComputeCost();
-  LOG(INFO) << "Initial cost: " << ori_cost;
+  // std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
+  // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  // double ori_cost = sbp_graph_.ComputeCost();
+  // LOG(INFO) << "Initial cost: " << ori_cost;
   JUST(StealSbpSignatureFromOpNode(op_graph, job));
-  ori_cost = sbp_graph_.ComputeCost();
+  double ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();
 }
@@ -121,8 +121,31 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
 
 Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job) {
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
+
+  // test debug
+  std::cout << "Get Into Print Op Graph" << std::endl;
+  // Collect op_node
+  std::vector<OpNode*> NodeList;
+  for (const auto& op_name_sbp_node : op_name2sbp_node_) {
+    auto* op_node_ = op_name_sbp_node.second->op_node;
+    if (op_node_) { NodeList.push_back(op_node_); }
+  }
+
+  // test debug
+  std::cout << "Deciding order" << std::endl;
+  // Decide the order to visit the op
+  std::vector<int32_t> order;
+  auto comp_op_name = [&](OpNode* a, OpNode* b) {
+    return a->op().op_name().compare(b->op().op_name()) > 0;
+  };
+  auto_parallel::DecideOrder(NodeList, order, comp_op_name);
+  std::vector<int32_t> output_order;
+
+  // test debug
+  std::cout << "Finish deciding order" << std::endl;
   // Create sbp nodes
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  for (int32_t i = 0; i < NodeList.size(); i++) {
+    OpNode* op_node = NodeList[order[i]];
     // TODO: support mirror op
     bool is_mirrored_conf = false;
     {
@@ -136,17 +159,24 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
     // Mapping from sbp_node to op_node
     sbp_node->op_node = op_node;  // TODO: SetOpNode()
     op_name2sbp_node_[op_node->op().op_name()] = sbp_node;
-  });
+  }
   // Create sbp edges
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  for (int32_t i = 0; i < NodeList.size(); i++) {
+    OpNode* op_node = NodeList[order[i]];
     // Get corresponding sbp node
     SbpNode<cfg::NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+    std::vector<OpNode*> OutputNodeList;
     for (const auto op_edge : op_node->out_edges()) {
-      const auto& end_node_name = op_edge->dst_node()->op().op_name();
+      OutputNodeList.push_back(op_edge->dst_node());
+    }
+    std::vector<int32_t> output_order;
+    auto_parallel::DecideOrder(NodeList, output_order, comp_op_name);
+    for (int32_t j : output_order) {
+      const auto& end_node_name = OutputNodeList[j]->op().op_name();
       // Generate sbp edge in cost model
       sbp_node->PointTo(op_name2sbp_node_[end_node_name]);
     }
-  });
+  }
   return Maybe<void>::Ok();
 }
 
