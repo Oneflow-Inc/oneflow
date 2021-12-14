@@ -209,7 +209,7 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
     const auto b_shape = input_b->shape();
     const int64_t b_num_axes = b_shape->NumAxes();
 
-    if(b_num_axes == 2){
+    if(b_num_axes == 2 && !ctx->transpose_a){
       if (ctx->transpose_b) {
         in_grads->at(1) =
             JUST(functional::BroadcastMatmulGradB(out_grads.at(0), input_a, ctx->alpha));
