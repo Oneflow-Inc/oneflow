@@ -142,6 +142,12 @@ class TypedAttrValRef final : public TypedAttrValIf<T> {
 template<typename T>
 const T& AttrValueCast(const user_op::AttrVal& val);
 
+template<typename T>
+std::shared_ptr<user_op::AttrVal> CastAttrValue(const T& attr_val);
+
+template<typename T>
+std::shared_ptr<user_op::AttrVal> CastAttrValue(const T* attr_val);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_

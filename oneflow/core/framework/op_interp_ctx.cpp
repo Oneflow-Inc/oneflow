@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interp_ctx.h"
-
-#include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
+
+Maybe<AttrVal> OpInterpCtx::GetAttr(const std::string& attr_name) const {
+  return op_->GetAttr(attr_name);
+}
 
 template<typename T>
 Maybe<const T&> OpInterpCtx::GetAttr(const std::string& attr_name) const {
@@ -55,11 +57,10 @@ Maybe<void> OpInterpCtx::SetAttr(const std::string& attr_name, const AttrVal& at
   return Error::RuntimeError() << "Invalid type for attribute " << attr_name;
 }
 
-/*static*/ Maybe<OpInterpCtx> OpInterpCtx::New(const std::string& op_name) {
-  CHECK_OR_RETURN((IsClassRegistered<std::string, OpInterpCtx>(op_name)))
-      << "Can not create interp ctx for op " << op_name
-      << ", please check whether it has been registered correctly.";
-  return std::shared_ptr<OpInterpCtx>(NewObj<std::string, OpInterpCtx>(op_name));
+bool OpInterpCtx::HasAttr(const std::string& attr_name) const {
+  return AttrNames().count(attr_name) > 0;
 }
+
+const HashSet<std::string>& OpInterpCtx::AttrNames() const { return op_->AttrNames(); }
 
 }  // namespace oneflow

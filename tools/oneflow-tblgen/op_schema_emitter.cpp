@@ -24,14 +24,13 @@ limitations under the License.
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
-#include <iomanip>
-#include <string>
-#include <vector>
-
 #include "inja.hpp"
 
+#include <iomanip>
+#include <string>
+
 using namespace llvm;
+using inja::json;
 
 namespace oneflow {
 namespace tblgen {
@@ -46,46 +45,42 @@ cl::opt<std::string> dumpJson{"op-dump-json",
                               cl::desc("dump tablegen code to json in provided file"),
                               cl::value_desc("filename"), cl::init(""), cl::cat(opSchemaCat)};
 
-const std::string& outputFilename() {
-  auto* option =
-      static_cast<cl::opt<std::string>*>(cl::getRegisteredOptions().lookup("o"));  // NOLINT
-  return option->getValue();
-}
-
-enum class OpSchemaTarget {
-  Header = 1,
-  Source,
+enum class FileTarget {
+  kHeader = 1,
+  kSource,
 };
 
-template<OpSchemaTarget Target>
+template<FileTarget Target>
 class OpSchemaEmitter {
  public:
   explicit OpSchemaEmitter(RecordKeeper& RK);
 
-  struct CustomCode {
-    bool is_member;
-    StringRef code;
-  };
   void run(raw_ostream& os);
-  bool getCustomCode(const Record* def, StringRef fieldname, CustomCode* code);
+
+  void emitInputAndOutput(const Record* def, json* op) const;
+
+  void emitAttrs(const Record* def, json* op) const;
+
+  bool emitCustomCode(const Record* def, StringRef fieldname, json* op) const;
 
  private:
-  static nonstd::string_view toCppType(nonstd::string_view ods_type) {
+  static std::string emitType(const std::string& ods_type) {
 #define OP_SCHEMA(ods, cpp) \
   if (ods_type == #ods) return #cpp;
 #include "op_schema_types.inc"
 #undef OP_SCHEMA
-    PrintFatalError("undefined attribute type: " + (std::string)ods_type);
+    PrintFatalError("undefined attribute type: " + ods_type);
   }
+
+ private:
+  RecordKeeper& records;
 
   inja::Environment env;
   inja::Template temp;
-  RecordKeeper& records;
-
-  static const nonstd::string_view code;
+  static const std::string code;
 };
 
-template<OpSchemaTarget Target>
+template<FileTarget Target>
 OpSchemaEmitter<Target>::OpSchemaEmitter(RecordKeeper& RK) : records(RK) {
   env.add_callback("quoted", 1, [](inja::Arguments& args) {
     auto str = args.at(0)->get<std::string>();
@@ -106,37 +101,25 @@ OpSchemaEmitter<Target>::OpSchemaEmitter(RecordKeeper& RK) : records(RK) {
   temp = env.parse(code);
 }
 
-template<OpSchemaTarget Target>
+template<FileTarget Target>
 void OpSchemaEmitter<Target>::run(raw_ostream& os) {
-  using inja::json;
   emitSourceFileHeader("oneflow op schema", os);
   json ops = json::object();
+
   for (const auto& def : records.getAllDerivedDefinitions("OneFlow_BaseOp")) {
-    auto name = def->getValueAsString("opName");
-    if (name.empty()) {  // NOLINT
+    auto op_type_name = def->getValueAsString("opName");
+    if (op_type_name.empty()) {
       PrintFatalError(def, "`opName` of op definitions cannot be omitted");
     }
-    json op{{"name", name}, {"attrs", json::object()}};
+    json op{{"name", op_type_name},
+            {"input", json::object()},
+            {"output", json::object()},
+            {"attrs", json::object()},
+            {"infer_nd_sbp", json::object()}};
 
-    const auto* attrs = def->getValueAsDag("attrs");
-    for (size_t i = 0; i < attrs->getNumArgs(); ++i) {
-      const auto* A = dyn_cast<DefInit>(attrs->getArg(i))->getDef();
-      std::string AS;
-      if (!A->isAnonymous()) {
-        AS = A->getNameInitAsString();
-      } else {
-        AS = A->getValueAsDef("baseAttr")->getNameInitAsString();
-      }
-      auto NS = attrs->getArgName(i)->getAsUnquotedString();
-      op["attrs"][NS] = {{"type", toCppType(AS)}};
-
-      if (auto DV = A->getValueAsOptionalString("defaultValue")) {
-        op["attrs"][NS]["default"] = DV.getValue();
-      }
-    }
-
-    CustomCode code;
-    if (getCustomCode(def, "infer_nd_sbp", &code)) { std::cout << code.code.str() << std::endl; }
+    emitInputAndOutput(def, &op);
+    emitAttrs(def, &op);
+    emitCustomCode(def, "infer_nd_sbp", &op);
 
     auto op_name = def->getName();
     if (!op_name.consume_front("OneFlow_")) {
@@ -144,15 +127,13 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     }
     ops[op_name.str()] = op;
   }
-  if (ops.empty()) { PrintWarning("no `Op` in this file"); }
 
-  auto filename = outputFilename();
+  auto* option = static_cast<cl::opt<std::string>*>(cl::getRegisteredOptions().lookup("o"));
+  auto filename = option->getValue();
   filename = filename != "-" ? filename : "";
-
   json data{{"filename", filename}, {"ops", ops}};
 
-  if (Target == OpSchemaTarget::Source) { data["include"] = sourceIncludeFilename; }
-
+  if (Target == FileTarget::kSource) { data["include"] = sourceIncludeFilename; }
   if (!dumpJson.empty()) {
     std::ofstream file(dumpJson);
     file << data.dump();
@@ -160,49 +141,90 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
   os << env.render(temp, data);
 }
 
-template<OpSchemaTarget Target>
-bool OpSchemaEmitter<Target>::getCustomCode(const Record* def, StringRef fieldname,
-                                            CustomCode* code) {
+template<FileTarget Target>
+void OpSchemaEmitter<Target>::emitInputAndOutput(const Record* def, json* op) const {
+  const auto* input = def->getValueAsDag("input");
+  for (size_t i = 0; i < input->getNumArgs(); ++i) {
+    const auto* A = dyn_cast<DefInit>(input->getArg(i))->getDef();
+    bool is_optional = A->isSubClassOf("Optional");
+    auto NS = input->getArgName(i)->getAsUnquotedString();
+    (*op)["input"][NS] = {{"is_optional", is_optional}, {"size", 1}};
+  }
+  const auto* output = def->getValueAsDag("output");
+  for (size_t i = 0; i < output->getNumArgs(); ++i) {
+    const auto* A = dyn_cast<DefInit>(input->getArg(i))->getDef();
+    bool is_optional = A->isSubClassOf("Optional");
+    auto NS = output->getArgName(i)->getAsUnquotedString();
+    (*op)["output"][NS] = {{"is_optional", is_optional}, {"size", 1}};
+  }
+}
+
+template<FileTarget Target>
+void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
+  const auto* attrs = def->getValueAsDag("attrs");
+  for (size_t i = 0; i < attrs->getNumArgs(); ++i) {
+    const auto* A = dyn_cast<DefInit>(attrs->getArg(i))->getDef();
+    std::string AS;
+    if (!A->isAnonymous()) {
+      AS = A->getNameInitAsString();
+    } else {
+      AS = A->getValueAsDef("baseAttr")->getNameInitAsString();
+    }
+    auto NS = attrs->getArgName(i)->getAsUnquotedString();
+    (*op)["attrs"][NS] = {{"type", emitType(AS)}};
+
+    if (auto DV = A->getValueAsOptionalString("defaultValue")) {
+      (*op)["attrs"][NS]["default"] = DV.getValue();
+    }
+  }
+}
+
+template<FileTarget Target>
+bool OpSchemaEmitter<Target>::emitCustomCode(const Record* def, StringRef fieldname,
+                                             json* op) const {
   auto* valueInit = def->getValueInit(fieldname);
   StringInit* stringInit = dyn_cast<StringInit>(valueInit);
   if (!stringInit || stringInit->getValue().empty()) { return false; }
-  auto value = stringInit->getValue().ltrim().rtrim(" \t\v\f\r");
+
+  auto code = stringInit->getValue().ltrim().rtrim(" \t\v\f\r");
+  auto value = code;
   if (!value.consume_front("return ")) {
     PrintFatalError(
         def, "Invalid " + fieldname.str() + " code (note: should start with return identifier)");
   }
-  size_t quto_start_pos = value.find_first_of("(");
-  size_t quto_end_pos = value.find_last_of(")");
-  if (quto_start_pos == std::string::npos || quto_end_pos == std::string::npos
-      || quto_start_pos > quto_end_pos) {
+  size_t start_pos = value.find_first_of("(");
+  size_t end_pos = value.find_last_of(")");
+  if (start_pos == std::string::npos || end_pos == std::string::npos  // NOLINT
+      || start_pos > end_pos) {
     PrintFatalError(def, "Invalid " + fieldname.str() + " code (note: missing brackets)");
   }
-  value = value.substr(0, quto_start_pos).ltrim().rtrim(" \t\v\f\r");
-  if (value.consume_front("::")) {
-    code->is_member = true;
-  } else {
-    code->is_member = false;
+  if (value.substr(start_pos + 1, end_pos - start_pos) != "ctx") {
+    PrintFatalError(def, "Invalid " + fieldname.str() + " code (note: argument should be ctx)");
   }
-  code->code = value;
+  auto func = value.substr(0, start_pos).ltrim().rtrim(" \t\v\f\r");
+  bool is_member_func = func.consume_front("::");
+  (*op)[fieldname.str()] = {{"is_member_func", is_member_func},
+                            {"func", func.str()},
+                            {"code", "return " + func.str() + "(ctx);"}};
   return true;
 }
 
 template<>
-const nonstd::string_view OpSchemaEmitter<OpSchemaTarget::Header>::code{
+const std::string OpSchemaEmitter<FileTarget::kHeader>::code{
 #include "op_schema_header.inc"
 };
 
 template<>
-const nonstd::string_view OpSchemaEmitter<OpSchemaTarget::Source>::code{
+const std::string OpSchemaEmitter<FileTarget::kSource>::code{
 #include "op_schema_source.inc"
 };
 
 void EmitOpSchemaHeader(RecordKeeper& RK, raw_ostream& os) {
-  OpSchemaEmitter<OpSchemaTarget::Header>(RK).run(os);
+  OpSchemaEmitter<FileTarget::kHeader>(RK).run(os);
 }
 
 void EmitOpSchemaSource(RecordKeeper& RK, raw_ostream& os) {
-  OpSchemaEmitter<OpSchemaTarget::Source>(RK).run(os);
+  OpSchemaEmitter<FileTarget::kSource>(RK).run(os);
 }
 
 }  // namespace tblgen
