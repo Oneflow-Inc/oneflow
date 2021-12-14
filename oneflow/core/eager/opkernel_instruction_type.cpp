@@ -1019,17 +1019,17 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   if (oneflow::DTREnabled()) {
+    CHECK_OK(DTRLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::Infer(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::InitOutputBlobAttrs(instruction));
-    CHECK_OK(DTRLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::Compute(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::UpdateTensorInfo(instruction));
     auto operand =
         CHECK_JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
     std::cout << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
   } else {
-    CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));
     CHECK_OK(EagerLocalCallOpKernelUtil::Prepare(instruction));
+    CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));
     CHECK_OK(EagerLocalCallOpKernelUtil::Compute(instruction));
     // CHECK_OK(EagerLocalCallOpKernelUtil::DisplayCount(instruction));
   }
