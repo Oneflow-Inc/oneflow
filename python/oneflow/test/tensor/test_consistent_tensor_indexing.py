@@ -161,12 +161,9 @@ def test_combining_indexing(test_case, numpy_x, x):
 
 
 def test_mask_setitem(test_case, numpy_x, x):
-    if x.is_consistent:
-        x = x.to_local()
-
     # mask tensor index
     mask = np.random.rand(*numpy_x.shape).astype(np.float32)
-    y = flow.tensor(mask, device=x.deivce())
+    y = flow.tensor(mask, device="cuda")
 
     # broadcast set
     x[y > 0.5] = 1.0
