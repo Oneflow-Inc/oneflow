@@ -536,17 +536,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Device device=None) => Arange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=None, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -691,6 +691,13 @@
     "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
     Int32List padding, String data_format, Int32List kernel_size, 
     Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
+  bind_python: True
+
+- name: "deconv2d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv2d"
   bind_python: True
 
 - name: "deconv3d"
@@ -1456,6 +1463,14 @@
   signature: "Tensor (Tensor dy, Tensor in, Int32 diagonal=0) => DiagGrad"
   bind_python: False
 
+- name: "diagonal"
+  signature: "Tensor (Tensor x, Int32 offset=0, Int32 dim1=0, Int32 dim2=1) => Diagonal"
+  bind_python: True
+
+- name: "diagonal_grad"
+  signature: "Tensor (Tensor dy, Tensor in, Int32 offset=0) => DiagonalGrad"
+  bind_python: False
+
 - name: "tensor_getitem"
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
   bind_python: True
@@ -1688,6 +1703,12 @@
   ]
   bind_python: True
 
+- name: "chunk"
+  signature: [
+    "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
+  ]
+  bind_python: True
+
 - name: "split_like"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
@@ -1811,10 +1832,9 @@
   bind_python: True
 
 - name: "read_onerec"
-  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True) => ReadOneRec"
+  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => ReadOneRec"
   bind_python: True
 
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
-

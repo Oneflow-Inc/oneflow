@@ -1,7 +1,7 @@
-include "mlir/IR/OpBase.td"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
 
-#ifndef ONEFLOW_ENUMS
-#define ONEFLOW_ENUMS
+include "mlir/IR/OpBase.td"
 
 def OneFlow_InvalidDataType : I32EnumAttrCase<"DT_InvalidDataType", 0>;
 def OneFlow_Char : I32EnumAttrCase<"DT_Char", 1>;
@@ -14,6 +14,8 @@ def OneFlow_UInt8 : I32EnumAttrCase<"DT_UInt8", 7>;
 def OneFlow_OFRecord : I32EnumAttrCase<"DT_OFRecord", 8>;
 def OneFlow_Float16 : I32EnumAttrCase<"DT_Float16", 9>;
 def OneFlow_TensorBuffer: I32EnumAttrCase<"DT_TensorBuffer", 10>;
+def OneFlow_BFloat16: I32EnumAttrCase<"DT_BFloat16", 11>;
+def OneFlow_Bool: I32EnumAttrCase<"DT_Bool", 12>;
 
 def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
   [
@@ -28,6 +30,8 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
     OneFlow_OFRecord,
     OneFlow_Float16,
     OneFlow_TensorBuffer,
+    OneFlow_BFloat16,
+    OneFlow_Bool
   ]
 > {
   let cppNamespace = "::mlir::oneflow";
@@ -35,4 +39,4 @@ def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
   let symbolToStringFnName = "ConvertToString";
 }
 
-#endif // ONEFLOW_ENUMS
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
