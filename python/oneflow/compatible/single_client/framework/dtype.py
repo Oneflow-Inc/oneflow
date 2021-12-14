@@ -70,11 +70,8 @@ _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     flow.uint16: np.uint16,
     flow.uint32: np.uint32,
     flow.uint64: np.uint64,
-    flow.uint128: np.uint128,
     flow.int16: np.int16,
     flow.int64: np.int64,
-    flow.int128: np.int128,
-    # Numpy has no complex32 dtype.
     flow.complex64: np.complex64,
     flow.complex128: np.complex128,
 }
