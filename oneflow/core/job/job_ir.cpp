@@ -13,12 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOWDIALECT_H
-#define ONEFLOW_ONEFLOWDIALECT_H
+#include "oneflow/core/job/job_ir.h"
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+namespace oneflow {
 
-#include "OneFlow/OneFlowOpsDialect.h.inc"
+#ifndef WITH_MLIR
 
-#endif  // ONEFLOW_ONEFLOWDIALECT_H
+Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
+  UNIMPLEMENTED_THEN_RETURN() << "SaveJobToIR is only supported WITH_MLIR";
+}
+
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
+  UNIMPLEMENTED_THEN_RETURN() << "LoadJobFromIR is only supported WITH_MLIR";
+}
+
+#endif
+
+}  // namespace oneflow
