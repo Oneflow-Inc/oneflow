@@ -69,8 +69,6 @@ find_package(MLIR REQUIRED CONFIG)
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${llvm_monorepo_BINARY_DIR}/bin)
-set(LLVM_LIBRARY_OUTPUT_INTDIR ${llvm_monorepo_BINARY_DIR}/lib)
 set(MLIR_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
 
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")

@@ -72,6 +72,8 @@ endfunction()
 find_package(Threads REQUIRED)
 set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 
+set(LLVM_RUNTIME_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/bin)
+set(LLVM_LIBRARY_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/lib)
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(test)

@@ -1,4 +1,4 @@
-message(STATUS "LLVM_TOOLS_DIR: ${LLVM_TOOLS_DIR}")
+message(STATUS "LLVM_TOOLS_BINARY_DIR (used as LLVM_TOOLS_DIR): ${LLVM_TOOLS_BINARY_DIR}")
 message(STATUS "LLVM_EXTERNAL_LIT: ${LLVM_EXTERNAL_LIT}")
 configure_lit_site_cfg(
         ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
