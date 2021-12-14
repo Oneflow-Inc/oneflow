@@ -150,6 +150,7 @@ oneflow
             set_printoptions,
             decode_onerec,
             read_onerec,
+            from_numpy,
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.env.get_rank
