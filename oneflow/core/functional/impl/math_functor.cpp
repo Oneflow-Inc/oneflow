@@ -589,10 +589,49 @@ class TransposeFunctor {
     }
     if (input->is_eager() && input->is_local()) { 
       if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
-        return JUST(view::Transpose(input->contiguous(), positive_perm)); 
+        return JUST(view::Transpose(input, positive_perm)); 
       }
     }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
+class Transpose2dimFunctor {
+ public:
+  Transpose2dimFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t dim0,
+                           const int32_t dim1) const {
+    MutableAttrMap attrs;
+    const int64_t ndim = input->shape()->NumAxes();
+    std::vector<int32_t> permute;
+    permute.reserve(ndim);
+    int32_t dim_0 = dim0;
+    int32_t dim_1 = dim1;
+
+    if (dim0 < 0) { dim_0 += ndim; }
+    if (dim1 < 0) { dim_1 += ndim; }
+
+    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
+        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
+        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+    for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
+    std::swap(permute[dim_0], permute[dim_1]);
+    Shape shape(DimVector(permute.begin(), permute.end()));
+    printf("\n Permute functor >>>>> permute:%s", shape.ToString().c_str());
+    if (input->is_eager() && input->is_local()) { 
+      if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
+        return JUST(view::Transpose(input, permute)); 
+      }
+    }
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
@@ -641,38 +680,6 @@ class ConsistentEyeFunctor {
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class Transpose2dimFunctor {
- public:
-  Transpose2dimFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
-                           const int32_t dim1) const {
-    MutableAttrMap attrs;
-    const int64_t ndim = x->shape()->NumAxes();
-    std::vector<int32_t> permute;
-    permute.reserve(ndim);
-    int32_t dim_0 = dim0;
-    int32_t dim_1 = dim1;
-
-    if (dim0 < 0) { dim_0 += ndim; }
-    if (dim1 < 0) { dim_1 += ndim; }
-
-    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
-    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
-    for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
-    std::swap(permute[dim_0], permute[dim_1]);
-
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
  private:
@@ -1744,10 +1751,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
   m.add_functor<TransposeFunctor>("Transpose");
+  m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<EyeFunctor>("Eye");
   m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
-  m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
