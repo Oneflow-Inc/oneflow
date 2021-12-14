@@ -302,6 +302,22 @@ def save(
             disk I/O.
     """
     path: Path = Path(path)
+
+    if isinstance(obj, oneflow.nn.Graph):
+        graph: oneflow.nn.Graph = obj
+        if not graph._is_compiled:
+            raise RuntimeError("graph must be compiled first.")
+
+        os.makedirs(path, exist_ok=True)
+
+        serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
+
+        for x in graph._state():
+            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+
+        return
+
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
     with tensor_pickling_context(path, consistent_dst_rank):
         pickled_bytes = pickle.dumps(obj)
