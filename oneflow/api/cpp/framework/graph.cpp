@@ -131,8 +131,8 @@ class Graph::GraphImpl final {
   explicit GraphImpl(const std::string& model_path);
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
-  void enable_openvino() { xrt_kind_ = XrtKind::kTensorRT; }
-  void enable_tensorrt() { xrt_kind_ = XrtKind::kOpenVINO; }
+  void enable_openvino() { xrt_kind_ = XrtKind::kOpenVINO; }
+  void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
 
  private:
   oneflow::Maybe<void> Compile(const std::vector<Tensor>& inputs);
@@ -182,6 +182,8 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     std::ifstream input(model_path + "/model.pb");
     CHECK(input.is_open());
     CHECK(job_.ParseFromIstream(&input));
+
+    // prevent model name conflict when launch multiple model instances
     static int graph_index = 0;
     job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name()
                                           + std::to_string(graph_index));

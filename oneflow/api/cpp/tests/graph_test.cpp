@@ -57,6 +57,25 @@ TEST(Api, graph_test) {
   ASSERT_EQ(buf[3], 1);
 }
 
+TEST(Api, resnet_test) {
+  EnvScope scope;
+
+  Graph graph = Load("/home/zhouzekai/models/resnet50");
+  std::vector<Tensor> inputs;
+  inputs.emplace_back(Shape{1, 3, 224, 224});
+  inputs[0].zeros_();
+
+  Tensor output = graph.Forward(inputs).at(0);
+  Shape shape = output.shape();
+  ASSERT_EQ(shape.At(0), 1);
+  ASSERT_EQ(shape.At(1), 1000);
+  std::array<float, 1000> data{};
+  output.copy_to(data.data());
+  float expected_data[]{-1.07454,  -0.319766, -0.497719, -1.15014,  -0.677915,
+                            -0.326854, -0.906118, 0.276201,  0.0704126, -0.519408};
+  for (int i = 0; i < 10; i++) { ASSERT_NEAR(data[i], expected_data[i], 0.00001); }
+}
+
 TEST(Api, thread_test) {
   EnvScope scope;
   const Graph graphs[]{Load("/home/zhouzekai/models/resnet50"),
@@ -161,7 +180,7 @@ TEST(Api, graph_gpu_batching_test) {
 
 TEST(Api, tensor_copy_test) {
   EnvScope scope;
-  std::array<float, 4> data;
+  std::array<float, 4> data{};
 
   Tensor tensor(Shape{2, 2}, Device("cuda", 0));
   tensor.copy_to(data.data());
