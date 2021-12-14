@@ -388,8 +388,8 @@ def _sin(self):
 
 def _sin_(self):
     return flow.sin_(self)
-    
-    
+
+
 def _sinh(self):
     return flow.sinh(self)
 
@@ -686,7 +686,7 @@ def _matmul(self, other):
 
 def _round(self):
     return flow.round(self)
-    
+
 
 def _round_(self):
     return flow.round_(self)

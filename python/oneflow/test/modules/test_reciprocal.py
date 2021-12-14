@@ -70,5 +70,6 @@ class TestReciprocalModule(flow.unittest.TestCase):
         test_case.assertTrue(id_x == id(x))
         return x
 
+
 if __name__ == "__main__":
     unittest.main()

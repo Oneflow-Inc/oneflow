@@ -78,6 +78,7 @@ class TestSin(flow.unittest.TestCase):
         y = x.sin()
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestInplaceSin(flow.unittest.TestCase):
     @autotest(check_graph=False)
