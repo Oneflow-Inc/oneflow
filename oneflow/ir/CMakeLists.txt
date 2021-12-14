@@ -27,7 +27,7 @@ if(LLVM_PROVIDER STREQUAL "in-tree")
 elseif(LLVM_PROVIDER STREQUAL "install")
   include(install-llvm.cmake)
 else()
-  message(FATAL_ERROR "LLVM_PROVIDER should be in-tree or install")
+  message(FATAL_ERROR "LLVM_PROVIDER should be in-tree or install, but got: ${LLVM_PROVIDER}")
 endif()
 
 set(MLIR_TABLEGEN_EXE mlir-tblgen)
@@ -51,7 +51,7 @@ set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
 
 function(oneflow_add_mlir_library)
   add_mlir_library(${ARGV})
-  set_compile_options_to_oneflow_target(${ARGV0} EXCLUDE_FROM_LIBMLIR)
+  set_compile_options_to_oneflow_target(${ARGV0})
   set_property(TARGET ${ARGV0} APPEND PROPERTY
     BUILD_RPATH "${LLVM_LIBRARY_DIR}")
   set_property(TARGET ${ARGV0} APPEND PROPERTY
@@ -62,7 +62,7 @@ endfunction()
 
 function(oneflow_add_mlir_dialect_library)
   add_mlir_dialect_library(${ARGV})
-  set_compile_options_to_oneflow_target(${ARGV0} EXCLUDE_FROM_LIBMLIR)
+  set_compile_options_to_oneflow_target(${ARGV0})
   set_property(TARGET ${ARGV0} APPEND PROPERTY
     INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
   set_property(TARGET ${ARGV0} APPEND PROPERTY
