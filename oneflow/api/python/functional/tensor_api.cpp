@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <Python.h>
+#include <memory>
 
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/api/python/functional/common.h"
@@ -59,9 +60,10 @@ class TensorWithDataFunctor {
 
       const auto& other = JUST(PyUnpackTensor(data));
       return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
+    } else {
+      // Make tensor from python sequence or numpy array.
+      return MakeLocalTensorFromData(data, dtype, device, requires_grad);
     }
-    // Make tensor from python sequence or numpy array.
-    return MakeLocalTensorFromData(data, dtype, device, requires_grad);
   }
 };
 
@@ -213,6 +215,56 @@ class AssignLocalTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LocalTensorSharedNumpyDataFunctor {
+ public:
+  LocalTensorSharedNumpyDataFunctor() {}
+  Maybe<Tensor> operator()(PyObject* obj) const {
+    if (!PyArray_Check(obj)) {
+      return Error::TypeError() << "expected np.ndarray, but got " << Py_TYPE(obj)->tp_name;
+    }
+    auto* array = reinterpret_cast<PyArrayObject*>(obj);
+
+    // Build TensorMeta
+    int32_t dim = PyArray_NDIM(array);
+    const npy_intp* dims_ptr = PyArray_SHAPE(array);
+    const auto shape = std::make_shared<Shape>(DimVector(dims_ptr, dims_ptr + dim));
+    DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
+    Symbol<Device> device = JUST(Device::New("cpu"));
+    const npy_intp* stride_ptr = PyArray_STRIDES(array);
+    const auto stride = std::make_shared<Stride>(DimVector(stride_ptr, stride_ptr + dim));
+    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, data_type, device, stride, 0);
+
+    // Build TensorBuffer
+    const auto& Free = [obj](char* dptr) {
+      py::gil_scoped_acquire gil;
+      Py_DECREF(obj);
+    };
+    Py_INCREF(obj);  // make TensorBuffer hold ndarray
+    void* data_ptr = PyArray_DATA(array);
+    auto array_size_in_bytes = PyArray_NBYTES(array);
+    auto tensor_data = std::make_shared<vm::TensorStorage>();
+    tensor_data->set_blob_dptr(
+        std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
+        array_size_in_bytes);
+
+    // Build TensorStorage: decrease ndarray reference count before releasing
+    auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
+
+    // Build Tensor
+    auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor_storage,
+                                                                 /*requires_grad=*/false,
+                                                                 /*ls_leaf=*/true);
+
+    // Init blob
+    JUST(tensor_impl->InitEagerBlobObject(JUST(GetLocalDepObject4Device(*device))));
+    JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
+    JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
+    JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
+    std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
+    return out;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -226,6 +278,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
   m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
+  m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
 }
 
 }  // namespace functional
