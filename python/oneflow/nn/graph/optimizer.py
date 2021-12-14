@@ -40,7 +40,9 @@ class OptDict(object):
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
             if not isinstance(opt_dict["lr_sch"], LrScheduler):
-                raise ValueError('opt_dict["lr_sch"] is not an instance of LrScheduler.')
+                raise ValueError(
+                    'opt_dict["lr_sch"] is not an instance of LrScheduler.'
+                )
 
             if opt_dict["lr_sch"]._optimizer is not self._optimizer:
                 raise ValueError("lr_scheduler doesn't match optimizer.")

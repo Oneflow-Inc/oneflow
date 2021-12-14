@@ -48,7 +48,7 @@ class MyGraph(flow.nn.Graph):
 def _rand_input():
     generator = flow.Generator()
     generator.manual_seed(0)
-    return flow.randint(0, 10, (8, ), generator=generator, placement=P, sbp=SBP)
+    return flow.randint(0, 10, (8,), generator=generator, placement=P, sbp=SBP)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
