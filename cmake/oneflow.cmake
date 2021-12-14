@@ -276,8 +276,9 @@ endif()
 
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
+set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools")
 oneflow_add_executable(oneflow-gen-ods EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-gen-ods/oneflow-gen-ods.cpp)
-set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${ONEFLOW_TOOLS_DIR}")
 
 set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
