@@ -253,6 +253,7 @@ del oneflow
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
+from oneflow._C import from_numpy
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
