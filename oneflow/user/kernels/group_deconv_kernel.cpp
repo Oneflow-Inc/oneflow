@@ -276,9 +276,10 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
 };
 
 template<typename T>
-std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(
-    user_op::KernelCacheContext* ctx, const std::string& in_name, const std::string& out_name,
-    const std::string& weight_name) {
+std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(user_op::KernelCacheContext* ctx,
+                                                                  const std::string& in_name,
+                                                                  const std::string& out_name,
+                                                                  const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<DeconvOpKernelCache<T>> state(new DeconvOpKernelCache<T>());
