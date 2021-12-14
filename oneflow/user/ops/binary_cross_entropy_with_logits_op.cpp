@@ -117,8 +117,11 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
-      builder.Broadcast(user_op::OpArg("pos_weight", 0));
+    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
+                                                  user_op::SbpContext* ctx) {
+      if (ctx->user_op_conf().has_input("pos_weight", 0)) {
+        builder.Broadcast(user_op::OpArg("pos_weight", 0));
+      }
     }));
 
 REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
@@ -131,8 +134,11 @@ REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
     .Attr<bool>("has_pos_weight")
     .SetTensorDescInferFn(InferGradTensorDescFn)
     .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder) {
-      builder.Broadcast(user_op::OpArg("pos_weight", 0));
+    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
+                                                   user_op::SbpContext* ctx) {
+      if (ctx->user_op_conf().has_input("pos_weight", 0)) {
+        builder.Broadcast(user_op::OpArg("pos_weight", 0));
+      }
     }));
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")

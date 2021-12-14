@@ -450,6 +450,10 @@ def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
 
 
+def _diagonal(self, offset=0, dim1=0, dim2=1):
+    return flow._C.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
+
+
 def _log1p(self):
     return flow.log1p(self)
 
@@ -736,6 +740,10 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
+def _chunk(self, chunks=None, dim=None):
+    return flow._C.chunk(self, chunks, dim)
+
+
 def _all(self, dim=None, keepdim=False):
     return flow.all(self, dim, keepdim)
 
@@ -992,6 +1000,7 @@ def RegisterMethods():
     Tensor.softsign = _softsign
     Tensor.cast = _cast
     Tensor.diag = _diag
+    Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
     Tensor.log1p_ = _log1p_
     Tensor.add = _add
@@ -1064,6 +1073,7 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.bmm = _bmm
+    Tensor.chunk = _chunk
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow

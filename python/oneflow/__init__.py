@@ -75,6 +75,8 @@ from oneflow._C import atanh, atanh_
 from oneflow._C import atanh as arctanh
 from oneflow._C import atanh_ as arctanh_
 from oneflow._C import batch_matmul as bmm
+from oneflow._C import broadcast_like
+from oneflow._C import chunk
 from oneflow._C import sign
 from oneflow._C import sinh, sinh_
 from oneflow._C import tan, tan_
@@ -126,6 +128,10 @@ from oneflow._C import cosh, cosh_
 from oneflow._C import erf, erf_
 from oneflow._C import erfc, erfc_
 from oneflow._C import expm1, expm1_
+from oneflow._C import diagonal
+from oneflow._C import erf
+from oneflow._C import erfc
+from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import log, log_
 from oneflow._C import flatten
@@ -258,6 +264,7 @@ del oneflow
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
+from oneflow._C import from_numpy
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
@@ -292,8 +299,6 @@ from oneflow.nn.modules.pooling import (
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
-from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
-from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
