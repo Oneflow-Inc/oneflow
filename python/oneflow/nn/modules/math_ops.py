@@ -1079,7 +1079,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
                 [9., 4., 3.]], dtype=oneflow.float32)
         >>> indices
         tensor([[2, 3, 1],
-                [1, 2, 3]], dtype=oneflow.int32)
+                [1, 2, 3]], dtype=oneflow.int64)
         >>> values.shape
         oneflow.Size([2, 3])
         >>> indices.shape
@@ -1090,7 +1090,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
                 [1., 2.]], dtype=oneflow.float32)
         >>> indices
         tensor([[0, 4],
-                [0, 4]], dtype=oneflow.int32)
+                [0, 4]], dtype=oneflow.int64)
         >>> values.shape
         oneflow.Size([2, 2])
         >>> indices.shape
