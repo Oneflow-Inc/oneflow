@@ -13,12 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOWDIALECT_H
-#define ONEFLOW_ONEFLOWDIALECT_H
+#ifndef ONEFLOW_CORE_JOB_JOB_IR_H_
+#define ONEFLOW_CORE_JOB_JOB_IR_H_
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/job.pb.h"
 
-#include "OneFlow/OneFlowOpsDialect.h.inc"
+namespace oneflow {
 
-#endif  // ONEFLOW_ONEFLOWDIALECT_H
+Maybe<void> SaveJobToIR(Job* job, const std::string& path);
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path);
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_JOB_IR_H_
