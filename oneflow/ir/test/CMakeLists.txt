@@ -1,4 +1,3 @@
-set(LLVM_TOOLS_BINARY_DIR ${llvm_monorepo_BINARY_DIR}/bin CACHE STRING "" FORCE)
 message(STATUS "LLVM_TOOLS_DIR: ${LLVM_TOOLS_DIR}")
 message(STATUS "LLVM_EXTERNAL_LIT: ${LLVM_EXTERNAL_LIT}")
 configure_lit_site_cfg(
