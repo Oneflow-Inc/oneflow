@@ -1,9 +1,3 @@
-set(LLVM_ENABLE_RTTI ON) # turn this on to make it compatible with protobuf
-
-if(WITH_MLIR_CUDA_CODEGEN)
-  set(MLIR_RUNTIME_GPU_LIBS mlir_cuda_runtime)
-endif(WITH_MLIR_CUDA_CODEGEN)
-
 oneflow_add_mlir_library(MLIROneFlowExtension
   extension.cpp
   ir_pass.cpp
@@ -22,8 +16,7 @@ oneflow_add_mlir_library(MLIROneFlowExtension
   oneflow
   MLIRExecutionEngine
   MLIROneFlowTranslation
-  mlir_c_runner_utils
-  ${MLIR_RUNTIME_GPU_LIBS}
+  MLIROneFlowRuntime
 )
 mlir_check_all_link_libraries(MLIROneFlowExtension)
 add_custom_target(mex DEPENDS MLIROneFlowExtension)
