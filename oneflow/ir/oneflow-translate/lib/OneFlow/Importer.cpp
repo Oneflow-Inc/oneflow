@@ -817,11 +817,12 @@ LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& a
   auto* var_op_conf = op_conf->mutable_variable_conf();
   var_op_conf->set_out("out");
 
-  for (const auto& elem : adaptor.shape()) {
-    var_op_conf->mutable_shape()->mutable_dim()->Add(elem.getSExtValue());
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, var_op_conf->mutable_shape());
   }
 
-  if (op->hasAttr("data_type")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
     var_op_conf->set_data_type(dt);
@@ -869,23 +870,22 @@ LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor
   auto* input_op_conf = op_conf->mutable_input_conf();
   input_op_conf->set_out("out");
 
-  if (op->hasAttr("shape")) {
-    for (auto elem : adaptor.shape()) {
-      input_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
-    }
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, input_op_conf->mutable_blob_conf()->mutable_shape());
   }
 
-  if (op->hasAttr("data_type")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
     input_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
-  if (op->hasAttr("is_dynamic")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
     input_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
   }
 
-  if (op->hasAttr("nd_sbp")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
     if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
                                   input_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
       return failure();
@@ -913,23 +913,22 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   auto* output_op_conf = op_conf->mutable_output_conf();
   output_op_conf->set_out("out");
 
-  if (op->hasAttr("shape")) {
-    for (auto elem : adaptor.shape()) {
-      output_op_conf->mutable_blob_conf()->mutable_shape()->add_dim(elem.getSExtValue());
-    }
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, output_op_conf->mutable_blob_conf()->mutable_shape());
   }
 
-  if (op->hasAttr("data_type")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
     output_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
-  if (op->hasAttr("is_dynamic")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
     output_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
   }
 
-  if (op->hasAttr("nd_sbp")) {
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
     if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
                                   output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
       return failure();
