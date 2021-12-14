@@ -82,6 +82,7 @@ class TestMeshGridModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(auto_backward=False, check_graph=False)
+    @unittest.skip("pytorch 1.9.0 exist not indexing")
     def test_meshgrid_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to(device)
@@ -90,7 +91,8 @@ class TestMeshGridModule(flow.unittest.TestCase):
         return res[0], res[1]
     
     @autotest(auto_backward=True, check_graph=False)
-    def test_meshgrid_with_random_data_a(test_case):
+    @unittest.skip("pytorch 1.9.0 exist not indexing")
+    def test_meshgrid_with_random_data_xy(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=1, dim0=random(1, 6)).to(device)
         y = random_pytorch_tensor(ndim=1, dim0=random(1, 6)).to(device)
