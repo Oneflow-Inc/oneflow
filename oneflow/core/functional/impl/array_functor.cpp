@@ -964,7 +964,7 @@ class SliceBaseFunctor {
     if (x->is_eager() && x->is_local()) {
       // TODO: view support 0-dim tensor 
       if(!(x->shape()->NumAxes()<=1 || x->shape()->elem_cnt()<=1)){
-        return view::Slice(x->contiguous(), start, stop, step);
+        return view::Slice(x, start, stop, step);
       }
     }
 
@@ -1023,7 +1023,7 @@ class NarrowFunctor {
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_eager() && input->is_local()) {
       if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
-        return JUST(view::Narrow(input->contiguous(), narrow_dim, start, length));
+        return JUST(view::Narrow(input, narrow_dim, start, length));
       }
     }
     MutableAttrMap attrs;
