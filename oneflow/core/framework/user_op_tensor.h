@@ -30,7 +30,7 @@ namespace user_op {
 
 class Tensor {
  public:
-  ~Tensor() = default;
+  virtual ~Tensor() = default;
 
   virtual const ShapeView& shape() const = 0;
   virtual MutShapeView* mut_shape() = 0;

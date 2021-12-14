@@ -3,29 +3,23 @@
 
 include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowInterfaces.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr,
-                                      "signed 32-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int32_t v) -> Attribute { return builder_.getSI32IntegerAttr($0); })))";
-}
+def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
-def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr,
-                                      "signed 64-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](int64_t v) -> Attribute { return builder_.getSI64IntegerAttr($0); })))";
-}
+def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
 
-def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType,
-                                      "signed 64-bit integer array attribute"> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return DataTypeAttr::get($0); })))";
-}
+def ShapeAttr : TypedArrayAttrBase<SI64Attr, ""> {}
 
-def ShapeArrayAttr : TypedArrayAttrBase<AnyI64ElementsAttr,
-                                      ""> {
-  let constBuilderCall = "$_builder.getArrayAttr(llvm::to_vector<8>(llvm::map_range(values, [this](auto v) -> Attribute { return DenseIntElementsAttr::get($0); })))";
-}
+def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, ""> {}
+
+def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
+def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
+def OneFlow_TensorSource : NativeOpTrait<"TensorSource">;
 
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
@@ -66,8 +60,6 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
     I32ElementsAttr:$result_segment_sizes
   );
 }
-
-def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 
 class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = [OneFlow_AlternativeOp]> :
         OneFlow_BaseOp<mnemonic, traits> {
@@ -160,39 +152,89 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 
-class OneFlow_PoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_MaxPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow pooling operation";
-  let input = (ins AnyType:$x);
-  let output = (outs AnyType:$y);
+  let summary = "OneFlow Max Pooling operation";
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$indice
+  );
   let attrs = (ins
     SI32ArrayAttr:$padding,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
+    SI32ArrayAttr:$dilation,
+    DefaultValuedAttr<BoolAttr, "false">:$return_indices,
+    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
 }
 
-class OneFlow_PoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow pooling grad operation";
+  let summary = "OneFlow Average Pooling operation";
+  let input = (ins
+    AnyType:$x
+  );
+  let output = (outs
+    AnyType:$y
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
+    DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
+    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+  );
+}
+
+class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Max Pooling Grad operation";
+  let input = (ins
+    AnyType:$x,
+    AnyType:$y,
+    AnyType:$indice,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$padding,
+    StrAttr:$data_format,
+    SI32ArrayAttr:$kernel_size,
+    SI32ArrayAttr:$stride,
+    SI32ArrayAttr:$dilation,
+    DefaultValuedAttr<BoolAttr, "false">:$return_indices,
+    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
+  );
+}
+
+class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Average Pooling Grad operation";
   let input = (ins
     AnyType:$x,
     AnyType:$y,
     AnyType:$dy
   );
-  let output = (outs AnyType:$dx);
+  let output = (outs
+    AnyType:$dx
+  );
   let attrs = (ins
     SI32ArrayAttr:$padding,
     StrAttr:$data_format,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$stride,
-    BoolAttr:$ceil_mode,
-    BoolAttr:$count_include_pad,
-    SI64Attr:$divisor_override
+    DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
+    DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
+    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
   );
 }
 
