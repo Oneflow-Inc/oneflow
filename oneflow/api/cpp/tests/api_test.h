@@ -28,6 +28,7 @@ class EnvScope {  // NOLINT
 };
 
 Shape RandomShape();
+Shape RandomShapeSmall();
 
 template<typename T>
 std::vector<T> RandomData(size_t size);

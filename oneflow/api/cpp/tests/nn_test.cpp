@@ -37,7 +37,7 @@ std::vector<T> Relu(const std::vector<T>& data) {
 
 }  // namespace
 
-void TestRelu(bool on_gpu = false) {
+void TestRelu(bool on_gpu) {
   const auto shape = RandomShape();
   const auto data = RandomData<float>(shape.Count(0));
   const auto target_data = Relu(data);
@@ -55,10 +55,10 @@ void TestRelu(bool on_gpu = false) {
 TEST(Api, nn_relu) {
   EnvScope scope;
 
-  TestRelu();
+  TestRelu(/*on_gpu*/ false);
 
 #ifdef WITH_CUDA
-  TestRelu(true);
+  TestRelu(/*on_gpu*/ true);
 #endif
 }
 
@@ -69,7 +69,9 @@ TEST(Api, nn_relu_multithreading) {
   std::uniform_int_distribution<> dist(8, 32);
   int n_threads = dist(rng);
 
-  for (int i = 0; i < n_threads; ++i) { threads.emplace_back(std::thread(TestRelu, false)); }
+  for (int i = 0; i < n_threads; ++i) {
+    threads.emplace_back(std::thread(TestRelu, /*on_gpu*/ false));
+  }
 
   for (auto& x : threads) { x.join(); }
 }

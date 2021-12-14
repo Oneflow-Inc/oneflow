@@ -91,4 +91,20 @@ TEST(Api, tensor_zeros) {
   ASSERT_EQ(data, target_data);
 }
 
+TEST(Api, tensor_print) {
+  EnvScope scope;
+#define TEST_TENSOR_PRINT(dtype, cpp_dtype)                                                  \
+  const auto shape_##cpp_dtype = RandomShapeSmall();                                         \
+  const auto data_##cpp_dtype = RandomData<cpp_dtype>(shape_##cpp_dtype.Count(0));           \
+  const auto tensor_##cpp_dtype =                                                            \
+      Tensor::from_buffer(data_##cpp_dtype.data(), shape_##cpp_dtype, Device("cpu"), dtype); \
+  std::cout << tensor_##cpp_dtype << std::endl;
+
+  TEST_TENSOR_PRINT(DType::kFloat, float)
+  TEST_TENSOR_PRINT(DType::kDouble, double)
+  TEST_TENSOR_PRINT(DType::kInt8, int8_t)
+  TEST_TENSOR_PRINT(DType::kInt32, int32_t)
+  TEST_TENSOR_PRINT(DType::kInt64, int64_t)
+}
+
 }  // namespace oneflow_api
