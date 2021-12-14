@@ -356,6 +356,8 @@ def enable_tensor_float_32_compute(val=True):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     sess.config_proto.resource.enable_tensor_float_32_compute = val
+    if not val:
+        os.environ["ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION"] = "0"
 
 
 def api_enable_mem_chain_merge(val: bool = True) -> None:
