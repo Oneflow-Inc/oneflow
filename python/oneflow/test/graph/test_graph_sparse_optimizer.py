@@ -63,9 +63,9 @@ class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
 
         sparse_optimizer_found = False
         for op in graph._full_graph_proto.net.op:
-            print("==>", op.name)
+            # print("==>", op.name)
             if op.HasField("user_conf"):
-                print("  -->", op.user_conf.op_type_name)
+                # print("  -->", op.user_conf.op_type_name)
                 if op.user_conf.op_type_name == "indexed_slices_sgd_update":
                     sparse_optimizer_found = True
                     break

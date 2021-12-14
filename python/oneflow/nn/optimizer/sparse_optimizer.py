@@ -32,10 +32,10 @@ class SparseOptimizer(object):
         return self._nested_optim.state_dict()
 
     def step(self, closure):
-        raise NotImplementedError("SparseOptimizer do not support eager mode for now")
+        raise NotImplementedError("SparseOptimizer doesn't support step for now")
 
     def clip_grad(self):
-        raise NotImplementedError("SparseOptimizer do not support eager mode for now")
+        raise NotImplementedError("SparseOptimizer doesn't support clip_grad for now")
 
     def zero_grad(self, set_to_none: bool = False):
-        raise NotImplementedError("SparseOptimizer do not support eager mode for now")
+        raise NotImplementedError("SparseOptimizer doesn't support zero_grad for now")
