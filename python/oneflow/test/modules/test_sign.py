@@ -63,6 +63,16 @@ class TestSign(flow.unittest.TestCase):
         y = torch.sign(x)
         return y
 
+    @autotest(check_graph=False)
+    def test_inplace_sign_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor(low=-100.0, high=100).to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        x.sign_()
+        test_case.assertTrue(id_x == id(x))
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()

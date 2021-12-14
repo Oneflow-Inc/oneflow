@@ -36,6 +36,33 @@ class TestErfcModule(flow.unittest.TestCase):
         y = torch.erfc(x)
         return y
 
+    @autotest(check_graph=False)
+    def test_tensor_erfc_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.erfc()
+        return y
+
+    @autotest(check_graph=False)
+    def test_flow_inplace_erfc_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        torch.erfc_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest(check_graph=False)
+    def test_tensor_inplace_erfc_with_random_data(test_case):
+        device = random_device()
+        x_0 = random_pytorch_tensor().to(device)
+        x = x_0 + 1
+        id_x = id(x)
+        x.erfc_()
+        test_case.assertTrue(id_x == id(x))
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()

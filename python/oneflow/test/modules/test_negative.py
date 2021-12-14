@@ -30,8 +30,10 @@ class TestNegativeModule(flow.unittest.TestCase):
         x = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)
         y1 = torch.negative(x)
         y2 = torch.neg(x)
-        y3 = -x
-        return (y1, y2, y3)
+        y3 = torch.negative_(x)
+        y4 = torch.neg_(x)
+        y5 = -x
+        return (y1, y2, y3, y4, y5)
 
     @autotest(check_graph=False)
     def test_tensor_negative_with_random_data(test_case):
@@ -48,6 +50,35 @@ class TestNegativeModule(flow.unittest.TestCase):
     def test_neg_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         z = torch.neg(x)
+        return z
+
+    @autotest(check_graph=False)
+    def test_neg_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        z = x.neg()
+        return z
+
+    @autotest(check_graph=False)
+    def test_tensor_inplace_negative_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        return x.negative_()
+
+    @autotest(check_graph=False)
+    def test_inplace_negative_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        z = torch.negative_(x)
+        return z
+
+    @autotest(check_graph=False)
+    def test_inplace_neg_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        z = torch.neg_(x)
+        return z
+
+    @autotest(check_graph=False)
+    def test_inplace_neg_with_random_data(test_case):
+        x = random_pytorch_tensor().to(random_device())
+        z = x.neg_()
         return z
 
 

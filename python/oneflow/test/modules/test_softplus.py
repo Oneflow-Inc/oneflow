@@ -38,6 +38,19 @@ def _test_softplus_impl(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 0.0001, 0.0001))
 
 
+def _test_inplace_softplus(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    np_x_grad = np.exp(np_input) / (1 + np.exp(np_input))
+    id_input = id(of_input)
+    flow.softplus_(of_input)
+    test_case.assertTrue(id_input == id(of_input))
+    np_out = np.log(1 + np.exp(np_input))
+    test_case.assertTrue(np.allclose(of_input.numpy(), np_out, 0.0001, 0.0001))
+
+
 @flow.unittest.skip_unless_1n1d()
 class Testsoftplus(flow.unittest.TestCase):
     def test_softplus(test_case):

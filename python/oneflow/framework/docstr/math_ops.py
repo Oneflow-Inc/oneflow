@@ -38,6 +38,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.abs_,
+    r"""
+    In-place version of :func:`oneflow.abs`
+    """,
+)
+
+add_docstr(
     oneflow.add,
     r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -72,41 +79,6 @@ add_docstr(
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
-
-    """,
-)
-
-add_docstr(
-    oneflow.floor,
-    """
-    Returns a new tensor with the arcsine of the elements of :attr:`input`.
-
-    .. math::
-        \\text{out}_{i} = \\lfloor \\text{input}_{i} \\rfloor
-
-    Args:
-        input (Tensor): the input tensor.
-        
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
-        >>> output = flow.floor(input)
-        >>> output.shape
-        oneflow.Size([4])
-        >>> output.numpy()
-        array([-1.,  1.,  0.,  0.], dtype=float32)
-        
-        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
-        >>> output1 = input1.floor()
-        >>> output1.shape
-        oneflow.Size([2, 2])
-        >>> output1.numpy()
-        array([[ 0.,  1.],
-               [-1.,  2.]], dtype=float32)
 
     """,
 )
@@ -215,6 +187,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.reciprocal_,
+    r"""
+    In-place version of :func:`oneflow.reciprocal`
+    """,
+)
+
+add_docstr(
     oneflow.sub,
     r"""Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -257,6 +236,7 @@ add_docstr(
     oneflow.asin,
     r"""
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
+    Alias of arcsin
 
     .. math::
         \text{out}_{i} = \sin^{-1}(\text{input}_{i})
@@ -287,9 +267,18 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.asin_,
+    r"""
+    In-place version of :func:`oneflow.asin`
+    """,
+)
+
+
+add_docstr(
     oneflow.asinh,
     r"""
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
+    Alias of arcsinh
 
     .. math::
         \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
@@ -322,9 +311,18 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.asinh_,
+    r"""
+    In-place version of :func:`oneflow.asinh`
+    """,
+)
+
+
+add_docstr(
     oneflow.atan,
     r"""
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
+    Alias of arctan
 
     .. math::
         \text{out}_{i} = \tan^{-1}(\text{input}_{i})
@@ -345,6 +343,14 @@ add_docstr(
         
     """,
 )
+
+add_docstr(
+    oneflow.atan_,
+    r"""
+    In-place version of :func:`oneflow.atan`
+    """,
+)
+
 
 add_docstr(
     oneflow.ceil,
@@ -397,6 +403,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.ceil_,
+    r"""
+    In-place version of :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
     oneflow.negative,
     r"""This operator computes the negative value of Tensor.
     
@@ -424,6 +437,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.negative_,
+    r"""
+    In-place version of :func:`oneflow.negative`
+    """,
+)
+
+add_docstr(
     oneflow.log1p,
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 
@@ -441,6 +461,13 @@ add_docstr(
         >>> out
         tensor([0.8329, 0.9163, 1.3083], dtype=oneflow.float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.log1p_,
+    r"""
+    In-place version of :func:`oneflow.log1p`
     """,
 )
 
@@ -478,9 +505,17 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.exp_,
+    r"""
+    In-place version of :func:`oneflow.exp_`
+    """,
+)
+
+add_docstr(
     oneflow.acos,
     r"""
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
+    Alias of arccos
 
     .. math::
         \text{out}_{i} = \arccos(\text{input}_{i})
@@ -503,10 +538,20 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow.acos_,
+    r"""
+    In-place version of :func:`oneflow.acos`.
+    """,
+)
+
+
 add_docstr(
     oneflow.acosh,
     r"""
     Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
+    Alias of arccosh
 
     .. math::
 
@@ -533,8 +578,18 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.acosh_,
+    r"""
+    In-place version of :func:`oneflow.acosh`
+    """,
+)
+
+
+add_docstr(
     oneflow.atanh,
-    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    r"""
+    Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    Alias of arctanh 
 
     .. math::
         \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
@@ -556,6 +611,14 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.atanh_,
+    r"""
+    In-place version of :func:`oneflow.atanh`
+    """,
+)
+
 
 add_docstr(
     oneflow.sign,
@@ -585,6 +648,7 @@ add_docstr(
 
     """,
 )
+
 
 add_docstr(
     oneflow.sin,
@@ -620,7 +684,6 @@ add_docstr(
     oneflow.sin_,
     r"""
     In-place version of :func:`oneflow.sin`
-
     """,
 )
 
@@ -656,6 +719,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.sinh_,
+    r"""
+    In-place version of :func:`oneflow.sinh`
+    """,
+)
+
+add_docstr(
     oneflow.tan,
     r"""Returns  the tan value of the elements of :attr:`input`.
 
@@ -677,6 +747,13 @@ add_docstr(
         >>> output
         tensor([-1.,  0.,  1.], dtype=oneflow.float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.tan_,
+    r"""
+    In-place version of :func:`oneflow.tan`
     """,
 )
 
@@ -755,6 +832,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.cos_,
+    r"""
+    In-place version of :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
     oneflow.cosh,
     r"""
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
@@ -778,6 +862,13 @@ add_docstr(
         >>> output
         array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.cosh_,
+    r"""
+    In-place version of :func:`oneflow.cosh`
     """,
 )
 
@@ -829,6 +920,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.erf_,
+    r"""
+    In-place version of :func:`oneflow.erf`
+    """,
+)
+
+add_docstr(
     oneflow.erfc,
     r"""Computes the complementary error function of each element of input. The complementary error 
     function is defined as follows:
@@ -860,6 +958,13 @@ add_docstr(
         tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
                 [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
         
+    """,
+)
+
+add_docstr(
+    oneflow.erfc_,
+    r"""
+    In-place version of :func:`oneflow.erfc`
     """,
 )
 
@@ -905,6 +1010,13 @@ add_docstr(
           [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
 
 
+    """,
+)
+
+add_docstr(
+    oneflow.expm1_,
+    r"""
+    In-place version of :func:`oneflow.expm1`
     """,
 )
 
@@ -963,6 +1075,13 @@ add_docstr(
         >>> output = flow.log(input)
 
 
+    """,
+)
+
+add_docstr(
+    oneflow.log_,
+    r"""
+    In-place version of :func:`oneflow.log`
     """,
 )
 
@@ -1079,6 +1198,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.rsqrt_,
+    r"""
+    In-place version of :func:`oneflow.rsqrt`
+    """,
+)
+
+add_docstr(
     oneflow.sqrt,
     r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
 
@@ -1103,6 +1229,12 @@ add_docstr(
         """,
 )
 
+add_docstr(
+    oneflow.sqrt_,
+    r"""
+    In-place version of :func:`oneflow.sqrt`
+    """,
+)
 
 add_docstr(
     oneflow.square,
@@ -1127,6 +1259,13 @@ add_docstr(
             >>> output
             array([1., 4., 9.], dtype=float32)
         """,
+)
+
+add_docstr(
+    oneflow.square_,
+    r"""
+    In-place version of :func:`oneflow.square`
+    """,
 )
 
 add_docstr(
@@ -1180,6 +1319,13 @@ add_docstr(
         >>> out2.numpy()
         array([2., 8., 5., 7.], dtype=float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.round_,
+    r"""
+    In-place version of :func:`oneflow.round`
     """,
 )
 
@@ -1276,6 +1422,7 @@ add_docstr(
     """,
 )
 
+
 add_docstr(
     oneflow.dot,
     r"""This operator computes the dot product of tensor input and other.
@@ -1335,5 +1482,47 @@ add_docstr(
         >>> output = flow.movedim(input, (1, 2), (0, 1))
         >>> output.shape
         oneflow.Size([3, 4, 2, 5])
+    """,
+)
+
+add_docstr(
+    oneflow.floor,
+    r"""
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\lfloor \\text{input}_{i} \\rfloor
+
+    Args:
+        input (Tensor): the input tensor.
+        
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.floor(input)
+        >>> output.shape
+        oneflow.Size([4])
+        >>> output.numpy()
+        array([-1.,  1.,  0.,  0.], dtype=float32)
+        
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.floor()
+        >>> output1.shape
+        oneflow.Size([2, 2])
+        >>> output1.numpy()
+        array([[ 0.,  1.],
+               [-1.,  2.]], dtype=float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
     """,
 )

@@ -331,6 +331,16 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest()
+    def test_inplace_logsigmoid_module_with_random_data(test_case):
+        m = torch.nn.LogSigmoid()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
+
 
 def numpy_softplus(x, beta, threshold):
     return np.where(

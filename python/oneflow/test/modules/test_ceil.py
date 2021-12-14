@@ -39,6 +39,58 @@ class TestCeilModule(flow.unittest.TestCase):
         y = torch.ceil(x)
         return y
 
+    @autotest(check_graph=False)
+    def test_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        y = input.ceil()
+        return y
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_ceil_tensor_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = x.ceil()
+        return y
+
+    @autotest(check_graph=False)
+    def test_inplace_ceil_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        x = input + 1
+        id_x = id(x)
+        torch.ceil_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_inplace_ceil_flow_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        id_x = id(x)
+        torch.ceil_(x)
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest(check_graph=False)
+    def test_inplace_ceil_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        x = input + 1
+        id_x = id(x)
+        x.ceil_()
+        test_case.assertTrue(id_x == id(x))
+        return x
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_inplace_ceil_tensor_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        id_x = id(x)
+        x.ceil_()
+        test_case.assertTrue(id_x == id(x))
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()

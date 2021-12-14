@@ -306,8 +306,16 @@ def _abs(self):
     return flow.abs(self)
 
 
+def _abs_(self):
+    return flow.abs_(self)
+
+
 def _exp(self):
     return flow.exp(self)
+
+
+def _exp_(self):
+    return flow.exp_(self)
 
 
 def _expand_as(input, other):
@@ -318,20 +326,40 @@ def _acos(self):
     return flow.acos(self)
 
 
+def _acos_(self):
+    return flow.acos_(self)
+
+
 def _arccos(self):
     return flow.arccos(self)
+
+
+def _arccos_(self):
+    return flow.arccos_(self)
 
 
 def _acosh(self):
     return flow.acosh(self)
 
 
+def _acosh_(self):
+    return flow.acosh_(self)
+
+
 def _arccosh(self):
     return flow.arccosh(self)
 
 
+def _arccosh_(self):
+    return flow.arccosh_(self)
+
+
 def _atanh(self):
     return flow.atanh(self)
+
+
+def _atanh_(self):
+    return flow.atanh_(self)
 
 
 def _atan2(self, other):
@@ -342,16 +370,40 @@ def _arctanh(self):
     return flow.arctanh(self)
 
 
+def _arctanh_(self):
+    return flow.arctanh_(self)
+
+
 def _sign(self):
     return flow.sign(self)
+
+
+def _sign_(self):
+    return flow._C.sign_(self)
+
+
+def _sin(self):
+    return flow.sin(self)
+
+
+def _sin_(self):
+    return flow.sin_(self)
 
 
 def _sinh(self):
     return flow.sinh(self)
 
 
+def _sinh_(self):
+    return flow.sinh_(self)
+
+
 def _tan(self):
     return flow.tan(self)
+
+
+def _tan_(self):
+    return flow.tan_(self)
 
 
 def _gelu(self):
@@ -366,8 +418,16 @@ def _sigmoid(self):
     return flow.sigmoid(self)
 
 
+def _sigmoid_(self):
+    return flow.sigmoid_(self)
+
+
 def _tanh(self):
     return flow.tanh(self)
+
+
+def _tanh_(self):
+    return flow.tanh_(self)
 
 
 def _silu(self):
@@ -398,36 +458,72 @@ def _log1p(self):
     return flow.log1p(self)
 
 
+def _log1p_(self):
+    return flow.log1p_(self)
+
+
 def _reciprocal(self):
     return flow.reciprocal(self)
+
+
+def _reciprocal_(self):
+    return flow.reciprocal_(self)
 
 
 def _asin(self):
     return flow.asin(self)
 
 
+def _asin_(self):
+    return flow.asin_(self)
+
+
 def _arcsin(self):
     return flow.arcsin(self)
+
+
+def _arcsin_(self):
+    return flow.arcsin_(self)
 
 
 def _asinh(self):
     return flow.asinh(self)
 
 
+def _asinh_(self):
+    return flow.asinh_(self)
+
+
 def _arcsinh(self):
     return flow.arcsinh(self)
+
+
+def _arcsinh_(self):
+    return flow.arcsinh_(self)
 
 
 def _atan(self):
     return flow.atan(self)
 
 
+def _atan_(self):
+    return flow.atan_(self)
+
+
 def _arctan(self):
     return flow.arctan(self)
 
 
+def _arctan_(self):
+    return flow.arctan_(self)
+
+
 def _ceil(self):
     return flow.ceil(self)
+
+
+def _ceil_(self):
+    return flow.ceil_(self)
 
 
 def _clamp(self, min=None, max=None):
@@ -442,24 +538,52 @@ def _cos(self):
     return flow.cos(self)
 
 
+def _cos_(self):
+    return flow.cos_(self)
+
+
 def _cosh(self):
     return flow.cosh(self)
+
+
+def _cosh_(self):
+    return flow.cosh_(self)
 
 
 def _erf(self):
     return flow.erf(self)
 
 
+def _erf_(self):
+    return flow.erf_(self)
+
+
 def _erfc(self):
     return flow.erfc(self)
+
+
+def _erfc_(self):
+    return flow.erfc_(self)
 
 
 def _expm1(self):
     return flow.expm1(self)
 
 
+def _expm1_(self):
+    return flow.expm1_(self)
+
+
 def _fmod(self, other):
     return flow.fmod(self, other)
+
+
+def _floor(self, other):
+    return flow.floor(self)
+
+
+def _floor_(self, other):
+    return flow.floor_(self)
 
 
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
@@ -468,6 +592,10 @@ def _flatten(self, start_dim: int = 0, end_dim: int = -1):
 
 def _log(self):
     return flow.log(self)
+
+
+def _log_(self):
+    return flow.log_(self)
 
 
 def _minimum(self, y):
@@ -482,20 +610,40 @@ def _negative(self):
     return flow._C.negative(self)
 
 
+def _negative_(self):
+    return flow._C.negative_(self)
+
+
 def _neg(self):
     return flow._C.negative(self)
+
+
+def _neg_(self):
+    return flow._C.negative_(self)
 
 
 def _rsqrt(self):
     return flow.rsqrt(self)
 
 
+def _rsqrt_(self):
+    return flow.rsqrt_(self)
+
+
 def _sqrt(self):
     return flow.sqrt(self)
 
 
+def _sqrt_(self):
+    return flow.sqrt_(self)
+
+
 def _square(self):
     return flow.square(self)
+
+
+def _square_(self):
+    return flow.square_(self)
 
 
 def _var(self, dim=None, unbiased=True, keepdim=False):
@@ -540,8 +688,16 @@ def _round(self):
     return flow.round(self)
 
 
+def _round_(self):
+    return flow.round_(self)
+
+
 def _softplus(self):
     return flow.softplus(self)
+
+
+def _softplus_(self):
+    return flow.softplus_(self)
 
 
 def _tril(self, diagonal=0):
@@ -798,30 +954,47 @@ def RegisterMethods():
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
+    Tensor.abs_ = _abs_
     Tensor.exp = _exp
+    Tensor.exp_ = _exp_
     Tensor.floor_divide = _floor_divide
     Tensor.floor = _floor
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
     Tensor.acos = _acos
+    Tensor.acos_ = _acos_
     Tensor.arccos = _arccos
+    Tensor.arccos_ = _arccos_
     Tensor.acosh = _acosh
+    Tensor.acosh_ = _acosh_
     Tensor.arccosh = _arccosh
+    Tensor.arccosh_ = _arccosh_
     Tensor.atanh = _atanh
+    Tensor.atanh_ = _atanh_
     Tensor.atan2 = _atan2
     Tensor.arctanh = _arctanh
+    Tensor.arctanh_ = _arctanh_
     Tensor.sign = _sign
+    Tensor.sign_ = _sign_
+    Tensor.sin = _sin
+    Tensor.sin_ = _sin_
     Tensor.sinh = _sinh
+    Tensor.sinh_ = _sinh_
     Tensor.tan = _tan
+    Tensor.tan_ = _tan_
     Tensor.gt = _gt
     Tensor.ge = _ge
     Tensor.gelu = _gelu
     Tensor.mish = _mish
     Tensor.negative = _negative
+    Tensor.negative_ = _negative_
     Tensor.neg = _neg
+    Tensor.neg_ = _neg_
     Tensor.sigmoid = _sigmoid
+    Tensor.sigmoid_ = _sigmoid_
     Tensor.tanh = _tanh
+    Tensor.tanh_ = _tanh_
     Tensor.silu = _silu
     Tensor.selu = _selu
     Tensor.softsign = _softsign
@@ -829,42 +1002,64 @@ def RegisterMethods():
     Tensor.diag = _diag
     Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
+    Tensor.log1p_ = _log1p_
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
     Tensor.mul = _mul
     Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
+    Tensor.reciprocal_ = _reciprocal_
     Tensor.sub = _sub
     Tensor.asin = _asin
+    Tensor.asin_ = _asin_
     Tensor.arcsin = _arcsin
+    Tensor.arcsin_ = _arcsin_
     Tensor.asinh = _asinh
+    Tensor.asinh_ = _asinh_
     Tensor.arcsinh = _arcsinh
+    Tensor.arcsinh_ = _arcsinh_
     Tensor.atan = _atan
+    Tensor.atan_ = _atan_
     Tensor.arctan = _arctan
+    Tensor.arctan_ = _arctan_
     Tensor.ceil = _ceil
+    Tensor.ceil_ = _ceil_
     Tensor.clamp = _clamp
     Tensor.clip = _clip
     Tensor.cos = _cos
+    Tensor.cos_ = _cos_
     Tensor.cosh = _cosh
+    Tensor.cosh_ = _cosh_
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
+    Tensor.erf_ = _erf_
     Tensor.erfc = _erfc
+    Tensor.erfc_ = _erfc_
     Tensor.expm1 = _expm1
+    Tensor.expm1_ = _expm1_
     Tensor.fmod = _fmod
+    Tensor.floor = _floor
+    Tensor.floor_ = _floor_
     Tensor.flatten = _flatten
     Tensor.log = _log
+    Tensor.log_ = _log_
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
+    Tensor.rsqrt_ = _rsqrt_
     Tensor.sqrt = _sqrt
+    Tensor.sqrt_ = _sqrt_
     Tensor.square = _square
+    Tensor.square_ = _square_
     Tensor.var = _var
     Tensor.std = _std
     Tensor.matmul = _matmul
     Tensor.round = _round
+    Tensor.round_ = _round_
     Tensor.softplus = _softplus
+    Tensor.softplus_ = _softplus_
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous

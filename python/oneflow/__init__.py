@@ -63,20 +63,23 @@ def is_deprecated(func_or_class):
     )
 
 
-from oneflow._C import abs
-from oneflow._C import exp
-from oneflow._C import acos
+from oneflow._C import abs, abs_
+from oneflow._C import exp, exp_
+from oneflow._C import acos, acos_
 from oneflow._C import acos as arccos
-from oneflow._C import acosh
+from oneflow._C import acos_ as arccos_
+from oneflow._C import acosh, acosh_
 from oneflow._C import acosh as arccosh
-from oneflow._C import atanh
+from oneflow._C import acosh_ as arccosh_
+from oneflow._C import atanh, atanh_
 from oneflow._C import atanh as arctanh
+from oneflow._C import atanh_ as arctanh_
 from oneflow._C import batch_matmul as bmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
 from oneflow._C import sign
-from oneflow._C import sinh
-from oneflow._C import tan
+from oneflow._C import sinh, sinh_
+from oneflow._C import tan, tan_
 from oneflow._C import greater
 from oneflow._C import greater as gt
 from oneflow._C import greater_equal
@@ -87,8 +90,8 @@ from oneflow._C import logical_xor
 from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
-from oneflow._C import sigmoid
-from oneflow._C import tanh
+from oneflow._C import sigmoid, sigmoid_
+from oneflow._C import tanh, tanh_
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softsign
@@ -96,46 +99,55 @@ from oneflow._C import cast
 from oneflow._C import ones_like
 from oneflow._C import zeros_like
 from oneflow._C import diag
-from oneflow._C import log1p
+from oneflow._C import log1p, log1p_
 from oneflow._C import add
 from oneflow._C import div
 from oneflow._C import floor
 from oneflow._C import floor_divide
+from oneflow._C import floor, floor_
 from oneflow._C import mul
-from oneflow._C import negative
-from oneflow._C import negative as neg
-from oneflow._C import reciprocal
+from oneflow._C import reciprocal_no_nan as reciprocal
+from oneflow._C import reciprocal_no_nan_ as reciprocal_
 from oneflow._C import sub
 from oneflow._C import sin, sin_
-from oneflow._C import asin
+from oneflow._C import asin, asin_
 from oneflow._C import asin as arcsin
-from oneflow._C import asinh
+from oneflow._C import asin_ as arcsin_
+from oneflow._C import asinh, asinh_
 from oneflow._C import asinh as arcsinh
-from oneflow._C import atan
+from oneflow._C import asinh_ as arcsinh_
+from oneflow._C import atan, atan_
 from oneflow._C import atan as arctan
+from oneflow._C import atan_ as arctan_
 from oneflow._C import atan2
-from oneflow._C import ceil
+from oneflow._C import ceil, ceil_
 from oneflow._C import clamp
 from oneflow._C import clamp as clip
-from oneflow._C import cos
-from oneflow._C import cosh
+from oneflow._C import cos, cos_
+from oneflow._C import cosh, cosh_
+from oneflow._C import erf, erf_
+from oneflow._C import erfc, erfc_
+from oneflow._C import expm1, expm1_
 from oneflow._C import diagonal
 from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
+from oneflow._C import log, log_
 from oneflow._C import flatten
-from oneflow._C import log
 from oneflow._C import minimum
 from oneflow._C import maximum
+from oneflow._C import negative, negative_
+from oneflow._C import negative as neg
+from oneflow._C import negative_ as neg_
 from oneflow._C import pow
-from oneflow._C import rsqrt
-from oneflow._C import sqrt
-from oneflow._C import square
+from oneflow._C import rsqrt, rsqrt_
+from oneflow._C import sqrt, sqrt_
+from oneflow._C import square, square_
 from oneflow._C import matmul
 from oneflow._C import bernoulli
-from oneflow._C import round
-from oneflow._C import softplus
+from oneflow._C import round, round_
+from oneflow._C import softplus, softplus_
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
