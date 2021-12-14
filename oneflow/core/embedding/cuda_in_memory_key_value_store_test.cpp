@@ -71,9 +71,19 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
     store->Prefetch(stream, batch_size, keys + offset, context + offset);
     store->Update(stream, batch_size, keys + offset, context + offset, values + offset);
   }
+  OF_CUDA_CHECK(cudaMemset(values_host, 0, values_size));
+  OF_CUDA_CHECK(cudaMemset(values, 0, values_size));
   for (size_t offset = 0; offset < options.num_embeddings; offset += batch_size) {
     store->Prefetch(stream, batch_size, keys + offset, context + offset);
     store->Lookup(stream, batch_size, keys + offset, context + offset, values + offset);
+  }
+  OF_CUDA_CHECK(cudaMemcpy(values_host, values, values_size, cudaMemcpyDefault));
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+  for (size_t i = 0; i < options.num_embeddings; ++i) {
+    uint64_t key = keys_host[i];
+    for (size_t j = 0; j < options.embedding_vec_size; j++) {
+      ASSERT_EQ(values_host[i * options.embedding_vec_size + j], key);
+    }
   }
   OF_CUDA_CHECK(cudaDeviceSynchronize());
   OF_CUDA_CHECK(cudaGetLastError());
