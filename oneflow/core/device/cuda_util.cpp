@@ -107,9 +107,18 @@ void InitGlobalCudaDeviceProp() {
 }
 
 int32_t GetSMCudaMaxBlocksNum() {
-  const auto& global_device_prop = *Global<cudaDeviceProp>::Get();
-  int32_t n =
-      global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor;
+  int sm_count = 0;
+  int max_threads_per_sm = 0;
+  const auto* global_device_prop = Global<cudaDeviceProp>::Get();
+  if (global_device_prop != nullptr) {
+    sm_count = global_device_prop->multiProcessorCount;
+    max_threads_per_sm = global_device_prop->maxThreadsPerMultiProcessor;
+  } else {
+    OF_CUDA_CHECK(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, 0));
+    OF_CUDA_CHECK(
+        cudaDeviceGetAttribute(&max_threads_per_sm, cudaDevAttrMaxThreadsPerMultiProcessor, 0));
+  }
+  int32_t n = sm_count * max_threads_per_sm;
   return (n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock;
 }
 
