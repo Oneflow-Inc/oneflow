@@ -2089,7 +2089,7 @@ class MeshgridFunctor {
 
     bool swap_first_and_second_tensors = false;
     if(indexing == "xy"){
-       swap_first_and_second_tensors = size >= 2;
+       swap_first_and_second_tensors = (size >= 2);
        if (swap_first_and_second_tensors) {
           std::swap(tensor_consts[0], tensor_consts[1]);
        }
@@ -2113,7 +2113,7 @@ class MeshgridFunctor {
     Shape grids_shape(grids_vec);
     
     DimVector view_shape_vec(size, 1);
-    Shape view_shape;
+    Shape view_shape(view_shape_vec);
     for (int i = 0; i < size; ++i) {
       view_shape_vec[i] = -1;
       view_shape.assign(view_shape_vec);
