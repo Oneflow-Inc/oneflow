@@ -22,7 +22,14 @@ endif()
 
 project(oneflow-dialect LANGUAGES CXX C)
 
-include(llvm-in-tree.cmake)
+if(LLVM_PROVIDER STREQUAL "in-tree")
+  include(llvm-in-tree.cmake)
+elseif(LLVM_PROVIDER STREQUAL "install")
+  include(install-llvm.cmake)
+else()
+  message(FATAL_ERROR "LLVM_PROVIDER should be in-tree or install")
+endif()
+
 set(MLIR_TABLEGEN_EXE mlir-tblgen)
 
 include_directories(${LLVM_INCLUDE_DIRS})
