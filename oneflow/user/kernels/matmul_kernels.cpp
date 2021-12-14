@@ -335,7 +335,6 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     double beta = 0.0;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -348,12 +347,18 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
       beta = 1.0;
     }
 
-    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
-    int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
-    CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
-    int64_t m = a->shape().At(a->shape().NumAxes() - 1);
-    int64_t n = b->shape().At(b->shape().NumAxes() - 1);
-
+    CHECK_EQ(b->shape().NumAxes(), 2);
+    CHECK_GT(a->shape().NumAxes(), b->shape().NumAxes());
+    int64_t m = a->shape().Count(0, a->shape().NumAxes() - 1);
+    int64_t k = a->shape().At(a->shape().NumAxes() - 1);
+    int64_t n = -1;
+    if (!transpose_b) {
+      n = b->shape().At(1);
+      CHECK_EQ(k, b->shape().At(0));
+    } else {
+      n = b->shape().At(0);
+      CHECK_EQ(k, b->shape().At(1));
+    }
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);
     matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
