@@ -55,12 +55,12 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   }
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start InitCopyCost" << std::endl;
   JUST(InitCopyCost(op_graph));
-  // std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
-  // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
-  // double ori_cost = sbp_graph_.ComputeCost();
-  // LOG(INFO) << "Initial cost: " << ori_cost;
-  JUST(StealSbpSignatureFromOpNode(op_graph, job));
+  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
+  sbp_graph_.Set0SbpSignature();
   double ori_cost = sbp_graph_.ComputeCost();
+  LOG(INFO) << "Initial cost: " << ori_cost;
+  JUST(StealSbpSignatureFromOpNode(op_graph, job));
+  ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();
 }
