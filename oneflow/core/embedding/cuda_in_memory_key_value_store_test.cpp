@@ -91,8 +91,8 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   OF_CUDA_CHECK(cudaGetLastError());
   OF_CUDA_CHECK(cudaFree(keys));
   OF_CUDA_CHECK(cudaFree(values));
-  OF_CUDA_CHECK(cudaFree(keys_host));
-  OF_CUDA_CHECK(cudaFree(values_host));
+  OF_CUDA_CHECK(cudaFreeHost(keys_host));
+  OF_CUDA_CHECK(cudaFreeHost(values_host));
 
   CHECK_JUST(stream->Sync());
   device->DestroyStream(stream);
