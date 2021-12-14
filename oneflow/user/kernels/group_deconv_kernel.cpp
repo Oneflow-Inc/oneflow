@@ -277,7 +277,7 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
 
 template<typename T>
 std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(
-    user_op::KernelComputeContext* ctx, const std::string& in_name, const std::string& out_name,
+    user_op::KernelCacheContext* ctx, const std::string& in_name, const std::string& out_name,
     const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
@@ -341,7 +341,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     if (*cache_ptr != nullptr && (flag | user_op::OpKernelCache::kAttrNotChanged)) {
-      auto deconv_cache = dynamic_cast<const DeconvOpKernelCache<T>*>(cache_ptr);
+      auto deconv_cache = std::dynamic_pointer_cast<DeconvOpKernelCache<T>>(*cache_ptr);
       deconv_cache->Update(ctx->TensorDesc4ArgNameAndIndex("in", 0)->shape(),
                            ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape());
       return;
