@@ -33,6 +33,8 @@ namespace oneflow {
 
 namespace ep {
 
+class CudaDevice;
+
 #ifdef WITH_CUDA_GRAPHS
 
 class CudaGraphExecutable {
@@ -57,11 +59,13 @@ class CudaGraphExecutable {
 class CudaStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStream);
-  explicit CudaStream(int device_ordinal);
+  explicit CudaStream(CudaDevice* device);
   ~CudaStream() override;
 
   DeviceType device_type() const override;
+  Device* device() const override;
   Maybe<void> Sync() override;
+  void RecordEvent(Event* event) override;
 
   Maybe<void> OnExecutionContextSetup() override;
   Maybe<void> OnExecutionContextTeardown() override;
@@ -69,26 +73,28 @@ class CudaStream : public Stream {
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
   cudnnHandle_t cudnn_handle() const;
+  const cudaDeviceProp& device_properties() const;
 
 #ifdef WITH_CUDA_GRAPHS
   void BeginGraphCapture();
   void EndGraphCapture(CudaGraphExecutable* executable);
   bool IsGraphCapturing() const;
   void LaunchGraph(const CudaGraphExecutable* executable);
-#endif
+#endif  // WITH_CUDA_GRAPHS
 
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
   cudnnHandle_t cudnn_handle_{};
-  int device_ordinal_;
+  int device_index_;
 #if CUBLAS_VERSION >= 11200
   void* workspace_{};
   size_t workspace_size_{};
 #endif  // CUBLAS_VERSION >= 11200
 #ifdef WITH_CUDA_GRAPHS
-  bool is_graph_capturing_;
+  bool is_graph_capturing_{};
 #endif  // WITH_CUDA_GRAPHS
+  CudaDevice* device_;
 };
 
 }  // namespace ep

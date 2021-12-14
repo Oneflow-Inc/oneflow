@@ -14,38 +14,52 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 
 namespace oneflow {
 
-template<typename T>
-class CpuGeluKernel final : public user_op::OpKernel {
+template<typename Context>
+std::unique_ptr<ep::primitive::ElementwiseUnary> NewGeluPrimitive(Context* ctx) {
+  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+      ctx->device_type(), ep::primitive::UnaryOp::kGelu, src->data_type(), dst->data_type());
+}
+
+class GeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  CpuGeluKernel() = default;
-  ~CpuGeluKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(GeluKernel);
+  GeluKernel() = default;
+  ~GeluKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int32_t elem_cnt = in->shape().elem_cnt();
-    const T* in_ptr = in->dptr<T>();
-    T* out_ptr = out->mut_dptr<T>();
-    T inv_sqrt2 = std::sqrt(0.5);
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      out_ptr[i] = 0.5 * in_ptr[i] * (1.0 + std::erf(inv_sqrt2 * in_ptr[i]));
-    }
-  };
+    auto primitive = NewGeluPrimitive(ctx);
+    CHECK(primitive);
 
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t elem_cnt = x->shape().elem_cnt();
+
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
+    } else {
+      // For 0-d Tensor
+      return;
+    }
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GELU_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("gelu").SetCreateFn<CpuGeluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+auto GeluPrimitiveExists() {
+  return hob::make_custom("GeluPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewGeluPrimitive(&ctx).operator bool();
+  });
+}
 
-REGISTER_CPU_GELU_KERNEL(float)
-REGISTER_CPU_GELU_KERNEL(double)
+REGISTER_USER_KERNEL("gelu").SetCreateFn<GeluKernel>().SetIsMatchedHob(GeluPrimitiveExists()
+                                                                       == true);
 
 template<typename T>
 class CpuGeluGradKernel final : public user_op::OpKernel {

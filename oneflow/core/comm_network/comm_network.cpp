@@ -74,11 +74,11 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
     ready_cbs_.Send(cb);
   } else {
     CommNetItem work_item(is_read, cb);
-    actor_read_ctx->waiting_list.push_back(work_item);
+    actor_read_ctx->waiting_list.emplace_back(work_item);
   }
   if (is_read) {
     CommNetItem empty_cb;
-    actor_read_ctx->waiting_list.push_back(empty_cb);
+    actor_read_ctx->waiting_list.emplace_back(empty_cb);
   }
 }
 

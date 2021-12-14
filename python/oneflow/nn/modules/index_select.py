@@ -71,10 +71,10 @@ def index_select_op(input, dim, index):
         ), "index is out of range(index shuold be lower than the dim-th dimension of input)"
 
     index_rshp[dim] = 1
-    index_gather = index[0].expand(index_rshp)
+    index_gather = index[0].expand(*index_rshp)
     if index.size()[0] > 1:
         for index_i in index[1:]:
-            x = index_i.expand(index_rshp)
+            x = index_i.expand(*index_rshp)
             index_gather = flow.cat((index_gather, x), dim)
 
     return flow.gather(input, dim, index_gather)

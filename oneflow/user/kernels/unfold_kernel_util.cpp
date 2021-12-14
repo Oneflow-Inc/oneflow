@@ -24,7 +24,7 @@ namespace user_op {
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
 struct UnfoldKernelUtil<DeviceType::kCPU, T, INDEX_T, NDIM, SDIM> {
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
-  static void Forward(DeviceCtx* ctx, const UnfoldParams<INDEX_T, NDIM, SDIM>* raw_params,
+  static void Forward(ep::Stream* stream, const UnfoldParams<INDEX_T, NDIM, SDIM>* raw_params,
                       const T* input_ptr, T* output_ptr) {
     for (INDEX_T out_offset = 0; out_offset < raw_params->out_elem_cnt; ++out_offset) {
       using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;

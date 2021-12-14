@@ -35,3 +35,8 @@ from .sbp import *
 from .trigonometric_ops import *
 from .tensor_ops import *
 from .meshgrid import *
+from .dataset import *
+from .bmm import *
+from .flatten import *
+from .chunk import *
+from .broadcast_like import *

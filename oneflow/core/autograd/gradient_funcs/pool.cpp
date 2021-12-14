@@ -107,18 +107,18 @@ class MaxPoolNdGrad final : public PoolNdGrad {
   Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "max"); }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_1d", MaxPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_2d", MaxPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_3d", MaxPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_1d", MaxPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_2d", MaxPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_3d", MaxPoolNdGrad);
 
 class AvgPoolNdGrad final : public PoolNdGrad {
  public:
   Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "avg"); }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_1d", AvgPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_2d", AvgPoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_3d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_1d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_2d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_3d", AvgPoolNdGrad);
 
 }  // namespace one
 }  // namespace oneflow

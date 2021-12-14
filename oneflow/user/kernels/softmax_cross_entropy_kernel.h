@@ -37,9 +37,9 @@ auto SoftmaxPrimitiveExists() {
 
 template<DeviceType device_type, typename T>
 struct CrossEntropyKernelUtil {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                             const T* x, const T* labels, T* y);
-  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+  static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t num_classes, const T* x, const T* labels, T* y);
+  static void ComputeDiffWithSoftmax(ep::Stream* stream, const int64_t elem_cnt,
                                      const int64_t num_classes, const T* prob, const T* labels,
                                      const T* dy, T* dx);
 };
@@ -65,7 +65,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     primitive->Launch(ctx->stream(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());
 
-    CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->device_ctx(), num_instances,
+    CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->stream(), num_instances,
                                                            num_classes, prob->dptr<T>(),
                                                            label->dptr<T>(), out->mut_dptr<T>());
   }
@@ -98,7 +98,7 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
 
     CrossEntropyKernelUtil<device_type, T>::ComputeDiffWithSoftmax(
-        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
+        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
         label->dptr<T>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

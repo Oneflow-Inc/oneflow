@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/intrusive/mutexed_list.h"
+#include "oneflow/core/intrusive/object_pool.h"
 
 namespace oneflow {
 
@@ -163,14 +164,17 @@ class VirtualMachineEngine final : public intrusive::Base {
       const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
       int64_t global_device_id, const DoEachT& DoEach);
 
-  void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type,
-                                               MirroredObject* mirrored_object,
-                                               Instruction* instrution);
+  void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
+  void ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access);
+  void ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access);
+  RwMutexedObjectAccess* AccessMirroredObject(OperandAccessType access_type,
+                                              MirroredObject* mirrored_object,
+                                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object, Instruction* instruction);
   void DispatchInstruction(Instruction* instruction);
   void TryDeleteLogicalObjects();
 
+  bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
 
@@ -207,6 +211,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   LivelyInstructionList lively_instruction_list_;
   BarrierInstructionList barrier_instruction_list_;
   std::map<std::string, RtInstrTypeId> instr_type_name2rt_instr_type_id_;
+  RwMutexedObjectAccess::object_pool_type access_pool_;
+  InstructionEdge::object_pool_type instruction_edge_pool_;
 };
 
 }  // namespace vm

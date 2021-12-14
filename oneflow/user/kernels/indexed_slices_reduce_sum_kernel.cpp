@@ -39,7 +39,7 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
     const int64_t n = x_indices->shape().elem_cnt();
     const int64_t m = x_values->shape().elem_cnt() / n;
     IndexedSlicesReduceSumKernelUtil<device_type, K, T, int64_t>::ReduceSum(
-        ctx->device_ctx(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
+        ctx->stream(), n, m, x_indices->dptr<K>(), x_values->dptr<T>(),
         num_unique->mut_dptr<int64_t>(), y_indices->mut_dptr<K>(), y_values->mut_dptr<T>(), tmp_ptr,
         tmp_size);
   }

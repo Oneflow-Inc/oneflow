@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -44,34 +45,36 @@ __global__ void HasNotFiniteGpuKernel(const int64_t n, const T* x, volatile bool
 }
 
 template<typename T>
-bool HasNotFinite(DeviceCtx* device_ctx, const int64_t elem_cnt, const T* data_ptr,
+bool HasNotFinite(ep::Stream* stream, const int64_t elem_cnt, const T* data_ptr,
                   bool* has_not_finite_host, bool* has_not_finite_device) {
-  OF_CUDA_CHECK(cudaMemsetAsync(has_not_finite_device, 0, sizeof(bool), device_ctx->cuda_stream()));
+  OF_CUDA_CHECK(cudaMemsetAsync(has_not_finite_device, 0, sizeof(bool),
+                                stream->As<ep::CudaStream>()->cuda_stream()));
   HasNotFiniteGpuKernel<T>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-          elem_cnt, data_ptr, has_not_finite_device);
+      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+         stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, data_ptr, has_not_finite_device);
   OF_CUDA_CHECK(cudaMemcpyAsync(has_not_finite_host, has_not_finite_device, sizeof(bool),
-                                cudaMemcpyDefault, device_ctx->cuda_stream()));
-  OF_CUDA_CHECK(cudaStreamSynchronize(device_ctx->cuda_stream()));
+                                cudaMemcpyDefault, stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
   return *has_not_finite_host;
 }
 
-bool HasNotFiniteGpu(DeviceCtx* device_ctx, const Blob* blob, bool* has_not_finite_host,
+bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_host,
                      bool* has_not_finite_device) {
   const DataType dtype = blob->data_type();
   const int64_t elem_cnt = blob->shape().elem_cnt();
   if (dtype == kFloat) {
-    return HasNotFinite<float>(device_ctx, elem_cnt, blob->dptr<float>(), has_not_finite_host,
+    return HasNotFinite<float>(stream, elem_cnt, blob->dptr<float>(), has_not_finite_host,
                                has_not_finite_device);
   } else if (dtype == kDouble) {
-    return HasNotFinite<double>(device_ctx, elem_cnt, blob->dptr<double>(), has_not_finite_host,
+    return HasNotFinite<double>(stream, elem_cnt, blob->dptr<double>(), has_not_finite_host,
                                 has_not_finite_device);
   } else if (dtype == kFloat16) {
 #if __CUDA_ARCH__ >= 530
-    return HasNotFinite<half>(device_ctx, elem_cnt, blob->dptr<half>(), has_not_finite_host,
+    return HasNotFinite<half>(stream, elem_cnt, blob->dptr<half>(), has_not_finite_host,
                               has_not_finite_device);
 #else
     LOG(FATAL) << "use half need nvcc arch >= 530";
+    return true;
 #endif
   } else {
     return false;
@@ -99,7 +102,7 @@ void CudaCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,
     Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {
       bool has_not_finite =
-          HasNotFiniteGpu(ctx->device_ctx(), blob, has_not_finite_host_, has_not_finite_device_);
+          HasNotFiniteGpu(ctx->stream(), blob, has_not_finite_host_, has_not_finite_device_);
       CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }

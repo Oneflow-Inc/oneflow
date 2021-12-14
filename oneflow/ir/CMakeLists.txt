@@ -16,6 +16,10 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
+if(POLICY CMP0116)
+  cmake_policy(SET CMP0116 OLD)
+endif()
+
 project(oneflow-dialect LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
@@ -112,6 +116,22 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
+
+set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
+  -Wl,--no-as-needed oneflow -Wl,--as-needed
+  -Wl,--no-as-needed ${oneflow_exe_third_party_libs} -Wl,--as-needed
+  -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
+)
+
+function(oneflow_add_llvm_library)
+  add_llvm_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
+
+function(oneflow_add_mlir_dialect_library)
+  add_mlir_dialect_library(${ARGV})
+  set_compile_options_to_oneflow_target(${ARGV0})
+endfunction()
 
 add_subdirectory(include)
 add_subdirectory(lib)

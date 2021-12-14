@@ -43,11 +43,11 @@ void OutputKernel::ForwardDataContent(KernelContext* ctx) const {
     BufferStatus buffer_status = buffer->TryReceive(&job_instance);
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
+      OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("in"));
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {
-    AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
+    AutoMemcpy(ctx->stream(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
   }
 }
 

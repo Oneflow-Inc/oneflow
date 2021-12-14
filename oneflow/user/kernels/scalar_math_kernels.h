@@ -33,7 +33,7 @@ namespace oneflow {
 
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out);
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out);
 };
 
 template<template<typename> class UnaryFunctor, typename T>

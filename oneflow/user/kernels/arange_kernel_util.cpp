@@ -20,7 +20,7 @@ namespace oneflow {
 namespace user_op {
 template<typename T>
 struct ArangeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t arange_elem_cnt,
+  void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
                   T* out) {
     DoArange<T>(start, delta, arange_elem_cnt, out);
   }

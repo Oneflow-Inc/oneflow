@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_ARANGE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ARANGE_KERNEL_UTIL_H_
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
@@ -28,7 +28,7 @@ namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename T>
 struct ArangeFunctor final {
-  void operator()(DeviceCtx* ctx, const T start, const T delta, const int64_t arange_elem_cnt,
+  void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
                   T* out);
 };
 

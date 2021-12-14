@@ -17,10 +17,10 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_PRIMITIVE_PRIMITIVE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/stream/include/stream_context.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 

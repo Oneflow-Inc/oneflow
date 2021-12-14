@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/softmax_cross_entropy_kernel.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -99,38 +100,41 @@ int GetCrossEntropyNumBlocks(const int num_instances) {
 int GetCrossEntropyBlockSize() { return kCrossEntropyGpuBlockSize; }
 
 template<typename T>
-struct CrossEntropyKernelUtil<DeviceType::kGPU, T> {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                             const T* x, const T* labels, T* y) {
+struct CrossEntropyKernelUtil<DeviceType::kCUDA, T> {
+  static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t num_classes, const T* x, const T* labels, T* y) {
     cudaMemset(y, 0, sizeof(T) * num_instances);
     ComputeEntropyGpu<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
-                        ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, y);
+                        stream->As<ep::CudaStream>()->cuda_stream()>>>(num_instances, num_classes,
+                                                                       x, labels, y);
   }
 
-  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+  static void ComputeDiffWithSoftmax(ep::Stream* stream, const int64_t elem_cnt,
                                      const int64_t num_classes, const T* prob, const T* labels,
                                      const T* dy, T* dx) {
     ComputeDiffWithSoftmaxGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(elem_cnt, num_classes, prob, labels, dy, dx);
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, num_classes, prob, labels, dy, dx);
   }
 };
 
 template<>
-struct CrossEntropyKernelUtil<DeviceType::kGPU, float16> {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                             const float16* x, const float16* labels, float16* y) {
+struct CrossEntropyKernelUtil<DeviceType::kCUDA, float16> {
+  static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t num_classes, const float16* x, const float16* labels,
+                             float16* y) {
     cudaMemset(y, 0, sizeof(float16) * num_instances);
     ComputeEntropyGpuHalf<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
-                            ctx->cuda_stream()>>>(
+                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, reinterpret_cast<const half*>(x),
         reinterpret_cast<const half*>(labels), reinterpret_cast<half*>(y));
   }
 
-  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+  static void ComputeDiffWithSoftmax(ep::Stream* stream, const int64_t elem_cnt,
                                      const int64_t num_classes, const float16* prob,
                                      const float16* labels, const float16* dy, float16* dx) {
     ComputeDiffWithSoftmaxGpuHalf<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                    ctx->cuda_stream()>>>(
+                                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, num_classes, reinterpret_cast<const half*>(prob),
         reinterpret_cast<const half*>(labels), reinterpret_cast<const half*>(dy),
         reinterpret_cast<half*>(dx));
@@ -138,11 +142,11 @@ struct CrossEntropyKernelUtil<DeviceType::kGPU, float16> {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace user_op

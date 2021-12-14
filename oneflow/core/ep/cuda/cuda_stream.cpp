@@ -16,8 +16,10 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/device/node_device_descriptor_manager.h"
-#include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
+#include "oneflow/core/hardware/cuda_device_descriptor.h"
+#include "oneflow/core/ep/cuda/cuda_event.h"
+#include "oneflow/core/ep/cuda/cuda_device.h"
 
 #ifdef WITH_CUDA
 
@@ -29,11 +31,12 @@ namespace {
 
 constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
 
-void SetAffinityByDevice(int64_t dev_id) {
-  auto node_device_desc =
-      Global<device::NodeDeviceDescriptorManager>::Get()->GetLocalNodeDeviceDescriptor();
-  auto cuda_device = std::dynamic_pointer_cast<const device::CudaDeviceDescriptor>(
-      node_device_desc->GetDevice(device::kCudaDeviceDescriptorClassName, dev_id));
+void SetAffinityByDevice(int dev_id) {
+  auto node_device_desc_mgr = Global<hardware::NodeDeviceDescriptorManager>::Get();
+  if (node_device_desc_mgr == nullptr) { return; }
+  auto node_device_desc = node_device_desc_mgr->GetLocalNodeDeviceDescriptor();
+  auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
+      node_device_desc->GetDevice(hardware::kCudaDeviceDescriptorClassName, dev_id));
   if (!cuda_device) { return; }
   node_device_desc->Topology()->SetCPUAffinityByPCIBusID(cuda_device->PCIBusID());
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
@@ -77,8 +80,9 @@ void CudaGraphExecutable::Reset() {
 
 #endif  // WITH_CUDA_GRAPHS
 
-CudaStream::CudaStream(int device_ordinal) : device_ordinal_(device_ordinal) {
-  CudaCurrentDeviceGuard guard(device_ordinal_);
+CudaStream::CudaStream(CudaDevice* device)
+    : device_index_(device->device_index()), device_(device) {
+  CudaCurrentDeviceGuard guard(device_index_);
   // cuda_stream
   OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
   // cublas_handle
@@ -108,7 +112,7 @@ CudaStream::CudaStream(int device_ordinal) : device_ordinal_(device_ordinal) {
 }
 
 CudaStream::~CudaStream() {
-  CudaCurrentDeviceGuard guard(device_ordinal_);
+  CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
@@ -119,14 +123,16 @@ CudaStream::~CudaStream() {
 }
 
 Maybe<void> CudaStream::OnExecutionContextSetup() {
-  SetAffinityByDevice(device_ordinal_);
-  OF_CUDA_CHECK(cudaSetDevice(device_ordinal_));
+  OF_CUDA_CHECK(cudaSetDevice(device_index_));
+  SetAffinityByDevice(device_index_);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CudaStream::OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
 
-DeviceType CudaStream::device_type() const { return DeviceType::kGPU; }
+DeviceType CudaStream::device_type() const { return DeviceType::kCUDA; }
+
+Device* CudaStream::device() const { return device_; }
 
 Maybe<void> CudaStream::Sync() {
   cudaError_t err = cudaStreamSynchronize(cuda_stream_);
@@ -137,11 +143,18 @@ Maybe<void> CudaStream::Sync() {
   }
 }
 
+void CudaStream::RecordEvent(Event* event) {
+  auto* cuda_event = static_cast<CudaEvent*>(event);  // NOLINT
+  OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
+}
+
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
 
 cudnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
+
+const cudaDeviceProp& CudaStream::device_properties() const { return device_->properties(); }
 
 #ifdef WITH_CUDA_GRAPHS
 
