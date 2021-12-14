@@ -7,10 +7,6 @@ oneflow_add_mlir_library(MLIROneFlowTranslation
   oneflow_deps
 	LINK_LIBS PUBLIC
 	MLIRIR
-)
-
-target_link_libraries(MLIROneFlowTranslation
-  PRIVATE
   ${dialect_libs}
   ${translation_libs}
   MLIRIR
