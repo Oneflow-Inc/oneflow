@@ -13,14 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/job_ir.h"
 
-#ifndef ONEFLOW_API_CPP_FRAMEWORK_H_
-#define ONEFLOW_API_CPP_FRAMEWORK_H_
+namespace oneflow {
 
-#include "framework/device.h"
-#include "framework/shape.h"
-#include "framework/dtype.h"
-#include "framework/tensor.h"
-#include "framework/ivalue.h"
+#ifndef WITH_MLIR
 
-#endif  // ONEFLOW_API_CPP_FRAMEWORK_H_
+Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
+  UNIMPLEMENTED_THEN_RETURN() << "SaveJobToIR is only supported WITH_MLIR";
+}
+
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
+  UNIMPLEMENTED_THEN_RETURN() << "LoadJobFromIR is only supported WITH_MLIR";
+}
+
+#endif
+
+}  // namespace oneflow
