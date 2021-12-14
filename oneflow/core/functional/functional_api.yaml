@@ -1696,6 +1696,10 @@
   signature: "TensorTuple (Tensor input, Int32 axis, Float epsilon) => L2Normalize"
   bind_python: True
 
+- name: "normalize"
+  signature: "Tensor (Tensor input, Float p, Int32 dim, Float eps) => Normalize"
+  bind_python: True
+
 - name: "l2_normalize_grad"
   signature: "Tensor (Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon) => L2NormalizeGrad"
   bind_python: False

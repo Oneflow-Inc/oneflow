@@ -50,7 +50,7 @@ def l2_normalize(input, dim=0, epsilon=1e-12):
                 [0.6000, 0.8000]], dtype=oneflow.float32)
 
     """
-    y, _ = flow._C.l2_normalize(input, dim, epsilon)
+    y = flow._C.normalize(input, 2, dim, epsilon)
     return y
 
 
