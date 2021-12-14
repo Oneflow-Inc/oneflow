@@ -259,8 +259,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   attr_vec.emplace_back(GetBuilder().getNamedAttr(
       OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
   // attr shape
-  auto shape_attr = GetBuilder().getI64VectorAttr(
-      {op_conf.variable_conf().shape().dim().begin(), op_conf.variable_conf().shape().dim().end()});
+  auto shape_attr = GetAttrFromShape(op_conf.variable_conf().shape());
   auto shape_named_attr =
       GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr);
   attr_vec.emplace_back(shape_named_attr);
@@ -361,9 +360,7 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
       OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
   // attr shape
   if (op_conf.input_conf().blob_conf().has_shape()) {
-    auto shape_attr =
-        GetBuilder().getI64VectorAttr({op_conf.input_conf().blob_conf().shape().dim().begin(),
-                                       op_conf.input_conf().blob_conf().shape().dim().end()});
+    auto shape_attr = GetAttrFromShape(op_conf.input_conf().blob_conf().shape());
     attr_vec.emplace_back(
         GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr));
   }
@@ -446,9 +443,7 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
       OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
   // attr shape
   if (op_conf.output_conf().blob_conf().has_shape()) {
-    auto shape_attr =
-        GetBuilder().getI64VectorAttr({op_conf.output_conf().blob_conf().shape().dim().begin(),
-                                       op_conf.output_conf().blob_conf().shape().dim().end()});
+    auto shape_attr = GetAttrFromShape(op_conf.output_conf().blob_conf().shape());
     attr_vec.emplace_back(
         GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr));
   }
