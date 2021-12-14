@@ -939,6 +939,9 @@ class ToContiguousFunctor {
     op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    if(input->is_consistent() || input->is_lazy()){
+      return input;
+    }
     MutableAttrMap attrs;
     const auto& stride = JUST(input->stride())->StrideVec();
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
