@@ -44,6 +44,8 @@ class Device final {
 
  private:
   std::shared_ptr<oneflow::Symbol<oneflow::Device>> device_ = nullptr;
+
+  friend std::ostream& operator<<(std::ostream&, const Device&);
 };
 
 }  // namespace oneflow_api

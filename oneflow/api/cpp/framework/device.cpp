@@ -23,6 +23,15 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
+std::ostream& operator<<(std::ostream& os, const Device& device) {
+  if (device.type() == "cpu") {
+    os << device.type();
+  } else {
+    os << device.type() << ":" << device.device_id();
+  }
+  return os;
+}
+
 Device::Device(const std::string& type_or_type_with_device_id)
     : device_(std::make_shared<of::Symbol<of::Device>>(
         of::DeviceExportUtil::ParseAndNew(type_or_type_with_device_id).GetOrThrow())) {}

@@ -249,16 +249,11 @@ std::ostream& print(std::ostream& stream, const double* data, const Shape& shape
       if (scale != 1) { printScale(stream, scale); }
       for (auto i = 0; i < n_dims; ++i) { stream << std::setw(sz) << data[i] / scale << std::endl; }
     }
-    stream << "[ " << shape;
   } else if (n_dims == 2) {
     if (n_elems > 0) { __printMatrix(stream, data, shape, linesize, 0); }
-    stream << "[ " << shape;
   } else {
     if (n_elems > 0) { __printTensor(stream, data, shape, linesize); }
-    stream << "[ " << shape;
   }
-
-  stream << " ]";
   return stream;
 }
 
@@ -305,7 +300,11 @@ std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
       {DType::kInt64, [&]() { return std::ref(print<int64_t>(os, tensor, linesize)); }},
       {DType::kFloat, [&]() { return std::ref(print<float>(os, tensor, linesize)); }},
       {DType::kDouble, [&]() { return std::ref(print<double>(os, tensor, linesize)); }}};
-  return f[tensor.dtype()]();
+  f[tensor.dtype()]();
+  os << "["
+     << "Shape: " << tensor.shape() << ", Device: " << tensor.device()
+     << ", DataType: " << GetDTypeName(tensor.dtype()) << "]";
+  return os;
 }
 
 Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {

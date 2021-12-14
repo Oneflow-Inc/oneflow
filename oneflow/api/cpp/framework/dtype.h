@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_CPP_FRAMEWORK_DTYPE_H_
 
 #include <cstdint>
+#include <string>
 
 namespace oneflow_api {
 
@@ -37,6 +38,7 @@ enum class DType {
 };
 
 [[nodiscard]] int32_t GetDTypeSize(DType dtype);
+[[nodiscard]] std::string GetDTypeName(DType dtype);
 
 }  // namespace oneflow_api
 

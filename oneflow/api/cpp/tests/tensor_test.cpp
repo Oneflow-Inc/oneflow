@@ -90,14 +90,13 @@ TEST(Api, tensor_zeros) {
 
   ASSERT_EQ(data, target_data);
 }
-
-TEST(Api, tensor_print) {
-  EnvScope scope;
-#define TEST_TENSOR_PRINT(dtype, cpp_dtype)                                                  \
-  const auto shape_##cpp_dtype = RandomShapeSmall();                                         \
-  const auto data_##cpp_dtype = RandomData<cpp_dtype>(shape_##cpp_dtype.Count(0));           \
-  const auto tensor_##cpp_dtype =                                                            \
-      Tensor::from_buffer(data_##cpp_dtype.data(), shape_##cpp_dtype, Device("cpu"), dtype); \
+void TestTensorPrint(bool on_gpu) {
+#define TEST_TENSOR_PRINT(dtype, cpp_dtype)                                        \
+  const auto shape_##cpp_dtype = RandomShapeSmall();                               \
+  const auto data_##cpp_dtype = RandomData<cpp_dtype>(shape_##cpp_dtype.Count(0)); \
+  const auto tensor_##cpp_dtype =                                                  \
+      Tensor::from_buffer(data_##cpp_dtype.data(), shape_##cpp_dtype,              \
+                          on_gpu ? Device("cuda:0") : Device("cpu"), dtype);       \
   std::cout << tensor_##cpp_dtype << std::endl;
 
   TEST_TENSOR_PRINT(DType::kFloat, float)
@@ -105,6 +104,15 @@ TEST(Api, tensor_print) {
   TEST_TENSOR_PRINT(DType::kInt8, int8_t)
   TEST_TENSOR_PRINT(DType::kInt32, int32_t)
   TEST_TENSOR_PRINT(DType::kInt64, int64_t)
+}
+
+TEST(Api, tensor_print) {
+  EnvScope scope;
+  TestTensorPrint(/*one_gpu*/ false);
+
+#ifdef WITH_CUDA
+  TestTensorPrint(/*on_gpu*/ true);
+#endif
 }
 
 }  // namespace oneflow_api
