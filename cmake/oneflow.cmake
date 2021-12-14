@@ -1,100 +1,5 @@
 include(python)
 
-include(CheckCXXCompilerFlag)
-
-function(target_try_compile_option target flag)
-  # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
-  # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
-  string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
-  string(REGEX REPLACE "[-=]" "_" varName CXX_FLAG${checkedFlag})
-  # Avoid double checks. A compiler will not magically support a flag it did not before
-  if(NOT DEFINED ${varName}_SUPPORTED)
-    check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
-  endif()
-  if (${varName}_SUPPORTED)
-    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${flag}>)
-    if(BUILD_CUDA)
-      if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
-          "${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${flag}>)
-      endif()
-    endif()
-  endif ()
-endfunction()
-
-function(target_try_compile_options target)
-  foreach(flag ${ARGN})
-    target_try_compile_option(${target} ${flag})
-  endforeach()
-endfunction()
-
-function(target_treat_warnings_as_errors target)
-  if (TREAT_WARNINGS_AS_ERRORS)
-    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror>)
-    if(BUILD_CUDA)
-      # Only pass flags when cuda compiler is Clang because cmake handles -Xcompiler incorrectly
-      if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Werror>)
-        # Suppress warning from cub library -- marking as system header seems not working for .cuh files
-        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Wno-pass-failed>)
-      endif()
-    endif()
-
-    # TODO: remove it while fixing all deprecated call
-    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
-
-    # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_try_compile_options(${target}
-      -Wno-error=unused-const-variable
-      -Wno-error=unused-variable
-      -Wno-error=unused-local-typedefs
-      -Wno-error=unused-private-field
-      -Wno-error=unused-lambda-capture
-    )
-
-    # there is some strict-overflow warnings in oneflow/user/kernels/ctc_loss_kernel_util.cpp for unknown reason, disable them for now
-    target_try_compile_options(${target} -Wno-error=strict-overflow)
-
-    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
-
-    # disable for pointer operations of intrusive linked lists
-    target_try_compile_options(${target} -Wno-error=array-bounds)
-
-    target_try_compile_options(${target} -Wno-error=comment)
-
-    # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
-    target_try_compile_options(${target} -Wno-error=attributes)
-  endif()
-endfunction()
-
-function(set_compile_options_to_oneflow_target target)
-  target_treat_warnings_as_errors(${target})
-  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
-  # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-  target_try_compile_options(${target} -Wno-mismatched-tags)
-
-  if(BUILD_CUDA)
-    if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
-      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-        -Xcompiler -Werror=return-type;
-        -Wno-deprecated-gpu-targets;
-        -Werror cross-execution-space-call;
-        -Xcudafe --diag_suppress=declared_but_not_referenced;
-      >)
-    elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-        -Werror=return-type;
-      >)
-    else()
-      message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
-    endif()
-    # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
-    target_compile_definitions(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-      THRUST_IGNORE_CUB_VERSION_CHECK;
-    >)
-  endif()
-endfunction()
-
 function(oneflow_add_executable)
   add_executable(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
@@ -435,6 +340,9 @@ if(BUILD_PYTHON)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
   target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+  if(WITH_MLIR)
+    add_dependencies(check-oneflow oneflow_internal)
+  endif(WITH_MLIR)
 
   set(gen_pip_args "")
   if (BUILD_CUDA)
@@ -471,24 +379,6 @@ if(BUILD_TESTING)
     add_test(NAME oneflow_test COMMAND oneflow_testexe)
   endif()
 endif()
-
-
-
-set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
-set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
-set(AUTO_GEN_DEV_REG_MACRO_ID "ONEFLOW_CORE_FRAMEWORK_AUTO_GEN_DEVICE_REGISTRY_H_")
-
-message(STATUS "auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
-set(AUTO_GEN_DEV_REG_HEADER_CONTENT "#ifndef ${AUTO_GEN_DEV_REG_MACRO_ID}\n#define ${AUTO_GEN_DEV_REG_MACRO_ID}\n")
-file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
-foreach(item ${DEVICE_REGISTER_HEADERS})
-    file(RELATIVE_PATH item ${PROJECT_SOURCE_DIR} ${item})
-    message(STATUS "device register header file found: " ${item})
-    set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#include \"${item}\"\n")
-endforeach()
-set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#endif //${AUTO_GEN_DEV_REG_MACRO_ID}\n\n")
-write_file_if_different(${AUTO_GEN_DEV_REG_HEADER} ${AUTO_GEN_DEV_REG_HEADER_CONTENT})
-list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
 
 # build include
 add_custom_target(of_include_copy ALL)
