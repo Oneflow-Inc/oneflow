@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -30,6 +31,11 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   if (cudaGetDevice(&device_count) != cudaSuccess) { return; }
   if (device_count <= 0) { return; }
 
+  std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
+      new ep::DeviceManagerRegistry());
+  auto device = device_manager_registry->GetDevice(DeviceType::kCUDA, 0);
+  ep::Stream* stream = device->CreateStream();
+
   CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
   options.embedding_vec_size = 128;
@@ -37,6 +43,47 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   options.num_device_embeddings = 1024;
   options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain;
   std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
+
+  uint64_t* keys = nullptr;
+  float* values = nullptr;
+  uint64_t* keys_host = nullptr;
+  float* values_host = nullptr;
+  uint64_t* context = nullptr;
+  size_t keys_size = sizeof(uint64_t) * options.num_embeddings;
+  size_t values_size = sizeof(float) * options.embedding_vec_size * options.num_embeddings;
+  size_t context_size = sizeof(uint64_t) * options.num_embeddings;
+  OF_CUDA_CHECK(cudaMalloc(&keys, keys_size));
+  OF_CUDA_CHECK(cudaMalloc(&values, values_size));
+  OF_CUDA_CHECK(cudaMalloc(&context, context_size));
+  OF_CUDA_CHECK(cudaMallocHost(&keys_host, keys_size));
+  OF_CUDA_CHECK(cudaMallocHost(&values_host, values_size));
+  for (size_t i = 0; i < options.num_embeddings; ++i) {
+    uint64_t key = i * options.num_shards + 3;
+    keys_host[i] = key;
+    for (size_t j = 0; j < options.embedding_vec_size; j++) {
+      values_host[i * options.embedding_vec_size + j] = key;
+    }
+  }
+  OF_CUDA_CHECK(cudaMemcpy(keys, keys_host, keys_size, cudaMemcpyDefault));
+  OF_CUDA_CHECK(cudaMemcpy(values, values_host, values_size, cudaMemcpyDefault));
+  size_t batch_size = 128;
+  for (size_t offset = 0; offset < options.num_embeddings; offset += batch_size) {
+    store->Prefetch(stream, batch_size, keys + offset, context + offset);
+    store->Update(stream, batch_size, keys + offset, context + offset, values + offset);
+  }
+  for (size_t offset = 0; offset < options.num_embeddings; offset += batch_size) {
+    store->Prefetch(stream, batch_size, keys + offset, context + offset);
+    store->Lookup(stream, batch_size, keys + offset, context + offset, values + offset);
+  }
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+  OF_CUDA_CHECK(cudaGetLastError());
+  OF_CUDA_CHECK(cudaFree(keys));
+  OF_CUDA_CHECK(cudaFree(values));
+  OF_CUDA_CHECK(cudaFree(keys_host));
+  OF_CUDA_CHECK(cudaFree(values_host));
+
+  CHECK_JUST(stream->Sync());
+  device->DestroyStream(stream);
 }
 
 #endif  // WITH_CUDA
