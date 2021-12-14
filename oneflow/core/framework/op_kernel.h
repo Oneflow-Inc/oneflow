@@ -279,9 +279,9 @@ class OpKernelCache {
  public:
   virtual ~OpKernelCache() = default;
 
-  static const int32_t kAllMayChanged = 0x0;
-  static const int32_t kShapeNotChanged = 0x1;
-  static const int32_t kAttrNotChanged = 0x2;
+  static const int32_t kAllMayChanged = 0;
+  static const int32_t kShapeNotChanged = 1 << 0;
+  static const int32_t kAttrNotChanged = 1 << 1;
 
  protected:
   OpKernelCache() = default;
@@ -306,8 +306,8 @@ class OpKernel {
   }
 
   virtual void InitOpKernelCache(KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<OpKernelCache>* cache) const {
-    *cache = InitOpKernelCache(ctx);
+                                 std::shared_ptr<OpKernelCache>* cache_ptr) const {
+    *cache_ptr = InitOpKernelCache(ctx);
   }
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {

@@ -266,10 +266,10 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
 };
 
 template<typename T>
-std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelState(user_op::KernelCacheContext* ctx,
-                                                        const std::string& in_name,
-                                                        const std::string& out_name,
-                                                        const std::string& weight_name) {
+std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(user_op::KernelCacheContext* ctx,
+                                                                  const std::string& in_name,
+                                                                  const std::string& out_name,
+                                                                  const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<DeconvOpKernelCache<T>> cache(new DeconvOpKernelCache<T>());
@@ -326,9 +326,16 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
-    return CreateDeconvOpKernelState<T>(ctx, "out", "in", "weight");
+  using user_op::OpKernel::InitOpKernelCache;
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr != nullptr && (flag | user_op::OpKernelCache::kAttrNotChanged)) {
+      auto deconv_cache = std::dynamic_pointer_cast<DeconvOpKernelCache<T>>(*cache_ptr);
+      deconv_cache->Update(ctx->TensorDesc4ArgNameAndIndex("in", 0)->shape(),
+                           ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape());
+      return;
+    }
+    *cache_ptr = CreateDeconvOpKernelCache<T>(ctx, "out", "in", "weight");
   }
 
  private:
@@ -357,11 +364,11 @@ class DeconvCpuKernel final : public user_op::OpKernel {
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
       // out = col2im(col_buf')
-      deconv_cache->col2im_func_(col_buf->dptr<T>(), ShapeView(deconv_cache->in_5d_shape_),
-                               ShapeView(deconv_cache->weight_5d_shape_),
-                               ShapeView(deconv_cache->out_5d_shape_), deconv_cache->strides_3d_.data(),
-                               deconv_cache->dilation_rate_3d_.data(),
-                               deconv_cache->padding_before_3d_.data(), GetImgMutDptr<T>(out, i));
+      deconv_cache->col2im_func_(
+          col_buf->dptr<T>(), ShapeView(deconv_cache->in_5d_shape_),
+          ShapeView(deconv_cache->weight_5d_shape_), ShapeView(deconv_cache->out_5d_shape_),
+          deconv_cache->strides_3d_.data(), deconv_cache->dilation_rate_3d_.data(),
+          deconv_cache->padding_before_3d_.data(), GetImgMutDptr<T>(out, i));
     }
   }
 };

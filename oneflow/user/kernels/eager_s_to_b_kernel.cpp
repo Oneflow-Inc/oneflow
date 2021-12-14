@@ -136,8 +136,8 @@ class EagerSToBKernel final : public user_op::OpKernel {
   ~EagerSToBKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerSToBOpKernelCache>(ctx); }
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerSToBOpKernelCache>(ctx); }
   }
 
  private:

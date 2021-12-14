@@ -94,8 +94,10 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
   ~EagerSymmetricSToPKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    if (*cache == nullptr) { *cache = std::make_shared<EagerSymmetricSToPOpKernelCache>(ctx); }
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr == nullptr) {
+      *cache_ptr = std::make_shared<EagerSymmetricSToPOpKernelCache>(ctx);
+    }
   }
 
  private:

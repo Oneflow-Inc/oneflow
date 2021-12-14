@@ -68,10 +68,10 @@ Maybe<std::vector<std::pair<int64_t, int64_t>>> RawGroupP2PPair(
 static constexpr auto* GroupP2PPair = DECORATE(&RawGroupP2PPair, ThreadLocal);
 
 void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
-                               std::shared_ptr<user_op::OpKernelCache>* cache) {
+                               std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
   // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
   // once parallel_conf is determined, so only init the cache at the first time.
-  if (*cache == nullptr) { *cache = std::make_shared<EagerCclOpKernelCache>(ctx); }
+  if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclOpKernelCache>(ctx); }
 }
 }  // namespace
 
@@ -81,8 +81,8 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
   ~EagerCclBroadcastKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    InitEagerCclOpKernelCache(ctx, cache);
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
@@ -116,8 +116,8 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
   ~EagerCclReduceKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    InitEagerCclOpKernelCache(ctx, cache);
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
@@ -152,8 +152,8 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
   ~EagerCclAllReduceKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    InitEagerCclOpKernelCache(ctx, cache);
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
@@ -183,8 +183,8 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
   ~EagerCclReduceScatterKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    InitEagerCclOpKernelCache(ctx, cache);
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
@@ -215,8 +215,8 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
   ~EagerCclAllGatherKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    InitEagerCclOpKernelCache(ctx, cache);
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
@@ -246,8 +246,8 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
   ~EagerCclS2SKernel() override = default;
 
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache) const override {
-    InitEagerCclOpKernelCache(ctx, cache);
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
