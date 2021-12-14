@@ -23,82 +23,82 @@ import oneflow.unittest
 
 
 def test_basic_slice(test_case, numpy_x, x):
-    test_case.assertTrue(np.allclose(numpy_x[1], x[1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[-2], x[-2].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[1], x[1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[-2], x[-2].numpy()))
 
-    test_case.assertTrue(np.allclose(numpy_x[0, 1], x[0, 1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[(0, 1)], x[(0, 1)].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[((0, 1))], x[((0, 1))].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0, 1], x[0, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[(0, 1)], x[(0, 1)].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[((0, 1))], x[((0, 1))].numpy()))
 
-    test_case.assertTrue(np.allclose(numpy_x[None], x[None].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[True], x[True].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[1, None], x[1, None].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[1, None, 1], x[1, None, 1].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[None], x[None].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[True], x[True].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[1, None], x[1, None].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[1, None, 1], x[1, None, 1].numpy()))
     test_case.assertTrue(
-        np.allclose(numpy_x[1, None, None, 1], x[1, None, None, 1].to_local().numpy())
+        np.allclose(numpy_x[1, None, None, 1], x[1, None, None, 1].numpy())
     )
 
-    test_case.assertTrue(np.allclose(numpy_x[:], x[:].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[:1], x[:1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[0:1], x[0:1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[-2:-1], x[-2:-1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[2:100:200], x[2:100:200].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[:], x[:].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[:1], x[:1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:1], x[0:1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[-2:-1], x[-2:-1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[2:100:200], x[2:100:200].numpy()))
 
-    test_case.assertTrue(np.allclose(numpy_x[0:2, ...], x[0:2, ...].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[0:2, ..., 1], x[0:2, ..., 1].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:2, ...], x[0:2, ...].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:2, ..., 1], x[0:2, ..., 1].numpy()))
     test_case.assertTrue(
-        np.allclose(numpy_x[0:2, ..., 1, 1], x[0:2, ..., 1, 1].to_local().numpy())
-    )
-
-    test_case.assertTrue(np.allclose(numpy_x[0:4:2, ...], x[0:4:2, ...].to_local().numpy()))
-    test_case.assertTrue(
-        np.allclose(numpy_x[0:2, None, ..., True], x[0:2, None, ..., True].to_local().numpy())
-    )
-    test_case.assertTrue(
-        np.allclose(numpy_x[None, ..., 0:4:2, True], x[None, ..., 0:4:2, True].to_local().numpy())
+        np.allclose(numpy_x[0:2, ..., 1, 1], x[0:2, ..., 1, 1].numpy())
     )
 
-    test_case.assertTrue(np.allclose(numpy_x[False, ...], x[False, ...].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[0:4:2, ...], x[0:4:2, ...].numpy()))
     test_case.assertTrue(
-        np.allclose(numpy_x[False, True, ...], x[False, True, ...].to_local().numpy())
+        np.allclose(numpy_x[0:2, None, ..., True], x[0:2, None, ..., True].numpy())
     )
     test_case.assertTrue(
-        np.allclose(numpy_x[True, ..., False, True], x[True, ..., False, True].to_local().numpy())
+        np.allclose(numpy_x[None, ..., 0:4:2, True], x[None, ..., 0:4:2, True].numpy())
+    )
+
+    test_case.assertTrue(np.allclose(numpy_x[False, ...], x[False, ...].numpy()))
+    test_case.assertTrue(
+        np.allclose(numpy_x[False, True, ...], x[False, True, ...].numpy())
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[True, ..., False, True], x[True, ..., False, True].numpy())
     )
     test_case.assertTrue(
         np.allclose(
             numpy_x[True, None, ..., False, True],
-            x[True, None, ..., False, True].to_local().numpy(),
+            x[True, None, ..., False, True].numpy(),
         )
     )
     test_case.assertTrue(
         np.allclose(
-            numpy_x[True, 1, ..., False, True], x[True, 1, ..., False, True].to_local().numpy()
+            numpy_x[True, 1, ..., False, True], x[True, 1, ..., True, True].numpy()
         )
     )
 
 
 def test_advanced_indexing(test_case, numpy_x, x):
-    test_case.assertTrue(np.allclose(numpy_x[[0, 1]], x[[0, 1]].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[[0, 1]], x[[0, 1]].numpy()))
     test_case.assertTrue(
-        np.allclose(numpy_x[[0, 1], [1, 0]], x[[0, 1], [1, 0]].to_local().numpy())
+        np.allclose(numpy_x[[0, 1], [1, 0]], x[[0, 1], [1, 0]].numpy())
     )
     test_case.assertTrue(
         np.allclose(
-            numpy_x[[[0, 1], [0, 1], [1, 0]]], x[[[0, 1], [0, 1], [1, 0]]].to_local().numpy()
+            numpy_x[[[0, 1], [0, 1], [1, 0]]], x[[[0, 1], [0, 1], [1, 0]]].numpy()
         )
     )
-    test_case.assertTrue(np.allclose(numpy_x[[[0], [1]]], x[[[0], [1]]].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[[[0], [1]]], x[[[0], [1]]].numpy()))
     test_case.assertTrue(
         np.allclose(
             numpy_x[[[[0], [1]], [[0], [1]], [0, 1]]],
-            x[[[[0], [1]], [[0], [1]], [0, 1]]].to_local().numpy(),
+            x[[[[0], [1]], [[0], [1]], [0, 1]]].numpy(),
         )
     )
     test_case.assertTrue(
         np.allclose(
             numpy_x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]],
-            x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]].to_local().numpy(),
+            x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]].numpy(),
         )
     )
 
@@ -106,57 +106,57 @@ def test_advanced_indexing(test_case, numpy_x, x):
     test_case.assertTrue(
         np.allclose(
             numpy_x[np.array([0, 1]), np.array([1, 0])],
-            x[flow.tensor([0, 1]), flow.tensor([1, 0])].to_local().numpy(),
+            x[flow.tensor([0, 1]), flow.tensor([1, 0])].numpy(),
         )
     )
     test_case.assertTrue(
         np.allclose(
             numpy_x[:, np.array([[0, 1], [1, 1]]), np.array([[1, 0], [1, 1]])],
-            x[:, flow.tensor([[0, 1], [1, 1]]), flow.tensor([[1, 0], [1, 1]]),].to_local().numpy(),
+            x[:, flow.tensor([[0, 1], [1, 1]]), flow.tensor([[1, 0], [1, 1]]),].numpy(),
         )
     )
 
     # mask tensor index
     mask = np.random.rand(numpy_x.shape[0], numpy_x.shape[1]).astype(np.float32)
     y = flow.tensor(mask)
-    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 0, 1], x[y > 0, 1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 1, 1], x[y > 1, 1].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0, 1], x[y > 0, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1, 1], x[y > 1, 1].numpy()))
 
     mask = np.random.rand(*numpy_x.shape).astype(np.float32)
     y = flow.tensor(mask)
-    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0], x[y > 0].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
 
 
 def test_advanced_indexing_array(test_case, numpy_x, x, dtype):
     idx = np.array([0, 1], dtype=dtype)
-    test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].numpy()))
 
     idx1 = np.array([0, 1], dtype=dtype)
     idx2 = np.array([1, 0], dtype=dtype)
-    test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].numpy()))
 
     idx = np.array([[0, 1], [0, 1], [1, 0]], dtype=dtype)
-    test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].to_local().numpy()))
-    test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
 
 
 def test_combining_indexing(test_case, numpy_x, x):
     test_case.assertTrue(
-        np.allclose(numpy_x[[0, 1], 1:2, [1, 0]], x[[0, 1], 1:2, [1, 0]].to_local().numpy())
+        np.allclose(numpy_x[[0, 1], 1:2, [1, 0]], x[[0, 1], 1:2, [1, 0]].numpy())
     )
     test_case.assertTrue(
-        np.allclose(numpy_x[:, [0, 1], [1, 0]], x[:, [0, 1], [1, 0]].to_local().numpy())
+        np.allclose(numpy_x[:, [0, 1], [1, 0]], x[:, [0, 1], [1, 0]].numpy())
     )
-    test_case.assertTrue(np.allclose(numpy_x[:, [0, 1], 1], x[:, [0, 1], 1].to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[:, [0, 1], 1], x[:, [0, 1], 1].numpy()))
     test_case.assertTrue(
-        np.allclose(numpy_x[..., [0, 1], 1, [1, 0]], x[..., [0, 1], 1, [1, 0]].to_local().numpy())
+        np.allclose(numpy_x[..., [0, 1], 1, [1, 0]], x[..., [0, 1], 1, [1, 0]].numpy())
     )
 
 
@@ -171,19 +171,19 @@ def test_mask_setitem(test_case, numpy_x, x):
     # broadcast set
     x[y > 0.5] = 1.0
     numpy_x[mask > 0.5] = 1.0
-    test_case.assertTrue(np.allclose(numpy_x, x.to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
     # elementwise set
     update = np.random.randn((mask > 0.5).sum()).astype(np.float32)
     tensor_update = flow.tensor(update)
     x[y > 0.5] = tensor_update
     numpy_x[mask > 0.5] = update
-    test_case.assertTrue(np.allclose(numpy_x, x.to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
     # empty mask
     x[y > 1.0] = 1.0
     numpy_x[mask > 1.0] = 1.0
-    test_case.assertTrue(np.allclose(numpy_x, x.to_local().numpy()))
+    test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
 
 @flow.unittest.skip_unless_1n2d()
