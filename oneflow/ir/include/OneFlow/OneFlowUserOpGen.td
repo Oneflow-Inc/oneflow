@@ -4678,6 +4678,7 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterf
   let attrs = (ins
     AnyI64ElementsAttr:$shape
   );
+  let infer_nd_sbp = [{ return ::InferNdSbp(ctx); }];
 }
 
 def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

@@ -198,7 +198,7 @@ bool OpSchemaEmitter<Target>::emitCustomCode(const Record* def, StringRef fieldn
       || start_pos > end_pos) {
     PrintFatalError(def, "Invalid " + fieldname.str() + " code (note: missing brackets)");
   }
-  if (value.substr(start_pos + 1, end_pos - start_pos) != "ctx") {
+  if (value.substr(start_pos + 1, end_pos - start_pos - 1) != "ctx") {
     PrintFatalError(def, "Invalid " + fieldname.str() + " code (note: argument should be ctx)");
   }
   auto func = value.substr(0, start_pos).ltrim().rtrim(" \t\v\f\r");
