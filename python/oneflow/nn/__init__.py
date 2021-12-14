@@ -133,6 +133,7 @@ from oneflow.nn.modules.upsampling import (
     UpsamplingNearest2d,
 )
 from oneflow.nn.modules.fold import Fold, Unfold
+from oneflow.nn.modules.embedding import OneEmbeddingLookup
 
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils

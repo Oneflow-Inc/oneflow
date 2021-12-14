@@ -1834,3 +1834,7 @@
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
+
+- name: "embedding_lookup_placeholder"
+  signature: "Tensor (Tensor ids, String name, Int64 embedding_size, DataType dtype, String encoder, String partitioning, String initializer, String optimizer, String backend) => OneEmbeddingLookup"
+  bind_python: True

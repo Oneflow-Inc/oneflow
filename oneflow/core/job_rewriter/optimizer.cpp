@@ -33,6 +33,26 @@ void AddOptimizerOp(JobPassCtx* ctx, const OpNode& var_op_node, const std::strin
   obj->Call(ctx, var_op_node, model_diff_lbn, optimizer_conf, job_builder);
 }
 
+void AddEmbeddingUpdateOp(JobPassCtx* ctx, const OpNode& embedding_lookup_op_node,
+                          const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
+                          JobBuilder* job_builder) {
+  user_op::UserOpConfWrapper embedding_lookup_op(embedding_lookup_op_node.op().op_conf());
+  const std::string& update_op_name = embedding_lookup_op.op_name() + "_update";
+  const int64_t scope_symbol_id = embedding_lookup_op.op_conf().scope_symbol_id();
+
+  user_op::UserOpConfWrapperBuilder sgd_update_op_builder(update_op_name);
+  sgd_update_op_builder.OpTypeName("sgd_embedding_update_placeholder")
+      .Input("embedding_diff", model_diff_lbn)
+      .Input("ids", embedding_lookup_op.input("ids", 0))
+      .Input("learning_rate", optimizer_conf.learning_rate_lbn())
+      .Attr<std::string>("name", embedding_lookup_op.attr<std::string>("name"))
+      .Attr<int64_t>("embedding_size", embedding_lookup_op.attr<int64_t>("embedding_size"))
+      .ScopeSymbolId(embedding_lookup_op.op_conf().scope_symbol_id());
+  user_op::UserOpConfWrapper sgd_embedding_update_op = sgd_update_op_builder.Build();
+  job_builder->AddOps(embedding_lookup_op_node.parallel_desc().parallel_conf(),
+                      {sgd_embedding_update_op.op_conf()});
+}
+
 float GetOptimizerWeightDecayRate(const OptimizerConf& optimizer_conf, const VariableOp& op) {
   if (optimizer_conf.has_weight_decay_conf()) {
     const WeightDecayConf& weight_decay_conf = optimizer_conf.weight_decay_conf();

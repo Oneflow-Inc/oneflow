@@ -2101,6 +2101,34 @@ class RoiAlignGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmbeddingLookupFunctor {
+ public:
+  EmbeddingLookupFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding_lookup_placeholder").Input("ids").Output("embeddings").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ids, const std::string& name,
+                           const int64_t& embedding_size, const Symbol<DType>& dtype,
+                           const std::string& encoder, const std::string& partitioning,
+                           const std::string& initializer, const std::string& optimizer,
+                           const std::string& backend) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("name", name));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<std::string>("encoder", encoder));
+    JUST(attrs.SetAttr<std::string>("partitioning", partitioning));
+    JUST(attrs.SetAttr<std::string>("initializer", initializer));
+    JUST(attrs.SetAttr<std::string>("optimizer", optimizer));
+    JUST(attrs.SetAttr<std::string>("backend", backend));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2170,6 +2198,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
+  m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
 };
 
 }  // namespace functional

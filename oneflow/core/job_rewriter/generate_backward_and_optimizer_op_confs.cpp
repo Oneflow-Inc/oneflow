@@ -93,6 +93,10 @@ void FilterModelLbi2ModelDiffLbiByOpConf(
     const OpNode* producer = op_graph.OpNode4OpName(lbi.op_name());
     if (producer->op().op_conf().has_variable_conf()) {
       (*model_lbi2model_diff_lbi)[lbi] = diff_lbi;
+    } else if (producer->op().op_conf().has_user_conf()
+               && producer->op().op_conf().user_conf().op_type_name()
+                      == "embedding_lookup_placeholder") {
+      (*model_lbi2model_diff_lbi)[lbi] = diff_lbi;
     }
   }
 }
@@ -103,6 +107,18 @@ void FilterCurModelLbi2ModelDiffLbiByName(
     HashMap<LogicalBlobId, LogicalBlobId>* cur_model_lbi2model_diff_lbi) {
   for (const std::string& variable : variables) {
     const LogicalBlobId& lbi = GenLogicalBlobId(variable + "/out");
+    if (model_lbi2model_diff_lbi.find(lbi) != model_lbi2model_diff_lbi.end()) {
+      (*cur_model_lbi2model_diff_lbi)[lbi] = model_lbi2model_diff_lbi.at(lbi);
+    }
+  }
+}
+
+void FilterCurModelLbi2ModelDiffLbiByEmbeddingName(
+    const std::vector<std::string>& embedding_lookup_ops,
+    const HashMap<LogicalBlobId, LogicalBlobId>& model_lbi2model_diff_lbi,
+    HashMap<LogicalBlobId, LogicalBlobId>* cur_model_lbi2model_diff_lbi) {
+  for (const std::string& op : embedding_lookup_ops) {
+    const LogicalBlobId& lbi = GenLogicalBlobId(op + "/embeddings_0");
     if (model_lbi2model_diff_lbi.find(lbi) != model_lbi2model_diff_lbi.end()) {
       (*cur_model_lbi2model_diff_lbi)[lbi] = model_lbi2model_diff_lbi.at(lbi);
     }
@@ -195,7 +211,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
         ClipGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi,
                      optimizer_conf.clip_conf());
       }
-      RegularizeGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi);
+      // RegularizeGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi);
       op_graph.ForEachNode([&](OpNode* op_node) {
         const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
         if (var_op == nullptr
@@ -206,6 +222,28 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
         const std::string& model_diff_lbn = GenLogicalBlobName(
             cur_model_lbi2model_diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn())));
         AddOptimizerOp(ctx, *op_node, model_diff_lbn, optimizer_conf, job_builder.get());
+      });
+    }
+    for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+      HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
+      // TODO(guoran):add optimizer_conf.embedding_lookup_op_names() in python
+      std::vector<std::string> embedding_lookup_op_names;
+      embedding_lookup_op_names.push_back("embedding_lookup-embedding_lookup_placeholder_0");
+      FilterCurModelLbi2ModelDiffLbiByEmbeddingName(
+          embedding_lookup_op_names, model_lbi2model_diff_lbi, &cur_model_lbi2model_diff_lbi);
+      op_graph.ForEachNode([&](OpNode* op_node) {
+        if (op_node->op().op_conf().has_user_conf()
+            && op_node->op().op_conf().user_conf().op_type_name()
+                   == "embedding_lookup_placeholder") {
+          const auto& it =
+              cur_model_lbi2model_diff_lbi.find(op_node->op().BnInOp2Lbi("embeddings_0"));
+          if (it == cur_model_lbi2model_diff_lbi.end()) {
+            LOG(ERROR) << "embeddings_0 no diff";
+            return;
+          }
+          const std::string& model_diff_lbn = GenLogicalBlobName(it->second);
+          AddEmbeddingUpdateOp(ctx, *op_node, model_diff_lbn, optimizer_conf, job_builder.get());
+        }
       });
     }
     return Maybe<void>::Ok();
