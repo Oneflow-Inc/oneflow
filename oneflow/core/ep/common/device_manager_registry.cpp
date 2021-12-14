@@ -24,7 +24,7 @@ namespace ep {
 class DeviceManagerRegistry::Impl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Impl);
-  Impl(DeviceManagerRegistry* registry) : registry_(registry) {
+  explicit Impl(DeviceManagerRegistry* registry) : registry_(registry) {
     managers_.resize(DeviceType_ARRAYSIZE);
   }
   ~Impl() = default;
