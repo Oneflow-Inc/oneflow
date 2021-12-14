@@ -24,14 +24,15 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestGluModule(flow.unittest.TestCase):
-    @autotest(n=5, check_graph=True, check_func_name="glu")
+    
+    @autotest(n=5, check_graph=True)
     def test_glu_module_with_random_data(test_case):
         device = random_device()
         dim = random(-3, 3).to(int)
         x = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=6).to(device)
         y = torch.nn.functional.glu(x, dim)
         return y
-
+    
     @autotest(n=5)
     def test_GLU_module_with_random_data(test_case):
         device = random_device()

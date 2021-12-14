@@ -277,8 +277,8 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
+                                filter=["to","tensor","_to","train"]
                                 if isinstance(oneflow, flow.nn.Module):
-
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -298,9 +298,10 @@ def GetDualObject(name, pytorch, oneflow):
                                         flow_res_id_eager2_graph[
                                             id(oneflow_res)
                                         ] = test_g_res
-                                elif (
-                                    oneflow.__module__ == "oneflow._oneflow_internal._C"
-                                ):
+
+                                elif oneflow.__name__ in filter:
+                                    pass
+                                elif ( not ("oneflow.nn.modules" in oneflow.__module__)):
                                     tensor_args = []
                                     other_args = []
                                     for a in oneflow_args:
@@ -588,7 +589,6 @@ def autotest(
     atol=1e-05,
     check_graph=True,
     check_allclose=True,
-    func_name="",
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
