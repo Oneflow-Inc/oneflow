@@ -3154,6 +3154,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
     def test_eager_consistent_cast_with_same_placement_and_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
