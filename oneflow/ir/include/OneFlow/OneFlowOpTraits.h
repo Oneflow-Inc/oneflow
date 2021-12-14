@@ -105,6 +105,25 @@ class IsAlternative : public TraitBase<ConcreteType, IsAlternative> {
   }
 };
 
+template<typename ConcreteType>
+class TensorSource : public TraitBase<ConcreteType, TensorSource> {
+ public:
+  static StringRef getShapeAttrName() { return "shape"; }
+  static StringRef getDataTypeAttrName() { return "data_type"; }
+  static StringRef getIsDynamicAttrName() { return "is_dynamic"; }
+  static StringRef getNdSbpAttrName() { return "nd_sbp"; }
+
+  static LogicalResult verifyTrait(Operation* op) {
+    if (!op->hasAttrOfType<ArrayAttr>(getShapeAttrName())) {
+      return op->emitError("expected operation to have attribute: " + getShapeAttrName());
+    }
+    if (!op->hasAttrOfType<IntegerAttr>(getDataTypeAttrName())) {
+      return op->emitError("expected operation to have attribute: " + getDataTypeAttrName());
+    }
+    return success();
+  }
+};
+
 }  // namespace OpTrait
 
 }  // namespace mlir
