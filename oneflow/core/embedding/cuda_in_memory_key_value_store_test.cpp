@@ -28,7 +28,7 @@ namespace {
 
 TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   int device_count = 0;
-  if (cudaGetDevice(&device_count) != cudaSuccess) { return; }
+  if (cudaGetDeviceCount(&device_count) != cudaSuccess) { return; }
   if (device_count <= 0) { return; }
 
   std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
