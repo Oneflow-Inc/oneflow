@@ -114,7 +114,7 @@ void TestUtil::AddStreamDescByInstrNames(VmDesc* vm_desc, int64_t parallel_num,
                                          const std::vector<std::string>& instr_names) {
   auto Insert = [&](const std::string& instr_name) {
     const auto& stream_type_id = LookupInstrTypeId(instr_name).stream_type_id();
-    auto stream_desc = intrusive::make_shared<StreamDesc>(stream_type_id, 1, parallel_num, 1);
+    auto stream_desc = intrusive::make_shared<StreamDesc>(stream_type_id, parallel_num, 1);
     vm_desc->mut_stream_type_id2desc()->Insert(stream_desc.Mutable());
   };
   for (const auto& instr_name : instr_names) {
