@@ -276,6 +276,47 @@ Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
   return Maybe<void>::Ok();
 }
 
+// clang-format off
+// Job e.g.:
+//                                    [wait_and_send_ids]
+//                                             |
+//                                             V
+//                                             |
+//                         +-------------------+
+//                         |                   |
+//                         V             [cpu_decoder]
+//                         |                   |
+//             [critcial_section_wait]         V
+//                         |                   |
+//                         V            [forward_ops...]
+//                         |                   |
+//                         |                   V
+//                         +-------------------+
+//                                             |
+//                                        [copy_loss]
+//                                             |
+//                                             +-----------------------+
+//                                             |                       |
+//                                             V                       V
+//                                             |                       |
+//                                     [backward_ops...]               |
+//                                             |                       |
+//                                             V            [critical_section_callback]
+//                                             |                       |
+//                                     [optimizer_ops...]              V
+//                                             |                       |
+//                                             V                       |
+//                                             |                       |
+//                                             +-----------------------+
+//                                             |                       
+//                                     [callback_notifier]                       
+// 
+//
+// clang-format on
+// critcial_section_wait is a blocking opkernel which waits tick signal from instruction
+// CriticalSectionBegin.
+// critical_section_callback is a non-blocking opkernel which notifies instruction
+// CriticalSectionEnd done.
 Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
                                                const one::EagerBlobObjectListPtr& outputs,
                                                const one::EagerBlobObjectListPtr& parameters,
