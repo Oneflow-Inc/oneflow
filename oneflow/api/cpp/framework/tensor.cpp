@@ -303,7 +303,7 @@ std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
   f[tensor.dtype()]();
   os << "["
      << "Shape: " << tensor.shape() << ", Device: " << tensor.device()
-     << ", DataType: " << GetDTypeName(tensor.dtype()) << "]";
+     << ", DataType: " << tensor.dtype() << "]";
   return os;
 }
 

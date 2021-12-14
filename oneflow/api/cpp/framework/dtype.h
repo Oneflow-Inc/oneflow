@@ -38,7 +38,8 @@ enum class DType {
 };
 
 [[nodiscard]] int32_t GetDTypeSize(DType dtype);
-[[nodiscard]] std::string GetDTypeName(DType dtype);
+
+std::ostream& operator<<(std::ostream&, DType);
 
 }  // namespace oneflow_api
 

@@ -37,6 +37,9 @@ std::map<DType, std::string> DTypeName = {
 
 int32_t GetDTypeSize(DType dtype) { return DTypeSize[dtype]; }
 
-std::string GetDTypeName(DType dtype) { return DTypeName[dtype]; }
+std::ostream& operator<<(std::ostream& os, DType dtype) {
+  os << DTypeName[dtype];
+  return os;
+}
 
 }  // namespace oneflow_api
