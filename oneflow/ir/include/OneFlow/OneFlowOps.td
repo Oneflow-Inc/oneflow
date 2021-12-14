@@ -13,6 +13,8 @@ include "mlir/Pass/PassBase.td"
 
 def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
   let summary = "";
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
   let attrs = (ins
     StrArrayAttr:$output_lbns
   );
@@ -21,6 +23,8 @@ def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompati
 
 def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let summary = "";
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
   let attrs = (ins
     StrArrayAttr:$input_bns,
     StrArrayAttr:$output_lbns
