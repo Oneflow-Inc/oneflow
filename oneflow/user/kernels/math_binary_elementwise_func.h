@@ -187,46 +187,76 @@ struct FloorDivFunctor<half> {
 template<>
 struct XdivyFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__heq(GetZeroVal<half>(), x)) {
       return GetZeroVal<half>();
     } else {
       return __hdiv(x, y);
     }
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC const half BackwardXGrad(const half x, const half y, const half dz) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__heq(GetZeroVal<half>(), x)) {
       return GetZeroVal<half>();
     } else {
       return XdivyFunctor<half>::Forward(dz, y);
     }
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC const half BackwardYGrad(const half x, const half y, const half dz) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dz, XdivyFunctor<half>::Forward(__hneg(x), __hmul(y, y)));
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
 template<>
 struct XlogyFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__heq(GetZeroVal<half>(), x)) {
       return GetZeroVal<half>();
     } else {
       return __hmul(x, hlog(y));
     }
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC const half BackwardXGrad(const half x, const half y, const half dz) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__heq(GetZeroVal<half>(), x)) {
       return GetZeroVal<half>();
     } else {
       return XlogyFunctor<half>::Forward(dz, y);
     }
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC const half BackwardYGrad(const half x, const half y, const half dz) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dz, XdivyFunctor<half>::Forward(x, y));
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
