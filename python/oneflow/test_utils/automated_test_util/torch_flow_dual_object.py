@@ -301,7 +301,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                                 elif oneflow.__name__ in filter:
                                     pass
-                                elif ( not ("oneflow.nn.modules" in oneflow.__module__)):
+                                elif "oneflow.nn.modules" not in oneflow.__module__:
                                     tensor_args = []
                                     other_args = []
                                     for a in oneflow_args:
