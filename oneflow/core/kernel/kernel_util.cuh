@@ -38,6 +38,7 @@ __device__ __forceinline__ half MaxWithLogThreshold(half x) {
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
+  return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 #endif
@@ -54,6 +55,7 @@ __device__ __forceinline__ half SafeLog(half x) {
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
+  return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 #endif
