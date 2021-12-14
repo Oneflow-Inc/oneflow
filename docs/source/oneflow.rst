@@ -126,7 +126,6 @@ oneflow
             sinh, 
             sinh_, 
             sign, 
-            sign_, 
             selu, 
             silu, 
             slice, 

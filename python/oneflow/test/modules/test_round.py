@@ -33,14 +33,14 @@ class TestRound(flow.unittest.TestCase):
         y = torch.round(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_round_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.round()
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_inplace_round_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor().to(device)
@@ -50,7 +50,7 @@ class TestRound(flow.unittest.TestCase):
         test_case.assertTrue(id_x == id(x))
         return x
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_inplace_round_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor().to(device)

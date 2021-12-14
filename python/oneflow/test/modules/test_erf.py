@@ -36,14 +36,14 @@ class TestErfModule(flow.unittest.TestCase):
         y = torch.erf(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_erf_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.erf()
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_inpalce_erf_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor().to(device)
@@ -53,8 +53,8 @@ class TestErfModule(flow.unittest.TestCase):
         test_case.assertTrue(id_x == id(x))
         return x
 
-    @autotest()
-    def test_tensor_erf_with_random_data(test_case):
+    @autotest(check_graph=False)
+    def test_tensor_inplace_erf_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor().to(device)
         x = x_0 + 1

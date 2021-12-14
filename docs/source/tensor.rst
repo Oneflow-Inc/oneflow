@@ -141,7 +141,6 @@ OneFlow Tensor Class
             sigmoid, 
             sigmoid_, 
             sign, 
-            sign_, 
             silu, 
             sin, 
             sin_, 

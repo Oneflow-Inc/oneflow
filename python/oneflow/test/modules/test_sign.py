@@ -63,13 +63,13 @@ class TestSign(flow.unittest.TestCase):
         y = torch.sign(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_inplace_sign_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor(low=-100., high=100).to(device)
         x = x_0 + 1
         id_x = id(x)
-        torch.sign_(x)
+        x.sign_()
         test_case.assertTrue(id_x == id(x))
         return x
 

@@ -75,7 +75,7 @@ from oneflow._C import atanh, atanh_
 from oneflow._C import atanh as arctanh
 from oneflow._C import atanh_ as arctanh_
 from oneflow._C import batch_matmul as bmm
-from oneflow._C import sign, sign_
+from oneflow._C import sign
 from oneflow._C import sinh, sinh_
 from oneflow._C import tan, tan_
 from oneflow._C import greater

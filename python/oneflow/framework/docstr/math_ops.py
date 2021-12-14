@@ -649,12 +649,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.sign_,
-    r"""
-    In-place version of :func:`oneflow.sign`
-    """,
-)
 
 add_docstr(
     oneflow.sin,

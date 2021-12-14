@@ -459,11 +459,11 @@ def _log1p_(self):
 
 
 def _reciprocal(self):
-    return flow.reciprocal_no_nan(self)
+    return flow.reciprocal(self)
 
 
 def _reciprocal_(self):
-    return flow.reciprocal_no_nan_(self)
+    return flow.reciprocal_(self)
 
 
 def _asin(self):

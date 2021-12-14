@@ -37,7 +37,7 @@ class TestReciprocalModule(flow.unittest.TestCase):
         y = torch.reciprocal(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_reciprocal_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(
@@ -46,7 +46,7 @@ class TestReciprocalModule(flow.unittest.TestCase):
         y = x.reciprocal()
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_inplace_reciprocal_list_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor(
@@ -58,7 +58,7 @@ class TestReciprocalModule(flow.unittest.TestCase):
         test_case.assertTrue(id_x == id(x))
         return x
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_inplace_reciprocal_list_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor(

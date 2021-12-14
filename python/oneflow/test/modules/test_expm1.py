@@ -58,7 +58,7 @@ class TestExpm1Module(flow.unittest.TestCase):
         y = torch.expm1(input)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_expm1_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
@@ -72,7 +72,7 @@ class TestExpm1Module(flow.unittest.TestCase):
         y = torch.expm1(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_inplace_expm1_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor().to(device)
@@ -82,7 +82,7 @@ class TestExpm1Module(flow.unittest.TestCase):
         test_case.assertTrue(id_x == id(x))
         return x
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_tensor_inplace_expm1_with_random_data(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor().to(device)
