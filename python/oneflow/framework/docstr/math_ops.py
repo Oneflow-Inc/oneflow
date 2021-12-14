@@ -236,6 +236,7 @@ add_docstr(
     oneflow.asin,
     r"""
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
+    Alias of arcsin
 
     .. math::
         \text{out}_{i} = \sin^{-1}(\text{input}_{i})
@@ -272,24 +273,12 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.arcsin,
-    r"""
-    See :func:`oneflow.asin`
-    """,
-)
-
-add_docstr(
-    oneflow.arcsin_,
-    r"""
-    In-place version of :func:`oneflow.arcsin`
-    """,
-)
 
 add_docstr(
     oneflow.asinh,
     r"""
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
+    Alias of arcsinh
 
     .. math::
         \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
@@ -328,24 +317,12 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.arcsinh,
-    r"""
-    See :func:`oneflow.asinh`
-    """,
-)
-
-add_docstr(
-    oneflow.arcsinh_,
-    r"""
-    In-place version of :func:`oneflow.arcsinh`
-    """,
-)
 
 add_docstr(
     oneflow.atan,
     r"""
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
+    Alias of arctan
 
     .. math::
         \text{out}_{i} = \tan^{-1}(\text{input}_{i})
@@ -374,19 +351,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.arctan,
-    r"""
-    See :func:`oneflow.atan`
-    """,
-)
-
-add_docstr(
-    oneflow.arctan_,
-    r"""
-    In-place version of :func:`oneflow.arctan`
-    """,
-)
 
 add_docstr(
     oneflow.ceil,
@@ -551,6 +515,7 @@ add_docstr(
     oneflow.acos,
     r"""
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
+    Alias of arccos
 
     .. math::
         \text{out}_{i} = \arccos(\text{input}_{i})
@@ -573,31 +538,20 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.arccos,
-    r"""
-    See :func:`oneflow.acos`
-    """,
-)
 
 add_docstr(
     oneflow.acos_,
     r"""
-    In-place version of :func:`oneflow.acos`
+    In-place version of :func:`oneflow.acos`.
     """,
 )
 
-add_docstr(
-    oneflow.arccos_,
-    r"""
-    See :func:`oneflow.acos_`
-    """,
-)
 
 add_docstr(
     oneflow.acosh,
     r"""
     Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
+    Alias of arccosh
 
     .. math::
 
@@ -630,23 +584,12 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.arccosh,
-    r"""
-    See :func:`oneflow.acosh`
-    """,
-)
-
-add_docstr(
-    oneflow.arccosh_,
-    r"""
-    In-place version of :func:`oneflow.arccosh_`
-    """,
-)
 
 add_docstr(
     oneflow.atanh,
-    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    r"""
+    Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    Alias of arctanh 
 
     .. math::
         \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
@@ -676,19 +619,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.arctanh,
-    r"""
-    See :func:`oneflow.atanh`
-    """,
-)
-
-add_docstr(
-    oneflow.arctanh_,
-    r"""
-    In-place version of :func:`oneflow.arctanh`
-    """,
-)
 
 add_docstr(
     oneflow.sign,

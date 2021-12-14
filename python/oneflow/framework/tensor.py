@@ -1021,7 +1021,7 @@ def RegisterMethods():
     Tensor.cos = _cos
     Tensor.cos_ = _cos_
     Tensor.cosh = _cosh
-    Tensor.cosh = _cosh_
+    Tensor.cosh_ = _cosh_
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erf_ = _erf_
@@ -1034,6 +1034,7 @@ def RegisterMethods():
     Tensor.floor_ = _floor_
     Tensor.flatten = _flatten
     Tensor.log = _log
+    Tensor.log_ = _log_
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
     Tensor.pow = _pow

@@ -81,12 +81,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.Tensor.floor,
-    """
-    See :func:`oneflow.floor`
-    """,
-)
 
 add_docstr(
     oneflow.Tensor.numel,
@@ -250,7 +244,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.arcsin,
     """
-    See :func:`oneflow.arcsin`
+    See :func:`oneflow.asin`
     """,
 )
 
@@ -271,21 +265,21 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.asinh_,
     """
-    In-place version of :func:`oneflow.Tensor.asinh_`
+    In-place version of :func:`oneflow.Tensor.asinh`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.arcsinh,
     """
-    See :func:`oneflow.arcsinh`
+    See :func:`oneflow.asinh`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.arcsinh_,
     """
-    In-place version of :func:`oneflow.Tensor.arcsinh_`
+    In-place version of :func:`oneflow.Tensor.asinh`
     """,
 )
 
@@ -334,14 +328,14 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.arccos,
     """
-    See :func:`oneflow.arccos`
+    See :func:`oneflow.acos`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.arccos_,
     """
-    In-place version of :func:`oneflow.Tensor.acos_`
+    In-place version of :func:`oneflow.Tensor.acos`
     """,
 )
 
@@ -362,14 +356,14 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.arccosh,
     """
-    See :func:`oneflow.arccosh`
+    See :func:`oneflow.acosh`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.arccosh_,
     """
-    In-place version of :func:`oneflow.arccosh`
+    In-place version of :func:`oneflow.acosh`
     """,
 )
 
@@ -480,12 +474,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.Tensor.atanh,
-    """
-    See :func:`oneflow.atanh`
-    """,
-)
 
 add_docstr(
     oneflow.Tensor.backward,
