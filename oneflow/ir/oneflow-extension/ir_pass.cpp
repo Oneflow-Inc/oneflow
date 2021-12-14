@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/job/job_ir.h"
 
 namespace oneflow {
 
@@ -173,5 +174,22 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
 
 template class IRRoundTrip<kBeforeAD>;
 template class IRRoundTrip<kAfterAD>;
+
+Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
+  // TODO: check path is valid dir
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
+    TeePersistentLogStream::Create("saved_job")->Write(*job);
+  }
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  ::mlir::oneflow::SaveJobToIR(job_wrapper, path);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
+  job->Clear();
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  ::mlir::oneflow::LoadJobFromIR(job_wrapper, path);
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
