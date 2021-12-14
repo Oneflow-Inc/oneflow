@@ -57,6 +57,7 @@ limitations under the License.
 #include "oneflow/core/job/session.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow_api {
 
@@ -181,6 +182,10 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     std::ifstream input(model_path + "/model.pb");
     CHECK(input.is_open());
     CHECK(job_.ParseFromIstream(&input));
+    static int graph_index = 0;
+    job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name()
+                                          + std::to_string(graph_index));
+    graph_index += 1;
   }
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
@@ -190,6 +195,8 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path) : GraphImpl(model_pat
 
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock(mtx);
     Compile(inputs).GetOrThrow();
     is_compiled_ = true;
   }
@@ -226,8 +233,6 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
   if (batch_size_ > 0 && op_conf.has_input_conf()) {
     op_conf.mutable_input_conf()->mutable_blob_conf()->mutable_shape()->mutable_dim()->Set(
         0, batch_size_);
-    std::cout << "Print input conf" << std::endl;
-    std::cout << op_conf.ShortDebugString() << std::endl;
   }
   auto* ctx = JUST(of::GetCurInferCtx());
   JUST(ctx->AddAndInferConsistentOp(op_conf));
@@ -259,7 +264,6 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
     }));
   }
   JUST(of::CurJobBuildAndInferCtx_Complete());
-  JUST(of::CurJobBuildAndInferCtx_Rebuild());
   {
     const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
     const of::OpGraph complete_graph(*complete_job);
@@ -267,7 +271,13 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
       const of::LazyMode::Guard lazy_mode_disabled_guard{false};
       const of::OperatorConf& op_conf = node.op().op_conf();
       if (op_conf.has_output_conf()) {
-        const of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
+        of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
+        if (batch_size_ > 0) {
+          const std::string input_lbi_str = op_conf.output_conf().in();
+          const of::LogicalBlobId input_lbi = of::GenLogicalBlobId(input_lbi_str);
+          int64_t batch_size = node.LogicalBlobDesc4Lbi(input_lbi).shape().At(0);
+          blob_conf.mutable_shape()->set_dim(0, batch_size);
+        }
         output_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(blob_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(blob_conf.data_type()))),

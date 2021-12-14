@@ -17,8 +17,8 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_GRAPH_H_
 #define ONEFLOW_API_CPP_GRAPH_H_
 
-#include "oneflow/api/cpp/framework/device.h"
-#include "oneflow/api/cpp/framework/tensor.h"
+#include "device.h"
+#include "tensor.h"
 #include "iostream"
 
 namespace oneflow {
