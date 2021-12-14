@@ -93,40 +93,6 @@ class TestSigmoid(unittest.TestCase):
         self._test_random_body((2, 10, 2))
         self._test_random_body((2, 5, 2, 2))
 
-    @autotest()
-    def test_flow_sigmoid_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        y = torch.sigmoid(x)
-        return y
-
-    @autotest()
-    def test_tensor_sigmoid_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        y = x.sigmoid()
-        return y
-
-    @autotest()
-    def test_flow_inplace_sigmoid_with_random_data(test_case):
-        device = random_device()
-        x_0 = random_pytorch_tensor().to(device)
-        x = x_0 + 1
-        id_x = id(x)
-        torch.sigmoid_(x)
-        test_case.assertTrue(id_x == id(x))
-        return y
-
-    @autotest()
-    def test_tensor_inplace_sigmoid_with_random_data(test_case):
-        device = random_device()
-        x_0 = random_pytorch_tensor().to(device)
-        x = x_0 + 1
-        id_x = id(x)
-        x.sigmoid_()
-        test_case.assertTrue(id_x == id(x))
-        return x
-
 
 if __name__ == "__main__":
     unittest.main()
