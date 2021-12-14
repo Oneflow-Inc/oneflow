@@ -28,10 +28,8 @@ class MyModule(flow.nn.Module):
         super().__init__()
         w = flow.randn(10, 10, placement=P, sbp=SBP)
         self.weight = flow.nn.Parameter(w)
-        print(self.weight)
 
     def forward(self, input):
-        print(self.weight)
         return flow._C.gather(self.weight, input, 0)
 
 
