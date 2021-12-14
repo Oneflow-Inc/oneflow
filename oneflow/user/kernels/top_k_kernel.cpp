@@ -90,7 +90,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
 
     const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int64_t instance_num = in->shape().elem_cnt() / instance_size;
-    const int64_t k = std::min(ctx->Attr<int64_t>("k"), instance_size);
+    const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size);
     int64_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int64_t>() : nullptr;
     CpuTopK(ctx->stream(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,
             ctx->Attr<bool>("sorted"), out->mut_dptr<int64_t>());
@@ -105,7 +105,7 @@ class TopKCpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
         const Shape& in_shape = ctx->InputShape("in", 0);                               \
-        return ctx->Attr<int64_t>("k") > 1 ? in_shape.elem_cnt() * sizeof(int64_t) : 0; \
+        return ctx->Attr<int32_t>("k") > 1 ? in_shape.elem_cnt() * sizeof(int64_t) : 0; \
       });
 
 REGISTER_CPU_TOP_K_KERNEL(float)
