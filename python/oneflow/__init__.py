@@ -74,6 +74,7 @@ from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
+from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh
 from oneflow._C import tan
@@ -336,7 +337,6 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
-from oneflow.nn.modules.split import split_op as split
 from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
