@@ -34,6 +34,16 @@ _dtypes = [
     flow.record,
     flow.tensor_buffer,
     flow.bfloat16,
+    flow.uint16,
+    flow.uint32,
+    flow.uint64,
+    flow.uint128,
+    flow.int16,
+    flow.int64,
+    flow.int128,
+    flow.complex32,
+    flow.complex64,
+    flow.complex128,
 ]
 
 
@@ -57,6 +67,13 @@ _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     flow.int32: np.int32,
     flow.int64: np.int64,
     flow.uint8: np.uint8,
+    flow.uint16: np.uint16,
+    flow.uint32: np.uint32,
+    flow.uint64: np.uint64,
+    flow.int16: np.int16,
+    flow.int64: np.int64,
+    flow.complex64: np.complex64,
+    flow.complex128: np.complex128,
 }
 
 
