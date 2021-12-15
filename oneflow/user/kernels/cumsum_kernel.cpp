@@ -25,7 +25,11 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    // judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    auto nele = in->shape().elem_cnt();
+    if (!nele) { return; }
+
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dim = ctx->Attr<int64_t>("dim");
     const auto* pin = in->dptr<T>();
@@ -33,15 +37,20 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 
     // size means dimension size, cod means coefficient of dimension
     auto size = in->shape().At(dim);
+    auto space = in->shape().Count(dim);
     auto cod = in->shape().Count(dim) / size;
+    auto nspace = nele / space;
 
-    for (auto i = 0; i < size; i++) {
-      auto* tmp_pout = pout + i * cod;
-      std::copy_n(pin, cod, tmp_pout);
+    for (auto i = 0; i < nspace; i++) {
+      for (auto j = 0; j < size; j++) {
+        auto* tmp_pout = pout + i * cod * size + j * cod;
+        auto* tmp_pin = pin + i * cod * size;
+        std::copy_n(tmp_pin, cod, tmp_pout);
 
-      for (auto j = 1; j <= i; j++) {
-        auto* tmp_pin = pin + j * cod;
-        for (auto k = 0; k < cod; k++) { tmp_pout[k] += tmp_pin[k]; }
+        for (auto k = 1; k <= j; k++) {
+          auto* tmp_pin2 = tmp_pin + k * cod;
+          for (auto l = 0; l < cod; l++) { tmp_pout[l] += tmp_pin2[l]; }
+        }
       }
     }
   }
