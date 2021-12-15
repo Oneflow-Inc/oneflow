@@ -13,15 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union, List
-import numpy as np
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-import oneflow as flow
-from oneflow.framework.tensor import Tensor, register_tensor_op
-
-
-@register_tensor_op("split")
-def split_op(x, split_size_or_sections: Union[int, List[int]], dim: int = 0):
+add_docstr(
+    oneflow.split,
     """Splits the tensor into chunks.
 
     If `split_size_or_sections` is an integer type, then x will be split into equally sized chunks (if possible).
@@ -50,11 +46,5 @@ def split_op(x, split_size_or_sections: Union[int, List[int]], dim: int = 0):
                 [4, 5],
                 [6, 7],
                 [8, 9]], dtype=oneflow.int64))
-    """
-    return flow._C.split(x, split_size=split_size_or_sections, dim=dim)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
