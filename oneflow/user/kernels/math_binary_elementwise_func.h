@@ -161,18 +161,36 @@ struct Atan2Functor<half> {
   }
 
   static OF_HALF_FUNC const half BackwardXGrad(const half x, const half y, const half dz) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dz, __hdiv(y, __hadd(__hmul(y, y), __hmul(x, x))));
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+    return 0.;
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC const half BackwardYGrad(const half x, const half y, const half dz) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dz, __hdiv(__hneg(x), __hadd(__hmul(y, y), __hmul(x, x))));
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+    return 0.;
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
 template<>
 struct FloorDivFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return hfloor(__hdiv(x, y));
+#else
+    printf("use half need nvcc arch >= 530");
+    assert(false);
+    return 0.;
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC const half BackwardXGrad(const half x, const half y, const half dz) {
@@ -196,6 +214,7 @@ struct XdivyFunctor<half> {
 #else
     printf("use half need nvcc arch >= 530");
     assert(false);
+    return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
@@ -209,6 +228,7 @@ struct XdivyFunctor<half> {
 #else
     printf("use half need nvcc arch >= 530");
     assert(false);
+    return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
@@ -218,6 +238,7 @@ struct XdivyFunctor<half> {
 #else
     printf("use half need nvcc arch >= 530");
     assert(false);
+    return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
@@ -256,6 +277,7 @@ struct XlogyFunctor<half> {
 #else
     printf("use half need nvcc arch >= 530");
     assert(false);
+    return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
