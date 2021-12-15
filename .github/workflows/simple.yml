@@ -256,9 +256,6 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
-        if: always() && matrix.build-type == 'gcc7'
       - uses: Oneflow-Inc/get-oneflow@support-clang-12
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
