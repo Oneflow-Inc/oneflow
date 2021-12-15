@@ -68,6 +68,8 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
 // JIT ops
 
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
