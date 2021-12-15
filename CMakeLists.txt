@@ -226,6 +226,7 @@ else() # build_python
 endif(BUILD_PYTHON)
 
 include(third_party)
+add_subdirectory(external)
 
 if (BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
