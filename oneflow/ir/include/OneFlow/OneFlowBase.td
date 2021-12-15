@@ -52,6 +52,13 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
 
   // Custom sbp
   code infer_nd_sbp = ?;
+  code get_sbp = ?;
+  code infer_logical_tensor_desc = ?;
+  code infer_tensor_desc = ?;
+  code infer_dtype = ?;
+  code infer_device = ?;
+  code modify_input = ?;
+  code modify_output = ?;
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
