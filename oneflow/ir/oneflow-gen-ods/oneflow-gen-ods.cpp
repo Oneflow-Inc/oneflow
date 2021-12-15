@@ -384,7 +384,7 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
 
 bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
   return (IsPoolOp(r.op_type_name) || IsAdaptivePoolOp(r.op_type_name) || IsConvOp(r.op_type_name))
-         && !r.no_grad && !r.cpu_only_supported;
+         && !r.no_grad && !r.cpu_only_supported && r.same_output_regst_num == -1;
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -515,6 +515,12 @@ void PrintIsCpuOnly(const ::oneflow::user_op::OpRegistryResult& r) {
               << "\n";
   }
 }
+void PrintSameOutputRegstNum(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.same_output_regst_num != -1) {
+    std::cout << "  let same_output_regst_num = " << r.same_output_regst_num << ";"
+              << "\n";
+  }
+}
 
 void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   const ::oneflow::UserOpDef& op_def = r.op_def;
@@ -566,6 +572,7 @@ void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   PrintHasCanonicalizer(r.op_type_name);
   PrintNoGrad(r);
   PrintIsCpuOnly(r);
+  PrintSameOutputRegstNum(r);
   std::cout << "}"
             << "\n";
 }

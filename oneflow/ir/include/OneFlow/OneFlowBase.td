@@ -51,14 +51,23 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
   bit no_grad = 0;
   bit cpu_only = 0;
-  code infer_nd_sbp = ?; // Custom sbp infer
-  code get_sbp = ?; // List all supported sbp
+  int same_output_regst_num = -1;
+  code infer_nd_sbp =?;
+  code get_sbp = ?;
   code infer_logical_tensor_desc = ?;
   code infer_tensor_desc = ?;
   code infer_dtype = ?;
   code infer_device = ?;
-  code modify_input = ?;
+  code modify_input =?;
   code modify_output = ?;
+  // code infer_nd_sbp = [{ return $_this_class::InferLogicalTensorDesc(nd_sbp_ctx); }]; // Custom sbp infer
+  // code get_sbp = [{ return $_this_class::InferLogicalTensorDesc(sbp_ctx); }];  // List all supported sbp
+  // code infer_logical_tensor_desc = [{ return $_this_class::InferLogicalTensorDesc(infer_ctx); }];
+  // code infer_tensor_desc = [{ return $_this_class::InferTensorDesc(infer_ctx); }];
+  // code infer_dtype = [{ return $_this_class::InferDtype(infer_ctx); }];
+  // code infer_device = [{ return $_this_class::InferDevice(device_infer_ctx); }];
+  // code modify_input = [{ return $_this_class::ModifyInput(modifier, wrapper); }];
+  // code modify_output = [{ return $_this_class::ModifyOutput(modifier, wrapper); }];
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :

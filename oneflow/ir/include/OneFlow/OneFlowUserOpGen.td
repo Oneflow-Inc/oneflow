@@ -1949,6 +1949,7 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOp
 
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3301,6 +3302,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInte
     StrArrayAttr:$nd_sbp
   );
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3357,6 +3359,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, DeclareOpInterfaceM
     StrArrayAttr:$nd_sbp
   );
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3561,6 +3564,7 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterf
     StrArrayAttr:$nd_sbp
   );
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3576,6 +3580,7 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareO
     StrArrayAttr:$nd_sbp
   );
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3910,6 +3915,7 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfac
     StrArrayAttr:$nd_sbp
   );
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -6505,6 +6511,7 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, DeclareOpInt
     AnyType:$out
   );
   let no_grad = 1;
+  let same_output_regst_num = 1;
 }
 
 #endif // GET_ONEFLOW_UNARY_OP_DEFINITIONS
