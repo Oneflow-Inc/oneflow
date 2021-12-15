@@ -104,7 +104,7 @@ class ConsistentEyeSbpListFunctor {
     auto res = JUST(
         OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp)));
     JUST(res->set_requires_grad(requires_grad));
-    return Maybe<Tensor>(res);
+    return res;
   }
 
  private:
