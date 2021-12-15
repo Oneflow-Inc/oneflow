@@ -134,7 +134,6 @@ def OneFlow_VariableWithoutCtrlOp : OneFlow_BaseOp<"variable_without_ctrl", [NoS
   let output = (outs AnyType:$output);
 
   let attrs = (ins
-    StrArrayAttr:$output_lbns,
     AnyI64ElementsAttr:$shape,
     OptionalAttr<OneFlow_DataType>:$data_type,
     DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
