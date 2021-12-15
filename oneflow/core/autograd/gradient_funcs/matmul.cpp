@@ -196,9 +196,9 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
 
   if (ctx->requires_grad_b) {
     ctx->b_num_axes = inputs.at(1)->shape()->NumAxes();
-    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input b
+    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
     if(broadcast_b){
-      ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input a
+      ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
     }
   }
   return Maybe<void>::Ok();
@@ -253,7 +253,6 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
 
   if (ctx->requires_grad_b) {
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-    std::shared_ptr<Tensor> broadcast_grad_b;
     if(ctx->b_num_axes == 2 && !ctx->transpose_a){
       if (ctx->transpose_b) {
         in_grads->at(1) =
@@ -263,6 +262,7 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
             JUST(functional::BroadcastMatmulGradB(input_a, out_grads.at(0), ctx->alpha));
       }
     }else{
+      std::shared_ptr<Tensor> broadcast_grad_b;
       if (ctx->transpose_b) {
         broadcast_grad_b =
             JUST(functional::MatMul(out_grads.at(0), input_a, true, ctx->transpose_a, ctx->alpha));
