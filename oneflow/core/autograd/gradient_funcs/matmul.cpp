@@ -177,6 +177,10 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
     };
   };
   auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, *out_shape);
+  const auto a_shape = input_a->shape();
+  const int64_t a_num_axes = a_shape->NumAxes();
+  const auto b_shape = input_b->shape();
+  const int64_t b_num_axes = b_shape->NumAxes();
 
   if (ctx->requires_grad_a) {
     std::shared_ptr<Tensor> broadcast_grad_a;
@@ -188,8 +192,6 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
           functional::MatMul(out_grads.at(0), input_b, false, !(ctx->transpose_b), ctx->alpha));
     }
     std::vector<int32_t> a_reduce_vec;
-    const auto a_shape = input_a->shape();
-    const int64_t a_num_axes = a_shape->NumAxes();
     auto GetABatchDim = MakeGetBatchDim(a_num_axes, *a_shape);
     const int64_t a_out_num_dim_differ = out_num_axes - a_num_axes;
     for (int32_t i = 0; i < out_num_axes - 2; i++) {
@@ -198,17 +200,19 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
         a_reduce_vec.push_back(i);
       }
     }
-    in_grads->at(0) = JUST(functional::ReduceSumLike(broadcast_grad_a, input_a, a_reduce_vec));
+    if(a_reduce_vec.empty()){
+      printf("A reduce vec is empty! \n"); 
+      in_grads->at(0) = broadcast_grad_a;
+    }else{
+      printf("A reduce vec is Not empty! \n"); 
+      in_grads->at(0) = JUST(functional::ReduceSumLike(broadcast_grad_a, input_a, a_reduce_vec));
+    }
   }
 
   if (ctx->requires_grad_b) {
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
     const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     std::shared_ptr<Tensor> broadcast_grad_b;
-
-    const auto b_shape = input_b->shape();
-    const int64_t b_num_axes = b_shape->NumAxes();
-
     if(b_num_axes == 2 && !ctx->transpose_a){
       if (ctx->transpose_b) {
         in_grads->at(1) =
@@ -234,7 +238,13 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
           b_reduce_vec.push_back(i);
         }
       }
-      in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
+      if(b_reduce_vec.empty()){
+        printf("B reduce vec is empty! \n"); 
+        in_grads->at(1) = broadcast_grad_b;
+      }else{
+        printf("B reduce vec is Not empty! \n"); 
+        in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
+      }
     }
   }
   return Maybe<void>::Ok();
