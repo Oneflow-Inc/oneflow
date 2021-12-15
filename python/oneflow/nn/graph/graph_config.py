@@ -157,9 +157,7 @@ class GraphConfig(object):
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
-        opt_dict.generate_optimizer_and_variable_configs(
-            self.proto.mutable_train_conf(), variables_conf
-        )
+        opt_dict.generate_optimizer_and_variable_configs(self.proto, variables_conf)
 
     def __repr__(self):
         main_str = (
