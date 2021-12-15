@@ -72,6 +72,7 @@ from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
+from oneflow._C import broadcast_like
 from oneflow._C import chunk
 from oneflow._C import sign
 from oneflow._C import sinh
@@ -125,6 +126,7 @@ from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import log
+from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import pow
@@ -251,6 +253,7 @@ del oneflow
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
+from oneflow._C import from_numpy
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
@@ -283,9 +286,9 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
+from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
-from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
