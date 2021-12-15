@@ -110,8 +110,9 @@ struct BroadcastMatmulCaptureState : public AutoGradCaptureState {
   bool requires_grad_b;
   size_t a_index;
   size_t b_index;
-  DimVector a_shape_vec;
-  DimVector b_shape_vec;
+  bool broadcast_a; 
+  bool broadcast_b; 
+  int64_t b_num_axes; 
 };
 
 class BroadcastMatmul : public OpExprGradFunction<BroadcastMatmulCaptureState> {
@@ -138,23 +139,62 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
                                      const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad_a = inputs.at(0)->requires_grad();
   ctx->requires_grad_b = inputs.at(1)->requires_grad();
-
-  ctx->a_shape_vec = inputs.at(0)->shape()->dim_vec();
-  ctx->b_shape_vec = inputs.at(1)->shape()->dim_vec();
-
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
+
+  const auto a_shape = inputs.at(0)->shape();
+  const auto b_shape = inputs.at(1)->shape();
+
+  const int64_t a_num_axes = a_shape->NumAxes();
+  const int64_t b_num_axes = b_shape->NumAxes();
+
+  const size_t num_max_batch_dims = std::max(a_num_axes, b_num_axes) - 2;
+  auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
+    const int64_t num_batch_dims = num_dims - 2;
+    const int64_t num_padding_dims = num_max_batch_dims - num_batch_dims;
+    return [num_padding_dims, shape_dim](size_t index) {
+      return index < num_padding_dims ? 1 : shape_dim.At(index - num_padding_dims);
+    };
+  };
+  auto GetABatchDim = MakeGetBatchDim(a_num_axes, *a_shape);
+  auto GetBBatchDim = MakeGetBatchDim(b_num_axes, *b_shape);
+  bool broadcast_a = false; 
+  bool broadcast_b = false; 
+
+  for (int32_t i = 0; i < num_max_batch_dims; i++) {
+    if (GetABatchDim(i) < GetBBatchDim(i) || a_num_axes < b_num_axes) {
+      broadcast_a = true; 
+      break; 
+    }
+  }
+
+  for (int32_t i = 0; i < num_max_batch_dims; i++) {
+    if (GetBBatchDim(i) < GetABatchDim(i) || b_num_axes < a_num_axes) {
+      broadcast_b = true; 
+      break; 
+    }
+  }
+
+  ctx->broadcast_a = broadcast_a; 
+  ctx->broadcast_b = broadcast_b; 
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a"));
   ctx->transpose_b = JUST(composed_attrs.GetAttr<bool>("transpose_b"));
   ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+
   if (ctx->requires_grad_a) {
-    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
     ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
+    if(broadcast_a){
+      ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
+    }
   }
+
   if (ctx->requires_grad_b) {
-    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
-    ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
+    ctx->b_num_axes = inputs.at(1)->shape()->NumAxes();
+    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input b
+    if(broadcast_b){
+      ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input a
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -164,8 +204,6 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(2);
-  const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-  const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
   const auto out_shape = out_grads.at(0)->shape();
   const int64_t out_num_axes = out_shape->NumAxes();
   const size_t num_max_batch_dims = out_num_axes - 2;
@@ -177,13 +215,9 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
     };
   };
   auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, *out_shape);
-  const auto a_shape = input_a->shape();
-  const int64_t a_num_axes = a_shape->NumAxes();
-  const auto b_shape = input_b->shape();
-  const int64_t b_num_axes = b_shape->NumAxes();
-
   if (ctx->requires_grad_a) {
     std::shared_ptr<Tensor> broadcast_grad_a;
+    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     if (ctx->transpose_a) {
       broadcast_grad_a =
           JUST(functional::MatMul(input_b, out_grads.at(0), ctx->transpose_b, true, ctx->alpha));
@@ -191,27 +225,32 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
       broadcast_grad_a = JUST(
           functional::MatMul(out_grads.at(0), input_b, false, !(ctx->transpose_b), ctx->alpha));
     }
-    std::vector<int32_t> a_reduce_vec;
-    auto GetABatchDim = MakeGetBatchDim(a_num_axes, *a_shape);
-    const int64_t a_out_num_dim_differ = out_num_axes - a_num_axes;
-    for (int32_t i = 0; i < out_num_axes - 2; i++) {
-      if (GetOutBatchDim(i) > GetABatchDim(i)
-          || (GetOutBatchDim(i) == 1 && i < a_out_num_dim_differ)) {
-        a_reduce_vec.push_back(i);
+    if(ctx->broadcast_a){
+      printf("Here Broadcast A! \n");
+      const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
+      const auto a_shape = input_a->shape();
+      const int64_t a_num_axes = a_shape->NumAxes();
+
+      std::vector<int32_t> a_reduce_vec;
+      auto GetABatchDim = MakeGetBatchDim(a_num_axes, *a_shape);
+      const int64_t a_out_num_dim_differ = out_num_axes - a_num_axes;
+      for (int32_t i = 0; i < out_num_axes - 2; i++) {
+        if (GetOutBatchDim(i) > GetABatchDim(i)
+            || (GetOutBatchDim(i) == 1 && i < a_out_num_dim_differ)) {
+          a_reduce_vec.push_back(i);
+        }
       }
-    }
-    if(a_reduce_vec.empty()){
-      in_grads->at(0) = broadcast_grad_a;
-    }else{
       in_grads->at(0) = JUST(functional::ReduceSumLike(broadcast_grad_a, input_a, a_reduce_vec));
+    }
+    else{
+      in_grads->at(0) = broadcast_grad_a;
     }
   }
 
   if (ctx->requires_grad_b) {
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     std::shared_ptr<Tensor> broadcast_grad_b;
-    if(b_num_axes == 2 && !ctx->transpose_a){
+    if(ctx->b_num_axes == 2 && !ctx->transpose_a){
       if (ctx->transpose_b) {
         in_grads->at(1) =
             JUST(functional::BroadcastMatmulGradB(out_grads.at(0), input_a, ctx->alpha));
@@ -227,19 +266,22 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
         broadcast_grad_b =
             JUST(functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
       }
-      std::vector<int32_t> b_reduce_vec;
-      auto GetBBatchDim = MakeGetBatchDim(b_num_axes, *b_shape);
-      const int64_t b_out_num_dim_differ = out_num_axes - b_num_axes;
-      for (int32_t i = 0; i < out_num_axes - 2; i++) {
-        if (GetOutBatchDim(i) > GetBBatchDim(i)
-            || (GetOutBatchDim(i) == 1 && i < b_out_num_dim_differ)) {
-          b_reduce_vec.push_back(i);
+      if(ctx->broadcast_b){
+        printf("Here Broadcast B! \n");
+        const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
+        const auto b_shape = input_b->shape();
+        std::vector<int32_t> b_reduce_vec;
+        auto GetBBatchDim = MakeGetBatchDim(ctx->b_num_axes, *b_shape);
+        const int64_t b_out_num_dim_differ = out_num_axes - ctx->b_num_axes;
+        for (int32_t i = 0; i < out_num_axes - 2; i++) {
+          if (GetOutBatchDim(i) > GetBBatchDim(i)
+              || (GetOutBatchDim(i) == 1 && i < b_out_num_dim_differ)) {
+            b_reduce_vec.push_back(i);
+          }
         }
-      }
-      if(b_reduce_vec.empty()){
-        in_grads->at(1) = broadcast_grad_b;
-      }else{
         in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
+      }else{
+        in_grads->at(1) = broadcast_grad_b;
       }
     }
   }
