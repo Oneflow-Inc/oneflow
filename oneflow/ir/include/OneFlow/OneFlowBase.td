@@ -68,6 +68,17 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   // code infer_device = [{ return $_this_class::InferDevice(device_infer_ctx); }];
   // code modify_input = [{ return $_this_class::ModifyInput(modifier, wrapper); }];
   // code modify_output = [{ return $_this_class::ModifyOutput(modifier, wrapper); }];
+  bit has_check_fn = 0;
+  bit has_logical_tensor_desc_infer_fn = 0;
+  bit has_physical_tensor_desc_infer_fn = 0;
+  bit has_get_sbp_fn = 0;
+  bit has_sbp_signature_infer_fn = 0;
+  bit has_data_type_infer_fn = 0;
+  bit has_device_infer_fn = 0;
+  bit has_input_arg_modify_fn = 0;
+  bit has_output_arg_modify_fn = 0;
+  bit has_output_blob_time_shape_infer_fn = 0;
+  bit has_nd_sbp_infer_fn = 0;
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
