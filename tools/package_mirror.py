@@ -70,6 +70,7 @@ def should_be_mirrored(url: str):
         and not "mirror.tensorflow.org" in url
         and not "mirror.bazel.build" in url
         and not "aliyuncs.com" in url
+        and not "file:" in url
     )
 
 
