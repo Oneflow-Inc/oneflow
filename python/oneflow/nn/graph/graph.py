@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+import time
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
-import time
+from google.protobuf import text_format
 
 import oneflow
 import oneflow._oneflow_internal
@@ -35,6 +37,7 @@ from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
@@ -212,7 +215,7 @@ class Graph(object):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optim, Optimizer
+            optim, (Optimizer, SparseOptimizer)
         ), "optimizer must be an instance of Optimizer"
         opt_dict["optim"] = optim
         if lr_sch is not None:
@@ -435,6 +438,7 @@ class Graph(object):
                 self._variables_conf[state_block.origin] = VariableConfig(
                     state_block.name_prefix + state_block.name
                 )
+
         for opt in self._opts:
             opt_dict = OptDict(opt)
             self.config._generate_optimizer_and_variable_configs(

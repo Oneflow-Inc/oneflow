@@ -75,7 +75,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
       std::make_shared<Stride>(target_stride), storage_offset);
 
-  JUST(input->has_eager_blob_object());
+  CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
