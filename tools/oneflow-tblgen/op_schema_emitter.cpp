@@ -61,6 +61,7 @@ class OpSchemaEmitter {
 
   void emitAttrs(const Record* def, json* op) const;
 
+  void emitInt(const Record* def, StringRef fieldname, json* op) const;
   void emitBit(const Record* def, StringRef fieldname, json* op) const;
 
  private:
@@ -125,6 +126,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
 
     emitInputAndOutput(def, &op);
     emitAttrs(def, &op);
+    emitInt(def, "same_output_regst_num", &op);
     emitBit(def, "no_grad", &op);
     emitBit(def, "cpu_only", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
@@ -195,6 +197,11 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
 template<FileTarget Target>
 void OpSchemaEmitter<Target>::emitBit(const Record* def, StringRef fieldname, json* op) const {
   (*op)[fieldname.str()] = def->getValueAsBit(fieldname);
+}
+
+template<FileTarget Target>
+void OpSchemaEmitter<Target>::emitInt(const Record* def, StringRef fieldname, json* op) const {
+  (*op)[fieldname.str()] = def->getValueAsInt(fieldname);
 }
 
 template<>
