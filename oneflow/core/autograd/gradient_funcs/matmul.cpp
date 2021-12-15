@@ -173,6 +173,11 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
       break; 
     }
   }
+  
+  if(b_num_axes == 2 && !ctx->transpose_a){
+    // In this case, we can directly use `broadcast_matmul_grad_b` OP to generate Grad instead of broadcast_matmul+reduce_sum_like. 
+    broadcast_b = false; 
+  }
 
   ctx->broadcast_a = broadcast_a; 
   ctx->broadcast_b = broadcast_b; 
@@ -226,7 +231,6 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
           functional::MatMul(out_grads.at(0), input_b, false, !(ctx->transpose_b), ctx->alpha));
     }
     if(ctx->broadcast_a){
-      printf("Here Broadcast A! \n");
       const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
       const auto a_shape = input_a->shape();
       const int64_t a_num_axes = a_shape->NumAxes();
@@ -267,7 +271,6 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
             JUST(functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
       }
       if(ctx->broadcast_b){
-        printf("Here Broadcast B! \n");
         const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
         const auto b_shape = input_b->shape();
         std::vector<int32_t> b_reduce_vec;

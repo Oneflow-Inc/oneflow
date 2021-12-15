@@ -495,7 +495,7 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       const user_op::TensorDesc& b = ctx->FwOp().TensorDesc4ArgNameAndIndex("b", 0); 
       const user_op::TensorDesc& out_grads = ctx->FwOp().TensorDesc4ArgNameAndIndex("out", 0); 
       
-      const auto out_shape = out_grads.shape();
+      const Shape& out_shape = out_grads.shape();
       const int64_t out_num_axes = out_shape.NumAxes();
       const size_t num_max_batch_dims = out_num_axes - 2;
 
