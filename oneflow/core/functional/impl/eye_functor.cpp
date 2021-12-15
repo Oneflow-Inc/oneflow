@@ -76,6 +76,11 @@ class ConsistentEyeSbpListFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
+    CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
+        << "len(sbp) == len(placement.hierarchy) required, but "
+        << "len(sbp)==" << sbp_tuple.size() << ", "
+        << "len(placement.hierarchy)==" << placement->hierarchy()->NumAxes();
+
     JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
     JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));

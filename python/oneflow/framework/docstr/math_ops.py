@@ -1347,11 +1347,13 @@ add_docstr(
         m (Optional[int], optional): the number of colums with default being n. Defaults to None.
     
     Keyword args:
-        device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
+        device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
+        placement(Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the tensor is stored on.
+        sbp(Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a consistent tensor, specify the SBP of the tensor.
     
     Returns:
-        oneflow.Tensor: The result Blob with ones on the diagonal and zeros elsewhere.
+        oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
     
     For example:
 
@@ -1363,6 +1365,10 @@ add_docstr(
         tensor([[1., 0., 0.],
                 [0., 1., 0.],
                 [0., 0., 1.]], dtype=oneflow.float32)
-    
-    """
+        >>> out = flow.eye(3, 3, device="cuda")
+        >>> out
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
+    """,
 )
