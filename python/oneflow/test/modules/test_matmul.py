@@ -42,11 +42,27 @@ class TestModule(flow.unittest.TestCase):
         return x.matmul(y)
 
     @autotest()
-    def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
+    def test_flow_tensor_y_broadcast_x_matmul(test_case):
         device = random_device()
         k = random(1, 6)
         x = random_pytorch_tensor(ndim=4, dim3=k).to(device)
         y = random_pytorch_tensor(ndim=2, dim0=k).to(device)
+        return x.matmul(y)
+
+    @autotest()
+    def test_flow_tensor_x_broadcast_y_matmul(test_case):
+        device = random_device()
+        k = random(1, 6).to(int)
+        x = random_pytorch_tensor(ndim=2, dim3=k).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=k).to(device)
+        return x.matmul(y)
+
+    @autotest()
+    def test_flow_tensor_broadcast_matmul_with_same_dims(test_case):
+        device = random_device()
+        k = random(1, 6).to(int)
+        x = random_pytorch_tensor(ndim=4, dim1=1, dim3=k).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=1, dim2=k).to(device)
         return x.matmul(y)
 
 
