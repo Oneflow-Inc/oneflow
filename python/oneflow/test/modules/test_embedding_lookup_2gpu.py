@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+#python3 -m oneflow.distributed.launch --nproc_per_node=2 test_embedding_lookup_2gpu.py
+
 import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
