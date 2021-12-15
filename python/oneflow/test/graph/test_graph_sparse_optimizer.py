@@ -19,14 +19,11 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
-P = flow.placement("cuda", {0: [0]})
-SBP = flow.sbp.broadcast
-
 
 class MyModule(flow.nn.Module):
-    def __init__(self):
+    def __init__(self, placement=None, sbp=None):
         super().__init__()
-        w = flow.randn(10, 10, placement=P, sbp=SBP)
+        w = flow.randn(10, 10, placement=placement, sbp=sbp)
         self.weight = flow.nn.Parameter(w)
 
     def forward(self, input):
@@ -45,19 +42,21 @@ class MyGraph(flow.nn.Graph):
         result.mean().backward()
 
 
-def _rand_input():
+def _rand_input(placement=None, sbp=None):
     generator = flow.Generator()
     generator.manual_seed(0)
-    return flow.randint(0, 10, (8,), generator=generator, placement=P, sbp=SBP)
+    return flow.randint(0, 10, (8,), generator=generator, placement=placement, sbp=sbp)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
     def test(test_case):
-        m = MyModule()
+        PLC = flow.placement("cuda", {0: [0]})
+        SBP = flow.sbp.broadcast
+        m = MyModule(PLC, SBP)
         graph = MyGraph(m)
-        graph._compile(_rand_input())
+        graph._compile(_rand_input(PLC, SBP))
 
         sparse_optimizer_found = False
         for op in graph._full_graph_proto.net.op:
