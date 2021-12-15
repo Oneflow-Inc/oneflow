@@ -83,9 +83,10 @@ class ConsistentEyeSbpListFunctor {
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
         << "len(placement.hierarchy)==" << placement->hierarchy()->NumAxes();
-    
-    FOR_RANGE(int32_t, i, 0, sbp_tuple.size()){
-        CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel()) << "sbp of eye should be broadcast only";
+
+    FOR_RANGE(int32_t, i, 0, sbp_tuple.size()) {
+      CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel())
+          << "sbp of eye should be broadcast only";
     }
 
     JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
@@ -95,7 +96,7 @@ class ConsistentEyeSbpListFunctor {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
         for (int i = 0; i < sbp_tuple.size(); ++i) {
-            nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
