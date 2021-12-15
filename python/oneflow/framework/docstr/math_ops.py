@@ -1340,7 +1340,9 @@ add_docstr(
 
 add_docstr(
     oneflow.eye,
-    """This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
+    """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
+    
+    This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
     Args:
         n (int): the number of rows.
