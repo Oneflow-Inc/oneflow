@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/embedding/hash_functions.cuh"
 
 namespace oneflow {
 
@@ -122,7 +123,7 @@ __global__ void OrdinalEncodingKernel(uint64_t capacity, TableEntry<Key, Index>*
                                       uint64_t* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
-    uint64_t hash = keys[i];
+    uint64_t hash = XXH64()(key);
     bool success = GetOrInsertOne<Key, Index>(capacity, table, table_size, key, hash, context + i);
     assert(success);
   }
