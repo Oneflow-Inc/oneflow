@@ -56,11 +56,11 @@ inline void PrintTensor(const Tensor& tensor) {
             << tensor.device().device_id() << " ";
   for (int i = 0; i < tensor.shape().NumAxes(); ++i) { std::cout << tensor.shape().At(i) << " "; }
   std::cout << std::endl;
-  // float* data = new float[tensor.shape().elem_cnt() * 4];
-  // tensor.copy_to(data);
-  // for (int i = 0; i < tensor.shape().elem_cnt(); ++i) { std::cout << data[i] << " "; }
-  // std::cout << std::endl;
-  // delete[] data;
+  float* data = new float[tensor.shape().elem_cnt() * 4];
+  tensor.copy_to(data);
+  for (int i = 0; i < tensor.shape().elem_cnt(); ++i) { std::cout << data[i] << " "; }
+  std::cout << std::endl;
+  delete[] data;
 }
 
 }  // namespace oneflow_api

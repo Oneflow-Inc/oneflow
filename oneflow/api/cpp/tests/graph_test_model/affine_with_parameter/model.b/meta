@@ -1,5 +1,4 @@
 shape {
-  dim: 2
-  dim: 2
+  dim: 4
 }
 data_type: kFloat

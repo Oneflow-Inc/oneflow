@@ -141,7 +141,7 @@ class Graph::GraphImpl final {
   oneflow::Maybe<void> AddOp(oneflow::OperatorConf op_conf);
   oneflow::Maybe<void> BuildGraph(const std::vector<Tensor>& inputs);
   oneflow::Maybe<void> LoadCheckpoint();
-  oneflow::Maybe<void> RegisterTensors();
+  oneflow::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
 
   std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
   const std::string model_path_;
@@ -151,7 +151,7 @@ class Graph::GraphImpl final {
   Device device_;
   oneflow::Job job_;
 
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> input_name_to_tensor_;
+  oneflow::HashMap<std::string, int> input_name_to_order_;
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
   oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
   std::shared_ptr<oneflow::one::TensorTuple> output_tensor_tuple_;
@@ -185,8 +185,7 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     CHECK(job_.ParseFromIstream(&input));
   }
   // prevent model name conflict when launch multiple model instances
-  job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name()
-                                        + of::NewUniqueId());
+  job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
@@ -206,7 +205,7 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
   JUST(BuildGraph(inputs));
   JUST(LoadCheckpoint());
-  JUST(RegisterTensors());
+  JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());
   return of::Maybe<void>::Ok();
 }
@@ -243,15 +242,14 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
   CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
                                  xrt_kind_);
   {
-    // TODO(zzk0): remove this; used for input tensor order
     int input_tensor_order = 0;
     const of::OpGraph op_graph(job_);
     JUST(op_graph.ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
       const of::OperatorConf& op_conf = node.op().op_conf();
       JUST(AddOp(op_conf));
       if (op_conf.has_input_conf()) {
-        // TODO(zzk0): input tensor order
-        input_name_to_tensor_[op_conf.name()] = inputs.at(input_tensor_order++).tensor_;
+        input_name_to_order_[op_conf.name()] = input_tensor_order;
+        input_tensor_order += 1;
       } else if (op_conf.has_variable_conf()) {
         const of::LazyMode::Guard lazy_mode_disabled_guard{false};
         const of::VariableOpConf& variable_conf = op_conf.variable_conf();
@@ -314,11 +312,14 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::GraphImpl::RegisterTensors() {
+of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inputs) {
   {
-    const auto& pair = Unzip(input_name_to_tensor_);
-    const std::vector<std::string>& input_op_names = pair.first;
-    const std::vector<std::shared_ptr<of::one::Tensor>>& input_tensors = pair.second;
+    std::vector<std::string> input_op_names(inputs.size());
+    std::vector<std::shared_ptr<of::one::Tensor>> input_tensors(inputs.size());
+    for (const auto& name_order : input_name_to_order_) {
+      input_op_names[name_order.second] = name_order.first;
+      input_tensors[name_order.second] = inputs.at(name_order.second).tensor_;
+    }
     JUST(graph_->RegisterInputOpNamesAndTensors(input_op_names, input_tensors));
   }
   {
