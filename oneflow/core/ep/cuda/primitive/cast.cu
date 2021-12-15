@@ -123,7 +123,7 @@ class CastFactoryImpl : public CastFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, CastFactory, CastFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, CastFactory, CastFactoryImpl);
 
 }  // namespace
 

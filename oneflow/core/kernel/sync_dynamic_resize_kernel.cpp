@@ -89,7 +89,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
       queue_.push(cuda_host_mem_ptr);
     };
     if (conf.eager()) {
-      OF_CUDA_CHECK(cudaStreamSynchronize(ctx->device_ctx()->cuda_stream()));
+      CHECK_JUST(ctx->stream()->Sync());
       UpdateShape();
     } else {
       auto* actor_context_provider = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(ctx));

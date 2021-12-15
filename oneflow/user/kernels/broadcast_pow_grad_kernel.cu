@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
@@ -59,8 +60,8 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
     NdarrayUtil<device, T>::BroadcastAdd(ctx->stream(), tmp, x, const_tmp);
     ComputeLogGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                       ctx->device_ctx()->cuda_stream()>>>(elem_cnt, tmp_buffer->mut_dptr<T>(),
-                                                           tmp_buffer->dptr<T>());
+                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, tmp_buffer->mut_dptr<T>(), tmp_buffer->dptr<T>());
     NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
     NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, z, const_tmp);
     NdarrayUtil<device, T>::ReduceSum(ctx->stream(), dy, const_tmp, tmp);
@@ -81,6 +82,6 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 }  // namespace oneflow

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/lazy/actor/light_actor.h"
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/stream/include/stream_context.h"
 
 namespace oneflow {
@@ -29,7 +30,10 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
   StreamContext* stream_ctx =
       NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
   stream_ctx_.reset(stream_ctx);
-  actor_thread_ = std::thread([this]() {
+  actor_thread_ = std::thread([this, stream_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_" + DeviceTypeName(stream_id.device_id().device_type())
+                                      + std::to_string(stream_id.device_id().device_index())
+                                      + "_actor");
     CHECK_JUST(stream_ctx_->stream()->OnExecutionContextSetup());
     PollMsgChannel();
     CHECK_JUST(stream_ctx_->stream()->OnExecutionContextTeardown());

@@ -28,7 +28,9 @@ def np_allclose_with_shape(a, b, *args, **kwargs):
     return np.allclose(a, b, *args, **kwargs)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+test_device = ["cpu"] if os.getenv("ONEFLOW_TEST_CPU_ONLY") else ["cpu", "cuda"]
+
+
 @flow.unittest.skip_unless_1n2d()
 class TestDDP(flow.unittest.TestCase):
     def _test_ddp_basic(test_case, dev_type):
@@ -59,7 +61,7 @@ class TestDDP(flow.unittest.TestCase):
         )
 
     def test_ddp_basic(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        for dev_type in test_device:
             test_case._test_ddp_basic(dev_type)
 
     def _test_ddp_with_unused_param(test_case, dev_type):
@@ -99,7 +101,7 @@ class TestDDP(flow.unittest.TestCase):
         )
 
     def test_ddp_with_unused_param(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        for dev_type in test_device:
             test_case._test_ddp_with_unused_param(dev_type)
 
     def _test_out_of_order_execution(test_case, dev_type):
@@ -140,7 +142,7 @@ class TestDDP(flow.unittest.TestCase):
         test_case.assertTrue(np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
 
     def test_out_of_order_execution(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        for dev_type in test_device:
             test_case._test_out_of_order_execution(dev_type)
 
     def _test_broadcast_buffer(test_case, dev_type):
@@ -187,7 +189,7 @@ class TestDDP(flow.unittest.TestCase):
             raise ValueError()
 
     def test_broadcast_buffer(test_case):
-        for dev_type in ["cuda", "cpu"]:
+        for dev_type in test_device:
             test_case._test_broadcast_buffer(dev_type)
 
 

@@ -34,7 +34,7 @@ Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
     std::iota(reduced_axes.begin(), reduced_axes.end(), 0);
     FOR_RANGE(int64_t, i, reduced_axes.size(), y_shape.NumAxes()) {
       if (x_extend_shape.At(i) == 1 && y_shape.At(i) != 1) {
-        reduced_axes.push_back(i);
+        reduced_axes.emplace_back(i);
       } else {
         CHECK_EQ(x_extend_shape.At(i), y_shape.At(i));
       }
@@ -48,7 +48,7 @@ Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
             .Output("y")
             .ScopeSymbolId(op.op_conf().scope_symbol_id())
             .Build();
-    op_confs->push_back(reduce_sum_like_op.op_conf());
+    op_confs->emplace_back(reduce_sum_like_op.op_conf());
     *DiffLbi4BnInOp("x") = GenLogicalBlobId(reduce_sum_like_op.output("y", 0));
   }
   return Maybe<void>::Ok();

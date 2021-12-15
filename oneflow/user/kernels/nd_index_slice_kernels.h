@@ -75,8 +75,8 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* c
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
-  GatherNdFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
-                                       params->dptr<T>(), out->mut_dptr<T>());
+  GatherNdFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(), params->dptr<T>(),
+                                       out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -88,7 +88,7 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* 
   Memset<device_type>(ctx->stream(), out->mut_dptr<T>(), 0, out_bytes_size);
   if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
-  ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+  ScatterNdAddFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
 
@@ -103,9 +103,9 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
   Memcpy<device_type>(ctx->stream(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  FillByNdIndexFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+  FillByNdIndexFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
                                             out->mut_dptr<T>(), static_cast<T>(0));
-  ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+  ScatterNdAddFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
 
@@ -120,7 +120,7 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
   Memcpy<device_type>(ctx->stream(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  ScatterNdAddFunctor<device_type, T, I>()(ctx->device_ctx(), args, indices->dptr<I>(),
+  ScatterNdAddFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
 

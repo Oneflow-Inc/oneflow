@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/ctc_loss_kernel_util.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -237,8 +238,8 @@ __global__ void CtcLossGradGpu(
 }  // namespace
 
 template<typename T, typename IDX>
-struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
-  static void CtcLossForward(DeviceCtx* ctx, const T* log_probs_ptr, const int* targets_ptr,
+struct CtcLossKernelUtil<DeviceType::kCUDA, T, IDX> {
+  static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
@@ -247,13 +248,13 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
                              const int64_t max_target_length, const int blank,
                              const int32_t targets_ndim) {
     int32_t thread_num = batch_size * kCudaThreadsNumPerBlock;
-    RUN_CUDA_KERNEL((CtcLossGpu<T, IDX>), ctx, thread_num, log_probs_ptr, targets_ptr,
+    RUN_CUDA_KERNEL((CtcLossGpu<T, IDX>), stream, thread_num, log_probs_ptr, targets_ptr,
                     input_lengths_ptr, target_lengths_ptr, alpha_ptr, loss_ptr, input_helper,
                     alpha_helper, batch_size, max_input_length, max_target_length, blank,
                     targets_ndim);
   }
 
-  static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
+  static void CtcLossBackward(ep::Stream* stream, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
                               const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                               T* beta_ptr, T* grad_ptr,
@@ -264,20 +265,20 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
                               const int blank, const bool zero_infinity,
                               const int32_t targets_ndim) {
     int32_t thread_num = batch_size * kCudaThreadsNumPerBlock;
-    RUN_CUDA_KERNEL((CtcLossGradGpu<T, IDX>), ctx, thread_num, grad_out_ptr, loss_ptr, alpha_ptr,
+    RUN_CUDA_KERNEL((CtcLossGradGpu<T, IDX>), stream, thread_num, grad_out_ptr, loss_ptr, alpha_ptr,
                     log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr, beta_ptr,
                     grad_ptr, input_helper, beta_helper, batch_size, max_input_length,
                     max_target_length, num_labels, blank, zero_infinity, targets_ndim);
   }
 };
 
-#define INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU(device_type_v, log_probs_dtype_pair,          \
-                                             input_lengths_dtype_pair)                     \
+#define INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CUDA(device_type_v, log_probs_dtype_pair,         \
+                                              input_lengths_dtype_pair)                    \
   template struct CtcLossKernelUtil<device_type_v, OF_PP_PAIR_FIRST(log_probs_dtype_pair), \
                                     OF_PP_PAIR_FIRST(input_lengths_dtype_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CUDA, (DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-#undef INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU
+#undef INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

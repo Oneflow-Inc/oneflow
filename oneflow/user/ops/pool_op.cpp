@@ -113,196 +113,106 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
 
 }  // namespace
 
-REGISTER_USER_OP("avg_pool_1d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+#define REGISTER_TF_AVG_POOL_FORWARD_OP(name, dim)        \
+  REGISTER_USER_OP(name)                                  \
+      .Input("x")                                         \
+      .Output("y")                                        \
+      .Attr<std::string>("padding")                       \
+      .Attr<std::vector<int32_t>>("padding_before")       \
+      .Attr<std::vector<int32_t>>("padding_after")        \
+      .Attr<std::string>("data_format")                   \
+      .Attr<std::vector<int32_t>>("pool_size")            \
+      .Attr<std::vector<int32_t>>("strides")              \
+      .Attr<bool>("ceil_mode")                            \
+      .SetTensorDescInferFn(MakeFwTensorDescInferFn(dim)) \
+      .SetGetSbpFn(FwGetSbpFn)                            \
+      .SetDataTypeInferFn(FwInferDataType);
 
-REGISTER_USER_OP("avg_pool_1d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+REGISTER_TF_AVG_POOL_FORWARD_OP("tf_avg_pool_1d", 1)
+REGISTER_TF_AVG_POOL_FORWARD_OP("tf_avg_pool_2d", 2)
+REGISTER_TF_AVG_POOL_FORWARD_OP("tf_avg_pool_3d", 3)
 
-REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
+#undef REGISTER_TF_AVG_POOL_FORWARD_OP
 
-REGISTER_USER_OP("avg_pool_2d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+#define REGISTER_TF_AVG_POOL_BACKWARD_OP(name)      \
+  REGISTER_USER_OP(name)                            \
+      .Input("x")                                   \
+      .Input("y")                                   \
+      .Input("dy")                                  \
+      .Output("dx")                                 \
+      .Attr<std::string>("padding")                 \
+      .Attr<std::vector<int32_t>>("padding_before") \
+      .Attr<std::vector<int32_t>>("padding_after")  \
+      .Attr<std::string>("data_format")             \
+      .Attr<std::vector<int32_t>>("pool_size")      \
+      .Attr<std::vector<int32_t>>("strides")        \
+      .Attr<bool>("ceil_mode")                      \
+      .SetTensorDescInferFn(BwTensorDescInferFn)    \
+      .SetGetSbpFn(BwGetSbpFn)                      \
+      .SetDataTypeInferFn(BwInferDataType);
 
-REGISTER_USER_OP("avg_pool_2d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+REGISTER_TF_AVG_POOL_BACKWARD_OP("tf_avg_pool_1d_grad")
+REGISTER_TF_AVG_POOL_BACKWARD_OP("tf_avg_pool_2d_grad")
+REGISTER_TF_AVG_POOL_BACKWARD_OP("tf_avg_pool_3d_grad")
 
-REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
+#undef REGISTER_TF_AVG_POOL_FORWARD_OP
 
-REGISTER_USER_OP("avg_pool_3d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+REGISTER_USER_OP_GRAD("tf_avg_pool_1d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_avg", 1));
+REGISTER_USER_OP_GRAD("tf_avg_pool_2d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_avg", 2));
+REGISTER_USER_OP_GRAD("tf_avg_pool_3d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_avg", 3));
 
-REGISTER_USER_OP("avg_pool_3d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+#define REGISTER_TF_MAX_POOL_FORWARD_OP(name, dim)        \
+  REGISTER_USER_OP(name)                                  \
+      .Input("x")                                         \
+      .Output("y")                                        \
+      .Attr<std::string>("padding")                       \
+      .Attr<std::vector<int32_t>>("padding_before")       \
+      .Attr<std::vector<int32_t>>("padding_after")        \
+      .Attr<std::string>("data_format")                   \
+      .Attr<std::vector<int32_t>>("pool_size")            \
+      .Attr<std::vector<int32_t>>("strides")              \
+      .Attr<bool>("ceil_mode")                            \
+      .SetTensorDescInferFn(MakeFwTensorDescInferFn(dim)) \
+      .SetGetSbpFn(FwGetSbpFn)                            \
+      .SetDataTypeInferFn(FwInferDataType);
 
-REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
+REGISTER_TF_MAX_POOL_FORWARD_OP("tf_max_pool_1d", 1)
+REGISTER_TF_MAX_POOL_FORWARD_OP("tf_max_pool_2d", 2)
+REGISTER_TF_MAX_POOL_FORWARD_OP("tf_max_pool_3d", 3)
 
-REGISTER_USER_OP("max_pool_1d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+#undef REGISTER_TF_MAX_POOL_FORWARD_OP
 
-REGISTER_USER_OP("max_pool_1d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
+#define REGISTER_TF_MAX_POOL_BACKWARD_OP(name)      \
+  REGISTER_USER_OP(name)                            \
+      .Input("x")                                   \
+      .Input("y")                                   \
+      .Input("dy")                                  \
+      .Output("dx")                                 \
+      .Attr<std::string>("padding")                 \
+      .Attr<std::vector<int32_t>>("padding_before") \
+      .Attr<std::vector<int32_t>>("padding_after")  \
+      .Attr<std::string>("data_format")             \
+      .Attr<std::vector<int32_t>>("pool_size")      \
+      .Attr<std::vector<int32_t>>("strides")        \
+      .Attr<bool>("ceil_mode")                      \
+      .SetTensorDescInferFn(BwTensorDescInferFn)    \
+      .SetGetSbpFn(BwGetSbpFn)                      \
+      .SetDataTypeInferFn(BwInferDataType);
 
-REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
+REGISTER_TF_MAX_POOL_BACKWARD_OP("tf_max_pool_1d_grad")
+REGISTER_TF_MAX_POOL_BACKWARD_OP("tf_max_pool_2d_grad")
+REGISTER_TF_MAX_POOL_BACKWARD_OP("tf_max_pool_3d_grad")
 
-REGISTER_USER_OP("max_pool_2d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
+#undef REGISTER_TF_MAX_POOL_BACKWARD_OP
 
-REGISTER_USER_OP("max_pool_2d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
-
-REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
-
-REGISTER_USER_OP("max_pool_3d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(FwInferDataType);
-
-REGISTER_USER_OP("max_pool_3d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("pool_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwInferDataType);
-
-REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
+REGISTER_USER_OP_GRAD("tf_max_pool_1d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_max", 1));
+REGISTER_USER_OP_GRAD("tf_max_pool_2d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_max", 2));
+REGISTER_USER_OP_GRAD("tf_max_pool_3d")
+    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_max", 3));
 
 }  // namespace oneflow

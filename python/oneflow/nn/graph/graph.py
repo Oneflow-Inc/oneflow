@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+import time
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
+from google.protobuf import text_format
 
 import oneflow
 import oneflow._oneflow_internal
@@ -34,6 +37,7 @@ from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
@@ -211,7 +215,7 @@ class Graph(object):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optim, Optimizer
+            optim, (Optimizer, SparseOptimizer)
         ), "optimizer must be an instance of Optimizer"
         opt_dict["optim"] = optim
         if lr_sch is not None:
@@ -434,6 +438,7 @@ class Graph(object):
                 self._variables_conf[state_block.origin] = VariableConfig(
                     state_block.name_prefix + state_block.name
                 )
+
         for opt in self._opts:
             opt_dict = OptDict(opt)
             self.config._generate_optimizer_and_variable_configs(
@@ -443,14 +448,22 @@ class Graph(object):
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph.")
+            self._print(0, 0, self._shallow_repr() + " Start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
-
+            build_graph_start = time.perf_counter()
             eager_outputs = self._build_graph(*args)
-
-            self._print(0, 0, self._shallow_repr() + " end building graph.")
+            build_graph_end = time.perf_counter()
+            self._print(
+                0,
+                0,
+                self._shallow_repr()
+                + " Done! cost time: "
+                + str(round(build_graph_end - build_graph_start, 2))
+                + "s."
+                + "\n",
+            )
         except:
             self._print(
                 2,
@@ -467,15 +480,24 @@ class Graph(object):
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " start compiling plan and init graph runtime.",
+                self._shallow_repr() + " Start compiling plan and init graph runtime.",
             )
-
+            compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
-
+            compile_and_init_end = time.perf_counter()
             self._print(
                 0,
                 0,
-                self._shallow_repr() + " end compiling plan and init graph rumtime.",
+                self._shallow_repr()
+                + " Done! cost time: "
+                + str(round(compile_and_init_end - compile_and_init_start, 2))
+                + "s."
+                + "\n"
+                + self._shallow_repr()
+                + " The total time consumed to complete build graph, compiling plan and init graph runtime: "
+                + str(round(compile_and_init_end - build_graph_start, 2))
+                + "s."
+                + "\n",
             )
         except:
             self._print(
@@ -483,8 +505,8 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " compiling plan or initialing graph runtime got error : ",
-                sys_exc_error_msg(),
+                + " compiling plan or initialing graph runtime got error: "
+                + sys_exc_error_msg(),
             )
             raise
 
@@ -694,7 +716,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " run got error : "
+                + " run got error: "
                 + sys_exc_error_msg(),
             )
             raise

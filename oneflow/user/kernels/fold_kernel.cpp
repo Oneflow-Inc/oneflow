@@ -60,7 +60,7 @@ class FoldKernel final : public OpKernel {
   ~FoldKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
 
@@ -76,7 +76,7 @@ class FoldKernel final : public OpKernel {
     size_t out_bytes_size = output->shape().elem_cnt() * GetSizeOfDataType(output->data_type());
     Memset<device_type>(ctx->stream(), output->mut_dptr<T>(), 0, out_bytes_size);
     FoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
-        ctx->device_ctx(), &params, input->dptr<T>(), output->mut_dptr<T>());
+        ctx->stream(), &params, input->dptr<T>(), output->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -95,8 +95,8 @@ REGISTER_FOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
-REGISTER_FOLD_KERNEL(DeviceType::kGPU, float)
-REGISTER_FOLD_KERNEL(DeviceType::kGPU, double)
+REGISTER_FOLD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_FOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

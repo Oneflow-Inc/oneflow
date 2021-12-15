@@ -16,13 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct InTopkKernelUtil {
-  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
+  static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
                      const T* targets, const float* predictions, const int k, int8_t* out);
 };
 }  // namespace oneflow

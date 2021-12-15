@@ -36,8 +36,8 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
     CHECK_EQ(table_elem_cnt % 2, 0);
     const int64_t capacity = table_elem_cnt / 2;
     CategoricalOrdinalEncodeKernelUtil<device_type, T>::Encode(
-        ctx->device_ctx(), capacity, table->mut_dptr<T>(), size->mut_dptr<T>(),
-        in->shape().elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
+        ctx->stream(), capacity, table->mut_dptr<T>(), size->mut_dptr<T>(), in->shape().elem_cnt(),
+        in->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -51,8 +51,8 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt32, int32_t);
 REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCPU, DataType::kInt64, int64_t);
 #ifdef WITH_CUDA
-REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kGPU, DataType::kInt32, int32_t);
-REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kGPU, DataType::kInt64, int64_t);
+REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCUDA, DataType::kInt32, int32_t);
+REGISTER_CATEGORICAL_ORDINAL_ENCODE_KERNEL(DeviceType::kCUDA, DataType::kInt64, int64_t);
 #endif
 
 }  // namespace oneflow

@@ -52,7 +52,7 @@ struct CpuKernelUtilIf {};
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
     : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+  static void InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
 };
 
@@ -60,26 +60,26 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
     : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+  static void InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
 };
 
 // GPU, Integral, Floating
 template<typename T, typename Derived>
 struct GpuKernelUtilIf {
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+  static void InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
 };
 
 // GPU, Floating
 template<typename T>
-struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
+struct KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsFloating<T>::value>::type>
+    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kCUDA, T>> {};
 
 // GPU, Integral
 template<typename T>
-struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
+struct KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsIntegral<T>::value>::type>
+    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kCUDA, T>> {};
 
 }  // namespace oneflow
 

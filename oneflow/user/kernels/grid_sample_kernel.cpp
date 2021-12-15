@@ -78,8 +78,8 @@ class GridSampleKernel final : public user_op::OpKernel {
 REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kCPU, float);
 REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
-REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kGPU, float);
-REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kGPU, double);
+REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kCUDA, float);
+REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kCUDA, double);
 #endif
 
 template<DeviceType device_type, typename data_type>
@@ -143,8 +143,8 @@ class GridSampleGradKernel final : public user_op::OpKernel {
 REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
-REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_GRID_SAMPLE_GRAD_KERNEL(DeviceType::kCUDA, double);
 #endif
 
 }  // namespace oneflow

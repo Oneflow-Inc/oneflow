@@ -37,7 +37,7 @@ namespace one {
 
 class LocalUserKernelBaseContext;
 class LocalUserKernelRegContext;
-class LocalUserKernelInitContext;
+class LocalUserKernelInitAndCacheContext;
 class LocalUserOpInferContext;
 
 class ConsistentTensorInferResult;
@@ -229,8 +229,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) override;
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index);
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return *const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
@@ -346,7 +345,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
   }
-  DeviceCtx* device_ctx() override { return device_ctx_; }
   ep::Stream* stream() override {
     CHECK(device_ctx_);
     return device_ctx_->stream();
@@ -412,11 +410,12 @@ class StatefulLocalOpKernel final {
     return op_infer_ctx_for_scheduler_thread_.get();
   }
 
-  LocalUserOpInferContext* op_infer_ctx_for_main_thread() const {
-    return op_infer_ctx_for_main_thread_.get();
-  }
-
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
+
+  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage,
+                             const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
+                             EagerBlobObjectListRawPtr outputs,
+                             ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
@@ -428,10 +427,11 @@ class StatefulLocalOpKernel final {
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-                            EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-                            ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-                            user_op::OpKernelState** state);
+  void TryInitOpKernelStateAndCache(
+      const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
+      EagerBlobObjectListRawPtr outputs,
+      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
+      user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -440,10 +440,6 @@ class StatefulLocalOpKernel final {
   }
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
-
-  Maybe<const user_op::OpKernel*> ChooseOpKernel(
-      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
@@ -454,7 +450,6 @@ class StatefulLocalOpKernel final {
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_main_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
@@ -468,6 +463,7 @@ class StatefulLocalOpKernel final {
              DataType_MAX>
       dtype2cached_kernels_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
+  HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;

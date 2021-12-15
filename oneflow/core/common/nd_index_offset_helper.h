@@ -68,7 +68,13 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
+// <<<<<<< dev_fast_div
     for (int i = 0; i < n; ++i) { offset += math_helper_[i].Mul(index[i]); }
+// =======
+//     for (int i = 0; i < N; ++i) {
+//       if (i < n) { offset += index[i] * stride_[i]; }
+//     }
+// >>>>>>> master
     return offset;
   }
 
@@ -111,11 +117,20 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
+// <<<<<<< dev_fast_div
     for (int i = 0; i < n; ++i) {
       const T idx = math_helper_[i].Div(remaining);
       index[i] = idx;
       // remaining = remaining - idx * stride_[i];
       remaining = remaining - math_helper_[i].Mul(idx);
+// =======
+//     for (int i = 0; i < N; ++i) {
+//       if (i < n) {
+//         const T idx = remaining / stride_[i];
+//         index[i] = idx;
+//         remaining = remaining - idx * stride_[i];
+//       }
+// >>>>>>> master
     }
   }
 

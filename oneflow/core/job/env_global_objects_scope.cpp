@@ -34,7 +34,7 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
@@ -50,6 +50,7 @@ limitations under the License.
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -170,11 +171,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
                                     GlobalProcessCtx::NumOfProcessPerNode());
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
                                         GlobalProcessCtx::NumOfProcessPerNode());
-  Global<device::NodeDeviceDescriptorManager>::SetAllocated(
-      new device::NodeDeviceDescriptorManager());
+  Global<hardware::NodeDeviceDescriptorManager>::SetAllocated(
+      new hardware::NodeDeviceDescriptorManager());
   if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
-    Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
+    Global<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
+  Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
@@ -242,11 +244,12 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<ThreadPool>::Delete();
+  Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
   }
   Global<ResourceDesc, ForEnv>::Delete();
-  Global<device::NodeDeviceDescriptorManager>::Delete();
+  Global<hardware::NodeDeviceDescriptorManager>::Delete();
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();

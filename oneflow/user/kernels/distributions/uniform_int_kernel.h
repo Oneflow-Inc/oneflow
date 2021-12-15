@@ -80,16 +80,17 @@ class UniformIntKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t from = ctx->Attr<int64_t>("low");
-    int64_t to = ctx->Attr<int64_t>("high");
-    CHECK_LT(from, to) << "uniform kernel expects 'low' to be less than 'high'";
+    int64_t from = ctx->Attr<int64_t>("from");
+    int64_t to = ctx->Attr<int64_t>("to");
+    CHECK_LT(from, to) << "uniform kernel expects 'from' to be less than 'to'";
 
     if (IsFloating<T>::value) {
       from = update_from<T>(from);
       to = update_to<T>(to);
-      CHECK_LT(from, to) << "uniform kernel expects 'low' casted to dtype to be less than 'high'"
+      CHECK_LT(from, to) << "uniform kernel expects 'from' casted to dtype to be less than 'to'"
                             " casted to dtype";
     }
     check_from_to_in_range<T>(from, to - 1);
@@ -100,7 +101,7 @@ class UniformIntKernel final : public user_op::OpKernel {
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     UniformIntDistribution<device_type, T> distribution(from, to);
-    distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);
+    distribution(ctx->stream(), elem_cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

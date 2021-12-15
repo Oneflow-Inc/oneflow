@@ -30,16 +30,15 @@ void Memset<DeviceType::kCPU>(ep::Stream* stream, void* dst, const char value, s
   memset(dst, value, sz);
 }
 
-void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
+void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
                                          std::function<void(Blob*)> Callback) {
 #ifdef WITH_CUDA
   char* host_raw_dptr = nullptr;
   OF_CUDA_CHECK(cudaMallocHost(&host_raw_dptr, blob->AlignedTotalByteSize()));
   Blob host_blob(MemoryCase(), &blob->blob_desc(), host_raw_dptr);
   Callback(&host_blob);
-  Memcpy<DeviceType::kGPU>(ctx->stream(), blob->mut_dptr(), host_blob.dptr(),
-                           blob->ByteSizeOfBlobBody());
-  OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
+  Memcpy<DeviceType::kCUDA>(stream, blob->mut_dptr(), host_blob.dptr(), blob->ByteSizeOfBlobBody());
+  CHECK_JUST(stream->Sync());
   OF_CUDA_CHECK(cudaFreeHost(host_raw_dptr));
 #else
   UNIMPLEMENTED();

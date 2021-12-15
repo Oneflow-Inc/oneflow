@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<template<typename T> class UNARY_OP, typename T>
 struct LogicalNotFunctor<DeviceType::kCPU, UNARY_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T* in, int8_t* out) {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T* in, int8_t* out) {
     DoLogicalNot<UNARY_OP, T>(elem_cnt, in, out);
   }
 };
@@ -40,7 +40,7 @@ class CpuLogicalNotKernel final : public user_op::OpKernel {
     const T* x = tensor_x->dptr<T>();
     K* y = tensor_y->mut_dptr<K>();
     int64_t n = tensor_x->shape().elem_cnt();
-    if (n != 0) { LogicalNotFunctor<device_type, UNARY_OP, T>()(ctx->device_ctx(), n, x, y); }
+    if (n != 0) { LogicalNotFunctor<device_type, UNARY_OP, T>()(ctx->stream(), n, x, y); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -24,9 +24,9 @@
   signature:
     [
       "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
-      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Add",
-      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarAdd",
-      "Tensor (Scalar input, Tensor other) => ScalarAdd",
+      "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Add",
+      "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarAdd",
+      "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) => ScalarAdd",
     ]
   bind_python: true
 
@@ -45,6 +45,14 @@
       "Tensor (Tensor input, Tensor other) => Mul",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarMul",
       "Tensor (Scalar input, Tensor other) => ScalarMul",
+    ]
+  bind_python: true
+
+- name: "mul_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceMul",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarMul",
     ]
   bind_python: true
 
@@ -228,6 +236,14 @@
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMean"
   bind_python: True
 
+- name: "reduce_all"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAll"
+  bind_python: True
+
+- name: "reduce_any"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAny"
+  bind_python: True
+
 - name: "reduce_prod"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
   bind_python: True
@@ -339,6 +355,14 @@
 
 - name: "log_grad"
   signature: "Tensor (Tensor x, Tensor dy) => LogGrad"
+  bind_python: False
+
+- name: "log2"
+  signature: "Tensor (Tensor x) => Log2"
+  bind_python: True
+
+- name: "log2_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Log2Grad"
   bind_python: False
 
 - name: "sqrt"
@@ -520,17 +544,17 @@
 
 - name: "arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Device device=None) => Arange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Device device=None) => Arange",
+      "Tensor (Scalar end, *, DataType dtype=None, Device device=None) => Arange",
     ]
   bind_python: True
 
 - name: "consistent_arange"
   signature: [
-      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=kInt64,
+      "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Scalar end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange",
+      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentArange",
     ]
   bind_python: True
 
@@ -677,6 +701,13 @@
     Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
   bind_python: True
 
+- name: "deconv2d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
+    Int32List padding, String data_format, Int32List kernel_size, 
+    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv2d"
+  bind_python: True
+
 - name: "deconv3d"
   signature:
     "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
@@ -717,7 +748,7 @@
   bind_python: True
 
 - name: "dim_gather"
-  signature: "Tensor (Tensor x, Tensor indices, Int32 dim) => DimGather"
+  signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
 
 - name: "arg_sort"
@@ -769,7 +800,7 @@
   bind_python: True
 
 - name: "kl_div_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target) => KLDivLossGrad"
   bind_python: False
 
 - name: "nll_loss"
@@ -777,7 +808,7 @@
   bind_python: True
 
 - name: "nll_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index, String reduction) => NllLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index) => NllLossGrad"
   bind_python: False
 
 - name: "binary_cross_entropy_loss"
@@ -785,7 +816,7 @@
   bind_python: True
 
 - name: "binary_cross_entropy_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None) => BinaryCrossEntropyLossGrad"
   bind_python: False
 
 - name: "binary_cross_entropy_with_logits_loss"
@@ -793,7 +824,7 @@
   bind_python: True
 
 - name: "binary_cross_entropy_with_logits_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLossGrad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
 - name: "sparse_cross_entropy"
@@ -837,7 +868,7 @@
   bind_python: True
 
 - name: "smooth_l1_loss_grad"
-  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta, String reduction) => SmoothL1LossGrad"
+  signature: "Tensor (Tensor loss_grad, Tensor prediction, Tensor label, Float beta) => SmoothL1LossGrad"
   bind_python: False
 
 - name: "combined_margin_loss"
@@ -890,6 +921,13 @@
 - name: "masked_fill"
   signature: "Tensor (Tensor x, Tensor mask, Scalar value) => MaskedFill"
   bind_python: true
+
+- name: "movedim"
+  signature: [
+    "Tensor (Tensor input, Int32 source, Int32 destination) => MovedimInt",
+    "Tensor (Tensor input, Int32List source, Int32List destination) => MovedimVec",
+  ]
+  bind_python: True
 
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
@@ -1378,7 +1416,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
+  signature: "Tensor (Tensor x, Tensor addend=None, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1431,6 +1469,14 @@
 
 - name: "diag_grad"
   signature: "Tensor (Tensor dy, Tensor in, Int32 diagonal=0) => DiagGrad"
+  bind_python: False
+
+- name: "diagonal"
+  signature: "Tensor (Tensor x, Int32 offset=0, Int32 dim1=0, Int32 dim2=1) => Diagonal"
+  bind_python: True
+
+- name: "diagonal_grad"
+  signature: "Tensor (Tensor dy, Tensor in, Int32 offset=0) => DiagonalGrad"
   bind_python: False
 
 - name: "tensor_getitem"
@@ -1665,6 +1711,12 @@
   ]
   bind_python: True
 
+- name: "chunk"
+  signature: [
+    "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
+  ]
+  bind_python: True
+
 - name: "split_like"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
@@ -1700,6 +1752,22 @@
 - name: "fused_bias_add_dropout"
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
   bind_python: True
+
+- name: "fused_scale_mask_softmax"
+  signature: "Tensor (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0) => FusedScaleMaskSoftmax"
+  bind_python: True
+
+- name: "fused_scale_mask_softmax_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Tensor mask, Float scale=1.0) => FusedScaleMaskSoftmaxGrad"
+  bind_python: False
+
+- name: "fused_scale_mask_softmax_dropout"
+  signature: "TensorTuple (Tensor x, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedScaleMaskSoftmaxDropout"
+  bind_python: True
+
+- name: "fused_scale_mask_softmax_dropout_grad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Tensor dropout_mask, Float scale=1.0, Float dropout_scale=1.0) => FusedScaleMaskSoftmaxDropoutGrad"
+  bind_python: False
 
 - name: "fused_scale_tril_softmax_mask_scale"
   signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
@@ -1744,6 +1812,33 @@
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
   bind_python: False
 
+- name: "nms"
+  signature:
+    "Tensor (Tensor x, Float iou_threshold, Int32 keep_n=-1) => Nms"
+  bind_python: True
+
+- name: "roi_align"
+  signature:
+    "Tensor (Tensor x, Tensor rois, Float spatial_scale, Int32 pooled_h, Int32 pooled_w, Int32 sampling_ratio, Bool aligned) => RoiAlign"
+  bind_python: True
+
+- name: "roi_align_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor x_like, Tensor rois, Float spatial_scale, Int32 pooled_h, Int32 pooled_w, Int32 sampling_ratio, Bool aligned) => RoiAlignGrad"
+  bind_python: False
+
 - name: "meshgrid"
   signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
+  bind_python: True
+
+- name: "decode_onerec"
+  signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
+  bind_python: True
+
+- name: "read_onerec"
+  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => ReadOneRec"
+  bind_python: True
+
+- name: "dot"
+  signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
