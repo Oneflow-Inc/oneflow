@@ -1,3 +1,4 @@
+find_package(Threads REQUIRED)
 include(FetchContent)
 FetchContent_Declare(
   arrow
@@ -17,10 +18,11 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "" CACHE STRING "" FORCE)
 set(ARROW_SIMD_LEVEL "NONE" CACHE STRING "" FORCE)
 set(ARROW_CMAKE_INSTALL_DIR ${THIRD_PARTY_DIR}/arrow)
 set(ARROW_BUILD_TESTS OFF)
-set(arrow_targets parquet)
+set(ARROW_PARQUET ON)
+set(PARQUET_MINIMAL_DEPENDENCY ON)
 include(CMakePackageConfigHelpers)
 function(install)
-message(STATUS "skip installing ${ARGV}")
+    message(STATUS "skip installing ${ARGV}")
 endfunction()
 add_subdirectory(${arrow_SOURCE_DIR}/cpp ${arrow_BINARY_DIR})
 
