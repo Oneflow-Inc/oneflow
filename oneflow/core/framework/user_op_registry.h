@@ -67,6 +67,7 @@ struct OpRegistryResult {
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
+  bool has_real_check_fn_ = true;  // NOTE: this field should be remove once ods gen is done
   TensorDescInferFn logical_tensor_desc_infer_fn;
   TensorDescInferFn physical_tensor_desc_infer_fn;
   GetSbpFn get_sbp_fn;

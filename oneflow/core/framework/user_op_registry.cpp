@@ -238,7 +238,10 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       return Maybe<void>::Ok();
     };
   }
-  if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
+  if (result_.check_fn == nullptr) {
+    result_.check_fn = CheckAttrFnUtil::NoCheck;
+    result_.has_real_check_fn_ = false;
+  }
   CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
     result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {

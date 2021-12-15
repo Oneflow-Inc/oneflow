@@ -355,6 +355,7 @@ std::string GetConvOpClassName(const std::string& op_name) {
   return ret;
 }
 
+static std::string BaseOpName = "OneFlow_BaseOp";
 std::string GetBaseOp(const std::string& op_name) {
   if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
@@ -374,16 +375,24 @@ std::string GetBaseOp(const std::string& op_name) {
   } else if (IsAdaptivePoolOp(op_name)) {
     return "OneFlow_AdaptivePool" + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
   } else {
-    return "OneFlow_BaseOp";
+    return BaseOpName;
   }
 }
+bool HasBaseOp(const std::string& op_name) { return GetBaseOp(op_name) != BaseOpName; }
 
 bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
   return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
 bool HasOneFlow_BasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
-  return r.check_fn && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
+  return !r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
+         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn && !r.device_infer_fn
+         && !r.input_arg_modify_fn && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn
+         && !r.nd_sbp_infer_fn;
+}
+
+bool HasOneFlow_BasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& r) {
+  return r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
          && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn && !r.device_infer_fn
          && !r.input_arg_modify_fn && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn
          && !r.nd_sbp_infer_fn;
@@ -391,7 +400,16 @@ bool HasOneFlow_BasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) 
 
 void PrintHas1(const std::string& var_name) { std::cout << "  let has_" << var_name << " = 1;\n"; }
 
+void PrintBasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.device_infer_fn) { PrintHas1("device_infer_fn"); }
+  if (r.input_arg_modify_fn) { PrintHas1("input_arg_modify_fn"); }
+  if (r.output_arg_modify_fn) { PrintHas1("output_arg_modify_fn"); }
+  if (r.output_blob_time_shape_infer_fn) { PrintHas1("output_blob_time_shape_infer_fn"); }
+  if (r.nd_sbp_infer_fn) { PrintHas1("nd_sbp_infer_fn"); }
+}
+
 void PrintBasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
   if (r.device_infer_fn) { PrintHas1("device_infer_fn"); }
   if (r.input_arg_modify_fn) { PrintHas1("input_arg_modify_fn"); }
   if (r.output_arg_modify_fn) { PrintHas1("output_arg_modify_fn"); }
@@ -400,11 +418,17 @@ void PrintBasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
 }
 
 void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
-  if (IsIdempotentOp(r.op_type_name)) {
-    PrintBasicBaseOpHasFn(r);
-    return;
+  if (HasBaseOp(r.op_type_name)) {
+    if (HasOneFlow_BasicBaseOpHasFn(r)) {
+      PrintBasicBaseOpHasFn(r);
+      return;
+    }
+    if (HasOneFlow_BasicBaseOpHasFnWithCheck(r)) {
+      PrintBasicBaseOpHasFnWithCheck(r);
+      return;
+    }
   }
-  if (r.check_fn) { PrintHas1("check_fn"); }
+  if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
   if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
   if (r.physical_tensor_desc_infer_fn) { PrintHas1("physical_tensor_desc_infer_fn"); }
   if (r.get_sbp_fn) { PrintHas1("get_sbp_fn"); }
@@ -417,10 +441,15 @@ void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
 }
 
 bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
-  return ((IsPoolOp(r.op_type_name) || IsAdaptivePoolOp(r.op_type_name) || IsConvOp(r.op_type_name)
-           || IsIdempotentOp(r.op_type_name) || IsInvolutionOp(r.op_type_name))
-          && HasOneFlow_BasicBaseOpHasFn(r))
-         && !r.no_grad && !r.cpu_only_supported && r.same_output_regst_num == -1;
+  const bool has_base_class = IsIdempotentOp(r.op_type_name) || IsInvolutionOp(r.op_type_name)
+                              || IsAdaptivePoolOp(r.op_type_name) || IsPoolOp(r.op_type_name);
+  if (has_base_class) { CHECK(HasOneFlow_BasicBaseOpHasFn(r)) << r.op_type_name; }
+  const bool has_base_class_with_check = IsConvOp(r.op_type_name);
+  if (has_base_class_with_check) {
+    CHECK(HasOneFlow_BasicBaseOpHasFnWithCheck(r)) << r.op_type_name;
+  }
+  return (has_base_class || has_base_class_with_check) && !r.no_grad && !r.cpu_only_supported
+         && r.same_output_regst_num == -1;
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {

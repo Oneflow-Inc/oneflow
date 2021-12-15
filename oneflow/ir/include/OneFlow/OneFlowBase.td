@@ -149,7 +149,6 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$strides,
     BoolAttr:$ceil_mode
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -174,7 +173,6 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$strides,
     BoolAttr:$ceil_mode
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -201,7 +199,6 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$return_indices,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -226,7 +223,6 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
     DefaultValuedAttr<SI64Attr, "0">:$divisor_override
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -254,7 +250,6 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$return_indices,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -281,7 +276,6 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
     DefaultValuedAttr<SI64Attr, "0">:$divisor_override
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -311,7 +305,6 @@ class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<OpTrait> traits = []>
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -323,7 +316,6 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let summary = "";
   let input = (ins AnyType:$x);
   let output = (outs AnyType:$y);
-  let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
