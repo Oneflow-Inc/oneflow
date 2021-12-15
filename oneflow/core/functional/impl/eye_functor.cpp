@@ -15,7 +15,10 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -80,14 +83,20 @@ class ConsistentEyeSbpListFunctor {
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
         << "len(placement.hierarchy)==" << placement->hierarchy()->NumAxes();
+    
+    FOR_RANGE(int32_t, i, 0, sbp_tuple.size()){
+        CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel()) << "sbp of eye should be broadcast only";
+    }
 
     JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
     JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
-      for (int i = 0; i < sbp_tuple.size(); ++i) {
-        nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+            nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
       }
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
