@@ -382,8 +382,9 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
   return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
-bool ShouldGenEmptyBody(const std::string& op_name) {
-  return IsPoolOp(op_name) || IsAdaptivePoolOp(op_name) || IsConvOp(op_name);
+bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
+  return (IsPoolOp(r.op_type_name) || IsAdaptivePoolOp(r.op_type_name) || IsConvOp(r.op_type_name))
+         && !r.no_grad && !r.cpu_only_supported;
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -502,6 +503,19 @@ bool IsBinaryOp(const ::oneflow::user_op::OpRegistryResult& r) {
          && r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
 }
 
+void PrintNoGrad(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.no_grad) {
+    std::cout << "  let no_grad = 1;"
+              << "\n";
+  }
+}
+void PrintIsCpuOnly(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.cpu_only_supported) {
+    std::cout << "  let cpu_only = 1;"
+              << "\n";
+  }
+}
+
 void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   const ::oneflow::UserOpDef& op_def = r.op_def;
   // TODO: handle in out size/optional
@@ -550,6 +564,8 @@ void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   PrintTraitAttrs(op_def);
   PrintExtraClassDeclaration(op_def);
   PrintHasCanonicalizer(r.op_type_name);
+  PrintNoGrad(r);
+  PrintIsCpuOnly(r);
   std::cout << "}"
             << "\n";
 }
@@ -605,7 +621,7 @@ void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
     std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
               << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
               << "\", [" + GetTraits(r) + "]> ";  // TODO: add traits
-    if (ShouldGenEmptyBody(r.op_type_name)) {
+    if (ShouldGenEmptyBody(r)) {
       std::cout << "{}\n";
     } else {
       PrintBody(r);

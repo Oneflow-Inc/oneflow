@@ -49,7 +49,8 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     output,
     ctrl_output
   );
-
+  bit no_grad = 0;
+  bit cpu_only = 0;
   // Custom sbp
   code infer_nd_sbp = ?;
 }

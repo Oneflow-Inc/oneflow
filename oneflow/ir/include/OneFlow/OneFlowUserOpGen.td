@@ -118,6 +118,7 @@ def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [DeclareOpInterfaceMethods<UserO
     AnyType:$ref,
     AnyType:$value
   );
+  let no_grad = 1;
 }
 
 def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -126,6 +127,7 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [DeclareOpInterfaceMethods<
     AnyType:$value,
     AnyType:$condition
   );
+  let no_grad = 1;
 }
 
 def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -134,6 +136,7 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [DeclareOpInterfaceM
     AnyType:$value,
     AnyType:$condition
   );
+  let no_grad = 1;
 }
 
 def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -212,6 +215,7 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [NoSideEffect, DeclareOpInt
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -376,6 +380,7 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2
   );
+  let no_grad = 1;
 }
 
 def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -594,6 +599,7 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [NoSideEffect, 
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -624,6 +630,7 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffe
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -634,6 +641,7 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -644,6 +652,7 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, De
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -654,6 +663,7 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSid
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -677,6 +687,7 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [NoS
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -687,6 +698,7 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSid
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -697,6 +709,7 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoS
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -737,6 +750,7 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [NoSideE
   let output = (outs
     AnyType:$z
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1115,6 +1129,8 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, DeclareOp
     DefaultValuedAttr<BoolAttr, "false">:$stride_partition,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1133,6 +1149,8 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, D
     DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1149,6 +1167,8 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, Decla
     DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
     DefaultValuedAttr<BoolAttr, "true">:$verify_example
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1185,6 +1205,8 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
     DefaultValuedAttr<SI64Attr, "0">:$random_seed,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1197,6 +1219,8 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [N
   let attrs = (ins
     StrAttr:$name
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1220,6 +1244,8 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
     DefaultValuedAttr<SI32Attr, "8">:$decode_buffer_size_per_thread,
     DefaultValuedAttr<SI32Attr, "0">:$num_decode_threads_per_machine
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1233,6 +1259,8 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [N
     StrAttr:$name,
     DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1251,6 +1279,8 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
     F32ArrayAttr:$random_area,
     F32ArrayAttr:$random_aspect_ratio
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1267,6 +1297,8 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSid
     DefaultValuedAttr<BoolAttr, "false">:$dim1_varying_length,
     DefaultValuedAttr<BoolAttr, "false">:$truncate
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1286,6 +1318,8 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, De
     DefaultValuedAttr<BoolAttr, "false">:$has_batch_padding,
     ShapeAttr:$batch_padding
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 #endif // GET_ONEFLOW_DATASET_OP_DEFINITIONS
@@ -1307,6 +1341,7 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, DeclareOpInterf
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$k
   );
+  let no_grad = 1;
 }
 
 def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1331,6 +1366,8 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [NoSideEffect,
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1341,6 +1378,8 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffec
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1352,6 +1391,8 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1362,6 +1403,8 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1373,6 +1416,8 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_RoiAlignOp : OneFlow_BaseOp<"roi_align", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1421,6 +1466,7 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, DeclareOpInterfaceMe
     DefaultValuedAttr<SI32Attr, "0">:$k,
     DefaultValuedAttr<BoolAttr, "false">:$sorted
   );
+  let no_grad = 1;
 }
 
 #endif // GET_ONEFLOW_DETECTION_OP_DEFINITIONS
@@ -1444,6 +1490,7 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, DeclareO
     StrAttr:$out_parallel_conf,
     ShapeAttr:$shape
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1460,6 +1507,7 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffec
     StrAttr:$out_parallel_conf,
     ShapeAttr:$shape
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1472,6 +1520,7 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSi
   let attrs = (ins
     StrAttr:$parallel_conf
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1485,6 +1534,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSi
     StrAttr:$parallel_conf,
     DefaultValuedAttr<BoolAttr, "false">:$async_launch
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1511,6 +1561,7 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffec
     StrAttr:$parallel_conf,
     DefaultValuedAttr<SI64Attr, "0">:$root
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1524,6 +1575,7 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
     StrAttr:$parallel_conf,
     DefaultValuedAttr<StrAttr, "\"sum\"">:$op_type
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1538,6 +1590,7 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, Dec
     DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
     StrAttr:$parallel_conf
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1552,6 +1605,7 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, DeclareO
     StrAttr:$out_parallel_conf,
     ShapeAttr:$shape
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1567,6 +1621,7 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, DeclareO
     StrAttr:$out_parallel_conf,
     ShapeAttr:$shape
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1582,6 +1637,7 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, DeclareO
     StrAttr:$out_parallel_conf,
     ShapeAttr:$shape
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1595,15 +1651,65 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
     StrAttr:$parallel_conf
   );
+  let no_grad = 1;
 }
 
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
 // Group: FUSED
-// fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad
-// Total: 14
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad
+// Total: 16
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
+
+def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    Optional<AnyType>:$addend,
+    Optional<AnyType>:$moving_mean,
+    Optional<AnyType>:$moving_variance,
+    AnyType:$gamma,
+    AnyType:$beta
+  );
+  let output = (outs
+    AnyType:$y,
+    AnyType:$reserve_space,
+    Optional<AnyType>:$mean,
+    Optional<AnyType>:$inv_variance
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.">:$momentum
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+}
+
+def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$dy,
+    AnyType:$mean,
+    AnyType:$inv_variance,
+    AnyType:$gamma,
+    AnyType:$beta,
+    AnyType:$reserve_space,
+    AnyType:$y
+  );
+  let output = (outs
+    AnyType:$gamma_diff,
+    AnyType:$beta_diff,
+    AnyType:$dx,
+    Optional<AnyType>:$addend_diff
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon
+  );
+}
 
 def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -1842,6 +1948,7 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOp
 }
 
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let no_grad = 1;
 }
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1892,6 +1999,7 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, 
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$buffer_size
   );
+  let no_grad = 1;
 }
 
 def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1924,6 +2032,8 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffec
     DefaultValuedAttr<SI32Attr, "0">:$alignment,
     DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1937,6 +2047,8 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, Declar
     DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
     OneFlow_DataType:$data_type
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1947,6 +2059,8 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, DeclareOpI
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1963,6 +2077,8 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffec
     F32ArrayAttr:$random_area,
     F32ArrayAttr:$random_aspect_ratio
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1981,6 +2097,8 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
     DefaultValuedAttr<BoolAttr, "false">:$resize_longer,
     DefaultValuedAttr<StrAttr, "\"bilinear\"">:$interpolation_type
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1998,6 +2116,8 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSi
     OneFlow_DataType:$data_type,
     DefaultValuedAttr<StrAttr, "\"bilinear\"">:$interpolation_type
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 #endif // GET_ONEFLOW_IMAGE_OP_DEFINITIONS
@@ -2018,6 +2138,7 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [NoSideEffect, DeclareOpInter
   let attrs = (ins
     StrAttr:$direction
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -2027,6 +2148,7 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, DeclareOpInterfac
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -2040,6 +2162,7 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, DeclareOpInte
   let attrs = (ins
     OneFlow_DataType:$dtype
   );
+  let no_grad = 1;
 }
 
 def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -2196,6 +2319,7 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -2211,6 +2335,8 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideE
     DefaultValuedAttr<SI32Attr, "0">:$target_size,
     DefaultValuedAttr<SI32Attr, "0">:$max_size
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -2387,6 +2513,7 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, D
     DefaultValuedAttr<SI64Attr, "0">:$y_int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$y_float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3103,6 +3230,7 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$hash_precomputed
   );
+  let no_grad = 1;
 }
 
 def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3129,6 +3257,7 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, DeclareOpInterfac
     OneFlow_DataType:$dtype,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3142,6 +3271,8 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, DeclareOpInt
     DefaultValuedAttr<BoolAttr, "false">:$has_seed,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3169,6 +3300,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, DeclareOpInte
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3224,6 +3356,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, DeclareOpInterfaceM
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3236,6 +3369,7 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, DeclareOpInterfaceMetho
     OneFlow_DataType:$dtype,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3262,6 +3396,7 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [No
   let output = (outs
     AnyType:$y
   );
+  let no_grad = 1;
 }
 
 def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3347,6 +3482,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, DeclareOpInte
     DefaultValuedAttr<SI64Attr, "0">:$seed,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3360,6 +3496,7 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, DeclareOpInterfaceMet
     StrAttr:$device_type,
     DefaultValuedAttr<SI64Attr, "0">:$device_id
   );
+  let no_grad = 1;
 }
 
 def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3369,6 +3506,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, DeclareOpInterfaceMet
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$dst_process_id
   );
+  let no_grad = 1;
 }
 
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3395,6 +3533,7 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEff
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "1">:$buffer_size
   );
+  let no_grad = 1;
 }
 
 def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3421,6 +3560,7 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, DeclareOpInterf
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3435,6 +3575,7 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, DeclareO
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3450,6 +3591,7 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEff
   let attrs = (ins
     OneFlow_DataType:$out_idx
   );
+  let no_grad = 1;
 }
 
 def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3493,6 +3635,7 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
     DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis,
     DefaultValuedAttr<SI64Attr, "-1">:$out_dim1_split_axis
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3502,6 +3645,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3514,6 +3658,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3523,6 +3668,7 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3532,6 +3678,7 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3541,6 +3688,7 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3553,6 +3701,7 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3562,6 +3711,7 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3571,6 +3721,7 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3584,6 +3735,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
     DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis
   );
+  let no_grad = 1;
 }
 
 #endif // GET_ONEFLOW_NCCL_OP_DEFINITIONS
@@ -3613,6 +3765,8 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
     DefaultValuedAttr<F32Attr, "0.5">:$crop_pos_y,
     OneFlow_DataType:$output_dtype
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3634,6 +3788,7 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
     DefaultValuedAttr<F32Attr, "0.5">:$crop_pos_y,
     OneFlow_DataType:$output_dtype
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3647,6 +3802,8 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, 
     F32ArrayAttr:$std,
     F32ArrayAttr:$mean
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3752,6 +3909,7 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, DeclareOpInterfac
     ShapeAttr:$shape,
     StrArrayAttr:$nd_sbp
   );
+  let no_grad = 1;
 }
 
 def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3830,6 +3988,7 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [AttrSizedOperand
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3842,6 +4001,7 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.9">:$beta
   );
+  let no_grad = 1;
 }
 
 def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3874,6 +4034,7 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [AttrSizedOperandSegmen
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3900,6 +4061,7 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3914,6 +4076,7 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
     DefaultValuedAttr<F32Attr, "0.9">:$beta,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
+  let no_grad = 1;
 }
 
 def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3926,6 +4089,7 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay
   );
+  let no_grad = 1;
 }
 
 def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3952,6 +4116,7 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [AttrSizedOperandSegmen
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3975,6 +4140,7 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [AttrSizedOperandSegmen
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -3997,6 +4163,7 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [AttrSizedOpera
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4022,6 +4189,7 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [AttrSizedOperand
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4042,6 +4210,7 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [AttrSizedOperandSegments
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
   );
+  let no_grad = 1;
 }
 
 def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4413,6 +4582,7 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect,
     DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
     DefaultValuedAttr<BoolAttr, "true">:$per_layer_quantization
   );
+  let no_grad = 1;
 }
 
 def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4434,6 +4604,7 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
     DefaultValuedAttr<StrAttr, "\"symmetric\"">:$quantization_scheme,
     DefaultValuedAttr<F32Attr, "0.95">:$momentum
   );
+  let no_grad = 1;
 }
 
 def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4470,6 +4641,7 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
     AnyType:$y_values,
     AnyType:$num_unique
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4677,6 +4849,7 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, D
   let attrs = (ins
     SI32ArrayAttr:$axis
   );
+  let no_grad = 1;
 }
 
 #endif // GET_ONEFLOW_REDUCE_OP_DEFINITIONS
@@ -4697,7 +4870,6 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterf
   let attrs = (ins
     ShapeAttr:$shape
   );
-  let infer_nd_sbp = [{ return ::InferNdSbp(ctx); }];
 }
 
 def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4881,6 +5053,7 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEff
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4896,6 +5069,7 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSid
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4911,6 +5085,7 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [N
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4926,6 +5101,7 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4941,6 +5117,7 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideE
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4956,6 +5133,7 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4971,6 +5149,7 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4986,6 +5165,7 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffec
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5001,6 +5181,7 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEff
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
+  let no_grad = 1;
 }
 
 def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5205,9 +5386,13 @@ def OneFlow_CreateSummaryWriterOp : OneFlow_BaseOp<"create_summary_writer", [NoS
   let attrs = (ins
     StrAttr:$logdir
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5216,6 +5401,8 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
     AnyType:$step,
     AnyType:$tag
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5224,6 +5411,8 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideE
     AnyType:$step,
     AnyType:$tag
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5231,6 +5420,8 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect,
     AnyType:$in,
     AnyType:$step
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5239,6 +5430,8 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSid
     AnyType:$step,
     AnyType:$tag
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 #endif // GET_ONEFLOW_SUMMARY_OP_DEFINITIONS
@@ -5260,6 +5453,8 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffec
     OneFlow_DataType:$data_type,
     DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5274,6 +5469,8 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
     OneFlow_DataType:$out_dtype,
     DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5288,6 +5485,8 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
     DTArrayAttr:$out_dtypes,
     DefaultValuedAttr<BoolAttr, "false">:$dynamic_out
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5301,6 +5500,8 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
     ShapeAttr:$instance_shape,
     OneFlow_DataType:$dtype
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5313,6 +5514,8 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$instance_dims
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 #endif // GET_ONEFLOW_TENSOR_BUFFER_OP_DEFINITIONS
@@ -5449,6 +5652,7 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [NoSideEffe
   let output = (outs
     AnyType:$out
   );
+  let cpu_only = 1;
 }
 
 def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5817,6 +6021,8 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, DeclareOpIn
     DefaultValuedAttr<BoolAttr, "false">:$has_seed,
     OneFlow_DataType:$dtype
   );
+  let no_grad = 1;
+  let cpu_only = 1;
 }
 
 def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5847,6 +6053,7 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [NoSideEffect, Declare
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -5881,6 +6088,7 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect,
   let output = (outs
     AnyType:$y
   );
+  let no_grad = 1;
 }
 
 def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -6043,6 +6251,7 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, DeclareO
   let output = (outs
     AnyType:$y
   );
+  let no_grad = 1;
 }
 
 def OneFlow_MishOp : OneFlow_BaseOp<"mish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -6083,6 +6292,7 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, DeclareOpInterfa
     DefaultValuedAttr<SI64Attr, "0">:$integer_off_value,
     OneFlow_DataType:$dtype
   );
+  let no_grad = 1;
 }
 
 def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -6108,6 +6318,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     DefaultValuedAttr<F32Attr, "0.">:$rate,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
+  let no_grad = 1;
 }
 
 def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -6181,6 +6392,7 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", [NoSideEffect, DeclareOpInterfaceMet
   let attrs = (ins
     StrAttr:$direction
   );
+  let no_grad = 1;
 }
 
 def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -6292,6 +6504,7 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, DeclareOpInt
   let output = (outs
     AnyType:$out
   );
+  let no_grad = 1;
 }
 
 #endif // GET_ONEFLOW_UNARY_OP_DEFINITIONS
