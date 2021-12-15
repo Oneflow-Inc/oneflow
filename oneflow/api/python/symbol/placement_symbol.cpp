@@ -16,7 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
@@ -80,14 +81,14 @@ struct PlacementSymbolExportUtil {
             << "Key of device_ids dict must be int.";
         int64_t machine_id = pair.first.cast<int64_t>();
         if (py::isinstance<py::int_>(pair.second)) {
-          machine_device_id_vec.push_back({machine_id, pair.second.cast<int64_t>()});
+          machine_device_id_vec.emplace_back(machine_id, pair.second.cast<int64_t>());
         } else {
           CHECK_OR_RETURN(py::isinstance<py::iterable>(pair.second))
               << "Value of device_ids dict must be int, list or range";
           for (const auto& device_id : pair.second) {
             CHECK_OR_RETURN(py::isinstance<py::int_>(device_id))
                 << "Value of device_ids dict must be int, list or range of int.";
-            machine_device_id_vec.push_back({machine_id, device_id.cast<int64_t>()});
+            machine_device_id_vec.emplace_back(machine_id, device_id.cast<int64_t>());
           }
         }
       }
@@ -96,8 +97,8 @@ struct PlacementSymbolExportUtil {
         CHECK_OR_RETURN(py::isinstance<py::int_>(global_device_id))
             << "Value of device_ids list must be int";
         int64_t global_rank_int64 = global_device_id.cast<int64_t>();
-        machine_device_id_vec.push_back({GlobalProcessCtx::NodeId(global_rank_int64),
-                                         GlobalProcessCtx::LocalRank(global_rank_int64)});
+        machine_device_id_vec.emplace_back(GlobalProcessCtx::NodeId(global_rank_int64),
+                                           GlobalProcessCtx::LocalRank(global_rank_int64));
       }
     }
 
@@ -164,21 +165,6 @@ struct PlacementSymbolExportUtil {
 
   static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
     return *PlacementToString(placement).GetPtrOrThrow();
-  }
-
-  static Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
-                                                               const std::string& device_type) {
-    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
-    std::shared_ptr<cfg::ParallelConf> parallel_conf =
-        std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-    parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
-    std::shared_ptr<ParallelDesc> out_parallel_desc;
-    JUST(LogicalRun(
-        [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-          out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-          return Maybe<void>::Ok();
-        }));
-    return SymbolOf(*out_parallel_desc);
   }
 
   static Symbol<ParallelDesc> ApiReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,

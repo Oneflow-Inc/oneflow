@@ -53,7 +53,7 @@ class ObsoleteCtrlKeys {
   }
   void Add(const std::string& key) {
     std::unique_lock<std::mutex> lck(mutex_);
-    keys_.push_back(key);
+    keys_.emplace_back(key);
   }
 
  private:

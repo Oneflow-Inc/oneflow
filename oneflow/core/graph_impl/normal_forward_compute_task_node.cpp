@@ -14,9 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -117,5 +116,7 @@ void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
     node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   });
 }
+
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kNormalForward);
 
 }  // namespace oneflow

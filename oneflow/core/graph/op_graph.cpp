@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 
@@ -214,7 +213,7 @@ MakeGetterParallelDesc4OpName(const Job& job) {
 void OpGraph::InitNodes(const Job& job) {
   auto ParallelDesc4OpName = MakeGetterParallelDesc4OpName(job);
   for (const auto& op_conf : job.net().op()) {
-    op_names_.push_back(op_conf.name());
+    op_names_.emplace_back(op_conf.name());
     OpNode* node = new OpNode(ParallelDesc4OpName(op_conf.name()), op_conf);
     AddAllocatedNode(node);
   }
@@ -241,7 +240,7 @@ void OpGraph::InitEdges() {
     for (const auto& ibn : op_node->op().input_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
-      (*consumer_lbi2ibns)[lbi].push_back(ibn);
+      (*consumer_lbi2ibns)[lbi].emplace_back(ibn);
       auto producer_it = lbi2producer.find(lbi);
       CHECK(producer_it != lbi2producer.end()) << "producer not found: " << GenLogicalBlobName(lbi);
       const int32_t output_index = CHECK_JUST(producer_it->second->op().GetOutputIndex(lbi));
@@ -478,7 +477,7 @@ std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
   ForEachNode([&](OpNode* op_node) {
     size_t in_edges_cnt = 0;
     ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_edges_cnt; });
-    if (in_edges_cnt == 0) { ret.push_back(op_node); }
+    if (in_edges_cnt == 0) { ret.emplace_back(op_node); }
   });
   return ret;
 }

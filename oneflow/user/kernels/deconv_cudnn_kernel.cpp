@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
@@ -34,7 +35,7 @@ struct CudnnDeConvArgsAndAlgo final {
   // CudnnDeConvArgsAndAlgo
   CudnnDeConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w,
                          const user_op::Tensor* y, user_op::Tensor* buf,
-                         const user_op::KernelComputeContext* ctx, DeviceCtx* device_ctx,
+                         const user_op::KernelComputeContext* ctx, ep::Stream* stream,
                          bool has_forced_algo, int32_t forced_algo)
       : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
              y->shape(), ctx->Attr<std::string>("data_format"), buf->shape().elem_cnt(),
@@ -51,9 +52,9 @@ struct CudnnDeConvArgsAndAlgo final {
                  .cudnn_conf()
                  .cudnn_conv_enable_pseudo_half()) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
-    AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
-                                   const_cast<void*>(w->dptr()), const_cast<void*>(y->dptr()),
-                                   buf->mut_dptr());
+    AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
+                                   const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
+                                   const_cast<void*>(y->dptr()), buf->mut_dptr());
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<PerfT>(
           &args, &res, static_cast<AlgoT>(forced_algo));
@@ -123,24 +124,24 @@ class DeConvGpuKernel final : public user_op::OpKernel {
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
-        out, weight, in, buf, ctx, ctx->device_ctx(),
-        cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),
+        out, weight, in, buf, ctx, ctx->stream(), cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),
         cudnn_conf.cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
     OF_CUDNN_CHECK(cudnnConvolutionBackwardData(
-        ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(), weight->dptr(),
-        args.ydesc.Get(), in->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
-        args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(), out->mut_dptr()));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr<T>(), args.wdesc.Get(),
+        weight->dptr(), args.ydesc.Get(), in->dptr(), args.cdesc.Get(), algo_perf.algo,
+        buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.xdesc.Get(),
+        out->mut_dptr()));
   }
 };
 
 #define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                                              \
   REGISTER_USER_KERNEL(#op_name)                                                                   \
       .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \

@@ -21,9 +21,11 @@ limitations under the License.
 namespace oneflow {
 namespace xrt {
 
-void XrtNode::AddInEdge(const XrtEdge* edge) { in_edges_.push_back(const_cast<XrtEdge*>(edge)); }
+void XrtNode::AddInEdge(const XrtEdge* edge) { in_edges_.emplace_back(const_cast<XrtEdge*>(edge)); }
 
-void XrtNode::AddOutEdge(const XrtEdge* edge) { out_edges_.push_back(const_cast<XrtEdge*>(edge)); }
+void XrtNode::AddOutEdge(const XrtEdge* edge) {
+  out_edges_.emplace_back(const_cast<XrtEdge*>(edge));
+}
 
 void XrtNode::EraseInEdge(const XrtEdge* edge) {
   in_edges_.remove_if(

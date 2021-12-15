@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/common/switch_func.h"
-#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -44,39 +43,40 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
 
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
-  static void Forward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
+  static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SwitchDoForward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params, entire, sliced);
+    SwitchDoForward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, entire, sliced);
   }
 
-  static void Backward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
+  static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SwitchDoBackward(SwitchCase(fold_slice_params.ndim), ctx, fold_slice_params, sliced, entire);
+    SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
   }
 
  private:
   template<int NDIM>
-  static void DoForward(DeviceCtx* ctx, const SliceParams& params, const T* entire, T* sliced) {
+  static void DoForward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    MultiThreadLoop(elem_cnt, [&](size_t i) {
+    FOR_RANGE(int, i, 0, elem_cnt) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
-    });
+    }
   }
 
   template<int NDIM>
-  static void DoBackward(DeviceCtx* ctx, const SliceParams& params, const T* sliced, T* entire) {
+  static void DoBackward(ep::Stream* stream, const SliceParams& params, const T* sliced,
+                         T* entire) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    MultiThreadLoop(elem_cnt, [&](size_t i) {
+    FOR_RANGE(int, i, 0, elem_cnt) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
-    });
+    }
   }
 
 #define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \

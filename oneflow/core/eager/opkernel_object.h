@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
-#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -86,9 +85,10 @@ class SystemOpKernelContext : public KernelContext {
   explicit SystemOpKernelContext(DeviceCtx* device_ctx) : device_ctx_(device_ctx) {}
   ~SystemOpKernelContext() = default;
 
-  StreamContext* stream_ctx() const override { return stream_ctx_.get(); }
-
-  DeviceCtx* device_ctx() const override { return device_ctx_; }
+  ep::Stream* stream() const override {
+    CHECK(device_ctx_ != nullptr);
+    return device_ctx_->stream();
+  }
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
@@ -99,10 +99,7 @@ class SystemOpKernelContext : public KernelContext {
 
   void set_state(std::shared_ptr<KernelState> state) override { UNIMPLEMENTED(); }
 
-  void set_device_ctx(DeviceCtx* ctx) {
-    stream_ctx_.reset(NewStreamContextAdapter(ctx));
-    device_ctx_ = ctx;
-  }
+  void set_device_ctx(DeviceCtx* ctx) { device_ctx_ = ctx; }
 
   void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
     bn_in_op2blob_fn_ = std::move(fn);
@@ -111,7 +108,6 @@ class SystemOpKernelContext : public KernelContext {
  private:
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
-  std::unique_ptr<StreamContext> stream_ctx_;
 };
 
 class SystemOpKernelObject : public vm::Object {

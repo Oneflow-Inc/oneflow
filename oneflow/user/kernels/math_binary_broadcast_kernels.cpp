@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K,
-         void (*binary_func)(DeviceCtx* ctx, const XpuVarNdarray<K>& z,
+         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<K>& z,
                              const XpuVarNdarray<const T>& x, const XpuVarNdarray<const T>& y)>
 class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -40,7 +40,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
     const T* dptr_y = tensor_y->dptr<T>();
     K* dptr_z = tensor_z->mut_dptr<K>();
     size_t num_axes = tensor_z->shape().NumAxes();
-    binary_func(ctx->device_ctx(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
+    binary_func(ctx->stream(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
                 XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
                 XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
   }
@@ -53,8 +53,8 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
           device, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair), \
           &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(          \
               Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                            \
-                       & (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
+                       && (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
@@ -62,7 +62,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
 // gpu half
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
-                                 MATH_BINARY_BROADCAST_FUNC_SEQ, (DeviceType::kGPU),
+                                 MATH_BINARY_BROADCAST_FUNC_SEQ, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif
 
@@ -72,9 +72,9 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
           device, OF_PP_PAIR_FIRST(data_type_pair), int8_t,                                   \
           &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
               Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                    \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
-                       & (user_op::HobDataType("z", 0) == DataType::kInt8));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)) \
+                       && (user_op::HobDataType("z", 0) == DataType::kInt8));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
                                  MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,

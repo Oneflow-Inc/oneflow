@@ -3153,5 +3153,22 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
             _test_eager_naive_boxing_s_to_s(test_case, *arg)
 
 
+@flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
+    def test_eager_consistent_cast_with_same_placement_and_sbp(test_case):
+        x = np.ones((4, 8), dtype=np.int32)
+        placement = flow.placement("cuda", {0: range(2)})
+        y = flow.tensor(
+            x,
+            dtype=flow.float32,
+            placement=placement,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        z = y.to_consistent(placement=placement, sbp=[flow.sbp.split(0)])
+        test_case.assertEqual(y.consistent_id(), z.consistent_id())
+
+
 if __name__ == "__main__":
     unittest.main()

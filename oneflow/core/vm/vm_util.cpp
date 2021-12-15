@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -36,8 +36,8 @@ intrusive::shared_ptr<InstructionMsg> NewInstruction(const std::string& instr_ty
 }
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
-  auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
-  JUST(oneflow_vm->Receive(instr_msg_list));
+  auto* virtual_machine = JUST(GlobalMaybe<VirtualMachine>());
+  JUST(virtual_machine->Receive(instr_msg_list));
   return Maybe<void>::Ok();
 }
 

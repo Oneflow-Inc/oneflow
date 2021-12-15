@@ -134,7 +134,8 @@ class GPTDataLoaderKernel final : public OpKernel {
   }
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state,
+               const OpKernelCache*) const override {
     auto* loader = dynamic_cast<GPTDataLoader*>(state);
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -153,11 +154,11 @@ class GPTDataLoaderKernel final : public OpKernel {
 
 }  // namespace
 
-#define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)            \
-  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")   \
-      .SetCreateFn<GPTDataLoaderKernel<dtype>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
+#define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")               \
+      .SetCreateFn<GPTDataLoaderKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
 
 REGISTER_GPT_DATA_LOADER_KERNEL(int32_t);
 REGISTER_GPT_DATA_LOADER_KERNEL(int64_t);

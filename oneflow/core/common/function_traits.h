@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_FUNCTION_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_FUNCTION_TRAITS_H_
 
+#include <tuple>
+
 namespace oneflow {
 
 template<typename... Args>
@@ -29,6 +31,8 @@ struct function_traits<Ret(Args...)> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+  template<size_t i>
+  using arg_type = typename std::tuple_element<i, args_type>::type;
 
   static constexpr size_t nargs = sizeof...(Args);
 };
@@ -38,6 +42,8 @@ struct function_traits<Ret (*)(Args...)> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+  template<size_t i>
+  using arg_type = typename std::tuple_element<i, args_type>::type;
 
   static constexpr size_t nargs = sizeof...(Args);
 };
@@ -47,6 +53,8 @@ struct function_traits<Ret (C::*)(Args...)> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+  template<size_t i>
+  using arg_type = typename std::tuple_element<i, args_type>::type;
 
   static constexpr size_t nargs = sizeof...(Args);
 };
@@ -56,6 +64,8 @@ struct function_traits<Ret (C::*)(Args...) const> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+  template<size_t i>
+  using arg_type = typename std::tuple_element<i, args_type>::type;
 
   static constexpr size_t nargs = sizeof...(Args);
 };

@@ -63,6 +63,24 @@ class BinaryFloatFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BinaryGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dz) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y, dz}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
+  }
+
+ protected:
+  BinaryGradFunctor() = default;
+  virtual ~BinaryGradFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
+};
+
 class InplaceableBinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,

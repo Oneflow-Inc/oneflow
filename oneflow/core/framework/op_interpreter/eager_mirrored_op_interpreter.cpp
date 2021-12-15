@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/stride.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -173,9 +172,7 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
   const auto& data_type = tensor_impl->dtype();
   const auto& device = tensor_impl->device();
-  const auto empty_expr = JUST(op_expr_helper::EmptyOp(*shape, data_type));
-  std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
-  JUST(NaiveInterpret(*empty_expr, *inputs, device, outputs, OpExprInterpContext(AttrMap{})));
+  outputs->at(0) = JUST(functional::Empty(*shape, DType(data_type), device));
   return Maybe<void>::Ok();
 }
 

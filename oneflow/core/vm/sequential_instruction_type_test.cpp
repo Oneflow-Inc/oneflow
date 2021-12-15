@@ -64,22 +64,26 @@ TEST(SequentialInstruction, front_seq_compute) {
   }
   int64_t sixsixsix = 0;
   {
-    auto instruction = NewInstruction("ComputeRankFrontSeqCallback");
-    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() { sixsixsix = 666; };
-    *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    auto instruction = intrusive::make_shared<InstructionMsg>(
+        vm.Mutable(), "ComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
+        phy_instr_operand);
+    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     list.EmplaceBack(std::move(instruction));
   }
   bool compute_finished = false;
   bool is_666 = false;
   {
-    auto instruction = NewInstruction("CtrlComputeRankFrontSeqCallback");
-    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() {
       is_666 = sixsixsix == 666;
       compute_finished = true;
     };
-    *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    auto instruction = intrusive::make_shared<InstructionMsg>(
+        vm.Mutable(), "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
+        phy_instr_operand);
+    instruction->add_int64_operand(GlobalProcessCtx::Rank());
     list.EmplaceBack(std::move(instruction));
   }
   BlockingCounter bc(1);

@@ -61,7 +61,7 @@ REGISTER_USER_OP("pack")
           CHECK_OR_RETURN(!time_shape_dim_vec.empty());
           CHECK_EQ_OR_RETURN(time_shape_dim_vec.back(), pack_num);
           time_shape_dim_vec.pop_back();
-          if (time_shape_dim_vec.empty()) { time_shape_dim_vec.push_back(1); }
+          if (time_shape_dim_vec.empty()) { time_shape_dim_vec.emplace_back(1); }
           *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
           return Maybe<void>::Ok();
         })

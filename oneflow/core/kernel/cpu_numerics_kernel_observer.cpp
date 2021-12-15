@@ -28,7 +28,7 @@ bool HasNotFinite(const int64_t elem_cnt, const T* data_ptr) {
   return false;
 }
 
-bool HasNotFiniteCpu(DeviceCtx* device_ctx, const Blob* blob) {
+bool HasNotFiniteCpu(ep::Stream* stream, const Blob* blob) {
   const DataType dtype = blob->data_type();
   const int64_t elem_cnt = blob->shape().elem_cnt();
   if (dtype == kFloat) {
@@ -47,7 +47,7 @@ void CpuCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,
   for (const auto& obn : kernel->op_attribute().output_bns()) {
     Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {
-      bool has_not_finite = HasNotFiniteCpu(ctx->device_ctx(), blob);
+      bool has_not_finite = HasNotFiniteCpu(ctx->stream(), blob);
       CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }

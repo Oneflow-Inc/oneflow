@@ -1160,12 +1160,12 @@ def TruncatedNormalInitializerImpl(
 def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
-    fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
+    fan_in = np.prod(var_blob_shape[1:]).astype(np.int32).item()
     fan_out = var_blob_shape[0]
     if data_format == "channel_first":
-        fan_out *= np.prod(var_blob_shape[2:]).astype(np.int).item()
+        fan_out *= np.prod(var_blob_shape[2:]).astype(np.int32).item()
     else:
-        fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int).item()
+        fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int32).item()
     if variance_norm == initializer_conf_util.kAverage:
         fan = (fan_in + fan_out) / 2
     elif variance_norm == initializer_conf_util.kFanIn:
