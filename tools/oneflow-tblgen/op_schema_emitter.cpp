@@ -61,7 +61,7 @@ class OpSchemaEmitter {
 
   void emitAttrs(const Record* def, json* op) const;
 
-  void emitCustomCode(const Record* def, StringRef fieldname, json* op) const;
+  void emitBit(const Record* def, StringRef fieldname, json* op) const;
 
  private:
   static std::string emitType(const std::string& ods_type) {
@@ -125,17 +125,19 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
 
     emitInputAndOutput(def, &op);
     emitAttrs(def, &op);
-    emitCustomCode(def, "has_nd_sbp_infer_fn", &op);
-    emitCustomCode(def, "has_get_sbp_fn", &op);
-    emitCustomCode(def, "has_logical_tensor_desc_infer_fn", &op);
-    emitCustomCode(def, "has_physical_tensor_desc_infer_fn", &op);
-    emitCustomCode(def, "has_data_type_infer_fn", &op);
-    emitCustomCode(def, "has_device_infer_fn", &op);
-    emitCustomCode(def, "has_input_arg_modify_fn", &op);
-    emitCustomCode(def, "has_output_arg_modify_fn", &op);
-    emitCustomCode(def, "has_output_blob_time_shape_infer_fn", &op);
-    emitCustomCode(def, "has_nd_sbp_infer_fn", &op);
-    emitCustomCode(def, "has_check_fn", &op);
+    emitBit(def, "no_grad", &op);
+    emitBit(def, "cpu_only", &op);
+    emitBit(def, "has_nd_sbp_infer_fn", &op);
+    emitBit(def, "has_get_sbp_fn", &op);
+    emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
+    emitBit(def, "has_physical_tensor_desc_infer_fn", &op);
+    emitBit(def, "has_data_type_infer_fn", &op);
+    emitBit(def, "has_device_infer_fn", &op);
+    emitBit(def, "has_input_arg_modify_fn", &op);
+    emitBit(def, "has_output_arg_modify_fn", &op);
+    emitBit(def, "has_output_blob_time_shape_infer_fn", &op);
+    emitBit(def, "has_sbp_signature_infer_fn", &op);
+    emitBit(def, "has_check_fn", &op);
     ops[op_name.str()] = op;
   }
 
@@ -191,8 +193,7 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
 }
 
 template<FileTarget Target>
-void OpSchemaEmitter<Target>::emitCustomCode(const Record* def, StringRef fieldname,
-                                             json* op) const {
+void OpSchemaEmitter<Target>::emitBit(const Record* def, StringRef fieldname, json* op) const {
   (*op)[fieldname.str()] = def->getValueAsBit(fieldname);
 }
 

@@ -31,82 +31,73 @@ Maybe<AttrVal> {{opname}}::GetAttr(const std::string& attr_name) const {
 
 REGISTER_OP_SCHEMA("user.{{op.name}}", schema::{{opname}});
 
-// REGISTER_USER_OP("{{op.name}}")
+REGISTER_USER_OP("{{op.name}}")
 {%- if op.input -%}
 {%- for name, input in op.input -%}
 {%- if input.is_optional -%}
-//     .OptionalInput("{{name}}")
+    .OptionalInput("{{name}}")
 {%- else -%}
-//     .Input("{{name}}")
+    .Input("{{name}}")
 {%- endif -%}
 {%- endfor -%}
 {%- endif -%}
 {%- if op.output -%}
 {%- for name, output in op.output -%}
 {%- if output.is_optional -%}
-//     .OptionalOutput("{{name}}")
+    .OptionalOutput("{{name}}")
 {%- else -%}
-//     .Output("{{name}}")
+    .Output("{{name}}")
 {%- endif -%}
 {%- endfor -%}
 {%- endif -%}
 
 {%- for name, attr in op.attrs -%}
 {%- if existsIn(attr, "default") -%}
-//     .Attr<{{attr.type}}>("{{name}}", {{attr.default}})
+    .Attr<{{attr.type}}>("{{name}}", {{attr.default}})
 {%- else -%}
-//     .Attr<{{attr.type}}>("{{name}}")
+    .Attr<{{attr.type}}>("{{name}}")
 {%- endif -%}
 {%- endfor -%}
-
+{%- if op.cpu_only -%}
+    .SupportCpuOnly()
+{%- endif -%}
+{%- if op.no_grad -%}
+    .NoGrad()
+{%- endif -%}
 {%- if op.has_nd_sbp_infer_fn -%}
-//     .SetNdSbpInferFn(&{{opname}}::InferNdSbp)
+    .SetNdSbpInferFn(&{{opname}}::InferNdSbp)
 {%- endif -%}
-
 {%- if op.has_get_sbp_fn -%}
-//     .SetGetSbpFn(&{{opname}}::GetSbp)
+    .SetGetSbpFn(&{{opname}}::GetSbp)
 {%- endif -%}
-
 {%- if op.has_logical_tensor_desc_infer_fn -%}
-//     .SetLogicalTensorDescInferFn(&{{opname}}::InferLogicalTensorDesc)
+    .SetLogicalTensorDescInferFn(&{{opname}}::InferLogicalTensorDesc)
 {%- endif -%}
-
 {%- if op.has_physical_tensor_desc_infer_fn -%}
-{%- if op.has_logical_tensor_desc_infer_fn -%}
-//     .SetPhysicalTensorDescInferFn(&{{opname}}::InferTensorDesc)
-{%- else -%}
-//     ..SetTensorDescInferFn(&{{opname}}::InferTensorDesc)
+    .SetPhysicalTensorDescInferFn(&{{opname}}::InferPhysicalTensorDesc)
 {%- endif -%}
-{%- endif -%}
-
 {%- if op.has_data_type_infer_fn -%}
-//     .SetDataTypeInferFn(&{{opname}}::InferDataType)
+    .SetDataTypeInferFn(&{{opname}}::InferDataType)
 {%- endif -%}
-
 {%- if op.has_device_infer_fn -%}
-//     .SetDeviceInferFn(&{{opname}}::InferDevice)
+    .SetDeviceInferFn(&{{opname}}::InferDevice)
 {%- endif -%}
-
 {%- if op.has_sbp_signature_infer_fn -%}
-//     .SetSbpSignatureInferFn(&{{opname}}::InferSbpSignature)
-{%- endif -%}
-
+    .SetSbpSignatureInferFn(&{{opname}}::InferSbpSignature)
+{% endif -%}
 {%- if op.has_input_arg_modify_fn -%}
-//     .SetInputArgModifyFn(&{{opname}}::ModifyInputArg)
+    .SetInputArgModifyFn(&{{opname}}::ModifyInputArg)
 {%- endif -%}
-
 {%- if op.has_output_arg_modify_fn -%}
-//     .SetOutputArgModifyFn(&{{opname}}::ModifyOutputArg)
+    .SetOutputArgModifyFn(&{{opname}}::ModifyOutputArg)
 {%- endif -%}
-
 {%- if op.has_output_blob_time_shape_infer_fn -%}
-//     .SetOutputBlobTimeShapeInferFn(&{{opname}}::InferOutputBlobTimeShape)
+    .SetOutputBlobTimeShapeInferFn(&{{opname}}::InferOutputBlobTimeShape)
 {%- endif -%}
-
 {%- if op.has_check_fn -%}
-//     .SetCheckAttrFn(&{{opname}}::CheckAttr)
+    .SetCheckAttrFn(&{{opname}}::CheckAttr)
 {%- endif -%}
-
+;
 {%- endfor %}
 } // namespace oneflow
 )OP_SCHEMA_INC"
