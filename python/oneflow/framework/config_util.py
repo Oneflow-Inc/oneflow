@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import traceback
 
 import oneflow._oneflow_internal
 import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
-import os
 
 
 def api_load_library(val: str) -> None:
