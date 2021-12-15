@@ -73,6 +73,8 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     if (user_op_conf.has_input("_add_to_output", 0)) { return false; }
     return true;
   };
+
+  // Save all op's ctrl in op name in a set.
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
@@ -80,6 +82,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
   });
 
+  // Whether 2 ops has path between them.
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   std::vector<OperatorConf> delete_ops;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -121,10 +124,13 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       const std::string& consumer_op_name = consumer->op().op_name();
+      // remeber add_n op's consumer ops
       if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
         op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
       }
+      // for each input of add_n op's consumer
       for (const std::string& ibn : consumer->op().input_bns()) {
+        // If the input is add_n op's out, find the consum edge, then consume new_add_to_op
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
           OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
           const auto& new_val = GenLogicalBlobName(*sum_lbi);
@@ -133,6 +139,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
         }
       }
     }
+    // add this add_n op to remove list
     delete_ops.emplace_back(op_conf);
   });
   job_builder->DelOps(delete_ops);
