@@ -299,6 +299,7 @@ def GetDualObject(name, pytorch, oneflow):
                                             id(oneflow_res)
                                         ] = test_g_res
 
+
                                 elif oneflow.__name__ in filter:
                                     pass
                                 elif "oneflow.nn.modules" not in oneflow.__module__:
@@ -313,11 +314,11 @@ def GetDualObject(name, pytorch, oneflow):
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
-                                            self.test_module = oneflow
+                                            self.test_func = oneflow
 
                                         def build(self, *tensor_args):
-                                            return self.test_module(
-                                                *tensor_args, *other_args
+                                            return self.test_func(
+                                                *tensor_args, *other_args, **oneflow_kwargs
                                             )
 
                                     test_g = TestGraphOfFunctional()
