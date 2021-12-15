@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ndarray/ndarray_reduce.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/user/kernels/variance_kernel_util.h"
 
 namespace oneflow {
@@ -81,29 +83,28 @@ class VarGradKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    // TODO(liufengwei): Kernel implementation replaces functional::xx
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_VAR_KERNEL(device, dtype)                                                    \
-  REGISTER_USER_KERNEL("var")                                                                 \
-      .SetCreateFn<VarKernel<device, dtype>>()                                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize);
+#define REGISTER_VAR_GRAD_KERNEL(device, dtype)             \
+  REGISTER_USER_KERNEL("var_grad")                          \
+      .SetCreateFn<VarGradKernel<device, dtype>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
-#define REGISTER_VAR_KERNELS_WITH_DEVICE(device) \
-  REGISTER_VAR_KERNEL(device, float)             \
-  REGISTER_VAR_KERNEL(device, double)
+#define REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE(device) \
+  REGISTER_VAR_GRAD_KERNEL(device, float)             \
+  REGISTER_VAR_GRAD_KERNEL(device, double)
 
-REGISTER_VAR_KERNELS_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_VAR_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
 #endif
 
-#undef REGISTER_VAR_KERNELS_WITH_DEVICE
-#undef REGISTER_VAR_KERNEL
-
+#undef REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE
+#undef REGISTER_VAR_GRAD_KERNEL
 
 }  // namespace user_op
 }  // namespace oneflow

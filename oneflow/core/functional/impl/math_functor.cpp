@@ -1514,16 +1514,19 @@ class VarianceFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     if (!IsFloatingDataType(input->dtype()->data_type())) {
-      return Error::RuntimeError() << "var only support floating point and complex dtypes";
+      return Error::RuntimeError() << "var only support floating point dtypes";
     }
     MutableAttrMap attrs;
-    if (unbiased) { attrs.SetAttr<bool>("unbiased", JUST(unbiased)); }
+    if (unbiased) {
+      attrs.SetAttr<bool>("unbiased", JUST(unbiased));
+    } else {
+      attrs.SetAttr<bool>("unbiased", true);
+    }
     if (keepdim) {
       attrs.SetAttr<bool>("keepdim", JUST(keepdim));
     } else {
       attrs.SetAttr<bool>("keepdim", false);
     }
-
     std::vector<int32_t> axis;
     const int32_t ndim = input->shape()->NumAxes();
     axis.reserve(ndim);
