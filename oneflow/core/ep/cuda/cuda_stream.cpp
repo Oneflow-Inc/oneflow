@@ -42,6 +42,10 @@ void SetAffinityByDevice(int dev_id) {
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
 }
 
+bool IsCuda9OnTuringDevice(const cudaDeviceProp& prop) {
+  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && prop.major == 7 && prop.minor == 5;
+}
+
 }  // namespace
 
 #ifdef WITH_CUDA_GRAPHS
@@ -100,12 +104,12 @@ CudaStream::CudaStream(CudaDevice* device)
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
   // cudnn_handle
-  if (IsCuda9OnTuringDevice()) {
+  if (IsCuda9OnTuringDevice(device_properties())) {
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaGetLastError());
   }
   OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
-  if (IsCuda9OnTuringDevice()) {
+  if (IsCuda9OnTuringDevice(device_properties())) {
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     cudaGetLastError();
   }
