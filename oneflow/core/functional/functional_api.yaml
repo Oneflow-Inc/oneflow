@@ -536,14 +536,6 @@
     ]
   bind_python: True
 
-- name: "physical_eye"
-  signature: "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => PhysicalEye"
-  bind_python: false
-
-- name: "consistent_eye"
-  signature: "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye"
-  bind_python: false
-
 - name: "arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
