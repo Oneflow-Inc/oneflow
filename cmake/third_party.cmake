@@ -3,7 +3,9 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-include(zlib)
+if (WITH_ZLIB)
+  include(zlib)
+endif()
 include(protobuf)
 include(googletest)
 include(gflags)
@@ -39,6 +41,10 @@ if (WITH_TENSORRT)
 endif()
 
 include(hwloc)
+if (WITH_ONEDNN)
+  include(oneDNN)
+endif()
+
 
 option(CUDA_STATIC "" ON)
 
@@ -136,16 +142,22 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    zlib_imported
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
 )
+if (WITH_ONEDNN)
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
+endif()
 
 if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
+endif()
+
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_libs zlib_imported)
 endif()
 
 if(WIN32)
@@ -155,7 +167,6 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib
   protobuf
   gflags
   glog
@@ -171,6 +182,12 @@ set(oneflow_third_party_dependencies
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
+if (WITH_ONEDNN)
+  list(APPEND oneflow_third_party_dependencies onednn)
+endif()
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_dependencies zlib)
+endif()
 
 if (WITH_COCOAPI)
   list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
@@ -201,6 +218,10 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
 )
+if (WITH_ONEDNN)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
+endif()
+
 
 if (NOT WITH_XLA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
@@ -273,6 +294,20 @@ if (WITH_OPENVINO)
   list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
 endif()
 
+foreach (oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
+  if (NOT "${oneflow_third_party_lib}" MATCHES "^-l.+" AND NOT TARGET ${oneflow_third_party_lib} AND "${oneflow_third_party_lib}" MATCHES "^\/.+" AND NOT "${oneflow_third_party_lib}" MATCHES "^.+\.framework")
+    get_filename_component(IMPORTED_LIB_NAME ${oneflow_third_party_lib} NAME_WE)
+    set(IMPORTED_LIB_NAME "imported::${IMPORTED_LIB_NAME}")
+    message(STATUS "Creating imported lib: ${oneflow_third_party_lib} => ${IMPORTED_LIB_NAME}")
+    add_library(${IMPORTED_LIB_NAME} UNKNOWN IMPORTED)
+    set_property(TARGET ${IMPORTED_LIB_NAME} PROPERTY IMPORTED_LOCATION "${oneflow_third_party_lib}")
+    list(APPEND ONEFLOW_THIRD_PARTY_LIBS_TO_LINK "${IMPORTED_LIB_NAME}")
+  else()
+    list(APPEND ONEFLOW_THIRD_PARTY_LIBS_TO_LINK "${oneflow_third_party_lib}")
+  endif()
+endforeach()
+
+set(oneflow_third_party_libs ${ONEFLOW_THIRD_PARTY_LIBS_TO_LINK})
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)

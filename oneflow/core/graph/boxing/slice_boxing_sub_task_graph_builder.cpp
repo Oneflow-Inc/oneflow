@@ -20,8 +20,18 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
+
+namespace {
+
+bool IsCopyNdPrimitiveSupported(DeviceType device_type, int64_t ndims) {
+  auto primitive = ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(device_type, ndims);
+  return primitive.operator bool();
+}
+
+}  // namespace
 
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
@@ -30,6 +40,14 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
     const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if (!IsCopyNdPrimitiveSupported(in_parallel_desc.device_type(),
+                                  logical_blob_desc.shape().NumAxes())) {
+    return Error::BoxingNotSupportedError();
+  }
+  if (!IsCopyNdPrimitiveSupported(out_parallel_desc.device_type(),
+                                  logical_blob_desc.shape().NumAxes())) {
+    return Error::BoxingNotSupportedError();
+  }
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }

@@ -17,7 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_DEVICE_MANAGER_REGISTRY_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/device_manager.h"
+#include "oneflow/core/ep/include/device_manager_factory.h"
 
 namespace oneflow {
 
@@ -31,6 +33,11 @@ class DeviceManagerRegistry {
 
   DeviceManager* GetDeviceManager(DeviceType device_type);
   std::shared_ptr<Device> GetDevice(DeviceType device_type, size_t device_index);
+
+  static void RegisterDeviceManagerFactory(std::unique_ptr<DeviceManagerFactory>&& factory);
+  static void DumpVersionInfo();
+  static std::string GetDeviceTypeNameByDeviceType(DeviceType device_type);
+  static DeviceType GetDeviceTypeByDeviceTypeName(const std::string& device_type_name);
 
  private:
   class Impl;

@@ -140,6 +140,44 @@ class MulFunctor {
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
+class InplaceMulFunctor {
+ public:
+  InplaceMulFunctor() {
+    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
+    broadcast_mul_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    if (y->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(x)), y})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    if (*x_cast->shape() == *y_cast->shape()) {
+      JUST(OpInterpUtil::Dispatch(*mul_op_, input_vec, outputs.get()));
+    } else {
+      JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
+    }
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> mul_op_;
+  std::shared_ptr<OpExpr> broadcast_mul_op_;
+};
+
 class DivFunctor : public BinaryFloatFunctor {
  public:
   DivFunctor() {
@@ -300,6 +338,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Atan2Functor>("Atan2");
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");
+  m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
   m.add_functor<impl::DivFunctor>("Div");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");

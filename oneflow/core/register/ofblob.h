@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
@@ -27,7 +28,7 @@ class Blob;
 class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);
-  OfBlob(DeviceCtx* device_ctx, Blob* blob) : device_ctx_(device_ctx), blob_(blob) {
+  OfBlob(ep::Stream* stream, Blob* blob) : stream_(stream), blob_(blob) {
     mem_case_.mutable_host_mem();
   }
   ~OfBlob() = default;
@@ -41,16 +42,18 @@ class OfBlob final {
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
 
   template<typename T>
-  void AutoMemCopyTo(T* ptr, int64_t len) const;
+  inline void AutoMemCopyTo(T* ptr, int64_t len) const;
+
   template<typename T>
-  void AutoMemCopyFrom(const T* ptr, int64_t len) const;
+  inline void AutoMemCopyFrom(const T* ptr, int64_t len) const;
+
   void AsyncAutoMemset(const char value) const;
 
   Blob* mut_blob() { return blob_; }
-  DeviceCtx* mut_device_ctx() { return device_ctx_; }
+  ep::Stream* stream() { return stream_; }
 
  private:
-  DeviceCtx* device_ctx_;
+  ep::Stream* stream_;
   Blob* blob_;
   MemoryCase mem_case_;
 };
@@ -77,24 +80,36 @@ inline void OfBlob::CopyStaticShapeTo(int64_t* ptr, int64_t num_axis) const {
 }
 
 template<typename T>
-void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
+inline void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_->stream(), ptr, blob_->dptr(), len * sizeof(T), mem_case_,
-                 blob_->mem_case());
+  SyncAutoMemcpy(stream_, ptr, blob_->dptr(), len * sizeof(T), mem_case_, blob_->mem_case());
+}
+
+template<>
+inline void OfBlob::AutoMemCopyTo<void>(void* ptr, int64_t len) const {
+  CHECK_EQ(blob_->shape().elem_cnt() * (DType(blob_->data_type()).bytes().GetOrThrow()), len);
+  SyncAutoMemcpy(stream_, ptr, static_cast<const char*>(blob_->dptr()), len * sizeof(char),
+                 mem_case_, blob_->mem_case());
 }
 
 template<typename T>
-void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
+inline void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
   blob_->blob_access_checker()->CheckBodyMutable();
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_->stream(), blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(),
-                 mem_case_);
+  SyncAutoMemcpy(stream_, blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(), mem_case_);
+}
+template<>
+inline void OfBlob::AutoMemCopyFrom<void>(const void* ptr, int64_t len) const {
+  blob_->blob_access_checker()->CheckBodyMutable();
+  CHECK_EQ(blob_->shape().elem_cnt() * (DType(blob_->data_type()).bytes().GetOrThrow()), len);
+  SyncAutoMemcpy(stream_, static_cast<char*>(blob_->mut_dptr()), ptr, len * sizeof(char),
+                 blob_->mem_case(), mem_case_);
 }
 
 inline void OfBlob::AsyncAutoMemset(const char value) const {
-  ::oneflow::AutoMemset(device_ctx_->stream(), blob_->mut_dptr(), value,
+  ::oneflow::AutoMemset(stream_, blob_->mut_dptr(), value,
                         blob_->shape().elem_cnt() * GetSizeOfDataType(blob_->data_type()),
                         blob_->mem_case());
 }

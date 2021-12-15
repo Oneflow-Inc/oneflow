@@ -246,6 +246,10 @@ def _mul(self, other):
     return flow.mul(self, other)
 
 
+def _mul_(self, other):
+    return flow._C.mul_(self, other)
+
+
 def _rmul(self, other):
     return self.mul(other)
 
@@ -284,6 +288,10 @@ def _rtruediv(self, other):
 
 def _floor_divide(self, other):
     return flow.floor_divide(self, other)
+
+
+def _floor(self):
+    return flow._C.floor(self)
 
 
 def _neg(self):
@@ -382,6 +390,10 @@ def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
 
 
+def _diagonal(self, offset=0, dim1=0, dim2=1):
+    return flow._C.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
+
+
 def _log1p(self):
     return flow.log1p(self)
 
@@ -448,6 +460,10 @@ def _expm1(self):
 
 def _fmod(self, other):
     return flow.fmod(self, other)
+
+
+def _flatten(self, start_dim: int = 0, end_dim: int = -1):
+    return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
 
 
 def _log(self):
@@ -566,6 +582,18 @@ def _roll(self, shifts, dims=None):
 
 def _bmm(self, other):
     return flow.bmm(self, other)
+
+
+def _chunk(self, chunks=None, dim=None):
+    return flow._C.chunk(self, chunks, dim)
+
+
+def _all(self, dim=None, keepdim=False):
+    return flow.all(self, dim, keepdim)
+
+
+def _any(self, dim=None, keepdim=False):
+    return flow.any(self, dim, keepdim)
 
 
 def _len(self):
@@ -709,6 +737,10 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
+def _gather(self, dim, index):
+    return flow._C.dim_gather(self, dim, index, False)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -768,6 +800,7 @@ def RegisterMethods():
     Tensor.abs = _abs
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
+    Tensor.floor = _floor
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
@@ -794,11 +827,13 @@ def RegisterMethods():
     Tensor.softsign = _softsign
     Tensor.cast = _cast
     Tensor.diag = _diag
+    Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
     Tensor.mul = _mul
+    Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
     Tensor.asin = _asin
@@ -817,6 +852,7 @@ def RegisterMethods():
     Tensor.erfc = _erfc
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
+    Tensor.flatten = _flatten
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
@@ -842,12 +878,16 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.bmm = _bmm
+    Tensor.chunk = _chunk
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.gather = _gather
+    Tensor.all = _all
+    Tensor.any = _any
 
 
 def register_tensor_op(op_name):
