@@ -243,20 +243,20 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
           ctx->Attr<float>("mask_fill_value"), ctx->Attr<float>("scale_value"),
           ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);
     }
-#define DEFINE_ONE_ELIF(dims)                                                                        \
-    else if (num_dims == dims) {                                                                     \
-      LaunchForwardKernel<T, ComputeType, MASK, dims>(                                               \
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x->dptr<T>(), y->mut_dptr<T>(),        \
-          softmax_y->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), rows, cols,    \
-          ctx->Attr<float>("mask_fill_value"), ctx->Attr<float>("scale_value"),                      \
-          ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);                           \
-    } 
+#define DEFINE_ONE_ELIF(dims)                                                                   \
+  else if (num_dims == dims) {                                                                  \
+    LaunchForwardKernel<T, ComputeType, MASK, dims>(                                            \
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x->dptr<T>(), y->mut_dptr<T>(),     \
+        softmax_y->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), rows, cols, \
+        ctx->Attr<float>("mask_fill_value"), ctx->Attr<float>("scale_value"),                   \
+        ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);                        \
+  }
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
     DEFINE_ONE_ELIF(5)
     DEFINE_ONE_ELIF(6)
 #undef DEFINE_ONE_ELIF
-    else { 
+    else {
       UNIMPLEMENTED();
     }
   }
@@ -294,14 +294,14 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
           static_cast<float>(0.0), ctx->Attr<float>("scale_value"),
           ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);
     }
-#define DEFINE_ONE_ELIF(dims)                                                                         \
-    else if (num_dims == dims) {                                                                      \
-      LaunchBackwardKernel<T, ComputeType, MASK, dims>(                                               \
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(),  \
-            dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), rows, cols,          \
-            static_cast<float>(0.0), ctx->Attr<float>("scale_value"),                                 \
-            ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);                          \
-    }
+#define DEFINE_ONE_ELIF(dims)                                                                    \
+  else if (num_dims == dims) {                                                                   \
+    LaunchBackwardKernel<T, ComputeType, MASK, dims>(                                            \
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(), \
+        dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), rows, cols,         \
+        static_cast<float>(0.0), ctx->Attr<float>("scale_value"),                                \
+        ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);                         \
+  }
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
     DEFINE_ONE_ELIF(5)
