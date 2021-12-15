@@ -226,6 +226,9 @@ else() # build_python
 endif(BUILD_PYTHON)
 
 include(third_party)
+set(ARROW_URL https://github.com/apache/arrow/archive/refs/tags/apache-arrow-7.0.0.dev.tar.gz)
+use_mirror(VARIABLE ARROW_URL URL ${ARROW_URL})
+set(ARROW_MD5 cb77269e021b51eb986f30a4bd4ccff6)
 add_subdirectory(external)
 
 if (BUILD_CUDA)
