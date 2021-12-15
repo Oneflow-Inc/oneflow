@@ -111,7 +111,7 @@ config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.oneflow_obj_root, "test")
-config.oneflow_tools_dir = os.path.join(config.oneflow_obj_root, "bin")
+config.oneflow_tools_dir = os.path.join(config.oneflow_ir_obj_root, "bin")
 
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
@@ -126,9 +126,7 @@ if gpu_index != -1:
     llvm_config.with_environment("CUDA_VISIBLE_DEVICES", str(gpu_index))
 
 llvm_config.with_environment(
-    "PYTHONPATH",
-    os.path.join(config.test_source_root, "../../../python"),
-    append_path=True,
+    "PYTHONPATH", os.path.join(config.oneflow_src_root, "python"), append_path=True,
 )
 
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
