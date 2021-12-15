@@ -61,7 +61,7 @@ class OpSchemaEmitter {
 
   void emitAttrs(const Record* def, json* op) const;
 
-  bool emitCustomCode(const Record* def, StringRef fieldname, json* op) const;
+  void emitCustomCode(const Record* def, StringRef fieldname, json* op) const;
 
  private:
   static std::string emitType(const std::string& ods_type) {
@@ -74,6 +74,9 @@ class OpSchemaEmitter {
 
  private:
   RecordKeeper& records;
+
+  StringRef op_type_name;
+  StringRef op_name;
 
   inja::Environment env;
   inja::Template temp;
@@ -107,24 +110,32 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
   json ops = json::object();
 
   for (const auto& def : records.getAllDerivedDefinitions("OneFlow_BaseOp")) {
-    auto op_type_name = def->getValueAsString("opName");
+    op_type_name = def->getValueAsString("opName");
     if (op_type_name.empty()) {
       PrintFatalError(def, "`opName` of op definitions cannot be omitted");
+    }
+    op_name = def->getName();
+    if (!op_name.consume_front("OneFlow_")) {
+      PrintFatalError(def, "op name is not start with `OneFlow_`: " + op_name.str());
     }
     json op{{"name", op_type_name},
             {"input", json::object()},
             {"output", json::object()},
-            {"attrs", json::object()},
-            {"infer_nd_sbp", json::object()}};
+            {"attrs", json::object()}};
 
     emitInputAndOutput(def, &op);
     emitAttrs(def, &op);
-    emitCustomCode(def, "infer_nd_sbp", &op);
-
-    auto op_name = def->getName();
-    if (!op_name.consume_front("OneFlow_")) {
-      PrintFatalError(def, "op name is not start with `OneFlow_`: " + op_name.str());
-    }
+    emitCustomCode(def, "has_nd_sbp_infer_fn", &op);
+    emitCustomCode(def, "has_get_sbp_fn", &op);
+    emitCustomCode(def, "has_logical_tensor_desc_infer_fn", &op);
+    emitCustomCode(def, "has_physical_tensor_desc_infer_fn", &op);
+    emitCustomCode(def, "has_data_type_infer_fn", &op);
+    emitCustomCode(def, "has_device_infer_fn", &op);
+    emitCustomCode(def, "has_input_arg_modify_fn", &op);
+    emitCustomCode(def, "has_output_arg_modify_fn", &op);
+    emitCustomCode(def, "has_output_blob_time_shape_infer_fn", &op);
+    emitCustomCode(def, "has_nd_sbp_infer_fn", &op);
+    emitCustomCode(def, "has_check_fn", &op);
     ops[op_name.str()] = op;
   }
 
@@ -180,33 +191,9 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
 }
 
 template<FileTarget Target>
-bool OpSchemaEmitter<Target>::emitCustomCode(const Record* def, StringRef fieldname,
+void OpSchemaEmitter<Target>::emitCustomCode(const Record* def, StringRef fieldname,
                                              json* op) const {
-  auto* valueInit = def->getValueInit(fieldname);
-  StringInit* stringInit = dyn_cast<StringInit>(valueInit);
-  if (!stringInit || stringInit->getValue().empty()) { return false; }
-
-  auto code = stringInit->getValue().ltrim().rtrim(" \t\v\f\r");
-  auto value = code;
-  if (!value.consume_front("return ")) {
-    PrintFatalError(
-        def, "Invalid " + fieldname.str() + " code (note: should start with return identifier)");
-  }
-  size_t start_pos = value.find_first_of("(");
-  size_t end_pos = value.find_last_of(")");
-  if (start_pos == std::string::npos || end_pos == std::string::npos  // NOLINT
-      || start_pos > end_pos) {
-    PrintFatalError(def, "Invalid " + fieldname.str() + " code (note: missing brackets)");
-  }
-  if (value.substr(start_pos + 1, end_pos - start_pos - 1) != "ctx") {
-    PrintFatalError(def, "Invalid " + fieldname.str() + " code (note: argument should be ctx)");
-  }
-  auto func = value.substr(0, start_pos).ltrim().rtrim(" \t\v\f\r");
-  bool is_member_func = func.consume_front("::");
-  (*op)[fieldname.str()] = {{"is_member_func", is_member_func},
-                            {"func", func.str()},
-                            {"code", "return " + func.str() + "(ctx);"}};
-  return true;
+  (*op)[fieldname.str()] = def->getValueAsBit(fieldname);
 }
 
 template<>

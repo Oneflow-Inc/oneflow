@@ -1,24 +1,72 @@
 R"OP_SCHEMA_INC(
-#include <string>
-#include <vector>
-
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/op_base.h"
 
+#include <string>
+#include <vector>
+#include <functional>
+
 namespace oneflow {
+
+class Device;
+class InputBlobModifier;
+class OutputBlobModifier;
+
 namespace user_op {
+class UserOpDefWrapper;
+class UserOpConfWrapper;
+class InferContext;
+class SbpContext;
+class InferSbpSignatureFnContext;
+class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
+class DeviceInferContext;
 }  // namespace user_op
+
+using GetInputArgModifier =
+    std::function<InputBlobModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
+using GetOutputArgModifier =
+    std::function<OutputBlobModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 
 {% for opname, op in ops %}
 class {{opname}} : public OpBase {
  public:
   virtual ~{{opname}}() = default;
-  {% if op.infer_nd_sbp %}
-  static Maybe<void> InferNdSbp(user_op::InferNdSbpFnContext* ctx);
 
-  {% endif -%}
+  {% if op.has_nd_sbp_infer_fn -%}
+  static Maybe<void> InferNdSbp(user_op::InferNdSbpFnContext* ctx);
+  {%- endif -%}
+  {% if op.has_get_sbp_fn -%}
+  static Maybe<void> GetSbp(user_op::SbpContext* ctx);
+  {%- endif -%}
+  {% if op.has_logical_tensor_desc_infer_fn -%}
+  static Maybe<void> InferLogicalTensorDesc(user_op::InferContext* ctx);
+  {%- endif -%}
+  {% if op.has_tensor_desc_infer_fn -%}
+  static Maybe<void> InferTensorDesc(user_op::InferContext* ctx);
+  {%- endif -%}
+  {% if op.has_data_type_infer_fn -%}
+  static Maybe<void> InferDataType(user_op::InferContext* ctx);
+  {%- endif -%}
+  {% if op.has_device_infer_fn -%}
+  static Maybe<void> InferDevice(user_op::DeviceInferContext* ctx);
+  {%- endif -%}
+  {% if op.has_sbp_signature_infer_fn -%}
+  static Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx);
+  {%- endif -%}
+  {% if op.has_input_arg_modify_fn -%}
+  static Maybe<void> ModifyInputArg(GetInputArgModifier, const UserOpConfWrapper&);
+  {%- endif -%}
+  {% if op.has_output_arg_modify_fn -%}
+  static Maybe<void> ModifyOutputArg(GetOutputArgModifier, const UserOpConfWrapper&);
+  {%- endif -%}
+  {% if op.has_output_blob_time_shape_infer_fn -%}
+  static Maybe<void> InferOutputBlobTimeShape(user_op::InferOutputBlobTimeShapeFnContext* ctx);
+  {%- endif -%}
+  {% if op.has_check_fn -%}
+  static Maybe<void> CheckAttr(const user_op::UserOpDefWrapper&, const user_op::UserOpConfWrapper&);
+  {%- endif -%}
 
   {% for name, attr in op.attrs -%}
   virtual const {{attr.type}}& {{name}}() const = 0;
