@@ -541,11 +541,15 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       };
       auto GetOutBatchDim = MakeGetBatchDim(out_num_axes, out_shape);
 
-      // std::shared_ptr<Tensor> broadcast_grad_a;
+      
       std::string broadcast_a_grad;
-      std::string broadcast_b_grad;
-
       std::string broadcast_a_backward_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "broadcast_a_grad";
+      
+      const Shape& a_shape = a.shape();
+      const int64_t a_num_axes = a_shape.NumAxes();
+      const Shape& b_shape = b.shape();
+      const int64_t b_num_axes = b_shape.NumAxes();
+
       if (transpose_a) {
         ctx->DefineOp(broadcast_a_backward_op_name,
                       [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
@@ -573,8 +577,6 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
                       });
       }
       std::vector<int32_t> a_reduce_vec;
-      const Shape& a_shape = a.shape();
-      const int64_t a_num_axes = a_shape.NumAxes();
       auto GetABatchDim = MakeGetBatchDim(a_num_axes, a_shape);
       const int64_t a_out_num_dim_differ = out_num_axes - a_num_axes;
       for (int32_t i = 0; i < out_num_axes - 2; i++) {
@@ -584,27 +586,31 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
         }
       }
       broadcast_a_grad = ctx->GetOp(broadcast_a_backward_op_name).output("out", 0);
+      if(a_reduce_vec.empty()){
+        printf("A reduce vec is empty! \n"); 
+        ctx->FwOp().InputGradBind(user_op::OpArg("a", 0), [&]() -> const std::string& {
+          return broadcast_a_grad; 
+        });
+      }else{
+        printf("A reduce vec is not empty! \n"); 
+        std::string reduce_broadcast_a_grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "reduce_a_grad";
+        ctx->DefineOp(reduce_broadcast_a_grad_op_name,
+                      [&ctx, &broadcast_a_grad, &a_reduce_vec](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
+                        return builder.OpTypeName("reduce_sum_like")
+                            .InputBind("x", broadcast_a_grad)
+                            .InputBind("like", ctx->FwOp().input("a", 0))
+                            .Attr<std::vector<int32_t>>("axis", a_reduce_vec)
+                            .Output("y")
+                            .Build();
+                      });
+        ctx->FwOp().InputGradBind(user_op::OpArg("a", 0), [&]() -> const std::string& {
+          return ctx->GetOp(reduce_broadcast_a_grad_op_name).output("y", 0);
+        });
+      }
+      
 
-      std::string reduce_broadcast_a_grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "reduce_a_grad";
-      ctx->DefineOp(reduce_broadcast_a_grad_op_name,
-                            [&ctx, &broadcast_a_grad, &a_reduce_vec](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                              return builder.OpTypeName("reduce_sum_like")
-                                  .InputBind("x", broadcast_a_grad)
-                                  .InputBind("like", ctx->FwOp().input("a", 0))
-                                  .Attr<std::vector<int32_t>>("axis", a_reduce_vec)
-                                  .Output("y")
-                                  .Build();
-                            });
-      ctx->FwOp().InputGradBind(user_op::OpArg("a", 0), [&]() -> const std::string& {
-        return ctx->GetOp(reduce_broadcast_a_grad_op_name).output("y", 0);
-      });
-
-    
-    const Shape& b_shape = b.shape();
-    const int64_t b_num_axes = b_shape.NumAxes();
-
-    std::string broadcast_b_backward_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "broadcast_b_grad";
     if(b_num_axes == 2 && !transpose_a){
+      std::string broadcast_b_backward_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "broadcast_b_grad";
       ctx->DefineOp(broadcast_b_backward_op_name,
                     [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
                       if (!transpose_b) {
@@ -627,8 +633,9 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
         return ctx->GetOp(broadcast_b_backward_op_name).output("out", 0);
       });
     }else{
+      std::string broadcast_matmul_b_backward_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "broadcast_matmul_b_grad";
       if (transpose_b) {
-        ctx->DefineOp(broadcast_b_backward_op_name,
+        ctx->DefineOp(broadcast_matmul_b_backward_op_name,
                       [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
                         return builder.OpTypeName("broadcast_matmul")
                             .InputBind("a", ctx->FwOp().output_grad("out", 0))
@@ -641,7 +648,7 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
                       });
 
       } else {
-        ctx->DefineOp(broadcast_b_backward_op_name,
+        ctx->DefineOp(broadcast_matmul_b_backward_op_name,
                       [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
                         return builder.OpTypeName("broadcast_matmul")
                             .InputBind("a", ctx->FwOp().input("a", 0))
@@ -662,20 +669,29 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
           b_reduce_vec.push_back(i);
         }
       }
-
-      std::string reduce_broadcast_b_grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "reduce_b_grad";
-      ctx->DefineOp(reduce_broadcast_b_grad_op_name,
-                            [&ctx, &broadcast_b_grad, &b_reduce_vec](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                              return builder.OpTypeName("reduce_sum_like")
-                                  .InputBind("x", broadcast_b_grad)
-                                  .InputBind("like", ctx->FwOp().input("b", 0))
-                                  .Attr<std::vector<int32_t>>("axis", b_reduce_vec)
-                                  .Output("y")
-                                  .Build();
-                            });
-      ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
-        return ctx->GetOp(reduce_broadcast_b_grad_op_name).output("y", 0);
-      });
+      std::string broadcast_b_grad;
+      broadcast_b_grad = ctx->GetOp(broadcast_matmul_b_backward_op_name).output("out", 0);
+      if(b_reduce_vec.empty()){
+        printf("B reduce vec is empty! \n"); 
+        ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
+          return broadcast_b_grad; 
+        });
+      }else{
+        printf("B reduce vec is not empty! \n"); 
+        std::string reduce_broadcast_b_grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "reduce_b_grad";
+        ctx->DefineOp(reduce_broadcast_b_grad_op_name,
+                              [&ctx, &broadcast_b_grad, &b_reduce_vec](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
+                                return builder.OpTypeName("reduce_sum_like")
+                                    .InputBind("x", broadcast_b_grad)
+                                    .InputBind("like", ctx->FwOp().input("b", 0))
+                                    .Attr<std::vector<int32_t>>("axis", b_reduce_vec)
+                                    .Output("y")
+                                    .Build();
+                              });
+        ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
+          return ctx->GetOp(reduce_broadcast_b_grad_op_name).output("y", 0);
+        });
+      }
     }
     return Maybe<void>::Ok();
   });
