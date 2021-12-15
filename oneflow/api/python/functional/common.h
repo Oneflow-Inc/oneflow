@@ -20,7 +20,7 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/scalar.h"

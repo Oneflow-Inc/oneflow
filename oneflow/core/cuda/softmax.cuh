@@ -189,8 +189,8 @@ struct DirectLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const PackType<SRC, N>*>(src) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
@@ -204,10 +204,10 @@ struct DirectStore {
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     Pack<DST, N> pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
 #pragma unroll
     for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
-    *reinterpret_cast<PackType<DST, N>*>(dst + offset) = pack.storage;
+    *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
   int64_t row_size;
@@ -709,8 +709,9 @@ inline cudaError_t DispatchSoftmaxBlockUncachedImpl(cudaStream_t stream, LOAD lo
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                                   const int64_t cols) {
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                const int64_t cols) {
   if (cols <= 1024) {
     return DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
         stream, load, store, rows, cols);
@@ -731,8 +732,17 @@ inline cudaError_t DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, 
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t DispatchLogSoftmax(cudaStream_t stream, LOAD load, STORE store,
-                                      const int64_t rows, const int64_t cols) {
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                const int64_t cols) {
+  return DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
+      stream, load, store, rows, cols);
+}
+
+template<typename LOAD, typename STORE, typename ComputeType>
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchLogSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                   const int64_t cols) {
   if (cols <= 1024) {
     return DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType, Algorithm::kLogSoftmax>(
         stream, load, store, rows, cols);
@@ -750,6 +760,14 @@ inline cudaError_t DispatchLogSoftmax(cudaStream_t stream, LOAD load, STORE stor
     }
     return cudaSuccess;
   }
+}
+
+template<typename LOAD, typename STORE, typename ComputeType>
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchLogSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                   const int64_t cols) {
+  return DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, Algorithm::kLogSoftmax>(
+      stream, load, store, rows, cols);
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
@@ -1267,8 +1285,9 @@ inline cudaError_t DispatchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, LOA
 }
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                       STORE store, const int64_t rows, const int64_t cols) {
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                    const int64_t rows, const int64_t cols) {
   if (cols <= 1024) {
     return DispatchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, Algorithm::kSoftmax>(
         stream, load_y, load_dy, store, rows, cols);
@@ -1288,9 +1307,20 @@ inline cudaError_t DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_
     return cudaSuccess;
   }
 }
+
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchLogSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy,
-                                          STORE store, const int64_t rows, const int64_t cols) {
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                    const int64_t rows, const int64_t cols) {
+  return DispatchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                              Algorithm::kSoftmax>(stream, load_y, load_dy, store,
+                                                                   rows, cols);
+}
+
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchLogSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                       const int64_t rows, const int64_t cols) {
   if (cols <= 1024) {
     return DispatchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, Algorithm::kLogSoftmax>(
         stream, load_y, load_dy, store, rows, cols);
@@ -1309,6 +1339,15 @@ inline cudaError_t DispatchLogSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LO
     }
     return cudaSuccess;
   }
+}
+
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType>
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchLogSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                       const int64_t rows, const int64_t cols) {
+  return DispatchSoftmaxGradBlockUncachedImpl<LOAD_Y, LOAD_DY, STORE, ComputeType,
+                                              Algorithm::kLogSoftmax>(stream, load_y, load_dy,
+                                                                      store, rows, cols);
 }
 
 }  // namespace softmax
