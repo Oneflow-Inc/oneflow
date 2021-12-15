@@ -138,6 +138,8 @@ void release() {
   if (IsEnvInited()) {
     // sync multi_client
     of::vm::ClusterSync().GetOrThrow();
+    of::Global<of::MultiClientSessionContext>::Get()->TryClose().GetOrThrow();
+    of::Global<of::MultiClientSessionContext>::Delete();
     // destory env
     if (of::IsMultiClient().GetOrThrow()) {
       OF_ENV_BARRIER();
@@ -145,9 +147,6 @@ void release() {
       of::ClusterInstruction::MasterSendHalt();
     }
     of::Global<of::EnvGlobalObjectsScope>::Delete();
-    // TODO(zzk0): segmentation fault
-    // of::Global<of::MultiClientSessionContext>::Get()->TryClose().GetOrThrow();
-    of::Global<of::MultiClientSessionContext>::Delete();
   }
   // TODO close session
   of::SetShuttingDown();

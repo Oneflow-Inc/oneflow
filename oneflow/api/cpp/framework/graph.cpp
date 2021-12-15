@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -182,13 +183,10 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     std::ifstream input(model_path + "/model.pb");
     CHECK(input.is_open());
     CHECK(job_.ParseFromIstream(&input));
-
-    // prevent model name conflict when launch multiple model instances
-    static int graph_index = 0;
-    job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name()
-                                          + std::to_string(graph_index));
-    graph_index += 1;
   }
+  // prevent model name conflict when launch multiple model instances
+  job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name()
+                                        + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
@@ -256,7 +254,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
         input_name_to_tensor_[op_conf.name()] = inputs.at(input_tensor_order++).tensor_;
       } else if (op_conf.has_variable_conf()) {
         const of::LazyMode::Guard lazy_mode_disabled_guard{false};
-        const of::VariableOpConf variable_conf = op_conf.variable_conf();
+        const of::VariableOpConf& variable_conf = op_conf.variable_conf();
         variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(variable_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(variable_conf.data_type()))),
@@ -296,7 +294,7 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
     const auto& variable_op_name = variable_op_name_and_tensor.first;
     const auto& variable_tensor = variable_op_name_and_tensor.second;
     const std::string variable_filename = model_path_ + "/" + variable_op_name + "/out";
-    const std::string buffer = [&variable_filename]() {
+    const std::string buffer = [&]() {
       std::ifstream variable_file(variable_filename, std::ios::binary);
       CHECK(variable_file.is_open());
       std::stringstream ss;
@@ -318,20 +316,20 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
 
 of::Maybe<void> Graph::GraphImpl::RegisterTensors() {
   {
-    const auto pair = Unzip(input_name_to_tensor_);
+    const auto& pair = Unzip(input_name_to_tensor_);
     const std::vector<std::string>& input_op_names = pair.first;
     const std::vector<std::shared_ptr<of::one::Tensor>>& input_tensors = pair.second;
     JUST(graph_->RegisterInputOpNamesAndTensors(input_op_names, input_tensors));
   }
   {
-    const auto pair = Unzip(output_name_to_tensor_);
+    const auto& pair = Unzip(output_name_to_tensor_);
     const std::vector<std::string>& output_op_names = pair.first;
     const std::vector<std::shared_ptr<of::one::Tensor>>& output_tensors = pair.second;
     JUST(graph_->RegisterOutputOpNamesAndTensors(output_op_names, output_tensors));
     output_tensor_tuple_ = ConvertToTensorTuple(output_tensors);
   }
   {
-    const auto pair = Unzip(variable_op_name_to_tensor_);
+    const auto& pair = Unzip(variable_op_name_to_tensor_);
     const std::vector<std::string>& variable_op_names = pair.first;
     const std::vector<std::shared_ptr<of::one::Tensor>>& variable_tensors = pair.second;
     JUST(graph_->RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors));
