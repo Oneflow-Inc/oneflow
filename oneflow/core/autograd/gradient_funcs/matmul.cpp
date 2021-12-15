@@ -201,10 +201,8 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
       }
     }
     if(a_reduce_vec.empty()){
-      printf("A reduce vec is empty! \n"); 
       in_grads->at(0) = broadcast_grad_a;
     }else{
-      printf("A reduce vec is Not empty! \n"); 
       in_grads->at(0) = JUST(functional::ReduceSumLike(broadcast_grad_a, input_a, a_reduce_vec));
     }
   }
@@ -239,10 +237,8 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
         }
       }
       if(b_reduce_vec.empty()){
-        printf("B reduce vec is empty! \n"); 
         in_grads->at(1) = broadcast_grad_b;
       }else{
-        printf("B reduce vec is Not empty! \n"); 
         in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
       }
     }

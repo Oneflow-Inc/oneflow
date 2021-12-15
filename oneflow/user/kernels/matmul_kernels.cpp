@@ -280,8 +280,9 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     const int64_t a_num_axes = a->shape().NumAxes();
     const int64_t b_num_axes = b->shape().NumAxes();
     const int64_t out_num_axes = out->shape().NumAxes();
-    int64_t m, n,
-        k = -1;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
+    int64_t m = -1; 
+    int64_t n = -1; 
+    int64_t k = -1;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
     if (!transpose_a) {
       m = a->shape().At(a_num_axes - 2);
       k = a->shape().At(a_num_axes - 1);

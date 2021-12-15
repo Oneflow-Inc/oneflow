@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -280,8 +279,9 @@ REGISTER_USER_OP("broadcast_matmul")
         // Then we emplace back m, n -> C(16, 8, 4, 6)
         out_dim_vec[i] = std::max(GetABatchDim(i), GetBBatchDim(i));
       }
-      int64_t m, n,
-          k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
+      int64_t m = 0; 
+      int64_t n = 0;
+      int64_t k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
       if (!transpose_a) {
         m = a.shape().At(num_a_dims - 2);
         k = a.shape().At(num_a_dims - 1);
@@ -440,38 +440,6 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
         CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i));
       }
       *out->mut_shape() = Shape({a.shape().At(a.shape().NumAxes() - 1), b.shape().At(b.shape().NumAxes() - 1)});
-      // bool transpose_a = ctx->Attr<bool>("transpose_a");
-      // bool transpose_b = ctx->Attr<bool>("transpose_b");
-      // // When A matmul B and b numdims is 2, it use this OP as its backward function. 
-      // // For example: A(2, 4, 6, 8) matmul B (8, 10) -> C (2, 4, 6, 10)
-      // // Otherwise, it use BroadcastMatmul + ReduceSumLike as its backward function.
-      // const int64_t num_a_dims = a.shape().NumAxes(); 
-      // const int64_t num_b_dims = b.shape().NumAxes();
-      // CHECK_EQ_OR_RETURN(num_a_dims, num_b_dims);
-      // DimVector out_dim_vec(num_a_dims);
-      // FOR_RANGE(int64_t, i, 0, num_a_dims - 2) {
-      //   out_dim_vec[i] = a.shape().At(i);
-      // }
-      // int64_t m = 0; 
-      // int64_t n = 0; 
-      // int64_t k = 0;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
-      // if (!transpose_a) {
-      //   m = a.shape().At(num_a_dims - 2);
-      //   k = a.shape().At(num_a_dims - 1);
-      // } else {
-      //   m = a.shape().At(num_a_dims - 1);
-      //   k = a.shape().At(num_a_dims - 2);
-      // }
-      // if (!transpose_b) {
-      //   CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 2));
-      //   n = b.shape().At(num_b_dims - 1);
-      // } else {
-      //   CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 1));
-      //   n = b.shape().At(num_b_dims - 2);
-      // }
-      // out_dim_vec.at(num_a_dims - 2) = m;
-      // out_dim_vec.at(num_a_dims - 1) = n;
-      // *out->mut_shape() = Shape(out_dim_vec);
 
       if (ctx->has_input("_add_to_output", 0)) {
         const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
@@ -522,7 +490,6 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       bool transpose_a = ctx->FwOp().attr<bool>("transpose_a");
       bool transpose_b = ctx->FwOp().attr<bool>("transpose_b");
       double alpha = ctx->FwOp().attr<double>("alpha");
-      // CHECK_OR_RETURN(!transpose_a);
 
       const user_op::TensorDesc& a = ctx->FwOp().TensorDesc4ArgNameAndIndex("a", 0); 
       const user_op::TensorDesc& b = ctx->FwOp().TensorDesc4ArgNameAndIndex("b", 0); 
@@ -587,12 +554,10 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       }
       broadcast_a_grad = ctx->GetOp(broadcast_a_backward_op_name).output("out", 0);
       if(a_reduce_vec.empty()){
-        printf("A reduce vec is empty! \n"); 
         ctx->FwOp().InputGradBind(user_op::OpArg("a", 0), [&]() -> const std::string& {
           return broadcast_a_grad; 
         });
       }else{
-        printf("A reduce vec is not empty! \n"); 
         std::string reduce_broadcast_a_grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "reduce_a_grad";
         ctx->DefineOp(reduce_broadcast_a_grad_op_name,
                       [&ctx, &broadcast_a_grad, &a_reduce_vec](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
@@ -672,12 +637,10 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       std::string broadcast_b_grad;
       broadcast_b_grad = ctx->GetOp(broadcast_matmul_b_backward_op_name).output("out", 0);
       if(b_reduce_vec.empty()){
-        printf("B reduce vec is empty! \n"); 
         ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
           return broadcast_b_grad; 
         });
       }else{
-        printf("B reduce vec is not empty! \n"); 
         std::string reduce_broadcast_b_grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "reduce_b_grad";
         ctx->DefineOp(reduce_broadcast_b_grad_op_name,
                               [&ctx, &broadcast_b_grad, &b_reduce_vec](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
