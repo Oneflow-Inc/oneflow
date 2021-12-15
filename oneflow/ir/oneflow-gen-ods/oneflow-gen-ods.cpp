@@ -382,9 +382,30 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
   return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
+bool HasInferFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  return r.check_fn && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
+         && r.get_sbp_fn && r.sbp_signature_infer_fn && r.data_type_infer_fn && r.device_infer_fn
+         && r.input_arg_modify_fn && r.output_arg_modify_fn && r.output_blob_time_shape_infer_fn
+         && r.nd_sbp_infer_fn;
+}
+
+void PrintHas1(const std::string& var_name) { std::cout << "  let has_" << var_name << " = 1;\n"; }
+void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.check_fn) { PrintHas1("check_fn"); }
+  if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
+  if (r.physical_tensor_desc_infer_fn) { PrintHas1("physical_tensor_desc_infer_fn"); }
+  if (r.get_sbp_fn) { PrintHas1("get_sbp_fn"); }
+  if (r.data_type_infer_fn) { PrintHas1("data_type_infer_fn"); }
+  if (r.device_infer_fn) { PrintHas1("device_infer_fn"); }
+  if (r.input_arg_modify_fn) { PrintHas1("input_arg_modify_fn"); }
+  if (r.output_arg_modify_fn) { PrintHas1("output_arg_modify_fn"); }
+  if (r.output_blob_time_shape_infer_fn) { PrintHas1("output_blob_time_shape_infer_fn"); }
+  if (r.nd_sbp_infer_fn) { PrintHas1("nd_sbp_infer_fn"); }
+}
+
 bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
   return (IsPoolOp(r.op_type_name) || IsAdaptivePoolOp(r.op_type_name) || IsConvOp(r.op_type_name))
-         && !r.no_grad && !r.cpu_only_supported;
+         && !r.no_grad && !r.cpu_only_supported && r.same_output_regst_num == -1 && !HasInferFn(r);
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -515,6 +536,12 @@ void PrintIsCpuOnly(const ::oneflow::user_op::OpRegistryResult& r) {
               << "\n";
   }
 }
+void PrintSameOutputRegstNum(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.same_output_regst_num != -1) {
+    std::cout << "  let same_output_regst_num = " << r.same_output_regst_num << ";"
+              << "\n";
+  }
+}
 
 void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   const ::oneflow::UserOpDef& op_def = r.op_def;
@@ -566,6 +593,8 @@ void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   PrintHasCanonicalizer(r.op_type_name);
   PrintNoGrad(r);
   PrintIsCpuOnly(r);
+  PrintSameOutputRegstNum(r);
+  PrintHasFn(r);
   std::cout << "}"
             << "\n";
 }

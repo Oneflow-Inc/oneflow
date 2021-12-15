@@ -51,15 +51,34 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
   bit no_grad = 0;
   bit cpu_only = 0;
-  // Custom sbp
-  code infer_nd_sbp = ?;
+  int same_output_regst_num = -1;
+  code infer_nd_sbp =?;
   code get_sbp = ?;
   code infer_logical_tensor_desc = ?;
   code infer_tensor_desc = ?;
   code infer_dtype = ?;
   code infer_device = ?;
-  code modify_input = ?;
+  code modify_input =?;
   code modify_output = ?;
+  // code infer_nd_sbp = [{ return $_this_class::InferLogicalTensorDesc(nd_sbp_ctx); }]; // Custom sbp infer
+  // code get_sbp = [{ return $_this_class::InferLogicalTensorDesc(sbp_ctx); }];  // List all supported sbp
+  // code infer_logical_tensor_desc = [{ return $_this_class::InferLogicalTensorDesc(infer_ctx); }];
+  // code infer_tensor_desc = [{ return $_this_class::InferTensorDesc(infer_ctx); }];
+  // code infer_dtype = [{ return $_this_class::InferDtype(infer_ctx); }];
+  // code infer_device = [{ return $_this_class::InferDevice(device_infer_ctx); }];
+  // code modify_input = [{ return $_this_class::ModifyInput(modifier, wrapper); }];
+  // code modify_output = [{ return $_this_class::ModifyOutput(modifier, wrapper); }];
+  bit has_check_fn = 0;
+  bit has_logical_tensor_desc_infer_fn = 0;
+  bit has_physical_tensor_desc_infer_fn = 0;
+  bit has_get_sbp_fn = 0;
+  bit has_sbp_signature_infer_fn = 0;
+  bit has_data_type_infer_fn = 0;
+  bit has_device_infer_fn = 0;
+  bit has_input_arg_modify_fn = 0;
+  bit has_output_arg_modify_fn = 0;
+  bit has_output_blob_time_shape_infer_fn = 0;
+  bit has_nd_sbp_infer_fn = 0;
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
