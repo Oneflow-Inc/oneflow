@@ -792,8 +792,28 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     for (const auto& eager_blob_object : *output_eager_blob_objects) {
       if (!eager_blob_object->producer_op_device().has_value()) {
         JUST(eager_blob_object->init_producer_op_device(producer_op_device));
+        eager_blob_object->set_last_used_device(producer_op_device);
       }
     }
+  }
+  // Insert SoftSync for outputs before inputs, because the old value of input->last_used_device is
+  // used for SoftSync reuse.
+  for (const auto& output : *output_eager_blob_objects) {
+    if (unlikely(output->producer_op_device().has_value())) {
+      const auto& blob_last_used_device = JUST(output->last_used_device());
+      const auto& inputs = input_eager_blob_objects;
+      if (!inputs->empty() && blob_last_used_device == JUST(inputs->at(0)->last_used_device())) {
+        // Do nothing, because SoftSync will be inserted when handling inputs later.
+      } else {
+        if (blob_last_used_device != op_device) {
+          auto* dep_object = JUST(output->compute_local_dep_object());
+          JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
+        }
+      }
+    } else {
+      JUST(output->init_producer_op_device(op_device));
+    }
+    output->set_last_used_device(op_device);
   }
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
@@ -810,12 +830,6 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
       Global<VirtualMachine>::Get()->mut_vm(), JUST(op_device->local_call_instruction_name()),
       parallel_desc_sym, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
-  for (const auto& output : *output_eager_blob_objects) {
-    if (!output->producer_op_device().has_value()) {
-      JUST(output->init_producer_op_device(op_device));
-    }
-    output->set_last_used_device(op_device);
-  }
   return Maybe<void>::Ok();
 }
 
