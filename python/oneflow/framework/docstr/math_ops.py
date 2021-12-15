@@ -1337,3 +1337,32 @@ add_docstr(
         oneflow.Size([3, 4, 2, 5])
     """,
 )
+
+add_docstr(
+    oneflow.eye,
+    """This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
+
+    Args:
+        n (int): the number of rows.
+        m (Optional[int], optional): the number of colums with default being n. Defaults to None.
+    
+    Keyword args:
+        device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
+    
+    Returns:
+        oneflow.Tensor: The result Blob with ones on the diagonal and zeros elsewhere.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> out = flow.eye(3, 3)
+        >>> out
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], dtype=oneflow.float32)
+    
+    """
+)

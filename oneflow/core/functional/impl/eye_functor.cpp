@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -26,10 +27,8 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
-#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/api/common/device.h"
 
 namespace oneflow {
@@ -43,14 +42,16 @@ class EyeDevcieFunctor {
   EyeDevcieFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
-                           const bool& requies_grad) const {
+                           const bool& requires_grad) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
     JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    JUST(res->set_requires_grad(requires_grad));
+    return res;
   }
 
  private:
@@ -80,40 +81,40 @@ class ConsistentEyeSbpListFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
+      for (int i = 0; i < sbp_tuple.size(); ++i) {
+        nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
       }
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    auto res = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp)));
+    JUST(res->set_requires_grad(requires_grad));
+    return Maybe<Tensor>(res);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-// class ConsistentEyeSbpFunctor {
-//  public:
-//   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
-//                            const Symbol<DType>& dtype,
-//                            const bool& requires_grad,
-//                            const Symbol<ParallelDesc>& placement,
-//                            const Symbol<cfg::SbpParallel>& sbp) const {
-//     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
-//     sbp_tuple.push_back(sbp);
-//     return JUST(functional::Eye(rows, cols, dtype, requires_grad, placement, sbp_tuple));
-//   }
-// };
+class ConsistentEyeSbpFunctor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
+                           const Symbol<DType>& dtype, const bool& requires_grad,
+                           const Symbol<ParallelDesc>& placement,
+                           const Symbol<cfg::SbpParallel>& sbp) const {
+    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple{sbp};
+    return JUST(functional::Eye(rows, cols, dtype, requires_grad, placement, sbp_tuple));
+  }
+};
 
 }  // namespace impl
 
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, ConsistentEyeSbpListFunctor>("Eye");
+  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, ConsistentEyeSbpListFunctor,
+                ConsistentEyeSbpFunctor>("Eye");
 };
 
 }  // namespace functional
