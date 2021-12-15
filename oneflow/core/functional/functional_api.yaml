@@ -529,18 +529,20 @@
   bind_python: False
 
 - name: "eye"
-  signature:
-    [
-      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => Eye",
+  signature: [
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Device device=None, Bool requires_grad=False) => Eye",
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, String device, Bool requires_grad=False) => Eye",
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Bool requires_grad=False, Placement placement=None, SbpList sbp=None) => Eye",
     ]
   bind_python: True
 
+- name: "physical_eye"
+  signature: "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => PhysicalEye"
+  bind_python: false
+
 - name: "consistent_eye"
-  signature:
-    [
-      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye",
-    ]
-  bind_python: True
+  signature: "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye"
+  bind_python: false
 
 - name: "arange"
   signature: [

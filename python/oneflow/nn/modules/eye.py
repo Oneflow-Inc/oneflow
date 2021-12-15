@@ -53,27 +53,45 @@ def eye_op(
                 [0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    if placement is None:
-        if isinstance(device, str):
-            device = flow.device(device)
-        res = flow._C.eye(n, m, dtype=dtype, device=device)
+    if isinstance(sbp, flow.sbp.sbp):
+        assert sbp == flow.sbp.broadcast
+        sbp = (sbp,)
     else:
-        assert isinstance(
-            placement, flow._oneflow_internal.placement
-        ), "placement should be oneflow._oneflow_internal.placement type."
-        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-        if isinstance(sbp, flow.sbp.sbp):
-            assert sbp == flow.sbp.broadcast
-            sbp = (sbp,)
-        else:
-            for elem in sbp:
-                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                assert elem == flow.sbp.broadcast
-        assert len(sbp) == len(placement.hierarchy)
-        res = flow._C.consistent_eye(n, m, dtype=dtype, placement=placement, sbp=sbp)
+        for elem in sbp:
+            assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+            assert elem == flow.sbp.broadcast
+    assert len(sbp) == len(placement.hierarchy)
 
-    res.requires_grad = requires_grad
-    return res
+    return flow._C.eye(
+        n,
+        m,
+        dtype=dtype,
+        device=device,
+        requires_grad=requires_grad,
+        placement=placement,
+        sbp=sbp,
+    )
+    # if placement is None:
+    #     if isinstance(device, str):
+    #         device = flow.device(device)
+    #     res = flow._C.eye(n, m, dtype=dtype, device=device)
+    # else:
+    #     assert isinstance(
+    #         placement, flow._oneflow_internal.placement
+    #     ), "placement should be oneflow._oneflow_internal.placement type."
+    #     assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+    #     if isinstance(sbp, flow.sbp.sbp):
+    #         assert sbp == flow.sbp.broadcast
+    #         sbp = (sbp,)
+    #     else:
+    #         for elem in sbp:
+    #             assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+    #             assert elem == flow.sbp.broadcast
+    #     assert len(sbp) == len(placement.hierarchy)
+    #     res = flow._C.consistent_eye(n, m, dtype=dtype, placement=placement, sbp=sbp)
+
+    # res.requires_grad = requires_grad
+    # return res
 
 
 if __name__ == "__main__":
