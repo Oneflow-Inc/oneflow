@@ -29,11 +29,11 @@ struct CudaInMemoryKeyValueStoreOptions {
     kOrdinal,
   };
   size_t num_shards = 0;
-  size_t embedding_vec_size = 0;
+  size_t value_length = 0;
   DataType key_type = DataType::kInvalidDataType;
   DataType value_type = DataType::kInvalidDataType;
-  size_t num_embeddings = 0;
-  size_t num_device_embeddings = 0;
+  size_t num_keys = 0;
+  size_t num_device_keys = 0;
   EncodingType encoding_type = EncodingType::kPlain;
 };
 

@@ -130,19 +130,18 @@ __global__ void OrdinalEncodingKernel(uint64_t capacity, TableEntry<Key, Index>*
 }
 
 template<typename Elem>
-__global__ void LookupKernel(uint32_t vec_size, uint64_t num_embeddings,
-                             uint64_t num_device_embeddings, const Elem* device_embeddings,
-                             const Elem* host_embeddings, uint32_t values_elem_cnt,
-                             const uint64_t* context, Elem* values) {
+__global__ void LookupKernel(uint32_t value_length, uint64_t num_keys, uint64_t num_device_keys,
+                             const Elem* device_values, const Elem* host_values,
+                             uint32_t values_elem_cnt, const uint64_t* context, Elem* values) {
   CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
-    const uint64_t key_id = i / vec_size;
+    const uint64_t key_id = i / value_length;
     const uint64_t row_id = context[key_id];
-    const uint64_t col_id = i - key_id * vec_size;
+    const uint64_t col_id = i - key_id * value_length;
     Elem elem;
-    if (row_id < num_device_embeddings) {
-      elem = device_embeddings[row_id * vec_size + col_id];
-    } else if (row_id < num_embeddings) {
-      elem = host_embeddings[(row_id - num_device_embeddings) * vec_size + col_id];
+    if (row_id < num_device_keys) {
+      elem = device_values[row_id * value_length + col_id];
+    } else if (row_id < num_keys) {
+      elem = host_values[(row_id - num_device_keys) * value_length + col_id];
     } else {
       elem = 0;
     }
@@ -151,19 +150,18 @@ __global__ void LookupKernel(uint32_t vec_size, uint64_t num_embeddings,
 }
 
 template<typename Elem>
-__global__ void UpdateKernel(uint32_t vec_size, uint64_t num_embeddings,
-                             uint64_t num_device_embeddings, Elem* device_embeddings,
-                             Elem* host_embeddings, uint32_t values_elem_cnt,
+__global__ void UpdateKernel(uint32_t value_length, uint64_t num_keys, uint64_t num_device_keys,
+                             Elem* device_values, Elem* host_values, uint32_t values_elem_cnt,
                              const uint64_t* context, const Elem* values) {
   CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
-    const uint64_t key_id = i / vec_size;
+    const uint64_t key_id = i / value_length;
     const uint64_t row_id = context[key_id];
-    const uint64_t col_id = i - key_id * vec_size;
+    const uint64_t col_id = i - key_id * value_length;
     const Elem elem = values[i];
-    if (row_id < num_device_embeddings) {
-      device_embeddings[row_id * vec_size + col_id] = elem;
-    } else if (row_id < num_embeddings) {
-      host_embeddings[(row_id - num_device_embeddings) * vec_size + col_id] = elem;
+    if (row_id < num_device_keys) {
+      device_values[row_id * value_length + col_id] = elem;
+    } else if (row_id < num_keys) {
+      host_values[(row_id - num_device_keys) * value_length + col_id] = elem;
     } else {
       // do nothing;
     }
@@ -192,7 +190,7 @@ class OrdinalEncoder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
   explicit OrdinalEncoder(const CudaInMemoryKeyValueStoreOptions& options)
-      : capacity_(options.num_embeddings) {
+      : capacity_(options.num_keys) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
     OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
@@ -222,27 +220,23 @@ class KeyValueStoreImpl : public KeyValueStore {
   explicit KeyValueStoreImpl(const CudaInMemoryKeyValueStoreOptions& options)
       : encoder_(options),
         device_index_(-1),
-        embedding_vec_size_(options.embedding_vec_size),
-        num_embeddings_(options.num_embeddings),
-        num_device_embeddings_(options.num_device_embeddings) {
+        value_length_(options.value_length),
+        num_keys_(options.num_keys),
+        num_device_keys_(options.num_device_keys) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    const size_t device_embeddings_size =
-        num_device_embeddings_ * embedding_vec_size_ * sizeof(Elem);
-    if (device_embeddings_size > 0) {
-      OF_CUDA_CHECK(cudaMalloc(&device_embeddings_, device_embeddings_size));
-    }
-    CHECK_GE(num_embeddings_, num_device_embeddings_);
-    const size_t host_embeddings_size =
-        (num_embeddings_ - num_device_embeddings_) * embedding_vec_size_ * sizeof(Elem);
-    if (host_embeddings_size > 0) {
-      OF_CUDA_CHECK(NumaAwareCudaMallocHost(
-          device_index_, reinterpret_cast<void**>(&host_embeddings_), host_embeddings_size));
+    const size_t device_values_size = num_device_keys_ * value_length_ * sizeof(Elem);
+    if (device_values_size > 0) { OF_CUDA_CHECK(cudaMalloc(&device_values_, device_values_size)); }
+    CHECK_GE(num_keys_, num_device_keys_);
+    const size_t host_values_size = (num_keys_ - num_device_keys_) * value_length_ * sizeof(Elem);
+    if (host_values_size > 0) {
+      OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&host_values_),
+                                            host_values_size));
     }
   }
   ~KeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFree(device_embeddings_));
-    OF_CUDA_CHECK(cudaFreeHost(host_embeddings_));
+    OF_CUDA_CHECK(cudaFree(device_values_));
+    OF_CUDA_CHECK(cudaFreeHost(host_values_));
   }
 
   void Prefetch(ep::Stream* stream, uint32_t num_keys, const void* keys,
@@ -255,11 +249,11 @@ class KeyValueStoreImpl : public KeyValueStore {
  private:
   Encoder encoder_;
   int device_index_;
-  uint32_t embedding_vec_size_;
-  uint64_t num_embeddings_;
-  uint64_t num_device_embeddings_;
-  Elem* device_embeddings_;
-  Elem* host_embeddings_;
+  uint32_t value_length_;
+  uint64_t num_keys_;
+  uint64_t num_device_keys_;
+  Elem* device_values_;
+  Elem* host_values_;
 };
 
 template<typename Encoder, typename Key, typename Elem>
@@ -272,20 +266,20 @@ template<typename Encoder, typename Key, typename Elem>
 void KeyValueStoreImpl<Encoder, Key, Elem>::Lookup(ep::Stream* stream, uint32_t num_keys,
                                                    const void* keys, const uint64_t* context,
                                                    void* values) {
-  const uint32_t values_elem_cnt = num_keys * embedding_vec_size_;
-  RUN_CUDA_KERNEL((LookupKernel<Elem>), stream, values_elem_cnt, embedding_vec_size_,
-                  num_embeddings_, num_device_embeddings_, device_embeddings_, host_embeddings_,
-                  values_elem_cnt, context, static_cast<Elem*>(values));
+  const uint32_t values_elem_cnt = num_keys * value_length_;
+  RUN_CUDA_KERNEL((LookupKernel<Elem>), stream, values_elem_cnt, value_length_, num_keys_,
+                  num_device_keys_, device_values_, host_values_, values_elem_cnt, context,
+                  static_cast<Elem*>(values));
 }
 
 template<typename Encoder, typename Key, typename Elem>
 void KeyValueStoreImpl<Encoder, Key, Elem>::Update(ep::Stream* stream, uint32_t num_keys,
                                                    const void* keys, const uint64_t* context,
                                                    const void* values) {
-  const uint32_t values_elem_cnt = num_keys * embedding_vec_size_;
-  RUN_CUDA_KERNEL((UpdateKernel<Elem>), stream, values_elem_cnt, embedding_vec_size_,
-                  num_embeddings_, num_device_embeddings_, device_embeddings_, host_embeddings_,
-                  values_elem_cnt, context, static_cast<const Elem*>(values));
+  const uint32_t values_elem_cnt = num_keys * value_length_;
+  RUN_CUDA_KERNEL((UpdateKernel<Elem>), stream, values_elem_cnt, value_length_, num_keys_,
+                  num_device_keys_, device_values_, host_values_, values_elem_cnt, context,
+                  static_cast<const Elem*>(values));
 }
 
 }  // namespace

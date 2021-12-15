@@ -54,7 +54,7 @@ void DecodeOneRawOFRecord(const Feature& feature, T* dptr, int64_t sample_elem_c
       if (dim1_varying_length) {                                                         \
         sample_elem_cnt = list.value_size();                                             \
       } else {                                                                           \
-        CHECK_EQ(sample_elem_cnt, list.value_size());                                    \
+        CHECK_EQ(sample_elem_cnt, list.value_length());                                  \
       }                                                                                  \
     }                                                                                    \
     std::transform(in_dptr, in_dptr + sample_elem_cnt, dptr,                             \

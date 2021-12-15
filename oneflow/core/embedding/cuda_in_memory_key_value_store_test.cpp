@@ -100,28 +100,28 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   if (!HasCudaDevice()) { return; }
   CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
-  options.embedding_vec_size = 128;
-  options.num_embeddings = 1024 * 16;
-  options.num_device_embeddings = 1024 * 4;
+  options.value_length = 128;
+  options.num_keys = 1024 * 16;
+  options.num_device_keys = 1024 * 4;
   options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain;
   std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
 
-  TestKeyValueStore(store.get(), options.num_embeddings, options.num_embeddings,
-                    options.embedding_vec_size, options.num_shards);
+  TestKeyValueStore(store.get(), options.num_keys, options.num_keys, options.value_length,
+                    options.num_shards);
 }
 
 TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
   if (!HasCudaDevice()) { return; }
   CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
-  options.embedding_vec_size = 128;
-  options.num_embeddings = 1024 * 16;
-  options.num_device_embeddings = 1024 * 4;
+  options.value_length = 128;
+  options.num_keys = 1024 * 16;
+  options.num_device_keys = 1024 * 4;
   options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
   std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
 
-  TestKeyValueStore(store.get(), options.num_embeddings, options.num_embeddings * 0.75,
-                    options.embedding_vec_size, options.num_shards);
+  TestKeyValueStore(store.get(), options.num_keys, options.num_keys * 0.75, options.value_length,
+                    options.num_shards);
 }
 
 #endif  // WITH_CUDA
