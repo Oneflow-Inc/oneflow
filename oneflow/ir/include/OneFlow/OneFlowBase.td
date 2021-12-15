@@ -51,9 +51,8 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
   bit no_grad = 0;
   bit cpu_only = 0;
-  // Custom sbp
-  code infer_nd_sbp = ?;
-  code get_sbp = ?;
+  code infer_nd_sbp = ?; // Custom sbp infer
+  code get_sbp = ?; // List all supported sbp
   code infer_logical_tensor_desc = ?;
   code infer_tensor_desc = ?;
   code infer_dtype = ?;
