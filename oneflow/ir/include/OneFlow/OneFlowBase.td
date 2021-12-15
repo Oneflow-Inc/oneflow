@@ -128,6 +128,11 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let trait_attrs = (ins
       I32ElementsAttr:$operand_segment_sizes
     );
+    let has_check_fn = 1;
+    let has_logical_tensor_desc_infer_fn = 1;
+    let has_physical_tensor_desc_infer_fn = 1;
+    let has_get_sbp_fn = 1;
+    let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -144,6 +149,11 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$strides,
     BoolAttr:$ceil_mode
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -164,6 +174,11 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$strides,
     BoolAttr:$ceil_mode
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 
@@ -186,6 +201,11 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$return_indices,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -206,6 +226,11 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
     DefaultValuedAttr<SI64Attr, "0">:$divisor_override
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -229,6 +254,11 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$return_indices,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -251,6 +281,11 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
     DefaultValuedAttr<SI64Attr, "0">:$divisor_override
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -276,6 +311,11 @@ class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<OpTrait> traits = []>
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
@@ -283,19 +323,22 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let summary = "";
   let input = (ins AnyType:$x);
   let output = (outs AnyType:$y);
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 def OneFlow_Idempotent : NativeOpTrait<"IsIdempotentOfIdenticalPlacement">;
 
 class OneFlow_IdempotentBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Idempotent])> {
-}
+        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Idempotent])> {}
 
 def OneFlow_Involution : NativeOpTrait<"IsInvolutionOfIdenticalPlacement">;
 
 class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {
-}
+        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {}
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
 include "OneFlow/OneFlowUserOpGen.td"

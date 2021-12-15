@@ -382,15 +382,28 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
   return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
-bool HasInferFn(const ::oneflow::user_op::OpRegistryResult& r) {
+bool HasOneFlow_BasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
   return r.check_fn && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
-         && r.get_sbp_fn && r.sbp_signature_infer_fn && r.data_type_infer_fn && r.device_infer_fn
-         && r.input_arg_modify_fn && r.output_arg_modify_fn && r.output_blob_time_shape_infer_fn
-         && r.nd_sbp_infer_fn;
+         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn && !r.device_infer_fn
+         && !r.input_arg_modify_fn && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn
+         && !r.nd_sbp_infer_fn;
 }
 
 void PrintHas1(const std::string& var_name) { std::cout << "  let has_" << var_name << " = 1;\n"; }
+
+void PrintBasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.device_infer_fn) { PrintHas1("device_infer_fn"); }
+  if (r.input_arg_modify_fn) { PrintHas1("input_arg_modify_fn"); }
+  if (r.output_arg_modify_fn) { PrintHas1("output_arg_modify_fn"); }
+  if (r.output_blob_time_shape_infer_fn) { PrintHas1("output_blob_time_shape_infer_fn"); }
+  if (r.nd_sbp_infer_fn) { PrintHas1("nd_sbp_infer_fn"); }
+}
+
 void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (IsIdempotentOp(r.op_type_name)) {
+    PrintBasicBaseOpHasFn(r);
+    return;
+  }
   if (r.check_fn) { PrintHas1("check_fn"); }
   if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
   if (r.physical_tensor_desc_infer_fn) { PrintHas1("physical_tensor_desc_infer_fn"); }
@@ -404,8 +417,10 @@ void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
 }
 
 bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
-  return (IsPoolOp(r.op_type_name) || IsAdaptivePoolOp(r.op_type_name) || IsConvOp(r.op_type_name))
-         && !r.no_grad && !r.cpu_only_supported && r.same_output_regst_num == -1 && !HasInferFn(r);
+  return ((IsPoolOp(r.op_type_name) || IsAdaptivePoolOp(r.op_type_name) || IsConvOp(r.op_type_name)
+           || IsIdempotentOp(r.op_type_name) || IsInvolutionOp(r.op_type_name))
+          && HasOneFlow_BasicBaseOpHasFn(r))
+         && !r.no_grad && !r.cpu_only_supported && r.same_output_regst_num == -1;
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
