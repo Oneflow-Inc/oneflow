@@ -228,7 +228,7 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
-      && JUST(x->parallel_desc()) == parallel_desc) {
+      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
   }
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
