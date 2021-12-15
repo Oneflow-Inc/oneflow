@@ -39,11 +39,11 @@ auto LogSoftmaxPrimitiveExists() {
   });
 }
 
-class SparseSoftmaxCrossEntropyOpKernelState final : public user_op::OpKernelState {
+class SparseSoftmaxCrossEntropyOpKernelCache final : public user_op::OpKernelCache {
  public:
-  SparseSoftmaxCrossEntropyOpKernelState(int64_t lower, int64_t upper)
+  SparseSoftmaxCrossEntropyOpKernelCache(int64_t lower, int64_t upper)
       : lower_(lower), upper_(upper) {}
-  ~SparseSoftmaxCrossEntropyOpKernelState() override = default;
+  ~SparseSoftmaxCrossEntropyOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -164,8 +164,8 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
  public:
   SparseSoftmaxCrossEntropyMsGradKernel() = default;
   ~SparseSoftmaxCrossEntropyMsGradKernel() = default;
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prob", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
@@ -173,15 +173,16 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       const int64_t class_axis = prob_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, nd_sbp, prob_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelCache>(view.At(class_axis).begin(),
                                                                       view.At(class_axis).end());
     } else {
-      return std::shared_ptr<OpKernelState>(nullptr);
+      return nullptr;
     }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
@@ -191,11 +192,11 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
-    if (state != nullptr) {
-      auto* kernel_state = dynamic_cast<SparseSoftmaxCrossEntropyOpKernelState*>(state);
-      CHECK_NOTNULL(kernel_state);
-      CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
-      lower_bound = kernel_state->lower();
+    if (cache != nullptr) {
+      auto* kernel_cache = dynamic_cast<const SparseSoftmaxCrossEntropyOpKernelCache*>(cache);
+      CHECK_NOTNULL(kernel_cache);
+      CHECK_EQ(num_classes, kernel_cache->upper() - kernel_cache->lower());
+      lower_bound = kernel_cache->lower();
     }
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
         ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
