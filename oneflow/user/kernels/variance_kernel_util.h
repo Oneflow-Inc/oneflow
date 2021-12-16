@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 namespace {
-void SetGridDimAndBlockDim(const int64_t total_elem_cnt, int* grid_dim, int* block_dim) {
+void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
   if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
     *grid_dim =
         std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
@@ -39,11 +39,11 @@ void SetGridDimAndBlockDim(const int64_t total_elem_cnt, int* grid_dim, int* blo
 }
 }  // namespace
 
-OF_DEVICE_FUNC int64_t LinearIndex2Offset(int64_t linear_index, const int32_t* dim_size_in_axis_ptr,
+OF_DEVICE_FUNC size_t LinearIndex2Offset(size_t linear_index, const int32_t* dim_size_in_axis_ptr,
                                       const int32_t* stride_vec_ptr, const int32_t size) {
-  int offset = 0;
-  int tmp = 0;
-  for (int64_t j = 0; j < size; j++) {
+  size_t offset = 0;
+  size_t tmp = 0;
+  for (int j = 0; j < size; j++) {
     tmp = (j == 0 ? linear_index : (tmp / dim_size_in_axis_ptr[j - 1]));
     offset += tmp % dim_size_in_axis_ptr[j] * stride_vec_ptr[j];
   }

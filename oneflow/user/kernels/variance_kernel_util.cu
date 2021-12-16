@@ -29,11 +29,12 @@ __global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, VarPa
   }
 }
 
+namespace {
 template<typename T>
 inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
-                                     int64_t total_elem_cnt, int64_t start, int64_t step) {
+                                     size_t total_elem_cnt, size_t start, size_t step) {
   T old_mean = 0.0;
-  for (int i = start; i < total_elem_cnt; i += step) {
+  for (size_t i = start; i < total_elem_cnt; i += step) {
     ++(*count);
     old_mean = *mean;
     *mean += (in_ptr[i] - *mean) / *count;
@@ -43,13 +44,11 @@ inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
 
 template<typename T>
 inline __device__ void WelfordCombine(T* b_mean, T* b_m2, T* b_count, T* mean, T* m2, T* count,
-                                      int64_t total_elem_cnt, int64_t start, int64_t step) {
-  for (int i = start; i < total_elem_cnt; i += step) {
+                                      size_t total_elem_cnt, size_t start, size_t step) {
+  for (size_t i = start; i < total_elem_cnt; i += step) {
     cuda::layer_norm::WelfordCombine(b_mean[i], b_m2[i], b_count[i], mean, m2, count);
   }
 }
-
-namespace {
 __device__ int32_t done_block_count = 0;
 }  // namespace
 
