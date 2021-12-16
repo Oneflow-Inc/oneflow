@@ -1021,12 +1021,12 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
                         last_used_device));
   }
   Optional<Symbol<Device>> op_device{};
-  // Disable inter-device instruction sequential for tensor used by nccl stream.
-  // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     op_device = Optional<Symbol<Device>>(NullOpt);
   } else if (last_used_device->type() == "async_launched_nccl"
              && (producer_op_device->type() == "cuda" || producer_op_device->type() == "gpu")) {
+    // Disable inter-device instruction sequential for tensor used by nccl stream.
+    // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     op_device = Optional<Symbol<Device>>(NullOpt);
   } else {
     op_device = producer_op_device;
