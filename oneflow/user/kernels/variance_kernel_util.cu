@@ -23,14 +23,14 @@ namespace user_op {
 template<typename T>
 __global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, VarParam var_param) {
   CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
-    int64_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis, var_param.stride_in_caxis,
+    size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis, var_param.stride_in_caxis,
                                           var_param.caxis_size);
     ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
   }
 }
 
 template<typename T>
-inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, int64_t* count,
+inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
                                      int64_t total_elem_cnt, int64_t start, int64_t step) {
   T old_mean = 0.0;
   for (int i = start; i < total_elem_cnt; i += step) {
@@ -49,35 +49,6 @@ inline __device__ void WelfordCombine(T* b_mean, T* b_m2, T* b_count, T* mean, T
   }
 }
 
-template<typename T>
-__global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, VarParam var_param) {
-  int64_t elems_per_thread = var_param.elem_cnt / blockDim.x;
-  int64_t tail_elems = var_param.elem_cnt % blockDim.x;
-  T thread_mean = 0.0;
-  T thread_m2 = 0.0;
-  int64_t thread_count = 0;
-  if (elems_per_thread > 0) {
-    WelfordReduce(in_ptr, &thread_mean, &thread_m2, &thread_count, var_param.elem_cnt - tail_elems,
-                  threadIdx.x, blockDim.x);
-  }
-  // deal tail elems
-  if (tail_elems != 0 && threadIdx.x == 0) {
-    int tail_offset = blockDim.x * elems_per_thread;
-    WelfordReduce(&in_ptr[tail_offset], &thread_mean, &thread_m2, &thread_count, tail_elems,
-                  /*thread id=*/0, /*step=*/1);
-  }
-  __syncthreads();
-  T final_mean = 0;
-  T final_m2 = 0;
-  T final_count = 0;
-  cuda::layer_norm::WelfordBlockAllReduce<T>(thread_mean, thread_m2, thread_count, &final_mean,
-                                             &final_m2, &final_count);
-  if (threadIdx.x == 0) {
-    *out_ptr =
-        cuda::layer_norm::Div(final_m2, (var_param.unbiased ? final_count - 1 : final_count));
-  }
-}
-
 namespace {
 __device__ int32_t done_block_count = 0;
 }  // namespace
@@ -85,37 +56,45 @@ __device__ int32_t done_block_count = 0;
 template<typename T>
 __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
                                     VarParam var_param) {
-  int64_t elems_per_block = var_param.elem_cnt / gridDim.x;
-  int64_t elems_per_thread = elems_per_block / blockDim.x;
+  size_t elems_per_block = var_param.elem_cnt / gridDim.x;
+  size_t elems_per_thread = elems_per_block / blockDim.x;
 
-  int64_t tail_elems = elems_per_block % blockDim.x;
+  size_t tail_elems = elems_per_block % blockDim.x;
   if (blockIdx.x == gridDim.x - 1 && threadIdx.x == 0) {
     tail_elems += var_param.elem_cnt % gridDim.x;
   }
 
   T thread_mean = 0.0;
   T thread_m2 = 0.0;
-  int64_t thread_count = 0;
+  T thread_count = 0.0;
   // every thread deal it's elems
   if (elems_per_thread > 0) {
-    int block_offset = blockIdx.x * elems_per_block;
+    size_t block_offset = blockIdx.x * elems_per_block;
     WelfordReduce(&in_ptr[block_offset], &thread_mean, &thread_m2, &thread_count,
                   elems_per_block - tail_elems, threadIdx.x, blockDim.x);
   }
 
   // thread 0 deal tail elems
   if (tail_elems != 0 && threadIdx.x == 0) {
-    int tail_offset = blockIdx.x * elems_per_block + blockDim.x * elems_per_thread;
+    size_t tail_offset = blockIdx.x * elems_per_block + blockDim.x * elems_per_thread;
     WelfordReduce(&in_ptr[tail_offset], &thread_mean, &thread_m2, &thread_count, tail_elems,
                   /*tail start=*/0, /*step=*/1);
   }
-  __syncthreads();
 
   T block_mean = 0;
   T block_m2 = 0;
   T block_count = 0;
   cuda::layer_norm::WelfordBlockAllReduce<T>(thread_mean, thread_m2, thread_count, &block_mean,
                                              &block_m2, &block_count);
+  
+  if (gridDim.x == 1) {
+    if (threadIdx.x == 0) { 
+      *out_ptr =
+          cuda::layer_norm::Div(block_m2, (var_param.unbiased ? block_count - 1 : block_count));
+    }
+    return;
+  }
+
   T* tmp_mean_ptr = tmp_buffer_ptr;
   T* tmp_m2_ptr = &tmp_mean_ptr[gridDim.x];
   T* tmp_count_ptr = &tmp_m2_ptr[gridDim.x];
@@ -131,8 +110,8 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
     T last_block_thread_mean = 0;
     T last_block_thread_m2 = 0;
     T last_block_thread_count = 0;
-    int32_t welforddatas_per_thread = gridDim.x / blockDim.x;
-    int32_t tail_welforddatas = gridDim.x % blockDim.x;
+    size_t welforddatas_per_thread = gridDim.x / blockDim.x;
+    size_t tail_welforddatas = gridDim.x % blockDim.x;
 
     if (welforddatas_per_thread > 0) {
       WelfordCombine(tmp_mean_ptr, tmp_m2_ptr, tmp_count_ptr, &last_block_thread_mean,
@@ -141,20 +120,18 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
     }
     // thread 0 deal tail welford data
     if (tail_welforddatas != 0 && threadIdx.x == 0) {
-      int last_block_tail_offset = blockDim.x * welforddatas_per_thread;
+      size_t last_block_tail_offset = blockDim.x * welforddatas_per_thread;
       WelfordCombine(&tmp_mean_ptr[last_block_tail_offset], &tmp_m2_ptr[last_block_tail_offset],
                      &tmp_count_ptr[last_block_tail_offset], &last_block_thread_mean,
                      &last_block_thread_m2, &last_block_thread_count, tail_welforddatas,
                      /*tail start=*/0, /*step=*/1);
     }
-    __syncthreads();
     T final_mean = 0;
     T final_m2 = 0;
     T final_count = 0;
     cuda::layer_norm::WelfordBlockAllReduce<T>(last_block_thread_mean, last_block_thread_m2,
                                                last_block_thread_count, &final_mean, &final_m2,
                                                &final_count);
-    __syncthreads();
     if (threadIdx.x == 0) {
       *out_ptr =
           cuda::layer_norm::Div(final_m2, (var_param.unbiased ? final_count - 1 : final_count));
@@ -170,14 +147,9 @@ struct VarFunctor<DeviceType::kCUDA, T> final {
     int block_dim = 0;
     SetGridDimAndBlockDim(var_param.elem_cnt, &grid_dim, &block_dim);
     if (var_param.parallel_num == 1) {
-      if (var_param.elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
         size_t shm_size = grid_dim * sizeof(T) * 3;
         ComputeVarScalarOut<T><<<grid_dim, block_dim, shm_size, RunCudaKernelGetStream(stream)>>>(
             in_ptr, out_ptr, tmp_buffer_ptr, var_param);
-      } else {
-        ComputeVarScalarOut<T><<<grid_dim, block_dim, 0, RunCudaKernelGetStream(stream)>>>(
-            in_ptr, out_ptr, var_param);
-      }
     } else {
       RUN_CUDA_KERNEL(ComputeVarUsingWelfordWrapper<T>, stream, var_param.parallel_num, in_ptr,
                       out_ptr, var_param);

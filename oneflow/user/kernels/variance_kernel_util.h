@@ -57,8 +57,8 @@ constexpr size_t MaxDims = 8;
 struct VarParam {
   VarParam() : unbiased(true), parallel_num(1), elem_cnt(1), axis_size(1), caxis_size(1) {}
   bool unbiased;
-  int64_t parallel_num;
-  int64_t elem_cnt;
+  size_t parallel_num;
+  size_t elem_cnt;
   int32_t axis_size;
   int32_t caxis_size;
   int32_t stride_in_axis[MaxDims];
@@ -131,12 +131,12 @@ class VarParamHelper final {
 
 template<typename T>
 OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const VarParam& var_param) {
-  int64_t count = 0;
-  T mean = 0.0;
-  T old_mean = 0.0;
-  T m2 = 0.0;
-  for (int64_t i = 0; i < var_param.elem_cnt; i++) {
-    int64_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
+  size_t count = 0;
+  double mean = 0.0;
+  double old_mean = 0.0;
+  double m2 = 0.0;
+  for (size_t i = 0; i < var_param.elem_cnt; i++) {
+    size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
                                     var_param.axis_size);
     count++;
     old_mean = mean;
