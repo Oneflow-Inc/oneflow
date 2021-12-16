@@ -279,7 +279,7 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value)) \
       .SetInferTmpSizeFn(GenInferTmpSizeFn<k_dtype, idx_dtype>());
 
-REGISTER_CUDA_ID_SHUFFLE_KERNEL(int32_t, int32_t)
+// REGISTER_CUDA_ID_SHUFFLE_KERNEL(int32_t, int32_t)
 REGISTER_CUDA_ID_SHUFFLE_KERNEL(int64_t, int32_t)
 
 template<typename T>
@@ -292,6 +292,13 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(ERROR) << "EmbeddingShuffleKernel";
+    const user_op::Tensor* cur_rank_embeddings =
+        ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
+    user_op::Tensor* cur_rank_num_unique_ids =
+        ctx->Tensor4ArgNameAndIndex("cur_rank_num_unique_ids", 0);
+    user_op::Tensor* ids_reverse_idx = ctx->Tensor4ArgNameAndIndex("cur_rank_reverse_idx", 0);
+    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

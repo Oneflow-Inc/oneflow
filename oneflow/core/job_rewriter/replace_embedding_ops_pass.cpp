@@ -58,17 +58,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Build();
     add_ops.push_back(id_shuffle_op.op_conf());
 
-    DataType cast_data_type = DataType::kInt64;
-    auto cast_op = user_op::UserOpConfWrapperBuilder(user_op_conf.op_name() + "_tmp_cast_to_uint64")
-                       .Op("cast")
-                       .Input("in", id_shuffle_op.output("cur_rank_unique_ids", 0))
-                       .Output("out")
-                       .Attr<DataType>("dtype", cast_data_type)
-                       .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
-                       .Build();
-    add_ops.push_back(cast_op.op_conf());
-
-    const std::string unique_ids_lbn = cast_op.output("out", 0);
+    const std::string unique_ids_lbn = id_shuffle_op.output("cur_rank_unique_ids", 0);
     // embedding prefetch op
     user_op::UserOpConfWrapperBuilder embedding_prefetch_op_builder(user_op_conf.op_name()
                                                                     + "_embedding_prefetch");

@@ -69,7 +69,7 @@ class TrainGraph(flow.nn.Graph):
 
 
 ids = flow.randint(
-    0, 150000, (65536, 26), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int32
+    0, 150000, (65536, 26), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int64
 )
 print(ids)
 graph = TrainGraph()
