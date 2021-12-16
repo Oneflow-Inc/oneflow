@@ -666,6 +666,7 @@ class ConsistentEyeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
     JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
@@ -744,6 +745,7 @@ class ConsistentArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();
@@ -793,6 +795,7 @@ class ConsistentArange2Functor {
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };

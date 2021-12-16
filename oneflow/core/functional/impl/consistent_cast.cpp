@@ -295,6 +295,7 @@ class LocalToConsistentFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype) const {
+    JUST(CheckDeviceIdsIsValid(parallel_desc));
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
@@ -337,6 +338,7 @@ class ToConsistentFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
+    JUST(CheckDeviceIdsIsValid(parallel_desc));
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));

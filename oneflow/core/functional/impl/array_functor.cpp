@@ -130,6 +130,7 @@ class ConsistentConstantFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
@@ -210,6 +211,7 @@ class ConsistentEmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
