@@ -316,7 +316,7 @@ jobs:
           src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/bin
           dst-dir: bin
       - name: Upload liboneflow_cpp library
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && steps.build-cuda.outcome == 'success' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@support-clang-12
         timeout-minutes: 10
         with:
@@ -553,11 +553,6 @@ jobs:
           docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
           chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
           docker exec -e LD_LIBRARY_PATH=${{ steps.download-digest.outputs.entry-dir }}/liboneflow_cpp/lib ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
-      - name: Sleep
-        if: ${{ always() && !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
-        run: |
-          hostname
-          sleep 99999
       - name: Build documentation
         timeout-minutes: 10
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
