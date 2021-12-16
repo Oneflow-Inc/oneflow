@@ -35,19 +35,19 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     const auto* pin = in->dptr<T>();
     auto* pout = out->mut_dptr<T>();
 
-    // size means dimension size, cod means coefficient of dimension
-    auto size = in->shape().At(dim);
-    auto space = in->shape().Count(dim);
-    auto cod = in->shape().Count(dim) / size;
-    auto nspace = nele / space;
+    // take cumsum's abbreviation as `cs`
+    // data partition: cs_up_space|cs_space|cs_down_space
+    auto cs_up_space = nele / in->shape().Count(dim);
+    auto cs_space = in->shape().At(dim);
+    auto cs_down_space = in->shape().Count(dim) / cs_space;
 
     std::copy_n(pin, nele, pout);
-    for (auto i = 0; i < nspace; i++) {
-      auto* tmp_pout_base = pout + i * size * cod;
-      for (auto j = 1; j < size; j++) {
-        auto* tmp_pout = tmp_pout_base + j * cod;
-        auto* last_tmp_pout = tmp_pout - cod;
-        for (auto k = 0; k < cod; k++) { tmp_pout[k] += last_tmp_pout[k]; }
+    for (auto i = 0; i < cs_up_space; i++) {
+      auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
+      for (auto j = 1; j < cs_space; j++) {
+        auto* tmp_pout = tmp_pout_base + j * cs_down_space;
+        auto* last_tmp_pout = tmp_pout - cs_down_space;
+        for (auto k = 0; k < cs_down_space; k++) { tmp_pout[k] += last_tmp_pout[k]; }
       }
     }
   }

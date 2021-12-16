@@ -20,9 +20,9 @@ namespace oneflow {
 
 namespace {
 
-// data partition: nspace|size|cod
-// total thread number: nspace * cod
-// in cod part, use cod threads to calculate as follows(m=cod-1, n=dim-1):
+// total thread number: cs_up_space * cs_down_space
+// in cs_down_space part, use cs_down_space threads
+// to calculate as follows(m=cs_down_space-1, n=cs_space-1):
 // dm0, ..., d10, d00
 //  |         |    |
 // dm1, ..., d11, d01
@@ -33,20 +33,21 @@ namespace {
 //  |         |    |
 // dmn, ..., d1n, d0n
 template<typename T>
-__global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t nspace, int64_t size, int64_t cod) {
+__global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                                 int64_t cs_down_space) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       i < nspace * cod; i += step) {
-    auto space_id = i / cod;
-    auto space_thread_id = i % cod;
+       i < cs_up_space * cs_down_space; i += step) {
+    auto cs_up_space_id = i / cs_down_space;
+    auto cs_down_space_id = i % cs_down_space;
 
-    auto* pin_base = pin + space_id * size * cod + space_thread_id;
-    auto* pout_base = pout + space_id * size * cod + space_thread_id;
+    auto* pin_base = pin + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+    auto* pout_base = pout + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
 
-    // calculate size data in one thread
-    for (auto j = 0; j < size; j++) {
-      auto idx = j * cod;
+    // calculate cs_space data in one thread
+    for (auto j = 0; j < cs_space; j++) {
+      auto idx = j * cs_down_space;
       pout_base[idx] = pin_base[idx];
-      if (j != 0) { pout_base[idx] += pout_base[idx - cod]; }
+      if (j != 0) { pout_base[idx] += pout_base[idx - cs_down_space]; }
     }
   }
 }
@@ -72,14 +73,19 @@ class GpuCumsumKernel final : public user_op::OpKernel {
     const auto* pin = in->dptr<T>();
     auto* pout = out->mut_dptr<T>();
 
-    // size means dimension size, cod means coefficient of dimension
-    auto size = in->shape().At(dim);
-    auto space = in->shape().Count(dim);
-    auto cod = in->shape().Count(dim) / size;
-    auto nspace = nele / space;
-    auto thread_num = nspace * cod;
+    // take cumsum's abbreviation as `cs`
+    // data partition: cs_up_space|cs_space|cs_down_space
+    auto cs_up_space = nele / in->shape().Count(dim);
+    auto cs_space = in->shape().At(dim);
+    auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, pin, pout, nspace, size, cod);
+    // auto t1 = std::chrono::high_resolution_clock::now();
+    // auto thread_num = cs_up_space * cs_down_space;
+    // RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
+    //                 cs_space, cs_down_space);
+    // auto t2 = std::chrono::high_resolution_clock::now();
+    // auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    // std::cout << time / 1000000. << std::endl;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
