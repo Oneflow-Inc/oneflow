@@ -2596,8 +2596,8 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
-  let has_sbp_signature_infer_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_sbp_signature_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
@@ -5857,8 +5857,8 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, Decl
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
-  let has_sbp_signature_infer_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_sbp_signature_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
