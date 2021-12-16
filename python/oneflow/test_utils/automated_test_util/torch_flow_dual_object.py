@@ -277,7 +277,7 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
-                                filter=["to","tensor","_to","train"]
+                                filter=["to", "tensor", "_to", "train"]
                                 if isinstance(oneflow, flow.nn.Module):
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
@@ -302,7 +302,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                                 elif oneflow.__name__ in filter:
                                     pass
-                                elif "oneflow.nn.modules" not in oneflow.__module__:
+                                elif "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow):
                                     tensor_args = []
                                     other_args = []
                                     for a in oneflow_args:
