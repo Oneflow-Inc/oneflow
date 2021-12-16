@@ -37,8 +37,6 @@ void SetGridDimAndBlockDim(const int64_t total_elem_cnt, int* grid_dim, int* blo
     *block_dim = std::min(tmp, kCudaThreadsNumPerBlock);
   }
 }
-
-void SetBlockDim(const int64_t total_elem_cnt, int* block_dim) {}
 }  // namespace
 
 OF_DEVICE_FUNC int64_t LinearIndex2Offset(int64_t linear_index, const int32_t* dim_size_in_axis_ptr,

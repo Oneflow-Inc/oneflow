@@ -23,7 +23,7 @@ namespace user_op {
 template<typename T>
 __global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, VarParam var_param) {
   CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
-    int input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis, var_param.stride_in_caxis,
+    int64_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis, var_param.stride_in_caxis,
                                           var_param.caxis_size);
     ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
   }
