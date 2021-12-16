@@ -74,6 +74,7 @@ struct OpRegistryResult {
   SbpSignatureInferFn sbp_signature_infer_fn;
   DataTypeInferFn data_type_infer_fn;
   DeviceInferFn device_infer_fn;
+  bool has_real_device_infer_fn_ = false;  // NOTE: this field should be remove once ods gen is done
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
