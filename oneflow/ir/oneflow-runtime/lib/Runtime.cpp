@@ -13,22 +13,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/include/active_device_guard.h"
-#include "oneflow/core/ep/include/device_manager_registry.h"
 
-namespace oneflow {
-
-namespace ep {
-
-ActiveDeviceGuard::ActiveDeviceGuard(Device* device) : device_manager_(device->device_manager()) {
-  saved_active_device_ = device_manager_->GetActiveDeviceIndex();
-  device->SetAsActiveDevice();
-}
-
-ActiveDeviceGuard::~ActiveDeviceGuard() {
-  device_manager_->SetActiveDeviceByIndex(saved_active_device_);
-}
-
-}  // namespace ep
-
-}  // namespace oneflow
+// This file is added to avoid cmake error
