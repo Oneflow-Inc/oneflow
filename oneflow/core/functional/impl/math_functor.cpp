@@ -627,7 +627,6 @@ class Transpose2dimFunctor {
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
     Shape shape(DimVector(permute.begin(), permute.end()));
-    printf("\n Permute functor >>>>> permute:%s", shape.ToString().c_str());
     if (input->is_eager() && input->is_local()) {
       if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
         return JUST(view::Transpose(input, permute));
