@@ -16,10 +16,15 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 
 ONEFLOW_API_PYBIND11_MODULE("eager.multi_client", m) {
   using namespace oneflow;
   namespace py = pybind11;
   m.def(
       "Sync", []() { vm::ClusterSync().GetOrThrow(); }, py::call_guard<py::gil_scoped_release>());
+  m.def("SetDevVmDepObjectConsumeModeToNone", [](bool is_none) {
+    *one::CurrentDevVmDepObjectConsumeMode() =
+        is_none ? one::DevVmDepObjectConsumeMode::NONE : one::DevVmDepObjectConsumeMode::MUTABLE;
+  });
 }
