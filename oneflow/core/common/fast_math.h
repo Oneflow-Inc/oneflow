@@ -43,7 +43,7 @@ struct FastIntegerMath {
     assert(operand_ >= 1 && operand_ <= GetMaxVal<T>());
   }
 
-  OF_DEVICE_FUNC T Divides(T n) const {
+  OF_DEVICE_FUNC T divides(T n) const {
     if (log2_operand_ >= 0) {
       return n >> log2_operand_;
     } else {
@@ -51,18 +51,18 @@ struct FastIntegerMath {
     }
   }
 
-  OF_DEVICE_FUNC T Mod(T n) const { return n - Divides(n) * operand_; }
-  OF_DEVICE_FUNC T Mul(T n) const {
+  OF_DEVICE_FUNC T mod(T n) const { return n - divides(n) * operand_; }
+  OF_DEVICE_FUNC T mul(T n) const {
     if (log2_operand_ >= 0) {
       return n << log2_operand_;
     } else {
       return n * operand_;
     }
   }
-  OF_DEVICE_FUNC T Add(T n) const { return n + operand_; }
-  OF_DEVICE_FUNC T Sub(T n) const { return n - operand_; }
-  OF_DEVICE_FUNC void DivMod(T n, T* q, T* r) const {
-    *q = Divides(n);
+  OF_DEVICE_FUNC T add(T n) const { return n + operand_; }
+  OF_DEVICE_FUNC T sub(T n) const { return n - operand_; }
+  OF_DEVICE_FUNC void divmod(T n, T* q, T* r) const {
+    *q = divides(n);
     *r = n - *q * operand_;
   }
 
@@ -97,7 +97,7 @@ struct FastIntegerMath<int32_t> {
     }
   }
 
-  OF_DEVICE_FUNC int32_t Divides(const int32_t n) const {
+  OF_DEVICE_FUNC int32_t divides(const int32_t n) const {
     if (is_power_2) {
       return n >> log2_operand_;
     } else {
@@ -112,18 +112,18 @@ struct FastIntegerMath<int32_t> {
     }
   }
 
-  OF_DEVICE_FUNC int32_t Mod(int32_t n) const { return n - Divides(n) * operand_; }
-  OF_DEVICE_FUNC int32_t Mul(int32_t n) const {
+  OF_DEVICE_FUNC int32_t mod(int32_t n) const { return n - divides(n) * operand_; }
+  OF_DEVICE_FUNC int32_t mul(int32_t n) const {
     if (log2_operand_ >= 0) {
       return n << log2_operand_;
     } else {
       return n * operand_;
     }
   }
-  OF_DEVICE_FUNC int32_t Add(int32_t n) const { return n + operand_; }
-  OF_DEVICE_FUNC int32_t Sub(int32_t n) const { return n - operand_; }
-  OF_DEVICE_FUNC void DivMod(int32_t n, int32_t* q, int32_t* r) const {
-    *q = Divides(n);
+  OF_DEVICE_FUNC int32_t add(int32_t n) const { return n + operand_; }
+  OF_DEVICE_FUNC int32_t sub(int32_t n) const { return n - operand_; }
+  OF_DEVICE_FUNC void divmod(int32_t n, int32_t* q, int32_t* r) const {
+    *q = divides(n);
     *r = n - *q * operand_;
   }
 

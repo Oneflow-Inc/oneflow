@@ -95,7 +95,7 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < N - 1; ++i) {
-      const T idx = math_helper_[i].Divides(remaining);
+      const T idx = math_helper_[i].divides(remaining);
       index[i] = idx;
       remaining = remaining - math_helper_[i].Mul(idx);
     }
@@ -110,7 +110,7 @@ class NdIndexOffsetHelper {
 #endif
     for (int i = 0; i < N; ++i) {
       if (i < n) {
-        const T idx = math_helper_[i].Divides(remaining);
+        const T idx = math_helper_[i].divides(remaining);
         index[i] = idx;
         remaining = remaining - math_helper_[i].Mul(idx);
       }
@@ -127,14 +127,14 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < n - 1; ++i) {
-      const T idx = math_helper_[i].Divides(remaining);
+      const T idx = math_helper_[i].divides(remaining);
       *index[i] = idx;
       remaining = remaining - math_helper_[i].Mul(idx);
     }
     if (n == N) {
       *index[n - 1] = remaining;
     } else {
-      *index[n - 1] = math_helper_[n - 1].Divides(remaining);
+      *index[n - 1] = math_helper_[n - 1].divides(remaining);
     }
   }
 
