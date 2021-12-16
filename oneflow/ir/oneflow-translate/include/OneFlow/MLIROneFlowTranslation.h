@@ -110,7 +110,7 @@ class Importer {
     return GetBuilder().getArrayAttr(attrs);
   }
 
-  DenseIntElementsAttr DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape);
+  ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
   llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
