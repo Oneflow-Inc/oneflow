@@ -115,6 +115,49 @@ TEST(Api, graph_gpu_batching_test) {
   Forward(graph, device, 10);
 }
 
+TEST(Api, graph_multi_device_test) {
+  EnvScope scope;
+  Device device("cuda", 0);
+  Graph graph = LoadGraph(device);
+  Forward(graph, device, 1);
+
+  Device device1("cuda", 1);
+  Graph graph1 = LoadGraph(device1);
+  Forward(graph1, device1, 1);
+
+  Device device2("cpu");
+  Graph graph2 = LoadGraph(device2);
+  Forward(graph2, device2, 1);
+}
+
+TEST(Api, graph_unload_test) {
+  {
+    EnvScope scope;
+
+    Device device("cuda", 0);
+    Graph graph = LoadGraph(device);
+    Forward(graph, device, 1);
+
+    {
+      Device device1("cuda", 1);
+      Graph graph1 = LoadGraph(device1);
+      Forward(graph1, device1, 1);
+    }
+
+    Device device2("cpu");
+    Graph graph2 = LoadGraph(device2);
+    Forward(graph2, device2, 1);
+  }
+
+  {
+    EnvScope scope;
+
+    Device device("cpu");
+    Graph graph = LoadGraph(device);
+    Forward(graph, device, 1);
+  }
+}
+
 TEST(Api, graph_thread_test) {
   EnvScope scope;
 
