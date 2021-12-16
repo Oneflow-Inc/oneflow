@@ -991,7 +991,8 @@ struct NegativeFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hneg(x);
-#else printf("use half need nvcc arch >= 530");
+#else
+    printf("use half need nvcc arch >= 530");
     assert(false);
     return 0.;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
