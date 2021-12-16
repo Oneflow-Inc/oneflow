@@ -170,7 +170,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state, const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     LOG(ERROR) << "IdShuffleKernel";
