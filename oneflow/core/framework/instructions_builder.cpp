@@ -257,8 +257,7 @@ static constexpr auto* GetCriticalSectionDevice =
 template<typename T>
 Maybe<intrusive::shared_ptr<LocalDepObject>> InstructionsBuilder::MakeCriticalSectionBegin(
     const one::EagerBlobObjectListPtr& eager_blob_objects) {
-  const auto& device = JUST(GetCriticalSectionDevice());
-  const auto local_dep_object = JUST(LocalDepObject::New(*device));
+  const auto local_dep_object = JUST(NewLocalDepObject());
   const auto& phy_instr_operand = std::make_shared<T>(eager_blob_objects, *local_dep_object);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "CriticalSectionBegin",

@@ -26,33 +26,18 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> LocalDepObject::Init(const Device& device) {
-  const auto& parallel_desc = JUST(Device::GetPlacement(device)).shared_from_symbol();
-  vm::ObjectId object_id = vm::IdUtil::NewPhysicalValueObjectId(GlobalProcessCtx::Rank());
-  int64_t global_device_id = 0;
-  {
-    CHECK_EQ(parallel_desc->parallel_num(), 1);
-    int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(0));
-    CHECK_EQ(machine_id, GlobalProcessCtx::Rank());
-    int64_t device_id = CHECK_JUST(parallel_desc->DeviceId4ParallelId(0));
-    if (Global<VirtualMachine>::Get() == nullptr) {
-      global_device_id = 0;
-    } else {
-      const auto& vm = Global<VirtualMachine>::Get()->vm();
-      CHECK_EQ(vm.this_machine_id(), machine_id);
-      global_device_id = vm.this_start_global_device_id() + device_id;
-    }
-  }
-  mut_logical_object()->__Init__(object_id, std::const_pointer_cast<ParallelDesc>(parallel_desc));
-  mut_mirrored_object()->__Init__(mut_logical_object(), global_device_id);
+Maybe<void> LocalDepObject::Init() {
+  mut_mirrored_object()->__Init__();
   return Maybe<void>::Ok();
 }
 
-Maybe<intrusive::shared_ptr<LocalDepObject>> LocalDepObject::New(const Device& device) {
+Maybe<intrusive::shared_ptr<LocalDepObject>> LocalDepObject::New() {
   auto local_dep_obj = intrusive::make_shared<LocalDepObject>();
-  JUST(local_dep_obj.Mutable()->Init(device));
+  JUST(local_dep_obj.Mutable()->Init());
   return local_dep_obj;
 }
+
+Maybe<intrusive::shared_ptr<LocalDepObject>> NewLocalDepObject() { return LocalDepObject::New(); }
 
 namespace {
 
@@ -98,7 +83,7 @@ Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
     local_dep_object = stored_list->PopFront();
   } else {
     // When running unstable and no stored objects, directly new LocalDepObject
-    local_dep_object = *JUST(LocalDepObject::New(*device));
+    local_dep_object = *JUST(LocalDepObject::New());
     GlobalLifetimeLocalDepObjectList(device)->PushBack(local_dep_object.Mutable());
   }
   CHECK_OR_RETURN(local_dep_object->pool_hook().empty());
@@ -122,8 +107,17 @@ Maybe<void> PutLocalDepObjectToDevicePool(Symbol<Device> device, LocalDepObject*
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+Maybe<intrusive::shared_ptr<LocalDepObject>> RawGetLocalDepObject4Device(const Device& device) {
+  return NewLocalDepObject();
+}
+
+}  // namespace
+
 Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device) {
-  static constexpr auto* GetObj = DECORATE(&LocalDepObject::New, StaticGlobalCopiable);
+  static constexpr auto* GetObj = DECORATE(&RawGetLocalDepObject4Device, StaticGlobalCopiable);
   return JUST(GetObj(device))->Mutable();
 }
+
 }  // namespace oneflow

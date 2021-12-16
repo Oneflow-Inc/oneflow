@@ -36,11 +36,21 @@ void RwMutexedObjectAccess::__Init__(Instruction* instruction, MirroredObject* m
   mut_mirrored_object_id()->CopyFrom(mirrored_object->mirrored_object_id());
 }
 
+void MirroredObject::__Init__() {
+  mut_rw_mutexed_object();
+  clear_deleting_access();
+}
+
+void MirroredObject::__Init__(int64_t global_device_id) {
+  __Init__();
+  mut_mirrored_object_id()->__Init__(0, global_device_id);
+  set_global_device_id(global_device_id);
+}
+
 void MirroredObject::__Init__(LogicalObject* logical_object, int64_t global_device_id) {
   __Init__();
   mut_mirrored_object_id()->__Init__(logical_object->logical_object_id(), global_device_id);
   set_global_device_id(global_device_id);
-  mut_rw_mutexed_object();
 }
 
 }  // namespace vm
