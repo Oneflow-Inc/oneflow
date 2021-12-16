@@ -596,6 +596,7 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
 class Transpose2dimFunctor {
  public:
   Transpose2dimFunctor() {
@@ -685,6 +686,7 @@ class ConsistentArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();
@@ -734,6 +736,7 @@ class ConsistentArange2Functor {
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
