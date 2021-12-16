@@ -79,9 +79,32 @@ REGISTER_USER_OP("id_shuffle")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("embedding_prefetch")
+    .Input("num_unique_ids")
+    .Input("unique_ids")
+    .Output("context")
+    .Attr<std::string>("name")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("context", 0) = ctx->InputShape("unique_ids", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("context", 0) = DataType::kUInt64;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("num_unique_ids", 0), 0)
+          .Split(user_op::OpArg("unique_ids", 0), 0)
+          .Split(user_op::OpArg("context", 0), 0)
+          .Build();
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP("embedding_lookup")
     .Input("num_unique_ids")
     .Input("unique_ids")
+    .Input("context")
     .Output("embeddings")
     .Attr<int64_t>("embedding_size")
     .Attr<DataType>("dtype")
@@ -97,6 +120,7 @@ REGISTER_USER_OP("embedding_lookup")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("num_unique_ids", 0), 0)
+          .Split(user_op::OpArg("context", 0), 0)
           .Split(user_op::OpArg("unique_ids", 0), 0)
           .Split(user_op::OpArg("embeddings", 0), 0)
           .Build();

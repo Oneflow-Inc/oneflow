@@ -80,6 +80,7 @@ size_t GetSizeOfDataType(DataType data_type) {
     OF_PP_FOR_EACH_TUPLE(
         MAKE_CASE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
     case kBFloat16: return 2;
+    case kUInt64: return 8;
     default: LOG(FATAL) << "invalid data_type: " << DataType_Name(data_type);
   }
 }

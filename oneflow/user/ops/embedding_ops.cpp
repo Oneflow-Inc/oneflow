@@ -76,28 +76,6 @@ REGISTER_USER_OP("sgd_embedding_update_placeholder")
 
 /*
 
-REGISTER_USER_OP("embedding_prefetch")
-    .Input("indices")
-    .Output("num_unique_indices")
-    .Output("unique_indices")
-    .Output("reverse_idx")
-    .Attr<std::string>("name")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("num_unique_indices", 0) = Shape({1});
-      *ctx->OutputShape("unique_indices", 0) = ctx->InputShape("indices", 0);
-      *ctx->OutputShape("reverse_idx", 0) = ctx->InputShape("indices", 0);
-      *ctx->OutputIsDynamic("num_unique_indices", 0) = false;
-      *ctx->OutputIsDynamic("unique_indices", 0) = true;
-      *ctx->OutputIsDynamic("reverse_idx", 0) = ctx->InputIsDynamic("indices", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("reverse_idx", 0) = DataType::kInt32;
-      *ctx->OutputDType("num_unique_indices", 0) = DataType::kInt32;
-      *ctx->OutputDType("unique_indices", 0) = ctx->InputDType("indices", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("embedding_lookup")
     .Input("num_unique_indices")

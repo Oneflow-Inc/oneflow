@@ -58,13 +58,38 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Build();
     add_ops.push_back(id_shuffle_op.op_conf());
 
+    DataType cast_data_type = DataType::kInt64;
+    auto cast_op = user_op::UserOpConfWrapperBuilder(user_op_conf.op_name() + "_tmp_cast_to_uint64")
+                       .Op("cast")
+                       .Input("in", id_shuffle_op.output("cur_rank_unique_ids", 0))
+                       .Output("out")
+                       .Attr<DataType>("dtype", cast_data_type)
+                       .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
+                       .Build();
+    add_ops.push_back(cast_op.op_conf());
+
+    const std::string unique_ids_lbn = cast_op.output("out", 0);
+    // embedding prefetch op
+    user_op::UserOpConfWrapperBuilder embedding_prefetch_op_builder(user_op_conf.op_name()
+                                                                    + "_embedding_prefetch");
+    user_op::UserOpConfWrapper embedding_prefetch_op =
+        embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
+            .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
+            .Input("unique_ids", unique_ids_lbn)
+            .Output("context")
+            .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
+            .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
+            .Build();
+    add_ops.push_back(embedding_prefetch_op.op_conf());
+
     // embedding lookup op
     user_op::UserOpConfWrapperBuilder embedding_lookup_op_builder(user_op_conf.op_name()
                                                                   + "_embedding_lookup");
     user_op::UserOpConfWrapper embedding_lookup_op =
         embedding_lookup_op_builder.OpTypeName("embedding_lookup")
             .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
-            .Input("unique_ids", id_shuffle_op.output("cur_rank_unique_ids", 0))
+            .Input("unique_ids", unique_ids_lbn)
+            .Input("context", embedding_prefetch_op.output("context", 0))
             .Output("embeddings")
             .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
             .Attr<DataType>("dtype", user_op_conf.attr<DataType>("dtype"))

@@ -288,10 +288,10 @@ std::unique_ptr<KeyValueStore> NewCudaInMemoryKeyValueStore(
     const CudaInMemoryKeyValueStoreOptions& options) {
   if (options.encoding_type == CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain) {
     return std::unique_ptr<KeyValueStore>(
-        new KeyValueStoreImpl<PlainEncoder<uint64_t>, uint64_t, float>(options));
+        new KeyValueStoreImpl<PlainEncoder<int64_t>, int64_t, float>(options));
   } else if (options.encoding_type == CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal) {
     return std::unique_ptr<KeyValueStore>(
-        new KeyValueStoreImpl<OrdinalEncoder<uint64_t, uint64_t>, uint64_t, float>(options));
+        new KeyValueStoreImpl<OrdinalEncoder<int64_t, uint64_t>, int64_t, float>(options));
   } else {
     UNIMPLEMENTED();
     return nullptr;

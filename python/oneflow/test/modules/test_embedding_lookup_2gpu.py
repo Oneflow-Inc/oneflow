@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-#python3 -m oneflow.distributed.launch --nproc_per_node=2 test_embedding_lookup_2gpu.py
+# python3 -m oneflow.distributed.launch --nproc_per_node=2 test_embedding_lookup_2gpu.py
 
 import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
 
-np_ids = np.random.rand(10, 10).astype(np.int64)
-np_embeddings = np.random.rand(10, 10, 64).astype(np.int64)
 placement = flow.placement("cuda", {0: [0, 1]})
 
 
@@ -29,7 +27,7 @@ class Model(flow.nn.Module):
     def __init__(self):
         super().__init__()
         self.w1 = flow.nn.Parameter(
-            flow.randn(10, 10, 64, placement=placement, sbp=flow.sbp.split(0))
+            flow.randn(65536, 26, 64, placement=placement, sbp=flow.sbp.split(0))
         )
 
     def forward(self, x):
@@ -71,9 +69,10 @@ class TrainGraph(flow.nn.Graph):
 
 
 ids = flow.randint(
-    0, 100, (10, 10), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int32
+    0, 150000, (65536, 26), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int32
 )
-print(ids.shape)
+print(ids)
 graph = TrainGraph()
-loss = graph(ids)
+for i in range(20):
+    loss = graph(ids)
 print(loss)

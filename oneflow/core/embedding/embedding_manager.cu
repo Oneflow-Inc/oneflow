@@ -32,13 +32,14 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   embedding::CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
   options.value_length = 128;
-  options.num_keys = 1024 * 16;
-  options.num_device_keys = 1024 * 4;
+  options.num_keys = 1024 * 1024;
+  options.num_device_keys = 1024 * 128;
   options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
   std::unique_ptr<embedding::KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
-  key_value_store_map_.emplace(map_key, std::move(store));
+  auto pair = key_value_store_map_.emplace(map_key, std::move(store));
+  CHECK(pair.second);
   LOG(ERROR) << "not found, create " << name << " " << parallel_id;
-  return store.get();
+  return pair.first->second.get();
 }
 
 }  // namespace oneflow
