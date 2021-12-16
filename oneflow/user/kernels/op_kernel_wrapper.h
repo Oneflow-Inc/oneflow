@@ -35,6 +35,21 @@ class OpKernelStateWrapper final : public user_op::OpKernelState {
   T data_;
 };
 
+template<typename T>
+class OpKernelCacheWrapper final : public user_op::OpKernelCache {
+ public:
+  template<typename... Args>
+  explicit OpKernelCacheWrapper(Args&&... args) : data_(std::forward<Args>(args)...) {}
+
+  ~OpKernelCacheWrapper() = default;
+
+  const T& Get() const { return data_; }
+  T* Mutable() { return &data_; }
+
+ private:
+  T data_;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_OP_KERNEL_STATE_WRAPPER_H_

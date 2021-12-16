@@ -16,8 +16,6 @@ limitations under the License.
 from typing import List, Optional, Union
 
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
 def linspace_op(
@@ -30,7 +28,7 @@ def linspace_op(
     sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     requires_grad: bool = False,
 ):
-    """
+    r"""
     Creates a one-dimensional tensor of size :attr:`steps` whose values are evenly
     spaced from :attr:`start` to :attr:`end`, inclusive. That is, the value are:
 
@@ -40,7 +38,6 @@ def linspace_op(
         \ldots,
         \text{start} + (\text{steps} - 2) * \frac{\text{end} - \text{start}}{\text{steps} - 1},
         \text{end})
-    """ + """
 
     Args:
         start (float): the starting value for the set of points
@@ -51,7 +48,6 @@ def linspace_op(
         dtype(flow.dtype, optional): If `dtype` is not given, the `dtype` is inferred to be `flow.float32`.
         device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
-    
     For example:
 
     .. code-block:: python
@@ -60,8 +56,8 @@ def linspace_op(
         
         >>> y = flow.linspace(3, 10, steps=5)
         >>> y
-        tensor([  3.0000,   4.7500,   6.5000,   8.2500,  10.0000], dtype=oneflow.float32)
-    
+        tensor([ 3.0000,  4.7500,  6.5000,  8.2500, 10.0000], dtype=oneflow.float32)
+
     """
     step = 1.0
     if steps == 0:

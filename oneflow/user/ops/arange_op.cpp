@@ -47,6 +47,10 @@ REGISTER_NO_GRAD_USER_OP("arange")
             << "RuntimeError: step must be nonzero. ";
         double float_start = ctx->Attr<double>("float_start");
         double float_limit = ctx->Attr<double>("float_limit");
+        // CHECK when limit > start, delta > 0; limit < start, delta < 0;
+        // CHECK_GE For 0-Dim Tensor
+        CHECK_GE_OR_RETURN((float_limit - float_start) / float_delta, static_cast<double>(0.0))
+            << "RuntimeError: upper bound and larger bound inconsistent with step sign";
         range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
       }
       *out_shape = Shape({range_elem_cnt});

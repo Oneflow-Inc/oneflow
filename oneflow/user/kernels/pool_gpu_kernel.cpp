@@ -43,15 +43,15 @@ class CudnnPoolDesc final {
   cudnnPoolingDescriptor_t val_;
 };
 
-class GPUPoolOpKernelState final : public user_op::OpKernelState {
+class GPUPoolOpKernelCache final : public user_op::OpKernelCache {
  public:
-  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
+  GPUPoolOpKernelCache(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
                        const ShapeView& y_shape, const std::string& data_format,
                        const DataType& dtype, const Params3D& params_3d)
       : dim_(dim), pooling_type_(pooling_type) {
     Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
   }
-  ~GPUPoolOpKernelState() = default;
+  ~GPUPoolOpKernelCache() = default;
 
   void Reset(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
              const ShapeView& y_shape, const std::string& data_format, const DataType& dtype,
@@ -80,10 +80,10 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
         new CudnnPoolDesc(pooling_mode, dim, pool_size.data(), padding.data(), strides.data()));
   }
 
-  static std::shared_ptr<GPUPoolOpKernelState> FromKernelComputeContext(
-      const int32_t& dim, const std::string& pooling_type, user_op::KernelComputeContext* ctx) {
+  static std::shared_ptr<GPUPoolOpKernelCache> FromKernelComputeContext(
+      const int32_t& dim, const std::string& pooling_type, user_op::KernelCacheContext* ctx) {
     if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
-    const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
+    const ShapeView& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -93,9 +93,9 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
-    const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
-    return std::make_shared<GPUPoolOpKernelState>(dim, pooling_type, x_shape, y_shape, data_format,
+    const ShapeView& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+    const DataType dtype = ctx->TensorDesc4ArgNameAndIndex("x", 0)->data_type();
+    return std::make_shared<GPUPoolOpKernelCache>(dim, pooling_type, x_shape, y_shape, data_format,
                                                   dtype, params_3d);
   }
 
@@ -114,31 +114,31 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
 template<typename T>
 struct PoolGpuKernelUtil {
   static void FWCompute(user_op::KernelComputeContext* ctx,
-                        GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
+                        const GPUPoolOpKernelCache* gpu_pool_op_kernel_cache) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    CHECK(gpu_pool_op_kernel_state != nullptr);
+    CHECK(gpu_pool_op_kernel_cache != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingForward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
-        gpu_pool_op_kernel_state->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
-        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
-        gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
+        gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), y->mut_dptr()));
   }
 
   static void BWCompute(user_op::KernelComputeContext* ctx,
-                        GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
+                        const GPUPoolOpKernelCache* gpu_pool_op_kernel_cache) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    CHECK(gpu_pool_op_kernel_state != nullptr);
+    CHECK(gpu_pool_op_kernel_cache != nullptr);
     OF_CUDNN_CHECK(cudnnPoolingBackward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
-        gpu_pool_op_kernel_state->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
-        gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->dptr(),
-        gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), dy->dptr(),
-        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
-        gpu_pool_op_kernel_state->cudnn_x_tensor_desc(), dx->mut_dptr()));
+        gpu_pool_op_kernel_cache->cudnn_pooling_desc(), CudnnSPOnePtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), y->dptr(),
+        gpu_pool_op_kernel_cache->cudnn_y_tensor_desc(), dy->dptr(),
+        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), x->dptr(), CudnnSPZeroPtr<T>(),
+        gpu_pool_op_kernel_cache->cudnn_x_tensor_desc(), dx->mut_dptr()));
   }
 };
 
@@ -152,9 +152,13 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "AVG", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(1, "AVG", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -165,9 +169,13 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::C
   ~AvgPool1DGradGpuKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "AVG", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(1, "AVG", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -179,9 +187,13 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "AVG", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(2, "AVG", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -193,9 +205,13 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "AVG", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(2, "AVG", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -207,9 +223,13 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "AVG", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(3, "AVG", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -221,9 +241,13 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "AVG", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(3, "AVG", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -235,9 +259,13 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "MAX", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(1, "MAX", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -249,9 +277,13 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(1, "MAX", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(1, "MAX", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -263,9 +295,13 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "MAX", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(2, "MAX", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -277,9 +313,13 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(2, "MAX", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(2, "MAX", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -291,9 +331,13 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "MAX", ctx);
-    PoolGpuKernelUtil<T>::FWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(3, "MAX", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::FWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
@@ -305,9 +349,13 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto& pool_state = GPUPoolOpKernelState::FromKernelComputeContext(3, "MAX", ctx);
-    PoolGpuKernelUtil<T>::BWCompute(ctx, pool_state.get());
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return GPUPoolOpKernelCache::FromKernelComputeContext(3, "MAX", ctx);
+  }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    PoolGpuKernelUtil<T>::BWCompute(ctx, dynamic_cast<const GPUPoolOpKernelCache*>(cache));
   };
 };
 
