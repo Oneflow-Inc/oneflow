@@ -24,6 +24,7 @@ REGISTER_USER_OP("id_shuffle")
     .Output("cur_rank_num_unique_ids")
     .Output("cur_rank_unique_ids")
     .Output("cur_rank_reverse_idx")
+    .Output("num_unique_ids_matrix")
     .Attr<std::string>("partitioning")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& ids_shape = ctx->InputShape("ids", 0);
@@ -34,12 +35,14 @@ REGISTER_USER_OP("id_shuffle")
       *ctx->OutputShape("cur_rank_num_unique_ids", 0) = Shape({parallel_num});
       *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
       *ctx->OutputShape("cur_rank_reverse_idx", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
+      *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
 
       *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
       *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
       *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = true;
       *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = true;
       *ctx->OutputIsDynamic("ids_reverse_idx", 0) = ctx->InputIsDynamic("ids", 0);
+      *ctx->OutputIsDynamic("num_unique_ids_matrix", 0) = false;
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -51,12 +54,14 @@ REGISTER_USER_OP("id_shuffle")
       *ctx->OutputShape("cur_rank_num_unique_ids", 0) = Shape({1});
       *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
       *ctx->OutputShape("cur_rank_reverse_idx", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
+      *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
 
       *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
       *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
       *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = true;
       *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = true;
       *ctx->OutputIsDynamic("ids_reverse_idx", 0) = ctx->InputIsDynamic("ids", 0);
+      *ctx->OutputIsDynamic("num_unique_ids_matrix", 0) = false;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -67,6 +72,7 @@ REGISTER_USER_OP("id_shuffle")
           .Split(user_op::OpArg("cur_rank_num_unique_ids", 0), 0)
           .Split(user_op::OpArg("cur_rank_unique_ids", 0), 0)
           .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)
+          .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
           .Build();
       return Maybe<void>::Ok();
     })
@@ -76,6 +82,7 @@ REGISTER_USER_OP("id_shuffle")
       *ctx->OutputDType("cur_rank_num_unique_ids", 0) = DataType::kInt32;
       *ctx->OutputDType("cur_rank_unique_ids", 0) = ctx->InputDType("ids", 0);
       *ctx->OutputDType("cur_rank_reverse_idx", 0) = DataType::kInt32;
+      *ctx->OutputDType("num_unique_ids_matrix", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 
@@ -161,6 +168,7 @@ REGISTER_USER_OP("embedding_shuffle")
     .Input("cur_rank_reverse_idx")
     .Input("num_unique_ids")
     .Input("ids_reverse_idx")
+    .Input("num_unique_ids_matrix")
     .Output("embeddings")
     .Attr<int64_t>("embedding_size")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -173,6 +181,7 @@ REGISTER_USER_OP("embedding_shuffle")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
           .Split(user_op::OpArg("cur_rank_embeddings", 0), 0)
           .Split(user_op::OpArg("cur_rank_num_unique_ids", 0), 0)
           .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)

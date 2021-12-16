@@ -53,6 +53,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Output("cur_rank_num_unique_ids")
             .Output("cur_rank_unique_ids")
             .Output("cur_rank_reverse_idx")
+            .Output("num_unique_ids_matrix")
             .Attr<std::string>("partitioning", user_op_conf.attr<std::string>("partitioning"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
@@ -97,6 +98,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Input("cur_rank_reverse_idx", id_shuffle_op.output("cur_rank_reverse_idx", 0))
             .Input("num_unique_ids", id_shuffle_op.output("num_unique_ids", 0))
             .Input("ids_reverse_idx", id_shuffle_op.output("ids_reverse_idx", 0))
+            .Input("num_unique_ids_matrix", id_shuffle_op.output("num_unique_ids_matrix", 0))
             .Output("embeddings")
             .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
