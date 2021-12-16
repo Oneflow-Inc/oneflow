@@ -366,6 +366,7 @@ file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_B
 if(BUILD_TESTING)
   if (of_all_test_cc)
     oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+    target_include_directories(oneflow_testexe PRIVATE ${ARROW_SRC_DIR})
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
     if (BUILD_CUDA)
       target_link_libraries(oneflow_testexe CUDA::cudart_static)
