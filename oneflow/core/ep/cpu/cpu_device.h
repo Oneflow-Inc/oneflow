@@ -25,16 +25,28 @@ namespace ep {
 class CpuDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDevice);
-  CpuDevice() = default;
-  virtual ~CpuDevice() = default;
+  explicit CpuDevice(DeviceManager* device_manager) : device_manager_(device_manager) {}
+  ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
+
+  DeviceType device_type() const override { return DeviceType::kCPU; }
+  size_t device_index() const override { return 0; }
+  DeviceManager* device_manager() const override { return device_manager_; }
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
 
   void CreateEvents(Event** events, size_t count) override;
   void DestroyEvents(Event** events, size_t count) override;
+
+  Maybe<void> Alloc(const AllocationOptions& options, void** ptr, size_t size) override;
+  void Free(const AllocationOptions& options, void* ptr) override;
+  Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
+  void FreePinned(const AllocationOptions& options, void* ptr) override;
+
+ private:
+  DeviceManager* device_manager_;
 };
 
 }  // namespace ep

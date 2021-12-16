@@ -1,3 +1,12 @@
+set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_BINARY_DIR}/include/OneFlow")
+message(STATUS "Generating user op ODS ${ONEFLOW_USER_OP_GEN_TD_PATH}/OneFlowUserOpGen.td")
+add_custom_target(GenUserOpODS
+  DEPENDS oneflow-gen-ods
+  COMMAND "$<TARGET_FILE:oneflow-gen-ods>"
+  BYPRODUCTS OneFlowUserOpGen.td
+  WORKING_DIRECTORY "${ONEFLOW_USER_OP_GEN_TD_PATH}"
+)
+
 set(LLVM_TARGET_DEFINITIONS OneFlowEnums.td)
 mlir_tablegen(OneFlowEnums.h.inc -gen-enum-decls)
 mlir_tablegen(OneFlowEnums.cpp.inc -gen-enum-defs)
@@ -10,6 +19,7 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS_USED_IN_PATTERNS)
 endforeach()
 mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
+add_dependencies(MLIROneFlowPatternsIncGen GenUserOpODS)
 
 # NOTE: seperate conversion and opt with --name
 set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
@@ -29,13 +39,17 @@ foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
     set(LLVM_TABLEGEN_FLAGS "${ONE_LLVM_TABLEGEN_FLAGS}")
     string(TOLOWER "${OP_GROUP_NAME}" OP_GROUP_NAME_LOWER)
     set(CPP_INC_FILE "OneFlow.${OP_GROUP_NAME_LOWER}_ops.cpp.inc")
+    set(HEADER_INC_FILE "OneFlow.${OP_GROUP_NAME_LOWER}_ops.h.inc")
     mlir_tablegen(${CPP_INC_FILE} -gen-op-defs)
+    mlir_tablegen(${HEADER_INC_FILE} -gen-op-decls)
 endforeach()
 add_public_tablegen_target(MLIROneFlowOpGroupDefsIncGen)
+add_dependencies(MLIROneFlowOpGroupDefsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "${FULL_LLVM_TABLEGEN_FLAGS}")
-mlir_tablegen(OneFlow.Ops.h.inc -gen-op-decls)
+mlir_tablegen(OneFlow.gen_ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROneFlowOpGroupDeclsIncGen)
+add_dependencies(MLIROneFlowOpGroupDeclsIncGen GenUserOpODS)
 
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(

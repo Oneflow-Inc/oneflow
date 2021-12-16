@@ -16,7 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -81,14 +81,14 @@ struct PlacementSymbolExportUtil {
             << "Key of device_ids dict must be int.";
         int64_t machine_id = pair.first.cast<int64_t>();
         if (py::isinstance<py::int_>(pair.second)) {
-          machine_device_id_vec.push_back({machine_id, pair.second.cast<int64_t>()});
+          machine_device_id_vec.emplace_back(machine_id, pair.second.cast<int64_t>());
         } else {
           CHECK_OR_RETURN(py::isinstance<py::iterable>(pair.second))
               << "Value of device_ids dict must be int, list or range";
           for (const auto& device_id : pair.second) {
             CHECK_OR_RETURN(py::isinstance<py::int_>(device_id))
                 << "Value of device_ids dict must be int, list or range of int.";
-            machine_device_id_vec.push_back({machine_id, device_id.cast<int64_t>()});
+            machine_device_id_vec.emplace_back(machine_id, device_id.cast<int64_t>());
           }
         }
       }
@@ -97,8 +97,8 @@ struct PlacementSymbolExportUtil {
         CHECK_OR_RETURN(py::isinstance<py::int_>(global_device_id))
             << "Value of device_ids list must be int";
         int64_t global_rank_int64 = global_device_id.cast<int64_t>();
-        machine_device_id_vec.push_back({GlobalProcessCtx::NodeId(global_rank_int64),
-                                         GlobalProcessCtx::LocalRank(global_rank_int64)});
+        machine_device_id_vec.emplace_back(GlobalProcessCtx::NodeId(global_rank_int64),
+                                           GlobalProcessCtx::LocalRank(global_rank_int64));
       }
     }
 
