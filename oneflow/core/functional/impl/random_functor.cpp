@@ -127,8 +127,8 @@ class ConsistentRandFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(IsMultiClient())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
+    if (LazyMode::is_enabled()) {
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -199,8 +199,8 @@ class ConsistentRandNFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(IsMultiClient())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
+    if (LazyMode::is_enabled()) {
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -282,17 +282,10 @@ class ConsistentRandIntFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-
+    if (LazyMode::is_enabled()) {
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+    }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 
@@ -358,16 +351,10 @@ class ConsistentRandPermFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    if (LazyMode::is_enabled()) {
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+    }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 

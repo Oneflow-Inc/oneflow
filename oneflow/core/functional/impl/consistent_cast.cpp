@@ -227,6 +227,10 @@ Maybe<Tensor> ConsistentToConsistent(
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
+      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+    return x;
+  }
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor->contiguous()}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
