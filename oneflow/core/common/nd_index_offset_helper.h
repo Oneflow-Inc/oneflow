@@ -54,10 +54,7 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < N - 1; ++i) {
-      // offset += index[i] * stride_[i];
-      offset += math_helper_[i].Mul(index[i]);
-    }
+    for (int i = 0; i < N - 1; ++i) { offset += math_helper_[i].Mul(index[i]); }
     offset += index[N - 1];
     return offset;
   }
@@ -68,13 +65,9 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-// <<<<<<< dev_fast_div
-    for (int i = 0; i < n; ++i) { offset += math_helper_[i].Mul(index[i]); }
-// =======
-//     for (int i = 0; i < N; ++i) {
-//       if (i < n) { offset += index[i] * stride_[i]; }
-//     }
-// >>>>>>> master
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { offset += math_helper_[i].Mul(index[i]); }
+    }
     return offset;
   }
 
@@ -91,7 +84,6 @@ class NdIndexOffsetHelper {
     if (n == N) {
       offset += index[n - 1];
     } else {
-      // offset += index[n - 1] * stride_[n - 1];
       offset += math_helper_[n - 1].Mul(index[n - 1]);
     }
     return offset;
@@ -103,9 +95,8 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < N - 1; ++i) {
-      const T idx = math_helper_[i].Div(remaining);
+      const T idx = math_helper_[i].Divides(remaining);
       index[i] = idx;
-      // remaining = remaining - idx * stride_[i];
       remaining = remaining - math_helper_[i].Mul(idx);
     }
     index[N - 1] = remaining;
@@ -117,20 +108,12 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-// <<<<<<< dev_fast_div
-    for (int i = 0; i < n; ++i) {
-      const T idx = math_helper_[i].Div(remaining);
-      index[i] = idx;
-      // remaining = remaining - idx * stride_[i];
-      remaining = remaining - math_helper_[i].Mul(idx);
-// =======
-//     for (int i = 0; i < N; ++i) {
-//       if (i < n) {
-//         const T idx = remaining / stride_[i];
-//         index[i] = idx;
-//         remaining = remaining - idx * stride_[i];
-//       }
-// >>>>>>> master
+    for (int i = 0; i < N; ++i) {
+      if (i < n) {
+        const T idx = math_helper_[i].Divides(remaining);
+        index[i] = idx;
+        remaining = remaining - math_helper_[i].Mul(idx);
+      }
     }
   }
 
@@ -144,16 +127,14 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < n - 1; ++i) {
-      const T idx = math_helper_[i].Div(remaining);
+      const T idx = math_helper_[i].Divides(remaining);
       *index[i] = idx;
-      // remaining = remaining - idx * stride_[i];
       remaining = remaining - math_helper_[i].Mul(idx);
     }
     if (n == N) {
       *index[n - 1] = remaining;
     } else {
-      // *index[n - 1] = remaining / stride_[n - 1];
-      *index[n - 1] = math_helper_[n - 1].Div(remaining);
+      *index[n - 1] = math_helper_[n - 1].Divides(remaining);
     }
   }
 

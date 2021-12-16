@@ -37,13 +37,13 @@ struct FastIntegerMath {
     if (is_power_2) {
       log2_operand_ = 31 - leading_zeroes;
     } else {
-      log2_operand_ = -1;
+      log2_operand_ = -1;  // Set as flag.
     }
     operand_ = operand == 0 ? 1 : operand;
     assert(operand_ >= 1 && operand_ <= GetMaxVal<T>());
   }
 
-  OF_DEVICE_FUNC T Div(T n) const {
+  OF_DEVICE_FUNC T Divides(T n) const {
     if (log2_operand_ >= 0) {
       return n >> log2_operand_;
     } else {
@@ -51,7 +51,7 @@ struct FastIntegerMath {
     }
   }
 
-  OF_DEVICE_FUNC T Mod(T n) const { return n - Div(n) * operand_; }
+  OF_DEVICE_FUNC T Mod(T n) const { return n - Divides(n) * operand_; }
   OF_DEVICE_FUNC T Mul(T n) const {
     if (log2_operand_ >= 0) {
       return n << log2_operand_;
@@ -62,7 +62,7 @@ struct FastIntegerMath {
   OF_DEVICE_FUNC T Add(T n) const { return n + operand_; }
   OF_DEVICE_FUNC T Sub(T n) const { return n - operand_; }
   OF_DEVICE_FUNC void DivMod(T n, T* q, T* r) const {
-    *q = Div(n);
+    *q = Divides(n);
     *r = n - *q * operand_;
   }
 
@@ -80,11 +80,11 @@ struct FastIntegerMath<int32_t> {
 #else
     int leading_zeroes = __builtin_clz(operand);
 #endif
-    bool is_power_2 = ((operand & (operand - 1)) == 0);
+    is_power_2 = ((operand & (operand - 1)) == 0);
     if (is_power_2) {
       log2_operand_ = 31 - leading_zeroes;
     } else {
-      log2_operand_ = -1;  // Set as flag
+      log2_operand_ = -1;  // Set as flag.
       operand_ = operand == 0 ? 1 : operand;
       assert(operand_ >= 1 && operand_ <= GetMaxVal<uint32_t>());
       for (l_ = 0; l_ < 32; l_++)
@@ -97,15 +97,22 @@ struct FastIntegerMath<int32_t> {
     }
   }
 
-  OF_DEVICE_FUNC int32_t Div(int32_t n) const {
-    if (log2_operand_ >= 0) {
+  OF_DEVICE_FUNC int32_t Divides(const int32_t n) const {
+    if (is_power_2) {
       return n >> log2_operand_;
     } else {
-      return n / operand_;
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+      uint32_t t = __umulhi(M_, n);
+      return (t + n) >> l_;
+#else
+      // Using uint64_t for t, then t + n won't overflow.
+      uint64_t t = ((uint64_t)M_ * n) >> 32;
+      return static_cast<int>((t + n) >> l_);
+#endif
     }
   }
 
-  OF_DEVICE_FUNC int32_t Mod(int32_t n) const { return n - Div(n) * operand_; }
+  OF_DEVICE_FUNC int32_t Mod(int32_t n) const { return n - Divides(n) * operand_; }
   OF_DEVICE_FUNC int32_t Mul(int32_t n) const {
     if (log2_operand_ >= 0) {
       return n << log2_operand_;
@@ -116,7 +123,7 @@ struct FastIntegerMath<int32_t> {
   OF_DEVICE_FUNC int32_t Add(int32_t n) const { return n + operand_; }
   OF_DEVICE_FUNC int32_t Sub(int32_t n) const { return n - operand_; }
   OF_DEVICE_FUNC void DivMod(int32_t n, int32_t* q, int32_t* r) const {
-    *q = Div(n);
+    *q = Divides(n);
     *r = n - *q * operand_;
   }
 
@@ -124,6 +131,7 @@ struct FastIntegerMath<int32_t> {
   int32_t log2_operand_;
   uint32_t M_;  // m' in the paper.
   uint32_t l_;  // l_ = ceil(log2(d_))
+  bool is_power_2;
 };
 
 }  // namespace oneflow
