@@ -98,8 +98,8 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
-          if (eager_blob_object->last_used_device().has_value()) {
+          if (eager_blob_object->producer_op_device().has_value()) {
+            JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
             const auto& device = JUST(eager_blob_object->producer_op_device());
             auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
             JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));

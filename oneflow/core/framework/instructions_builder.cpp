@@ -37,7 +37,7 @@ limitations under the License.
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
-#include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
+#include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
@@ -1015,19 +1015,23 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  if (eager_blob_object->last_used_device().has_value()) {
-    const auto& last_used_device = JUST(eager_blob_object->last_used_device());
-    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
-    if (last_used_device != producer_op_device) {
-      JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
-                          last_used_device));
-    }
+  const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+  const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
+  if (last_used_device != producer_op_device) {
+    JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
+                        last_used_device));
   }
-  LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
-  const auto& phy_instr_operand = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
-      eager_blob_object, compute_local_dep_object);
+  Optional<Symbol<Device>> op_device(producer_op_device);
+  // Disable inter-device instruction sequential for tensor used by nccl stream.
+  // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
+  if (last_used_device->type() == "async_launched_nccl"
+      && (producer_op_device->type() == "cuda" || producer_op_device->type() == "gpu")) {
+    op_device = Optional<Symbol<Device>>(NullOpt);
+  }
+  const auto& phy_instr_operand =
+      std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, op_device);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".ReleaseTensor",
+      Global<VirtualMachine>::Get()->mut_vm(), producer_op_device->type() + ".ReleaseTensor",
       parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
