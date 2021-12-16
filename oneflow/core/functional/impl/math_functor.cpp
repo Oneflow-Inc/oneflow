@@ -596,7 +596,6 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class Transpose2dimFunctor {
  public:
   Transpose2dimFunctor() {
