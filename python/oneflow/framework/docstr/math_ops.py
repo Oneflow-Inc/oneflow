@@ -1346,13 +1346,13 @@ add_docstr(
 
     Args:
         n (int): the number of rows.
-        m (Optional[int], optional): the number of colums with default being n. Defaults to None.
+        m (int, optional): the number of colums with default being n. Defaults to None.
     
     Keyword args:
         device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
-        placement(Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the tensor is stored on.
-        sbp(Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a consistent tensor, specify the SBP of the tensor.
+        placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
+        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
     
     Returns:
         oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
