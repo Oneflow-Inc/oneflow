@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-// data partition: nspace|dim|cod
+// data partition: nspace|size|cod
 // total thread number: nspace * cod
 // in cod part, use cod threads to calculate as follows(m=cod-1, n=dim-1):
 // dm0, ..., d10, d00
@@ -33,18 +33,17 @@ namespace {
 //  |         |    |
 // dmn, ..., d1n, d0n
 template<typename T>
-__global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t nspace, int64_t dim, int64_t cod,
-                                 int64_t nele) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < nele;
-       i += step) {
+__global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t nspace, int64_t size, int64_t cod) {
+  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
+       i < nspace * cod; i += step) {
     auto space_id = i / cod;
     auto space_thread_id = i % cod;
 
-    auto* pin_base = pin + space_id * dim * cod + space_thread_id;
-    auto* pout_base = pout + space_id * dim * cod + space_thread_id;
+    auto* pin_base = pin + space_id * size * cod + space_thread_id;
+    auto* pout_base = pout + space_id * size * cod + space_thread_id;
 
-    // calculate dim data in one thread
-    for (auto j = 0; j < dim; j++) {
+    // calculate size data in one thread
+    for (auto j = 0; j < size; j++) {
       auto idx = j * cod;
       pout_base[idx] = pin_base[idx];
       if (j != 0) { pout_base[idx] += pout_base[idx - cod]; }
@@ -80,17 +79,15 @@ class GpuCumsumKernel final : public user_op::OpKernel {
     auto nspace = nele / space;
     auto thread_num = nspace * cod;
 
-    RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, pin, pout, nspace, dim, cod,
-                    nele);
+    RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, pin, pout, nspace, size, cod);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                             \
-  REGISTER_USER_KERNEL("leaky_relu")                                   \
-      .SetCreateFn<GpuCumsumKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("cumsum").SetCreateFn<GpuCumsumKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_CUMSUM_KERNEL(float)
 REGISTER_CUDA_CUMSUM_KERNEL(double)
