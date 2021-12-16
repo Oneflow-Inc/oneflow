@@ -30,6 +30,8 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto nele = in->shape().elem_cnt();
     if (!nele) { return; }
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dim = ctx->Attr<int64_t>("dim");
     const auto* pin = in->dptr<T>();
@@ -41,18 +43,19 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto cod = in->shape().Count(dim) / size;
     auto nspace = nele / space;
 
+    std::copy_n(pin, nele, pout);
     for (auto i = 0; i < nspace; i++) {
-      for (auto j = 0; j < size; j++) {
-        auto* tmp_pout = pout + i * cod * size + j * cod;
-        auto* tmp_pin = pin + i * cod * size;
-        std::copy_n(tmp_pin, cod, tmp_pout);
-
-        for (auto k = 1; k <= j; k++) {
-          auto* tmp_pin2 = tmp_pin + k * cod;
-          for (auto l = 0; l < cod; l++) { tmp_pout[l] += tmp_pin2[l]; }
-        }
+      auto* tmp_pout_base = pout + i * size * cod;
+      for (auto j = 1; j < size; j++) {
+        auto* tmp_pout = tmp_pout_base + j * cod;
+        auto* last_tmp_pout = tmp_pout - cod;
+        for (auto k = 0; k < cod; k++) { tmp_pout[k] += last_tmp_pout[k]; }
       }
     }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    std::cout << time << std::endl;
   }
 
   // TODO: what's it used for?
