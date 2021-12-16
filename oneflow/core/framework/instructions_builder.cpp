@@ -1106,8 +1106,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
 
 template Maybe<void> InstructionsBuilder::TensorView(
     const std::shared_ptr<one::MirroredTensor> input_tensor,
-    const std::shared_ptr<one::MirroredTensor> view_tensor
-);
+    const std::shared_ptr<one::MirroredTensor> view_tensor);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(

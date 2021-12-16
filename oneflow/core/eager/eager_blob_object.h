@@ -111,7 +111,6 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
-
   const Optional<Symbol<Device>>& producer_op_device() const {
     return tensor_storage_->producer_op_device();
   }

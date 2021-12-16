@@ -102,7 +102,8 @@ class PReluGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
-    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy->contiguous(), x->contiguous(), alpha->contiguous()});
+    return OpInterpUtil::Dispatch<one::TensorTuple>(
+        *op_, {dy->contiguous(), x->contiguous(), alpha->contiguous()});
   }
 
  private:

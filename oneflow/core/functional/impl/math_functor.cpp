@@ -417,7 +417,8 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff->contiguous(), mask->contiguous(), count->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {out_diff->contiguous(), mask->contiguous(), count->contiguous()}, attrs);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
@@ -465,7 +466,8 @@ class ReduceGlobalStageBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous(), device_count->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous(), device_count->contiguous()},
+                                               attrs);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
 
@@ -490,7 +492,8 @@ class ReduceGlobalStageGradBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff->contiguous(), mask->contiguous(), device_count->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {out_diff->contiguous(), mask->contiguous(), device_count->contiguous()}, attrs);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
@@ -587,9 +590,9 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
           << ndim << " ) but got " << positive_perm[i];
     }
-    if (input->is_eager() && input->is_local()) { 
-      if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
-        return JUST(view::Transpose(input, positive_perm)); 
+    if (input->is_eager() && input->is_local()) {
+      if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
+        return JUST(view::Transpose(input, positive_perm));
       }
     }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
@@ -599,7 +602,6 @@ class TransposeFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class Transpose2dimFunctor {
  public:
@@ -626,9 +628,9 @@ class Transpose2dimFunctor {
     std::swap(permute[dim_0], permute[dim_1]);
     Shape shape(DimVector(permute.begin(), permute.end()));
     printf("\n Permute functor >>>>> permute:%s", shape.ToString().c_str());
-    if (input->is_eager() && input->is_local()) { 
-      if(!(input->shape()->NumAxes()<=1 || input->shape()->elem_cnt()<=1)){
-        return JUST(view::Transpose(input, permute)); 
+    if (input->is_eager() && input->is_local()) {
+      if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
+        return JUST(view::Transpose(input, permute));
       }
     }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
@@ -1332,9 +1334,11 @@ class MinimumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x->contiguous(), y->contiguous()});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x->contiguous(), y->contiguous()});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {x->contiguous(), y->contiguous()});
     }
   }
 
@@ -1355,9 +1359,11 @@ class MaximumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x->contiguous(), y->contiguous()});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {x->contiguous(), y->contiguous()});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x->contiguous(), y->contiguous()});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {x->contiguous(), y->contiguous()});
     }
   }
 

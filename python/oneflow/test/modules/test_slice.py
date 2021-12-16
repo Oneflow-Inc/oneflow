@@ -32,7 +32,7 @@ def _test_slice(test_case, device):
     flow_tmp = x[0:3, 0:5, 0:6]
     y = flow_tmp[::1, ::2, ::3]
     tmp = np_arr[0:3, 0:5, 0:6]
-    np_out = tmp[::1, ::2, ::3]    
+    np_out = tmp[::1, ::2, ::3]
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
 

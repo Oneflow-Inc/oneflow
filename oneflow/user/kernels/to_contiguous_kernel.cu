@@ -35,7 +35,7 @@ struct StrideParam {
   __device__ int64_t compute_index(int64_t output_idx, const StrideParam& input_params) const {
     int64_t input_idx = 0;
 
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < ndims; ++i) {
       int64_t idx = output_idx / stride[i];
       output_idx -= idx * stride[i];
@@ -100,12 +100,12 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   static to_contiguous_fn_map_t<T> to_contiguous_fn_map;
   void operator()() {
     if (contiguous_dim == -1) {
-      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, block_size * dsize,
-                                    cudaMemcpyDeviceToDevice,
+      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, block_size * dsize, cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
       const int ndim = in_shape.NumAxes();
-      to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+      to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr,
+                                      out_dptr);
     }
   }
 };
