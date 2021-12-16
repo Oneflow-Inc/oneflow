@@ -79,13 +79,9 @@ class GpuCumsumKernel final : public user_op::OpKernel {
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    // auto t1 = std::chrono::high_resolution_clock::now();
-    // auto thread_num = cs_up_space * cs_down_space;
-    // RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
-    //                 cs_space, cs_down_space);
-    // auto t2 = std::chrono::high_resolution_clock::now();
-    // auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    // std::cout << time / 1000000. << std::endl;
+    auto thread_num = cs_up_space * cs_down_space;
+    RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
+                    cs_space, cs_down_space);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
