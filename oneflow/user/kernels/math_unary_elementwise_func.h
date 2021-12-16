@@ -670,23 +670,11 @@ struct TanFunctor<double> {
 template<>
 struct AbsFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hlt(x, GetZeroVal<half>()) ? __hneg(dy) : dy;
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -695,13 +683,7 @@ struct AcosFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(acos, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hneg(hrsqrt(__hsub(GetOneVal<half>(), __hmul(x, x)))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -710,13 +692,7 @@ struct AcoshFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(acosh, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrsqrt(__hsub(__hmul(x, x), GetOneVal<half>())));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -725,13 +701,7 @@ struct AsinFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(asin, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrsqrt(__hsub(GetOneVal<half>(), __hmul(x, x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -740,13 +710,7 @@ struct AsinhFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(asinh, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrsqrt(__hadd(GetOneVal<half>(), __hmul(x, x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -755,13 +719,7 @@ struct AtanFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(atan, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hdiv(GetOneVal<half>(), __hadd(GetOneVal<half>(), __hmul(x, x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -770,13 +728,7 @@ struct AtanhFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(atanh, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hdiv(GetOneVal<half>(), __hsub(GetOneVal<half>(), __hmul(x, x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -789,24 +741,10 @@ struct CeilFunctor<half> {
 
 template<>
 struct CosFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return hcos(x);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Forward(const half x) { return hcos(x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hneg(hsin(x)));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -815,13 +753,7 @@ struct CoshFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(cosh, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, MATH_FUNC_H(sinh, x));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -830,13 +762,7 @@ struct ErfFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(erf, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -845,52 +771,22 @@ struct ErfcFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(erfc, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hneg(__hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x)))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
 template<>
 struct ExpFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return hexp(x);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Forward(const half x) { return hexp(x); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hmul(dy, hexp(x));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hexp(x)); }
 };
 
 template<>
 struct Expm1Functor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(expm1, x); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hmul(dy, hexp(x));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hexp(x)); }
 };
 
 template<>
@@ -915,37 +811,15 @@ template<>
 struct LogFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return hlog(x); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hmul(dy, hrcp(x));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hrcp(x)); }
 };
 
 template<>
 struct Log2Functor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return hlog2(x);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Forward(const half x) { return hlog2(x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrcp(__hmul(x, hlog(HALF_VAL_TWO))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -954,73 +828,31 @@ struct Log1pFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(log1p, x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrcp(__hadd(x, GetOneVal<half>())));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
 template<>
 struct LogSigmoidFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hneg(hlog(__hadd(GetOneVal<half>(), hexp(__hneg(x)))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrcp(__hadd(hexp(x), GetOneVal<half>())));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
 template<>
 struct NegativeFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hneg(x);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Forward(const half x) { return __hneg(x); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hneg(dy);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hneg(dy); }
 };
 
 template<>
 struct ReciprocalFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return hrcp(x);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Forward(const half x) { return hrcp(x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
     return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
@@ -1030,25 +862,13 @@ struct ReciprocalFunctor<half> {
 template<>
 struct ReciprocalNoNanFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
     return hrcp(x);
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__heq(GetZeroVal<half>(), x)) { return GetZeroVal<half>(); }
     return __hmul(dy, __hneg(hrcp(__hmul(x, x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -1071,13 +891,7 @@ struct RsqrtFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return hrsqrt(x); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, __hneg(hrcp(__hmul(HALF_VAL_TWO, hsqrt(__hmul(x, __hmul(x, x)))))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
@@ -1088,29 +902,17 @@ struct SigmoidFunctor<half> {
   }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     half y = hrcp(__hadd(GetOneVal<half>(), hexp(__hneg(x))));
     return __hmul(dy, __hmul(y, __hsub(GetOneVal<half>(), y)));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
 template<>
 struct SignFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     if (__hgt(x, GetZeroVal<half>())) { return GetOneVal<half>(); }
     if (__hlt(x, GetZeroVal<half>())) { return __hneg(GetOneVal<half>()); }
     return GetZeroVal<half>();
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) { return GetZeroVal<half>(); }
@@ -1120,15 +922,7 @@ template<>
 struct SinFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return hsin(x); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hmul(dy, hcos(x));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return __hmul(dy, hcos(x)); }
 };
 
 template<>
@@ -1171,24 +965,10 @@ struct SquareFunctor<half> {
 
 template<>
 struct TanFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-    return __hdiv(hsin(x), hcos(x));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-  }
+  static OF_HALF_FUNC half Forward(const half x) { return __hdiv(hsin(x), hcos(x)); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hmul(dy, hrcp(__hmul(hcos(x), hcos(x))));
-#else
-    printf("use half need nvcc arch >= 530");
-    assert(false);
-    return 0.;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
   }
 };
 
