@@ -1660,8 +1660,8 @@ class L2NormalizeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("l2_normalize").Input("x").Output("y").Output("square_x_sum").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
-                                const float& epsilon) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
+                           const float& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", 0));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
@@ -1673,11 +1673,10 @@ class L2NormalizeFunctor {
 
       const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
           *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
-      return TensorTuple({JUST(functional::Transpose(result->at(0), input_perm)),
-                          JUST(functional::Transpose(result->at(1), input_perm))});
+      return functional::Transpose(result->at(0), input_perm);
     }
 
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
