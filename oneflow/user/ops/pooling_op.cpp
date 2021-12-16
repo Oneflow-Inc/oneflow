@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/pooling_kernel_util.h"
 #include "oneflow/user/kernels/avg_pooling_kernel_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -204,99 +205,85 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
 }
 }  // namespace
 
-#define REGISTER_MAXPOOL_FORWARD_OP(name, dim)                        \
-  REGISTER_USER_OP(name)                                              \
-      .Input("x")                                                     \
-      .Output("y")                                                    \
-      .Output("indice")                                               \
-      .Attr<std::vector<int32_t>>("padding")                          \
-      .Attr<std::string>("data_format")                               \
-      .Attr<std::vector<int32_t>>("kernel_size")                      \
-      .Attr<std::vector<int32_t>>("stride")                           \
-      .Attr<std::vector<int32_t>>("dilation")                         \
-      .Attr<bool>("return_indices")                                   \
-      .Attr<bool>("ceil_mode")                                        \
-      .SetTensorDescInferFn(MaxPoolMakeForwardTensorDescInferFn(dim)) \
-      .SetGetSbpFn(MaxPoolForwardGetSbpFn)                            \
-      .SetDataTypeInferFn(FwInferDataType);
+#define IMPLEMENT_MAXPOOL_FUNCS(name, dim)                                               \
+  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
+    return MaxPoolForwardGetSbpFn(ctx);                                                  \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    return MaxPoolMakeForwardTensorDescInferFn(dim)(ctx);                                \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                  \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
+    return FwInferDataType(ctx);                                                         \
+  }
 
-REGISTER_MAXPOOL_FORWARD_OP("maxpool_1d", 1)
-REGISTER_MAXPOOL_FORWARD_OP("maxpool_2d", 2)
-REGISTER_MAXPOOL_FORWARD_OP("maxpool_3d", 3)
+IMPLEMENT_MAXPOOL_FUNCS(MaxPool1D, 1)
+IMPLEMENT_MAXPOOL_FUNCS(MaxPool2D, 2)
+IMPLEMENT_MAXPOOL_FUNCS(MaxPool3D, 3)
+#undef IMPLEMENT_MAXPOOL_FUNCS
 
-#undef REGISTER_MAXPOOL_FORWARD_OP
+#define IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(name)                                               \
+  /*static*/ Maybe<void> name##GradOp::GetSbp(user_op::SbpContext* ctx) {                    \
+    return MaxPoolBackwardGetSbpFn(ctx);                                                     \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    return BackwardTensorDescInferFn(ctx);                                                   \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                      \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
+    return BwInferDataType(ctx);                                                             \
+  }
 
-#define REGISTER_MAXPOOL_BACKWARD_OP(name)             \
-  REGISTER_USER_OP(name)                               \
-      .Input("x")                                      \
-      .Input("y")                                      \
-      .Input("indice")                                 \
-      .Input("dy")                                     \
-      .Output("dx")                                    \
-      .Attr<std::vector<int32_t>>("padding")           \
-      .Attr<std::string>("data_format")                \
-      .Attr<std::vector<int32_t>>("kernel_size")       \
-      .Attr<std::vector<int32_t>>("stride")            \
-      .Attr<std::vector<int32_t>>("dilation")          \
-      .Attr<bool>("return_indices")                    \
-      .Attr<bool>("ceil_mode")                         \
-      .SetTensorDescInferFn(BackwardTensorDescInferFn) \
-      .SetGetSbpFn(MaxPoolBackwardGetSbpFn)            \
-      .SetDataTypeInferFn(BwInferDataType);
-
-REGISTER_MAXPOOL_BACKWARD_OP("maxpool_1d_grad")
-REGISTER_MAXPOOL_BACKWARD_OP("maxpool_2d_grad")
-REGISTER_MAXPOOL_BACKWARD_OP("maxpool_3d_grad")
-
-#undef REGISTER_MAXPOOL_BACKWARD_OP
+IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool1D)
+IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool2D)
+IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
+#undef IMPLEMENT_MAXPOOL_BACKWARD_FUNCS
 
 REGISTER_USER_OP_GRAD("maxpool_1d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn("max", 1));
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn("max", 2));
 REGISTER_USER_OP_GRAD("maxpool_3d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn("max", 3));
 
-#define REGISTER_AVGPOOL_FORWARD_OP(name, ndim)                        \
-  REGISTER_USER_OP(name)                                               \
-      .Input("x")                                                      \
-      .Output("y")                                                     \
-      .Attr<std::vector<int32_t>>("padding")                           \
-      .Attr<std::string>("data_format")                                \
-      .Attr<std::vector<int32_t>>("kernel_size")                       \
-      .Attr<std::vector<int32_t>>("stride")                            \
-      .Attr<bool>("ceil_mode")                                         \
-      .Attr<bool>("count_include_pad")                                 \
-      .Attr<int64_t>("divisor_override")                               \
-      .SetTensorDescInferFn(AvgPoolMakeForwardTensorDescInferFn(ndim)) \
-      .SetGetSbpFn(AvgPoolForwardGetSbpFn)                             \
-      .SetDataTypeInferFn(FwInferDataType);
+#define IMPLEMENT_AVGPOOL_FUNCS(name, ndim)                                              \
+  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
+    return AvgPoolForwardGetSbpFn(ctx);                                                  \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    return AvgPoolMakeForwardTensorDescInferFn(ndim)(ctx);                               \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                  \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
+    return FwInferDataType(ctx);                                                         \
+  }
 
-REGISTER_AVGPOOL_FORWARD_OP("avgpool_1d", 1);
-REGISTER_AVGPOOL_FORWARD_OP("avgpool_2d", 2);
-REGISTER_AVGPOOL_FORWARD_OP("avgpool_3d", 3);
+IMPLEMENT_AVGPOOL_FUNCS(AvgPool1D, 1)
+IMPLEMENT_AVGPOOL_FUNCS(AvgPool2D, 2)
+IMPLEMENT_AVGPOOL_FUNCS(AvgPool3D, 3)
+#undef IMPLEMENT_AVGPOOL_FUNCS
 
-#undef REGISTER_AVGPOOL_FORWARD_OP
+#define IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(name)                                               \
+  /*static*/ Maybe<void> name##GradOp::GetSbp(user_op::SbpContext* ctx) {                    \
+    return AvgPoolBackwardGetSbpFn(ctx);                                                     \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    return BackwardTensorDescInferFn(ctx);                                                   \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                      \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
+    return BwInferDataType(ctx);                                                             \
+  }
 
-#define REGISTER_AVGPOOL_BACKWARD_OP(name)             \
-  REGISTER_USER_OP(name)                               \
-      .Input("x")                                      \
-      .Input("y")                                      \
-      .Input("dy")                                     \
-      .Output("dx")                                    \
-      .Attr<std::vector<int32_t>>("padding")           \
-      .Attr<std::string>("data_format")                \
-      .Attr<std::vector<int32_t>>("kernel_size")       \
-      .Attr<std::vector<int32_t>>("stride")            \
-      .Attr<bool>("ceil_mode")                         \
-      .Attr<bool>("count_include_pad")                 \
-      .Attr<int64_t>("divisor_override")               \
-      .SetTensorDescInferFn(BackwardTensorDescInferFn) \
-      .SetGetSbpFn(AvgPoolBackwardGetSbpFn)            \
-      .SetDataTypeInferFn(BwInferDataType);
-
-REGISTER_AVGPOOL_BACKWARD_OP("avgpool_1d_grad");
-REGISTER_AVGPOOL_BACKWARD_OP("avgpool_2d_grad");
-REGISTER_AVGPOOL_BACKWARD_OP("avgpool_3d_grad");
-
-#undef REGISTER_AVGPOOL_BACKWARD_OP
+IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool1D)
+IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool2D)
+IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool3D)
+#undef IMPLEMENT_AVGPOOL_BACKWARD_FUNCS
 
 REGISTER_USER_OP_GRAD("avgpool_1d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(1));
 REGISTER_USER_OP_GRAD("avgpool_2d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(2));
