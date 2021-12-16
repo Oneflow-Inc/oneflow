@@ -174,11 +174,6 @@ def _xor(self, other):
     return self.logical_xor(other)
 
 
-def _contiguous(self):
-    # TODO: support stride mechanism
-    return self
-
-
 def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
     return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
 
@@ -193,6 +188,16 @@ def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.transpose(self, new_dims)
 
 
 def is_nonzero(input):
@@ -522,16 +527,6 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.transpose(self, new_dims)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -583,7 +578,10 @@ def _roll(self, shifts, dims=None):
 def _bmm(self, other):
     return flow.bmm(self, other)
 
+
 def _contiguous(self):
+    if self.is_contiguous():
+        return self
     return flow._C.contiguous(self)
 
 
@@ -870,11 +868,11 @@ def RegisterMethods():
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
-    Tensor.contiguous = _contiguous
     Tensor.norm = _norm
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
@@ -887,7 +885,6 @@ def RegisterMethods():
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.all = _all

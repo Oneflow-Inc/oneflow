@@ -50,7 +50,6 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
         block_size(1),
         contiguous_dim(in_shape.NumAxes() - 1),
         out_stride(in_shape.NumAxes()),
-        index(contiguous_dim + 1),
         in_offset(0),
         out_offset(0),
         element_count(1) {
@@ -67,30 +66,11 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
     }
   }
 
- protected:
-  bool finish_stride() {
-    int64_t i = contiguous_dim;
-    for (; i != -1; --i) {
-      if (index[i] == in_shape.At(i) - 1) {
-        in_offset -= in_stride[i] * index[i];
-        out_offset -= out_stride[i] * index[i];
-        index[i] = 0;
-      } else {
-        index[i]++;
-        in_offset += in_stride[i];
-        out_offset += out_stride[i];
-        break;
-      }
-    }
-    return i == -1;
-  }
-
   int64_t block_size;
   int64_t element_count;
   int64_t contiguous_dim;
 
   StrideVector out_stride;
-  DimVector index;
 
   int64_t in_offset;
   int64_t out_offset;

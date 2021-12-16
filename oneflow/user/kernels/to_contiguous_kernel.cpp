@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
+#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
@@ -31,7 +33,7 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
       // 0-dim tensor
       std::memcpy(out_dptr, in_dptr, block_size * dsize);
     } else {
-      // if input tensor's strides equals to output's, than just return copyed tensor
+      // if input tensor's strides equals to output's, than just copy one memory-contiguous tensor
       bool is_same = true;
       for (int64_t i = contiguous_dim; i != -1; --i) {
         if(out_stride[i] != in_stride[i]){
@@ -42,13 +44,28 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
       if(is_same){
         std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize);
       }else{
-        std::fill(index.begin(), index.end(), 0);
-        while (true) {
+        const int64_t ndim = contiguous_dim + 1;
+        for(int64_t i=0; i<element_count; i+=block_size){
+          out_offset = i;
+          in_offset=0;
+          int64_t coordinates[ndim] = {0};
+          // compute coords(output offset to coords)
+          int64_t remaining=out_offset;
+          for (int i = 0; i < ndim; ++i) {
+            const int64_t idx = remaining / out_stride[i];
+            coordinates[i] = idx;
+            remaining = remaining - idx * out_stride[i];
+          }
+          // compute input offset
+          for(int64_t dim=0; dim < ndim; ++dim){
+            in_offset += in_stride[dim] * coordinates[dim];
+          }
+          // copy block_size data to output
           std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-                      block_size * dsize);
+                    block_size * dsize);
 
-          if (finish_stride()) break;
         }
+
       }
     }
   }
