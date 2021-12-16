@@ -357,6 +357,14 @@
   signature: "Tensor (Tensor x, Tensor dy) => LogGrad"
   bind_python: False
 
+- name: "log2"
+  signature: "Tensor (Tensor x) => Log2"
+  bind_python: True
+
+- name: "log2_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Log2Grad"
+  bind_python: False
+
 - name: "sqrt"
   signature: "Tensor (Tensor x) => Sqrt"
   bind_python: True
