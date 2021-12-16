@@ -37,7 +37,7 @@ namespace {
 inline Graph LoadGraph(const Device& device) {
   const std::string file_name = __FILE__;
   const std::string directory = file_name.substr(0, file_name.rfind('/'));
-  Graph graph = Load(directory + "/graph_test_model/affine_with_parameter");
+  Graph graph = Load(directory + "/graph_test_model/affine_with_parameter", device);
   return graph;
 }
 

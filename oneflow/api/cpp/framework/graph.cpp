@@ -51,6 +51,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_ir.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -177,14 +178,8 @@ void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
 
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
-  // TODO(zzk0): model_path is a directory, need to concatenate filename
-  // we need a mlir model name.
-  {
-    std::ifstream input(model_path + "/model.pb");
-    CHECK(input.is_open());
-    CHECK(job_.ParseFromIstream(&input));
-  }
-  // prevent model name conflict when launch multiple model instances
+  CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
+  job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
@@ -244,8 +239,8 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
   {
     int input_tensor_order = 0;
     const of::OpGraph op_graph(job_);
-    JUST(op_graph.ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
-      const of::OperatorConf& op_conf = node.op().op_conf();
+    op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
+      const of::OperatorConf& op_conf = node->op().op_conf();
       JUST(AddOp(op_conf));
       if (op_conf.has_input_conf()) {
         input_name_to_order_[op_conf.name()] = input_tensor_order;
@@ -259,21 +254,21 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
             *device_.device_));
       }
       return of::Maybe<void>::Ok();
-    }));
+    });
   }
   JUST(of::CurJobBuildAndInferCtx_Complete());
   {
     const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
     const of::OpGraph complete_graph(*complete_job);
-    JUST(complete_graph.ForEachOpNode([&](const of::OpNode& node) -> of::Maybe<void> {
+    complete_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
       const of::LazyMode::Guard lazy_mode_disabled_guard{false};
-      const of::OperatorConf& op_conf = node.op().op_conf();
+      const of::OperatorConf& op_conf = node->op().op_conf();
       if (op_conf.has_output_conf()) {
         of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
         if (batch_size_ > 0) {
           const std::string input_lbi_str = op_conf.output_conf().in();
           const of::LogicalBlobId input_lbi = of::GenLogicalBlobId(input_lbi_str);
-          int64_t batch_size = node.LogicalBlobDesc4Lbi(input_lbi).shape().At(0);
+          int64_t batch_size = node->LogicalBlobDesc4Lbi(input_lbi).shape().At(0);
           blob_conf.mutable_shape()->set_dim(0, batch_size);
         }
         output_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
@@ -282,7 +277,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
             *device_.device_));
       }
       return of::Maybe<void>::Ok();
-    }));
+    });
   }
   return of::Maybe<void>::Ok();
 }
