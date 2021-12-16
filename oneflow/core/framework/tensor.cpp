@@ -116,6 +116,15 @@ Maybe<Tensor> MirroredTensor::clone() const {
   return JUST(functional::Copy(input, device_type, device_id));
 }
 
+Maybe<void> DTRMirroredTensor::set_blob_object_bp_required() {
+  auto blob_object = CHECK_JUST(eager_blob_object());
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
+  // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+    dtr_eager_blob_object->set_bp_required(true);
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<Tensor> ConsistentTensor::clone() const {
   const auto& local_tensor = JUST(cur_rank_phy_tensor());
   const auto& device_type = JUST(local_tensor->device())->type();

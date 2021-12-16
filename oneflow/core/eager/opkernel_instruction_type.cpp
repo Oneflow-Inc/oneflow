@@ -898,11 +898,20 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
+
     // if (oneflow::DTRDebugEnabled()) {
     if (true) {
       std::cout << "prepare ok for " << operand->opkernel().op_type_name() << std::endl;
       std::cout << "===============================" << std::endl;
     }
+
+    for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+      const auto& mut_input = operand->inputs()->at(i);
+      if (const auto dtr_input = std::dynamic_pointer_cast<DTREagerBlobObject>(mut_input)) {
+        dtr_input->set_evict_attr(false);
+      }
+    }
+
     return Maybe<void>::Ok();
   }
 
@@ -920,12 +929,36 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   static inline Maybe<void> UpdateTensorInfo(vm::Instruction* instruction,
                                              double compute_time = -1.0) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
+
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
           // unpin inputs
           dtr_blob_object->unpin();
           return Maybe<void>::Ok();
         }));
+
+    // find in_place op and do sth
+    bool is_in_place = false;
+    auto* op = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
+    CHECK_NOTNULL_OR_RETURN(op);
+    for (const auto& input : *op->inputs()) {
+      CHECK_OR_RETURN(static_cast<bool>(input.get()));
+      auto in_dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+      CHECK_NOTNULL_OR_RETURN(in_dtr_blob_object);
+      for (const auto& output : *op->outputs()) {
+        CHECK_OR_RETURN(static_cast<bool>(output.get()));
+        auto out_dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
+        CHECK_NOTNULL_OR_RETURN(out_dtr_blob_object);
+        if (in_dtr_blob_object->object_dptr() == out_dtr_blob_object->object_dptr()) {
+          is_in_place = true;
+          break;
+        }
+      }
+      if (is_in_place) {
+        break;
+      }
+    }
+
     JUST(ForEachDTROutputTensor(
         operand,
         [&](const std::shared_ptr<vm::DTREagerBlobObject>& dtr_blob_object) -> Maybe<void> {
@@ -933,9 +966,15 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           // Condition - insert current blob into candidates only when blob memory > threshold (with
           // default 0)
           dtr_blob_object->reset_node(compute_time);
-          JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
+          if (is_in_place) {
+            dtr_blob_object->set_evict_attr(false);
+          } else {
+            JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
+          }
           return Maybe<void>::Ok();
         }));
+
+    CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
 
     // Display info of current tensor pool
     // if (oneflow::DTRDebugEnabled()) { JUST(Global<one::DTRTensorPool>::Get()->display()); }

@@ -35,6 +35,10 @@ class AutoGradCaptureState {
   size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
     size_t offset = saved_tensors_.size();
     saved_tensors_.push_back(tensor);
+
+    if (auto dtr_mirrored_tensor = dynamic_cast<one::DTRMirroredTensor*>(tensor.get())) {
+      dtr_mirrored_tensor->set_blob_object_bp_required();
+    }
     return offset;
   }
 

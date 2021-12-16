@@ -33,6 +33,7 @@ DTRTensorPool::DTRTensorPool() {
   // candidates_ = std::set<std::weak_ptr<vm::DTREagerBlobObject>>();
   candidates_ = std::vector<std::weak_ptr<vm::DTREagerBlobObject>>();
   start_time_ = std::chrono::steady_clock::now();
+  total_memory_bytes_ = 0;
 }
 
 namespace {
@@ -64,7 +65,8 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
       double cur_cost = -1;
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
           && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
-        cur_cost = JUST(shared_object->cost());
+        // cur_cost = JUST(shared_object->cost());
+        cur_cost = JUST(shared_object->reverse_cost());
         if (min_cost < 0 || min_cost > cur_cost) {
           best = shared_object.get();
           min_cost = cur_cost;
@@ -232,6 +234,14 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
     }
   }
   return Maybe<void>::Ok();
+}
+
+void DTRTensorPool::set_total_memory(size_t mem) {
+  total_memory_bytes_ = mem;
+}
+
+size_t DTRTensorPool::get_total_memory() {
+  return total_memory_bytes_;
 }
 
 }  // namespace one

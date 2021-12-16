@@ -291,6 +291,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
 
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
+  Global<one::DTRTensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   Piece* piece = AllocatePiece();
   piece->size = final_allocate_bytes;
@@ -330,6 +331,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   }
 
   total_memory_bytes_ -= total_free_bytes;
+  Global<one::DTRTensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   if (total_free_bytes > 0) {
     LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "

@@ -162,10 +162,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
                      const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object)
       : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object),
         could_evict_(true),
+        is_bp_required_(false),
         compute_time_(0),
         last_access_time_(0),
         time_since_last_access_(0),
         pinned_(0),
+        recompute_mode_(1),
         compute_op_(nullptr) {}
   ~DTREagerBlobObject() override;
 
@@ -194,6 +196,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   }
   void set_last_access_time(double val) { last_access_time_ = val; }
   void set_evict_attr(bool val) { could_evict_ = val; }
+  void set_bp_required(bool val) { is_bp_required_ = val; }
+  void set_recompute_mode(int val) { recompute_mode_ = val; }
 
   const std::string& compute_op_type_name() const;
 
@@ -203,6 +207,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   int num_pinned() const { return pinned_; }
   int num_user_ops() const { return user_ops_.size(); }
   bool is_evictable() const;
+  bool is_bp_required() const { return is_bp_required_; }
 
   void pin() {
     pinned_++;
@@ -221,15 +226,18 @@ class DTREagerBlobObject final : public EagerBlobObject {
     CHECK_NE_OR_RETURN(is_in_memory(), true);
     return Maybe<void>::Ok();
   }
-  Maybe<double> parent_cost() const;
-  Maybe<double> child_cost() const;
+  Maybe<double> parent_cost(bool is_bp_required=false) const;
+  Maybe<double> child_cost(bool is_bp_required=false) const;
   Maybe<double> neighbor_cost() const;
   Maybe<double> approx_neighbor_cost() const;
+  Maybe<double> rev_fwd_cost() const;
+  Maybe<double> rev_bwd_cost() const;
   size_t input_size() const;
   void clear_invalid_object();
 
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost() const;
+  Maybe<double> reverse_cost();
 
   std::shared_ptr<DisjNode> node;
   void reset_node(double t) {
@@ -239,10 +247,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
  private:
   bool evict_flag_ = false;
   bool could_evict_;
+  bool is_bp_required_;
   double compute_time_;
   double last_access_time_;
   double time_since_last_access_;
   size_t pinned_;
+  int recompute_mode_;    // 1 - forward recomputation; 0-1 - reverse recomputation
   std::unique_ptr<DTRInstrOperand> compute_op_;
   std::vector<std::unique_ptr<DTRInstrOperand>> user_ops_;
 };

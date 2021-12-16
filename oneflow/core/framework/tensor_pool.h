@@ -39,6 +39,9 @@ struct DTRTensorPool {
     if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
+  void set_total_memory(size_t mem);
+  size_t get_total_memory();
+
   Maybe<void> insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object, size_t thres = 0);
   Maybe<void> clear();
 
@@ -62,6 +65,7 @@ struct DTRTensorPool {
   // std::set<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::vector<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::chrono::steady_clock::time_point start_time_;
+  size_t total_memory_bytes_;   // same in cuda_allocator.h
   int num_eviction_;
   int num_recomputation_;
   int num_destruction_;

@@ -511,6 +511,8 @@ class DTRMirroredTensor final : public MirroredTensor {
     }
     inputs_ = inputs; }
 
+  Maybe<void> set_blob_object_bp_required();
+
  private:
   TensorTuple inputs_;
 };
