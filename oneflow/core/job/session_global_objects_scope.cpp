@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/hardware/cuda_device_descriptor.h"
@@ -135,6 +136,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
     Global<boxing::collective::Scheduler>::New();
+    Global<EmbeddingMgr>::New();
   }
 
   return Maybe<void>::Ok();
@@ -152,6 +154,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
+    Global<EmbeddingMgr>::Delete();
     Global<boxing::collective::Scheduler>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
