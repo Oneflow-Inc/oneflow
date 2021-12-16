@@ -24,13 +24,15 @@ namespace oneflow {
 
 namespace ep {
 
+class DeviceManagerRegistry;
+
 class DeviceManagerFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceManagerFactory);
   DeviceManagerFactory() = default;
   virtual ~DeviceManagerFactory() = default;
 
-  virtual std::unique_ptr<DeviceManager> NewDeviceManager() = 0;
+  virtual std::unique_ptr<DeviceManager> NewDeviceManager(DeviceManagerRegistry* registry) = 0;
   virtual DeviceType device_type() const = 0;
   virtual std::string device_type_name() const = 0;
   virtual void DumpVersionInfo() const {}
