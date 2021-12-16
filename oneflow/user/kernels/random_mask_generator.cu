@@ -63,23 +63,29 @@ template<bool tail>
 __global__ void GenerateGpu(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, 
                             uint64_t inc_offset, const int64_t elem_cnt, 
                             const float rate, int64_t n_tail, int8_t* mask, int8_t* tail_mask) {
-  using MaskType = cuda::elementwise::PackType<int8_t, 4>;
-  using MaskPack = cuda::elementwise::Pack<int8_t, 4>;
+  using MaskType = cuda::elementwise::PackType<int8_t, 8>;
+  using MaskPack = cuda::elementwise::Pack<int8_t, 8>;
   
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
 
-  RandPack4 rand_uniform_pack4;
+  RandPack4 rand_uniform_pack4_a;
+  RandPack4 rand_uniform_pack4_b;
 
-  for (int64_t linear_index = global_thread_id * 4; linear_index < elem_cnt;
-    linear_index += gridDim.x * blockDim.x * 4) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
+  for (int64_t linear_index = global_thread_id * 8; linear_index < elem_cnt;
+    linear_index += gridDim.x * blockDim.x * 8) {
+    rand_uniform_pack4_a.storage = curand_uniform4(&state);
+    rand_uniform_pack4_b.storage = curand_uniform4(&state);
 
     MaskPack mask_vec;
     #pragma unroll
     for (int i = 0; i < 4; i++) {
-      mask_vec.elem[i] = rand_uniform_pack4.elem[i] > rate;
+      mask_vec.elem[i] = rand_uniform_pack4_a.elem[i] > rate;
+    }
+    #pragma unroll
+    for (int i = 0; i < 4; i++) {
+      mask_vec.elem[i+4] = rand_uniform_pack4_b.elem[i] > rate;
     }
 
     *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
@@ -125,7 +131,7 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   //     curand_states, n, rate, mask);
   printf("Here>>??? \n"); 
   unsigned int grid_size = ComputeGridSize(kBlockSize, elem_cnt);
-  constexpr int pack_size = 4;
+  constexpr int pack_size = 8;
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
