@@ -52,6 +52,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.from_numpy,
+    r"""
+    Creates a ``Tensor`` from a ``numpy.ndarray``.
+
+    The returned tensor and ndarray share the same memory. Modifications to the tensor
+    will be reflected in the ndarray and vice versa.
+
+    It currently accepts ndarray with dtypes of numpy.float64, numpy.float32, numpy.float16,
+    numpy.int64, numpy.int32, numpy.int8, numpy.uint8.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.arange(6).reshape(2, 3)
+        >>> t = flow.from_numpy(np_arr)
+        >>> t
+        tensor([[0, 1, 2],
+                [3, 4, 5]], dtype=oneflow.int64)
+        >>> np_arr[0, 0] = -1
+        >>> t
+        tensor([[-1,  1,  2],
+                [ 3,  4,  5]], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atan2,
     r"""
     See :func:`oneflow.atan2`
@@ -71,6 +100,20 @@ add_docstr(
     Args:
         other (:class:`oneflow.Tensor`): The result tensor has the same size
             as :attr:`other`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.flatten,
+    """
+    See :func:`oneflow.flatten`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.floor,
+    """
+    See :func:`oneflow.floor`
     """,
 )
 
@@ -316,6 +359,26 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.bmm,
+    """
+    See :func:`oneflow.bmm`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.chunk,
+    """
+    See :func:`oneflow.chunk`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.split,
+    """
+    See :func:`oneflow.split`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.cast,
@@ -323,7 +386,6 @@ add_docstr(
     See :func:`oneflow.cast`
     """,
 )
-
 
 add_docstr(
     oneflow.Tensor.diag,
@@ -649,6 +711,16 @@ add_docstr(
         >>> output = input.to(dtype=flow.float32)
         >>> np.array_equal(arr.astype(np.float32), output.numpy())
         True
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.gather,
+    """
+    oneflow.Tensor.gather(dim, index) -> Tensor
+
+    See :func:`oneflow.gather`
 
     """,
 )

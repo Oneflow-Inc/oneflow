@@ -38,6 +38,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                     \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                           \
+  OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                         \
   OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)                       \
   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid)            \
   OF_PP_MAKE_TUPLE_SEQ("negative", Negative)                 \
@@ -53,8 +54,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("softplus", Softplus)                 \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
-  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                           \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
+  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
 }  // namespace oneflow
 

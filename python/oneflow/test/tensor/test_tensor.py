@@ -850,6 +850,16 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_shape, np_shape))
 
     @autotest(check_graph=False)
+    def test_flatten_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.flatten(
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
+        return y
+
+    @autotest(check_graph=False)
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
@@ -1612,6 +1622,29 @@ class TestTensorNumpy(flow.unittest.TestCase):
         input2 = random_pytorch_tensor(ndim=3, dim0=t, dim1=k, dim2=5)
         of_out = input1.bmm(input2)
         return of_out
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_tensor_split(test_case):
+        k0 = random(2, 6)
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        rand_dim = random(0, 3).to(int)
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = x.split(2, dim=rand_dim)
+        return torch.cat(res, rand_dim)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_tensor_split_sizes(test_case):
+        k0 = random(2, 6)
+        k1 = 7
+        k2 = random(2, 6)
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = x.split([1, 2, 3, 1], dim=-2)
+        return torch.cat(res, dim=1)
 
 
 if __name__ == "__main__":

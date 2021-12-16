@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
+template<template<typename> class BinaryFunc, DeviceType device_type, typename T, typename K>
 class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReduceKernel() = default;
@@ -41,7 +41,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
         Memset<device_type>(
-            ctx->stream(), output_tensor->mut_dptr<T>(), 0,
+            ctx->stream(), output_tensor->mut_dptr<K>(), 0,
             output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
@@ -49,7 +49,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     const Shape& reduced_shape =
         CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->stream(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<K>(reduced_shape, output_tensor->mut_dptr<K>()),
         XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
   }
@@ -60,12 +60,23 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 #define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                            \
   REGISTER_USER_KERNEL(op_name)                                                                    \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                                     \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
                        && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("input_tensor", 0);                                \
         return in_shape.elem_cnt() * sizeof(dtype);                                                \
+      });
+
+#define REGISTER_REDUCE_LOGICAL_XPU_KERNEL(op_name, binary_func, device, dtype)                  \
+  REGISTER_USER_KERNEL(op_name)                                                                  \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype, bool>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("output_tensor", 0) == DataType::kBool))         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                              \
+        return in_shape.elem_cnt() * sizeof(dtype);                                              \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
@@ -87,9 +98,19 @@ REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 
-#define REGISTER_REDUCE_LOGICAL_KERNELS(device)                           \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int8_t) \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)
+#define REGISTER_REDUCE_LOGICAL_KERNELS(device)                                    \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, float)   \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, float)   \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, double)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, double)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int8_t)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, uint8_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, uint8_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int32_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int32_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int64_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int64_t)
 
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 #ifdef WITH_CUDA
