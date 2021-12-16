@@ -30,8 +30,6 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto nele = in->shape().elem_cnt();
     if (!nele) { return; }
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dim = ctx->Attr<int64_t>("dim");
     const auto* pin = in->dptr<T>();
@@ -52,10 +50,6 @@ class CpuCumsumKernel final : public user_op::OpKernel {
         for (auto k = 0; k < cod; k++) { tmp_pout[k] += last_tmp_pout[k]; }
       }
     }
-
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    std::cout << time << std::endl;
   }
 
   // TODO: what's it used for?
