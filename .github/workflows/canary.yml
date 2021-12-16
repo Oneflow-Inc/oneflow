@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - add-support-clang-12
+      - canary-52
   workflow_dispatch:
     inputs:
       oneflow-ref:
