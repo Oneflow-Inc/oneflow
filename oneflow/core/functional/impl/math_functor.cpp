@@ -855,6 +855,22 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class NormalizeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const int32_t& dim, const float& eps) const {
+    int ndim = input->ndim();
+    CHECK_OR_RETURN(dim >= -ndim && dim < ndim)<< "Dimension out of range (expected to be in range of ["<<
+      -ndim<<','<< ndim-1<<"], but got "<<dim<<")";
+    
+    std::shared_ptr<one::Tensor> input_norm = JUST(ScalarNorm(input, p, dim, true, input->dtype()));
+    std::shared_ptr<one::Tensor> input_clamp = JUST(Clamp(input_norm, eps, nullptr));
+    std::shared_ptr<one::Tensor> input_expand = JUST(Expand(input_clamp, *(input->shape())));
+    return JUST(Div(input, input_expand));
+  }
+   
+};
+
 class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
@@ -1748,6 +1764,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<NormalizeFunctor>("Normalize");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");

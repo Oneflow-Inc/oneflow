@@ -30,6 +30,7 @@ Functional operations for neural networks
 .. autofunction:: tanh 
 .. autofunction:: silu
 .. autofunction:: mish
+.. autofunction:: normalize
 .. autofunction:: one_hot
 .. autofunction:: triplet_margin_loss
 .. autofunction:: dropout 
