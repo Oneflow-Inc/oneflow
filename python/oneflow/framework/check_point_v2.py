@@ -313,8 +313,6 @@ def save(
 
         path.mkdir(exist_ok=True)
 
-        model_pb_path = path / 'model.pb'
-        model_pb_path.write_bytes(graph._graph_proto.SerializeToString())
         serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
