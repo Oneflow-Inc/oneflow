@@ -66,9 +66,9 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
     }
   }
 
-  int64_t block_size;
-  int64_t element_count;
-  int64_t contiguous_dim;
+  int64_t block_size=1;
+  int64_t element_count=1;
+  int64_t contiguous_dim=0;
 
   StrideVector out_stride;
 
