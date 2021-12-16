@@ -14,8 +14,63 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "unistd.h"
+#include <thread>
+#include <future>
 
 namespace oneflow {
+
+namespace {
+template<typename T>
+void cumsum_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                 int64_t cs_down_space, int64_t nele) {
+  std::copy_n(pin, nele, pout);
+  for (auto i = 0; i < cs_up_space; i++) {
+    auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
+    for (auto j = 1; j < cs_space; j++) {
+      auto* tmp_pout = tmp_pout_base + j * cs_down_space;
+      auto* last_tmp_pout = tmp_pout - cs_down_space;
+      for (auto k = 0; k < cs_down_space; k++) { tmp_pout[k] += last_tmp_pout[k]; }
+    }
+  }
+}
+
+template<typename T>
+void cumsum_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                   int64_t cs_down_space, int64_t nele) {
+  auto CPU_NUM = sysconf(_SC_NPROCESSORS_CONF);
+
+  std::vector<std::future<void>> rets;
+  rets.resize(CPU_NUM);
+  auto njobs = cs_up_space * cs_down_space;
+  auto njobs_per_thr = njobs / CPU_NUM;
+  if (cs_up_space * cs_down_space % CPU_NUM) njobs_per_thr += 1;
+  for (auto thr_id = 0; thr_id < CPU_NUM; thr_id++) {
+    rets[thr_id] = std::async(
+        std::launch::async,
+        [&](auto thr_id) {
+          for (auto i = thr_id * njobs_per_thr; i < ((thr_id + 1) * njobs_per_thr) && i < njobs;
+               i++) {
+            auto cs_up_space_id = i / cs_down_space;
+            auto cs_down_space_id = i % cs_down_space;
+
+            auto* pin_base = pin + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+            auto* pout_base = pout + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+
+            // calculate cs_space data in one thread
+            for (auto j = 0; j < cs_space; j++) {
+              auto idx = j * cs_down_space;
+              pout_base[idx] = pin_base[idx];
+              if (j != 0) { pout_base[idx] += pout_base[idx - cs_down_space]; }
+            }
+          }
+        },
+        thr_id);
+  }
+
+  for (auto i = 0; i < CPU_NUM; i++) { rets[i].wait(); }
+}
+}  // namespace
 
 template<typename T>
 class CpuCumsumKernel final : public user_op::OpKernel {
@@ -41,15 +96,8 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    std::copy_n(pin, nele, pout);
-    for (auto i = 0; i < cs_up_space; i++) {
-      auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
-      for (auto j = 1; j < cs_space; j++) {
-        auto* tmp_pout = tmp_pout_base + j * cs_down_space;
-        auto* last_tmp_pout = tmp_pout - cs_down_space;
-        for (auto k = 0; k < cs_down_space; k++) { tmp_pout[k] += last_tmp_pout[k]; }
-      }
-    }
+    // cumsum_norm<T>(pin, pout, cs_up_space, cs_space, cs_down_space, nele);
+    cumsum_thread<T>(pin, pout, cs_up_space, cs_space, cs_down_space, nele);
   }
 
   // TODO: what's it used for?
