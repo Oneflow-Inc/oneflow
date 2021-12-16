@@ -24,7 +24,9 @@ namespace ep {
 class DeviceManagerRegistry::Impl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Impl);
-  Impl() { managers_.resize(DeviceType_ARRAYSIZE); }
+  explicit Impl(DeviceManagerRegistry* registry) : registry_(registry) {
+    managers_.resize(DeviceType_ARRAYSIZE);
+  }
   ~Impl() = default;
 
   DeviceManager* GetDeviceManager(DeviceType device_type) {
@@ -33,7 +35,7 @@ class DeviceManagerRegistry::Impl {
       std::lock_guard<std::mutex> factories_lock(factories_mutex_);
       auto& factory = factories_.at(device_type);
       CHECK(factory);
-      managers_.at(device_type) = factory->NewDeviceManager();
+      managers_.at(device_type) = factory->NewDeviceManager(registry_);
     }
     return managers_.at(device_type).get();
   }
@@ -88,13 +90,14 @@ class DeviceManagerRegistry::Impl {
   static std::vector<std::unique_ptr<DeviceManagerFactory>> factories_;
   static HashMap<std::string, DeviceType> device_type_name2device_type_;
   static std::mutex factories_mutex_;
+  DeviceManagerRegistry* registry_;
 };
 
 std::vector<std::unique_ptr<DeviceManagerFactory>> DeviceManagerRegistry::Impl::factories_;
 HashMap<std::string, DeviceType> DeviceManagerRegistry::Impl::device_type_name2device_type_;
 std::mutex DeviceManagerRegistry::Impl::factories_mutex_;
 
-DeviceManagerRegistry::DeviceManagerRegistry() { impl_.reset(new Impl()); }
+DeviceManagerRegistry::DeviceManagerRegistry() { impl_.reset(new Impl(this)); }
 
 DeviceManagerRegistry::~DeviceManagerRegistry() = default;
 
