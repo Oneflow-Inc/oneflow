@@ -28,13 +28,13 @@ class EagerExecution {};
 struct DTRConfig {
   bool is_enabled;
   float memory_threshold;
-  bool is_debug;
+  int debug_level;
   int memory_policy;
   bool use_disjoint_set;
-  DTRConfig(bool is_enabled, float memory_threshold, bool is_debug, int memory_policy, bool use_disjoint_set)
+  DTRConfig(bool is_enabled, float memory_threshold, int debug_level, int memory_policy, bool use_disjoint_set)
       : is_enabled(is_enabled),
         memory_threshold(memory_threshold),
-        is_debug(is_debug),
+        debug_level(debug_level),
         memory_policy(memory_policy),
         use_disjoint_set(use_disjoint_set) {}
 };

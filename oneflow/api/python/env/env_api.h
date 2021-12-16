@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_ENV_ENV_API_H_
 
 #include "oneflow/api/python/env/env.h"
-#include "oneflow/core/framework/config_dtr.h"
 
 inline std::string CurrentResource() { return oneflow::CurrentResource().GetOrThrow(); }
 
@@ -25,13 +24,6 @@ inline std::string EnvResource() { return oneflow::EnvResource().GetOrThrow(); }
 
 inline void EnableEagerEnvironment(bool enable_eager_execution) {
   return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
-}
-
-inline void EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug, int memory_policy,
-                              bool use_disjoint_set) {
-  return oneflow::EnableDTRStrategy(enable_dtr, thres, enable_debug, memory_policy,
-                                    use_disjoint_set)
-      .GetOrThrow();
 }
 
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }

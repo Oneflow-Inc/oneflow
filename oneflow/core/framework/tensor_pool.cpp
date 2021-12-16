@@ -44,9 +44,9 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
             << ", is pinned: " << (debo->num_pinned())
             << ", is evictable: " << (debo->is_evictable()) << ", compute op: " << compute_op
             << ", shape: " << debo->mut_blob_desc()->shape() << ", memory: " << mem << "MB"
-            << ", ebo address: " << debo.get()
-            << ", blob dptr: " << debo->blob().dptr()
-            << ", tensor buffer dptr: " << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
+            << ", ebo address: " << debo.get() << ", blob dptr: " << debo->blob().dptr()
+            << ", tensor buffer dptr: "
+            << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
             // << ", data_type: " << debo->mut_blob_desc()->data_type()
             << std::endl;
 }
@@ -70,11 +70,10 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
           min_cost = cur_cost;
           evict_object_id = id;
         }
-      }
-      if (oneflow::DTRDebugEnabled()) {
         std::cout << "id " << id << ", ";
         printInfo(shared_object);
-
+      }
+      if (oneflow::DTRDebugEnabled()) {
         // copy op in lenet/alexnet model is always to copy parameters
         // from cpu to gpu during model.to('cuda')
         // copying from cpu to gpu uses cuda h2d memory pool, unrelated
@@ -93,7 +92,12 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   }
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "pool mem is " << tensor_pool_mem << "MB" << std::endl;
-    std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << ", compute op is " << (best ? best->compute_op()->shared_opkernel()->op_type_name() : "null") << ", addr is " << best << std::endl;
+    const auto pd = best->parent_depth();
+    const auto cd = best->child_depth();
+    std::cout << "Evict " << evict_object_id << "th object, depth is " << pd << "+" << cd << "="
+              << (pd + cd) << ", cost is " << min_cost << ", compute op is "
+              << (best ? best->compute_op()->shared_opkernel()->op_type_name() : "null")
+              << ", addr is " << best << std::endl;
   }
   num_eviction_++;
   return best;
@@ -159,9 +163,9 @@ Maybe<void> DTRTensorPool::display2() {
   float pinned_mem = 0;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
-      std::cout << "id " << id << ", ";
-      printInfo(shared_object);
       if (shared_object->is_in_memory()) {
+        std::cout << "id " << id << ", ";
+        printInfo(shared_object);
         total_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
         if (shared_object->is_pinned()) {
           pinned_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
@@ -185,9 +189,7 @@ Maybe<void> DTRTensorPool::display() {
 void DTRTensorPool::merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
   auto&& parent_x = find_father(x);
   auto&& parent_y = find_father(y);
-  if (parent_x.get() == parent_y.get()) {
-    return;
-  }
+  if (parent_x.get() == parent_y.get()) { return; }
 
   parent_y->set_compute_time(parent_y->compute_time() + parent_x->compute_time());
   parent_x->set_parent(parent_y);
@@ -211,16 +213,14 @@ void DTRTensorPool::update_after_recompute(vm::DTREagerBlobObject* obj) {
 }
 
 Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
-  auto * operand = obj->compute_op();
+  auto* operand = obj->compute_op();
   const auto& inputs = operand->inputs();
   const auto& outputs = operand->outputs();
   for (int i = 0; i < inputs.size(); ++i) {
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) {
-        merge(dtr_blob_object->node, obj->node);
-      }
+      if (!dtr_blob_object->is_in_memory()) { merge(dtr_blob_object->node, obj->node); }
     }
   }
 
@@ -228,9 +228,7 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) {
-        merge(obj->node, dtr_blob_object->node);
-      }
+      if (!dtr_blob_object->is_in_memory()) { merge(obj->node, dtr_blob_object->node); }
     }
   }
   return Maybe<void>::Ok();

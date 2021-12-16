@@ -693,7 +693,7 @@ struct LocalCallOpKernelUtil {
                               return Maybe<void>::Ok();
                             }));
 
-    if (oneflow::DTRDebugEnabled()) {
+    if (oneflow::DTRDebugLevel() >= 3) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
         const std::string& op_type_name = operand->opkernel().op_type_name();
         std::cout << "mutable! op: " << op_type_name << ", input " << i;

@@ -277,18 +277,15 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   }
 
   if (final_allocate_bytes > available_bytes) {
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "xx"; }
     return false;
   }
 
   if (final_allocate_bytes < aligned_size) {
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "xx"; }
     return false;
   }
 
   char* mem_ptr = nullptr;
   if (cudaMalloc(&mem_ptr, final_allocate_bytes) != cudaSuccess) {
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "xx"; }
     return false;
   }
 

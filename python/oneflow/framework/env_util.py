@@ -61,15 +61,15 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
-def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug: bool = False, memory_policy: int = 1, use_disjoint_set: bool = True) -> None:
+def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug_level: int = 0, memory_policy: int = 1, use_disjoint_set: bool = True) -> None:
     """If True, DTR strategy will be launched. Memory threshold in percentage.
 
     Args:
         val (bool, optional): Use DTR strategy or not. Defaults to False.
         thres (int | str, optional): Cuda memory threshold. Defaults to 1500MB.
-        debug (bool, optional): Show detailed info or not. Defaults to False.
+        debug_level (int, optional): higher means more debug info. Defaults to 0.
     """
-    return enable_if.unique([enable_dtr])(val, thres, debug, memory_policy, use_disjoint_set)
+    return enable_if.unique([enable_dtr])(val, thres, debug_level, memory_policy, use_disjoint_set)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)

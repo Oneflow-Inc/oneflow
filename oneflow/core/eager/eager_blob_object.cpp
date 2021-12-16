@@ -139,6 +139,22 @@ bool DTREagerBlobObject::is_in_memory() const {
   return (tensor_buffer_->blob_dptr() != nullptr);
 }
 
+int DTREagerBlobObject::parent_depth() const {
+  int max = 0;
+  auto* ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
+  CHECK_NOTNULL(ptr);
+  for (const auto& input : ptr->inputs()) {
+    if (auto object = input.lock()) {
+      const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
+      CHECK_NOTNULL(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory()) {
+        max = std::max(max, dtr_blob_object->parent_depth());
+      }
+    }
+  }
+  return max + 1;
+}
+
 Maybe<double> DTREagerBlobObject::parent_cost() const {
   double cost = 0;
 
@@ -172,6 +188,24 @@ Maybe<double> DTREagerBlobObject::parent_cost() const {
   }
 
   return cost;
+}
+
+int DTREagerBlobObject::child_depth() const {
+  int max = 0;
+  for (int i = 0; i < user_ops_.size(); ++i) {
+    const auto* ptr = dynamic_cast<DTRInstrOperand*>(CHECK_JUST(user_op(i)));
+    CHECK_NOTNULL(ptr);
+    for (const auto& output : ptr->outputs()) {
+      if (auto object = output.lock()) {
+        const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
+        CHECK_NOTNULL(dtr_blob_object);
+        if (!dtr_blob_object->is_in_memory()) {
+          max = std::max(max, dtr_blob_object->child_depth());
+        }
+      }
+    }
+  }
+  return max + 1;
 }
 
 Maybe<double> DTREagerBlobObject::child_cost() const {
@@ -251,11 +285,16 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
 
 Maybe<double> DTREagerBlobObject::cost() const {
   const double n_cost = Global<DTRConfig>::Get()->use_disjoint_set ? JUST(approx_neighbor_cost())
-                                                                 : JUST(neighbor_cost());
+                                                                   : JUST(neighbor_cost());
   double time_since_last_access = Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << "n_cost " << n_cost << ", blob_body_bytes_ " << blob_body_bytes_
-              << ", time_since_last_access " << time_since_last_access << std::endl;
+    std::cout << std::dec << "n_cost " << static_cast<int64_t>(n_cost) << ", blob_body_bytes_ "
+              << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access
+              << std::endl;
+    const auto pd = parent_depth();
+    const auto cd = child_depth();
+    std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd + cd
+              << std::endl;
   }
   return n_cost / blob_body_bytes_ / time_since_last_access;
 }

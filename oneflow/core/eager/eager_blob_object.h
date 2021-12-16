@@ -171,6 +171,9 @@ class DTREagerBlobObject final : public EagerBlobObject {
 
   Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
+  int parent_depth() const;
+  int child_depth() const;
+
   // Getters and Setters
   const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }

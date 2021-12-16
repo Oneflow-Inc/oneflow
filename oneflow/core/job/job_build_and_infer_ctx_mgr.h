@@ -83,6 +83,7 @@ bool EagerExecutionEnabled();
 bool DTREnabled();
 size_t GetDTRMemoryThreshold();
 bool DTRDebugEnabled();
+int DTRDebugLevel();
 int GetDTRMemoryPolicy();
 bool dtr_use_disjoint_set();
 

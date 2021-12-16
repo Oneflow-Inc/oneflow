@@ -19,11 +19,27 @@ limitations under the License.
 
 namespace py = pybind11;
 
+namespace oneflow {
+Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level, int memory_policy,
+                              bool use_disjoint_set) {
+  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
+  *Global<DTRConfig>::Get() =
+      DTRConfig(enable_dtr, thres, debug_level, memory_policy, use_disjoint_set);
+  return Maybe<void>::Ok();
+}
+}  // namespace oneflow
+
+void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level, int memory_policy,
+                          bool use_disjoint_set) {
+  oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, memory_policy, use_disjoint_set)
+      .GetOrThrow();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
-  m.def("EnableDTRStrategy", &EnableDTRStrategy);
+  m.def("EnableDTRStrategy", &ApiEnableDTRStrategy);
 
   m.def("IsEnvInited", &IsEnvInited);
   m.def("InitEnv", &InitEnv);
