@@ -21,6 +21,22 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
+namespace oneflow {
+
+namespace {
+
+constexpr int32_t kVecSize = 4;
+constexpr int32_t kBlockSize = 256;
+
+template<typename T>
+constexpr int32_t GetDropoutPackSize() {
+  // For float, bfloat16, half.
+  return 4;
+};
+
+template<>
+constexpr int32_t GetDropoutPackSize<half2>() {
+  return 2;
 };
 
 template<>
