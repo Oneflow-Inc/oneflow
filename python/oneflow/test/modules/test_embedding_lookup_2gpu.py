@@ -27,7 +27,7 @@ class Model(flow.nn.Module):
     def __init__(self):
         super().__init__()
         self.w1 = flow.nn.Parameter(
-            flow.randn(65536, 26, 64, placement=placement, sbp=flow.sbp.split(0))
+            flow.randn(1, 1, 1, placement=placement, sbp=flow.sbp.broadcast)
         )
 
     def forward(self, x):
@@ -45,7 +45,7 @@ class TrainGraph(flow.nn.Graph):
         super().__init__()
         options = {
             "name": "my_embedding",
-            "embedding_size": 64,
+            "embedding_size": 128,
             "dtype": flow.float,
             "encoder": "invalid",
             "partitioning": "invalid",
