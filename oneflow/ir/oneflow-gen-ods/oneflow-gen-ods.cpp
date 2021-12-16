@@ -432,6 +432,7 @@ void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
   if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
   if (r.physical_tensor_desc_infer_fn) { PrintHas1("physical_tensor_desc_infer_fn"); }
   if (r.get_sbp_fn) { PrintHas1("get_sbp_fn"); }
+  if (r.sbp_signature_infer_fn) { PrintHas1("sbp_signature_infer_fn"); }
   if (r.data_type_infer_fn) { PrintHas1("data_type_infer_fn"); }
   if (r.device_infer_fn) { PrintHas1("device_infer_fn"); }
   if (r.input_arg_modify_fn) { PrintHas1("input_arg_modify_fn"); }
