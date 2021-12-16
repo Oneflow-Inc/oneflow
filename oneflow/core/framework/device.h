@@ -34,8 +34,8 @@ class MirroredObject;
 }
 using LocalDepObject = vm::MirroredObject;
 
-inline size_t GetInstructionHighWaterMark() { return 500; }
-inline size_t GetInstructionLowWaterMark() { return 200; }
+inline size_t GetInstructionHighWaterMark() { return 40000; }
+inline size_t GetInstructionLowWaterMark() { return 20000; }
 
 class Device final {
  public:

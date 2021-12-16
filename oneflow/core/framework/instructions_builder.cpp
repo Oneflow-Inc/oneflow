@@ -1020,12 +1020,16 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                         last_used_device));
   }
-  Optional<Symbol<Device>> op_device(producer_op_device);
+  Optional<Symbol<Device>> op_device{};
   // Disable inter-device instruction sequential for tensor used by nccl stream.
   // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
-  if (last_used_device->type() == "async_launched_nccl"
-      && (producer_op_device->type() == "cuda" || producer_op_device->type() == "gpu")) {
+  if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     op_device = Optional<Symbol<Device>>(NullOpt);
+  } else if (last_used_device->type() == "async_launched_nccl"
+             && (producer_op_device->type() == "cuda" || producer_op_device->type() == "gpu")) {
+    op_device = Optional<Symbol<Device>>(NullOpt);
+  } else {
+    op_device = producer_op_device;
   }
   const auto& phy_instr_operand =
       std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, op_device);
