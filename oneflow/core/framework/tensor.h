@@ -594,17 +594,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
-  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
-    const auto& consistent_tensor =
-        std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor);
-    bool old_requires_grad = requires_grad();
-    impl_ = consistent_tensor->impl_;
-    set_requires_grad(old_requires_grad);
-    grad_fn_node_ = nullptr;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
   Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override {
