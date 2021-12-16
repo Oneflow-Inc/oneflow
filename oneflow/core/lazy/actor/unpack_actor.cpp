@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/lazy/actor/actor.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
 
