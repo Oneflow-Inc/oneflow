@@ -61,7 +61,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
-def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug: bool = False) -> None:
+def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug: bool = False, memory_policy: int = 1, use_disjoint_set: bool = True) -> None:
     """If True, DTR strategy will be launched. Memory threshold in percentage.
 
     Args:
@@ -69,7 +69,7 @@ def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug: bool = False
         thres (int | str, optional): Cuda memory threshold. Defaults to 1500MB.
         debug (bool, optional): Show detailed info or not. Defaults to False.
     """
-    return enable_if.unique([enable_dtr])(val, thres, debug)
+    return enable_if.unique([enable_dtr])(val, thres, debug, memory_policy, use_disjoint_set)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
@@ -88,7 +88,7 @@ def str2bytes(input):
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_dtr(val=False, thres="1500MB", debug=False):
+def enable_dtr(val=False, thres="1500MB", debug=False, memory_policy=1, use_disjoint_set=True):
     if isinstance(thres, str):
         out = str2bytes(thres)
     elif isinstance(thres, int):
@@ -96,7 +96,7 @@ def enable_dtr(val=False, thres="1500MB", debug=False):
     else:
         raise TypeError("CUDA memory value should be a str or an int.")
 
-    return oneflow._oneflow_internal.EnableDTRStrategy(val, out, debug)
+    return oneflow._oneflow_internal.EnableDTRStrategy(val, out, debug, memory_policy, use_disjoint_set)
 
 
 def api_env_init() -> bool:

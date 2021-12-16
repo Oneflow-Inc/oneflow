@@ -18,19 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug) {
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTR>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<size_t, DTRMemoryThreshold>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<size_t, DTRRemainMemory>::Get()));
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTRDebug>::Get()));
-  *Global<bool, EnableDTR>::Get() = enable_dtr;
-  *Global<size_t, DTRMemoryThreshold>::Get() = thres;
-  *Global<bool, EnableDTRDebug>::Get() = enable_debug;
-  size_t free_bytes = -1;
-  size_t total_bytes = -1;
-  OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
-  // *Global<size_t, DTRRemainMemory>::Get() = (1 - thres) * free_bytes;
-  *Global<size_t, DTRRemainMemory>::Get() = total_bytes - thres;
+Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug, int memory_policy,
+                              bool use_disjoint_set) {
+  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
+  *Global<DTRConfig>::Get() =
+      DTRConfig(enable_dtr, thres, enable_debug, memory_policy, use_disjoint_set);
   return Maybe<void>::Ok();
 }
 

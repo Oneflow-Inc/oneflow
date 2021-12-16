@@ -27,8 +27,11 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
   return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
 }
 
-inline void EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug) {
-  return oneflow::EnableDTRStrategy(enable_dtr, thres, enable_debug).GetOrThrow();
+inline void EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug, int memory_policy,
+                              bool use_disjoint_set) {
+  return oneflow::EnableDTRStrategy(enable_dtr, thres, enable_debug, memory_policy,
+                                    use_disjoint_set)
+      .GetOrThrow();
 }
 
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }

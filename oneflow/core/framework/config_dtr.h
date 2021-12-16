@@ -25,7 +25,8 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug);
+Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, bool enable_debug, int memory_policy,
+                              bool use_disjoint_set);
 
 }  // namespace oneflow
 

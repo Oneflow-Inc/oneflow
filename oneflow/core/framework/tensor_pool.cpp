@@ -93,7 +93,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   }
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "pool mem is " << tensor_pool_mem << "MB" << std::endl;
-    std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << ", compute op is " << best->compute_op()->shared_opkernel()->op_type_name() << ", addr is " << best << std::endl;
+    std::cout << "Evict " << evict_object_id << "th object, cost is " << min_cost << ", compute op is " << (best ? best->compute_op()->shared_opkernel()->op_type_name() : "null") << ", addr is " << best << std::endl;
   }
   num_eviction_++;
   return best;
@@ -103,7 +103,7 @@ Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
   if (best == nullptr) { return false; }
   JUST(best->evict());
-  update_after_evict(best);
+  JUST(update_after_evict(best));
   return true;
 }
 
@@ -155,15 +155,23 @@ Maybe<void> DTRTensorPool::display2() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
   int id = 0;
+  float total_mem = 0;
+  float pinned_mem = 0;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
-      if (oneflow::DTRDebugEnabled()) {
-        std::cout << "id " << id << ", ";
-        printInfo(shared_object);
+      std::cout << "id " << id << ", ";
+      printInfo(shared_object);
+      if (shared_object->is_in_memory()) {
+        total_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+        if (shared_object->is_pinned()) {
+          pinned_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+        }
       }
     }
     id++;
   }
+  std::cout << "Total memory: " << total_mem << "MB" << std::endl;
+  std::cout << "Pinned memory: " << pinned_mem << "MB" << std::endl;
   return Maybe<void>::Ok();
 }
 

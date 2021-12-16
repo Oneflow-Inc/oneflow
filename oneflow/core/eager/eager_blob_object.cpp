@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
@@ -225,7 +226,8 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       if (!dtr_blob_object->is_in_memory()) {
-        double p_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+        double p_cost =
+            Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
         cost += p_cost;
       }
     }
@@ -237,7 +239,8 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       if (!dtr_blob_object->is_in_memory()) {
-        double c_cost = Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+        double c_cost =
+            Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
         cost += c_cost;
       }
     }
@@ -247,11 +250,12 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
 }
 
 Maybe<double> DTREagerBlobObject::cost() const {
-  auto n_cost = JUST(approx_neighbor_cost());
-  // auto n_cost = JUST(neighbor_cost());
+  const double n_cost = Global<DTRConfig>::Get()->use_disjoint_set ? JUST(approx_neighbor_cost())
+                                                                 : JUST(neighbor_cost());
   double time_since_last_access = Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << "n_cost " << n_cost << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access << std::endl;
+    std::cout << "n_cost " << n_cost << ", blob_body_bytes_ " << blob_body_bytes_
+              << ", time_since_last_access " << time_since_last_access << std::endl;
   }
   return n_cost / blob_body_bytes_ / time_since_last_access;
 }
@@ -267,8 +271,9 @@ const std::string& DTREagerBlobObject::compute_op_type_name() const {
 
 bool DTREagerBlobObject::is_evictable() const {
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
-  // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "conv_filter_grad") { return false; }
-  // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul") { return false; }
+  // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "conv_filter_grad") {
+  // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul")
+  // { return false; }
   return could_evict_;
 }
 

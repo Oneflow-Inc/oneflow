@@ -898,8 +898,10 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           dtr_blob_object->update_user_ops(operand);
           return Maybe<void>::Ok();
         }));
-    if (oneflow::DTRDebugEnabled()) {
+    // if (oneflow::DTRDebugEnabled()) {
+    if (true) {
       std::cout << "prepare ok for " << operand->opkernel().op_type_name() << std::endl;
+      std::cout << "===============================" << std::endl;
     }
     return Maybe<void>::Ok();
   }
@@ -949,7 +951,8 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   }
 
   static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
-    if (oneflow::DTRDebugEnabled()) {
+    // if (oneflow::DTRDebugEnabled()) {
+    if (true) {
       std::cout << "going to recompute "
                 << object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name() << " for "
                 << object << ", whose dptr is " << object->blob().dptr()

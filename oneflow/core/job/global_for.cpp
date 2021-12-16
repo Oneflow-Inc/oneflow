@@ -23,9 +23,6 @@ namespace oneflow {
 
 COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
 COMMAND(Global<Optional<bool>, MultiClient>::SetAllocated(new Optional<bool>()));
-COMMAND(Global<bool, EnableDTR>::SetAllocated(new bool(false)));
-COMMAND(Global<size_t, DTRMemoryThreshold>::SetAllocated(new size_t(1)));
-COMMAND(Global<size_t, DTRRemainMemory>::SetAllocated(new size_t(50 * 1048576)));
-COMMAND(Global<bool, EnableDTRDebug>::SetAllocated(new bool(false)));
+COMMAND(Global<DTRConfig>::SetAllocated(new DTRConfig(false, 0, 1, false, true)));
 
 }  // namespace oneflow
