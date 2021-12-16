@@ -257,8 +257,8 @@ static constexpr auto* GetCriticalSectionDevice =
 template<typename T>
 Maybe<intrusive::shared_ptr<LocalDepObject>> InstructionsBuilder::MakeCriticalSectionBegin(
     const one::EagerBlobObjectListPtr& eager_blob_objects) {
-  const auto local_dep_object = JUST(NewLocalDepObject());
-  const auto& phy_instr_operand = std::make_shared<T>(eager_blob_objects, *local_dep_object);
+  const auto local_dep_object = NewLocalDepObject();
+  const auto& phy_instr_operand = std::make_shared<T>(eager_blob_objects, local_dep_object);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "CriticalSectionBegin",
       std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
@@ -1036,9 +1036,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
-                                                const std::string& modifier,
-                                                Symbol<Device> op_device) {
+Maybe<void> InstructionsBuilder::SoftSyncStream(
+    const intrusive::shared_ptr<LocalDepObject>& compute_local_dep_object,
+    const std::string& modifier, Symbol<Device> op_device) {
   if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
 
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
@@ -1085,7 +1085,6 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
    * so they can share memory.
    */
   const auto& parallel_desc = GetParallelDesc(input_tensor);
-  LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
       JUST(input_tensor->eager_blob_object());
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
@@ -1095,8 +1094,8 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   view_eager_blob_object->set_is_shape_synced(true);
   view_eager_blob_object->set_last_used_device(JUST(input_tensor->device()));
   // prepare instruction operand
-  const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
-      eager_blob_object, view_eager_blob_object, local_dep_object);
+  const auto& phy_instr_operand =
+      std::make_shared<vm::TensorViewOperand>(eager_blob_object, view_eager_blob_object);
   // prepare instruction
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
@@ -1140,9 +1139,8 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::string& modifier) {
   const auto& parallel_desc = GetParallelDesc(tensor);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
-  const auto& phy_instr_operand = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
-      eager_blob_object, compute_local_dep_object, callback, modifier);
+  const auto& phy_instr_operand =
+      std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(eager_blob_object, callback, modifier);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(),
       parallel_desc->device_tag() + ".AccessBlobByCallback", parallel_desc, phy_instr_operand);

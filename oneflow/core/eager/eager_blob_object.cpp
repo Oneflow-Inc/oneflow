@@ -25,7 +25,7 @@ namespace vm {
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                  const std::shared_ptr<Shape>& shape, DataType data_type,
                                  const std::shared_ptr<TensorStorage>& tensor_storage,
-                                 const Optional<LocalDepObject*>& dep_object)
+                                 const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : BlobObject(mem_case, shape, data_type),
       tensor_storage_(tensor_storage),
       is_shape_synced_(true),

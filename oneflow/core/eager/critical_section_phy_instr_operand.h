@@ -54,7 +54,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
  protected:
   one::EagerBlobObjectListPtr eager_blob_objects_;
-  mutable intrusive::shared_ptr<LocalDepObject> local_dep_object_;
+  intrusive::shared_ptr<LocalDepObject> local_dep_object_;
 };
 
 class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {

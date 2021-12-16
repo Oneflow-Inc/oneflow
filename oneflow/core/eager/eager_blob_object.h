@@ -72,13 +72,11 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage, Optional<LocalDepObject*>()) {}
-
+      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
+                        intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
-                  LocalDepObject* dep_object)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
-                        Optional<LocalDepObject*>(dep_object)) {}
+                  const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() override {
     tensor_storage_.reset();
@@ -101,7 +99,8 @@ class EagerBlobObject final : public BlobObject {
   }
 
   Maybe<LocalDepObject*> compute_local_dep_object() const {
-    return JUST(compute_local_dep_object_);
+    CHECK_NOTNULL_OR_RETURN(compute_local_dep_object_.get());
+    return compute_local_dep_object_.get();
   }
 
   std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
@@ -129,15 +128,12 @@ class EagerBlobObject final : public BlobObject {
   }
 
  private:
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
-                  const Optional<LocalDepObject*>& dep_object);
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
   int64_t storage_offset_;
-  Optional<LocalDepObject*> compute_local_dep_object_;
+  intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace vm

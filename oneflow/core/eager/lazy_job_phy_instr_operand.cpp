@@ -43,29 +43,29 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(inputs_local_dep_object_->mut_mirrored_object());
-  DoEach(outputs_local_dep_object_->mut_mirrored_object());
+  DoEach(inputs_local_dep_object_.get());
+  DoEach(outputs_local_dep_object_.get());
 
   for (const auto& eager_blob_object : *param_blob_objects_) {
-    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 
 #ifdef WITH_CUDA
   auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
   auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
   CHECK_EQ(sync_launched_nccl, async_launched_nccl);
-  DoEach(async_launched_nccl->mut_mirrored_object());
+  DoEach(async_launched_nccl);
 #endif  // WITH_CUDA
 }
 
 void LaunchLazyJobPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(inputs_local_dep_object_->mut_mirrored_object());
+  DoEach(inputs_local_dep_object_.get());
 }
 
 void LaunchLazyJobPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(outputs_local_dep_object_->mut_mirrored_object());
+  DoEach(outputs_local_dep_object_.get());
 }
 
 Maybe<SharedEventRecord> LaunchLazyJobPhyInstrOperand::EndEventRecord4OpName(

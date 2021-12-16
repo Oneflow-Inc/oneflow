@@ -84,8 +84,8 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
  private:
-  mutable intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;
-  mutable intrusive::shared_ptr<LocalDepObject> outputs_local_dep_object_;
+  intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;
+  intrusive::shared_ptr<LocalDepObject> outputs_local_dep_object_;
   std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
       op_name2end_event_record_;
   one::EagerBlobObjectListPtr input_blob_objects_;

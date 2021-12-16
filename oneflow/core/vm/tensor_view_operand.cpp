@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/tensor_view_operand.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/intrusive/list.h"
 
@@ -27,7 +28,7 @@ void TensorViewOperand::ForEachConstMirroredObject(
 
 void TensorViewOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
-  DoEach(compute_local_dep_object_->mut_mirrored_object());
+  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
 void TensorViewOperand::ForEachMut2MirroredObject(
