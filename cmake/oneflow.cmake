@@ -261,6 +261,9 @@ else() # build_python
   endif()
 endif(BUILD_PYTHON)
 
+get_property(PARQUET_API_HEADER_DIR GLOBAL PROPERTY PARQUET_API_HEADER_DIR)
+target_include_directories(oneflow PRIVATE ${PARQUET_API_HEADER_DIR})
+target_link_libraries(oneflow parquet_static)
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
