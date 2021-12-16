@@ -72,7 +72,9 @@ class AddFunctor {
     if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input->contiguous(), other->contiguous()}).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({input->contiguous(), other->contiguous()})
+               .Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
                .AddInputs({input->contiguous(), JUST(functional::ScalarMul(alpha, other))})
@@ -128,7 +130,9 @@ class MulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x->contiguous(), y->contiguous()}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+             .AddInputs({x->contiguous(), y->contiguous()})
+             .Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
     if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
@@ -155,7 +159,9 @@ class InplaceMulFunctor {
                .AddInputs({JUST(Identity(x->contiguous())), y->contiguous()})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x->contiguous(), y->contiguous()}).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({x->contiguous(), y->contiguous()})
+               .Apply());
     }
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);

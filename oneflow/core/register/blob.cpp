@@ -27,8 +27,8 @@ Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_p
   Init(mem_case, blob_desc, header_ptr, body_ptr, 0);
 }
 
-Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
-           char* body_ptr, const int64_t offset) {
+Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
+           const int64_t offset) {
   Init(mem_case, blob_desc, header_ptr, body_ptr, offset);
 }
 

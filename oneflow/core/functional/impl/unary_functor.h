@@ -51,7 +51,8 @@ class InplaceUnaryFunctor {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
     if (x->requires_grad()) {
-      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x->contiguous()))}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x->contiguous()))},
+                                  outputs.get()));
     } else {
       JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get()));
     }
@@ -96,7 +97,8 @@ class InplaceFloatUnaryFunctor {
     if (x->requires_grad()) {
       // It should copy input tensor in autograd_mode because these operators can't calculate
       // in_grad with output.
-      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x->contiguous()))}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x->contiguous()))},
+                                  outputs.get()));
     } else {
       JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get()));
     }

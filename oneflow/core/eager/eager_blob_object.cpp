@@ -39,9 +39,7 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerBlobObject::InitBlob() {
-  return InitBlobWithOffset(0);
-}
+Maybe<void> EagerBlobObject::InitBlob() { return InitBlobWithOffset(0); }
 
 Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);

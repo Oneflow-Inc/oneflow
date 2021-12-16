@@ -29,13 +29,9 @@ namespace oneflow {
 namespace one {
 
 Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  if(tensor->is_lazy() || tensor->is_consistent()){
-    return true;
-  }
+  if (tensor->is_lazy() || tensor->is_consistent()) { return true; }
   const Shape& shape = *tensor->shape();
-  if(!shape.is_initialized() || shape.NumAxes()<1 || shape.elem_cnt() <= 1 ){
-    return true;
-  }
+  if (!shape.is_initialized() || shape.NumAxes() < 1 || shape.elem_cnt() <= 1) { return true; }
   const Stride& stride = *JUST(tensor->stride());
   int64_t dim = shape.NumAxes();
   int64_t expected_stride = 1;

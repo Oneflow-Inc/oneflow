@@ -50,7 +50,8 @@ class Blob final {
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr);
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
-  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr, const int64_t offset);
+  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
+       const int64_t offset);
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
@@ -63,18 +64,21 @@ class Blob final {
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>(data_type());
-    return reinterpret_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_)
+                                + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* mut_dptr() {
     this->blob_access_checker()->CheckBodyMutable();
     CheckDataType<T>(data_type());
-    return reinterpret_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_)
+                                + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* ForceMutDptr() {
     CheckDataType<T>(data_type());
-    return reinterpret_cast<T*>(static_cast<char*>(dptr_) + storage_offset_ * GetSizeOfDataType(data_type()));
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_)
+                                + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   const T* raw_dptr() const {
@@ -116,8 +120,8 @@ class Blob final {
   const BlobAccessChecker* blob_access_checker() { return this->blob_access_checker_; }
 
  private:
-  void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
-            char* body_ptr, const int64_t offset);
+  void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
+            const int64_t offset);
 
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
