@@ -41,11 +41,11 @@ void SetGridDimAndBlockDim(const int64_t total_elem_cnt, int* grid_dim, int* blo
 void SetBlockDim(const int64_t total_elem_cnt, int* block_dim) {}
 }  // namespace
 
-OF_DEVICE_FUNC int LinearIndex2Offset(int32_t linear_index, const int32_t* dim_size_in_axis_ptr,
+OF_DEVICE_FUNC int64_t LinearIndex2Offset(int64_t linear_index, const int32_t* dim_size_in_axis_ptr,
                                       const int32_t* stride_vec_ptr, const int32_t size) {
   int offset = 0;
   int tmp = 0;
-  for (int j = 0; j < size; j++) {
+  for (int64_t j = 0; j < size; j++) {
     tmp = (j == 0 ? linear_index : (tmp / dim_size_in_axis_ptr[j - 1]));
     offset += tmp % dim_size_in_axis_ptr[j] * stride_vec_ptr[j];
   }
@@ -59,8 +59,8 @@ constexpr size_t MaxDims = 8;
 struct VarParam {
   VarParam() : unbiased(true), parallel_num(1), elem_cnt(1), axis_size(1), caxis_size(1) {}
   bool unbiased;
-  int32_t parallel_num;
-  int32_t elem_cnt;
+  int64_t parallel_num;
+  int64_t elem_cnt;
   int32_t axis_size;
   int32_t caxis_size;
   int32_t stride_in_axis[MaxDims];
@@ -134,22 +134,18 @@ class VarParamHelper final {
 template<typename T>
 OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const VarParam& var_param) {
   int64_t count = 0;
-  double mean = 0.0;
-  double old_mean = 0.0;
-  double d = 0.0;
-  double population_variance = 0.0;
-  double sample_variance = 0.0;
-  for (int i = 0; i < var_param.elem_cnt; i++) {
-    int offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
+  T mean = 0.0;
+  T old_mean = 0.0;
+  T m2 = 0.0;
+  for (int64_t i = 0; i < var_param.elem_cnt; i++) {
+    int64_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
                                     var_param.axis_size);
     count++;
     old_mean = mean;
     mean += (in_ptr[offset] - mean) / count;
-    d += (in_ptr[offset] - mean) * (in_ptr[offset] - old_mean);
-    population_variance = d / count;
-    if (count > 1) { sample_variance = d / (count - 1); }
+    m2 += (in_ptr[offset] - mean) * (in_ptr[offset] - old_mean);
   }
-  *out_ptr = var_param.unbiased ? sample_variance : population_variance;
+  *out_ptr = m2 / (var_param.unbiased ? count - 1 : count);
 }
 
 template<DeviceType device_type, typename T>
