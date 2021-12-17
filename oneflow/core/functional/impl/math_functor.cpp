@@ -640,48 +640,32 @@ class Transpose2dimFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class EyeFunctor {
+class Transpose2dimFunctor {
  public:
-  EyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
-    OpExprInterpContext ctx(attrs);
-    ctx.device = device;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+  Transpose2dimFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class ConsistentEyeFunctor {
- public:
-  ConsistentEyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    JUST(CheckDeviceIdsIsValid(placement));
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
+                           const int32_t dim1) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype ? JUST(dtype)->data_type() : DataType::kFloat));
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    const int64_t ndim = x->shape()->NumAxes();
+    std::vector<int32_t> permute;
+    permute.reserve(ndim);
+    int32_t dim_0 = dim0;
+    int32_t dim_1 = dim1;
+
+    if (dim0 < 0) { dim_0 += ndim; }
+    if (dim1 < 0) { dim_1 += ndim; }
+
+    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
+        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
+        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+    for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
+    std::swap(permute[dim_0], permute[dim_1]);
+
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1761,8 +1745,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");
-  m.add_functor<EyeFunctor>("Eye");
-  m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
+  m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");

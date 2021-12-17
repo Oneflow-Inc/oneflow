@@ -164,6 +164,7 @@ from oneflow._C import roi_align
 from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
+from oneflow._C import eye
 from oneflow._C import contiguous
 
 
@@ -338,7 +339,6 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
-from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
