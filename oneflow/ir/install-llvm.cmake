@@ -53,24 +53,21 @@ if(NOT llvm_monorepo_POPULATED)
   endif()
   include(ProcessorCount)
   ProcessorCount(PROC_NUM)
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM}
+  if(WITH_MLIR)
+    set(INSTALL_ALL "install")
+  endif()
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target ${INSTALL_ALL} install-oneflow-tblgen
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret
   )
   if(ret EQUAL "1")
       message( FATAL_ERROR "Bad exit status")
   endif()
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target install
-    WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
-    RESULT_VARIABLE ret
-  )
-  if(ret EQUAL "1")
-      message( FATAL_ERROR "Bad exit status")
-  endif()
-  set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
-  set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 endif()
 
+if (WITH_MLIR)
+set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
+set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
@@ -85,3 +82,4 @@ include(AddLLVM)
 include(AddMLIR)
 include(HandleLLVMOptions)
 set(LLVM_EXTERNAL_LIT "${llvm_monorepo_BINARY_DIR}/bin/llvm-lit" CACHE STRING "" FORCE)
+endif()
