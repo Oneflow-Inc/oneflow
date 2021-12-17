@@ -1217,5 +1217,3 @@ def generate_values_by_initializer(initializer, shape, dtype):
     np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
     length = _elem_cnt(shape)
     return np.array(initializer(length)).astype(np_dtype).reshape(shape)
-
-
