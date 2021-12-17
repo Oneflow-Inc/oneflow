@@ -154,7 +154,7 @@ class Graph::GraphImpl final {
   oneflow::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
 
   std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
-  const std::string model_path_;
+  std::string model_path_;
   bool is_compiled_ = false;
   int batch_size_ = 0;
   XrtKind xrt_kind_ = XrtKind::kNone;
@@ -169,9 +169,7 @@ class Graph::GraphImpl final {
 };
 
 Graph::Graph(const std::string& model_path, const Device& device)
-    : graph_(std::make_shared<GraphImpl>(model_path, device)) {}
-
-Graph::Graph(const std::shared_ptr<GraphImpl>& graph) : graph_(graph) {}
+    : graph_(std::make_unique<GraphImpl>(model_path, device)) {}
 
 Graph::Graph(Graph&& graph) noexcept : graph_(std::move(graph.graph_)) {}
 
@@ -223,7 +221,7 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
 
 Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept
     : graph_(std::move(graph.graph_)),
-      model_path_(graph.model_path_),
+      model_path_(std::move(graph.model_path_)),
       is_compiled_(graph.is_compiled_),
       batch_size_(graph.batch_size_),
       xrt_kind_(graph.xrt_kind_),
@@ -238,6 +236,17 @@ Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept
 Graph::GraphImpl& Graph::GraphImpl::operator=(Graph::GraphImpl&& graph) noexcept {
   if (&graph == this) { return *this; }
   graph_ = std::move(graph.graph_);
+  model_path_ = std::move(graph.model_path_);
+  is_compiled_ = graph.is_compiled_;
+  batch_size_ = graph.batch_size_;
+  xrt_kind_ = graph.xrt_kind_;
+  device_ = std::move(graph.device_);
+  job_ = std::move(graph.job_);
+  input_name_to_order_ = std::move(graph.input_name_to_order_);
+  output_name_to_tensor_ = std::move(graph.output_name_to_tensor_);
+  variable_op_name_to_tensor_ = std::move(graph.variable_op_name_to_tensor_);
+  output_tensor_tuple_ = std::move(graph.output_tensor_tuple_);
+  parameter_tensor_tuple_ = std::move(graph.parameter_tensor_tuple_);
   return *this;
 }
 

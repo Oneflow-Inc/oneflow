@@ -36,7 +36,6 @@ class Graph {
 
  public:
   explicit Graph(const std::string& model_path, const Device& device = Device("cpu"));
-  explicit Graph(const std::shared_ptr<GraphImpl>& graph);
 
   Graph(const Graph& graph) = delete;
   Graph(Graph&& graph) noexcept;
@@ -53,7 +52,7 @@ class Graph {
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
 
  private:
-  std::shared_ptr<GraphImpl> graph_;
+  std::unique_ptr<GraphImpl> graph_;
 };
 
 }  // namespace oneflow_api
