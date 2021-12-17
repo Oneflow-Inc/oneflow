@@ -281,6 +281,7 @@ from oneflow.framework.generator import (
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow.framework.tensor import is_floating_point
 
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
@@ -309,7 +310,6 @@ from oneflow.nn.modules.comparison import less_op as lt
 from oneflow.nn.modules.comparison import less_equal_op as le
 from oneflow.nn.modules.comparison import ne_op as ne
 from oneflow.nn.modules.comparison import ne_op as not_equal
-from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill

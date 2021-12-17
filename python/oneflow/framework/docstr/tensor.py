@@ -724,3 +724,10 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.is_floating_point,
+    """
+    See :func:`oneflow.is_floating_point`
+    """,
+)
