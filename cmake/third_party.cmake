@@ -133,6 +133,12 @@ set(oneflow_exe_third_party_libs
     gflags_imported
 )
 
+set(oneflow_test_libs
+    ${GOOGLETEST_STATIC_LIBRARIES}
+    ${GOOGLEMOCK_STATIC_LIBRARIES}
+)
+
+
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
@@ -245,9 +251,9 @@ if (BUILD_CUDA)
   endif()
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies nccl)
 
@@ -317,11 +323,9 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  if(BUILD_PYTHON)
-    foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-      copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
-    endforeach()
-  endif(BUILD_PYTHON)
+  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
+  endforeach()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
