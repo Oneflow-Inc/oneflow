@@ -34,20 +34,26 @@ class Graph {
   class GraphImpl;
 
  public:
-  explicit Graph(const std::string& model_path, const Device& device);
-  explicit Graph(const std::string& model_path);
+  explicit Graph(const std::string& model_path, const Device& device = Device("cpu"));
   explicit Graph(const std::shared_ptr<GraphImpl>& graph);
+
+  Graph(const Graph& graph) = delete;
+  Graph(Graph&& graph) noexcept;
+
+  ~Graph() = default;
+
+  Graph& operator=(const Graph& graph) = delete;
+  Graph& operator=(Graph&& graph) noexcept;
+
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size);
   void enable_tensorrt();
 
+  static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
+
  private:
   std::shared_ptr<GraphImpl> graph_;
 };
-
-Graph Load(const std::string& model_path, const Device& device);
-
-Graph Load(const std::string& model_path);
 
 }  // namespace oneflow_api
 

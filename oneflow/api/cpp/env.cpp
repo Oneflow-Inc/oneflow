@@ -148,7 +148,6 @@ void release() {
     }
     of::Global<of::EnvGlobalObjectsScope>::Delete();
   }
-  // TODO close session
   of::SetShuttingDown();
   of::ResetThisThreadUniqueConsistentId().GetOrThrow();
 }

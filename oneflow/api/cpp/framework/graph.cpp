@@ -76,11 +76,7 @@ class CompileScope {
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
     of::cfg::JobConfigProto job_config_cfg(job_config);
-#ifdef WITH_TENSORRT
-    if (kind == XrtKind::kTensorRT) {
-      *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
-    }
-#endif
+    ConfigXrt(job_config_cfg, kind);
     CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
     CHECK_JUST(of::CurJobBuildAndInferCtx_SetJobConf(job_config_cfg));
   }
@@ -92,6 +88,16 @@ class CompileScope {
 
  private:
   of::LazyMode::Guard lazy_mode_enabled_guard{true};
+
+  void ConfigXrt(of::cfg::JobConfigProto& job_config_cfg, XrtKind kind) {
+#ifdef WITH_TENSORRT
+    if (kind == XrtKind::kTensorRT) {
+      *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
+    }
+#else
+    LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
+#endif
+  }
 };
 
 std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(
@@ -124,8 +130,16 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
 
 class Graph::GraphImpl final {
  public:
-  explicit GraphImpl(const std::string& model_path, const Device& device);
-  explicit GraphImpl(const std::string& model_path);
+  explicit GraphImpl(const std::string& model_path, const Device& device = Device("cpu"));
+
+  GraphImpl(const GraphImpl& graph) = delete;
+  GraphImpl(GraphImpl&& graph) noexcept;
+
+  ~GraphImpl() = default;
+
+  GraphImpl& operator=(const GraphImpl& graph) = delete;
+  GraphImpl& operator=(GraphImpl&& graph) noexcept;
+
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
@@ -153,20 +167,31 @@ class Graph::GraphImpl final {
   std::shared_ptr<oneflow::one::TensorTuple> parameter_tensor_tuple_;
 };
 
+Graph::Graph(const std::string& model_path, const Device& device)
+    : graph_(std::make_shared<GraphImpl>(model_path, device)) {}
+
+Graph::Graph(const std::shared_ptr<GraphImpl>& graph) : graph_(graph) {}
+
+Graph::Graph(Graph&& graph) noexcept : graph_(std::move(graph.graph_)) {}
+
+Graph& Graph::operator=(Graph&& graph) noexcept {
+  if (&graph == this) { return *this; }
+  graph_ = std::move(graph.graph_);
+  return *this;
+}
+
 std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
   return graph_->Forward(inputs);
 }
 
-Graph::Graph(const std::string& model_path, const Device& device)
-    : graph_(std::make_shared<GraphImpl>(model_path, device)) {}
-
-Graph::Graph(const std::string& model_path) : graph_(std::make_shared<GraphImpl>(model_path)) {}
-
-Graph::Graph(const std::shared_ptr<GraphImpl>& graph) : graph_(graph) {}
-
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
+
+Graph Graph::Load(const std::string& model_path, const Device& device) {
+  Graph graph(model_path, device);
+  return graph;
+}
 
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
@@ -177,7 +202,25 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
 
-Graph::GraphImpl::GraphImpl(const std::string& model_path) : GraphImpl(model_path, Device("cpu")) {}
+Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept
+    : graph_(std::move(graph.graph_)),
+      model_path_(graph.model_path_),
+      is_compiled_(graph.is_compiled_),
+      batch_size_(graph.batch_size_),
+      xrt_kind_(graph.xrt_kind_),
+      device_(std::move(graph.device_)),
+      job_(std::move(graph.job_)),
+      input_name_to_order_(std::move(graph.input_name_to_order_)),
+      output_name_to_tensor_(std::move(graph.output_name_to_tensor_)),
+      variable_op_name_to_tensor_(std::move(graph.variable_op_name_to_tensor_)),
+      output_tensor_tuple_(std::move(graph.output_tensor_tuple_)),
+      parameter_tensor_tuple_(std::move(graph.parameter_tensor_tuple_)) {}
+
+Graph::GraphImpl& Graph::GraphImpl::operator=(Graph::GraphImpl&& graph) noexcept {
+  if (&graph == this) { return *this; }
+  graph_ = std::move(graph.graph_);
+  return *this;
+}
 
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
@@ -324,16 +367,6 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
     parameter_tensor_tuple_ = ConvertToTensorTuple(variable_tensors);
   }
   return of::Maybe<void>::Ok();
-}
-
-Graph Load(const std::string& model_path, const Device& device) {
-  Graph graph(model_path, device);
-  return graph;
-}
-
-Graph Load(const std::string& model_path) {
-  const Device device = Device("cpu");
-  return Load(model_path, device);
 }
 
 }  // namespace oneflow_api

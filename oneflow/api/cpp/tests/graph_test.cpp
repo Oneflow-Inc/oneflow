@@ -23,11 +23,7 @@ limitations under the License.
 #include <iostream>
 #include <thread>
 #include <vector>
-#include "oneflow/api/cpp/framework/device.h"
-#include "oneflow/api/cpp/framework/dtype.h"
-#include "oneflow/api/cpp/framework/graph.h"
-#include "oneflow/api/cpp/framework/shape.h"
-#include "oneflow/api/cpp/framework/tensor.h"
+#include "oneflow/api/cpp/framework.h"
 #include "oneflow/api/cpp/tests/api_test.h"
 
 namespace oneflow_api {
@@ -37,7 +33,7 @@ namespace {
 inline Graph LoadGraph(const Device& device) {
   const std::string file_name = __FILE__;
   const std::string directory = file_name.substr(0, file_name.rfind('/'));
-  Graph graph = Load(directory + "/graph_test_model/affine_with_parameter", device);
+  Graph graph = Graph::Load(directory + "/graph_test_model/affine_with_parameter", device);
   return graph;
 }
 
@@ -159,7 +155,7 @@ TEST(Api, graph_thread_test) {
 
   std::vector<std::thread> threads;
   for (Graph& graph : graphs) {
-    threads.emplace_back(std::thread(std::bind(Forward, graph, device, 1)));
+    threads.emplace_back(std::thread(std::bind(Forward, std::move(graph), device, 1)));
   }
   for (auto& thread : threads) { thread.join(); }
 }
@@ -170,7 +166,7 @@ TEST(Api, graph_input_order_test) {
   const std::string file_name = __FILE__;
   const std::string directory = file_name.substr(0, file_name.rfind('/'));
   Device device("cpu");
-  Graph graph = Load(directory + "/graph_test_model/affine_no_parameter", device);
+  Graph graph = Graph::Load(directory + "/graph_test_model/affine_no_parameter", device);
 
   std::vector<Tensor> inputs;
   std::vector<float> x(3);
