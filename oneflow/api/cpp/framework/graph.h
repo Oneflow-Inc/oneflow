@@ -39,7 +39,6 @@ class Graph {
   explicit Graph(const std::shared_ptr<GraphImpl>& graph);
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size);
-  void enable_openvino();
   void enable_tensorrt();
 
  private:

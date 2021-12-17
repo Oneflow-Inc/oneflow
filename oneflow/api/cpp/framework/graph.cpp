@@ -65,7 +65,7 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
-enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVINO = 2 };
+enum class XrtKind : int { kNone = 0, kTensorRT = 1 };
 
 namespace {
 
@@ -76,11 +76,6 @@ class CompileScope {
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
     of::cfg::JobConfigProto job_config_cfg(job_config);
-#ifdef WITH_OPENVINO
-    if (kind == XrtKind::kOpenVINO) {
-      *(job_config_cfg.mutable_xrt_config()->mutable_use_openvino()) = true;
-    }
-#endif
 #ifdef WITH_TENSORRT
     if (kind == XrtKind::kTensorRT) {
       *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
@@ -133,7 +128,6 @@ class Graph::GraphImpl final {
   explicit GraphImpl(const std::string& model_path);
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
-  void enable_openvino() { xrt_kind_ = XrtKind::kOpenVINO; }
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
 
  private:
@@ -171,8 +165,6 @@ Graph::Graph(const std::string& model_path) : graph_(std::make_shared<GraphImpl>
 Graph::Graph(const std::shared_ptr<GraphImpl>& graph) : graph_(graph) {}
 
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
-
-void Graph::enable_openvino() { graph_->enable_openvino(); }
 
 void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
 
