@@ -83,14 +83,6 @@ TEST(Api, graph_multi_gpu_test) {
   Forward(graph1, device1);
 }
 
-TEST(Api, graph_openvino_test) {
-  EnvScope scope;
-  Device device("cpu");
-  Graph graph = LoadGraph(device);
-  graph.enable_openvino();
-  Forward(graph, device);
-}
-
 TEST(Api, graph_trt_test) {
   EnvScope scope;
   Device device("cuda:0");
