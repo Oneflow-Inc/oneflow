@@ -32,7 +32,7 @@ add_tablegen(oneflow_tblgen llvm
   op_schema_emitter.cpp
 )
 
-install(TARGETS oneflow_tblgen COMPONENT OneFlowTableGen)
+install(TARGETS oneflow_tblgen LLVMTableGen LLVMDemangle LLVMSupport COMPONENT OneFlowTableGen)
 add_custom_target(install-oneflow-tblgen
   DEPENDS oneflow_tblgen
   COMMAND
