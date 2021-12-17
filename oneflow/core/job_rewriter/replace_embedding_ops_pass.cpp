@@ -129,6 +129,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("num_unique_ids", id_shuffle_op.output("num_unique_ids", 0))
                 .Input("ids_reverse_idx", id_shuffle_op.output("ids_reverse_idx", 0))
                 .Input("embedding_diff", update_op_conf.input("embedding_diff", 0))
+                .Input("num_unique_ids_matrix", id_shuffle_op.output("num_unique_ids_matrix", 0))
                 .Output("cur_rank_unique_embedding_diff")
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())

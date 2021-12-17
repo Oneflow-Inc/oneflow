@@ -197,11 +197,12 @@ REGISTER_USER_OP("embedding_shuffle")
     });
 
 REGISTER_USER_OP("embedding_gradient_shuffle")
+    .Input("embedding_diff")
     .Input("cur_rank_num_unique_ids")
     .Input("cur_rank_reverse_idx")
     .Input("num_unique_ids")
     .Input("ids_reverse_idx")
-    .Input("embedding_diff")
+    .Input("num_unique_ids_matrix")
     .Output("cur_rank_unique_embedding_diff")
     .Attr<int64_t>("embedding_size")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -215,6 +216,7 @@ REGISTER_USER_OP("embedding_gradient_shuffle")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
           .Split(user_op::OpArg("cur_rank_num_unique_ids", 0), 0)
           .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)
           .Split(user_op::OpArg("num_unique_ids", 0), 0)
