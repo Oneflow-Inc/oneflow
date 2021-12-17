@@ -356,7 +356,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor("DispatchRmspropUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, double scale, float l1, float l2, bool centered,
-                   float epsilon, float decay_rate, float weight_decay) {
+                   float epsilon, float decay_rate, float weight_decay) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("scale", scale));
@@ -372,7 +372,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, float bias_correction1, float bias_correction2,
                    double scale, float l1, float l2, float beta1, float beta2, float epsilon,
-                   float weight_decay, bool amsgrad, bool do_bias_correction) {
+                   float weight_decay, bool amsgrad, bool do_bias_correction) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("bias_correction1_val", bias_correction1));
@@ -391,7 +391,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor("DispatchAdagradUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, double scale, float l1, float l2, float lr_decay,
-                   float weight_decay, float epsilon, int32_t train_step) {
+                   float weight_decay, float epsilon, int32_t train_step) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("scale", scale));
@@ -406,7 +406,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchMomentumUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
-         double scale, float l1, float l2, float beta, float weight_decay) {
+         double scale, float l1, float l2, float beta, float weight_decay) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("learning_rate_val", learning_rate));
         JUST(attrs.SetAttr("scale", scale));
@@ -416,20 +416,21 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         JUST(attrs.SetAttr("weight_decay", weight_decay));
         return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
       });
-  m.add_functor("DispatchSgdUpdate",
-                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
-                   float learning_rate, double scale, float l1, float l2, float weight_decay) {
-                  MutableAttrMap attrs;
-                  JUST(attrs.SetAttr("learning_rate_val", learning_rate));
-                  JUST(attrs.SetAttr("scale", scale));
-                  JUST(attrs.SetAttr("l1", l1));
-                  JUST(attrs.SetAttr("l2", l2));
-                  JUST(attrs.SetAttr("weight_decay", weight_decay));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
-                });
+  m.add_functor(
+      "DispatchSgdUpdate",
+      [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
+         double scale, float l1, float l2, float weight_decay) -> Maybe<Tensor> {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr("learning_rate_val", learning_rate));
+        JUST(attrs.SetAttr("scale", scale));
+        JUST(attrs.SetAttr("l1", l1));
+        JUST(attrs.SetAttr("l2", l2));
+        JUST(attrs.SetAttr("weight_decay", weight_decay));
+        return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
+      });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-                   const std::string& parallel_conf, bool async_launch) {
+                   const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("parallel_conf", parallel_conf));
                   JUST(attrs.SetAttr("async_launch", async_launch));
