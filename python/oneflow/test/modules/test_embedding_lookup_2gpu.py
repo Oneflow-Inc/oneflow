@@ -53,6 +53,7 @@ class TrainGraph(flow.nn.Graph):
             "optimizer": "invalid",
             "backend": "invalid",
         }
+        # Can't change the name 'embedding_lookup' because it is used to generate backward and optimizer
         self.embedding_lookup = flow.nn.OneEmbeddingLookup(options)
         self.dense = simp_module
         self.add_optimizer(
