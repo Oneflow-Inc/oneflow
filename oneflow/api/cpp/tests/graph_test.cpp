@@ -43,7 +43,9 @@ inline void Forward(Graph& graph, const Device& device, int expected_batch_dim =
   std::vector<Tensor> inputs;
   inputs.emplace_back(
       Tensor::from_buffer(data.data(), Shape({expected_batch_dim, 3}), device, DType::kFloat));
-  Tensor output = graph.Forward(inputs).at(0);
+  const auto& value = graph.Forward(inputs);
+  ASSERT_TRUE(value.IsTensor());
+  Tensor output = value.ToTensor();
   Shape shape = output.shape();
   ASSERT_EQ(shape.At(0), expected_batch_dim);
   ASSERT_EQ(shape.At(1), 4);
@@ -179,7 +181,9 @@ TEST(Api, graph_input_order_test) {
   std::fill(b.begin(), b.end(), 1);
   inputs.emplace_back(Tensor::from_buffer(b.data(), Shape({2}), device, DType::kFloat));
 
-  Tensor output = graph.Forward(inputs).at(0);
+  const auto& value = graph.Forward(inputs);
+  ASSERT_TRUE(value.IsTensor());
+  Tensor output = value.ToTensor();
   Shape shape = output.shape();
   ASSERT_EQ(shape.At(0), 1);
   ASSERT_EQ(shape.At(1), 2);

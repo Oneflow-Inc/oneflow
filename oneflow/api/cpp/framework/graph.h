@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_API_CPP_GRAPH_H_
 
 #include "device.h"
+#include "oneflow/api/cpp/framework/ivalue.h"
 #include "tensor.h"
 #include "iostream"
 
@@ -45,7 +46,7 @@ class Graph {
   Graph& operator=(const Graph& graph) = delete;
   Graph& operator=(Graph&& graph) noexcept;
 
-  std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
+  IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
   void enable_tensorrt();
 

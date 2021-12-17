@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/graph.h"
+#include "oneflow/api/cpp/framework/ivalue.h"
 #include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
@@ -90,13 +91,13 @@ class CompileScope {
   of::LazyMode::Guard lazy_mode_enabled_guard{true};
 
   void ConfigXrt(of::cfg::JobConfigProto& job_config_cfg, XrtKind kind) {
-#ifdef WITH_TENSORRT
     if (kind == XrtKind::kTensorRT) {
+#ifdef WITH_TENSORRT
       *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
-    }
 #else
-    LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
+      LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
 #endif
+    }
   }
 };
 
@@ -180,8 +181,26 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
   return *this;
 }
 
-std::vector<Tensor> Graph::Forward(const std::vector<Tensor>& inputs) {
-  return graph_->Forward(inputs);
+IValue Graph::Forward(const IValue& inputs) {
+  std::vector<Tensor> input_tensors;
+  if (inputs.IsNone()) {
+    // do nothing
+  } else if (inputs.IsTensor()) {
+    input_tensors.emplace_back(inputs.ToTensor());
+  } else if (inputs.IsTensorVector()) {
+    input_tensors = inputs.ToTensorVector();
+  } else {
+    LOG(WARNING) << "Graph currently only support types: Tensor/vector(Tensor)/None";
+  }
+
+  std::vector<Tensor> output_tensors = graph_->Forward(input_tensors);
+  if (output_tensors.empty()) {
+    return IValue{};
+  } else if (output_tensors.size() == 1) {
+    return IValue(output_tensors.at(0));
+  } else {
+    return IValue(output_tensors);
+  }
 }
 
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
