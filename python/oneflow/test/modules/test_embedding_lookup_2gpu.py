@@ -45,6 +45,7 @@ class TrainGraph(flow.nn.Graph):
         super().__init__()
         options = {
             "name": "my_embedding",
+            # Can't change the embedding_size 128 because the kv store value_length has been set to 128
             "embedding_size": 128,
             "dtype": flow.float,
             "encoder": "invalid",
