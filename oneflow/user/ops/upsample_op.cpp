@@ -23,15 +23,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleLinear1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float scale_factor = ctx->Attr<float>("scale_factor");
 
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 3)
+                  && x_desc.shape().NumAxes() == 3)
       << "upsample_linear_1d only supports NCH";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(scale_factor * x_desc->shape().At(2))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleLinear1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -47,14 +47,14 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float scale_factor = ctx->Attr<float>("scale_factor");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 3)
+                  && x_desc.shape().NumAxes() == 3)
       << "upsample_nearest_1d only supports NCH";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(scale_factor * x_desc->shape().At(2))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -70,16 +70,16 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float height_scale = ctx->Attr<float>("height_scale");
   const float width_scale = ctx->Attr<float>("width_scale");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 4)
+                  && x_desc.shape().NumAxes() == 4)
       << "upsample_nearest_2d only supports NCHW";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
-                                static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -95,16 +95,16 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBilinear2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float height_scale = ctx->Attr<float>("height_scale");
   const float width_scale = ctx->Attr<float>("width_scale");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 4)
+                  && x_desc.shape().NumAxes() == 4)
       << "upsample_bilinear_2d only supports NCHW";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
-                                static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBilinear2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -120,16 +120,16 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBicubic2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float height_scale = ctx->Attr<float>("height_scale");
   const float width_scale = ctx->Attr<float>("width_scale");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 4)
+                  && x_desc.shape().NumAxes() == 4)
       << "upsample_bicubic_2d only supports NCHW";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
-                                static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBicubic2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -170,18 +170,18 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float depth_scale = ctx->Attr<float>("depth_scale");
   const float height_scale = ctx->Attr<float>("height_scale");
   const float width_scale = ctx->Attr<float>("width_scale");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 5)
+                  && x_desc.shape().NumAxes() == 5)
       << "upsample_nearest_3d only supports NCDHW";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(depth_scale * x_desc->shape().At(2)),
-                                static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
-                                static_cast<int32_t>(width_scale * x_desc->shape().At(4))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -197,18 +197,18 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   const float depth_scale = ctx->Attr<float>("depth_scale");
   const float height_scale = ctx->Attr<float>("height_scale");
   const float width_scale = ctx->Attr<float>("width_scale");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
-                  && x_desc->shape().NumAxes() == 5)
+                  && x_desc.shape().NumAxes() == 5)
       << "upsample_trilinear_3d only supports NCDHW";
-  *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                static_cast<int32_t>(depth_scale * x_desc->shape().At(2)),
-                                static_cast<int32_t>(height_scale * x_desc->shape().At(3)),
-                                static_cast<int32_t>(width_scale * x_desc->shape().At(4))});
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

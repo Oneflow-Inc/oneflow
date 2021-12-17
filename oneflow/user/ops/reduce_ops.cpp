@@ -100,10 +100,10 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 
 IMPLEMENT_REDUCE_OP_FUNCS(ReduceAny, BinaryFuncAny, InferLogicalDataType)
 IMPLEMENT_REDUCE_OP_FUNCS(ReduceAll, BinaryFuncAll, InferLogicalDataType)
-IMPLEMENT_REDUCE_OP_FUNCS(ReduceMin, BinaryFuncMin, InferDataType)
-IMPLEMENT_REDUCE_OP_FUNCS(ReduceMax, BinaryFuncMax, InferDataType)
-IMPLEMENT_REDUCE_OP_FUNCS(ReduceSum, BinaryFuncSum, InferDataType)
-IMPLEMENT_REDUCE_OP_FUNCS(ReduceProd, BinaryFuncProd, InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceMin, BinaryFuncMin, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceMax, BinaryFuncMax, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceSum, BinaryFuncSum, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceProd, BinaryFuncProd, oneflow::InferDataType)
 #undef IMPLEMENT_REDUCE_OP_FUNCS
 
 REGISTER_USER_OP_GRAD("reduce_sum")
