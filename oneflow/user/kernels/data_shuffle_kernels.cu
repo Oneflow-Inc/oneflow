@@ -29,6 +29,75 @@ namespace oneflow {
 
 namespace {
 
+void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, size_t data_size,
+                const void* ptr) {
+  void* host_ptr;
+  OF_CUDA_CHECK(cudaMallocHost(&host_ptr, data_size));
+  std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
+                                                                ep::primitive::MemcpyKind::kDtoH);
+  CHECK(copyd2h_primitive);
+  copyd2h_primitive->Launch(stream, host_ptr, ptr, data_size);
+  CHECK_JUST(stream->Sync());
+  std::ofstream dx_os;
+  dx_os.open(StrCat("test/" + filename + "_", parallel_id));
+  dx_os.write(reinterpret_cast<char*>(host_ptr), data_size);
+  dx_os.close();
+  OF_CUDA_CHECK(cudaFreeHost(host_ptr));
+}
+
+template<typename T>
+void DebugEmbeddingShuffle(user_op::KernelComputeContext* ctx) {
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  user_op::Tensor* cur_rank_embeddings = ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
+  user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+  DumpToFile(ctx->stream(), "cur_rank_embeddings", parallel_id,
+             cur_rank_embeddings->shape().elem_cnt() * sizeof(T), cur_rank_embeddings->dptr());
+  DumpToFile(ctx->stream(), "embeddings", parallel_id, embeddings->shape().elem_cnt() * sizeof(T),
+             embeddings->dptr());
+}
+
+template<typename T>
+void DebugEmbeddingGradientShuffle(user_op::KernelComputeContext* ctx) {
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  user_op::Tensor* cur_rank_unique_embedding_diff =
+      ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_diff", 0);
+  user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
+  DumpToFile(ctx->stream(), "cur_rank_unique_embedding_diff", parallel_id,
+             cur_rank_unique_embedding_diff->shape().elem_cnt() * sizeof(T),
+             cur_rank_unique_embedding_diff->dptr());
+  DumpToFile(ctx->stream(), "embedding_diff", parallel_id,
+             embedding_diff->shape().elem_cnt() * sizeof(T), embedding_diff->dptr());
+}
+
+template<typename K, typename IDX>
+void DebugIdShuffle(user_op::KernelComputeContext* ctx) {
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
+  user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
+  user_op::Tensor* ids_reverse_idx = ctx->Tensor4ArgNameAndIndex("ids_reverse_idx", 0);
+  user_op::Tensor* cur_rank_num_unique_ids =
+      ctx->Tensor4ArgNameAndIndex("cur_rank_num_unique_ids", 0);
+  user_op::Tensor* cur_rank_unique_ids = ctx->Tensor4ArgNameAndIndex("cur_rank_unique_ids", 0);
+  user_op::Tensor* cur_rank_reverse_idx = ctx->Tensor4ArgNameAndIndex("cur_rank_reverse_idx", 0);
+  user_op::Tensor* num_unique_ids_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_ids_matrix", 0);
+  DumpToFile(ctx->stream(), "ids", parallel_id, ids->shape().elem_cnt() * sizeof(K), ids->dptr());
+  DumpToFile(ctx->stream(), "num_unique_ids", parallel_id,
+             num_unique_ids->shape().elem_cnt() * sizeof(IDX), num_unique_ids->dptr());
+  DumpToFile(ctx->stream(), "ids_reverse_idx", parallel_id,
+             ids_reverse_idx->shape().elem_cnt() * sizeof(IDX), ids_reverse_idx->dptr());
+  DumpToFile(ctx->stream(), "cur_rank_num_unique_ids", parallel_id,
+             cur_rank_num_unique_ids->shape().elem_cnt() * sizeof(IDX),
+             cur_rank_num_unique_ids->dptr());
+  DumpToFile(ctx->stream(), "cur_rank_unique_ids", parallel_id,
+             cur_rank_unique_ids->shape().elem_cnt() * sizeof(K), cur_rank_unique_ids->dptr());
+  DumpToFile(ctx->stream(), "cur_rank_reverse_idx", parallel_id,
+             cur_rank_reverse_idx->shape().elem_cnt() * sizeof(IDX), cur_rank_reverse_idx->dptr());
+  DumpToFile(ctx->stream(), "num_unique_ids_matrix", parallel_id,
+             num_unique_ids_matrix->shape().elem_cnt() * sizeof(IDX),
+             num_unique_ids_matrix->dptr());
+}
+
 struct BelongTo {
   int parallel_num;
   int parallel_id;
@@ -129,6 +198,33 @@ class IdShuffleTmpBufferManager final {
   void* ptr_;
 };
 
+class IdShuffleNcclKernelCommState final : public user_op::OpKernelState {
+ public:
+  explicit IdShuffleNcclKernelCommState(user_op::KernelInitContext* ctx)
+      : is_init_(false), parallel_desc_(ctx->parallel_desc()) {}
+  ~IdShuffleNcclKernelCommState() = default;
+
+  ncclComm_t comm() {
+    if (!is_init_) {
+      std::set<std::pair<int64_t, int64_t>> device_set;
+      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
+        int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
+        int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
+        device_set.emplace(std::make_pair(machine_id, device_id));
+      }
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+      comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, "ID_SHUFFLE");
+      is_init_ = true;
+    }
+    return comm_;
+  }
+
+ private:
+  bool is_init_;
+  ParallelDesc parallel_desc_;
+  ncclComm_t comm_{};
+};
+
 class NcclKernelCommState final : public user_op::OpKernelState {
  public:
   explicit NcclKernelCommState(user_op::KernelInitContext* ctx)
@@ -166,14 +262,14 @@ class IdShuffleKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclKernelCommState>(ctx);
+    return std::make_shared<IdShuffleNcclKernelCommState>(ctx);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclKernelCommState*>(state);
+    auto* nccl_comm = dynamic_cast<IdShuffleNcclKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
     user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
@@ -257,6 +353,8 @@ class IdShuffleKernel final : public user_op::OpKernel {
         ctx->stream(), recv_offset, received_unique_ids, cur_rank_num_unique_ids->mut_dptr<IDX>(),
         cur_rank_unique_ids->mut_dptr<K>(), cur_rank_reverse_idx->mut_dptr<IDX>(), workspace_ptr,
         workspace_size);
+
+    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) { DebugIdShuffle<K, IDX>(ctx); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -337,13 +435,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       cur_rank_num_ids += host_num_unique_ids_matrix[i * parallel_num + parallel_id];
     }
 
-    LOG(ERROR) << "num_ids " << num_ids << " embedding_size " << embedding_size;
-    for (int64_t i = 0; i < parallel_num; ++i) {
-      for (int64_t j = 0; j < parallel_num; ++j) {
-        LOG(ERROR) << "i " << i << " j " << j << " "
-                   << host_num_unique_ids_matrix[i * parallel_num + j];
-      }
-    }
     LOG(ERROR) << "parallel_id " << parallel_id << " cur_rank_num_ids " << cur_rank_num_ids;
     size_t reverse_cur_rank_embeddings_size =
         GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(T));
@@ -382,6 +473,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), ids_reverse_idx->dptr<IDX>(), ids_reverse_idx->shape().elem_cnt(),
         recv_unique_embeddings, Shape({1, num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
+
+    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) { DebugEmbeddingShuffle<T>(ctx); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -496,6 +589,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), cur_rank_reverse_idx->dptr<IDX>(), recv_embeddings_diff, cur_rank_num_ids,
         cur_rank_num_ids, 1, embedding_size, 0, cur_rank_unique_embedding_diff->mut_dptr<T>());
+
+    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) { DebugEmbeddingGradientShuffle<T>(ctx); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
