@@ -21,7 +21,21 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {}  // namespace
+namespace {
+
+template<typename T, typename IDX>
+__global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
+                                const float* learning_rate, float learning_rate_val,
+                                const T* model_diff, const T* model, T* updated_model) {
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  const int64_t n = *num_unique_ids * embedding_size;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const T model_val = model[i];
+    updated_model[i] = model_val - learning_rate_val * model_diff[i];
+  }
+}
+
+}  // namespace
 
 template<typename K, typename IDX>
 class EmbeddingPrefetchKernel final : public user_op::OpKernel {
@@ -75,7 +89,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
 
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
@@ -105,7 +118,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
 
 REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL(float, int64_t, int32_t)
 
-template<typename T>
+template<typename T, typename K, typename IDX>
 class EmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   EmbeddingUpdateKernel() = default;
@@ -115,17 +128,62 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     LOG(ERROR) << "EmbeddingUpdateKernel";
+    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+        "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+
+    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
+    const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
+    const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
+    const int64_t embedding_size =
+        unique_embeddings->shape().elem_cnt() / unique_ids->shape().elem_cnt();
+    LOG(ERROR) << "embedding_size " << embedding_size;
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* update_unique_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
+
+    IDX* host_num_keys;
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys, 1 * sizeof(IDX)));
+    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
+                                                                  ep::primitive::MemcpyKind::kDtoH);
+    CHECK(copyd2h_primitive);
+    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
+    CHECK_JUST(ctx->stream()->Sync());
+
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
+    // update kernel
+    SGDUpdateKernel<T, IDX>
+        <<<BlocksNum4ThreadsNum(embedding_diff->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, learning_rate_val,
+            embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(), update_unique_embeddings);
+
+    store->Update(ctx->stream(), *host_num_keys, unique_ids->dptr(),
+                  reinterpret_cast<const uint64_t*>(context->dptr()), update_unique_embeddings);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("sgd_embedding_update")                         \
-      .SetCreateFn<EmbeddingUpdateKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("unique_ids", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(t_dtype, k_dtype, idx_dtype)                  \
+  REGISTER_USER_KERNEL("sgd_embedding_update")                                              \
+      .SetCreateFn<EmbeddingUpdateKernel<t_dtype, k_dtype, idx_dtype>>()                    \
+      .SetIsMatchedHob(                                                                     \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
+          && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value)   \
+          && (user_op::HobDataType("unique_ids", 0) == GetDataType<k_dtype>::value)         \
+          && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const user_op::TensorDesc& unique_embeddings =                                      \
+            ctx->InputTensorDesc("unique_embeddings", 0);                                   \
+        return unique_embeddings.shape().elem_cnt() * sizeof(t_dtype);                      \
+      });
 
-REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(int32_t)
-REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(int64_t)
+REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(float, int64_t, int32_t)
 
 }  // namespace oneflow

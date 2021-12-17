@@ -57,7 +57,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Attr<std::string>("partitioning", user_op_conf.attr<std::string>("partitioning"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
-    add_ops.push_back(id_shuffle_op.op_conf());
+    OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
+    id_shuffle_new_op_conf.set_stream_name_hint("ID_SHUFFLE");
+    add_ops.push_back(id_shuffle_new_op_conf);
 
     const std::string unique_ids_lbn = id_shuffle_op.output("cur_rank_unique_ids", 0);
     // embedding prefetch op
@@ -127,6 +129,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("num_unique_ids", id_shuffle_op.output("num_unique_ids", 0))
                 .Input("ids_reverse_idx", id_shuffle_op.output("ids_reverse_idx", 0))
                 .Input("embedding_diff", update_op_conf.input("embedding_diff", 0))
+                .Input("num_unique_ids_matrix", id_shuffle_op.output("num_unique_ids_matrix", 0))
                 .Output("cur_rank_unique_embedding_diff")
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())
@@ -140,6 +143,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             sgd_embedding_update_op_builder.OpTypeName("sgd_embedding_update")
                 .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
                 .Input("unique_ids", id_shuffle_op.output("cur_rank_unique_ids", 0))
+                .Input("context", embedding_prefetch_op.output("context", 0))
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
                 .Input("embedding_diff",
                        embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0))
