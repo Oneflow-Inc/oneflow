@@ -1198,8 +1198,8 @@ void FormateVariableConf(nlohmann::json& json_conf) {
 
 std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     const std::string& job_name) const {
-  HashSet<std::string> input_op_names;
-  HashSet<std::string> output_op_names;
+  HashSet<std::string> inputs_op_names;
+  HashSet<std::string> outputs_op_names;
   std::vector<nlohmann::json> layers_vec;
   layers_vec.reserve(op_name2op_.size());
   for (const auto& pair : op_name2op_) {
@@ -1216,10 +1216,10 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     }
 
     if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
-      input_op_names.insert(op_name);
+      inputs_op_names.insert(op_name);
     }
     if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
-      output_op_names.insert(op_name);
+      outputs_op_names.insert(op_name);
     }
     json_layers_pair["name"] = op_name;
 
@@ -1243,8 +1243,8 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
   nlohmann::json json_pair;
   json_pair["name"] = job_name;
   json_pair["layers"] = layers_vec;
-  json_pair["input_layers"] = input_op_names;
-  json_pair["output_layers"] = output_op_names;
+  json_pair["input_layers"] = inputs_op_names;
+  json_pair["output_layers"] = outputs_op_names;
 
   return json_pair.dump();
 }
