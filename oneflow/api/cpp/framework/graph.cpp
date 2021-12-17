@@ -171,6 +171,8 @@ class Graph::GraphImpl final {
 Graph::Graph(const std::string& model_path, const Device& device)
     : graph_(std::make_unique<GraphImpl>(model_path, device)) {}
 
+Graph::~Graph() = default;
+
 Graph::Graph(Graph&& graph) noexcept : graph_(std::move(graph.graph_)) {}
 
 Graph& Graph::operator=(Graph&& graph) noexcept {

@@ -20,7 +20,6 @@ limitations under the License.
 #include "device.h"
 #include "ivalue.h"
 #include "tensor.h"
-#include "iostream"
 
 namespace oneflow {
 
@@ -31,16 +30,12 @@ class NNGraph;
 namespace oneflow_api {
 
 class Graph {
- private:
-  class GraphImpl;
-
  public:
   explicit Graph(const std::string& model_path, const Device& device = Device("cpu"));
+  ~Graph();
 
   Graph(const Graph& graph) = delete;
   Graph(Graph&& graph) noexcept;
-
-  ~Graph() = default;
 
   Graph& operator=(const Graph& graph) = delete;
   Graph& operator=(Graph&& graph) noexcept;
@@ -52,6 +47,7 @@ class Graph {
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
 
  private:
+  class GraphImpl;
   std::unique_ptr<GraphImpl> graph_;
 };
 
