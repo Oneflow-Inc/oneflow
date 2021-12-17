@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_MLIR
-#include "oneflow/ir/include/OneFlow/Extension.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
-#endif  // WITH_MLIR
 #include <glog/logging.h>
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/user_op_registry.h"
@@ -25,9 +21,11 @@ limitations under the License.
 #include <regex>
 
 namespace {
-using namespace oneflow;
+
 using K = std::string;
-using V = user_op::OpRegistryResult;
+using V = ::oneflow::user_op::OpRegistryResult;
+using ::oneflow::AttrType;
+using ::oneflow::UserOpDef_ArgDef;
 
 // from llvm
 std::string convertToCamelFromSnakeCase(const std::string& input, bool capitalizeFirst) {
@@ -66,7 +64,7 @@ std::string GetMLIRAttrTypeName(const AttrType& attr_type) {
   } else if (attr_type == ::oneflow::kAtString) {
     return "StrAttr";
   } else if (attr_type == ::oneflow::kAtShape) {
-    return "AnyI64ElementsAttr";
+    return "ShapeAttr";
   } else if (attr_type == ::oneflow::kAtDataType) {
     return "OneFlow_DataType";
   } else if (attr_type == ::oneflow::kAtListInt32) {
@@ -246,6 +244,15 @@ bool IsConvOp(const std::string& op_name) {
 bool IsLazyPoolOp(const std::string& op_name) {
   return op_name.find("_pool") != std::string::npos && op_name.find("tf_") != std::string::npos;
 }
+
+bool IsMaxPoolOp(const std::string& op_name) {
+  return op_name.find("maxpool") != std::string::npos;
+}
+
+bool IsAvgPoolOp(const std::string& op_name) {
+  return op_name.find("avgpool") != std::string::npos;
+}
+
 bool IsAdaptivePoolOp(const std::string& op_name) {
   return op_name.find("_pool") != std::string::npos
          && op_name.find("adaptive_") != std::string::npos;
@@ -348,6 +355,7 @@ std::string GetConvOpClassName(const std::string& op_name) {
   return ret;
 }
 
+static std::string BaseOpName = "OneFlow_BaseOp";
 std::string GetBaseOp(const std::string& op_name) {
   if (IsInvolutionOp(op_name)) {
     return "OneFlow_InvolutionBaseOp";
@@ -356,21 +364,88 @@ std::string GetBaseOp(const std::string& op_name) {
   } else if (IsConvOp(op_name)) {
     return "OneFlow_ConvolutionBaseOp";
   } else if (IsPoolOp(op_name)) {
-    return "OneFlow_" + std::string(IsLazyPoolOp(op_name) ? "TF" : "") + "Pool"
-           + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
+    if (IsLazyPoolOp(op_name)) {
+      return "OneFlow_" + std::string("TFPool") + std::string(IsGradOp(op_name) ? "Grad" : "")
+             + "BaseOp";
+    } else {
+      return "OneFlow_" + std::string(IsMaxPoolOp(op_name) ? "Max" : "")
+             + std::string(IsAvgPoolOp(op_name) ? "Avg" : "") + "Pool"
+             + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
+    }
   } else if (IsAdaptivePoolOp(op_name)) {
     return "OneFlow_AdaptivePool" + std::string(IsGradOp(op_name) ? "Grad" : "") + "BaseOp";
   } else {
-    return "OneFlow_BaseOp";
+    return BaseOpName;
   }
 }
+bool HasBaseOp(const std::string& op_name) { return GetBaseOp(op_name) != BaseOpName; }
 
 bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
   return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
-bool ShouldGenEmptyBody(const std::string& op_name) {
-  return IsPoolOp(op_name) || IsAdaptivePoolOp(op_name) || IsConvOp(op_name);
+bool HasOneFlow_BasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  return !r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
+         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn
+         && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn && !r.output_arg_modify_fn
+         && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
+}
+
+bool HasOneFlow_BasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& r) {
+  return r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
+         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn
+         && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn && !r.output_arg_modify_fn
+         && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
+}
+
+void PrintHas1(const std::string& var_name) { std::cout << "  let has_" << var_name << " = 1;\n"; }
+
+void PrintAdvancedHasFns(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.sbp_signature_infer_fn) { PrintHas1("sbp_signature_infer_fn"); }
+  if (r.has_real_device_infer_fn_) { PrintHas1("device_infer_fn"); }
+  if (r.input_arg_modify_fn) { PrintHas1("input_arg_modify_fn"); }
+  if (r.output_arg_modify_fn) { PrintHas1("output_arg_modify_fn"); }
+  if (r.output_blob_time_shape_infer_fn) { PrintHas1("output_blob_time_shape_infer_fn"); }
+  if (r.nd_sbp_infer_fn) { PrintHas1("nd_sbp_infer_fn"); }
+}
+void PrintBasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& r) {
+  PrintAdvancedHasFns(r);
+}
+
+void PrintBasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
+  PrintAdvancedHasFns(r);
+}
+
+void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (HasBaseOp(r.op_type_name)) {
+    if (HasOneFlow_BasicBaseOpHasFn(r)) {
+      PrintBasicBaseOpHasFn(r);
+      return;
+    }
+    if (HasOneFlow_BasicBaseOpHasFnWithCheck(r)) {
+      PrintBasicBaseOpHasFnWithCheck(r);
+      return;
+    }
+  }
+  if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
+  if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
+  if (r.physical_tensor_desc_infer_fn) { PrintHas1("physical_tensor_desc_infer_fn"); }
+  if (r.get_sbp_fn) { PrintHas1("get_sbp_fn"); }
+  if (r.data_type_infer_fn) { PrintHas1("data_type_infer_fn"); }
+  PrintAdvancedHasFns(r);
+}
+
+bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
+  const bool has_base_class = IsIdempotentOp(r.op_type_name) || IsInvolutionOp(r.op_type_name)
+                              || IsAdaptivePoolOp(r.op_type_name) || IsPoolOp(r.op_type_name);
+  if (has_base_class) { CHECK(HasOneFlow_BasicBaseOpHasFn(r)) << r.op_type_name; }
+  const bool has_base_class_with_check = IsConvOp(r.op_type_name);
+  if (has_base_class_with_check) {
+    CHECK(HasOneFlow_BasicBaseOpHasFnWithCheck(r)) << r.op_type_name;
+  }
+  return (has_base_class || has_base_class_with_check) && !r.no_grad && !r.cpu_only_supported
+         && r.same_output_regst_num == -1;
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -442,7 +517,7 @@ void PrintReturnStaticVal(const std::string& type, const std::string& func_name,
   std::cout << "    static const " + type + "* " + func_name + "() { static " + type + " val(" + val
                    + "); return &val; }\n";
 }
-void PrintExtraClassDeclaration(const oneflow::UserOpDef& op_def) {
+void PrintExtraClassDeclaration(const ::oneflow::UserOpDef& op_def) {
   return;
   std::cout << "  let extraClassDeclaration = [{"
             << "\n";
@@ -463,7 +538,7 @@ void PrintHasCanonicalizer(const std::string& op_name) {
   }
 }
 
-void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
+void PrintTraitAttrs(const ::oneflow::UserOpDef& op_def) {
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
   const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes || need_result_segment_sizes) {
@@ -479,18 +554,37 @@ void PrintTraitAttrs(const oneflow::UserOpDef& op_def) {
   }
 }
 
-bool IsUnaryOp(const oneflow::user_op::OpRegistryResult& r) {
+bool IsUnaryOp(const ::oneflow::user_op::OpRegistryResult& r) {
   return NumMultipleVariadic(r.op_def.input()) == 0 && NumMultipleVariadic(r.op_def.output()) == 0
          && r.op_def.input().size() == 1 && r.op_def.output().size() == 1;
 }
 
-bool IsBinaryOp(const oneflow::user_op::OpRegistryResult& r) {
+bool IsBinaryOp(const ::oneflow::user_op::OpRegistryResult& r) {
   return NumMultipleVariadic(r.op_def.input()) == 0 && NumMultipleVariadic(r.op_def.output()) == 0
          && r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
 }
 
-void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
-  const oneflow::UserOpDef& op_def = r.op_def;
+void PrintNoGrad(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.no_grad) {
+    std::cout << "  let no_grad = 1;"
+              << "\n";
+  }
+}
+void PrintIsCpuOnly(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.cpu_only_supported) {
+    std::cout << "  let cpu_only = 1;"
+              << "\n";
+  }
+}
+void PrintSameOutputRegstNum(const ::oneflow::user_op::OpRegistryResult& r) {
+  if (r.same_output_regst_num != -1) {
+    std::cout << "  let same_output_regst_num = " << r.same_output_regst_num << ";"
+              << "\n";
+  }
+}
+
+void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
+  const ::oneflow::UserOpDef& op_def = r.op_def;
   // TODO: handle in out size/optional
   // TODO: handle "," in last element
   std::cout << "{"
@@ -537,6 +631,10 @@ void PrintBody(const oneflow::user_op::OpRegistryResult& r) {
   PrintTraitAttrs(op_def);
   PrintExtraClassDeclaration(op_def);
   PrintHasCanonicalizer(r.op_type_name);
+  PrintNoGrad(r);
+  PrintIsCpuOnly(r);
+  PrintSameOutputRegstNum(r);
+  PrintHasFn(r);
   std::cout << "}"
             << "\n";
 }
@@ -558,8 +656,8 @@ std::string GetOpClassName(const std::string& op_name) {
   return PostProcessClassName(ret);
 }
 
-std::string GetTraits(const oneflow::user_op::OpRegistryResult& r) {
-  const oneflow::UserOpDef& op_def = r.op_def;
+std::string GetTraits(const ::oneflow::user_op::OpRegistryResult& r) {
+  const ::oneflow::UserOpDef& op_def = r.op_def;
   std::string ret{};
   if (HasSideEffect(r.op_type_name) == false) { ret += "NoSideEffect"; }
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
@@ -587,12 +685,12 @@ bool ShoudSkipOp(const std::string& op_name) { return op_name == "mlir_jit"; }
 void PrintODSFromOpRegistryResults(const std::map<K, V>& results) {
   for (const auto& kv : results) {
     if (ShoudSkipOp(kv.first)) continue;
-    const oneflow::user_op::OpRegistryResult& r = kv.second;
+    const ::oneflow::user_op::OpRegistryResult& r = kv.second;
     auto op_class_name = GetOpClassName(kv.first);
     std::cout << (ShouldGenBaseClass(r.op_type_name) ? "class" : "def") << " OneFlow_"
               << op_class_name << "Op : " << GetBaseOp(r.op_type_name) << "<\"" << kv.first
               << "\", [" + GetTraits(r) + "]> ";  // TODO: add traits
-    if (ShouldGenEmptyBody(r.op_type_name)) {
+    if (ShouldGenEmptyBody(r)) {
       std::cout << "{}\n";
     } else {
       PrintBody(r);
@@ -639,7 +737,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
                             std::map<std::string, std::map<K, V>>& groups) {
   for (const auto& kv : results) {
     std::string group_name = "MISC";
-    const oneflow::user_op::OpRegistryResult& r = kv.second;
+    const ::oneflow::user_op::OpRegistryResult& r = kv.second;
     if (IsUnaryOp(r)) { group_name = "Unary"; }
     if (IsBinaryOp(r)) { group_name = "Binary"; }
     if (IsImageOp(r.op_type_name)) { group_name = "Image"; }
@@ -690,11 +788,8 @@ int main(int argc, char* argv[]) {
   std::streambuf* fileBuf = of.rdbuf();
   std::cout.rdbuf(fileBuf);
 
-  using K = std::string;
-  using V = user_op::OpRegistryResult;
-
   std::map<K, V> sorted{};
-  auto unordered = user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
+  auto unordered = ::oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
   std::transform(unordered.begin(), unordered.end(), std::inserter(sorted, sorted.end()),
                  [](const std::pair<K, V>& p) { return p; });
   std::map<std::string, std::map<K, V>> groups;

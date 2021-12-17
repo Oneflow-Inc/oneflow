@@ -137,23 +137,9 @@ class DeConvBaseFunctor {
     ctx->set_output_padding(output_padding);
     ctx->set_strides(strides);
     ctx->set_dilation_rate(dilation);
+    ctx->set_groups(groups);
     ctx->set_data_format(data_format);
-    std::shared_ptr<one::Tensor> deconv_out = nullptr;
-    if (groups == 1) {
-      deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, ctx));
-    } else {
-      auto nc = x->dim(1) / groups;
-      auto split_x = JUST(functional::Split(x, nc, 1));
-      auto split_weight = JUST(functional::Split(weight, nc, 0));
-      one::TensorTuple split_out;
-      for (int i = 0; i < groups; i++) {
-        const std::shared_ptr<one::Tensor>& deconv_i = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *deconv_op_, {split_x->at(i), split_weight->at(i)}, ctx));
-        split_out.emplace_back(deconv_i);
-      }
-      deconv_out = JUST(functional::Concat(split_out, 1));
-    }
-
+    auto deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, ctx));
     if (bias) {
       return BiasAdd(deconv_out, JUST(bias), 1);
     } else {
@@ -172,6 +158,15 @@ class DeConv1dFunctor : public DeConvBaseFunctor<DeConv1dFunctor> {
   DeConv1dFunctor() : DeConvBaseFunctor<DeConv1dFunctor>() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class DeConv2dFunctor : public DeConvBaseFunctor<DeConv2dFunctor> {
+ public:
+  using ContextT = Deconv2DOpInterpCtxImpl<schema::Deconv2DOp>;
+  DeConv2dFunctor() {
+    deconv_op_ =
+        CHECK_JUST(one::OpBuilder("deconv2d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
@@ -1821,7 +1816,7 @@ class FusedBiasAddDropoutFunctor {
     mask_ctx->set_seed(gen->current_seed());
     mask_ctx->state = random_mask_like_state;
 
-    float scale = 1.0;
+    float scale = 0.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     auto ctx =
         std::make_shared<FusedBiasAddMaskScaleOpInterpCtxImpl<schema::FusedBiasAddMaskScaleOp>>();
@@ -1928,7 +1923,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     const auto& dropout_mask =
         JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, mask_ctx));
 
-    float dropout_scale = 1.0;
+    float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
     auto ctx = std::make_shared<
         FusedScaleMaskSoftmaxDropoutOpInterpCtxImpl<schema::FusedScaleMaskSoftmaxDropoutOp>>();
@@ -2085,6 +2080,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::Conv3dFunctor>("Conv3d");
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
+  m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");

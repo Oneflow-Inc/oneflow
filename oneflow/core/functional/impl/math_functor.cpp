@@ -590,60 +590,22 @@ class TransposeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
-    CHECK_EQ_OR_RETURN(input->ndim(), permute.size()) << "number of dims don't match in permute";
-    int32_t ndims = input->shape()->NumAxes();
-    for (int i = 0; i < permute.size(); i++) {
-      int32_t dim = permute.at(i);
-      if (dim < 0) { dim += ndims; }
-      CHECK_GE_OR_RETURN(dim, 0)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
-          << ndims << " ] but got " << ndims;
-      CHECK_LT_OR_RETURN(dim, ndims)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndims << ","
-          << ndims << " ] but got " << ndims;
+    MutableAttrMap attrs;
+    auto ndim = input->ndim();
+    CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
+
+    // handle negative permute value here, because of permute is const,
+    // so copy it to local var and do modification.
+    auto positive_perm = permute;
+    for (auto i = 0; i < positive_perm.size(); i++) {
+      if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
+      CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+          << ndim << " ) but got " << positive_perm[i];
     }
-    auto ctx = std::make_shared<TransposeOpInterpCtxImpl<schema::TransposeOp>>();
-    ctx->set_perm(permute);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
-  }
 
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class EyeFunctor {
- public:
-  EyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device) const {
-    auto ctx = std::make_shared<EyeOpInterpCtxImpl<schema::EyeOp>>();
-    ctx->set_rows(JUST(rows.As<int64_t>()));
-    ctx->set_cols(JUST(cols.value_or(rows).As<int64_t>()));
-    ctx->set_dtype(dtype ? JUST(dtype)->data_type() : DataType::kFloat);
-    ctx->device = device;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class ConsistentEyeFunctor {
- public:
-  ConsistentEyeFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    auto ctx = std::make_shared<EyeOpInterpCtxImpl<schema::EyeOp>>();
-    ctx->set_rows(JUST(rows.As<int64_t>()));
-    ctx->set_cols(JUST(cols.value_or(rows).As<int64_t>()));
-    ctx->set_dtype(dtype ? JUST(dtype)->data_type() : DataType::kFloat);
-    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -686,10 +648,15 @@ class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
-                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     auto ctx = std::make_shared<ArangeOpInterpCtxImpl<schema::ArangeOp>>();
-    const DataType range_dtype = dtype->data_type();
+    DataType range_dtype;
+    if (dtype.has_value()) {
+      range_dtype = dtype->data_type();
+    } else {
+      range_dtype = delta.IsIntegral() ? DType::Int64()->data_type() : DType::Float()->data_type();
+    }
     ctx->set_dtype(range_dtype);
     if (IsIntegralDataType(range_dtype)) {
       ctx->set_integer_start(JUST(start.As<int64_t>()));
@@ -710,7 +677,7 @@ class ArangeFunctor {
 
 class Arange2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     return Arange(Scalar(0), limit, Scalar(1), dtype, device);
   }
@@ -720,10 +687,17 @@ class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
-                           const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     auto ctx = std::make_shared<ArangeOpInterpCtxImpl<schema::ArangeOp>>();
-    const DataType range_dtype = dtype->data_type();
+    DataType range_dtype;
+    if (dtype.has_value()) {
+      range_dtype = dtype->data_type();
+    } else {
+      range_dtype = delta.IsIntegral() ? DType::Int64()->data_type() : DType::Float()->data_type();
+    }
     ctx->set_dtype(range_dtype);
     if (IsIntegralDataType(range_dtype)) {
       ctx->set_integer_start(JUST(start.As<int64_t>()));
@@ -749,6 +723,7 @@ class ConsistentArange2Functor {
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
@@ -1734,8 +1709,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<TransposeFunctor>("Permute");
-  m.add_functor<EyeFunctor>("Eye");
-  m.add_functor<ConsistentEyeFunctor>("ConsistentEye");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");

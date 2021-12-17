@@ -4,8 +4,8 @@
 
 include "OneFlow/OneFlowOps.td"
 
-def IsNotNestedInJit: Constraint<CPred<"(!$0.getDefiningOp()->getParentOfType<FuncOp>()->hasAttr(\"llvm.emit_c_interface\"))">, "">;
-def OutlineMulCast : NativeCodeCall<"OutlineMulCast($_builder, $0, $1)">;
+def IsNotNestedInJit: Constraint<CPred<"($0.getDefiningOp()->getParentOfType<::mlir::oneflow::Job>())">, "">;
+def OutlineMulCast : NativeCodeCall<"::mlir::oneflow::OutlineMulCast($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
 def MulCastPattern : Pat<
   (

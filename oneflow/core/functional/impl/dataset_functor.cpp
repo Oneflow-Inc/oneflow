@@ -15,11 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_interp_ctx_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -91,7 +93,9 @@ class ReadOneRecFunctor {
   Maybe<Tensor> operator()(const std::vector<std::string>& files, const int32_t batch_size,
                            const bool random_shuffle, const std::string& shuffle_mode,
                            const int32_t shuffle_buffer_size, const bool shuffle_after_epoch,
-                           const bool verify_example) const {
+                           const bool verify_example,
+                           const Optional<Symbol<ParallelDesc>>& placement,
+                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp) const {
     auto ctx = std::make_shared<OneRecReaderOpInterpCtxImpl<schema::OneRecReaderOp>>();
     ctx->set_files(files);
     ctx->set_batch_size(batch_size);
@@ -100,6 +104,14 @@ class ReadOneRecFunctor {
     ctx->set_shuffle_buffer_size(shuffle_buffer_size);
     ctx->set_shuffle_after_epoch(shuffle_after_epoch);
     ctx->set_verify_example(verify_example);
+    if (placement.has_value()) {
+      JUST(CheckDeviceIdsIsValid(JUST(placement)));
+      CHECK_OR_RETURN(sbp.has_value())
+          << "placement is not None, but sbp is None. It's not allowed.";
+      ctx->parallel_desc = JUST(placement);
+      ctx->sbp = JUST(GetNdSbp(*JUST(sbp)));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 

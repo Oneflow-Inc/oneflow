@@ -104,6 +104,7 @@ class ConsistentRandFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
@@ -174,6 +175,7 @@ class ConsistentRandNFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = DataType::kFloat;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
@@ -257,6 +259,7 @@ class ConsistentRandIntFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
@@ -289,6 +292,7 @@ class ConsistentRandInt2Functor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp_tuple, dtype, generator,
                              requires_grad);
   }
@@ -326,6 +330,7 @@ class ConsistentRandPermFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto ctx = std::make_shared<RandpermOpInterpCtxImpl<schema::RandpermOp>>();
