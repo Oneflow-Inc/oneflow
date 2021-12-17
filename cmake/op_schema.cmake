@@ -57,11 +57,10 @@ set(GENERATED_OP_SCHEMA_H "${GENERATED_OP_SCHEMA_DIR}/op_generated.h")
 set(GENERATED_OP_SCHEMA_CPP "${GENERATED_OP_SCHEMA_DIR}/op_generated.cpp")
 
 
+set(ONEFLOW_TABLE_GEN_EXE ${LLVM_INSTALL_DIR}/bin/oneflow_tblgen)
 if(LLVM_PROVIDER STREQUAL "in-tree")
-    set(ONEFLOW_TABLE_GEN_EXE "$<TARGET_FILE:oneflow_tblgen>")
-    set(ONEFLOW_TABLE_GEN_TARGET oneflow_tblgen)
+    set(ONEFLOW_TABLE_GEN_TARGET oneflow_tblgen install-oneflow-tblgen install-mlir-headers)
 elseif(LLVM_PROVIDER STREQUAL "install")
-    set(ONEFLOW_TABLE_GEN_EXE ${LLVM_INSTALL_DIR}/bin/oneflow_tblgen)
     set(ONEFLOW_TABLE_GEN_TARGET ${ONEFLOW_TABLE_GEN_EXE})
 endif()
 
