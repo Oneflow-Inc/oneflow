@@ -51,7 +51,7 @@ __device__ int8_t GenMask(curandState* state, const float rate) {
 //   state[id] = localState;
 // }
 
-constexpr int32_t kVecSize = 4;
+constexpr int32_t kVecSize = 8;
 constexpr int32_t kBlockSize = 256;
 
 union RandPack4 {
@@ -61,10 +61,10 @@ union RandPack4 {
 
 template<bool tail>
 __global__ void GenerateGpu(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, 
-                            uint64_t inc_offset, const int64_t elem_cnt, 
-                            const float rate, int64_t n_tail, int8_t* mask, int8_t* tail_mask) {
-  using MaskType = cuda::elementwise::PackType<int8_t, 8>;
-  using MaskPack = cuda::elementwise::Pack<int8_t, 8>;
+                            /*uint64_t inc_offset,*/ const int64_t elem_cnt, 
+                            const float rate, /*int64_t n_tail,*/ int8_t* mask/*, int8_t* tail_mask*/) {
+  using MaskType = cuda::elementwise::PackType<int8_t, kVecSize>;
+  using MaskPack = cuda::elementwise::Pack<int8_t, kVecSize>;
   
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
@@ -73,39 +73,36 @@ __global__ void GenerateGpu(uint64_t seed, one::CUDAGeneratorState* cuda_gen_sta
   RandPack4 rand_uniform_pack4_a;
   RandPack4 rand_uniform_pack4_b;
 
-  for (int64_t linear_index = global_thread_id * 8; linear_index < elem_cnt;
-    linear_index += gridDim.x * blockDim.x * 8) {
+  for (int64_t linear_index = global_thread_id * kVecSize; linear_index < elem_cnt;
+    linear_index += gridDim.x * blockDim.x * kVecSize) {
     rand_uniform_pack4_a.storage = curand_uniform4(&state);
     rand_uniform_pack4_b.storage = curand_uniform4(&state);
 
     MaskPack mask_vec;
     #pragma unroll
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < kVecSize; i++) {
       mask_vec.elem[i] = rand_uniform_pack4_a.elem[i] > rate;
-    }
-    #pragma unroll
-    for (int i = 0; i < 4; i++) {
       mask_vec.elem[i+4] = rand_uniform_pack4_b.elem[i] > rate;
     }
 
     *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
     }
 
-    if (tail && global_thread_id < n_tail) {
-      const float rand_uniform = curand_uniform(&state);
-      const int8_t mask_val = rand_uniform > rate;
-      tail_mask[global_thread_id] = mask_val;
-    }
+    // if (tail && global_thread_id < n_tail) {
+    //   const float rand_uniform = curand_uniform(&state);
+    //   const int8_t mask_val = rand_uniform > rate;
+    //   tail_mask[global_thread_id] = mask_val;
+    // }
 
-    __syncthreads();
+    // __syncthreads();
 
-    if (threadIdx.x == 0) {
-      int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-      if (new_counter == gridDim.x) {
-        cuda_gen_state->dev_counter = 0;           // reset counter to zero
-        cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-      }
-    }
+    // if (threadIdx.x == 0) {
+    //   int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
+    //   if (new_counter == gridDim.x) {
+    //     cuda_gen_state->dev_counter = 0;           // reset counter to zero
+    //     cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
+    //   }
+    // }
 }
 
 }  // namespace
@@ -131,7 +128,7 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   //     curand_states, n, rate, mask);
   printf("Here>>??? \n"); 
   unsigned int grid_size = ComputeGridSize(kBlockSize, elem_cnt);
-  constexpr int pack_size = 8;
+  constexpr int pack_size = kVecSize;
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
@@ -141,19 +138,22 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   uint64_t seed = generator_->current_seed();
   one::CUDAGeneratorState* cuda_gen_state = generator_->cuda_gen_state();
   
-  if (tail) {
-    // If tail, we need generate randnum one more time, so here we add another `1`.
-    inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
-    GenerateGpu<true>
-        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, elem_cnt, rate, n_tail, mask, mask+tail_offset);
-  } else {
-    inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
+  // if (tail) {
+  //   // If tail, we need generate randnum one more time, so here we add another `1`.
+  //   inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
+  //   GenerateGpu<true>
+  //       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //           seed, cuda_gen_state, inc_offset, elem_cnt, rate, n_tail, mask, mask+tail_offset);
+  // } else {
+  //   inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
+  //   GenerateGpu<false>
+  //       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //           seed, cuda_gen_state, inc_offset, elem_cnt, rate, n_tail, mask, mask+tail_offset);
+  // }
+  inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
     GenerateGpu<false>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, elem_cnt, rate, n_tail, mask, mask+tail_offset);
-  }
-
+            seed, cuda_gen_state, /*inc_offset,*/ elem_cnt, rate, /*n_tail, */mask/*, mask+tail_offset*/);
 }
 
 template class RandomMaskGenerator<DeviceType::kCUDA>;
