@@ -40,7 +40,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SmoothL1LossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferPhysicalTensorDesc(ctx);
+  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SmoothL1LossOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);

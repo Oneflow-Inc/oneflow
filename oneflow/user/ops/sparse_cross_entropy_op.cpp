@@ -107,7 +107,7 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
-  return InferDataType(ctx);
+  return oneflow::InferDataType(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyOp::ModifyInputArg(
     GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
@@ -139,7 +139,7 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyMsOp::InferDataType(user_op::InferContext* ctx) {
-  return InferDataType(ctx);
+  return oneflow::InferDataType(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyMsOp::ModifyInputArg(
     GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
