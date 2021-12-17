@@ -57,7 +57,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Attr<std::string>("partitioning", user_op_conf.attr<std::string>("partitioning"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
-    add_ops.push_back(id_shuffle_op.op_conf());
+    OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
+    id_shuffle_new_op_conf.set_stream_name_hint("ID_SHUFFLE");
+    add_ops.push_back(id_shuffle_new_op_conf);
 
     const std::string unique_ids_lbn = id_shuffle_op.output("cur_rank_unique_ids", 0);
     // embedding prefetch op
