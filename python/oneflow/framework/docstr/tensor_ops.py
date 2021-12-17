@@ -102,3 +102,23 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.is_floating_point,
+    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> output = flow.is_floating_point(input)
+        >>> output
+        False
+    """,
+)
