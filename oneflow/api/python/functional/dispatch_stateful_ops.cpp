@@ -89,7 +89,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor("DispatchOfrecordRawDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-                   const std::string name, const Shape& shape, const Symbol<DType>& data_type,
+                   const std::string& name, const Shape& shape, const Symbol<DType>& data_type,
                    bool dim1_varying_length, bool truncate) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("name", name));
@@ -102,7 +102,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchCoinFlip",
       [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability, int64_t seed,
-         bool has_seed, const Optional<Symbol<Device>> device) -> Maybe<Tensor> {
+         bool has_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("probability", JUST(probability.As<float>())));
         JUST(attrs.SetAttr("batch_size", batch_size));
@@ -129,7 +129,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& input, int64_t crop_h,
          int64_t crop_w, float crop_pos_x, float crop_pos_y, const std::vector<float>& mean,
          const std::vector<float>& std, const Symbol<DType>& output_dtype,
-         const std::string output_layout, const std::string color_space) -> Maybe<Tensor> {
+         const std::string& output_layout, const std::string& color_space) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("color_space", color_space));
         JUST(attrs.SetAttr("output_layout", output_layout));
@@ -147,7 +147,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& input, int64_t crop_h,
          int64_t crop_w, float crop_pos_x, float crop_pos_y, const std::vector<float>& mean,
          const std::vector<float>& std, const Symbol<DType>& output_dtype,
-         const std::string output_layout, const std::string color_space) -> Maybe<Tensor> {
+         const std::string& output_layout, const std::string& color_space) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("color_space", color_space));
         JUST(attrs.SetAttr("output_layout", output_layout));
@@ -163,7 +163,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchOfrecordImageDecoderRandomCrop",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-         const std::string name, const std::string color_space,
+         const std::string& name, const std::string& color_space,
          const std::vector<float>& random_area, const std::vector<float>& random_aspect_ratio,
          int32_t num_attempts, int64_t seed, bool has_seed) -> Maybe<Tensor> {
         MutableAttrMap attrs;
@@ -178,14 +178,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor("DispatchOfrecordImageDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-                   const std::string name, const std::string color_space) -> Maybe<Tensor> {
+                   const std::string& name, const std::string& color_space) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("name", name));
                   JUST(attrs.SetAttr("color_space", color_space));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor("DispatchImageDecoderRandomCropResize",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    int64_t target_width, int64_t target_height, int64_t seed, int64_t num_workers,
                    int64_t max_num_pixels, float random_area_min, float random_area_max,
                    float random_aspect_ratio_min, float random_aspect_ratio_max,
@@ -206,7 +206,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 });
   m.add_functor(
       "DispatchTensorBufferToListOfTensorsV2",
-      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
          const std::vector<Shape>& out_shapes, const std::vector<Symbol<DType>>& out_dtypes,
          bool dynamic_out) -> Maybe<TensorTuple> {
         MutableAttrMap attrs;
@@ -220,9 +220,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
       });
   m.add_functor("DispatchImageResizeKeepAspectRatio",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    int32_t target_size, int32_t min_size, int32_t max_size, bool resize_longer,
-                   const std::string interpolation_type) -> Maybe<TensorTuple> {
+                   const std::string& interpolation_type) -> Maybe<TensorTuple> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("target_size", target_size));
                   JUST(attrs.SetAttr("min_size", min_size));
@@ -232,10 +232,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
                 });
   m.add_functor("DispatchImageResizeToFixed",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    int64_t target_width, int64_t target_height, int64_t channels,
                    const Symbol<DType>& data_type,
-                   const std::string interpolation_type) -> Maybe<TensorTuple> {
+                   const std::string& interpolation_type) -> Maybe<TensorTuple> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("target_width", target_width));
                   JUST(attrs.SetAttr("target_height", target_height));
@@ -245,7 +245,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
                 });
   m.add_functor("DispatchImageNormalize",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::vector<float>& mean, const std::vector<float>& std) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("std", std));
@@ -254,8 +254,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 });
   m.add_functor(
       "DispatchCOCOReader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string image_dir,
-         const std::string annotation_file, int64_t batch_size, bool shuffle_after_epoch,
+      [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
+         const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
          int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
          bool stride_partition, int64_t session_id,
          const Optional<Symbol<Device>>& device) -> Maybe<TensorTuple> {
@@ -274,8 +274,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor(
       "DispatchCOCOReader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string image_dir,
-         const std::string annotation_file, int64_t batch_size, bool shuffle_after_epoch,
+      [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
+         const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
          int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
          bool stride_partition, int64_t session_id, const Symbol<ParallelDesc>& placement,
          const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
@@ -296,7 +296,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor(
       "DispatchImageBatchAlign",
-      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input, int32_t alignment,
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input, int32_t alignment,
          const Shape& shape, const Symbol<DType>& data_type, bool dynamic_out) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("shape", shape));
@@ -306,15 +306,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
       });
   m.add_functor("DispatchOfrecordBytesDecoder",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
-                   const std::string name) -> Maybe<Tensor> {
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
+                   const std::string& name) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("name", name));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
       "DispatchMegatronGptMmapDataLoader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string data_file_prefix, int64_t seq_length,
+      [](const std::shared_ptr<OpExpr>& op, const std::string& data_file_prefix, int64_t seq_length,
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
          const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
          int64_t random_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
@@ -333,7 +333,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor(
       "DispatchMegatronGptMmapDataLoader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string data_file_prefix, int64_t seq_length,
+      [](const std::shared_ptr<OpExpr>& op, const std::string& data_file_prefix, int64_t seq_length,
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
          const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
          int64_t random_seed, const Symbol<ParallelDesc>& placement,
