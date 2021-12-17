@@ -165,7 +165,7 @@ Maybe<void> GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_ty
     return InferLogicalTensorDesc(ctx);                                                         \
   }                                                                                             \
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {               \
-    return InferDataType(ctx);                                                                  \
+    return oneflow::InferDataType(ctx);                                                         \
   }                                                                                             \
   /*static*/ Maybe<void> op_name##Op::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, \
                                                      const user_op::UserOpConfWrapper&) {       \
