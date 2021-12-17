@@ -52,7 +52,8 @@ __device__ int8_t GenMask(curandState* state, const float rate) {
 // }
 
 constexpr int32_t kVecSize = 8;
-constexpr int32_t kBlockSize = 256;
+// constexpr int32_t kBlockSize = 256;
+constexpr int32_t kBlockSize = 128;
 
 union RandPack4 {
   float4 storage;
@@ -127,7 +128,9 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   // GenerateGpu<<<block_num_final, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
   //     curand_states, n, rate, mask);
   printf("Here>>??? \n"); 
-  unsigned int grid_size = ComputeGridSize(kBlockSize, elem_cnt);
+  // unsigned int grid_size = ComputeGridSize(kBlockSize, elem_cnt);
+  unsigned int grid_size = 108;
+
   constexpr int pack_size = kVecSize;
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
