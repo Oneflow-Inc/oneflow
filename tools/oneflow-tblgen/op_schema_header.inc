@@ -87,7 +87,7 @@ class {{opname}} : public oneflow::{{opname}} {
 
   {% endfor -%}
 
-  Maybe<AttrVal> GetAttr(const std::string& attr_name) const;
+  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override;
 
  private:
   {% for name, attr in op.attrs -%}
