@@ -56,7 +56,7 @@ if(NOT llvm_monorepo_POPULATED)
   if(WITH_MLIR)
     set(INSTALL_ALL "install")
   endif()
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target ${INSTALL_ALL} install-oneflow-tblgen
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target ${INSTALL_ALL} install-oneflow-tblgen install-mlir-headers
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret
   )
