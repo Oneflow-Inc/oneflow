@@ -94,11 +94,12 @@ class OFRecordReader(Module):
                 self._op,
                 data_dir=self.ofrecord_dir,
                 data_part_num=self.data_part_num,
-                batch_size=self.batch_size,
                 part_name_prefix=self.part_name_prefix,
+                part_name_suffix_length=self.part_name_suffix_length,
+                batch_size=self.batch_size,
+                shuffle_buffer_size=self.shuffle_buffer_size,
                 random_shuffle=self.random_shuffle,
                 shuffle_after_epoch=self.shuffle_after_epoch,
-                part_name_suffix_length=self.part_name_suffix_length,
                 seed=self.seed,
                 sbp=self.sbp,
                 placement=self.placement,
@@ -108,11 +109,12 @@ class OFRecordReader(Module):
                 self._op,
                 data_dir=self.ofrecord_dir,
                 data_part_num=self.data_part_num,
-                batch_size=self.batch_size,
                 part_name_prefix=self.part_name_prefix,
+                part_name_suffix_length=self.part_name_suffix_length,
+                batch_size=self.batch_size,
+                shuffle_buffer_size=self.shuffle_buffer_size,
                 random_shuffle=self.random_shuffle,
                 shuffle_after_epoch=self.shuffle_after_epoch,
-                part_name_suffix_length=self.part_name_suffix_length,
                 seed=self.seed,
                 device=self.device,
             )
@@ -292,6 +294,7 @@ class CropMirrorNormalize(Module):
                 )
             else:
                 res = _C.dispatch_crop_mirror_normalize_from_uint8(
+                    self._op_uint8_no_mirror,
                     input,
                     color_space=self.color_space,
                     output_layout=self.output_layout,
@@ -307,8 +310,7 @@ class CropMirrorNormalize(Module):
             if mirror is not None:
                 res = _C.dispatch_crop_mirror_normalize_from_tensorbuffer(
                     self._op_buffer_with_mirror,
-                    input,
-                    mirror,
+                    (input, mirror),
                     color_space=self.color_space,
                     output_layout=self.output_layout,
                     mean=self.mean,
@@ -321,8 +323,8 @@ class CropMirrorNormalize(Module):
                 )
             else:
                 res = _C.dispatch_crop_mirror_normalize_from_tensorbuffer(
-                    self._op_buffer_with_mirror,
-                    input,
+                    self._op_buffer_no_mirror,
+                    (input,),
                     color_space=self.color_space,
                     output_layout=self.output_layout,
                     mean=self.mean,

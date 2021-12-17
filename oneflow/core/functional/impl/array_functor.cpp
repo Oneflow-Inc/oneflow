@@ -2404,10 +2404,10 @@ class TensorBufferToTensorFunctor {
     op_ = CHECK_JUST(one::OpBuilder("tensor_buffer_to_tensor").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Shape& instance_shape,
-                           const DataType& dtype) const {
+                           const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("instance_shape", instance_shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -2436,13 +2436,13 @@ class GenTensorBufferFunctor {
     op_ = CHECK_JUST(one::OpBuilder("gen_tensor_buffer").Output("out").Build());
   }
   Maybe<Tensor> operator()(const Shape& shape, const std::vector<Shape>& shape_list,
-                           const std::vector<float>& value_list, const DataType& data_type,
+                           const std::vector<float>& value_list, const Symbol<DType>& dtype,
                            bool dynamic_out) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<std::vector<Shape>>("shape_list", shape_list));
     JUST(attrs.SetAttr<std::vector<float>>("value_list", value_list));
-    JUST(attrs.SetAttr<DataType>("data_type", data_type));
+    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
     JUST(attrs.SetAttr<bool>("dynamic_out", dynamic_out));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
