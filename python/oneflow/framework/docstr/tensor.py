@@ -374,6 +374,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.split,
+    """
+    See :func:`oneflow.split`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`

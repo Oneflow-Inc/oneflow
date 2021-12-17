@@ -1044,24 +1044,13 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
     const intrusive::shared_ptr<LocalDepObject>& compute_local_dep_object,
     const std::string& modifier, Symbol<Device> op_device) {
   if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
-
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
-
-  {
-    const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
-        compute_local_dep_object, modifier);
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-        Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
-        parallel_desc, phy_instr_operand);
-    instruction_list_->EmplaceBack(std::move(instruction));
-  }
-  {
-    const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
-        compute_local_dep_object, modifier);
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-        Global<VirtualMachine>::Get()->mut_vm(), "Touch", parallel_desc, phy_instr_operand);
-    instruction_list_->EmplaceBack(std::move(instruction));
-  }
+  const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
+      compute_local_dep_object, modifier);
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
+      parallel_desc, phy_instr_operand);
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
