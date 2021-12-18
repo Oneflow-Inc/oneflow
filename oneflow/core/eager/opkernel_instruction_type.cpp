@@ -899,8 +899,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           return Maybe<void>::Ok();
         }));
 
-    // if (oneflow::DTRDebugEnabled()) {
-    if (true) {
+    if (oneflow::DTRDebugEnabled()) {
       std::cout << "prepare ok for " << operand->opkernel().op_type_name() << std::endl;
       std::cout << "===============================" << std::endl;
     }
@@ -974,7 +973,9 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           return Maybe<void>::Ok();
         }));
 
-    CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+    if (oneflow::DTRDebugLevel() >= 3) {
+      JUST(Global<one::DTRTensorPool>::Get()->display2());
+    }
 
     // Display info of current tensor pool
     // if (oneflow::DTRDebugEnabled()) { JUST(Global<one::DTRTensorPool>::Get()->display()); }
@@ -990,8 +991,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   }
 
   static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
-    // if (oneflow::DTRDebugEnabled()) {
-    if (true) {
+    if (oneflow::DTRDebugEnabled()) {
       std::cout << "going to recompute "
                 << object->compute_op()->shared_opkernel()->user_op_conf_->op_type_name() << " for "
                 << object << ", whose dptr is " << object->blob().dptr()
@@ -1068,7 +1068,9 @@ void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) con
     CHECK_OK(DTRLocalCallOpKernelUtil::UpdateTensorInfo(instruction));
     auto operand =
         CHECK_JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
-    std::cout << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
+    if (oneflow::DTRDebugLevel() >= 1) {
+      std::cout << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
+    }
   } else {
     CHECK_OK(EagerLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));
