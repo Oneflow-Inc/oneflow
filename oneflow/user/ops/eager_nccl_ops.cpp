@@ -43,7 +43,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Device>> EagerNcclAllReduceOp::InferDevice(
     user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+  return DeviceInferFn<&IsAsyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
