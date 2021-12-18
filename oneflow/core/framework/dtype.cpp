@@ -147,7 +147,6 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 
 Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
   const Symbol<DType> iv = CHECK_JUST(DType::Get(DataType::kInvalidDataType));
-  const Symbol<DType> b1 = CHECK_JUST(DType::Get(DataType::kBool));
   const Symbol<DType> c1 = CHECK_JUST(DType::Get(DataType::kChar));
   const Symbol<DType> f4 = CHECK_JUST(DType::Get(DataType::kFloat));
   const Symbol<DType> f8 = CHECK_JUST(DType::Get(DataType::kDouble));
