@@ -29,7 +29,9 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> CastToTickOp::GetSbp(user_op::SbpContext* ctx) { ADD_CODE_HERE; }
+/* static */ Maybe<void> CastToTickOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
 
 /* static */ Maybe<void> CastToTickOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
