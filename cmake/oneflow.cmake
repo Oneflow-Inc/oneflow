@@ -104,7 +104,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/common/.*\\.(h|cpp)$")
-    list(APPEND of_common_obj_cc ${oneflow_single_file})
+    list(APPEND of_api_common_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -285,11 +285,11 @@ if (BUILD_CUDA)
 endif()
 
 # oneflow api common
-oneflow_add_library(of_common_obj ${of_common_obj_cc})
-set(of_common_libs -Wl,--whole-archive of_common_obj -Wl,--no-whole-archive)
-target_link_libraries(of_common_obj oneflow)
+oneflow_add_library(of_api_common_obj ${of_api_common_cc})
+set(of_api_common_lib -Wl,--whole-archive of_api_common_obj -Wl,--no-whole-archive)
+target_link_libraries(of_api_common_obj oneflow)
 if (WITH_MLIR)
-  target_link_libraries(of_common_obj ${ONEFLOW_MLIR_LIBS})
+  target_link_libraries(of_api_common_obj ${ONEFLOW_MLIR_LIBS})
 endif()
 
 if(BUILD_PYTHON)
@@ -312,7 +312,7 @@ if(BUILD_PYTHON)
   target_link_libraries(oneflow_internal PRIVATE
                         ${of_libs}
                         of_functional_tensor_obj
-                        ${of_common_libs}
+                        ${of_api_common_lib}
                         ${oneflow_third_party_libs}
                         of_pyext_obj
                         ${oneflow_exe_third_party_libs})
@@ -354,7 +354,7 @@ if (BUILD_CPP_API)
     oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
   endif()
   set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
-  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} ${of_common_libs} ${oneflow_third_party_libs})
+  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} ${of_api_common_lib} ${oneflow_third_party_libs})
 endif()
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
