@@ -257,7 +257,7 @@ REGISTER_USER_OP("where")
     .SetInputArgModifyFn(GetWhereInputArgModify)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype) || IsBoolDataType(cond_dtype));
       const DataType& x_dtype = ctx->InputDType("x", 0);
       CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
       *ctx->OutputDType("out", 0) = x_dtype;
@@ -271,13 +271,15 @@ REGISTER_USER_OP("where_scalar_x")
     .Output("out")
     .Attr<bool>("has_int_operand")
     .Attr<bool>("has_float_operand")
+    .Attr<bool>("has_bool_operand")
     .Attr<int64_t>("int_operand")
     .Attr<double>("float_operand")
+    .Attr<bool>("bool_operand")
     .SetTensorDescInferFn(InferWhereXScalarTensorDesc)
     .SetInputArgModifyFn(GetWhereInputArgModify)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype) || IsBoolDataType(cond_dtype));
       const DataType& y_dtype = ctx->InputDType("y", 0);
       if (ctx->Attr<bool>("has_int_operand")) {
         CHECK_EQ_OR_RETURN(y_dtype, GetDataType<int64_t>::value)
@@ -285,6 +287,9 @@ REGISTER_USER_OP("where_scalar_x")
       } else if (ctx->Attr<bool>("has_float_operand")) {
         CHECK_EQ_OR_RETURN(y_dtype, GetDataType<double>::value)
             << "expected scalar type " << GetDataType<double>::value << "but found " << y_dtype;
+      } else if (ctx->Attr<bool>("has_bool_operand")) {
+        CHECK_EQ_OR_RETURN(y_dtype, GetDataType<bool>::value)
+            << "expected scalar type " << GetDataType<bool>::value << "but found " << y_dtype;
       }
       *ctx->OutputDType("out", 0) = y_dtype;
       return Maybe<void>::Ok();
@@ -297,20 +302,25 @@ REGISTER_USER_OP("where_scalar_y")
     .Output("out")
     .Attr<bool>("has_int_operand")
     .Attr<bool>("has_float_operand")
+    .Attr<bool>("has_bool_operand")
     .Attr<int64_t>("int_operand")
     .Attr<double>("float_operand")
+    .Attr<bool>("bool_operand")
     .SetTensorDescInferFn(InferWhereYScalarTensorDesc)
     .SetInputArgModifyFn(GetWhereInputArgModify)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype) || IsBoolDataType(cond_dtype));
       const DataType& x_dtype = ctx->InputDType("x", 0);
       if (ctx->Attr<bool>("has_int_operand")) {
         CHECK_EQ_OR_RETURN(x_dtype, GetDataType<int64_t>::value)
-            << "expected scalar type " << x_dtype << "but found " << GetDataType<int64_t>::value;
+            << "expected scalar type " << GetDataType<int64_t>::value << "but found " << x_dtype;
       } else if (ctx->Attr<bool>("has_float_operand")) {
         CHECK_EQ_OR_RETURN(x_dtype, GetDataType<double>::value)
-            << "expected scalar type " << x_dtype << "but found " << GetDataType<double>::value;
+            << "expected scalar type " << GetDataType<double>::value << "but found " << x_dtype;
+      } else if (ctx->Attr<bool>("has_bool_operand")) {
+        CHECK_EQ_OR_RETURN(x_dtype, GetDataType<bool>::value)
+            << "expected scalar type " << GetDataType<bool>::value << "but found " << x_dtype;
       }
       *ctx->OutputDType("out", 0) = x_dtype;
       return Maybe<void>::Ok();
@@ -320,20 +330,26 @@ REGISTER_USER_OP("where_scalar_y")
 REGISTER_NO_GRAD_USER_OP("where_scalar_xy")
     .Input("condition")
     .Output("out")
+    .Attr<bool>("has_x_bool_operand")
     .Attr<bool>("has_x_int_operand")
     .Attr<bool>("has_x_float_operand")
+    .Attr<bool>("has_y_bool_operand")
     .Attr<bool>("has_y_int_operand")
     .Attr<bool>("has_y_float_operand")
+    .Attr<bool>("x_bool_operand")
     .Attr<int64_t>("x_int_operand")
     .Attr<double>("x_float_operand")
+    .Attr<bool>("y_bool_operand")
     .Attr<int64_t>("y_int_operand")
     .Attr<double>("y_float_operand")
     .SetTensorDescInferFn(InferWhereXYScalarTensorDesc)
     .SetInputArgModifyFn(GetWhereInputArgModify)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
+      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype) || IsBoolDataType(cond_dtype));
+      if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
+        *ctx->OutputDType("out", 0) = GetDataType<bool>::value;
+      } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
         *ctx->OutputDType("out", 0) = GetDataType<int64_t>::value;
       } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
         *ctx->OutputDType("out", 0) = GetDataType<double>::value;

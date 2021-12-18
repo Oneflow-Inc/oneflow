@@ -59,7 +59,8 @@ struct TwoStageReduceKernelUtil<DeviceType::kCUDA, T, K> {
   template struct TwoStageReduceKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type_pair), \
                                            OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA,
-                                 FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
 #undef INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

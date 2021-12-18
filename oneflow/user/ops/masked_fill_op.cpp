@@ -21,14 +21,13 @@ namespace {
 
 Maybe<void> InferMaskedFillTensorDesc(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  const Shape& x_shape = ctx->InputShape("x", 0);
   *ctx->OutputShape("out", 0) = mask_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferMaskedFillDataType(user_op::InferContext* ctx) {
   const DataType& mask_dtype = ctx->InputDType("mask", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(mask_dtype));
+  CHECK_OR_RETURN(IsIntegralDataType(mask_dtype) || IsBoolDataType(mask_dtype));
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
@@ -79,8 +78,10 @@ REGISTER_USER_OP("masked_fill")
     .Output("out")
     .Attr<bool>("has_int_operand")
     .Attr<bool>("has_float_operand")
+    .Attr<bool>("has_bool_operand")
     .Attr<int64_t>("int_operand")
     .Attr<double>("float_operand")
+    .Attr<bool>("bool_operand")
     .SetTensorDescInferFn(InferMaskedFillTensorDesc)
     .SetInputArgModifyFn(GetMaskedFillInputArgModify)
     .SetDataTypeInferFn(InferMaskedFillDataType)

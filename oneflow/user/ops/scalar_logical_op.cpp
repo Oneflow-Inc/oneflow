@@ -39,7 +39,7 @@ namespace oneflow {
         return Maybe<void>::Ok();                                                     \
       })                                                                              \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
-        *ctx->OutputDType("out", 0) = DataType::kInt8;                                \
+        *ctx->OutputDType("out", 0) = DataType::kBool;                                \
         return Maybe<void>::Ok();                                                     \
       });
 

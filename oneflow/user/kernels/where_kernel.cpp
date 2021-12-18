@@ -78,8 +78,10 @@ class WhereScalarXKernel final : public user_op::OpKernel {
       scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
     } else if (ctx->Attr<bool>("has_float_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else if (ctx->Attr<bool>("has_bool_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<bool>("bool_operand"));
     } else {
-      UNIMPLEMENTED() << "The scalar in Where should be float or int.";
+      UNIMPLEMENTED() << "The scalar in Where should be bool, float or int.";
     }
     if (!(y->shape() == cond->shape())) {
       size_t num_axes = out->shape().NumAxes();
@@ -121,8 +123,10 @@ class WhereScalarYKernel final : public user_op::OpKernel {
       scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
     } else if (ctx->Attr<bool>("has_float_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else if (ctx->Attr<bool>("has_bool_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<bool>("bool_operand"));
     } else {
-      UNIMPLEMENTED() << "The scalar in Where should be float or int";
+      UNIMPLEMENTED() << "The scalar in Where should be bool, float or int";
     }
     if (!(x->shape() == cond->shape())) {
       size_t num_axes = out->shape().NumAxes();
@@ -166,8 +170,11 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
     } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
       x_scalar_operand = static_cast<T>(ctx->Attr<double>("x_float_operand"));
       y_scalar_operand = static_cast<T>(ctx->Attr<double>("y_float_operand"));
+    } else if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
+      x_scalar_operand = static_cast<T>(ctx->Attr<bool>("x_bool_operand"));
+      y_scalar_operand = static_cast<T>(ctx->Attr<bool>("y_bool_operand"));
     } else {
-      UNIMPLEMENTED() << "The scalar in Where should be float or int";
+      UNIMPLEMENTED() << "The scalar in Where should be bool, float or int";
     }
     WhereKernelUtil<device_type, T, CondT>::WhereXYScalar(ctx->stream(), out->shape().elem_cnt(),
                                                           cond->dptr<CondT>(), x_scalar_operand,
@@ -234,23 +241,27 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ,
-                                 INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_X_KERNEL, DEVICE_TYPE_SEQ,
                                  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64),
-                                 INT_DATA_TYPE_SEQ)
+                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+                                         BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_Y_KERNEL, DEVICE_TYPE_SEQ,
                                  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64),
-                                 INT_DATA_TYPE_SEQ)
+                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+                                         BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_SCALAR_XY_KERNEL, DEVICE_TYPE_SEQ,
                                  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
-                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64),
-                                 INT_DATA_TYPE_SEQ)
+                                     OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+                                         BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, (DeviceType::kCUDA), FLOAT16_DATA_TYPE_SEQ,
-                                 INT_DATA_TYPE_SEQ)
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #endif
 
 }  // namespace oneflow
