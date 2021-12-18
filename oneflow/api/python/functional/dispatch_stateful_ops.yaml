@@ -34,8 +34,8 @@
 
 - name: "dispatch_ofrecord_reader"
   signature: [
-      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Int64 seed, Device device=None) => DispatchOFRecordReader",
-      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Int64 seed, Placement placement, Sbp sbp) => DispatchOFRecordReader",
+      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Int64 seed, Device device=None) => DispatchOfrecordReader",
+      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix, Int32 part_name_suffix_length, Int32 batch_size, Int32 shuffle_buffer_size, Bool random_shuffle, Bool shuffle_after_epoch, Int64 seed, Placement placement, Sbp sbp) => DispatchOfrecordReader",
   ]
   bind_python: True
 
