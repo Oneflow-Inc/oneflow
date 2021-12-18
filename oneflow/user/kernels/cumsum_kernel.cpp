@@ -45,6 +45,9 @@ void cumsum_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
   auto njobs = cs_up_space * cs_down_space;
   auto njobs_per_thr = njobs / CPU_NUM;
   if (cs_up_space * cs_down_space % CPU_NUM) njobs_per_thr += 1;
+  // start threads according to CPU number
+  // total jobs number are cs_up_space * cs_down_space
+  // every thread handls ceil(njobs / CPU_NUM) jobs
   for (auto thr_id = 0; thr_id < CPU_NUM; thr_id++) {
     rets[thr_id] = std::async(
         std::launch::async,
