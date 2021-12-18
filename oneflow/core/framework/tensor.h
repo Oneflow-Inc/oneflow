@@ -489,30 +489,33 @@ class MirroredTensor : public TensorIf<MirroredTensor>,
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
+class Holder final {
+ private:
+  std::vector<std::shared_ptr<Holder>> input_holders_;
+  std::shared_ptr<TensorStorage> storage_;
+  std::shared_ptr<vm::EagerBlobObject> ebo_;
+
+ public:
+  Holder(const std::vector<std::shared_ptr<Holder>>& input_holders,
+         const std::shared_ptr<TensorStorage>& storage,
+         const std::shared_ptr<vm::EagerBlobObject>& ebo)
+      : input_holders_(input_holders), storage_(storage), ebo_(ebo) {}
+};
+
 class DTRMirroredTensor final : public MirroredTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
   DTRMirroredTensor() = default;
-  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) : MirroredTensor(impl) {
-  }
-  ~DTRMirroredTensor() {
-    if (oneflow::DTRDebugEnabled()) {
-    std::cout << "destruct " << this << ", ebo: " << CHECK_JUST(eager_blob_object()).get() << std::endl;
-    }
-  }
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl)
+      : MirroredTensor(impl) {}
+  ~DTRMirroredTensor() = default;
 
-  void set_tensor_inputs(const TensorTuple& inputs) {
-    if (oneflow::DTRDebugEnabled()) {
-      std::cout << "set inputs of " << this << " (ebo " << CHECK_JUST(eager_blob_object()).get() << ") to ";
-    for (const auto &x : inputs) {
-      std::cout << x.get() << " (ebo " << CHECK_JUST(x->eager_blob_object()).get() << "), ";
-    }
-    std::cout << std::endl;
-    }
-    inputs_ = inputs; }
+  Maybe<void> set_tensor_inputs(const TensorTuple& inputs);
+
+  std::shared_ptr<Holder> holder() const { return holder_; }
 
  private:
-  TensorTuple inputs_;
+  std::shared_ptr<Holder> holder_;
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor>,

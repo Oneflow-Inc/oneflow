@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
@@ -68,6 +69,30 @@ Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
     dtr_eager_blob_object->set_evict_attr(false);
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
+  if (oneflow::DTRDebugEnabled()) {
+    std::cout << "set inputs of " << this << " (ebo " << JUST(eager_blob_object()).get() << ") to ";
+    for (const auto& x : inputs) {
+      std::cout << x.get() << " (ebo " << JUST(x->eager_blob_object()).get() << "), ";
+    }
+    std::cout << std::endl;
+  }
+  std::vector<std::shared_ptr<Holder>> input_holders;
+  for (const auto& x : inputs) {
+    if (auto dtr_mirrored_tensor =
+            std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(x->AsMirroredTensor()))) {
+      const auto& input_holder = dtr_mirrored_tensor->holder();
+      CHECK_NOTNULL_OR_RETURN(input_holder);
+      input_holders.push_back(input_holder);
+    } else {
+      // do nothing
+    }
+  }
+  holder_ =
+      std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
   return Maybe<void>::Ok();
 }
 

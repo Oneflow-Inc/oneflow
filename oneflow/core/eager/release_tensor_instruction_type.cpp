@@ -24,6 +24,40 @@ namespace oneflow {
 
 namespace vm {
 
+void EvictDTRTensorInstructionType::Infer(vm::Instruction* instruction) const { UNIMPLEMENTED(); }
+
+void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr =
+      dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  std::cout << "eager eviction tensor " << ptr->eager_blob_object().get() << " with ref count "
+            << ptr->eager_blob_object().use_count() << std::endl;
+  CHECK_JUST(
+      CHECK_NOTNULL(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()))
+          ->evict());
+}
+
+class CpuEvictDTRTensorInstructionType final : public EvictDTRTensorInstructionType {
+ public:
+  CpuEvictDTRTensorInstructionType() = default;
+  ~CpuEvictDTRTensorInstructionType() override = default;
+  using stream_type = vm::CpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CpuEvictDTRTensorInstructionType>("cpu.EvictDTRTensor"));
+
+#ifdef WITH_CUDA
+class GpuEvictDTRTensorInstructionType final : public EvictDTRTensorInstructionType {
+ public:
+  GpuEvictDTRTensorInstructionType() = default;
+  ~GpuEvictDTRTensorInstructionType() override = default;
+  using stream_type = vm::CudaStreamType;
+};
+COMMAND(vm::RegisterInstructionType<GpuEvictDTRTensorInstructionType>("gpu.EvictDTRTensor"));
+#endif
+
 void ReleaseTensorInstructionType::Infer(vm::Instruction* instruction) const { UNIMPLEMENTED(); }
 
 void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
@@ -33,7 +67,8 @@ void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
   const auto* ptr =
       dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  std::cout << "release tensor " << ptr->eager_blob_object().get() << " with ref count " << ptr->eager_blob_object().use_count() << std::endl;
+  std::cout << "release tensor " << ptr->eager_blob_object().get() << " with ref count "
+            << ptr->eager_blob_object().use_count() << std::endl;
   CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
 }
 

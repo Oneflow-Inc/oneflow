@@ -28,6 +28,7 @@ TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buf
     : buffer_(tensor_buffer) {}
 
 TensorStorage::~TensorStorage() {
+  std::cout << "TensorStorage::~TensorStorage()" << std::endl;
   if (!IsShuttingDown() && releaser_hook_) { (*releaser_hook_)(buffer_); }
 }
 

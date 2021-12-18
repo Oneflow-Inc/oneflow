@@ -94,6 +94,16 @@ DTREagerBlobObject::~DTREagerBlobObject() {
   blob_.reset();
 }
 
+Maybe<void> DTREagerBlobObject::evict() {
+  evict_flag_ = true;
+  JUST(DeallocateBlobDataPtr());
+  if (blob_) {
+    blob_->reset_dptr(nullptr);
+  }
+  CHECK_NE_OR_RETURN(is_in_memory(), true);
+  return Maybe<void>::Ok();
+}
+
 void DTREagerBlobObject::clear_invalid_object() {
   if (IsShuttingDown()) { return; }
   CHECK_JUST(Global<one::DTRTensorPool>::Get()->clear());

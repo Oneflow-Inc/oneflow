@@ -28,7 +28,11 @@ void ReleaseTensorArgPhyInstrOperand::ForEachConstMirroredObject(
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  DoEach(nullptr, CHECK_JUST(eager_blob_object_->producer_op_device())->mut_schedule_local_dep_object()->mut_mirrored_object());
+  if (eager_blob_object_->producer_op_device().has_value()) {
+    DoEach(nullptr, CHECK_JUST(eager_blob_object_->producer_op_device())
+                        ->mut_schedule_local_dep_object()
+                        ->mut_mirrored_object());
+  }
   DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object());
 }
 

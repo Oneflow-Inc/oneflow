@@ -22,6 +22,15 @@ namespace oneflow {
 
 namespace vm {
 
+class EvictDTRTensorInstructionType : public vm::InstructionType {
+ public:
+  EvictDTRTensorInstructionType() = default;
+  ~EvictDTRTensorInstructionType() override = default;
+
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
+};
+
 class ReleaseTensorInstructionType : public vm::InstructionType {
  public:
   ReleaseTensorInstructionType() = default;

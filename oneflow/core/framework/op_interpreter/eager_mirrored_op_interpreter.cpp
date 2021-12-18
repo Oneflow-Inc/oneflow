@@ -174,7 +174,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   for (const auto &output : *outputs) {
     if (auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output)) {
-      dtr_output->set_tensor_inputs(inputs);
+      JUST(dtr_output->set_tensor_inputs(inputs));
     }
   }
 

@@ -215,7 +215,7 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override;
-  Maybe<MirroredTensorImpl> detach() const override;
+  virtual Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
@@ -252,6 +252,8 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
 };
 
+class EvictTrigger;
+
 class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DTREagerMirroredTensorImpl);
@@ -260,18 +262,24 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
                              bool requires_grad, bool is_leaf)
       : EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf) {}
   DTREagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                             const std::shared_ptr<TensorStorage> tensor_storage,
-                             bool requires_grad, bool is_leaf)
-      : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf) {}
+                             const std::shared_ptr<TensorStorage>& tensor_storage,
+                             const std::shared_ptr<EvictTrigger>& evict_trigger, bool requires_grad,
+                             bool is_leaf)
+      : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf),
+        evict_trigger_(evict_trigger) {}
   // ~DTREagerMirroredTensorImpl() {}
   ~DTREagerMirroredTensorImpl() override {}
 
+  Maybe<MirroredTensorImpl> detach() const override;
   Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object) override;
   // Maybe<void> InitEagerBlobObjectAndTensorStorage(
   //     const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
   //     const std::shared_ptr<TensorStorage>& tensor_storage);
 
  private:
+  Maybe<void> UpdateEvictTrigger();
+
+  std::shared_ptr<EvictTrigger> evict_trigger_;
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object);
 };
 
