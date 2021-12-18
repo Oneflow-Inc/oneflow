@@ -30,4 +30,4 @@ class AllReduce(Module):
     def forward(self, x):
         assert x.device.type == "cuda"
         assert x.device.index == flow.env.get_local_rank()
-        return _C.dispatch_eager_nccl_all_reduce(self._op, parallel_conf)
+        return flow._C.dispatch_eager_nccl_all_reduce(self._op, parallel_conf)
