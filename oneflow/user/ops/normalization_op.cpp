@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/device/cudnn_util.h"

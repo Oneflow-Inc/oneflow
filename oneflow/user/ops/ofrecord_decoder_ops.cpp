@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/user/image/image_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
