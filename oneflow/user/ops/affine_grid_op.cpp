@@ -20,8 +20,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
-                      const user_op::UserOpConfWrapper& conf) {
+Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
+                       const user_op::UserOpConfWrapper& conf) {
   bool pass_checked = true;
   std::stringstream err;
   err << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name() << ": ";
@@ -96,7 +96,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 
 /* static */ Maybe<void> AffineGridOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                                  const user_op::UserOpConfWrapper& conf) {
-  return CheckAttr(def, conf);
+  return CheckAttr_(def, conf);
 }
 
 /* static */ Maybe<void> AffineGridOp::InferDataType(user_op::InferContext* ctx) {
@@ -131,7 +131,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
 
 /* static */ Maybe<void> AffineGridGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                                      const user_op::UserOpConfWrapper& conf) {
-  return CheckAttr(def, conf);
+  return CheckAttr_(def, conf);
 }
 
 /* static */ Maybe<void> AffineGridGradOp::InferDataType(user_op::InferContext* ctx) {
