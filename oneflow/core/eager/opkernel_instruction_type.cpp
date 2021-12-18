@@ -929,13 +929,6 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
                                              double compute_time = -1.0) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
 
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          // unpin inputs
-          dtr_blob_object->unpin();
-          return Maybe<void>::Ok();
-        }));
-
     // find in_place op and do sth
     bool is_in_place = false;
     auto* op = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
@@ -958,13 +951,23 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       }
     }
 
+    if (!is_in_place) {
+      JUST(
+        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+          // unpin inputs
+          dtr_blob_object->unpin();
+          return Maybe<void>::Ok();
+        }));
+    }
+
     JUST(ForEachDTROutputTensor(
         operand,
         [&](const std::shared_ptr<vm::DTREagerBlobObject>& dtr_blob_object) -> Maybe<void> {
           dtr_blob_object->set_compute_time(compute_time);
+          dtr_blob_object->reset_node(dtr_blob_object->compute_time());
+          dtr_blob_object->reset_pesudo_node();
           // Condition - insert current blob into candidates only when blob memory > threshold (with
           // default 0)
-          dtr_blob_object->reset_node(compute_time);
           if (is_in_place) {
             dtr_blob_object->set_evict_attr(false);
           } else {

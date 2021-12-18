@@ -127,6 +127,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
   could_evict_ = (input_size() > 0) && could_evict_;
 
   node = std::make_shared<DisjNode>(0);
+  pesudo_node = std::make_shared<DisjNode>(0);
 
   return Maybe<void>::Ok();
 }
@@ -271,44 +272,97 @@ Maybe<double> DTREagerBlobObject::neighbor_cost() const {
   return p_cost + c_cost + compute_time_;
 }
 
-Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
-  double cost = 0;
+Maybe<double> DTREagerBlobObject::approx_neighbor_cost() {
+  // double cost = 0;
+  // const auto& inputs = compute_op_->inputs();
+  // for (int i = 0; i < inputs.size(); ++i) {
+  //   if (auto tmp = inputs[i].lock()) {
+  //     auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+  //     CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+  //     if (!dtr_blob_object->is_in_memory()) {
+  //       double p_cost =
+  //           Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+  //           std::cout << "dtr_blob_object->compute_time: " << dtr_blob_object->compute_time() << ", dtr_blob_object->node->compute_time: " << dtr_blob_object->node->compute_time() << std::endl;
+  //           if (p_cost < dtr_blob_object->compute_time()) {
+  //             p_cost = dtr_blob_object->compute_time();
+  //           }
+  //       cost += p_cost;
+  //     }
+  //   }
+  // }
+
+  // const auto& outputs = compute_op_->outputs();
+  // for (int i = 0; i < outputs.size(); ++i) {
+  //   if (auto tmp = outputs[i].lock()) {
+  //     auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+  //     CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+  //     if (!dtr_blob_object->is_in_memory()) {
+  //       double c_cost =
+  //           Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
+  //           if (c_cost < dtr_blob_object->compute_time()) {
+  //             c_cost = dtr_blob_object->compute_time();
+  //           }
+  //       cost += c_cost;
+  //     }
+  //   }
+  // }
+
+  double cost = JUST(update_after_pesudo_evict());
+  return cost;
+}
+
+Maybe<double> DTREagerBlobObject::update_after_pesudo_evict() {
+  std::cout << "Updata nodes after pesudo eviction" << std::endl;
   const auto& inputs = compute_op_->inputs();
+  const auto& outputs = compute_op_->outputs();
   for (int i = 0; i < inputs.size(); ++i) {
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) {
-        double p_cost =
-            Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
-            if (p_cost < dtr_blob_object->compute_time()) {
-              p_cost = dtr_blob_object->compute_time();
-            }
-        cost += p_cost;
+      // condition: obj!=dtr_blob_object - avoids self-merge due to inplace op
+      if (!dtr_blob_object->is_in_memory() && this != dtr_blob_object) {
+        Global<one::DTRTensorPool>::Get()->merge(dtr_blob_object->pesudo_node, pesudo_node);
       }
     }
   }
 
-  const auto& outputs = compute_op_->outputs();
   for (int i = 0; i < outputs.size(); ++i) {
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) {
-        double c_cost =
-            Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
-            if (c_cost < dtr_blob_object->compute_time()) {
-              c_cost = dtr_blob_object->compute_time();
-            }
-        cost += c_cost;
+      if (!dtr_blob_object->is_in_memory() && this!= dtr_blob_object) {
+        Global<one::DTRTensorPool>::Get()->merge(pesudo_node, dtr_blob_object->pesudo_node);
       }
     }
   }
 
-  return cost + compute_time_;
+  double compute_time = pesudo_node->compute_time();
+
+  for (int i = 0; i < inputs.size(); ++i) {
+    if (auto tmp = inputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      // condition: obj!=dtr_blob_object - avoids self-merge due to inplace op
+      if (!dtr_blob_object->is_in_memory() && this != dtr_blob_object) {
+        dtr_blob_object->reset_pesudo_node();
+        }
+    }
+  }
+
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (auto tmp = outputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory() && this != dtr_blob_object) {
+        dtr_blob_object->reset_pesudo_node();
+      }
+    }
+  }
+
+  return compute_time;
 }
 
-Maybe<double> DTREagerBlobObject::cost() const {
+Maybe<double> DTREagerBlobObject::cost() {
   const double n_cost = Global<DTRConfig>::Get()->use_disjoint_set ? JUST(approx_neighbor_cost())
                                                                    : JUST(neighbor_cost());
   double time_since_last_access = Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
@@ -416,6 +470,13 @@ bool DTREagerBlobObject::is_evictable() const {
   // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul")
   // { return false; }
   return could_evict_;
+}
+
+void DisjNode::set_parent(std::shared_ptr<DisjNode>& parent) {
+  parent_ = parent;
+}
+void DisjNode::set_compute_time(double new_time) {
+  compute_time_ = new_time;
 }
 
 }  // namespace vm

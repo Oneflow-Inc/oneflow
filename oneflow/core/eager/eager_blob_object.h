@@ -131,10 +131,8 @@ class DisjNode {
 
   bool is_root() { return !bool(parent_); }
 
-  void set_parent(std::shared_ptr<DisjNode>& parent) { parent_ = parent; }
-  void set_compute_time(double new_time) {
-    compute_time_ = new_time;
-  }
+  void set_parent(std::shared_ptr<DisjNode>& parent);
+  void set_compute_time(double new_time);
 
   double compute_time() { return compute_time_; }
   std::shared_ptr<DisjNode> parent() { return parent_; }
@@ -223,19 +221,26 @@ class DTREagerBlobObject final : public EagerBlobObject {
   Maybe<double> parent_cost(bool is_bp_required=false) const;
   Maybe<double> child_cost(bool is_bp_required=false) const;
   Maybe<double> neighbor_cost() const;
-  Maybe<double> approx_neighbor_cost() const;
+  Maybe<double> approx_neighbor_cost();
   Maybe<double> rev_fwd_cost() const;
   Maybe<double> rev_bwd_cost() const;
   size_t input_size() const;
   void clear_invalid_object();
 
   // TODO: variable cost functions in terms of different heuristics
-  Maybe<double> cost() const;
+  Maybe<double> cost();
   Maybe<double> reverse_cost();
 
   std::shared_ptr<DisjNode> node;
+  std::shared_ptr<DisjNode> pesudo_node;
+  Maybe<double> update_after_pesudo_evict();
   void reset_node(double t) {
     node->reset(t);
+  }
+  void reset_pesudo_node() {
+    pesudo_node->set_compute_time(node->compute_time());
+    auto&& n = node->parent();
+    pesudo_node->set_parent(n);
   }
 
  private:

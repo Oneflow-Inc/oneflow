@@ -41,6 +41,7 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
   double mem = debo->BlobBodyBytes() * 1. / 1024 / 1024;
   const std::string& compute_op =
       debo->compute_op()->shared_opkernel()->user_op_conf_->op_type_name();
+  auto fa = debo->node->parent();
   std::cout << "is_in_memory: " << static_cast<bool>(debo->is_in_memory())
             << ", is pinned: " << (debo->num_pinned())
             << ", is evictable: " << (debo->is_evictable()) << ", compute op: " << compute_op
@@ -48,6 +49,8 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
             << ", ebo address: " << debo.get() << ", blob dptr: " << debo->blob().dptr()
             << ", tensor buffer dptr: "
             << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
+            << ", node->compute_time(): " << debo->node->compute_time()
+            << ", node: " << debo->node
             // << ", data_type: " << debo->mut_blob_desc()->data_type()
             << std::endl;
 }
@@ -65,8 +68,8 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
       double cur_cost = -1;
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
           && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
-        // cur_cost = JUST(shared_object->cost());
-        cur_cost = JUST(shared_object->reverse_cost());
+        cur_cost = JUST(shared_object->cost());
+        // cur_cost = JUST(shared_object->reverse_cost());
         if (min_cost < 0 || min_cost > cur_cost) {
           best = shared_object.get();
           min_cost = cur_cost;
@@ -214,6 +217,8 @@ void DTRTensorPool::update_after_recompute(vm::DTREagerBlobObject* obj) {
   auto&& fa = find_father(obj->node);
   fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
   obj->reset_node(obj->compute_time());
+
+  obj->reset_pesudo_node();
 }
 
 Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
@@ -224,7 +229,10 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) { merge(dtr_blob_object->node, obj->node); }
+      // condition: obj!=dtr_blob_object - avoids self-merge due to inplace op
+      if (!dtr_blob_object->is_in_memory() && obj != dtr_blob_object) {
+        merge(dtr_blob_object->node, obj->node);
+        }
     }
   }
 
@@ -232,9 +240,12 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) { merge(obj->node, dtr_blob_object->node); }
+      if (!dtr_blob_object->is_in_memory() && obj!= dtr_blob_object) { merge(obj->node, dtr_blob_object->node); }
     }
   }
+
+  obj->reset_pesudo_node();
+
   return Maybe<void>::Ok();
 }
 
