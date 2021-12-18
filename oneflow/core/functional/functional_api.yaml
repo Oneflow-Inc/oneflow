@@ -357,6 +357,14 @@
   signature: "Tensor (Tensor x, Tensor dy) => LogGrad"
   bind_python: False
 
+- name: "log2"
+  signature: "Tensor (Tensor x) => Log2"
+  bind_python: True
+
+- name: "log2_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Log2Grad"
+  bind_python: False
+
 - name: "sqrt"
   signature: "Tensor (Tensor x) => Sqrt"
   bind_python: True
@@ -521,16 +529,11 @@
   bind_python: False
 
 - name: "eye"
-  signature:
-    [
-      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Device device=None) => Eye",
-    ]
-  bind_python: True
-
-- name: "consistent_eye"
-  signature:
-    [
-      "Tensor (Scalar n, Scalar m=None, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentEye",
+  signature: [
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Device device=None, Bool requires_grad=False) => Eye",
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, String device, Bool requires_grad=False) => Eye",
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Bool requires_grad=False, Placement placement, SbpList sbp) => Eye",
+    "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Bool requires_grad=False, Placement placement, Sbp sbp) => Eye",
     ]
   bind_python: True
 

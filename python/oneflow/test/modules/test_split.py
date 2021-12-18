@@ -30,8 +30,8 @@ class TestSplit(flow.unittest.TestCase):
         k2 = random(2, 6)
         rand_dim = random(0, 3).to(int)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
-        res = torch.split(x, split_size_or_sections=2, dim=rand_dim)
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = torch.split(x, 2, dim=rand_dim)
         return torch.cat(res, rand_dim)
 
     @autotest(check_graph=False)
@@ -40,8 +40,8 @@ class TestSplit(flow.unittest.TestCase):
         k1 = 7
         k2 = random(2, 6)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
-        res = torch.split(x, split_size_or_sections=[1, 2, 3, 1], dim=1)
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = torch.split(x, [1, 2, 3, 1], dim=1)
         return torch.cat(res, dim=1)
 
     @autotest(check_graph=False)
@@ -50,8 +50,8 @@ class TestSplit(flow.unittest.TestCase):
         k1 = 7
         k2 = random(2, 6)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
-        res = torch.split(x, split_size_or_sections=[1, 2, 3, 1], dim=-2)
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = torch.split(x, [1, 2, 3, 1], dim=-2)
         return torch.cat(res, dim=1)
 
     @autotest(auto_backward=False, check_graph=False)
