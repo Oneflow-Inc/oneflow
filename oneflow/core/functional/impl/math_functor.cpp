@@ -558,6 +558,16 @@ class ReduceProdFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    if (DType::priority_order[x->dtype()->data_type()]
+        == DType::priority_order[DType::Bool()->data_type()]) {
+      lowest_dtype = DType::Int64();
+    } else {
+      lowest_dtype = x->dtype();
+    }
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
@@ -566,7 +576,7 @@ class ReduceProdFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
 
  private:
@@ -1371,7 +1381,7 @@ class ScalarLogicalBaseFunctor {
     const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
 
-    if (IsFloatingDataType(dtype)) {
+    if (IsFloatingDataType(dtype) || dtype == DataType::kBool) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));

@@ -32,9 +32,8 @@ std::size_t GetDataTypeBytes() {
 }
 
 #define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
-DEFINE_STATIC_SWITCH_FUNC(
-    std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
-    MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
+DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
 
 class DTypeMeta final {
  public:
@@ -122,7 +121,8 @@ const int DType::priority_order[DataType::kMaxDataType] = {0,  /*kInvalid*/
                                                            7,  /*kFloat16*/
                                                            12, /*kTensorBuffer*/
                                                            10, /*kBFloat16*/
-                                                           1, /*kBool*/};
+                                                           1,
+                                                           /*kBool*/};
 
 bool DType::is_floating_point() const {
   return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();

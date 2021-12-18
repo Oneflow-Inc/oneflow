@@ -296,12 +296,19 @@ class WhereScalarXFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& scalar,
                            const std::shared_ptr<one::Tensor>& y) const {
     MutableAttrMap attrs;
-    if (scalar.IsFloatingPoint()) {
+    if (scalar.IsBool()) {
+      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
     } else {
@@ -323,16 +330,23 @@ class WhereScalarYFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
-    if (scalar.IsFloatingPoint()) {
+    if (scalar.IsBool()) {
+      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
   }
@@ -349,9 +363,20 @@ class WhereScalarXYFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
                            const Scalar& y_scalar) const {
     MutableAttrMap attrs;
-    if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
+    if (x_scalar.IsBool() && y_scalar.IsBool()) {
+      JUST(attrs.SetAttr<bool>("x_bool_operand", JUST(x_scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("y_bool_operand", JUST(y_scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_x_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_y_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
+    } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("x_float_operand", JUST(x_scalar.As<double>())));
       JUST(attrs.SetAttr<double>("y_float_operand", JUST(y_scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_y_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
@@ -359,12 +384,14 @@ class WhereScalarXYFunctor {
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(x_scalar.As<int64_t>())));
       JUST(attrs.SetAttr<int64_t>("y_int_operand", JUST(y_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_int_operand", true));
       JUST(attrs.SetAttr<bool>("has_y_int_operand", true));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {condition}, attrs);
   }
@@ -2165,10 +2192,17 @@ class MaskedFillFunctor {
       JUST(attrs.SetAttr<double>("float_operand", JUST(value.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(value.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
+    } else if (IsBoolDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<bool>("bool_operand", JUST(value.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
