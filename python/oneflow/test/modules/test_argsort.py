@@ -73,6 +73,14 @@ class TestArgsort(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_argsort_bool_with_random_data(test_case):
+        x = random_pytorch_tensor(ndim=4).to("cpu", torch.bool)
+        y = torch.argsort(
+            x, dim=random(low=-4, high=4).to(int), descending=random_bool()
+        )
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

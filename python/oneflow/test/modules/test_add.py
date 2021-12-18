@@ -240,21 +240,6 @@ class TestAddModule(flow.unittest.TestCase):
         return x
         x += y.mean().to(torch.bool)
 
-    @autotest(auto_backward=False, check_graph=False)
-    def test_add_bool_with_alpha(test_case):
-        device = random_device()
-        x1 = random_pytorch_tensor(2, 2, 3).to(device).mean().to(torch.bool)
-        x2 = random_pytorch_tensor(2, 2, 3).to(device).mean().to(torch.bool)
-        x3 = random_pytorch_tensor(2, 2, 3).to(device).mean().to(torch.bool)
-        y = random_pytorch_tensor(2, 2, 3).to(device).to(torch.bool)
-        s = random().to(float)
-        alpha = random().to(int)
-        z1 = torch.add(x1, y, alpha=alpha)
-        return z1
-        #z2 = torch.add(x2, s, alpha=alpha)
-        #z3 = torch.add(s, x3, alpha=alpha)
-        #return z1, z2, z3
-
 
 if __name__ == "__main__":
     unittest.main()
