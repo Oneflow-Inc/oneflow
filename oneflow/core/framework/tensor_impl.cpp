@@ -110,6 +110,19 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> DTREagerMirroredTensorImpl::UpdateEvictTrigger() {
+  const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
+  const auto& eager_blob_object = eager_blob_object_;
+  evict_trigger_ = std::make_shared<EvictTrigger>(
+      [eager_blob_object, parallel_desc]() {
+        CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+          JUST(builder->EvictDTRTensor(eager_blob_object, parallel_desc));
+          return Maybe<void>::Ok();
+        }));
+      });
+  return Maybe<void>::Ok();
+}
+
 Maybe<LocalDepObject*> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return JUST(eager_blob_object())->compute_local_dep_object();
 }
@@ -160,6 +173,31 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
+Maybe<MirroredTensorImpl> DTREagerMirroredTensorImpl::detach() const {
+  auto detached_impl =
+      std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, evict_trigger_, false, true);
+  detached_impl->eager_blob_object_ = eager_blob_object_;
+  return std::shared_ptr<MirroredTensorImpl>(detached_impl);
+}
+
+class EvictTrigger {
+ public:
+  using ReleaserHookT = std::function<void()>;
+
+  OF_DISALLOW_COPY_AND_MOVE(EvictTrigger);
+
+  explicit EvictTrigger(ReleaserHookT releaser_hook) : releaser_hook_(std::make_shared<ReleaserHookT>(releaser_hook)) {}
+
+  ~EvictTrigger() {
+    CHECK(releaser_hook_);
+    std::cout << "EvictTrigger::~EvictTrigger()" << std::endl;
+    if (!IsShuttingDown()) { (*releaser_hook_)(); }
+  }
+
+ private:
+  std::shared_ptr<ReleaserHookT> releaser_hook_;
+};
+
 Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_object) {
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
@@ -186,6 +224,7 @@ Maybe<void> DTREagerMirroredTensorImpl::set_eager_blob_object(
                   == tensor_meta()->shape_ptr().get());
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
   JUST(UpdateTensorStorage());
+  JUST(UpdateEvictTrigger());
   return Maybe<void>::Ok();
 }
 

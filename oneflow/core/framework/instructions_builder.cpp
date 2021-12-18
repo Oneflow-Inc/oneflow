@@ -1008,6 +1008,29 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::EvictDTRTensor(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  if (eager_blob_object->last_used_device().has_value()) {
+    const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+    const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
+
+    if (last_used_device != producer_op_device) {
+      JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
+                          last_used_device));
+    }
+  }
+  std::string instr_name = parallel_desc->device_tag() + ".EvictDTRTensor";
+  intrusive::shared_ptr<vm::InstructionMsg> instruction =
+      intrusive::make_shared<vm::InstructionMsg>(instr_name);
+  LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
+  *instruction->mut_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
+      eager_blob_object, compute_local_dep_object);
+  *instruction->mut_parallel_desc() = parallel_desc;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {

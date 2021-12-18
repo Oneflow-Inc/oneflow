@@ -72,8 +72,10 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
           min_cost = cur_cost;
           evict_object_id = id;
         }
-        std::cout << "id " << id << ", ";
-        printInfo(shared_object);
+        if (oneflow::DTRDebugLevel() >= 2) {
+          std::cout << "id " << id << ", ";
+          printInfo(shared_object);
+        }
       }
       if (oneflow::DTRDebugEnabled()) {
         // copy op in lenet/alexnet model is always to copy parameters

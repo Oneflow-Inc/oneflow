@@ -135,6 +135,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
+  Maybe<void> EvictDTRTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
