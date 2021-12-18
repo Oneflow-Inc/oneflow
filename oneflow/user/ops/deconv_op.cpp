@@ -82,7 +82,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
@@ -218,7 +218,7 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
 }
 
 /* static */ Maybe<void> Deconv1DOp::InferDataType(user_op::InferContext* ctx) {
-  return InferDataType(ctx);
+  return InferDataType_(ctx);
 }
 
 /* static */ Maybe<void> Deconv2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -239,7 +239,7 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
 }
 
 /* static */ Maybe<void> Deconv2DOp::InferDataType(user_op::InferContext* ctx) {
-  return InferDataType(ctx);
+  return InferDataType_(ctx);
 }
 
 /* static */ Maybe<void> Deconv3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -260,7 +260,7 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
 }
 
 /* static */ Maybe<void> Deconv3DOp::InferDataType(user_op::InferContext* ctx) {
-  return InferDataType(ctx);
+  return InferDataType_(ctx);
 }
 
 REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
