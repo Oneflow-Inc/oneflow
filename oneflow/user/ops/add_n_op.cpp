@@ -32,6 +32,7 @@ namespace oneflow {
   *out->mut_is_dynamic() = in_0.is_dynamic();
   return Maybe<void>::Ok();
 }
+
 /*static*/ Maybe<void> AddNOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
@@ -44,6 +45,7 @@ namespace oneflow {
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
 }
+
 /* static */ Maybe<void> AddNOp::InferDataType(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->OutputTensorDesc("out", 0);
