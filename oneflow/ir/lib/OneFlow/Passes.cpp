@@ -142,6 +142,27 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return attributes;
 }
 
+::llvm::SmallVector<::mlir::Value, 4> OutlineMatMul(::mlir::PatternRewriter& rewriter,
+                                                    mlir::OpResult matmul_res) {
+  if (auto matmul_op = llvm::dyn_cast<MatmulOp>(matmul_res.getDefiningOp())) {
+    auto op_name = matmul_op.op_name();
+    SmallVector<::mlir::Value, 4> operands;
+    operands.push_back(matmul_op.a());
+    operands.push_back(matmul_op.b());
+    SmallVector<::mlir::Value, 1> results;
+    results.push_back(matmul_op.out());
+    NamedAttrList attributes =
+        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), matmul_op);
+    SmallVector<Operation*, 4> ops = {matmul_op};
+    auto function =
+        GetOrInsertFuncOp(rewriter, matmul_op->getLoc(), op_name, operands, results, ops);
+    auto created = rewriter.create<MlirJitOp>(matmul_op.getLoc(), function, attributes, operands);
+    assert(DumpAssembly(rewriter, created).succeeded());
+    return created->getResults();
+  }
+  return {};
+}
+
 ::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
                                                      mlir::OpResult mul_res,
                                                      mlir::OpResult cast_res) {
@@ -235,6 +256,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
+  patterns.add<MatmulPattern>(patterns.getContext());
 }
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {

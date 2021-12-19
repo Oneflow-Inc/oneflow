@@ -41,6 +41,23 @@ namespace mlir {
 
 namespace oneflow {
 
+struct MatMulOpLowering final : public OpConversionPattern<MatmulOp> {
+ public:
+  using OpConversionPattern<MatmulOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto a = op.a();
+    auto b = op.b();
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op,
+                                                /* output */
+                                                op.out().getType(),
+                                                /* a  */ a,
+                                                /* b */ b);
+    return success();
+  }
+};
+
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
   using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
@@ -92,7 +109,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
-  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
+  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, MatMulOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
