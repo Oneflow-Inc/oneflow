@@ -238,10 +238,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<FuncOp>(
-      createConvertLinalgToParallelLoopsPass());      // convert-linalg-to-parallel-loops
-  pm.addNestedPass<FuncOp>(createMapSCFToGPUPass());  // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());          // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());         // gpu-kernel-outlining
+      createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
+  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
+  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
   pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());
   pm.addPass(createCanonicalizerPass());  // canonicalize
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
