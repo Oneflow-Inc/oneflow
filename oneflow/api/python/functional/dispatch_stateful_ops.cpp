@@ -63,7 +63,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         JUST(attrs.SetAttr("random_shuffle", random_shuffle));
         JUST(attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch));
         JUST(attrs.SetAttr("seed", seed));
-        JUST(attrs.SetAttr("nd_sbp", std::vector<std::string>{}));
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
       });
   m.add_functor(

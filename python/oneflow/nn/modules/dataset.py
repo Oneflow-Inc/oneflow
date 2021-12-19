@@ -761,7 +761,7 @@ class ImageDecode(Module):
 
     def forward(self, input):
         return _C.dispatch_image_decode(
-            self._op, input, color_space=self.color_space, data_type=self.dtye
+            self._op, input, color_space=self.color_space, data_type=self.dtype
         )
 
 
