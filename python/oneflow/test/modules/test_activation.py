@@ -528,6 +528,5 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         y = torch.nn.functional.logsigmoid(x)
         return y
 
-
 if __name__ == "__main__":
     unittest.main()

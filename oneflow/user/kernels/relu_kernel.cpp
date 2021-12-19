@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include <iostream>
+
 
 namespace oneflow {
 
@@ -45,7 +47,7 @@ class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     if (elem_cnt != 0) {
       primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
     } else {
-      // For 0-d Tensor
+      // For 0-size Tensor
       return;
     }
   }
