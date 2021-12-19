@@ -190,3 +190,7 @@ class SGD(Optimizer):
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs
+
+    @property
+    def support_sparse(self):
+        return True
