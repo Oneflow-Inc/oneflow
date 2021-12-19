@@ -32,14 +32,14 @@ class TestMatMulMLIR(oneflow.unittest.TestCase):
         data2 = np.random.randn(30, 30)
         b = flow.tensor(data2, dtype=flow.float32)
 
-        y_eager = flow._C.matmul(a, b)
+        y_eager = flow.matmul(a, b)
 
         class MatMulGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
 
             def build(self, a, b):
-                return flow._C.matmul(a, b)
+                return flow.matmul(a, b)
 
         matmul_g = MatMulGraph()
         y_lazy = matmul_g(a, b)

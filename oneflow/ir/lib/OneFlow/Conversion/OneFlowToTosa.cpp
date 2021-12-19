@@ -47,6 +47,7 @@ struct MatMulOpLowering final : public OpConversionPattern<MatmulOp> {
 
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
+    std::cout << "here" << std::endl;
     auto a = op.a();
     auto b = op.b();
     rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op,
