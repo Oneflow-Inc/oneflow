@@ -47,7 +47,7 @@ class Shape final {
   [[nodiscard]] int64_t NumAxes() const;
   [[nodiscard]] int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   [[nodiscard]] int64_t Count(int64_t begin_axis) const;
-  [[nodiscard]] std::vector<int64_t> DimVec() const;
+  [[nodiscard]] std::vector<int64_t> dim_vec() const;
 
  private:
   std::shared_ptr<oneflow::Shape> shape_ = nullptr;

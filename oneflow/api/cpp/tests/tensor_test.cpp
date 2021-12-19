@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <gtest/gtest.h>
 #include "oneflow/api/cpp/tests/api_test.h"
+#include <gtest/gtest.h>
 
 namespace oneflow_api {
 
@@ -92,7 +92,7 @@ TEST(Api, tensor_zeros) {
 }
 void TestTensorPrint(bool on_gpu) {
 #define TEST_TENSOR_PRINT(dtype, cpp_dtype)                                        \
-  const auto shape_##cpp_dtype = RandomShapeSmall();                               \
+  const auto shape_##cpp_dtype = RandomSmallShape();                               \
   const auto data_##cpp_dtype = RandomData<cpp_dtype>(shape_##cpp_dtype.Count(0)); \
   const auto tensor_##cpp_dtype =                                                  \
       Tensor::from_buffer(data_##cpp_dtype.data(), shape_##cpp_dtype,              \
@@ -112,6 +112,64 @@ TEST(Api, tensor_print) {
 
 #ifdef WITH_CUDA
   TestTensorPrint(/*on_gpu*/ true);
+#endif
+}
+
+void TestTensorPrintConfirmValue(bool on_gpu) {
+  const auto get_tensor_printed_string = [](const Tensor& tensor) -> std::string {
+    std::string temp_str, result_str;
+    std::stringstream ss;
+    ss << tensor;
+    while (std::getline(ss, temp_str, '\n')) {
+      if (result_str != "") { result_str += "\n"; }
+      result_str += temp_str;
+    }
+    return result_str;
+  };
+
+  const auto build_target_str = [](const std::string& str, bool on_gpu,
+                                   const std::string& data_type) -> std::string {
+    return str + (on_gpu ? "cuda:0" : "cpu") + ", DataType: " + data_type + "]";
+  };
+
+  const auto device = on_gpu ? Device("cuda:0") : Device("cpu");
+  const std::vector<float> data_float{1.1,  2.2,   -3.3,  4.44,     5.55,    6.66,
+                                      7.77, 8.888, 9.999, -10.0000, 11.1111, 12.1212};
+  const std::vector<int32_t> data_int32{8, 100, 55, 88, 9, -5, 2, -7};
+
+  const auto tensor_float = Tensor::from_buffer(data_float.data(), {3, 4}, device, DType::kFloat);
+  const auto tensor_int32 =
+      Tensor::from_buffer(data_int32.data(), {2, 2, 2}, device, DType::kInt32);
+
+  const auto tensor_float_str = build_target_str(R"(  1.1000   2.2000  -3.3000   4.4400
+  5.5500   6.6600   7.7700   8.8880
+  9.9990 -10.0000  11.1111  12.1212
+[Shape: (3,4), Device: )",
+                                                 on_gpu, "Float");
+
+  const auto tensor_int32_str = build_target_str(R"((1,.,.) = 
+    8  100
+   55   88
+
+(2,.,.) = 
+  9 -5
+  2 -7
+[Shape: (2,2,2), Device: )",
+                                                 on_gpu, "Int32");
+
+  const auto result_str_float = get_tensor_printed_string(tensor_float);
+  const auto result_str_int32 = get_tensor_printed_string(tensor_int32);
+
+  ASSERT_EQ(result_str_float, tensor_float_str);
+  ASSERT_EQ(result_str_int32, tensor_int32_str);
+}
+
+TEST(Api, tensor_print_confirm_value) {
+  EnvScope scope;
+  TestTensorPrintConfirmValue(/*one_gpu*/ false);
+
+#ifdef WITH_CUDA
+  TestTensorPrintConfirmValue(/*on_gpu*/ true);
 #endif
 }
 

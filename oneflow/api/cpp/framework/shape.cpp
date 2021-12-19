@@ -69,6 +69,6 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 
 int64_t Shape::Count(int64_t begin_axis) const { return shape_->Count(begin_axis); }
 
-std::vector<int64_t> Shape::DimVec() const { return ToStdDimVector(shape_->dim_vec()); }
+std::vector<int64_t> Shape::dim_vec() const { return ToStdDimVector(shape_->dim_vec()); }
 
 }  // namespace oneflow_api
