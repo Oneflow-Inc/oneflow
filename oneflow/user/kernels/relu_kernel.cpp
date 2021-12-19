@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 #include <iostream>
 
-
 namespace oneflow {
 
 template<typename Context>
