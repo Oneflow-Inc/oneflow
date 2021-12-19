@@ -153,23 +153,21 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return {};
 }
 
-::llvm::SmallVector<::mlir::Value, 4> OutlineConv2D(::mlir::PatternRewriter& rewriter,
-                                                    mlir::OpResult conv2d_res) {
-  if (auto conv2d_op = llvm::dyn_cast<Conv2DOp>(conv2d_res.getDefiningOp())) {
-    auto op_name = conv2d_op.op_name();
+::llvm::SmallVector<::mlir::Value, 4> OutlineMatMul(::mlir::PatternRewriter& rewriter,
+                                                    mlir::OpResult matmul_res) {
+  if (auto matmul_op = llvm::dyn_cast<MatmulOp>(matmul_res.getDefiningOp())) {
+    auto op_name = matmul_op.op_name();
     SmallVector<::mlir::Value, 4> operands;
-    operands.push_back(conv2d_op.in());
-    operands.push_back(conv2d_op.weight());
-    // operands.push_back(conv2d_op.bias());
-    // operands.push_back(conv2d_op.bias_multiplier());
+    operands.push_back(matmul_op.a());
+    operands.push_back(matmul_op.b());
     SmallVector<::mlir::Value, 1> results;
-    results.push_back(conv2d_op.out());
+    results.push_back(matmul_op.out());
     NamedAttrList attributes =
-        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), conv2d_op);
-    SmallVector<Operation*, 4> ops = {conv2d_op};
+        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), matmul_op);
+    SmallVector<Operation*, 4> ops = {matmul_op};
     auto function =
-        GetOrInsertFuncOp(rewriter, conv2d_op->getLoc(), op_name, operands, results, ops);
-    auto created = rewriter.create<MlirJitOp>(conv2d_op.getLoc(), function, attributes, operands);
+        GetOrInsertFuncOp(rewriter, matmul_op->getLoc(), op_name, operands, results, ops);
+    auto created = rewriter.create<MlirJitOp>(matmul_op.getLoc(), function, attributes, operands);
     assert(DumpAssembly(rewriter, created).succeeded());
     return created->getResults();
   }
@@ -239,7 +237,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
-  patterns.add<Conv2DPattern>(patterns.getContext());
+  patterns.add<MatmulPattern>(patterns.getContext());
 }
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {

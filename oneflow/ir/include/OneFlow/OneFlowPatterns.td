@@ -33,31 +33,25 @@ def MulCastPattern : Pat<
   ]
 >;
 
-def OutlineConv2D : NativeCodeCall<"::mlir::oneflow::OutlineConv2D($_builder, $0)">;
-def Conv2DPattern : Pat<
+def OutlineMatMul : NativeCodeCall<"::mlir::oneflow::OutlineMatMul($_builder, $0)">;
+def MatmulPattern : Pat<
   (
-    OneFlow_Conv2DOp : $conv2d_op
-    $in,
-    $weight,
-    $bias,
-    $bias_multiplier,
-    $filters,
-    $padding_before,
-    $data_format,
-    $kernel_size,
-    $strides,
-    $dilation_rate,
-    $group,
-    $operand_segment_sizes,
-    $conv2d_op_name,
-    $conv2d_device_tag,
-    $conv2d_device_name,
-    $conv2d_scope_symbol_id,
-    $conv2d_hierarchy
+    OneFlow_MatmulOp : $matmul_op
+    $a,
+    $b,
+    $_add_to_output,
+    $transpose_a,
+    $transpose_b,
+    $alpha,
+    $matmul_op_name,
+    $matmul_device_tag,
+    $matmul_device_name,
+    $matmul_scope_symbol_id,
+    $matmul_hierarchy
   ),
-  (OutlineConv2D $conv2d_op),
+  (OutlineMatMul $matmul_op),
   [
-    (IsNotNestedInJit $conv2d_op)
+    (IsNotNestedInJit $matmul_op)
   ]
 >;
 

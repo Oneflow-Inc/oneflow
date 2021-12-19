@@ -25,24 +25,24 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 
 @flow.unittest.skip_unless_1n1d()
-class TestConv2DMLIR(oneflow.unittest.TestCase):
-    def test_adaptive_pool1d_graph(test_case):
-        data = np.random.randn(94, 32, 112, 122)
-        x = flow.tensor(data, dtype=flow.float32)
+class TestMatMulMLIR(oneflow.unittest.TestCase):
+    def test_matmul_graph(test_case):
+        data1 = np.random.randn(20, 30)
+        a = flow.tensor(data1, dtype=flow.float32)
+        data2 = np.random.randn(30, 30)
+        b = flow.tensor(data2, dtype=flow.float32)
 
-        conv2d = flow.nn.Conv2d(32, 64, 3, stride=2, bias=False)
-        y_eager = conv2d(x)
+        y_eager = flow._C.matmul(a, b)
 
-        class Conv2DGraph(flow.nn.Graph):
+        class MatMulGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.conv2d = conv2d
 
-            def build(self, x):
-                return self.conv2d(x)
+            def build(self, a, b):
+                return flow._C.matmul(a, b)
 
-        conv2d_g = Conv2DGraph()
-        y_lazy = conv2d_g(x)
+        matmul_g = MatMulGraph()
+        y_lazy = matmul_g(a, b)
         
         # for i in range(100):
         #     y_lazy = conv2d_g(x)

@@ -19,6 +19,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -41,29 +42,19 @@ namespace mlir {
 
 namespace oneflow {
 
-struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
+struct MatMulOpLowering final : public OpConversionPattern<MatmulOp> {
  public:
-  using OpConversionPattern<Conv2DOp>::OpConversionPattern;
+  using OpConversionPattern<MatmulOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(Conv2DOp op, OpAdaptor adaptor,
+  LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto in = op.in();
-    auto weight = op.weight();
-    auto bias = op.bias();
-    auto padding_before = op.padding_before();
-    auto stride = op.strides();
-    auto dilation = op.dilation_rate();
-    std::cout << "111" << std::endl;
-    rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(
-        op,
-        /* output */ op->getResultTypes().front().cast<TensorType>(),
-        /* input  */ in,
-        /* weight */ weight,
-        /* bias */ bias,
-        /* pad  */ padding_before,
-        /* stride*/ stride,
-        /* dilation*/ dilation);
-    std::cout << "222" << std::endl;
+    auto a = op.a();
+    auto b = op.b();
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op,
+                                                /* output */
+                                                op.out().getType(),
+                                                /* a  */ a,
+                                                /* b */ b);
     return success();
   }
 };
@@ -118,7 +109,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
-  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, Conv2DOpLowering>(&getContext());
+  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, MatMulOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
