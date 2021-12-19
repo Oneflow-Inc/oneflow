@@ -983,19 +983,19 @@ class Topk(Module):
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             if self.largest:
-                indices = flow._C.topk(input, self.k)
+                indices = flow._C.top_k(input, self.k)
             else:
                 neg_input = flow.mul(input, -1)
-                indices = flow._C.topk(neg_input, self.k)
+                indices = flow._C.top_k(neg_input, self.k)
             return (flow.gather(input, axis, indices), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow._C.transpose(input, perm=perm)
             if self.largest:
-                indices = flow._C.topk(x, self.k)
+                indices = flow._C.top_k(x, self.k)
             else:
                 neg_input = flow.mul(x, -1)
-                indices = flow._C.topk(neg_input, self.k)
+                indices = flow._C.top_k(neg_input, self.k)
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, axis, indices), indices)
 

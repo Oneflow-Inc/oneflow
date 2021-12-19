@@ -1851,7 +1851,7 @@
   bind_python: True
 
 - name: "top_k"
-  signature: "Tensor (Tensor input, Int32 k, Bool sorted=False) => TopK"
+  signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
   bind_python: True
 
 - name: "in_top_k"

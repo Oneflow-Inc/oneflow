@@ -1562,6 +1562,8 @@ class TrilFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
+    JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2366,10 +2368,10 @@ class To4Functor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k) const {
-    // TODO()
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("k", k));
+    JUST(attrs.SetAttr<bool>("sorted", sorted));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
