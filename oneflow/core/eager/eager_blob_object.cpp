@@ -472,6 +472,14 @@ bool DTREagerBlobObject::is_evictable() const {
   return could_evict_;
 }
 
+double DisjNode::compute_time() {
+  if (is_root()) {
+    return compute_time_;
+  } else {
+    auto rt = Global<one::DTRTensorPool>::Get()->find_father(parent_);
+    return rt->compute_time();
+  }
+}
 void DisjNode::set_parent(std::shared_ptr<DisjNode>& parent) {
   parent_ = parent;
 }

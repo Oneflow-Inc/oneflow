@@ -134,7 +134,7 @@ class DisjNode {
   void set_parent(std::shared_ptr<DisjNode>& parent);
   void set_compute_time(double new_time);
 
-  double compute_time() { return compute_time_; }
+  double compute_time();
   std::shared_ptr<DisjNode> parent() { return parent_; }
 
   void reset(double t) {
