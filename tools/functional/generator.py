@@ -163,6 +163,8 @@ value_aliases = {
     "True": "true",
     "False": "false",
     "kInt": "DType::Int32()",
+    "kInt8": "DType::Int8()",
+    "kUInt8": "DType::UInt8()",
     "kInt32": "DType::Int32()",
     "kInt64": "DType::Int64()",
     "kFloat": "DType::Float()",

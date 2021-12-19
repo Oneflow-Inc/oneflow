@@ -245,6 +245,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(attrs.SetAttr("interpolation_type", interpolation_type));
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
                 });
+  m.add_functor(
+      "DispatchImageDecode",
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
+         const std::string& color_space, const Symbol<DType>& data_type) -> Maybe<Tensor> {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr("color_space", color_space));
+        JUST(attrs.SetAttr("data_type", data_type->data_type()));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
+      });
   m.add_functor("DispatchImageNormalize",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::vector<float>& mean, const std::vector<float>& std) -> Maybe<Tensor> {
@@ -357,7 +366,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor("DispatchRmspropUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, double scale, float l1, float l2, bool centered,
-                   float epsilon, float decay_rate, float weight_decay) -> Maybe<Tensor> {
+                   float epsilon, float decay_rate, float weight_decay) -> Maybe<void> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("scale", scale));
@@ -367,13 +376,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(attrs.SetAttr("epsilon", epsilon));
                   JUST(attrs.SetAttr("decay_rate", decay_rate));
                   JUST(attrs.SetAttr("weight_decay", weight_decay));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
                 });
   m.add_functor("DispatchAdamUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, float bias_correction1, float bias_correction2,
                    double scale, float l1, float l2, float beta1, float beta2, float epsilon,
-                   float weight_decay, bool amsgrad, bool do_bias_correction) -> Maybe<Tensor> {
+                   float weight_decay, bool amsgrad, bool do_bias_correction) -> Maybe<void> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("bias_correction1_val", bias_correction1));
@@ -387,12 +397,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(attrs.SetAttr("weight_decay", weight_decay));
                   JUST(attrs.SetAttr("amsgrad", amsgrad));
                   JUST(attrs.SetAttr("do_bias_correction", do_bias_correction));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
                 });
   m.add_functor("DispatchAdagradUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, double scale, float l1, float l2, float lr_decay,
-                   float weight_decay, float epsilon, int32_t train_step) -> Maybe<Tensor> {
+                   float weight_decay, float epsilon, int32_t train_step) -> Maybe<void> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("scale", scale));
@@ -402,12 +413,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(attrs.SetAttr("weight_decay", weight_decay));
                   JUST(attrs.SetAttr("epsilon", epsilon));
                   JUST(attrs.SetAttr("train_step_val", train_step));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
                 });
   m.add_functor(
       "DispatchMomentumUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
-         double scale, float l1, float l2, float beta, float weight_decay) -> Maybe<Tensor> {
+         double scale, float l1, float l2, float beta, float weight_decay) -> Maybe<void> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("learning_rate_val", learning_rate));
         JUST(attrs.SetAttr("scale", scale));
@@ -415,19 +427,21 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         JUST(attrs.SetAttr("l2", l2));
         JUST(attrs.SetAttr("beta", beta));
         JUST(attrs.SetAttr("weight_decay", weight_decay));
-        return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+        return Maybe<void>::Ok();
       });
   m.add_functor(
       "DispatchSgdUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
-         double scale, float l1, float l2, float weight_decay) -> Maybe<Tensor> {
+         double scale, float l1, float l2, float weight_decay) -> Maybe<void> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("learning_rate_val", learning_rate));
         JUST(attrs.SetAttr("scale", scale));
         JUST(attrs.SetAttr("l1", l1));
         JUST(attrs.SetAttr("l2", l2));
         JUST(attrs.SetAttr("weight_decay", weight_decay));
-        return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+        return Maybe<void>::Ok();
       });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
