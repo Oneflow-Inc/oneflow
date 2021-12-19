@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
-#include <iostream>
 
 namespace oneflow {
 
