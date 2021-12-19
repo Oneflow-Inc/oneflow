@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/user/image/random_crop_generator.h"
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
@@ -229,7 +229,8 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
     CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);

@@ -277,8 +277,8 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
+                                filter=["to", "tensor", "_to", "train"]
                                 if isinstance(oneflow, flow.nn.Module):
-
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -289,6 +289,40 @@ def GetDualObject(name, pytorch, oneflow):
 
                                     test_g = TestGraphOfModule()
                                     test_g_res = test_g(*oneflow_args)
+                                    if isinstance(test_g_res, tuple):
+                                        for idx, g_res in enumerate(test_g_res):
+                                            flow_res_id_eager2_graph[
+                                                id(oneflow_res[idx])
+                                            ] = g_res
+                                    else:
+                                        flow_res_id_eager2_graph[
+                                            id(oneflow_res)
+                                        ] = test_g_res
+
+
+                                elif oneflow.__name__ in filter:
+                                    pass
+                                elif "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow) or (inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__):
+                                    tensor_args = []
+                                    other_args = []
+                                    for a in oneflow_args:
+                                        if isinstance(a, flow.Tensor):
+                                            tensor_args.append(a)
+                                        else:
+                                            other_args.append(a)
+
+                                    class TestGraphOfFunctional(flow.nn.Graph):
+                                        def __init__(self):
+                                            super().__init__()
+                                            self.test_func = oneflow
+
+                                        def build(self, *tensor_args):
+                                            return self.test_func(
+                                                *tensor_args, *other_args, **oneflow_kwargs
+                                            )
+
+                                    test_g = TestGraphOfFunctional()
+                                    test_g_res = test_g(*tensor_args)
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
                                             flow_res_id_eager2_graph[
