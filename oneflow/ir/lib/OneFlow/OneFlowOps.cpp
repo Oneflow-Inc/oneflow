@@ -209,6 +209,37 @@ void AddNOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext
   results.insert<ConvertAddOpWithArity>(context);
 }
 
+template<typename OpType>
+struct ConcreteSystemOpPattern : public OpRewritePattern<OpType> {
+  explicit ConcreteSystemOpPattern(MLIRContext* context)
+      : OpRewritePattern<OpType>(context, /*benefit=*/1) {}
+  LogicalResult matchAndRewrite(OpType op, PatternRewriter& rewriter) const override {
+    if (op.ctrl_output() && op.ctrl_output().use_empty()) {
+      NamedAttrList attributes(op->getAttrDictionary());
+      if (auto created = rewriter.create<OpType>(op->getLoc(), op.output().getType(),
+                                                 op->getOperands(), attributes)) {
+        op.output().replaceAllUsesWith(
+            created->getResult(op.output().template cast<OpResult>().getResultNumber()));
+        op->erase();
+        return success();
+      }
+    }
+    return failure();
+  }
+};
+
+void VariableOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
+  results.insert<ConcreteSystemOpPattern<VariableOp>>(context);
+}
+
+void InputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
+  results.insert<ConcreteSystemOpPattern<InputOp>>(context);
+}
+
+void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
+  results.insert<ConcreteSystemOpPattern<OutputOp>>(context);
+}
+
 struct ConvertNormalizationAddReluOp : public mlir::OpRewritePattern<NormalizationAddReluOp> {
   explicit ConvertNormalizationAddReluOp(mlir::MLIRContext* context)
       : OpRewritePattern<NormalizationAddReluOp>(context, /*benefit=*/1) {}
