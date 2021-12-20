@@ -45,7 +45,7 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   const Shape& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
   const int64_t ndim = input_shape.NumAxes();
-  std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
+  const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
   for (int i = 0; i < ndim; i++) {
     if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();

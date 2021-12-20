@@ -39,7 +39,7 @@ void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* bloc
 }
 }  // namespace
 
-OF_DEVICE_FUNC size_t LinearIndex2Offset(size_t linear_index, const int32_t* dim_size_in_axis_ptr,
+OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index, const int32_t* dim_size_in_axis_ptr,
                                       const int32_t* stride_vec_ptr, const int32_t size) {
   size_t offset = 0;
   size_t tmp = 0;
@@ -136,7 +136,7 @@ OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const Va
   double old_mean = 0.0;
   double m2 = 0.0;
   for (size_t i = 0; i < var_param.elem_cnt; i++) {
-    size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
+    const size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
                                     var_param.axis_size);
     count++;
     old_mean = mean;
