@@ -87,16 +87,17 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
 // Handle pending instructions, and try schedule them to ready list.
 void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_PUSH("HandlePending");
-  InstructionMsgList tmp_pending_msg_list;
-  // MoveTo is under a lock.
-  mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
+  constexpr static int kLimit = 10;
+  int cnt = kLimit;
   InstructionList new_instruction_list;
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
+  INTRUSIVE_FOR_EACH_PTR(instr_msg, mut_local_pending_msg_list()) {
+    if (cnt-- <= 0) { break; }
     if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
       RunInstructionsInAdvance(instr_msg);
     } else {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
+    mut_local_pending_msg_list()->Erase(instr_msg);
   }
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
@@ -718,13 +719,20 @@ void VirtualMachineEngine::Schedule() {
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
   //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
-  if (unlikely(pending_msg_list().thread_unsafe_size())) { HandlePending(); }
+  if (unlikely(local_pending_msg_list().size())) {
+    HandlePending();
+  } else if (unlikely(pending_msg_list().thread_unsafe_size())) {
+    // MoveTo is under a lock.
+    mut_pending_msg_list()->MoveTo(mut_local_pending_msg_list());
+    HandlePending();
+  }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
-  return active_stream_list().empty() && flying_instruction_cnt() == 0;
+  return local_pending_msg_list().empty() && active_stream_list().empty()
+         && flying_instruction_cnt() == 0;
 }
 
 bool VirtualMachineEngine::Empty() const {

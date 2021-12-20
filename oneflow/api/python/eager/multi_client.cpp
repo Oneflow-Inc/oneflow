@@ -23,8 +23,13 @@ ONEFLOW_API_PYBIND11_MODULE("eager.multi_client", m) {
   namespace py = pybind11;
   m.def(
       "Sync", []() { vm::ClusterSync().GetOrThrow(); }, py::call_guard<py::gil_scoped_release>());
-  m.def("SetDevVmDepObjectConsumeModeToNone", [](bool is_none) {
-    *one::CurrentDevVmDepObjectConsumeMode() =
-        is_none ? one::DevVmDepObjectConsumeMode::NONE : one::DevVmDepObjectConsumeMode::MUTABLE;
+
+  py::class_<one::DevVmDepObjectConsumeModeGuard,
+             std::shared_ptr<one::DevVmDepObjectConsumeModeGuard>>(
+      m, "DevVmDepObjectConsumeModeGuard");
+
+  m.def("SourceOpOnlyResourceDependenceModeGuard", []() {
+    return std::make_shared<one::DevVmDepObjectConsumeModeGuard>(
+        one::DevVmDepObjectConsumeMode::NONE);
   });
 }
