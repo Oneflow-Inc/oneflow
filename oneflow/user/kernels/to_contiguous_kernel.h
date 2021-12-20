@@ -67,13 +67,13 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
   }
 
   int64_t block_size = 1;
-  int64_t element_count = 1;
   int64_t contiguous_dim = 0;
 
   StrideVector out_stride;
 
-  int64_t in_offset;
-  int64_t out_offset;
+  int64_t in_offset=0;
+  int64_t out_offset=0;
+  int64_t element_count = 1;
 };
 
 template<DeviceType, typename>
