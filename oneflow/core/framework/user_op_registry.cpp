@@ -160,6 +160,7 @@ OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_des
 
 OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
   result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  result_.has_real_physical_tensor_desc_infer_fn_ = true;
   return *this;
 }
 
