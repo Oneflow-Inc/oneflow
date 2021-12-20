@@ -206,9 +206,9 @@ class NcclKernelCommState final : public user_op::OpKernelState {
         stream_name_(""),
         parallel_desc_(ctx->parallel_desc()) {
     if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
-    OF_CUDA_CHECK(cudaMallocHost(
-        &host_num_unique_ids_matrix_,
-        parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(int32_t)));
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_unique_ids_matrix_,
+                                 parallel_desc_.parallel_num() * parallel_desc_.parallel_num()
+                                     * sizeof(int32_t)));  // TODO: int32_t->IDX
   }
   ~NcclKernelCommState() { OF_CUDA_CHECK(cudaFreeHost(host_num_unique_ids_matrix_)); }
 

@@ -35,6 +35,29 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
   }
 }
 
+template<typename T, typename K, typename IDX>
+__global__ void InitValueKernel(const int64_t embedding_size, const IDX* num_unique_ids,
+                                const K* unique_ids, T* values) {
+  const int64_t n = *num_unique_ids * embedding_size;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    IDX idx = i / embedding_size;
+    values[i] = unique_ids[idx];
+  }
+}
+
+class EmbeddingKernelState final : public user_op::OpKernelState {
+ public:
+  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx) {
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
+  }
+  ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
+
+  void* HostNumKeys() { return host_num_keys_; }
+
+ private:
+  void* host_num_keys_;
+};
+
 }  // namespace
 
 template<typename K, typename IDX>
@@ -43,17 +66,24 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
   EmbeddingPrefetchKernel() = default;
   ~EmbeddingPrefetchKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingKernelState>(ctx);
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
+    CHECK(kernel_state != nullptr);
     LOG(ERROR) << "EmbeddingPrefetchKernel";
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
-    IDX* host_num_keys;
-    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys, 1 * sizeof(IDX)));
+    IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
     std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
                                                                   ep::primitive::MemcpyKind::kDtoH);
@@ -63,6 +93,18 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     uint32_t num_keys = *host_num_keys;
     store->Prefetch(ctx->stream(), num_keys, unique_ids->dptr(),
                     reinterpret_cast<uint64_t*>(context->mut_dptr()));
+
+    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
+      int64_t embedding_size = 128;
+      float* unique_values;
+      OF_CUDA_CHECK(cudaMalloc(&unique_values, num_keys * embedding_size * sizeof(float)));
+      InitValueKernel<float, K, IDX>
+          <<<BlocksNum4ThreadsNum(num_keys * embedding_size), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              embedding_size, num_unique_ids->dptr<IDX>(), unique_ids->dptr<K>(), unique_values);
+      store->Update(ctx->stream(), num_keys, unique_ids->dptr(),
+                    reinterpret_cast<const uint64_t*>(context->dptr()), unique_values);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -82,10 +124,17 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
   EmbeddingLookupKernel() = default;
   ~EmbeddingLookupKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingKernelState>(ctx);
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(ERROR) << "EmbeddingLookupKernel";
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
+    CHECK(kernel_state != nullptr);
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
 
@@ -93,8 +142,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-    IDX* host_num_keys;
-    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys, 1 * sizeof(IDX)));
+    IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
     std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
                                                                   ep::primitive::MemcpyKind::kDtoH);
@@ -124,9 +172,17 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
   EmbeddingUpdateKernel() = default;
   ~EmbeddingUpdateKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingKernelState>(ctx);
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
+    CHECK(kernel_state != nullptr);
     LOG(ERROR) << "EmbeddingUpdateKernel";
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
@@ -142,8 +198,7 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     T* update_unique_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
 
-    IDX* host_num_keys;
-    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys, 1 * sizeof(IDX)));
+    IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
     std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
                                                                   ep::primitive::MemcpyKind::kDtoH);
