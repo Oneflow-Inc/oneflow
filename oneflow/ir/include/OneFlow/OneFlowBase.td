@@ -5,6 +5,7 @@ include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "/mlir/Interfaces/InferTypeOpInterface.td"
 
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 

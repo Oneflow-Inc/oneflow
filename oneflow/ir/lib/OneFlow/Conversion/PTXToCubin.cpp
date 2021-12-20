@@ -75,8 +75,8 @@ static void maybeSetOption(Pass::Option<std::string>& option, const char* value)
 SerializeToCubinPass::SerializeToCubinPass() {
   // TODO: infer target info with cudaGetDeviceProperties
   maybeSetOption(this->triple, "nvptx64-nvidia-cuda");
-  maybeSetOption(this->chip, "sm_75");
-  maybeSetOption(this->features, "+ptx60");
+  maybeSetOption(this->chip, "sm_61");
+  maybeSetOption(this->features, "+ptx61");
 }
 
 void SerializeToCubinPass::getDependentDialects(DialectRegistry& registry) const {
