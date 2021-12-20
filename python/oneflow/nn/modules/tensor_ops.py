@@ -224,6 +224,10 @@ def tolist_op(input):
         return input.item()
     return input.numpy().tolist()
 
+def is_floating_point(input):
+    if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
+        return True
+    return False
 
 if __name__ == "__main__":
     import doctest
