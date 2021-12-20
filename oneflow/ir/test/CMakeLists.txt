@@ -11,7 +11,6 @@ set(ONEFLOW_TEST_DEPENDS
         FileCheck count not
         oneflow-opt
         oneflow-translate
-        mlir-cpu-runner
         )
 
 add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests from: ${CMAKE_CURRENT_SOURCE_DIR}"
@@ -19,7 +18,10 @@ add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests from:
         DEPENDS ${ONEFLOW_TEST_DEPENDS}
         )
 set_target_properties(check-oneflow PROPERTIES FOLDER "Tests")
-
+if(LLVM_PROVIDER STREQUAL "in-tree")
+        add_dependencies(check-oneflow mlir-cpu-runner)
+endif()
+add_dependencies(check-oneflow oneflow_internal)
 add_lit_testsuites(ONEFLOW ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${ONEFLOW_TEST_DEPENDS})
 
 add_custom_target(c1 DEPENDS check-oneflow)
