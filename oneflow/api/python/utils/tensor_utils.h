@@ -30,13 +30,52 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-
+#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/extension/python/numpy.h"
 namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
+
+inline static py::array_t<float> EagerTensorToNumpy(const std::shared_ptr<Tensor>& t) {
+  std::shared_ptr<MirroredTensor> tensor = CHECK_JUST(t->AsMirroredTensor());
+  const size_t ndim = tensor->ndim();
+  const auto dtype = CHECK_JUST(numpy::OFDataTypeToNumpyType(tensor->dtype()->data_type()));
+  const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
+  const auto stride = numpy::OFStrideToNumpyStride(CHECK_JUST(tensor->stride())->StrideVec(),
+                                                   tensor->dtype()->data_type());
+  float* data_ptr = nullptr;
+  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t ofblob_ptr) {
+    data_ptr = reinterpret_cast<OfBlob*>(ofblob_ptr)->mut_blob()->mut_dptr<float>();
+  });
+  bool is_printed = false;
+  SpinCounter::SpinWait(
+      1,
+      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, "mut");
+        });
+      },
+      [&is_printed]() {
+        if (!is_printed) {
+          blocking::StackInfoCallback();
+          is_printed = true;
+        }
+      });
+
+  // return py::array_t<float>(py::buffer_info(data_ptr,      /* data as contiguous array  */
+  //                                           sizeof(float), /* size of one scalar        */
+  //                                           py::format_descriptor<float>::format(), /* data type
+  //                                           */ ndim,  /* number of dimensions      */ shape, /*
+  //                                           shape of the matrix       */ stride /* strides for
+  //                                           each axis     */
+  //                                           ));
+
+  return py::array_t<float>({2}, {4}, data_ptr);
+}
 
 template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(

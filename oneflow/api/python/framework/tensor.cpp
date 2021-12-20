@@ -198,6 +198,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<one::Tensor>& tensor) {
              return CheckMetaConsistency(tensor).GetOrThrow();
            })
+      .def(
+          "to_numpy",
+          [](const std::shared_ptr<one::Tensor>& tensor) { return EagerTensorToNumpy(tensor); },
+          py::return_value_policy::move)
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
