@@ -176,6 +176,7 @@ REGISTER_USER_OP("embedding_shuffle")
     .Input("num_unique_ids")
     .Input("ids_reverse_idx")
     .Input("num_unique_ids_matrix")
+    .Input("partition_index")
     .Output("embeddings")
     .Attr<int64_t>("embedding_size")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -196,6 +197,7 @@ REGISTER_USER_OP("embedding_shuffle")
           .Split(user_op::OpArg("num_unique_ids", 0), 0)
           .Split(user_op::OpArg("ids_reverse_idx", 0), 0)
           .Split(user_op::OpArg("embeddings", 0), 0)
+          .Split(user_op::OpArg("partition_index", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     })
