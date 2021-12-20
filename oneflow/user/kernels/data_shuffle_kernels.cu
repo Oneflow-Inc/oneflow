@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include <cub/cub.cuh>
+#include "oneflow/core/cuda/atomic.cuh"
 
 namespace oneflow {
 
@@ -96,6 +97,22 @@ void DebugIdShuffle(user_op::KernelComputeContext* ctx) {
   DumpToFile(ctx->stream(), "num_unique_ids_matrix", parallel_id,
              num_unique_ids_matrix->shape().elem_cnt() * sizeof(IDX),
              num_unique_ids_matrix->dptr());
+  user_op::Tensor* partition_index = ctx->Tensor4ArgNameAndIndex("partition_index", 0);
+  DumpToFile(ctx->stream(), "partition_index", parallel_id,
+             partition_index->shape().elem_cnt() * sizeof(IDX), partition_index->dptr());
+}
+
+template<typename K, typename IDX>
+__global__ void PartitionKernel(int64_t n, const IDX num_ids, const K* ids, K* out_ids,
+                                IDX* num_out, IDX* out_index) {
+  CUDA_1D_KERNEL_LOOP(i, num_ids) {
+    const K id = ids[i];
+    int64_t partition_id = id % 2;
+    IDX old_key_offset = cuda::atomic::Add(num_out + partition_id, 1);
+    IDX offset = partition_id * n + old_key_offset;
+    out_ids[offset] = id;
+    out_index[offset] = i;
+  }
 }
 
 struct BelongTo {
@@ -118,12 +135,17 @@ void GetPartitionWorkspaceSizeInBytes(ep::Stream* stream, int64_t n, int64_t par
 
 template<typename K, typename IDX>
 void Partition(ep::Stream* stream, int64_t num_ids, IDX num_valid, int64_t parallel_num, K* in,
-               K* out, IDX* num_out, void* workspace, size_t workspace_size_in_bytes) {
-  for (int64_t i = 0; i < parallel_num; ++i) {
-    BelongTo belong_to(parallel_num, i);
-    cub::DeviceSelect::If(workspace, workspace_size_in_bytes, in, out + i * num_ids, num_out + i,
-                          num_valid, belong_to, stream->As<ep::CudaStream>()->cuda_stream());
-  }
+               K* out, IDX* num_out, IDX* out_index, void* workspace,
+               size_t workspace_size_in_bytes) {
+  OF_CUDA_CHECK(cudaMemset(num_out, 0, parallel_num * sizeof(IDX)));
+  PartitionKernel<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
+                    stream->As<ep::CudaStream>()->cuda_stream()>>>(num_ids, num_valid, in, out,
+                                                                   num_out, out_index);
+  // for (int64_t i = 0; i < parallel_num; ++i) {
+  //  BelongTo belong_to(parallel_num, i);
+  //  cub::DeviceSelect::If(workspace, workspace_size_in_bytes, in, out + i * num_ids, num_out + i,
+  //                        num_valid, belong_to, stream->As<ep::CudaStream>()->cuda_stream());
+  //}
 }
 
 template<typename K, typename IDX>
@@ -269,6 +291,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* cur_rank_reverse_idx = ctx->Tensor4ArgNameAndIndex("cur_rank_reverse_idx", 0);
     user_op::Tensor* num_unique_ids_matrix =
         ctx->Tensor4ArgNameAndIndex("num_unique_ids_matrix", 0);
+    user_op::Tensor* partition_index = ctx->Tensor4ArgNameAndIndex("partition_index", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t num_ids = ids->shape().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
@@ -305,7 +328,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     IDX* received_num_unique_ids_matrix = num_unique_ids_matrix->mut_dptr<IDX>();
     Partition(ctx->stream(), num_ids, host_num_unique_ids[0], parallel_num,
               buffer_manager.UniqueIdsPtr(), partitioned_unique_ids, partitioned_num_unique_ids,
-              workspace_ptr, workspace_size);
+              partition_index->mut_dptr<IDX>(), workspace_ptr, workspace_size);
 
     // allgather count
     ncclComm_t comm = nccl_comm->comm();
