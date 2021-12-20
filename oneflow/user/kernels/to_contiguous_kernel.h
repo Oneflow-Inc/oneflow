@@ -71,8 +71,8 @@ class ToContiguousUtilBase : public ToContiguousUtilParam {
 
   StrideVector out_stride;
 
-  int64_t in_offset=0;
-  int64_t out_offset=0;
+  int64_t in_offset = 0;
+  int64_t out_offset = 0;
   int64_t element_count = 1;
 };
 
