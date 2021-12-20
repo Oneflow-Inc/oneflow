@@ -18,6 +18,7 @@ oneflow_add_mlir_library(MLIROneFlowExtension
   MLIROneFlowTranslation
   MLIROneFlowRuntime
   MLIROneFlowJIT
+  ENABLE_AGGREGATION
 )
 set(MLIR_ONEFLOW_JIT_LIBS -Wl,--no-as-needed MLIROneFlowJIT -Wl,--as-needed)
 target_link_libraries(MLIROneFlowRuntime PUBLIC ${MLIR_ONEFLOW_JIT_LIBS})

@@ -1,25 +1,16 @@
 add_subdirectory(Dialect)
 
 add_mlir_library(MLIROneFlowJIT
-  jit_importer.cpp
-  jit_op_interpreter.cpp
+  JITImporter.cpp
+  JITinterpreter.cpp
+  JITModule.cpp
   EXCLUDE_FROM_LIBMLIR
-  ADDITIONAL_HEADER_DIRS
+  ADDITIONAL_HEADERS
   ${PROJECT_SOURCE_DIR}/oneflow-translate/include
   ${PROJECT_SOURCE_DIR}/oneflow-jit/include
   DEPENDS oneflow_deps
 	LINK_LIBS PUBLIC
 	MLIRIR
-  MLIROneFlowJITDialect
-)
-
-llvm_update_compile_flags(MLIROneFlowJIT)
-
-target_link_libraries(MLIROneFlowJIT
-  PRIVATE
-  ${dialect_libs}
-  ${translation_libs}
-  MLIRIR
   MLIRParser
   MLIRPass
   MLIRSPIRV
@@ -28,6 +19,7 @@ target_link_libraries(MLIROneFlowJIT
   MLIROneFlow
   MLIRExecutionEngine
   MLIROneFlowTranslation
+  MLIROneFlowJITDialect
+  ENABLE_AGGREGATION
 )
-
-mlir_check_link_libraries(MLIROneFlowJIT)
+target_include_directories(MLIROneFlowJIT PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
