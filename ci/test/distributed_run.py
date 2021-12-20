@@ -126,9 +126,18 @@ async def launch_remote_container(
     oneflow_python_path=None,
     cmd=None,
     node_rank=None,
+    master_addr=None,
 ):
     print("launching remote container at", remote_host)
     assert img_tag
+    multi_client_docker_args = [node_rank, master_addr]
+    multi_client_arg_is_none = [x is None for x in multi_client_docker_args]
+    if all(multi_client_arg_is_none):
+        is_multi_client = True
+    elif not any(multi_client_arg_is_none):
+        is_multi_client = False
+    else:
+        raise ValueError()
     pythonpath_args = None
     if oneflow_wheel_path:
         pythonpath_args = ""
@@ -151,12 +160,12 @@ async def launch_remote_container(
         f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
     if cmd:
-        if node_rank is not None:
-            node_rank_args = f"--env NODE_RANK={node_rank}"
+        if is_multi_client:
+            multi_client_docker_args = f"--env NODE_RANK={node_rank} --env MASTER_ADDR={master_addr}"
         else:
-            node_rank_args = ""
+            multi_client_docker_args = ""
         await spawn_shell_and_check(
-            f"ssh {remote_host} docker exec {node_rank_args} {container_name} {cmd}"
+            f"ssh {remote_host} docker exec {multi_client_docker_args} {container_name} {cmd}"
         )
 
 
