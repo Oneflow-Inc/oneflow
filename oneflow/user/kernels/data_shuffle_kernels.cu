@@ -206,8 +206,11 @@ class NcclKernelCommState final : public user_op::OpKernelState {
         stream_name_(""),
         parallel_desc_(ctx->parallel_desc()) {
     if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    OF_CUDA_CHECK(cudaMallocHost(
+        &host_num_unique_ids_matrix_,
+        parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(int32_t)));
   }
-  ~NcclKernelCommState() = default;
+  ~NcclKernelCommState() { OF_CUDA_CHECK(cudaFreeHost(host_num_unique_ids_matrix_)); }
 
   ncclComm_t comm() {
     if (!is_init_) {
@@ -227,6 +230,7 @@ class NcclKernelCommState final : public user_op::OpKernelState {
     }
     return comm_;
   }
+  void* HostNumUniqueIdsMatrix() { return host_num_unique_ids_matrix_; }
 
  private:
   bool is_init_;
@@ -234,6 +238,7 @@ class NcclKernelCommState final : public user_op::OpKernelState {
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   ncclComm_t comm_{};
+  void* host_num_unique_ids_matrix_;
 };
 
 }  // namespace
@@ -269,10 +274,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-    IDX* host_num_unique_ids;
-    OF_CUDA_CHECK(
-        cudaMallocHost(&host_num_unique_ids, (parallel_num * parallel_num) * sizeof(IDX)));
-
+    IDX* host_num_unique_ids = reinterpret_cast<IDX*>(nccl_comm->HostNumUniqueIdsMatrix());
     IdShuffleTmpBufferManager<K, IDX> buffer_manager(tmp_buffer->mut_dptr(), num_ids, parallel_num);
     void* workspace_ptr = buffer_manager.WorkspacePtr();
     size_t workspace_size = buffer_manager.WorkspaceBytes();
@@ -403,9 +405,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     const int64_t embedding_size = embeddings->shape().elem_cnt() / num_ids;
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
 
-    IDX* host_num_unique_ids_matrix;
-    OF_CUDA_CHECK(
-        cudaMallocHost(&host_num_unique_ids_matrix, parallel_num * parallel_num * sizeof(IDX)));
+    IDX* host_num_unique_ids_matrix = reinterpret_cast<IDX*>(nccl_comm->HostNumUniqueIdsMatrix());
     std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
                                                                   ep::primitive::MemcpyKind::kDtoH);
@@ -519,9 +519,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = ids_reverse_idx->shape().elem_cnt();
     const int64_t embedding_size = embedding_diff->shape().elem_cnt() / num_ids;
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-    IDX* host_num_unique_ids_matrix;
-    OF_CUDA_CHECK(
-        cudaMallocHost(&host_num_unique_ids_matrix, parallel_num * parallel_num * sizeof(IDX)));
+    IDX* host_num_unique_ids_matrix = reinterpret_cast<IDX*>(nccl_comm->HostNumUniqueIdsMatrix());
     std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
                                                                   ep::primitive::MemcpyKind::kDtoH);
