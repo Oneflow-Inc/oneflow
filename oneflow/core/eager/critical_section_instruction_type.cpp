@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/vm/stream.h"

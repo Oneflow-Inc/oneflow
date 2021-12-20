@@ -61,7 +61,7 @@ void PrependTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder)
   }
 }
 
-Maybe<const OperatorConf&> FindSoleSrcSubsetTickOpConf(const Job& job) {
+Maybe<const OperatorConf&> FindJobSoleSrcSubsetTickOpConf(const Job& job) {
   const OperatorConf* src_subset_tick_op_conf = nullptr;
   for (const auto& op_conf : job.net().op()) {
     if (!op_conf.has_src_subset_tick_conf()) { continue; }
@@ -565,7 +565,7 @@ Maybe<void> AutoSourceAndSinkTick(
     CHECK_OR_RETURN(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
     return Maybe<void>::Ok();
   }));
-  OperatorConf src_subset_tick = JUST(FindSoleSrcSubsetTickOpConf(job_builder->job()));
+  OperatorConf src_subset_tick = JUST(FindJobSoleSrcSubsetTickOpConf(job_builder->job()));
   JUST(CreateSourceTicksAndSrcSubsetTick(&src_subset_tick, job_builder, DoEachSrc));
   JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
   return Maybe<void>::Ok();
@@ -760,7 +760,7 @@ Maybe<LogicalBlobId> MultiClientAutoCriticalSectionTick(
   return lbi;
 }
 
-Maybe<void> ConnectCriticalSectionCallbackToSoleDstSubsetTick(
+Maybe<void> ConnectCriticalSectionCallbackToJobSoleDstSubsetTick(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<std::shared_ptr<LogicalBlobId>>& critical_section_callback_lbis) {
   const OpNode* dst_subset_tick_op_node = nullptr;
@@ -806,8 +806,8 @@ Maybe<void> MultiClientAutoInterfaceCriticalSectionTick(const OpGraph& op_graph,
         GetOutputCriticalSectionCallbackBufferName(job->job_conf().job_name())));
     critical_section_callback_lbis.push_back(lbi);
   }
-  JUST(ConnectCriticalSectionCallbackToSoleDstSubsetTick(op_graph, &job_builder,
-                                                         critical_section_callback_lbis));
+  JUST(ConnectCriticalSectionCallbackToJobSoleDstSubsetTick(op_graph, &job_builder,
+                                                            critical_section_callback_lbis));
   return Maybe<void>::Ok();
 }
 
