@@ -74,7 +74,7 @@ add_custom_command(
     ARGS --gen-op-schema-cpp ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS}
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
     DEPENDS ${ONEFLOW_TABLE_GEN_TARGET} ${ONEFLOW_ODS}
-            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowUserOpGen.td
+            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowUserOps.td
     VERBATIM
 )
 set_source_files_properties(

@@ -73,4 +73,14 @@ def ControlEdgeCompatibleInterface : OpInterface<"ControlEdgeCompatible"> {
   ];
 }
 
+def NoGrad : OpInterface<"NoGrad"> {
+  let description = [{
+  }];
+}
+
+def CpuOnly : OpInterface<"CpuOnly"> {
+  let description = [{
+  }];
+}
+
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

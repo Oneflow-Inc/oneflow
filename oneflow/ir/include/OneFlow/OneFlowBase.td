@@ -337,6 +337,6 @@ class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {}
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
-include "OneFlow/OneFlowUserOpGen.td"
+include "OneFlow/OneFlowUserOps.td"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_
