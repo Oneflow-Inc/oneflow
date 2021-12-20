@@ -114,7 +114,7 @@ class TensorSource : public TraitBase<ConcreteType, TensorSource> {
   static StringRef getNdSbpAttrName() { return "nd_sbp"; }
 
   static LogicalResult verifyTrait(Operation* op) {
-    if (!op->hasAttrOfType<DenseIntElementsAttr>(getShapeAttrName())) {
+    if (!op->hasAttrOfType<ArrayAttr>(getShapeAttrName())) {
       return op->emitError("expected operation to have attribute: " + getShapeAttrName());
     }
     if (!op->hasAttrOfType<IntegerAttr>(getDataTypeAttrName())) {

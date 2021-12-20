@@ -116,7 +116,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
   let input = (ins);
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
-    AnyI64ElementsAttr:$shape,
+    ShapeAttr:$shape,
     OptionalAttr<OneFlow_DataType>:$data_type,
     DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
     DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
@@ -151,7 +151,7 @@ def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", [OneFlow_TensorSource]> 
   let input = (ins AnyType:$input);
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
-    OptionalAttr<AnyI64ElementsAttr>:$shape,
+    OptionalAttr<ShapeAttr>:$shape,
     OptionalAttr<OneFlow_DataType>:$data_type,
     OptionalAttr<BoolAttr>:$is_dynamic,
     OptionalAttr<StrArrayAttr>:$nd_sbp,
@@ -169,7 +169,7 @@ def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", [OneFlow_TensorSource]
   let input = (ins AnyType:$input);
   let output = (outs AnyType:$output);
   let custom_attrs = (ins
-    OptionalAttr<AnyI64ElementsAttr>:$shape,
+    OptionalAttr<ShapeAttr>:$shape,
     OptionalAttr<OneFlow_DataType>:$data_type,
     OptionalAttr<BoolAttr>:$is_dynamic,
     OptionalAttr<StrArrayAttr>:$nd_sbp,
