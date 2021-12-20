@@ -656,7 +656,6 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
 Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
-  
   auto FilterSbp4Blobs = [&](const PbRpf<std::string>& bns,
                              const cfg::NdSbpSignature& nd_sbp_sig) -> Maybe<bool> {
     // {in_0 : (S(6), B), in_1 : (S(0), S(1)), out : (B, S(1))}
@@ -668,7 +667,7 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
       const auto& nd_sbp = nd_sbp_it->second;
       Shape logical_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
       const auto& parallel_hierarchy = parallel_desc.hierarchy();
-      // Treat 1D sbp and nD sbp differently. Please refer to 
+      // Treat 1D sbp and nD sbp differently. Please refer to
       // JobBuildAndInferCtx::CheckOpBlobSplitability
       // for more details.
       if (nd_sbp.sbp_parallel_size() == 1) {

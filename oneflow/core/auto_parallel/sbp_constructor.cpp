@@ -56,7 +56,11 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start InitCopyCost" << std::endl;
   JUST(InitCopyCost(op_graph));
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
-  sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  // TODO:  Set all the sbp signatrure id to be 0 for initialization.
+  //        Could revert it back to
+  // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  //        after settling down the synchronization of sbp strategy.
+  sbp_graph_.Set0SbpSignature();
   double ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Initial cost: " << ori_cost;
   JUST(StealSbpSignatureFromOpNode(op_graph, job));
@@ -121,7 +125,9 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
 
 Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job) {
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
-  // Create sbp nodes
+
+  // Collect op_node
+  std::vector<OpNode*> OpNodeList;
   op_graph.ForEachNode([&](OpNode* op_node) {
     // TODO: support mirror op
     bool is_mirrored_conf = false;
@@ -131,22 +137,42 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
       if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
     CHECK(is_mirrored_conf == false) << "Haven't deal with mirror operators.";
+    OpNodeList.push_back(op_node);
+  });
+
+  // Decide the order to visit the op
+  std::vector<int32_t> order;
+  auto comp_op_name = [&](OpNode* a, OpNode* b) {
+    return a->op().op_name().compare(b->op().op_name()) > 0;
+  };
+  auto_parallel::DecideOrder(OpNodeList, order, comp_op_name);
+  std::vector<int32_t> output_order;
+
+  // Create sbp nodes
+  for (int32_t i = 0; i < OpNodeList.size(); i++) {
+    OpNode* op_node = OpNodeList[order[i]];
     // Generate sbp node in cost model and link it with corresponding op node
     SbpNode<cfg::NdSbpSignature>* sbp_node = sbp_graph_.GenerateNode();
     // Mapping from sbp_node to op_node
     sbp_node->op_node = op_node;  // TODO: SetOpNode()
     op_name2sbp_node_[op_node->op().op_name()] = sbp_node;
-  });
+  }
   // Create sbp edges
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  for (int32_t i = 0; i < OpNodeList.size(); i++) {
+    OpNode* op_node = OpNodeList[order[i]];
     // Get corresponding sbp node
     SbpNode<cfg::NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+    std::vector<OpNode*> OutputNodeList;
     for (const auto op_edge : op_node->out_edges()) {
-      const auto& end_node_name = op_edge->dst_node()->op().op_name();
+      OutputNodeList.push_back(op_edge->dst_node());
+    }
+    auto_parallel::DecideOrder(OutputNodeList, output_order, comp_op_name);
+    for (int32_t j : output_order) {
+      const auto& end_node_name = OutputNodeList[j]->op().op_name();
       // Generate sbp edge in cost model
       sbp_node->PointTo(op_name2sbp_node_[end_node_name]);
     }
-  });
+  }
   return Maybe<void>::Ok();
 }
 

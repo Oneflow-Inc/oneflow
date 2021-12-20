@@ -69,6 +69,8 @@ class SbpGraph {
 
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector_);
+  // assign 0 to a SbpSignature strategy to avoid randomness
+  void Set0SbpSignature();
 
   // Compute Cost for current strategy
   double ComputeCost();
@@ -226,6 +228,11 @@ void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector_) {
       this_node->FinalSbpSignatureId = rand() % this_node->SbpSignatureList.size();
     }
   }
+};
+
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::Set0SbpSignature() {
+  for (const auto& this_node : NodeList) { this_node->FinalSbpSignatureId = 0; }
 };
 
 template<class SbpSignature>
