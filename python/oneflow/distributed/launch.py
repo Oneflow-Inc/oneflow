@@ -167,11 +167,6 @@ def main():
                 except Exception:
                     pass
             if last_return_code is not None:
-                for process in processes:
-                    try:
-                        process.kill()
-                    except Exception:
-                        pass
                 raise subprocess.CalledProcessError(
                     returncode=last_return_code, cmd=cmd
                 )
