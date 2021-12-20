@@ -11,6 +11,7 @@ set(ONEFLOW_TEST_DEPENDS
         FileCheck count not
         oneflow-opt
         oneflow-translate
+        mlir-cpu-runner
         )
 
 add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests from: ${CMAKE_CURRENT_SOURCE_DIR}"
