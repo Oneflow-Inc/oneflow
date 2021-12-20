@@ -212,17 +212,17 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     const std::string& name = attr.first;
     const ::oneflow::AttrValue& value = attr.second;
     if (value.has_at_int32()) {
-      std::pair<mlir::Identifier, mlir::Attribute> kv =
+      mlir::NamedAttribute kv =
           GetBuilder().getNamedAttr(name, GetBuilder().getSI32IntegerAttr(value.at_int32()));
       attr_vec.emplace_back(kv);
     } else if (value.has_at_int64()) {
-      std::pair<mlir::Identifier, mlir::Attribute> kv =
+      mlir::NamedAttribute kv =
           GetBuilder().getNamedAttr(name, getSI64IntegerAttr(value.at_int64()));
       attr_vec.emplace_back(kv);
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr)                                       \
   else if (value.has_##at_key()) {                                              \
-    std::pair<mlir::Identifier, mlir::Attribute> kv =                           \
+    mlir::NamedAttribute kv =                                                   \
         GetBuilder().getNamedAttr(name, GetBuilder().get_attr(value.at_key())); \
     attr_vec.emplace_back(kv);                                                  \
   }
@@ -236,7 +236,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
-    std::pair<mlir::Identifier, mlir::Attribute> kv = GetBuilder().getNamedAttr(         \
+    mlir::NamedAttribute kv = GetBuilder().getNamedAttr(                                 \
         name, get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
     attr_vec.emplace_back(kv);                                                           \
   }
@@ -247,14 +247,13 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     else if (value.has_at_list_string()) {
       std::vector<llvm::StringRef> r_vec = {value.at_list_string().val().begin(),
                                             value.at_list_string().val().end()};
-      std::pair<mlir::Identifier, mlir::Attribute> kv =
+      mlir::NamedAttribute kv =
           GetBuilder().getNamedAttr(name, GetBuilder().getStrArrayAttr(r_vec));
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_data_type()) {
       if (auto dt_attr = GetDataTypeAttr(GetMLIRContext(), value.at_data_type())) {
-        std::pair<mlir::Identifier, mlir::Attribute> kv =
-            GetBuilder().getNamedAttr(name, dt_attr.getValue());
+        mlir::NamedAttribute kv = GetBuilder().getNamedAttr(name, dt_attr.getValue());
         attr_vec.emplace_back(kv);
       } else {
         GetModule().emitError("fail to convert op attr, key: " + name);
@@ -689,7 +688,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
   for (auto id_attr : op->getAttrDictionary()) {
-    auto id = id_attr.first;
+    auto id = id_attr.getName();
     // mlir only attrs
     // TODO: find a way to skip attrs like callee in a declarative way
     if (id.strref().equals("callee")
@@ -718,7 +717,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     // convert user conf attributes
     else {
       auto attr_name = id.str();
-      Attribute attr = id_attr.second;
+      Attribute attr = id_attr.getValue();
       auto user_attr = ::oneflow::AttrValue();
       const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name, attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
