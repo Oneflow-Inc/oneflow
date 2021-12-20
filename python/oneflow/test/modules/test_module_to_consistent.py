@@ -52,11 +52,11 @@ class TestModuleToCosistent(flow.unittest.TestCase):
         reuse_var_m.to_consistent(placement=P, sbp=B)
 
         test_case.assertTrue(reuse_var_m.linear1.weight is reuse_var_m.linear2.weight)
-        test_case.assertEqual(reuse_var_m.linear1.weight.placement, (P))
+        test_case.assertEqual(reuse_var_m.linear1.weight.placement, P)
         test_case.assertEqual(reuse_var_m.linear1.weight.sbp[0], B)
 
         test_case.assertTrue(reuse_var_m.linear1.bias is not reuse_var_m.linear2.bias)
-        test_case.assertEqual(reuse_var_m.linear1.bias.placement, (P))
+        test_case.assertEqual(reuse_var_m.linear1.bias.placement, P)
         test_case.assertEqual(reuse_var_m.linear1.bias.sbp[0], B)
 
 
