@@ -27,7 +27,17 @@ REGISTER_USER_OP("cumsum")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      auto dim = ctx->Attr<int64_t>("dim");
+      for (auto i = dim + 1; i < in_tensor_desc.shape().NumAxes(); i++) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
@@ -42,7 +52,7 @@ REGISTER_USER_OP("cumsum_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      auto dy_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+      const auto& dy_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
       for (auto i = 0; i < dy_tensor_desc.shape().NumAxes(); i++) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("dy", 0), i)
