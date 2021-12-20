@@ -147,7 +147,7 @@ class Adagrad(Optimizer):
                     "l2": param_group["weight_decay"],
                     "epsilon": param_group["eps"],
                     "lr_decay": param_group["lr_decay"],
-                    "train_step": self._state["step"] + 1,
+                    "train_step_val": self._state["step"] + 1,
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
