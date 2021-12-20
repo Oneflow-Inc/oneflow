@@ -47,7 +47,7 @@ endforeach()
 set(GENERATED_OP_SCHEMA_DIR oneflow/core/framework)
 set(GENERATED_IR_INCLUDE_DIR oneflow/ir/include)
 set(SOURCE_IR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/oneflow/ir/include)
-set(ONEFLOW_ODS ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOpGetGen.td)
+set(ONEFLOW_ODS ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOps.td)
 
 list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-I${GENERATED_IR_INCLUDE_DIR}")
 list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-I${SOURCE_IR_INCLUDE_DIR}")
@@ -74,7 +74,7 @@ add_custom_command(
     ARGS --gen-op-schema-cpp ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS}
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
     DEPENDS ${ONEFLOW_TABLE_GEN_TARGET} ${ONEFLOW_ODS}
-            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowUserOpGen.td
+            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOps.td
     VERBATIM
 )
 set_source_files_properties(

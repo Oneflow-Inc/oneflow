@@ -67,6 +67,8 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
 
 // JIT ops
 
+#ifdef GET_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
+
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
   let input = (ins Variadic<AnyType>:$data_input);
   let output = (outs Variadic<AnyType>:$data_output);
@@ -99,6 +101,8 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
     $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
   }];
 }
+
+#endif // GET_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
