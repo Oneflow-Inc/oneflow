@@ -43,6 +43,20 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     LOG(ERROR) << "user_op_conf " << user_op_conf.op_name();
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
+
+    auto AddIdentityOp = [&](std::string in_lbn) -> std::string {
+      user_op::UserOpConfWrapperBuilder id_shuffle_op_builder(user_op_conf.op_name() + "_identity_"
+                                                              + NewUniqueId());
+      user_op::UserOpConfWrapper identity_op =
+          id_shuffle_op_builder.OpTypeName("identity")
+              .Input("in", in_lbn)
+              .Output("out")
+              .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
+              .Build();
+      job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {identity_op.op_conf()});
+      return identity_op.output("out", 0);
+    };
+
     // id shuffle op
     user_op::UserOpConfWrapperBuilder id_shuffle_op_builder(user_op_conf.op_name() + "_id_shuffle");
     user_op::UserOpConfWrapper id_shuffle_op =
@@ -80,8 +94,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                                                                   + "_embedding_lookup");
     user_op::UserOpConfWrapper embedding_lookup_op =
         embedding_lookup_op_builder.OpTypeName("embedding_lookup")
-            .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
-            .Input("unique_ids", unique_ids_lbn)
+            .Input("num_unique_ids",
+                   AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
+            .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
             .Input("context", embedding_prefetch_op.output("context", 0))
             .Output("embeddings")
             .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
@@ -96,11 +111,14 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     user_op::UserOpConfWrapper embedding_shuffle_op =
         embedding_shuffle_op_builder.OpTypeName("embedding_shuffle")
             .Input("cur_rank_embeddings", embedding_lookup_op.output("embeddings", 0))
-            .Input("cur_rank_num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
-            .Input("cur_rank_reverse_idx", id_shuffle_op.output("cur_rank_reverse_idx", 0))
-            .Input("num_unique_ids", id_shuffle_op.output("num_unique_ids", 0))
-            .Input("ids_reverse_idx", id_shuffle_op.output("ids_reverse_idx", 0))
-            .Input("num_unique_ids_matrix", id_shuffle_op.output("num_unique_ids_matrix", 0))
+            .Input("cur_rank_num_unique_ids",
+                   AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
+            .Input("cur_rank_reverse_idx",
+                   AddIdentityOp(id_shuffle_op.output("cur_rank_reverse_idx", 0)))
+            .Input("num_unique_ids", AddIdentityOp(id_shuffle_op.output("num_unique_ids", 0)))
+            .Input("ids_reverse_idx", AddIdentityOp(id_shuffle_op.output("ids_reverse_idx", 0)))
+            .Input("num_unique_ids_matrix",
+                   AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
             .Output("embeddings")
             .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
@@ -124,12 +142,14 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         user_op::UserOpConfWrapper embedding_gradient_shuffle_op =
             embedding_gradient_shuffle_op_builder.OpTypeName("embedding_gradient_shuffle")
                 .Input("cur_rank_num_unique_ids",
-                       id_shuffle_op.output("cur_rank_num_unique_ids", 0))
-                .Input("cur_rank_reverse_idx", id_shuffle_op.output("cur_rank_reverse_idx", 0))
-                .Input("num_unique_ids", id_shuffle_op.output("num_unique_ids", 0))
-                .Input("ids_reverse_idx", id_shuffle_op.output("ids_reverse_idx", 0))
+                       AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
+                .Input("cur_rank_reverse_idx",
+                       AddIdentityOp(id_shuffle_op.output("cur_rank_reverse_idx", 0)))
+                .Input("num_unique_ids", AddIdentityOp(id_shuffle_op.output("num_unique_ids", 0)))
+                .Input("ids_reverse_idx", AddIdentityOp(id_shuffle_op.output("ids_reverse_idx", 0)))
                 .Input("embedding_diff", update_op_conf.input("embedding_diff", 0))
-                .Input("num_unique_ids_matrix", id_shuffle_op.output("num_unique_ids_matrix", 0))
+                .Input("num_unique_ids_matrix",
+                       AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
                 .Output("cur_rank_unique_embedding_diff")
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())
@@ -141,8 +161,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             user_op_conf.op_name() + "_sgd_embedding_update");
         user_op::UserOpConfWrapper sgd_embedding_update_op =
             sgd_embedding_update_op_builder.OpTypeName("sgd_embedding_update")
-                .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
-                .Input("unique_ids", id_shuffle_op.output("cur_rank_unique_ids", 0))
+                .Input("num_unique_ids",
+                       AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
+                .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
                 .Input("context", embedding_prefetch_op.output("context", 0))
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
                 .Input("embedding_diff",
