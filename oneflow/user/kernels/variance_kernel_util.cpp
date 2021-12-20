@@ -25,7 +25,7 @@ struct VarFunctor<DeviceType::kCPU, T> final {
   void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
                   const VarParam var_param) {
     for (size_t i = 0; i < var_param.parallel_num; i++) {
-      size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis,
+      const size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis,
                                             var_param.stride_in_caxis, var_param.caxis_size);
       ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
     }
