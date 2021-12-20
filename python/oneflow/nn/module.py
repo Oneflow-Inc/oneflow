@@ -470,31 +470,46 @@ class Module(object):
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
 
+        applied_dict = dict()
         for (key, param) in self._parameters.items():
             if param is None:
                 continue
 
-            assert isinstance(param, Parameter)
-            assert param.is_leaf
-            with flow.no_grad():
-                param_applied = fn(param)
-            param_applied.requires_grad = param.requires_grad
-
-            if param.grad is not None:
-                assert param.grad.is_leaf
+            need_apply = False
+            if param not in applied_dict:
+                need_apply = True
+                assert isinstance(param, Parameter)
+                assert param.is_leaf
                 with flow.no_grad():
-                    grad_applied = fn(param.grad)
-                grad_applied.requires_grad = param.grad.requires_grad
-                param_applied.grad = grad_applied
+                    param_applied = fn(param)
+                param_applied.requires_grad = param.requires_grad
+
+                if param.grad is not None:
+                    assert param.grad.is_leaf
+                    with flow.no_grad():
+                        grad_applied = fn(param.grad)
+                    grad_applied.requires_grad = param.grad.requires_grad
+                    param_applied.grad = grad_applied
 
             if can_use_assign_copy(param_applied, param):
-                self._parameters[key].data = param_applied
+                if need_apply:
+                    self._parameters[key].data = param_applied
+                    applied_dict[param] = param_applied
+                else:
+                    # assign copy has already change the data to param_applied
+                    pass
             else:
-                self._parameters[key] = Parameter(param_applied, param.requires_grad)
+                if need_apply:
+                    self._parameters[key] = Parameter(param_applied, param.requires_grad)
+                    applied_dict[param] = self._parameters[key]
+                else:
+                    self._parameters[key] = applied_dict[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                buf_applied = fn(buf)
+                self._buffers[key] = buf_applied
+                applied_dict[buf] = buf_applied
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
