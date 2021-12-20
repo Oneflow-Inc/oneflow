@@ -271,7 +271,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     IDX* host_num_unique_ids;
     OF_CUDA_CHECK(
-        cudaMallocHost(&host_num_unique_ids, (parallel_num * parallel_num + 1) * sizeof(IDX)));
+        cudaMallocHost(&host_num_unique_ids, (parallel_num * parallel_num) * sizeof(IDX)));
 
     IdShuffleTmpBufferManager<K, IDX> buffer_manager(tmp_buffer->mut_dptr(), num_ids, parallel_num);
     void* workspace_ptr = buffer_manager.WorkspacePtr();
@@ -311,7 +311,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
                                 reinterpret_cast<void*>(received_num_unique_ids_matrix),
                                 parallel_num, GetNcclDataType(cur_rank_num_unique_ids->data_type()),
                                 comm, cuda_stream));
-    IDX* host_num_unique_ids_matrix = host_num_unique_ids + 1;
+    IDX* host_num_unique_ids_matrix = host_num_unique_ids;
     copyd2h_primitive->Launch(ctx->stream(), host_num_unique_ids_matrix,
                               received_num_unique_ids_matrix,
                               parallel_num * parallel_num * sizeof(IDX));
