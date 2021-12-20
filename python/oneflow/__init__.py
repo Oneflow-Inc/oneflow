@@ -165,7 +165,7 @@ from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
-
+from oneflow._C import randperm
 
 from . import sbp
 import atexit
@@ -323,7 +323,6 @@ from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
-from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reduce_ops import max_op as max
 from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
