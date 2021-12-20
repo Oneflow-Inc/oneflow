@@ -1,4 +1,4 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops -linalg-detensorize=aggressive-mode -linalg-bufferize -tensor-bufferize -func-bufferize --tensor-constant-bufferize -buffer-results-to-out-params -convert-linalg-to-loops -convert-scf-to-std -convert-linalg-to-llvm -convert-memref-to-llvm -convert-std-to-llvm  %s | FileCheck %s
+// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops -linalg-bufferize -tensor-bufferize -func-bufferize --tensor-constant-bufferize -buffer-results-to-out-params -convert-linalg-to-loops -convert-scf-to-std -convert-linalg-to-llvm -convert-memref-to-llvm -convert-std-to-llvm  %s | FileCheck %s
 // RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops  -linalg-bufferize -tensor-bufferize -func-bufferize --tensor-constant-bufferize -buffer-results-to-out-params  -finalizing-bufferize -canonicalize %s | FileCheck %s
 // CHECK: return
 module  {
