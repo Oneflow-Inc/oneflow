@@ -136,6 +136,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
         if (update_op_conf.op_type_name() != "sgd_embedding_update_placeholder") { continue; }
+        if (update_op_conf.attr<std::string>("name") != user_op_conf.attr<std::string>("name")) { continue; }
         delete_op_names.push_back(update_op_conf.op_name());
         // embedding_gradient_shuffle op
         user_op::UserOpConfWrapperBuilder embedding_gradient_shuffle_op_builder(
