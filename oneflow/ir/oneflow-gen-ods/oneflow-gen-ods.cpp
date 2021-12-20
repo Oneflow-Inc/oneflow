@@ -385,17 +385,17 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
 }
 
 bool HasOneFlow_BasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
-  return !r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
-         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn
-         && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn && !r.output_arg_modify_fn
-         && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
+  return !r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn
+         && r.has_real_physical_tensor_desc_infer_fn_ && r.get_sbp_fn && !r.sbp_signature_infer_fn
+         && r.data_type_infer_fn && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn
+         && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
 }
 
 bool HasOneFlow_BasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& r) {
-  return r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn && r.physical_tensor_desc_infer_fn
-         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn
-         && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn && !r.output_arg_modify_fn
-         && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
+  return r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn
+         && r.has_real_physical_tensor_desc_infer_fn_ && r.get_sbp_fn && !r.sbp_signature_infer_fn
+         && r.data_type_infer_fn && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn
+         && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
 }
 
 void PrintHas1(const std::string& var_name) { std::cout << "  let has_" << var_name << " = 1;\n"; }
@@ -430,7 +430,7 @@ void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
   }
   if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
   if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
-  if (r.physical_tensor_desc_infer_fn) { PrintHas1("physical_tensor_desc_infer_fn"); }
+  if (r.has_real_physical_tensor_desc_infer_fn_) { PrintHas1("physical_tensor_desc_infer_fn"); }
   if (r.get_sbp_fn) { PrintHas1("get_sbp_fn"); }
   if (r.data_type_infer_fn) { PrintHas1("data_type_infer_fn"); }
   PrintAdvancedHasFns(r);

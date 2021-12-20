@@ -70,6 +70,8 @@ struct OpRegistryResult {
   bool has_real_check_fn_ = true;  // NOTE: this field should be remove once ods gen is done
   TensorDescInferFn logical_tensor_desc_infer_fn;
   TensorDescInferFn physical_tensor_desc_infer_fn;
+  bool has_real_physical_tensor_desc_infer_fn_ =
+      false;  // NOTE: this field should be remove once ods gen is done
   GetSbpFn get_sbp_fn;
   SbpSignatureInferFn sbp_signature_infer_fn;
   DataTypeInferFn data_type_infer_fn;
