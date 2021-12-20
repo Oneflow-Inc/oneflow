@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -24,10 +27,23 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/vm_util.h"
+#ifdef WITH_CUDA
+#include <cuda_runtime_api.h>
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
 namespace {
+
+int64_t GetGpuDeviceNum() {
+#ifndef WITH_CUDA
+  return 0;
+#else
+  int device_count = 0;
+  cudaGetDeviceCount(&device_count);
+  return device_count;
+#endif
+}
 
 using MachineId2DeviceIdList =
     std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>;
@@ -302,6 +318,34 @@ Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_des
   return Maybe<void>::Ok();
 }
 
+Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
+  if (likely(JUST(IsMultiClient()))) {
+    const auto& sorted_dev_phy_ids_iter =
+        machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
+    if (sorted_dev_phy_ids_iter != machine_id2sorted_dev_phy_ids_->end()) {
+      for (int64_t dev_phy_id : *sorted_dev_phy_ids_iter->second) {
+        if (device_type_ == DeviceType::kCUDA) {
+          const int64_t gpu_device_num = GetGpuDeviceNum();
+          CHECK_NE_OR_RETURN(gpu_device_num, 0)
+              << "Placment with \"cuda\" type is invalid because there is no CUDA device!";
+          int64_t device_num = std::min(GlobalProcessCtx::NumOfProcessPerNode(), gpu_device_num);
+          CHECK_LT_OR_RETURN(dev_phy_id, device_num)
+              << "Placment is invalid because device id must be less than "
+              << (gpu_device_num < GlobalProcessCtx::NumOfProcessPerNode()
+                      ? "num of CUDA devices on node"
+                      : "num of process per node");
+        } else if (device_type_ == DeviceType::kCPU) {
+          CHECK_LT_OR_RETURN(dev_phy_id, GlobalProcessCtx::NumOfProcessPerNode())
+              << "Placment is invalid because device id must be less than num of process per node";
+        } else {
+          OF_UNIMPLEMENTED();
+        }
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
   std::string rank = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
@@ -456,6 +500,11 @@ Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_
   return SymbolOf(ParallelDesc(parallel_conf));
 }
 
+Maybe<void> RawCheckDeviceIdsIsValid(Symbol<ParallelDesc> placement) {
+  JUST(placement->CheckDeviceIdsIsValid());
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 decltype(GetParallelId4CurrentProcessCtx) GetParallelId4CurrentProcessCtx =
@@ -467,5 +516,7 @@ decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, 
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
 decltype(TxtStringToPlacement) TxtStringToPlacement =
     DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
+decltype(CheckDeviceIdsIsValid) CheckDeviceIdsIsValid =
+    DECORATE(&RawCheckDeviceIdsIsValid, ThreadLocal);
 
 }  // namespace oneflow

@@ -132,9 +132,6 @@ bool CommNetIBEnabled() {
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
-#ifdef WITH_CUDA
-  InitGlobalCudaDeviceProp();
-#endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
@@ -255,9 +252,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
-#ifdef WITH_CUDA
-  Global<cudaDeviceProp>::Delete();
-#endif
   ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
 }
