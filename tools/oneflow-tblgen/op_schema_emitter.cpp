@@ -201,16 +201,17 @@ void OpSchemaEmitter<Target>::emitBit(const Record* def, StringRef fieldname, js
 }
 
 template<FileTarget Target>
-void OpSchemaEmitter<Target>::emitTrait(const Record* def, StringRef fieldname, StringRef traitname, json* op) const {
+void OpSchemaEmitter<Target>::emitTrait(const Record* def, StringRef fieldname, StringRef traitname,
+                                        json* op) const {
   bool hasTrait = false;
 
-  for(auto elem: *def->getValueAsListInit("traits")) {
-    if(elem->getAsString() == traitname) {
+  for (auto elem : *def->getValueAsListInit("traits")) {
+    if (elem->getAsString() == traitname) {
       hasTrait = true;
       break;
-    } 
+    }
   }
-  
+
   (*op)[fieldname.str()] = hasTrait;
 }
 
