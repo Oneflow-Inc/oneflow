@@ -25,8 +25,9 @@ import oneflow.framework.dtype as dtype_util
 from test_util import GenArgDict
 from collections import OrderedDict
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestMLIROptimizations(flow.unittest.TestCase):
@@ -42,18 +43,18 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         for arg in GenArgDict(d):
             self.run_fuse_cast_scale_mlir(**arg)
 
-    # @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
-    # def test_gpu(self):
-    #     d = OrderedDict(
-    #         {
-    #             "shape": [(96, 96), (3, 3)],
-    #             "in_type": [flow.int64],
-    #             "out_type": [flow.float32],
-    #             "device": ["gpu"],
-    #         }
-    #     )
-    #     for arg in GenArgDict(d):
-    #         self.run_fuse_cast_scale_mlir(**arg)
+    @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
+    def test_gpu(self):
+        d = OrderedDict(
+            {
+                "shape": [(96, 96), (3, 3)],
+                "in_type": [flow.int64],
+                "out_type": [flow.float32],
+                "device": ["gpu"],
+            }
+        )
+        for arg in GenArgDict(d):
+            self.run_fuse_cast_scale_mlir(**arg)
 
     def run_fuse_cast_scale_mlir(
         test_case, device=None, in_type=None, out_type=None, shape=None
