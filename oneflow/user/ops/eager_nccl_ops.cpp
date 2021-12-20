@@ -209,6 +209,10 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> EagerNcclS2sOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
 /* static */ Maybe<void> EagerNcclS2sOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
