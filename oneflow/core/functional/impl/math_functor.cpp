@@ -1517,16 +1517,10 @@ class VarianceFunctor {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
     MutableAttrMap attrs;
-    if (unbiased) {
-      attrs.SetAttr<bool>("unbiased", JUST(unbiased));
-    }
-    if (keepdim) {
-      attrs.SetAttr<bool>("keepdim", JUST(keepdim));
-    } else {
-      attrs.SetAttr<bool>("keepdim", false);
-    }
+    if (unbiased) { attrs.SetAttr<bool>("unbiased", JUST(unbiased)); }
+    if (keepdim) { attrs.SetAttr<bool>("keepdim", JUST(keepdim)); }
     std::vector<int32_t> axis;
-    const int32_t ndim = input->shape()->NumAxes();
+    const int ndim = input->shape()->NumAxes();
     axis.reserve(ndim);
     if (!dim) {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }

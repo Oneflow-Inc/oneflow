@@ -70,7 +70,7 @@ struct VarParam {
 class VarParamHelper final {
  public:
   VarParamHelper() = delete;
-  explicit VarParamHelper(const ShapeView& input_shape, std::vector<int32_t> axis, bool unbiased)
+  explicit VarParamHelper(const ShapeView& input_shape, const std::vector<int32_t> axis, const bool unbiased)
       : axis_(axis), input_shape_(input_shape) {
     param.unbiased = unbiased;
     ComputeStrideVec(axis_, param.stride_in_axis);
@@ -92,7 +92,7 @@ class VarParamHelper final {
     param.parallel_num = input_shape_.elem_cnt() / param.elem_cnt;
   }
 
-  void ComputeStrideVec(std::vector<int32_t> axis, int32_t* stride_vec) {
+  void ComputeStrideVec(const std::vector<int32_t> axis, int32_t* stride_vec) {
     // low dim at begin
     const int axis_size = axis.size();
     for (int i = 0; i < axis_size; i++) {
@@ -116,7 +116,7 @@ class VarParamHelper final {
     return caxis;
   }
 
-  void GetDimSizeInAxis(std::vector<int32_t> axis, int32_t* dim_size_in_axis) {
+  void GetDimSizeInAxis(const std::vector<int32_t> axis, int32_t* dim_size_in_axis) {
     // low dim at begin
     const int axis_size = axis.size();
     for (int i = 0; i < axis_size; i++) {
@@ -149,7 +149,7 @@ OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const Va
 template<DeviceType device_type, typename T>
 struct VarFunctor final {
   void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
-                  VarParam var_param);
+                  const VarParam var_param);
 };
 
 }  // namespace user_op

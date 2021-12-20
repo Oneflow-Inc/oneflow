@@ -21,7 +21,7 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-__global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, VarParam var_param) {
+__global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, const VarParam var_param) {
   CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
     size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis, var_param.stride_in_caxis,
                                           var_param.caxis_size);
@@ -32,7 +32,7 @@ __global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, VarPa
 namespace {
 template<typename T>
 inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
-                                     size_t total_elem_cnt, size_t start, size_t step) {
+                                     const size_t total_elem_cnt, const size_t start, const size_t step) {
   T old_mean = 0.0;
   for (size_t i = start; i < total_elem_cnt; i += step) {
     ++(*count);
@@ -44,7 +44,7 @@ inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
 
 template<typename T>
 inline __device__ void WelfordCombine(T* b_mean, T* b_m2, T* b_count, T* mean, T* m2, T* count,
-                                      size_t total_elem_cnt, size_t start, size_t step) {
+                                      const size_t total_elem_cnt, const size_t start, const size_t step) {
   for (size_t i = start; i < total_elem_cnt; i += step) {
     cuda::layer_norm::WelfordCombine(b_mean[i], b_m2[i], b_count[i], mean, m2, count);
   }
@@ -54,7 +54,7 @@ __device__ int32_t done_block_count = 0;
 
 template<typename T>
 __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
-                                    VarParam var_param) {
+                                    const VarParam var_param) {
   size_t elems_per_block = var_param.elem_cnt / gridDim.x;
   size_t elems_per_thread = elems_per_block / blockDim.x;
 
@@ -141,7 +141,7 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
 template<typename T>
 struct VarFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
-                  VarParam var_param) {
+                  const VarParam var_param) {
     int grid_dim = 0;
     int block_dim = 0;
     SetGridDimAndBlockDim(var_param.elem_cnt, &grid_dim, &block_dim);

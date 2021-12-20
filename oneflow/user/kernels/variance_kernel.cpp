@@ -32,7 +32,7 @@ class VarKernel final : public user_op::OpKernel {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    bool unbiased = ctx->Attr<bool>("unbiased");
+    const bool unbiased = ctx->Attr<bool>("unbiased");
     const T* in_ptr = input->dptr<T>();
     T* out_ptr = output->mut_dptr<T>();
     T* tmp_buffer_ptr = tmp_buffer->mut_dptr<T>();
@@ -52,8 +52,12 @@ class VarKernel final : public user_op::OpKernel {
 
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);
-  return static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
-         * GetSizeOfDataType(input.data_type()) * 3;
+  const Shape& input_shape = input.shape();
+  std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
+  if (axis.size() == input_shape.NumAxes()) {
+    return  static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
+         * GetSizeOfDataType(input.data_type()) * 3; }
+  return 0;
 }
 
 #define REGISTER_VAR_KERNEL(device, dtype)                                                    \
