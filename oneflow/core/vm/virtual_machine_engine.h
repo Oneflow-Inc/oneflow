@@ -121,7 +121,6 @@ class VirtualMachineEngine final : public intrusive::Base {
                                    Stream** stream);
 
  private:
-  using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using ReadyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
