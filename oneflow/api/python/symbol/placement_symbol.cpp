@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #ifdef WITH_CUDA
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 #endif  // WITH_CUDA
 
 namespace py = pybind11;
