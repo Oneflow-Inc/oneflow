@@ -463,7 +463,7 @@ class Module(object):
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn, applied_dict = None):
+    def _apply(self, fn, applied_dict=None):
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
         if applied_dict is None:
@@ -494,6 +494,8 @@ class Module(object):
                         grad_applied = fn(param.grad)
                     grad_applied.requires_grad = param.grad.requires_grad
                     param_applied.grad = grad_applied
+            else:
+                param_applied = applied_dict[param]
 
             if can_use_assign_copy(param_applied, param):
                 if need_apply:
