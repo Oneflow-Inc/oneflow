@@ -54,7 +54,7 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < N - 1; ++i) { offset += math_helper_[i].Mul(index[i]); }
+    for (int i = 0; i < N - 1; ++i) { offset += math_helper_[i].mul(index[i]); }
     offset += index[N - 1];
     return offset;
   }
@@ -66,7 +66,7 @@ class NdIndexOffsetHelper {
 #pragma unroll
 #endif
     for (int i = 0; i < N; ++i) {
-      if (i < n) { offset += math_helper_[i].Mul(index[i]); }
+      if (i < n) { offset += math_helper_[i].mul(index[i]); }
     }
     return offset;
   }
@@ -80,11 +80,11 @@ class NdIndexOffsetHelper {
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
-    for (int i = 0; i < n - 1; ++i) { offset += math_helper_[i].Mul(index[i]); }
+    for (int i = 0; i < n - 1; ++i) { offset += math_helper_[i].mul(index[i]); }
     if (n == N) {
       offset += index[n - 1];
     } else {
-      offset += math_helper_[n - 1].Mul(index[n - 1]);
+      offset += math_helper_[n - 1].mul(index[n - 1]);
     }
     return offset;
   }
@@ -97,7 +97,7 @@ class NdIndexOffsetHelper {
     for (int i = 0; i < N - 1; ++i) {
       const T idx = math_helper_[i].divides(remaining);
       index[i] = idx;
-      remaining = remaining - math_helper_[i].Mul(idx);
+      remaining = remaining - math_helper_[i].mul(idx);
     }
     index[N - 1] = remaining;
   }
@@ -112,7 +112,7 @@ class NdIndexOffsetHelper {
       if (i < n) {
         const T idx = math_helper_[i].divides(remaining);
         index[i] = idx;
-        remaining = remaining - math_helper_[i].Mul(idx);
+        remaining = remaining - math_helper_[i].mul(idx);
       }
     }
   }
@@ -129,7 +129,7 @@ class NdIndexOffsetHelper {
     for (int i = 0; i < n - 1; ++i) {
       const T idx = math_helper_[i].divides(remaining);
       *index[i] = idx;
-      remaining = remaining - math_helper_[i].Mul(idx);
+      remaining = remaining - math_helper_[i].mul(idx);
     }
     if (n == N) {
       *index[n - 1] = remaining;
