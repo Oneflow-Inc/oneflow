@@ -29,10 +29,10 @@ struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceDiffMachine = 2;
   static constexpr int64_t kDistanceMax = 3;
 
-  static bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc);
+  static bool IsDeviceTypeCPUOrCUDA(const ParallelDesc& parallel_desc);
   static bool HasEmptySliceIfSplit(int64_t parallel_num, const cfg::SbpParallel& sbp_parallel,
                                    const BlobDesc& blob_desc);
-  static bool IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs);
+  static bool IsOnSameCUDADevice(const TaskNode* lhs, const TaskNode* rhs);
   static bool IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingP2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);

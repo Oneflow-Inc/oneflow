@@ -232,10 +232,10 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
           const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_logical =
               ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          const TensorDesc& in_physical = ctx->InputTensorDesc(pair.first, pair.second);
           CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), nd_sbp, ctx->parallel_desc(),
                                                  ctx->parallel_ctx()))
-                          == in_physical->shape());
+                          == in_physical.shape());
         }
         for (const auto& pair : ctx->outputs()) {
           TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);

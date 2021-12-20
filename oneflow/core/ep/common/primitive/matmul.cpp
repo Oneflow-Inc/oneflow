@@ -58,7 +58,7 @@ class MatmulFactoryImpl : public MatmulFactory {
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, MatmulFactory, MatmulFactoryImpl<DeviceType::kCPU>);
 
 #ifdef WITH_CUDA
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, MatmulFactory, MatmulFactoryImpl<DeviceType::kGPU>);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MatmulFactory, MatmulFactoryImpl<DeviceType::kCUDA>);
 #endif  // WITH_CUDA
 
 }  // namespace

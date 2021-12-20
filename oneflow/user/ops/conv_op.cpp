@@ -434,17 +434,17 @@ REGISTER_USER_OP("conv_filter_grad")
         CHECK_LE_OR_RETURN(groups, dy.shape().At(1));
         CHECK_EQ_OR_RETURN(x.shape().At(1) % groups, 0);
         CHECK_EQ_OR_RETURN(dy.shape().At(1) % groups, 0);
-        filter_diff_dim_vec.push_back(dy.shape().At(1));
-        filter_diff_dim_vec.push_back(x.shape().At(1) / groups);
+        filter_diff_dim_vec.emplace_back(dy.shape().At(1));
+        filter_diff_dim_vec.emplace_back(x.shape().At(1) / groups);
         filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), kernel_size.cbegin(),
                                    kernel_size.cend());
       } else {
         CHECK_EQ_OR_RETURN("channels_last", data_format);
         CHECK_EQ_OR_RETURN(groups, 1);
-        filter_diff_dim_vec.push_back(dy.shape().dim_vec().back());
+        filter_diff_dim_vec.emplace_back(dy.shape().dim_vec().back());
         filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), kernel_size.cbegin(),
                                    kernel_size.cend());
-        filter_diff_dim_vec.push_back(x.shape().dim_vec().back() / groups);
+        filter_diff_dim_vec.emplace_back(x.shape().dim_vec().back() / groups);
       }
 
       user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
@@ -505,7 +505,7 @@ REGISTER_USER_OP("conv_bias_grad")
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+      user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
 
       int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
       std::string data_format = ctx->Attr<std::string>("data_format");
@@ -531,7 +531,7 @@ REGISTER_USER_OP("conv_bias_grad")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
+      user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
       *bias_diff->mut_data_type() = dy.data_type();
       return Maybe<void>::Ok();
     })

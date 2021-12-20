@@ -467,6 +467,32 @@ def log_op(input):
     return flow._C.log(input)
 
 
+@register_tensor_op("log2")
+def log2_op(input):
+    """
+    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
+    
+    .. math::
+        y_{i} = \\log2_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.random.randn(2, 3, 4, 5)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> output = flow.log2(input)
+
+
+    """
+    return flow._C.log2(input)
+
+
 @register_tensor_op("rsqrt")
 def rsqrt_op(input):
     """Returns a new tensor with the reciprocal of the square-root of each of
@@ -569,7 +595,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     .. math::
         \\text{out} = \\beta\\ \\text{input} + \\alpha\\ (\\text{mat1}_i \\mathbin{@} \\text{mat2}_i)
 
-    For inputs of type `FloatTensor` or `DoubleTensor`, arguments :attr:`beta` and
+    For inputs of type `float` or `double`, arguments :attr:`beta` and
     :attr:`alpha` must be real numbers, otherwise they should be integers.
 
     Args:
@@ -1053,7 +1079,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
                 [9., 4., 3.]], dtype=oneflow.float32)
         >>> indices
         tensor([[2, 3, 1],
-                [1, 2, 3]], dtype=oneflow.int32)
+                [1, 2, 3]], dtype=oneflow.int64)
         >>> values.shape
         oneflow.Size([2, 3])
         >>> indices.shape
@@ -1064,7 +1090,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
                 [1., 2.]], dtype=oneflow.float32)
         >>> indices
         tensor([[0, 4],
-                [0, 4]], dtype=oneflow.int32)
+                [0, 4]], dtype=oneflow.int64)
         >>> values.shape
         oneflow.Size([2, 2])
         >>> indices.shape

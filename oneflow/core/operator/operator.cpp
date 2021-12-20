@@ -1162,7 +1162,7 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
 
 bool IsCpuOnly(const std::string& user_op_type_name) {
   auto* registration_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_type_name);
-  CHECK_NOTNULL(registration_val);
+  CHECK(registration_val != nullptr) << "user_op_type_name: " << user_op_type_name;
   return registration_val->cpu_only_supported;
 }
 

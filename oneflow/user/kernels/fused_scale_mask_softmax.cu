@@ -26,10 +26,11 @@ struct ScaleMaskLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) {
     cuda::softmax::Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -53,9 +54,10 @@ struct ScaleMaskStore {
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -64,7 +66,7 @@ struct ScaleMaskStore {
         pack.elem[i] = static_cast<DST>(src[i]) * static_cast<DST>(scale);
       }
     }
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
   const int8_t* mask;
@@ -100,16 +102,16 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(dtype)           \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax")                    \
-      .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(dtype)           \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax")                     \
+      .SetCreateFn<FusedScaleMaskSoftmaxKernel<dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(half)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(float)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL(double)
-#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_GPU_KERNEL
+REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(half)
+REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(float)
+REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(double)
+#undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL
 
 template<typename T>
 class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
@@ -140,10 +142,10 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)          \
-  REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")               \
-      .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(dtype)           \
+  REGISTER_USER_KERNEL("fused_scale_mask_softmax_grad")                \
+      .SetCreateFn<FusedScaleMaskSoftmaxGradKernel<dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)

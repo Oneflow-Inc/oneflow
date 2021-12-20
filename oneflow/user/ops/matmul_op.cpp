@@ -305,7 +305,7 @@ REGISTER_USER_OP("broadcast_matmul")
         CHECK_EQ_OR_RETURN(k, b.shape().At(b.shape().NumAxes() - 1));
         n = b.shape().At(b.shape().NumAxes() - 2);
       }
-      out_dim_vec.push_back(n);
+      out_dim_vec.emplace_back(n);
       *out->mut_shape() = Shape(out_dim_vec);
 
       if (ctx->has_input("_add_to_output", 0)) {

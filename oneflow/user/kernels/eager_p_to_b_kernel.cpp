@@ -27,15 +27,15 @@ namespace oneflow {
 
 namespace {
 
-class EagerPToBOpKernelState final : public user_op::OpKernelState {
+class EagerPToBOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerPToBOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerPToBOpKernelState() override = default;
+  explicit EagerPToBOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerPToBOpKernelCache() override = default;
 
   const std::vector<std::pair<int64_t, int64_t>>& p2p_pair() const { return p2p_pair_; }
 
  private:
-  void Init(user_op::KernelInitContext* ctx) {
+  void Init(user_op::KernelCacheContext* ctx) {
     const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
     const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
     Symbol<ParallelDesc> in_parallel_desc = CHECK_JUST(TxtStringToPlacement(in_parallel_conf_txt));
@@ -71,15 +71,16 @@ class EagerPToBKernel final : public user_op::OpKernel {
   EagerPToBKernel() = default;
   ~EagerPToBKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerPToBOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerPToBOpKernelCache>(ctx); }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerPToBOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerPToBOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -87,7 +88,7 @@ class EagerPToBKernel final : public user_op::OpKernel {
     void* tmp_buffer_ptr = tmp_buffer->mut_dptr();
 
     const int64_t total_elem_cnt = ctx->Attr<Shape>("shape").elem_cnt();
-    const auto& p2p_pair = kernel_state->p2p_pair();
+    const auto& p2p_pair = kernel_cache->p2p_pair();
 
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         total_elem_cnt * GetSizeOfDataType(out->data_type()));
@@ -104,7 +105,7 @@ class EagerPToBKernel final : public user_op::OpKernel {
       if (GlobalProcessCtx::Rank() == dst) {
         CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
                                      ctx->stream()));
-        add_primitive->Launch(ctx->stream(), tmp_buffer_ptr, out->dptr(), out->mut_dptr(),
+        add_primitive->Launch(ctx->stream(), out->dptr(), tmp_buffer_ptr, out->mut_dptr(),
                               total_elem_cnt);
       }
     }
@@ -119,8 +120,8 @@ class EagerPToBKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
 
 REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kGPU)
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

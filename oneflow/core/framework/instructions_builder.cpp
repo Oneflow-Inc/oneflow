@@ -521,6 +521,7 @@ InstructionsBuilder::GetPhysicalOpArgBlobAttrs(
   std::shared_ptr<cfg::SbpParallel> sbp_parallel =
       logical_blob_object->op_arg_parallel_attr()->sbp_parallel();
   std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>> pyh_op_arg_blob_attrs;
+  pyh_op_arg_blob_attrs.reserve(parallel_num);
   if (sbp_parallel->has_split_parallel()) {
     int64_t split_axis = sbp_parallel->split_parallel().axis();
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -552,6 +553,7 @@ InstructionsBuilder::UnpackLogicalBlobToPhysicalBlobs(
     return pyhsical_blob_object;
   };
   std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects;
+  physical_blob_objects.reserve(phy_parallel_desc_symbols.size());
   for (int64_t i = 0; i < phy_parallel_desc_symbols.size(); ++i) {
     physical_blob_objects.emplace_back(JUST(GetPhysicalBlob(
         JUST(VectorAt(phy_parallel_desc_symbols, i)), JUST(VectorAt(*phy_op_arg_blob_attrs, i)))));
@@ -713,7 +715,9 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
   int64_t parallel_num = ref_blob_object->parallel_desc_symbol()->parallel_num();
   CHECK_EQ_OR_RETURN(parallel_num, value_blob_object->parallel_desc_symbol()->parallel_num());
   std::vector<uint64_t> token_id_0;
+  token_id_0.reserve(parallel_num);
   std::vector<uint64_t> token_id_1;
+  token_id_1.reserve(parallel_num);
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_0.emplace_back(NewTokenId()); }
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
   std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
@@ -1014,7 +1018,6 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   if (eager_blob_object->last_used_device().has_value()) {
     const auto& last_used_device = JUST(eager_blob_object->last_used_device());
     const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
-
     if (last_used_device != producer_op_device) {
       JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                           last_used_device));
@@ -1699,6 +1702,7 @@ InstructionsBuilder::GetMut1OperandBlobObjects(
   const auto OutputBns = [&op_attribute]() -> std::vector<std::string> {
     const auto& obn2modifier = op_attribute->arg_modifier_signature().obn2output_blob_modifier();
     std::vector<std::string> output_bns;
+    output_bns.reserve(op_attribute->output_bns().size() + op_attribute->tmp_bns().size());
     for (const auto& obn : op_attribute->output_bns()) {
       if (obn2modifier.at(obn).header_infered_before_compute()) { output_bns.emplace_back(obn); }
     }

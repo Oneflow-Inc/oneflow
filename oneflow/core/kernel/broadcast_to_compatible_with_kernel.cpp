@@ -57,7 +57,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL, 
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
 #if defined(WITH_CUDA)
-REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
+REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(DeviceType::kCUDA, (float16, DataType::kFloat16))
 #endif
 
 }  // namespace oneflow

@@ -21,26 +21,15 @@ limitations under the License.
 
 namespace oneflow {
 
-inline bool LossReductionTypeIsRight(const std::string& reduction) {
-  if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) { return false; }
-  return true;
-}
-
-Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
-    user_op::InferContext* ctx, const std::string& output_name, bool output_is_dynamic,
-    const Shape& output_shape_when_reduction_is_none);
-
-Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
-    user_op::InferContext* ctx, const std::string& input_name,
-    const Shape& input_shape_when_reduction_is_none);
-
 user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
-        [](user_op::UserOpSbpSignatureBuilder& builder) {});
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
+                             user_op::SbpContext* ctx)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {});
 
 user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f =
-        [](user_op::UserOpSbpSignatureBuilder& builder) {});
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
+                             user_op::SbpContext* ctx)>& f =
+        [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {});
 
 }  // namespace oneflow
 

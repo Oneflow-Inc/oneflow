@@ -54,7 +54,7 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
 
 REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kGPU)
+REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace

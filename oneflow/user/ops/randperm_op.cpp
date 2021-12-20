@@ -24,7 +24,8 @@ Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx);
 REGISTER_NO_GRAD_USER_OP("randperm")
     .Output("out")
     .Attr<int32_t>("n")
-    .Attr<std::string>("nd_sbp")
+    .Attr<int64_t>("seed")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       int32_t n = ctx->Attr<int32_t>("n");
@@ -37,19 +38,10 @@ REGISTER_NO_GRAD_USER_OP("randperm")
       *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
-    .SetNdSbpInferFn(&InferRandpermNdSbp);
-
-Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  if (JUST(IsMultiClient())) {
-    const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
-    NdSbp pb;
-    CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
-    out->InitFromProto(pb);
-  } else {
-    out->mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-  }
-  return Maybe<void>::Ok();
-}
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::SbpParallel default_sbp;
+      default_sbp.mutable_broadcast_parallel();
+      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+    });
 
 }  // namespace oneflow
