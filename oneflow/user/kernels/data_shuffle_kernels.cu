@@ -198,37 +198,15 @@ class IdShuffleTmpBufferManager final {
   void* ptr_;
 };
 
-class IdShuffleNcclKernelCommState final : public user_op::OpKernelState {
- public:
-  explicit IdShuffleNcclKernelCommState(user_op::KernelInitContext* ctx)
-      : is_init_(false), parallel_desc_(ctx->parallel_desc()) {}
-  ~IdShuffleNcclKernelCommState() = default;
-
-  ncclComm_t comm() {
-    if (!is_init_) {
-      std::set<std::pair<int64_t, int64_t>> device_set;
-      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
-        int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-        int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-        device_set.emplace(std::make_pair(machine_id, device_id));
-      }
-      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-      comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, "ID_SHUFFLE");
-      is_init_ = true;
-    }
-    return comm_;
-  }
-
- private:
-  bool is_init_;
-  ParallelDesc parallel_desc_;
-  ncclComm_t comm_{};
-};
-
 class NcclKernelCommState final : public user_op::OpKernelState {
  public:
   explicit NcclKernelCommState(user_op::KernelInitContext* ctx)
-      : is_init_(false), parallel_desc_(ctx->parallel_desc()) {}
+      : is_init_(false),
+        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
+        stream_name_(""),
+        parallel_desc_(ctx->parallel_desc()) {
+    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+  }
   ~NcclKernelCommState() = default;
 
   ncclComm_t comm() {
@@ -240,7 +218,11 @@ class NcclKernelCommState final : public user_op::OpKernelState {
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
       EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-      comm_ = comm_mgr->GetCommForDevice(device_set);
+      if (has_independent_stream_) {
+        comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+      } else {
+        comm_ = comm_mgr->GetCommForDevice(device_set);
+      }
       is_init_ = true;
     }
     return comm_;
@@ -248,6 +230,8 @@ class NcclKernelCommState final : public user_op::OpKernelState {
 
  private:
   bool is_init_;
+  bool has_independent_stream_;
+  std::string stream_name_;
   ParallelDesc parallel_desc_;
   ncclComm_t comm_{};
 };
@@ -262,14 +246,14 @@ class IdShuffleKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<IdShuffleNcclKernelCommState>(ctx);
+    return std::make_shared<NcclKernelCommState>(ctx);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<IdShuffleNcclKernelCommState*>(state);
+    auto* nccl_comm = dynamic_cast<NcclKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
     user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
@@ -455,10 +439,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           host_num_unique_ids_matrix[i * parallel_num + parallel_id] * embedding_size;
       const int64_t need_recv_elem_cnt =
           host_num_unique_ids_matrix[parallel_id * parallel_num + i] * embedding_size;
-      LOG(ERROR) << "need_send_elem_cnt "
-                 << host_num_unique_ids_matrix[i * parallel_num + parallel_id];
-      LOG(ERROR) << " need_recv_elem_cnt "
-                 << host_num_unique_ids_matrix[parallel_id * parallel_num + i];
       OF_NCCL_CHECK(
           ncclSend(reinterpret_cast<const void*>(reverse_cur_rank_embeddings + send_offset),
                    need_send_elem_cnt, GetNcclDataType(cur_rank_embeddings->data_type()), i, comm,
