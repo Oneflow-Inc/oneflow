@@ -182,6 +182,34 @@ struct DropoutStore {
   DST scale;
 };
 
+template<typename LOAD, typename STORE, typename ComputeType>
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchFusedSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                const int64_t cols) {
+  return cuda::softmax::DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, cuda::softmax::Algorithm::kSoftmax>(
+      stream, load, store, rows, cols);
+}
+
+template<typename LOAD, typename STORE, typename ComputeType>
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchFusedSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                const int64_t cols) {
+  // Because the warp implement use too much registers, in broadcast case, we use two NdIndexHelper (it means more registers)
+  // which cause the low occupancy. 
+  bool dispatch_smem_impl_success;
+  cudaError_t err =
+    cuda::softmax::TryDispatchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, cuda::softmax::Algorithm::kSoftmax>(
+          stream, load, store, rows, cols, &dispatch_smem_impl_success);
+  if (err != cudaSuccess) { return err; }
+  if (!dispatch_smem_impl_success) {
+    return cuda::softmax::DispatchSoftmaxBlockUncachedImpl<LOAD, STORE, ComputeType, cuda::softmax::Algorithm::kSoftmax>(
+        stream, load, store, rows, cols);
+  }
+  return cudaSuccess;
+  
+}
+
+
 template<typename T, typename ComputeType, typename MASK, size_t num_dims>
 void LaunchForwardKernel(cudaStream_t stream, const T* x, T* y, T* softmax_y, const MASK* mask,
                          const int8_t* dropout_mask, const int64_t rows, const int64_t cols,
@@ -192,7 +220,7 @@ void LaunchForwardKernel(cudaStream_t stream, const T* x, T* y, T* softmax_y, co
   ScaleMaskLoad<T, ComputeType, MASK, num_dims> load(x, mask, cols, fill, scale, mask_dims,
                                                      input_index_helper, mask_index_helper);
   DropoutStore<ComputeType, T> store(y, softmax_y, dropout_mask, cols, dropout_scale);
-  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+  OF_CUDA_CHECK((DispatchFusedSoftmax<decltype(load), decltype(store), ComputeType>(
       stream, load, store, rows, cols)));
 }
 
