@@ -56,6 +56,10 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start InitCopyCost" << std::endl;
   JUST(InitCopyCost(op_graph));
   std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
+  // TODO:  Set all the sbp signatrure id to be 0 for initialization.
+  //        Could revert it back to
+  // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  //        after settling down the synchronization of sbp strategy.
   sbp_graph_.Set0SbpSignature();
   double ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Initial cost: " << ori_cost;
