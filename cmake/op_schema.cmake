@@ -76,6 +76,7 @@ add_custom_command(
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
     DEPENDS ${ONEFLOW_TABLE_GEN_TARGET} ${ONEFLOW_ODS}
             ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOps.td
+            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowUserOps.td
     VERBATIM
 )
 set_source_files_properties(
