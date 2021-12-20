@@ -470,6 +470,8 @@ class Module(object):
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
 
+        # A dict to store tensors that has already been applied.
+        # There is no need to apply multiple times on a same tensor in a module.
         applied_dict = dict()
         for (key, param) in self._parameters.items():
             if param is None:
@@ -496,20 +498,24 @@ class Module(object):
                     self._parameters[key].data = param_applied
                     applied_dict[param] = param_applied
                 else:
-                    # assign copy has already change the data to param_applied
+                    # The parameter's data has already been set when it can use assign copy.
                     pass
             else:
                 if need_apply:
-                    self._parameters[key] = Parameter(param_applied, param.requires_grad)
-                    applied_dict[param] = self._parameters[key]
+                    new_param = Parameter(param_applied, param.requires_grad)
+                    self._parameters[key] = new_param
+                    applied_dict[param] = new_param
                 else:
                     self._parameters[key] = applied_dict[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                buf_applied = fn(buf)
-                self._buffers[key] = buf_applied
-                applied_dict[buf] = buf_applied
+                if buf not in applied_dict:
+                    buf_applied = fn(buf)
+                    self._buffers[key] = buf_applied
+                    applied_dict[buf] = buf_applied
+                else:
+                    self._buffers[key] = applied_dict[buf]
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
