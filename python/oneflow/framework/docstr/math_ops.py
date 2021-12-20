@@ -1283,7 +1283,7 @@ add_docstr(
     The equation is:
     
 	$$		
-	​   \\sum_{i=1}^{n}(x[i] * y[i])
+        \\sum_{i=1}^{n}(x[i] * y[i])
 	$$
     
     Args:
