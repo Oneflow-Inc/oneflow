@@ -75,7 +75,6 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
                                                                int64_t device_id) {
-  CheckDeviceType(type);
   CHECK_GE_OR_RETURN(device_id, 0);
   static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
   auto* device_id2symbol = &map[type];
@@ -89,7 +88,6 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  CheckDeviceType(type);
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
