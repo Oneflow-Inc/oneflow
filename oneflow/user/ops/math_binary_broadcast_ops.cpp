@@ -222,8 +222,8 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
     return InferDataTypeBinaryBroadcastLogical(ctx);                                     \
   }
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ_ODS)
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP,
-                     MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ)
+                     MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ_ODS)
 
 }  // namespace oneflow

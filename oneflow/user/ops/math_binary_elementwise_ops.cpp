@@ -70,6 +70,7 @@ namespace oneflow {
             return Maybe<void>::Ok();                                                           \
           });
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_OP_AND_GRAD, MATH_BINARY_ELEMENTWISE_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_OP_AND_GRAD,
+                     MATH_BINARY_ELEMENTWISE_FUNC_SEQ_ODS)
 
 }  // namespace oneflow
