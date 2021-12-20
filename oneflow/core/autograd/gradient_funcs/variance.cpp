@@ -42,7 +42,12 @@ class Variance : public OpExprGradFunction<VarianceState> {
   AttrMap base_attrs_;
 };
 
-Maybe<void> Variance::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
+Maybe<void> Variance::Init(const OpExpr& op) { 
+  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> Variance::Capture(VarianceState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs, const AttrMap& attrs) const {

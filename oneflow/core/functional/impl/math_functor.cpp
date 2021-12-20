@@ -1519,8 +1519,6 @@ class VarianceFunctor {
     MutableAttrMap attrs;
     if (unbiased) {
       attrs.SetAttr<bool>("unbiased", JUST(unbiased));
-    } else {
-      attrs.SetAttr<bool>("unbiased", true);
     }
     if (keepdim) {
       attrs.SetAttr<bool>("keepdim", JUST(keepdim));
