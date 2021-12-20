@@ -147,7 +147,7 @@ async def launch_remote_container(
         await spawn_shell_and_check(
             f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
         )
-    await spawn_shell(
+    await spawn_shell_and_check(
         f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
     if cmd:
@@ -155,7 +155,7 @@ async def launch_remote_container(
             node_rank_args = f"--env NODE_RANK={node_rank}"
         else:
             node_rank_args = ""
-        await spawn_shell(
+        await spawn_shell_and_check(
             f"ssh {remote_host} docker exec {node_rank_args} {container_name} {cmd}"
         )
 
