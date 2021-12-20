@@ -1,0 +1,256 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> BroadcastAddOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastAddOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastAddOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastSubOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastSubOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastSubOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastSubOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastMulOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastMulOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastMulOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastDivOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastDivOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastDivOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastDivOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastMinimumOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastMinimumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastMinimumOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastMinimumOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastMaximumOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastMaximumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastMaximumOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastMaximumOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastFloorModOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastFloorModOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastFloorModOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastFloorModOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastFmodOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastFmodOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastFmodOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastFmodOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastPowOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastPowOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastPowOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastPowOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastNormal(ctx);
+}
+
+/* static */ Maybe<void> BroadcastEqualOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastEqualOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastEqualOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastEqualOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastNotEqualOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastNotEqualOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastNotEqualOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastNotEqualOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastGreaterOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastGreaterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastGreaterOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastGreaterOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastGreaterEqualOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastGreaterEqualOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastGreaterEqualOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastGreaterEqualOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLessOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastLessOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastLessOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLessOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLessEqualOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastLessEqualOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastLessEqualOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLessEqualOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLogicalAndOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastLogicalAndOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastLogicalAndOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLogicalAndOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLogicalOrOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastLogicalOrOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastLogicalOrOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLogicalOrOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLogicalXorOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescBinaryBroadcastLogical(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastLogicalXorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> BroadcastLogicalXorOp::GetSbp(user_op::SbpContext *ctx) {
+return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLogicalXorOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataTypeBinaryBroadcastLogical(ctx);
+}
+

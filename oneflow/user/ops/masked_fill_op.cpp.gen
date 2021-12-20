@@ -1,0 +1,22 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> MaskedFillOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferMaskedFillTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> MaskedFillOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> MaskedFillOp::GetSbp(user_op::SbpContext *ctx) {
+return GetMaskedFillSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> MaskedFillOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+return GetMaskedFillInputArgModify(ctx);
+}
+
+/* static */ Maybe<void> MaskedFillOp::InferDataType(user_op::InferContext *ctx) {
+return InferMaskedFillDataType(ctx);
+}
+

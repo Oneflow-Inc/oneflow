@@ -1,0 +1,39 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> NllOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> NllOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> NllOp::GetSbp(user_op::SbpContext *ctx) {
+      builder.PartialSum(user_op::OpArg("total_weight", 0));
+    }
+
+/* static */ Maybe<void> NllOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper &conf) {
+      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+      CHECK_OR_RETURN(target_modifier != nullptr);
+      target_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<void> NllOp::InferDataType(user_op::InferContext *ctx) {
+return InferDataType(ctx);
+}
+
+/* static */ Maybe<void> NllGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> NllGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> NllGradOp::GetSbp(user_op::SbpContext *ctx) {
+      builder.PartialSum(user_op::OpArg("total_weight", 0));
+    }
+
+/* static */ Maybe<void> NllGradOp::InferDataType(user_op::InferContext *ctx) {
+return InferGradDataType(ctx);
+}
+

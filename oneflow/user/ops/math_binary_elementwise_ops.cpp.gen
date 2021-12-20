@@ -1,0 +1,214 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> PowOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> PowOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> PowOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> PowOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _xGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _xGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _yGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _yGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> Atan2Op::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> Atan2Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> Atan2Op::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> Atan2Op::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _xGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _xGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _yGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _yGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> FloordivOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> FloordivOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> FloordivOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> FloordivOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _xGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _xGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _yGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _yGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> XdivyOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> XdivyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> XdivyOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> XdivyOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _xGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _xGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _yGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _yGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> XlogyOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> XlogyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> XlogyOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> XlogyOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _xGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _xGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _xGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+
+/*static*/ Maybe<void> _yGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> _yGradOp::GetSbp(user_op::SbpContext *ctx) {
+return user_op::GetSbpFnUtil::S(ctx);
+}
+
+/* static */ Maybe<void> _yGradOp::InferDataType(user_op::InferContext *ctx) {
+return user_op::TensorDescInferFnUtil::U(ctx);
+}
+

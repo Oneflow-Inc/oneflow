@@ -1,0 +1,22 @@
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+/* static */ Maybe<void> RecvOp::InferLogicalTensorDesc(user_op::InferContext *ctx) {
+      *ctx->OutputShape("out", 0) = ctx->Attr<Shape>("shape");
+      return Maybe<void>::Ok();
+    }
+
+/*static*/ Maybe<void> RecvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {return InferLogicalTensorDesc(ctx);}
+
+/* static */ Maybe<void> RecvOp::GetSbp(user_op::SbpContext *ctx) { UNIMPLEMENTED_THEN_RETURN(); }
+
+/* static */ Maybe<void> RecvOp::InferDataType(user_op::InferContext *ctx) {
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+      return Maybe<void>::Ok();
+    }
+
+/* static */ Maybe<Symbol<Device>> RecvOp::InferDevice(user_op::DeviceInferContext *ctx) {
+return DeviceInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
+}
+
