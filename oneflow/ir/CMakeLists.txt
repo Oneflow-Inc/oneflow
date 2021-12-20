@@ -49,24 +49,38 @@ set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
   -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
 )
 
+function(update_rpath)
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+  BUILD_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+  BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+  BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+  INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+  INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+  INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
+endfunction(update_rpath)
+
 function(oneflow_add_mlir_library)
   add_mlir_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    BUILD_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  update_rpath(${ARGV0})
 endfunction()
 
 function(oneflow_add_mlir_dialect_library)
   add_mlir_dialect_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  update_rpath(${ARGV0})
+endfunction()
+
+function(oneflow_add_llvm_tool)
+  add_llvm_tool(${ARGV})
+  llvm_update_compile_flags(oneflow-runner)
+  set_compile_options_to_oneflow_target(${ARGV0})
+  update_rpath(${ARGV0})
 endfunction()
 
 find_package(Threads REQUIRED)
@@ -81,3 +95,4 @@ add_subdirectory(oneflow-opt)
 add_subdirectory(oneflow-translate)
 add_subdirectory(oneflow-runtime)
 add_subdirectory(oneflow-extension)
+add_subdirectory(oneflow-runner)

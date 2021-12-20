@@ -270,12 +270,12 @@ endif()
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
+  target_link_libraries(oneflow PUBLIC of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow PUBLIC of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
   if(BUILD_CUDA)
-    target_link_libraries(oneflow CUDA::cudart_static)
+    target_link_libraries(oneflow PUBLIC CUDA::cudart_static)
   endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
@@ -340,7 +340,7 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 if (BUILD_CPP_API)
-  file(GLOB_RECURSE of_cpp_api_files 
+  file(GLOB_RECURSE of_cpp_api_files
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
   if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
