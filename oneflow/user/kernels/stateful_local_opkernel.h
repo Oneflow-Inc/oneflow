@@ -417,6 +417,8 @@ class StatefulLocalOpKernel final {
                              EagerBlobObjectListRawPtr outputs,
                              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
 
+  const OperatorConf& op_conf() const { return *op_conf_; }
+
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;

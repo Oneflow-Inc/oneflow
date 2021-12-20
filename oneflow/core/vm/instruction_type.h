@@ -52,10 +52,7 @@ class InstructionType {
     DeleteInstructionStatus(instruction);
   }
 
-  virtual const std::string& DebugOpTypeName(Instruction* instruction) const {
-    static thread_local std::string empty("");
-    return empty;
-  }
+  virtual std::string DebugOpTypeName(const InstructionMsg&) const { return ""; }
 
  protected:
   InstructionType() = default;

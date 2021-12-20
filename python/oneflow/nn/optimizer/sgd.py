@@ -136,7 +136,9 @@ class SGD(Optimizer):
 
     def step(self, closure: Callable = None):
         with flow.no_grad():
-            flow._oneflow_internal.eager.multi_client.SetDevVmDepObjectConsumeModeToNone(True)
+            flow._oneflow_internal.eager.multi_client.SetDevVmDepObjectConsumeModeToNone(
+                True
+            )
             loss = None
             if closure is not None:
                 loss = closure()
@@ -162,7 +164,9 @@ class SGD(Optimizer):
                             beta=beta,
                         )
             self._state["step"] = self._state["step"] + 1
-            flow._oneflow_internal.eager.multi_client.SetDevVmDepObjectConsumeModeToNone(False)
+            flow._oneflow_internal.eager.multi_client.SetDevVmDepObjectConsumeModeToNone(
+                False
+            )
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
