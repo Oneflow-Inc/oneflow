@@ -133,29 +133,6 @@ def double(input):
     return input.to(dtype=flow.float64)
 
 
-@register_tensor_op("is_floating_point")
-def is_floating_point(input):
-    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
-
-    Args:
-        input  (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        
-        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
-        >>> output = flow.is_floating_point(input)
-        >>> output
-        False
-    """
-    if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
-        return True
-    return False
-
-
 @register_tensor_op("cpu")
 def cpu(input):
     r"""Returns a copy of this object in CPU memory.
