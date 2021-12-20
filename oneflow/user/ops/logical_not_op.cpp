@@ -27,11 +27,20 @@ Maybe<void> InferDataTypeLogicalNot(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_NO_GRAD_USER_OP("logical_not")
-    .Input("x")
-    .Output("y")
-    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
-    .SetDataTypeInferFn(InferDataTypeLogicalNot);
+/* static */ Maybe<void> LogicalNotOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::Unchanged(ctx);
+}
+
+/*static*/ Maybe<void> LogicalNotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LogicalNotOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
+}
+
+/* static */ Maybe<void> LogicalNotOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataTypeLogicalNot(ctx);
+}
 
 }  // namespace oneflow
