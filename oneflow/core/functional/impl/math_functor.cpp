@@ -1686,6 +1686,27 @@ class CumsumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CumsumGradFunctor {
+ public:
+  CumsumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    // check dim validation
+    auto ndim = input->ndim();
+    if (dim < 0) { dim += ndim; }
+    CHECK_OR_RETURN(dim >= 0 && dim < ndim)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+        << ndim << " ) but got " << dim;
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 }  // namespace impl
 
 using namespace impl;
@@ -1749,6 +1770,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
   m.add_functor<CumsumFunctor>("Cumsum");
+  m.add_functor<CumsumGradFunctor>("CumsumGrad");
 };
 
 }  // namespace functional
