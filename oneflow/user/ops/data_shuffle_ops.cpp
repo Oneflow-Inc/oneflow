@@ -179,6 +179,7 @@ REGISTER_USER_OP("embedding_shuffle")
       const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
       out_dim_vec.push_back(embedding_size);
       *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
+      *ctx->OutputIsDynamic("embeddings", 0) = false;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

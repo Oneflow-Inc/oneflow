@@ -21,23 +21,27 @@ import numpy as np
 import oneflow.nn as nn
 
 placement = flow.placement("cuda", {0: [0, 1]})
+batch_size = 65526
 
 
-class Model(flow.nn.Module):
-    def __init__(self):
+class MatMul(flow.nn.Module):
+    def __init__(self, k, n):
         super().__init__()
         self.w1 = flow.nn.Parameter(
-            flow.randn(1, 1, 1, placement=placement, sbp=flow.sbp.broadcast)
+            flow.randn(k, 1024, placement=placement, sbp=flow.sbp.broadcast)
+        )
+        self.w2 = flow.nn.Parameter(
+            flow.randn(1024, 512, placement=placement, sbp=flow.sbp.broadcast)
+        )
+        self.w3 = flow.nn.Parameter(
+            flow.randn(512, 1, placement=placement, sbp=flow.sbp.broadcast)
         )
 
     def forward(self, x):
-        out = x + self.w1
+        out = flow.matmul(x, self.w1)
+        out = flow.matmul(out, self.w2)
+        out = flow.matmul(out, self.w3)
         return out
-
-
-simp_module = Model()
-simp_module.to("cuda")
-simp_module.train()
 
 
 class TrainGraph(flow.nn.Graph):
@@ -56,22 +60,28 @@ class TrainGraph(flow.nn.Graph):
         }
         # Can't change the name 'embedding_lookup' because it is used to generate backward and optimizer
         self.embedding_lookup = flow.nn.OneEmbeddingLookup(options)
-        self.dense = simp_module
+        self.dense1 = MatMul(3328, 1)
         self.add_optimizer(
-            flow.optim.SGD(self.dense.parameters(), lr=0.1, momentum=0.9)
+            flow.optim.SGD(self.dense1.parameters(), lr=0.1, momentum=0.9)
         )
 
     def build(self, ids):
-        loss = self.embedding_lookup(ids)
+        embedding = self.embedding_lookup(ids)
+        loss = embedding.reshape(batch_size, -1)
         print(loss.shape)
-        loss = self.dense(loss)
+        loss = self.dense1(loss)
         loss = loss.mean()
         loss.backward()
         return loss
 
 
 ids = flow.randint(
-    0, 150000, (65536, 26), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int64
+    0,
+    150000,
+    (batch_size, 26),
+    placement=placement,
+    sbp=flow.sbp.split(0),
+    dtype=flow.int64,
 )
 print(ids)
 graph = TrainGraph()
