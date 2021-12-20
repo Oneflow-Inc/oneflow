@@ -22,8 +22,8 @@ namespace oneflow {
 
 namespace {
 template<typename T>
-void cumsum_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                 int64_t cs_down_space, int64_t nele) {
+void cumsum_forward_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                         int64_t cs_down_space, int64_t nele) {
   std::copy_n(pin, nele, pout);
   for (auto i = 0; i < cs_up_space; i++) {
     auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
@@ -36,8 +36,8 @@ void cumsum_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
 }
 
 template<typename T>
-void cumsum_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                   int64_t cs_down_space, int64_t nele) {
+void cumsum_forward_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                           int64_t cs_down_space, int64_t nele) {
   auto CPU_NUM = sysconf(_SC_NPROCESSORS_CONF);
 
   std::vector<std::future<void>> rets;
@@ -73,6 +73,21 @@ void cumsum_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
 
   for (auto i = 0; i < CPU_NUM; i++) { rets[i].wait(); }
 }
+
+template<typename T>
+void cumsum_backward_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                          int64_t cs_down_space, int64_t nele) {
+  for (auto i = 0; i < cs_up_space; i++) {
+    auto* tmp_pin_base = pin + i * cs_space * cs_down_space;
+    auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
+    for (auto j = 0; j < cs_space; j++) {
+      auto* tmp_pin = tmp_pin_base + j * cs_down_space;
+      auto* tmp_pout = tmp_pout_base + j * cs_down_space;
+      std::fill_n(tmp_pout, cs_down_space, cs_space - j);
+      for (auto k = 0; k < cs_down_space; k++) { tmp_pout[k] *= tmp_pin[k]; }
+    }
+  }
+}
 }  // namespace
 
 template<typename T>
@@ -99,8 +114,8 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    // cumsum_norm<T>(pin, pout, cs_up_space, cs_space, cs_down_space, nele);
-    cumsum_thread<T>(pin, pout, cs_up_space, cs_space, cs_down_space, nele);
+    // cumsum_forward_norm<T>(pin, pout, cs_up_space, cs_space, cs_down_space, nele);
+    cumsum_forward_thread<T>(pin, pout, cs_up_space, cs_space, cs_down_space, nele);
   }
 
   // TODO: what's it used for?
@@ -114,5 +129,39 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 
 REGISTER_CUMSUM_KERNEL(float)
 REGISTER_CUMSUM_KERNEL(double)
+
+template<typename T>
+class CpuCumsumGradKernel final : public user_op::OpKernel {
+ public:
+  CpuCumsumGradKernel() = default;
+  ~CpuCumsumGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    auto nele = dy->shape().elem_cnt();
+    auto dim = ctx->Attr<int64_t>("dim");
+    const auto* dy_ptr = dy->dptr<T>();
+    auto* dx_ptr = dx->mut_dptr<T>();
+
+    // data partition: cs_up_space|cs_space|cs_down_space
+    auto cs_up_space = nele / dx->shape().Count(dim);
+    auto cs_space = dx->shape().At(dim);
+    auto cs_down_space = dx->shape().Count(dim) / cs_space;
+
+    cumsum_backward_norm(dy_ptr, dx_ptr, cs_up_space, cs_space, cs_down_space, nele);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CPU_CUMSUM_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("cumsum_grad")                                 \
+      .SetCreateFn<CpuCumsumGradKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+REGISTER_CPU_CUMSUM_GRAD_KERNEL(float)
+REGISTER_CPU_CUMSUM_GRAD_KERNEL(double)
 
 }  // namespace oneflow
