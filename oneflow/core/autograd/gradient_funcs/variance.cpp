@@ -81,7 +81,7 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
       unsqueeze_vector.insert(unsqueeze_vector.begin() + i + ctx->axis.at(i), 1);
     }
   }
-  std::shared_ptr<Tensor> ext_dim_out_grad = JUST(functional::Reshape(out_grads.at(0), Shape(unsqueeze_vector)));
+  const std::shared_ptr<Tensor> ext_dim_out_grad = JUST(functional::Reshape(out_grads.at(0), Shape(unsqueeze_vector)));
   
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::Mul(

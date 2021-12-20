@@ -53,7 +53,7 @@ class VarKernel final : public user_op::OpKernel {
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const Shape& input_shape = input.shape();
-  std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
+  const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
   if (axis.size() == input_shape.NumAxes()) {
     return  static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
          * GetSizeOfDataType(input.data_type()) * 3; }
