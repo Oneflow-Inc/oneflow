@@ -40,6 +40,7 @@ namespace oneflow {
   }
 
 IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalEqual);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalNotEqual);
 IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalGreater);
 IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalGreaterEqual);
 IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalLess);
