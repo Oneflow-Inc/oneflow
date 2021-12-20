@@ -63,6 +63,7 @@ class OpSchemaEmitter {
 
   void emitInt(const Record* def, StringRef fieldname, json* op) const;
   void emitBit(const Record* def, StringRef fieldname, json* op) const;
+  void emitTrait(const Record* def, StringRef fieldname, StringRef traitname, json* op) const;
 
  private:
   static std::string emitType(const std::string& ods_type) {
@@ -127,8 +128,8 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitInputAndOutput(def, &op);
     emitAttrs(def, &op);
     emitInt(def, "same_output_regst_num", &op);
-    emitBit(def, "no_grad", &op);
-    emitBit(def, "cpu_only", &op);
+    emitTrait(def, "no_grad", "NoGrad", &op);
+    emitTrait(def, "cpu_only", "CpuOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);
     emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
@@ -197,6 +198,20 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
 template<FileTarget Target>
 void OpSchemaEmitter<Target>::emitBit(const Record* def, StringRef fieldname, json* op) const {
   (*op)[fieldname.str()] = def->getValueAsBit(fieldname);
+}
+
+template<FileTarget Target>
+void OpSchemaEmitter<Target>::emitTrait(const Record* def, StringRef fieldname, StringRef traitname, json* op) const {
+  bool hasTrait = false;
+
+  for(auto elem: *def->getValueAsListInit("traits")) {
+    if(elem->getAsString() == traitname) {
+      hasTrait = true;
+      break;
+    } 
+  }
+  
+  (*op)[fieldname.str()] = hasTrait;
 }
 
 template<FileTarget Target>

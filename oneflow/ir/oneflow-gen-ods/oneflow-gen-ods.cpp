@@ -444,8 +444,7 @@ bool ShouldGenEmptyBody(const ::oneflow::user_op::OpRegistryResult& r) {
   if (has_base_class_with_check) {
     CHECK(HasOneFlow_BasicBaseOpHasFnWithCheck(r)) << r.op_type_name;
   }
-  return (has_base_class || has_base_class_with_check) && !r.no_grad && !r.cpu_only_supported
-         && r.same_output_regst_num == -1;
+  return (has_base_class || has_base_class_with_check) && r.same_output_regst_num == -1;
 }
 
 void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
@@ -564,18 +563,6 @@ bool IsBinaryOp(const ::oneflow::user_op::OpRegistryResult& r) {
          && r.op_def.input().size() == 2 && r.op_def.output().size() == 1;
 }
 
-void PrintNoGrad(const ::oneflow::user_op::OpRegistryResult& r) {
-  if (r.no_grad) {
-    std::cout << "  let no_grad = 1;"
-              << "\n";
-  }
-}
-void PrintIsCpuOnly(const ::oneflow::user_op::OpRegistryResult& r) {
-  if (r.cpu_only_supported) {
-    std::cout << "  let cpu_only = 1;"
-              << "\n";
-  }
-}
 void PrintSameOutputRegstNum(const ::oneflow::user_op::OpRegistryResult& r) {
   if (r.same_output_regst_num != -1) {
     std::cout << "  let same_output_regst_num = " << r.same_output_regst_num << ";"
@@ -631,8 +618,6 @@ void PrintBody(const ::oneflow::user_op::OpRegistryResult& r) {
   PrintTraitAttrs(op_def);
   PrintExtraClassDeclaration(op_def);
   PrintHasCanonicalizer(r.op_type_name);
-  PrintNoGrad(r);
-  PrintIsCpuOnly(r);
   PrintSameOutputRegstNum(r);
   PrintHasFn(r);
   std::cout << "}"
@@ -660,6 +645,14 @@ std::string GetTraits(const ::oneflow::user_op::OpRegistryResult& r) {
   const ::oneflow::UserOpDef& op_def = r.op_def;
   std::string ret{};
   if (HasSideEffect(r.op_type_name) == false) { ret += "NoSideEffect"; }
+  if (r.no_grad) {
+    if (ret != "") ret += ", ";
+    ret += "NoGrad";
+  }
+  if (r.cpu_only_supported) {
+    if (ret != "") ret += ", ";
+    ret += "CpuOnly";
+  }
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
   const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes) {
@@ -784,7 +777,7 @@ void GroupOpRegistryResults(const std::map<K, V>& results,
 
 int main(int argc, char* argv[]) {
   std::streambuf* coutBuf = std::cout.rdbuf();
-  std::ofstream of("OneFlowUserOpGen.td");
+  std::ofstream of("OneFlowUserOps.td");
   std::streambuf* fileBuf = of.rdbuf();
   std::cout.rdbuf(fileBuf);
 

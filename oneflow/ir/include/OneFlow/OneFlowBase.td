@@ -49,8 +49,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     output,
     ctrl_output
   );
-  bit no_grad = 0;
-  bit cpu_only = 0;
   int same_output_regst_num = -1;
 
   bit has_check_fn = 0;
@@ -337,6 +335,6 @@ class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {}
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
-include "OneFlow/OneFlowUserOpGen.td"
+include "OneFlow/OneFlowUserOps.td"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_

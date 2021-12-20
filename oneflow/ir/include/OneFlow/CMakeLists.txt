@@ -1,10 +1,10 @@
 # set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_BINARY_DIR}/include/OneFlow")
 set(ONEFLOW_USER_OP_GEN_TD_PATH "${PROJECT_SOURCE_DIR}/include/OneFlow")
-message(STATUS "Generating user op ODS ${ONEFLOW_USER_OP_GEN_TD_PATH}/OneFlowUserOpGen.td")
+message(STATUS "Generating user op ODS ${ONEFLOW_USER_OP_GEN_TD_PATH}/OneFlowUserOps.td")
 add_custom_target(GenUserOpODS
   DEPENDS oneflow-gen-ods
   COMMAND "$<TARGET_FILE:oneflow-gen-ods>"
-  BYPRODUCTS OneFlowUserOpGen.td
+  BYPRODUCTS OneFlowUserOps.td
   WORKING_DIRECTORY "${ONEFLOW_USER_OP_GEN_TD_PATH}"
 )
 
