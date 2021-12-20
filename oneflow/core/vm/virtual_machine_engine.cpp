@@ -101,6 +101,7 @@ void VirtualMachineEngine::HandlePending() {
     }
   }
   OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_POP();
 }
 
 // Collect ready instructions onto ready_instruction_list_
