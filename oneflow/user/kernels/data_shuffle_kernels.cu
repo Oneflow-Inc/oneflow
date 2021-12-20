@@ -421,7 +421,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     CHECK(nccl_comm != nullptr);
     ncclComm_t comm = nccl_comm->comm();
 
-    LOG(ERROR) << "EmbeddingShuffleKernel";
     const user_op::Tensor* cur_rank_embeddings =
         ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
     const user_op::Tensor* cur_rank_num_unique_ids =
@@ -553,7 +552,6 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     auto* nccl_comm = dynamic_cast<NcclKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     ncclComm_t comm = nccl_comm->comm();
-    LOG(ERROR) << "EmbeddingGradientShuffleKernel";
 
     const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
     const user_op::Tensor* cur_rank_num_unique_ids =
