@@ -66,7 +66,7 @@ async def spawn_shell(cmd: str = None):
     assert p.returncode == 0, cmd
 
 
-async def spawn_shell_and_ignore_failure(cmd: str = None):
+async def spawn_shell_ignoring_failure(cmd: str = None):
     p = await asyncio.create_subprocess_shell(cmd,)
     await p.wait()
 
@@ -400,8 +400,8 @@ async def remove_containers_by_name(remote_hosts=None, container_name=None):
     assert container_name
     assert remote_hosts
     await asyncio.gather(
-        *[spawn_shell_and_ignore_failure(f"ssh {remote_host} {rm_cmd}") for remote_host in remote_hosts],
-        spawn_shell_and_ignore_failure(rm_cmd),
+        *[spawn_shell_ignoring_failure(f"ssh {remote_host} {rm_cmd}") for remote_host in remote_hosts],
+        spawn_shell_ignoring_failure(rm_cmd),
     )
 
 
@@ -620,7 +620,7 @@ if __name__ == "__main__":
         loop.run_until_complete(
             asyncio.gather(
                 *[
-                    spawn_shell_and_ignore_failure(
+                    spawn_shell_ignoring_failure(
                         f"ssh {remote_host} docker run --rm -v {workspace_dir}:/p -w /p busybox chmod -R 777 .",
                     )
                     for remote_host in remote_hosts
@@ -634,7 +634,7 @@ if __name__ == "__main__":
         loop.run_until_complete(
             asyncio.gather(
                 *[
-                    spawn_shell_and_ignore_failure(
+                    spawn_shell_ignoring_failure(
                         f"rsync -azPq --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='python' {extra_exclude_args} {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
                     )
                     for remote_host in remote_hosts
@@ -647,7 +647,7 @@ if __name__ == "__main__":
             loop.run_until_complete(
                 asyncio.gather(
                     *[
-                        spawn_shell_and_ignore_failure(f"ssh {remote_host} rm -rf {workspace_dir}",)
+                        spawn_shell_ignoring_failure(f"ssh {remote_host} rm -rf {workspace_dir}",)
                         for remote_host in remote_hosts
                     ],
                 )
@@ -676,6 +676,7 @@ if __name__ == "__main__":
                         img_tag=img_tag,
                         cmd=args.cmd,
                         node_rank=node_rank,
+                        master_addr=this_host,
                     )
                     for node_rank, remote_host in enumerate(remote_hosts)
                 ],
