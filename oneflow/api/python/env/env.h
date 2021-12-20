@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
+#include "oneflow/core/ep/cpu/parallel.h"
 
 namespace oneflow {
 
@@ -68,6 +69,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_clien
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
+  ep::primitive::Parallel::set_computing_cores();
   if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }

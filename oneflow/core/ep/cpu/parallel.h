@@ -13,31 +13,41 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_EVENT_H_
-#define ONEFLOW_CORE_EP_EVENT_H_
+#ifndef ONEFLOW_CORE_EP_PARALLEL_H_
+#define ONEFLOW_CORE_EP_PARALLEL_H_
 #include <iostream>
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include <unistd.h>
+#include <sys/types.h>
 
 #include "omp.h"
 
 namespace oneflow {
-
 namespace ep {
+namespace primitive {
 
-size_t divup(int64_t x, int64_t y) { return (x + y - 1) / y; }
+class Parallel {
+ public:
+  static void set_computing_cores();
+
+  static int _computing_cores;
+};
+
+inline size_t divup(int64_t x, int64_t y) { return (x + y - 1) / y; }
 
 template<typename F>
 void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size) {
-  if(begin >= end) {return;}
-  
+  if (begin >= end) { return; }
+
 #if WITH_OMP_THREADING_RUNTIME
-#pragma omp parallel
+
+  size_t nthr = Parallel::_computing_cores;
+  if (grain_size > 0) { nthr = std::min(nthr, divup((end - begin), grain_size)); }
+#pragma omp parallel num_threads(nthr)
   {
-    size_t num_threads = omp_get_num_threads();
-    if (grain_size > 0) { num_threads = std::min(num_threads, divup((end - begin), grain_size)); }
-    int64_t chunk_size = divup((end - begin), num_threads);
+    int64_t chunk_size = divup((end - begin), nthr);
     int64_t tid = omp_get_thread_num();
     int64_t begin_tid = begin + tid * chunk_size;
     int64_t end_tid = std::min(end, chunk_size + begin_tid);
@@ -63,8 +73,7 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size) {
 #endif
 }
 
+}  // namespace primitive
 }  // namespace ep
-
 }  // namespace oneflow
-
 #endif  // ONEFLOW_CORE_EP_EVENT_H_
