@@ -284,8 +284,7 @@ if (BUILD_PYTHON OR BUILD_CPP_API)
   file(GLOB_RECURSE of_api_common_files
     ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.h
     ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.cpp)
-  oneflow_add_library(of_api_common ${of_api_common_files})
-  set(of_api_common -Wl,--whole-archive of_api_common -Wl,--no-whole-archive)
+  oneflow_add_library(of_api_common OBJECT ${of_api_common_files})
   target_link_libraries(of_api_common oneflow)
   if (WITH_MLIR)
     target_link_libraries(of_api_common ${ONEFLOW_MLIR_LIBS})
@@ -312,7 +311,7 @@ if(BUILD_PYTHON)
   target_link_libraries(oneflow_internal PRIVATE
                         ${of_libs}
                         of_functional_tensor_obj
-                        ${of_api_common}
+                        of_api_common
                         ${oneflow_third_party_libs}
                         of_pyext_obj
                         ${oneflow_exe_third_party_libs})
@@ -354,7 +353,7 @@ if (BUILD_CPP_API)
     oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
   endif()
   set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
-  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} ${of_api_common} ${oneflow_third_party_libs})
+  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} of_api_common ${oneflow_third_party_libs})
 endif()
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
