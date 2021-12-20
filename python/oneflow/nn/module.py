@@ -463,16 +463,18 @@ class Module(object):
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn):
+    def _apply(self, fn, applied_dict = None):
+        # A dict to store tensors that has already been applied.
+        # There is no need to apply multiple times on a same tensor.
+        if applied_dict is None:
+            applied_dict = dict()
+
         for module in self.children():
-            module._apply(fn)
+            module._apply(fn, applied_dict)
 
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
 
-        # A dict to store tensors that has already been applied.
-        # There is no need to apply multiple times on a same tensor in a module.
-        applied_dict = dict()
         for (key, param) in self._parameters.items():
             if param is None:
                 continue
