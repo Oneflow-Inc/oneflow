@@ -606,10 +606,8 @@ def _len(self):
     return self.shape[0]
 
 
-def is_floating_point(input):
-    if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
-        return True
-    return False
+def _is_floating_point(input):
+    return flow.is_floating_point(input)
 
 
 def _uniform(self, a=0, b=1):
@@ -796,7 +794,7 @@ def RegisterMethods():
     Tensor.__floordiv__ = _floor_divide
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
-    Tensor.is_floating_point = is_floating_point
+    Tensor.is_floating_point = _is_floating_point
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
