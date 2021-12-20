@@ -49,8 +49,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     output,
     ctrl_output
   );
-  bit no_grad = 0;
-  bit cpu_only = 0;
   int same_output_regst_num = -1;
 
   bit has_check_fn = 0;
