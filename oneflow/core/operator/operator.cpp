@@ -827,10 +827,7 @@ Maybe<void> Operator::InferNdSbpSignature(
     };
     HashMap<std::string, cfg::NdSbp> ibn2nd_sbp;
     for (const auto& ibn : input_bns()) {
-      cfg::NdSbp distribution;
-      for (int32_t dim_sbp = 0; dim_sbp < parallel_hierarchy->NumAxes(); dim_sbp++) {
-        distribution.add_sbp_parallel()->mutable_broadcast_parallel();
-      }
+      cfg::NdSbp distribution = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
       if (nd_sbp_constraints.bn_in_op2nd_sbp_size() != 0) {
         const auto nd_sbp_constraints_it = nd_sbp_constraints.bn_in_op2nd_sbp().find(ibn);
         if (nd_sbp_constraints_it != nd_sbp_constraints.bn_in_op2nd_sbp().end()) {
