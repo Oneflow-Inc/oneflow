@@ -14,9 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
+
+import os
+
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+
 from typing import Tuple
 import unittest
-import os
 import numpy as np
 from numpy.core.fromnumeric import shape
 import oneflow.compatible.single_client as flow
@@ -24,9 +29,6 @@ import oneflow.compatible.single_client.typing as oft
 import oneflow.framework.dtype as dtype_util
 from test_util import GenArgDict
 from collections import OrderedDict
-
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
 
 
 @flow.unittest.skip_unless_1n1d()
