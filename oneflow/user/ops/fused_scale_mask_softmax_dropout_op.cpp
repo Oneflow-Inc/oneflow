@@ -30,8 +30,6 @@ REGISTER_USER_OP("fused_scale_mask_softmax_dropout")
     .Attr<float>("dropout_scale_value", 1.0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-      CHECK_OR_RETURN(x_desc.shape() == mask_desc.shape());
       *ctx->OutputShape("y", 0) = x_desc.shape();
       *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
       *ctx->OutputShape("softmax_y", 0) = x_desc.shape();
@@ -40,8 +38,6 @@ REGISTER_USER_OP("fused_scale_mask_softmax_dropout")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-      CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
       *ctx->OutputDType("y", 0) = x_desc.data_type();
       *ctx->OutputDType("softmax_y", 0) = x_desc.data_type();
       return Maybe<void>::Ok();
@@ -82,9 +78,7 @@ REGISTER_USER_OP("fused_scale_mask_softmax_dropout_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
       const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
       CHECK_EQ_OR_RETURN(dy_desc.shape(), softmax_y_desc.shape());
-      CHECK_OR_RETURN(dy_desc.shape() == mask_desc.shape());
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
       *dx_desc->mut_shape() = dy_desc.shape();
       *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
@@ -93,9 +87,7 @@ REGISTER_USER_OP("fused_scale_mask_softmax_dropout_grad")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
       const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
       CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type());
-      CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
       *dx_desc->mut_data_type() = dy_desc.data_type();
       return Maybe<void>::Ok();
