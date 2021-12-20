@@ -98,9 +98,7 @@ async def create_remote_workspace_dir(
             # Reference: https://stackoverflow.com/a/31278462
             if os.path.isdir(path) and path[-1] != "/":
                 path += "/"
-            await spawn_shell(
-                f"ssh {remote_host} mkdir -p {workspace_dir}/{path}"
-            )
+            await spawn_shell(f"ssh {remote_host} mkdir -p {workspace_dir}/{path}")
             await spawn_shell(
                 f"rsync -azPq --omit-dir-times --no-perms --no-group --copy-links --exclude='__pycache__' {path} {remote_host}:{workspace_dir}/{path}"
             )
@@ -161,7 +159,9 @@ async def launch_remote_container(
     )
     if cmd:
         if is_multi_client:
-            multi_client_docker_args = f"--env NODE_RANK={node_rank} --env MASTER_ADDR={master_addr}"
+            multi_client_docker_args = (
+                f"--env NODE_RANK={node_rank} --env MASTER_ADDR={master_addr}"
+            )
         else:
             multi_client_docker_args = ""
         await spawn_shell(
@@ -348,9 +348,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
             return spawn_shell(f"rm {tmp_lib_dir}/{lib}")
         else:
             print("keeping", lib)
-            return spawn_shell(
-                f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}"
-            )
+            return spawn_shell(f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}")
 
     await asyncio.gather(*(handle_lib(lib) for lib in libs))
 
@@ -513,9 +511,7 @@ if __name__ == "__main__":
     loop.run_until_complete(
         asyncio.gather(
             *[
-                spawn_shell(
-                    f"ssh -o StrictHostKeyChecking=no {remote_host} true"
-                )
+                spawn_shell(f"ssh -o StrictHostKeyChecking=no {remote_host} true")
                 for remote_host in remote_hosts
             ],
         ),
