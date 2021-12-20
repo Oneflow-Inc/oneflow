@@ -305,51 +305,57 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  const Shape& x_shape = x->shape();
-  const auto axis = ctx->Attr<int32_t>("axis");
-  CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
-  int64_t n = x_shape.At(0);
-  int64_t h = x_shape.Count(1, axis);
-  int64_t w = 1;
-  int64_t c = x_shape.At(axis);
-  const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-  if (x_sbp.has_split_parallel()) {
-    CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-    n = n / ctx->parallel_num();
-  }
-  cudnnBatchNormOps_t ops;
-  if (ctx->has_input("addend", 0)) {
-    ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
-  } else {
-    ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
-  }
-  size_t reserve_space_size;
-  InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
-  reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-  *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
-  return Maybe<void>::Ok();
+  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    const Shape& x_shape = x->shape();
+    const auto axis = ctx->Attr<int32_t>("axis");
+    CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+    int64_t n = x_shape.At(0);
+    int64_t h = x_shape.Count(1, axis);
+    int64_t w = 1;
+    int64_t c = x_shape.At(axis);
+    const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    if (x_sbp.has_split_parallel()) {
+      CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+      n = n / ctx->parallel_num();
+    }
+    cudnnBatchNormOps_t ops;
+    if (ctx->has_input("addend", 0)) {
+      ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+    } else {
+      ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+    }
+    size_t reserve_space_size;
+    InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
+    reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  const Shape& x_shape = x->shape();
-  const auto axis = ctx->Attr<int32_t>("axis");
-  CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
-  int64_t n = x_shape.At(0);
-  int64_t h = x_shape.Count(1, axis);
-  int64_t w = 1;
-  int64_t c = x_shape.At(axis);
-  cudnnBatchNormOps_t ops;
-  if (ctx->has_input("addend", 0)) {
-    ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
-  } else {
-    ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
-  }
-  size_t reserve_space_size;
-  InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
-  reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-  *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
-  return Maybe<void>::Ok();
+  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    const Shape& x_shape = x->shape();
+    const auto axis = ctx->Attr<int32_t>("axis");
+    CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+    int64_t n = x_shape.At(0);
+    int64_t h = x_shape.Count(1, axis);
+    int64_t w = 1;
+    int64_t c = x_shape.At(axis);
+    cudnnBatchNormOps_t ops;
+    if (ctx->has_input("addend", 0)) {
+      ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+    } else {
+      ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+    }
+    size_t reserve_space_size;
+    InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
+    reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::GetSbp(user_op::SbpContext* ctx) {
@@ -363,8 +369,11 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferDataType(
     user_op::InferContext* ctx) {
-  *reserve_space->mut_data_type() = DataType::kChar;
-  return Maybe<void>::Ok();
+  return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    *reserve_space->mut_data_type() = DataType::kChar;
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 
 #endif
