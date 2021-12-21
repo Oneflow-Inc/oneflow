@@ -26,6 +26,7 @@ REGISTER_USER_OP("id_shuffle")
     .Output("cur_rank_reverse_idx")
     .Output("num_unique_ids_matrix")
     .Output("partition_index")
+    .SetOutputBufferNum(1)
     .Attr<std::string>("partitioning")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& ids_shape = ctx->InputShape("ids", 0);
@@ -95,6 +96,7 @@ REGISTER_USER_OP("embedding_prefetch")
     .Input("num_unique_ids")
     .Input("unique_ids")
     .Output("context")
+    .SetOutputBufferNum(1)
     .Attr<std::string>("name")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("context", 0) = ctx->InputShape("unique_ids", 0);
@@ -118,6 +120,7 @@ REGISTER_USER_OP("embedding_lookup")
     .Input("unique_ids")
     .Input("context")
     .Output("embeddings")
+    .SetOutputBufferNum(1)
     .Attr<int64_t>("embedding_size")
     .Attr<DataType>("dtype")
     .Attr<std::string>("name")

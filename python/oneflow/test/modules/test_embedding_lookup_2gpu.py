@@ -24,6 +24,24 @@ placement = flow.placement("cuda", {0: [0, 1]})
 batch_size = 65536
 
 
+class SyntheticDataLoader(nn.Module):
+    def __init__(self,):
+        super(SyntheticDataLoader, self).__init__()
+        print("use synthetic data")
+
+    def forward(self):
+        ids = flow.randint(
+            0,
+            150000,
+            (batch_size, 26),
+            placement=placement,
+            sbp=flow.sbp.broadcast,
+            dtype=flow.int64,
+        )
+        split_ids = ids.to_consistent(placement, flow.sbp.split(0))
+        return split_ids
+
+
 class MatMul(flow.nn.Module):
     def __init__(self, k, n):
         super().__init__()
@@ -47,6 +65,7 @@ class MatMul(flow.nn.Module):
 class TrainGraph(flow.nn.Graph):
     def __init__(self,):
         super().__init__()
+        self.data_loader = SyntheticDataLoader()
         options = {
             "name": "my_embedding",
             # Can't change the embedding_size 128 because the kv store value_length has been set to 128
@@ -65,7 +84,8 @@ class TrainGraph(flow.nn.Graph):
             flow.optim.SGD(self.dense1.parameters(), lr=0.1, momentum=0.9)
         )
 
-    def build(self, ids):
+    def build(self,):
+        ids = self.data_loader()
         embedding = self.embedding_lookup(ids)
         loss = embedding.reshape(batch_size, -1)
         print(loss.shape)
@@ -75,16 +95,7 @@ class TrainGraph(flow.nn.Graph):
         return loss
 
 
-ids = flow.randint(
-    0,
-    150000,
-    (batch_size, 26),
-    placement=placement,
-    sbp=flow.sbp.split(0),
-    dtype=flow.int64,
-)
-print(ids)
 graph = TrainGraph()
 for i in range(20):
-    loss = graph(ids)
+    loss = graph()
 print(loss)
