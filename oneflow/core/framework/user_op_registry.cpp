@@ -44,7 +44,8 @@ OpRegistry& OpRegistry::Name(const std::string& op_type_name) {
 
 OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_optional,
                                 int32_t num, bool num_as_min) {
-  CHECK(InsertIfNotExists(name, &unique_names_));
+  CHECK(InsertIfNotExists(name, &unique_names_))
+      << "op arg registered, name: " << name << ", op: " << result_.op_type_name;
   UserOpDef::ArgDef arg_def;
   {
     arg_def.set_name(name);
