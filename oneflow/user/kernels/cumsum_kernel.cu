@@ -62,11 +62,24 @@ __global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t cs_up_space, int
 // dmn, ..., d1n, d0n
 template<typename T>
 __global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                                 int64_t cs_down_space, int64_t nele) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       i < nele; i += step) {
+                                  int64_t cs_down_space, int64_t nele) {
+  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < nele;
+       i += step) {
     auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
-    pout[i] = (cs_space - cs_space_id) * pin[i]; 
+    pout[i] = (cs_space - cs_space_id) * pin[i];
+  }
+}
+
+template<typename T>
+__global__ void CumsumBackwardGpu3D(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                                    int64_t cs_down_space, int64_t nele) {
+  for (auto i = blockIdx.z * blockDim.z + threadIdx.z; i < cs_up_space; i++) {
+    for (auto j = blockIdx.y * blockDim.y + threadIdx.y; j < cs_space; j++) {
+      for (auto k = blockIdx.x * blockDim.x + threadIdx.x; k < cs_down_space; k++) {
+        auto idx = i * cs_space * cs_down_space + j * cs_down_space + k;
+        pout[idx] = (cs_space - j) * pin[idx];
+      }
+    }
   }
 }
 }  // namespace
@@ -142,9 +155,9 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_CUMSUM_GRAD_KERNEL(dtype)                    \
-  REGISTER_USER_KERNEL("cumsum_grad")                              \
-      .SetCreateFn<GpuCumsumGradKernel<dtype>>()                    \
+#define REGISTER_CUDA_CUMSUM_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("cumsum_grad")                                  \
+      .SetCreateFn<GpuCumsumGradKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
