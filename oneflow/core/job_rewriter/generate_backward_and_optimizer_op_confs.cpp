@@ -227,12 +227,11 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     std::vector<std::string> embedding_lookup_op_names;
     op_graph.ForEachNode([&](OpNode* op_node) {
       if (op_node->op().op_conf().has_user_conf()
-            && op_node->op().op_conf().user_conf().op_type_name()
-                   == "embedding_lookup_placeholder"){
+          && op_node->op().op_conf().user_conf().op_type_name() == "embedding_lookup_placeholder") {
         embedding_lookup_op_names.push_back(op_node->op().op_name());
       }
     });
-    //if multi optimizer, may have error
+    // if multi optimizer, may have error
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
       FilterCurModelLbi2ModelDiffLbiByEmbeddingName(

@@ -68,6 +68,9 @@ for parallel_id in range(parallel_num):
 
 
 np_global_ids = np.concatenate((ids))
+
+
+# make np_unique_ids_list
 np_unique_ids_list = []
 for i in range(parallel_num):
     np_ids = ids[i]
@@ -77,7 +80,7 @@ for i in range(parallel_num):
         i, "ids_reverse_idx: ", np.array_equal(ids_reverse_idx[i], np_ids_reverse_idx)
     )
     print(i, "num_unique_ids: ", num_unique_ids[i] == np_unique_ids.size)
-
+    
     np_embedding = np.zeros((np_ids.size, 128))
     for j in range(np_ids.size):
         np_embedding[j, :] = np_ids[j]
@@ -85,8 +88,7 @@ for i in range(parallel_num):
         i, "embedding: ", np.array_equal(embeddings[i], np_embedding.flatten(),),
     )
 
-
-matrix = []
+# unittest
 for i in range(parallel_num):
     cur_rank_partition = []
     cur_rank_num_reverse_ids = 0
@@ -109,6 +111,7 @@ for i in range(parallel_num):
             cur_rank_reverse_idx[i][0:cur_rank_num_reverse_ids], np_cur_rank_reverse_idx
         ),
     )
+
     print(
         i,
         "cur_rank_unique_ids: ",
@@ -122,3 +125,26 @@ for i in range(parallel_num):
         "cur_rank_num_unique_ids: ",
         cur_rank_num_unique_ids[i] == np_cur_rank_unique_ids.size,
     )
+
+
+
+    np_embedding_diff = embedding_diff
+    np_cur_rank_unique_embedding_diff = np.zeros(
+        cur_rank_unique_embedding_diff[i].size
+    ).reshape(-1, 128)
+    for k in range(cur_rank_num_unique_ids[i][0]):
+        np_cur_rank_unique_embedding_diff[k, :] = sum(
+            np_embedding_diff[0][np.where(ids[0] == cur_rank_unique_ids[i][k])[0] * 128]
+        ) + sum(
+            np_embedding_diff[1][np.where(ids[1] == cur_rank_unique_ids[i][k])[0] * 128]
+        )
+
+    print(
+        i,
+        "cur_rank_unique_embedding_diff",
+        np.array_equal(
+            np_cur_rank_unique_embedding_diff.flatten(),
+            cur_rank_unique_embedding_diff[i],
+        ),
+    )
+
