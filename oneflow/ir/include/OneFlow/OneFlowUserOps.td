@@ -2269,7 +2269,7 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_so
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout_grad", [NoSideEffect, CudaOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$softmax_y,
     AnyType:$dy,
