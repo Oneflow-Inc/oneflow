@@ -53,7 +53,7 @@ class TestFloor(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_floor(test_case, *arg)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_floor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

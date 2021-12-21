@@ -104,14 +104,14 @@ class TestSqueeze(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_squeeze_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.squeeze(x, random(1, 3).to(int))
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_squeeze_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(3, 2, 1, 0).to(device)

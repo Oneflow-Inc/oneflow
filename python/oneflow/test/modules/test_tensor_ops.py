@@ -47,7 +47,7 @@ def _test_is_floating_point(test_case, shape, device, dtype):
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestCuda(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
+    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_cuda(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
