@@ -133,7 +133,7 @@ def _test_slice_backward(test_case, device):
 def _test_slice_update(test_case, device):
     x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
     input = flow.tensor(x, requires_grad=True, device=flow.device(device))
-    update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
+    update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True, device=flow.device(device))
     output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
     y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
     z = y.sum()
@@ -187,7 +187,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
             _test_slice_update,
             _test_slice_update_with_stride
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
