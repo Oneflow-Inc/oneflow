@@ -96,12 +96,6 @@ def _test_user_op_graph(test_case, is_cuda):
             "cc_Output_0", output_conf, ["in_0"], ["out_0"]
         )
 
-        attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-        # x0_tensor_in_c = _get_c_tensor(x0)
-        # x1_tensor_in_c = _get_c_tensor(x1)
-        # weight0_tensor_in_c = _get_c_tensor(weight0)
-
         x0_lazy_tensor = _C.dispatch_feed_input(x0_op, x0)
         x1_lazy_tensor = _C.dispatch_feed_input(x1_op, x1)
         weight0_lazy_tensor = _C.dispatch_feed_input(weight0_op, weight0)
