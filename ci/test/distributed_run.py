@@ -128,14 +128,13 @@ async def launch_remote_container(
 ):
     print("launching remote container at", remote_host)
     assert img_tag
-    multi_client_docker_args = [node_rank, master_addr]
-    multi_client_arg_is_none = [x is None for x in multi_client_docker_args]
-    if all(multi_client_arg_is_none):
+    multi_client_args = [node_rank, master_addr]
+    multi_client_arg_has_value = [x is not None for x in multi_client_args]
+    if any(multi_client_arg_has_value):
+        assert all(multi_client_arg_has_value)
         is_multi_client = True
-    elif not any(multi_client_arg_is_none):
-        is_multi_client = False
     else:
-        raise ValueError()
+        is_multi_client = False
     pythonpath_args = None
     if oneflow_wheel_path:
         pythonpath_args = ""
