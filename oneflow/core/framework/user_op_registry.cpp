@@ -88,11 +88,6 @@ OpRegistry& OpRegistry::NoGrad() {
   return *this;
 }
 
-OpRegistry& OpRegistry::NoBroadcast() {
-  result_.add_broadcast = false;
-  return *this;
-}
-
 OpRegistry& OpRegistry::SetOutputBufferNum(int32_t num) {
   result_.same_output_regst_num = num;
   return *this;

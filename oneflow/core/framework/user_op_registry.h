@@ -64,14 +64,12 @@ using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnConte
 using GetNdSbpSignatureListFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult()
-      : cpu_only_supported(false), no_grad(false), add_broadcast(true), same_output_regst_num(-1) {}
+  OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
-  bool add_broadcast;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -111,7 +109,6 @@ class OpRegistry final {
 
   OpRegistry& SupportCpuOnly();
   OpRegistry& NoGrad();
-  OpRegistry& NoBroadcast();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
   __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type);

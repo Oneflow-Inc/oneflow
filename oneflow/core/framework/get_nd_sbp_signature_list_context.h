@@ -34,6 +34,9 @@ class GetNdSbpSignatureListContext {
   virtual ~GetNdSbpSignatureListContext() = default;
 
   virtual void AddNdSbpSignature(cfg::NdSbpSignature&) = 0;
+  virtual const Shape& parallel_hierarchy() = 0;
+  virtual const Shape& BlobShape4InputArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const = 0;
   template<typename T>
   T Attr(const std::string& attr_name) const {
     return conf_.attr<T>(attr_name);
