@@ -14,6 +14,7 @@ namespace oneflow {
   REGISTER_CLASS_CREATOR(std::string, op_type, OpBase, ([]() { return new schema; }))
 
 {% for opname, op in ops %}
+{%- if op.cuda_only %}#ifdef WITH_CUDA{% endif %}
 const HashSet<std::string>& {{opname}}::AttrNames() const {
   static const HashSet<std::string> attr_names = { {%- for name, attr in op.attrs -%}"{{name}}", {%- endfor -%} };
   return attr_names;
@@ -101,6 +102,7 @@ REGISTER_USER_OP("{{op.name}}")
     .SetCheckAttrFn(&{{opname}}::CheckAttr)
 {%- endif -%}
 ;
+{%- if op.cuda_only %}#endif // WITH_CUDA{% endif %}
 {%- endfor %}
 } // namespace oneflow
 )OP_SCHEMA_INC"

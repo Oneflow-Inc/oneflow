@@ -130,6 +130,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitInt(def, "same_output_regst_num", &op);
     emitTrait(def, "no_grad", "NoGrad", &op);
     emitTrait(def, "cpu_only", "CpuOnly", &op);
+    emitTrait(def, "cuda_only", "CudaOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);
     emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
@@ -201,16 +202,17 @@ void OpSchemaEmitter<Target>::emitBit(const Record* def, StringRef fieldname, js
 }
 
 template<FileTarget Target>
-void OpSchemaEmitter<Target>::emitTrait(const Record* def, StringRef fieldname, StringRef traitname, json* op) const {
+void OpSchemaEmitter<Target>::emitTrait(const Record* def, StringRef fieldname, StringRef traitname,
+                                        json* op) const {
   bool hasTrait = false;
 
-  for(auto elem: *def->getValueAsListInit("traits")) {
-    if(elem->getAsString() == traitname) {
+  for (auto elem : *def->getValueAsListInit("traits")) {
+    if (elem->getAsString() == traitname) {
       hasTrait = true;
       break;
-    } 
+    }
   }
-  
+
   (*op)[fieldname.str()] = hasTrait;
 }
 
