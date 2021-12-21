@@ -21,7 +21,7 @@ import oneflow as flow
 from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
 
-
+import numpy as np 
 class Adam(Optimizer):
     """Implements Adam algorithm.
 
@@ -166,9 +166,17 @@ class Adam(Optimizer):
             loss = None
             if closure is not None:
                 loss = closure()
+            
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
+                    # one = np.ones((1, ), dtype=np.float32)
+                    # beta1 = np.array(param_group["betas"][0], dtype=np.float32)
+                    # beta2 = np.array(param_group["betas"][1], dtype=np.float32)
+                    
+                    # param_group["bias_correction1"] = float((one - np.power(beta1, self._state["step"] + 1))[0])
+                    # param_group["bias_correction2"] = float((one - np.power(beta2, self._state["step"] + 1))[0])
+
                     param_group["bias_correction1"] = 1.0 - math.pow(
                         param_group["betas"][0], self._state["step"] + 1
                     )
@@ -186,6 +194,7 @@ class Adam(Optimizer):
                     "epsilon": param_group["eps"],
                     "do_bias_correction": param_group["do_bias_correction"],
                     "amsgrad": param_group["amsgrad"],
+                    "step": self._state["step"]
                 }
                 for param in param_group.parameters:
                     if param.grad is None:

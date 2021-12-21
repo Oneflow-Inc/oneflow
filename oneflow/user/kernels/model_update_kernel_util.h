@@ -94,9 +94,14 @@ struct AdamUpdateFunctor {
       const T next_max_v =
           *max_v > next_v ? *max_v : next_v;  // use std::max has bug in GPU kernel.
       *max_v = next_max_v;
-      denom = (sqrt(next_max_v) / sqrt(bias_correction2)) + epsilon;
+      // denom = (sqrt(next_max_v) / sqrt(bias_correction2)) + epsilon;
+      // denom = (sqrt(next_max_v) / (sqrt(bias_correction2) + epsilon)) ;
+      // denom = sqrt(next_max_v / bias_correction2) + epsilon;
+      denom = sqrtf(next_max_v / bias_correction2) + epsilon;
     } else {
-      denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
+      // denom = (sqrt(next_v) / (sqrt(bias_correction2) + epsilon));
+      // denom = sqrt(next_v /bias_correction2) + epsilon;
+      denom = sqrtf(next_v /bias_correction2) + epsilon;
     }
     const T step_size = learning_rate / bias_correction1;
     *model = model_val - step_size * (next_m / denom) - learning_rate * weight_decay * model_val;

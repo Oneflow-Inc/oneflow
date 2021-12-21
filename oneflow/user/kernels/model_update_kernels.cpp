@@ -401,6 +401,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const int64_t step = ctx->Attr<int64_t>("step");
 
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
@@ -440,10 +441,20 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
+    const float bias_corr1 = 1 - std::pow(beta1, step+1); 
+    const float bias_corr2 = 1 - std::pow(beta2, step+1); 
+
+    // AdamUpdateKernelUtil<device_type, T, G>::Update(
+    //     ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
+    //     epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
+    //     bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
+    //     bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+    //     v->mut_dptr<T>(), max_v->mut_dptr<T>());
+
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
-        bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_corr1,
+        bias_corr2, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
         bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
         v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
