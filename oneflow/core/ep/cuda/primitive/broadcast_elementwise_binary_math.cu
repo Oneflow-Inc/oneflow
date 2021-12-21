@@ -13,46 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_BINARY_OP_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_BINARY_OP_H_
-
-#include "oneflow/core/ep/include/primitive/primitive.h"
+#include "oneflow/core/ep/cuda/primitive/broadcast_elementwise_binary.cuh"
 
 namespace oneflow {
 
 namespace ep {
 namespace primitive {
+namespace broadcast_elementwise_binary {
 
-enum class BinaryOp {
-  // Math
-  kAdd,
-  kSub,
-  kMul,
-  kDiv,
-  kMax,
-  kMin,
-  kPow,
-  // Comparision
-  kEqual,
-  kNotEqual,
-  kLessThan,
-  kLessEqual,
-  kGreaterThan,
-  kGreaterEqual,
-  // Logical
-  kLogicalAnd,
-  kLogicalOr,
-  kLogicalXor,
-  // Unary Backward
-  kReluBackwardWithDyY,
-  kSigmoidBackwardWithDyY,
-  kGeluBackwardWithDyX,
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
+      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>();
 
-};
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                 BINARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ);
 
-}
+}  // namespace broadcast_elementwise_binary
+}  // namespace primitive
 }  // namespace ep
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_EP_PRIMITIVE_BINARY_OP_H_
