@@ -68,10 +68,10 @@ REGISTER_USER_OP("cumsum_grad")
 
 REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("y", 0)) {
+  if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("cumsum_grad")
-                                             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                                              .Output("dx")
                                              .Attr("dim", op.attr<int64_t>("dim"))
                                              .Build();
