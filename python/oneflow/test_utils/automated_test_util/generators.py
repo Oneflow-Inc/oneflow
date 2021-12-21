@@ -248,9 +248,7 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
-        elif annotation is None:
-            val = None
-        elif annotation is NoneType:
+        elif annotation == NoneType:
             val = None
         else:
             raise NotImplementedError(
@@ -281,7 +279,7 @@ class random_tensor(generator):
         dtype=float,
     ):
         if ndim is None:
-            ndim = random(1, 6)
+            ndim = random(0, 6)
         if dim0 is None:
             dim0 = random(1, 8)
         if dim1 is None:
@@ -325,6 +323,16 @@ class random_tensor(generator):
         low = self.low.value()
         high = self.high.value()
         dtype = self.dtype.value()
+        if ndim == 0:
+            if dtype == float:
+                np_arr = rng.uniform(low=low, high=high)
+                return torch.tensor(np_arr)
+            elif dtype == int:
+                np_arr = rng.integers(low=low, high=high)
+                return torch.tensor(np_arr, dtype=torch.int64)
+            else:
+                raise NotImplementedError(f"Not implemented dtype {dtype} in random")
+
         shape = rng.integers(low=1, high=8, size=ndim)
         if dim0 is not None:
             shape[0] = dim0
