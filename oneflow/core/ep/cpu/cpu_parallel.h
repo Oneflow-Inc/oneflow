@@ -47,21 +47,7 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
     if (begin_tid < end) { func(begin_tid, end_tid); }
   }
 #else
-  // size_t num = end - begin;
-  // size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-  // thread_num = std::min(thread_num, divup(num, grain_size));
-  // BalancedSplitter bs(num, thread_num);
-  // BlockingCounter bc(thread_num);
-  // FOR_RANGE(size_t, range_id, 0, thread_num) {
-  //   Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, func] {
-  //     size_t start = bs.At(range_id).begin();
-  //     size_t end = bs.At(range_id).end();
-  //     func(start, end);
-  //     bc.Decrease();
-  //   });
-  // }
-  // // buzy loop wait.
-  // bc.WaitUntilCntEqualZero();
+// TODO
 #endif
 }
 
