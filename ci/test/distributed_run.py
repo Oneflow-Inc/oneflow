@@ -159,7 +159,8 @@ async def launch_remote_container(
     if cmd:
         if is_multi_client:
             multi_client_docker_args = (
-                f"--env NODE_RANK={node_rank} --env MASTER_ADDR={master_addr}"
+                # Use _MASTER_ADDR to avoid name conflict with OneFlow's built-in MASTER_ADDR
+                f"--env NODE_RANK={node_rank} --env _MASTER_ADDR={master_addr}"
             )
         else:
             multi_client_docker_args = ""
