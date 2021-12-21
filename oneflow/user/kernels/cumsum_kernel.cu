@@ -22,7 +22,7 @@ namespace {
 
 // total thread number: cs_up_space * cs_down_space
 // in cs_down_space part, use cs_down_space threads
-// to calculate as follows(m=cs_down_space-1, n=cs_space-1):
+// to calculate as follows(m=cs_down_space-1, n=cs_space-1, '|' stands for dependency):
 // dm0, ..., d10, d00
 //  |         |    |
 // dm1, ..., d11, d01
@@ -52,6 +52,26 @@ __global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t cs_up_space, int
   }
 }
 
+// total thread number: cs_up_space * cs_down_space
+// in cs_down_space part, use cs_down_space threads
+// to calculate as follows(m=cs_down_space-1, n=cs_space-1, there is no dependency in backward):
+// dm0, ..., d10, d00
+// dm1, ..., d11, d01
+// dm2, ..., d12, d02
+// ...       ...  ...
+// dmn, ..., d1n, d0n
+template<typename T>
+__global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                                 int64_t cs_down_space, int64_t nele) {
+  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
+       i < cs_up_space * cs_down_space; i += step) {
+    // auto cs_up_space_id = i / (cs_space * cs_down_space);
+    auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
+    // auto cs_down_space_id = (i % (cs_space * cs_down_space)) % cs_down_space;
+
+    pout[i] = (cs_space - cs_space_id) * pin[i]; 
+  }
+}
 }  // namespace
 
 template<typename T>
@@ -93,5 +113,45 @@ class GpuCumsumKernel final : public user_op::OpKernel {
 
 REGISTER_CUDA_CUMSUM_KERNEL(float)
 REGISTER_CUDA_CUMSUM_KERNEL(double)
+
+template<typename T>
+class GpuCumsumGradKernel final : public user_op::OpKernel {
+ public:
+  GpuCumsumGradKernel() = default;
+  ~GpuCumsumGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    // judge whether tensor has 0 size dimension first
+    const auto* in = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    auto nele = in->shape().elem_cnt();
+    if (!nele) { return; }
+    auto* out = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    auto dim = ctx->Attr<int64_t>("dim");
+    const auto* pin = in->dptr<T>();
+    auto* pout = out->mut_dptr<T>();
+
+    // take cumsum's abbreviation as `cs`
+    // data partition: cs_up_space|cs_space|cs_down_space
+    auto cs_up_space = nele / in->shape().Count(dim);
+    auto cs_space = in->shape().At(dim);
+    auto cs_down_space = in->shape().Count(dim) / cs_space;
+
+    auto thread_num = nele;
+    RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
+                    cs_space, cs_down_space, nele);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CUDA_CUMSUM_GRAD_KERNEL(dtype)                    \
+  REGISTER_USER_KERNEL("cumsum_grad")                              \
+      .SetCreateFn<GpuCumsumGradKernel<dtype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+REGISTER_CUDA_CUMSUM_GRAD_KERNEL(float)
+REGISTER_CUDA_CUMSUM_GRAD_KERNEL(double)
 
 }  // namespace oneflow
