@@ -46,7 +46,7 @@ else()
 endif()
 
 ExternalProject_Add(opencv
-    DEPENDS zlib libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
+    DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
     URL_MD5 59870e55385f5202c1aa178fe37ed2de
@@ -142,6 +142,10 @@ ExternalProject_Add(opencv
         -DENABLE_CXX11:BOOL=ON
         # -DLIB_SUFFIX:STRING=64
 )
+
+if (WITH_ZLIB)
+  add_dependencies(opencv zlib)
+endif()
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
 add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/opencv_headers.txt")

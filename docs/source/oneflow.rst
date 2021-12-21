@@ -42,6 +42,7 @@ oneflow
             cos, 
             cosh, 
             diag, 
+            diagonal,
             movedim,
             div, 
             dot, 
@@ -64,6 +65,7 @@ oneflow
             gt, 
             in_top_k, 
             index_select,
+            linspace,
             logical_and,
             logical_or,
             logical_not,
@@ -149,6 +151,7 @@ oneflow
             set_printoptions,
             decode_onerec,
             read_onerec,
+            from_numpy,
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.env.get_rank

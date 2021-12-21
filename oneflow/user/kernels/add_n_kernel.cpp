@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
 
@@ -39,7 +39,7 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx) const override {
     auto primitive = NewAddPrimitive(ctx);
     CHECK(primitive);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

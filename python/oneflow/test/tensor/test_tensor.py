@@ -1623,6 +1623,29 @@ class TestTensorNumpy(flow.unittest.TestCase):
         of_out = input1.bmm(input2)
         return of_out
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_tensor_split(test_case):
+        k0 = random(2, 6)
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        rand_dim = random(0, 3).to(int)
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = x.split(2, dim=rand_dim)
+        return torch.cat(res, rand_dim)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_tensor_split_sizes(test_case):
+        k0 = random(2, 6)
+        k1 = 7
+        k2 = random(2, 6)
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = x.split([1, 2, 3, 1], dim=-2)
+        return torch.cat(res, dim=1)
+
 
 if __name__ == "__main__":
     unittest.main()
