@@ -279,6 +279,7 @@ bool IsCrossEntropyOp(const std::string& op_name) {
   return (op_name.find("cross_entropy") != std::string::npos);
 }
 bool IsCUDAOp(const std::string& op_name) { return (op_name.find("nvtx") != std::string::npos); }
+bool IsCudnnOp(const std::string& op_name) { return (op_name.find("cudnn") != std::string::npos); }
 bool IsMatmulOp(const std::string& op_name) {
   return (op_name.find("matmul") != std::string::npos || op_name.find("fc") != std::string::npos);
 }
@@ -652,6 +653,10 @@ std::string GetTraits(const ::oneflow::user_op::OpRegistryResult& r) {
   if (r.cpu_only_supported) {
     if (ret != "") ret += ", ";
     ret += "CpuOnly";
+  }
+  if (IsCudnnOp(r.op_type_name) || IsCUDAOp(r.op_type_name)) {
+    if (ret != "") ret += ", ";
+    ret += "CudaOnly";
   }
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
   const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
