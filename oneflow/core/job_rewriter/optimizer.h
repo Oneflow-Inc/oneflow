@@ -25,9 +25,7 @@ namespace oneflow {
 
 void AddOptimizerOp(JobPassCtx* ctx, const OpNode& var_op_node, const std::string& model_diff_lbn,
                     const OptimizerConf& optimizer_conf, JobBuilder* job_builder);
-void AddEmbeddingUpdateOp(JobPassCtx* ctx, const OpNode& embedding_lookup_op_node,
-                          const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
-                          JobBuilder* job_builder);
+
 float GetOptimizerWeightDecayRate(const OptimizerConf& optimizer_conf, const VariableOp& op);
 
 void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder);
