@@ -16,13 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_PARALLEL_H_
 #define ONEFLOW_CORE_EP_PARALLEL_H_
 #include <iostream>
-#include "oneflow/core/thread/thread.h"
-#include "oneflow/core/thread/thread_pool.h"
-#include "oneflow/core/common/balanced_splitter.h"
+#include <omp.h>
 #include <unistd.h>
 #include <sys/types.h>
-
-#include "omp.h"
 
 namespace oneflow {
 namespace ep {

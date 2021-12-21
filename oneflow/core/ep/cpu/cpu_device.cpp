@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <sys/sysinfo.h>
-#include <cstdint>
 #include "oneflow/core/ep/cpu/cpu_device.h"
 #include "oneflow/core/ep/cpu/cpu_event.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
