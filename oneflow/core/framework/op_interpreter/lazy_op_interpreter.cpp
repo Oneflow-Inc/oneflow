@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -444,6 +445,11 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   parallel_conf->InitFromProto(parallel_desc->parallel_conf());
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
+  LOG(ERROR) << "Add SourceUserOpExpr: " << op_expr.op_name();
+  if (op_expr.op_name() == "uniform_int3") {
+    LOG(ERROR) << "set_stream_name_hint: " << op_expr.op_name();
+    op_conf->set_stream_name_hint("UNIFORM_INT");
+  }
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf->set_device_tag(parallel_conf->device_tag());
 
