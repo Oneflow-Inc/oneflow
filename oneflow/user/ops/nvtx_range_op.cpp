@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
+
+#ifdef WITH_CUDA
 
 /* static */ Maybe<void> NvtxStartOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
@@ -74,6 +75,42 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+#else
+
+/* static */ Maybe<void> NvtxStartOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/*static*/ Maybe<void> NvtxStartOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NvtxStartOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxStartOp::InferDataType(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxEndOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/*static*/ Maybe<void> NvtxEndOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxEndOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxEndOp::InferDataType(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+#endif  // WITH_CUDA
+
 REGISTER_USER_OP_GRAD("nvtx_start")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                user_op::AddOpFn AddOp) -> Maybe<void> {
@@ -109,5 +146,3 @@ REGISTER_USER_OP_GRAD("nvtx_end")
     });
 
 }  // namespace oneflow
-
-#endif  // WITH_CUDA

@@ -376,7 +376,33 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
   })(ctx);
 }
 
-#endif
+#else
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::ModifyInputArg(
+    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+#endif  // WITH_CUDA
 
 namespace {
 
@@ -513,6 +539,27 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferDataType(
     user_op::InferContext* ctx) {
   return BwDataTypeInferFn(ctx);
+}
+
+#else
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/*static*/ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
 }
 
 #endif
