@@ -1689,7 +1689,7 @@ class CumsumFunctor {
 class CumsumGradFunctor {
  public:
   CumsumGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("in").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     // check dim validation
