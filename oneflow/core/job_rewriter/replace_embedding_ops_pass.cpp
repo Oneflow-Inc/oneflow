@@ -173,7 +173,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
                 .Input("embedding_diff",
                        embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0))
-                .Input("learning_rate", update_op_conf.input("learning_rate", 0))
+                .Input("train_step", job_builder->job().job_conf().train_conf().train_step_lbn())
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
                 .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
