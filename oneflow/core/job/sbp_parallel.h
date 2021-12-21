@@ -62,6 +62,11 @@ void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
 void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
                                      const cfg::NdSbpSignature& nd_sbp_sig);
 
+std::string StringifyNdSbp(const cfg::NdSbp& nd_sbp);
+Maybe<std::string> StringifySbpSignatureList(const PbRpf<std::string>& inputs,
+                                             const PbRpf<std::string>& outputs,
+                                             const cfg::SbpSignatureList& sbp_signatures);
+
 }  // namespace oneflow
 
 namespace std {

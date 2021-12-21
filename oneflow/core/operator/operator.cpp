@@ -738,7 +738,20 @@ Maybe<void> Operator::InferNdSbpSignature(
           break;
         }
       }
-      CHECK_OR_RETURN(matched_sbp_signature != nullptr) << " op_name " << op_name();
+      if (!matched_sbp_signature) {
+        std::ostringstream err;
+        err << "op: " << op_name() << " can't find available sbp signature at hierarchy dim " << i
+            << ".\nSupported sbp signatures are: ";
+        err << *JUST(StringifySbpSignatureList(input_bns(), output_bns(), list));
+        err << ", but got SBP of inputs are: ";
+        for (size_t i = 0; i < input_bns().size(); ++i) {
+          const auto& ibn = input_bns()[i];
+          cfg::NdSbp nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+          err << ibn << ": " << StringifyNdSbp(nd_sbp);
+          if (i != input_bns().size() - 1) { err << ", "; }
+        }
+        return Error::RuntimeError() << err.str();
+      }
       for (const auto& bn : input_bns()) {
         *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[bn].add_sbp_parallel()) =
             matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
