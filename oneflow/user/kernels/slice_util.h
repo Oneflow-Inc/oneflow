@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/common/nd_index_offset_with_stride_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -44,6 +45,8 @@ struct SliceParams {
   int64_t start[kSliceMaxDims];
   int64_t step[kSliceMaxDims];
   int64_t size[kSliceMaxDims];
+  int64_t stride[kSliceMaxDims];
+  bool use_stride=false;
 
   int64_t elem_cnt() const {
     if (ndim == 0) { return 0; }
@@ -68,8 +71,28 @@ template<int NDIM>
 using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
 
 template<int NDIM>
+using SliceIndexWithStrideHelper = NdIndexOffsetWithStrideHelper<int64_t, NDIM>;
+
+template<int NDIM>
 OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
                                                  const SliceIndexHelper<NDIM>& entire_idx_cvtr,
+                                                 const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
+  int64_t nd_index[NDIM] = {0};
+  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);
+#ifdef __CUDA_ARCH__
+#pragma unroll
+#endif
+  for (int64_t i = 0; i < NDIM; ++i) {
+    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
+    assert(nd_index[i] >= 0);
+    assert(nd_index[i] < params.dims[i]);
+  }
+  return entire_idx_cvtr.NdIndexToOffset(nd_index);
+}
+
+template<int NDIM>
+OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffsetWithStride(int64_t offset, const SliceParams& params,
+                                                 const SliceIndexWithStrideHelper<NDIM>& entire_idx_cvtr,
                                                  const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
   int64_t nd_index[NDIM] = {0};
   sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);

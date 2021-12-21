@@ -22,6 +22,7 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
   SliceParams fold_slice_params;
   std::memset(&fold_slice_params, 0, sizeof(SliceParams));
   bool full_slice_on_prev_axis = false;
+  fold_slice_params.use_stride = params.use_stride;
   FOR_RANGE(int, i, 0, params.ndim) {
     bool full_slice_on_cur_axis = params.IsFullSlice(i);
     if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
@@ -37,6 +38,7 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
       fold_slice_params.ndim += 1;
     }
     full_slice_on_prev_axis = full_slice_on_cur_axis;
+    fold_slice_params.stride[i] = params.stride[i];
   }
   return fold_slice_params;
 }
@@ -50,7 +52,11 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
+    if(fold_slice_params.use_stride){
+      SwitchDoBackwardWithStride(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
+    }else{
+      SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
+    }
   }
 
  private:
@@ -79,6 +85,19 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
+  template<int NDIM>
+  static void DoBackwardWithStride(ep::Stream* stream, const SliceParams& params, const T* sliced,
+                         T* entire) {
+    CHECK_EQ(params.ndim, NDIM);
+    int64_t elem_cnt = params.elem_cnt();
+    SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr(params.stride);
+    SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+    FOR_RANGE(int, i, 0, elem_cnt) {
+      int64_t offset = SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      entire[offset] = sliced[i];
+    }
+  }
+
 #define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \
   SliceKernelUtil<DeviceType::kCPU, T>::func_name<N>
 #define DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(func_name)                  \
@@ -87,6 +106,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 
   DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoForward);
   DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoBackward);
+  DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoBackwardWithStride);
 #undef DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD
 #undef MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY
 };
