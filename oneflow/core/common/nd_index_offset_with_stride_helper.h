@@ -147,11 +147,6 @@ class NdIndexOffsetWithStrideHelper {
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
 
  private:
-  OF_DEVICE_FUNC void InitDefaultStrides(const T* dims, const int n) {
-    for (int i = n - 1; i < N; ++i) { stride_[i] = 1; }
-    for (int i = n - 2; i >= 0; --i) { stride_[i] = dims[i + 1] * stride_[i + 1]; }
-  }
-
   OF_DEVICE_FUNC void InitStrides(const T* strides, const int n) {
     for (int i = n; i < N; ++i) { stride_[i] = 1; }
     for (int i = n - 1; i >= 0; --i) { stride_[i] = strides[i]; }
