@@ -87,7 +87,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
-    add_ops.push_back(embedding_prefetch_op.op_conf());
+    OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
+    embedding_prefetch_new_op_conf.set_stream_name_hint("EMBEDDING");
+    add_ops.push_back(embedding_prefetch_new_op_conf);
 
     // embedding lookup op
     user_op::UserOpConfWrapperBuilder embedding_lookup_op_builder(user_op_conf.op_name()
@@ -104,7 +106,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
-    add_ops.push_back(embedding_lookup_op.op_conf());
+    OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
+    embedding_lookup_new_op_conf.set_stream_name_hint("EMBEDDING");
+    add_ops.push_back(embedding_lookup_new_op_conf);
 
     // embedding shuffle op
     user_op::UserOpConfWrapperBuilder embedding_shuffle_op_builder(user_op_conf.op_name());
@@ -178,7 +182,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
                 .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
                 .Build();
-        add_ops.push_back(sgd_embedding_update_op.op_conf());
+        OperatorConf sgd_embedding_update_new_op_conf = sgd_embedding_update_op.op_conf();
+        sgd_embedding_update_new_op_conf.set_stream_name_hint("EMBEDDING");
+        add_ops.push_back(sgd_embedding_update_new_op_conf);
       }
     }
     job_builder->DelOps(delete_op_names);
