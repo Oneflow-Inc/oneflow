@@ -145,7 +145,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 
     // check is_mutable in consumer
     OpNode* consumer = sbp_node_consumer->op_node;
-    CHECK(!IsSameSBP(consumer, ibn)) << "Create a proxy for an unsuitable consumer!\n";
+    CHECK(!IsSameSbp(consumer, ibn)) << "Create a proxy for an unsuitable consumer!\n";
 
     // Connect sbp proxy and consumer
     sbp_proxy->PointTo(sbp_node_consumer);
@@ -199,7 +199,7 @@ void SbpCollector::ProxySbpCandidate(
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       // Skip those blobs who enforc same SBP.
-      if (IsSameSBP(node, ibn)) {
+      if (IsSameSbp(node, ibn)) {
         // Enforcing same SBP. Can not collect sbp from this blob.
         continue;
       }
@@ -248,7 +248,7 @@ void SbpCollector::ProxySbpCandidate(
     std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidates(
         ParallelCandidatesInitializer);
 
-    DFS_SBPset(it_begin, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
+    DfsSbpSet(it_begin, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
     // Initialize sbp proxy
     SbpNode<cfg::NdSbpSignature>* sbp_proxy = InitializePorxy(sbp_graph, ParallelCandidates);
     // Might be unnecessary
@@ -283,7 +283,7 @@ void SbpCollector::ProxySbpCandidate(
 }
 
 // Depth first search to collect Sbp Parallel information for different lbis
-void SbpCollector::DFS_SBPset(
+void SbpCollector::DfsSbpSet(
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
     HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set,
     HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node,
@@ -314,10 +314,10 @@ void SbpCollector::DFS_SBPset(
     for (int32_t SbpParallelNum : SbpParallelIDs) {
       if (++accumulator[SbpParallelNum] == 1) {
         bs_buffer.AddEntry(SbpParallelNum);
-        DFS_SBPset(it_next, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
+        DfsSbpSet(it_next, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
         bs_buffer.DeleteEntry(SbpParallelNum);
       } else {
-        DFS_SBPset(it_next, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
+        DfsSbpSet(it_next, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
       }
       accumulator[SbpParallelNum]--;
     }

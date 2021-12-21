@@ -420,7 +420,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
     // If we are deciding whether we need the wait time, then make is_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
-    bool is_same_sbp = (!compute_cost) || IsSameSBP(consumer, ibn);
+    bool is_same_sbp = (!compute_cost) || IsSameSbp(consumer, ibn);
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
     bool allow_cpu2gpu = consumer->op().op_conf().has_image_decoder_random_crop_resize_conf();
 

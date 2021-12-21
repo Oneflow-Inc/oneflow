@@ -399,7 +399,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
       std::cout << "Pre Op:" << producer_node.op().op_name() << ": " << ibn;
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp()[ibn];
       std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
-      if (IsSameSBP(op_node, ibn)) { std::cout << ", same SBP"; }
+      if (IsSameSbp(op_node, ibn)) { std::cout << ", same SBP"; }
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
       std::cout << std::endl;

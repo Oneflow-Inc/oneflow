@@ -136,18 +136,18 @@ class SbpGraph {
   void SetTransferCost(double transfer_cost_);
 
  private:
-  void DFS_AddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
-                      std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                      std::vector<int32_t>& order2nbh_id, std::vector<int32_t>& nbh_id2order,
-                      std::vector<double>& order2AccMinInNbhCost,
-                      std::vector<std::vector<double>>& OutNbhCosts,
-                      std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
-                      std::vector<int32_t>& MinSbpSignatureId, double& MinCost, int32_t order,
-                      double CurrCost);
+  void DfsAddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
+                     std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
+                     std::vector<int32_t>& order2nbh_id, std::vector<int32_t>& nbh_id2order,
+                     std::vector<double>& order2AccMinInNbhCost,
+                     std::vector<std::vector<double>>& OutNbhCosts,
+                     std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
+                     std::vector<int32_t>& MinSbpSignatureId, double& MinCost, int32_t order,
+                     double CurrCost);
 
-  bool DFS_FindReasonableCost(std::vector<int32_t>& nbh_id2NodeListId,
-                              std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                              std::vector<int32_t>& nbh_id2order, int32_t nbh_id);
+  bool DfsFindReasonableCost(std::vector<int32_t>& nbh_id2NodeListId,
+                             std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
+                             std::vector<int32_t>& nbh_id2order, int32_t nbh_id);
 
 #ifdef DEBUG_ALGORITHM_
 
@@ -572,15 +572,15 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
 }
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::DFS_AddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
-                                            std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                                            std::vector<int32_t>& order2nbh_id,
-                                            std::vector<int32_t>& nbh_id2order,
-                                            std::vector<double>& order2AccMinInNbhCost,
-                                            std::vector<std::vector<double>>& OutNbhCosts,
-                                            std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
-                                            std::vector<int32_t>& MinSbpSignatureId,
-                                            double& MinCost, int32_t order, double CurrCost) {
+void SbpGraph<SbpSignature>::DfsAddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
+                                           std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
+                                           std::vector<int32_t>& order2nbh_id,
+                                           std::vector<int32_t>& nbh_id2order,
+                                           std::vector<double>& order2AccMinInNbhCost,
+                                           std::vector<std::vector<double>>& OutNbhCosts,
+                                           std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
+                                           std::vector<int32_t>& MinSbpSignatureId, double& MinCost,
+                                           int32_t order, double CurrCost) {
   // We have finished visiting the neighborhood
   if (order >= nbh_id2NodeListId.size()) {
     // relative difference > 1e-12
@@ -594,21 +594,21 @@ void SbpGraph<SbpSignature>::DFS_AddNbhCost(std::vector<int32_t>& nbh_id2NodeLis
   }
   // Pruning, remove all those branch with large cost
   if (CurrCost + order2AccMinInNbhCost[order] >= MinCost) { return; }
-  // DFS in the next order
+  // Deep first search in the next order
   int32_t nbh_id = order2nbh_id[order];
   SbpNode<SbpSignature>* sbp_node = NodeList[nbh_id2NodeListId[nbh_id]];
   for (int32_t sbp_id : nbh_id2order2sbp_id[nbh_id]) {
     sbp_node->FinalSbpSignatureId = sbp_id;
-    DFS_AddNbhCost(nbh_id2NodeListId, NodeListId2nbh_id, order2nbh_id, nbh_id2order,
-                   order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId,
-                   MinCost, order + 1,
-                   CurrCost + OutNbhCosts[nbh_id][sbp_id]
-                       + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order));
+    DfsAddNbhCost(nbh_id2NodeListId, NodeListId2nbh_id, order2nbh_id, nbh_id2order,
+                  order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId,
+                  MinCost, order + 1,
+                  CurrCost + OutNbhCosts[nbh_id][sbp_id]
+                      + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order));
   }
 }
 
 template<class SbpSignature>
-bool SbpGraph<SbpSignature>::DFS_FindReasonableCost(
+bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
     std::vector<int32_t>& nbh_id2NodeListId,
     std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id, std::vector<int32_t>& nbh_id2order,
     int32_t nbh_id) {
@@ -621,8 +621,8 @@ bool SbpGraph<SbpSignature>::DFS_FindReasonableCost(
     // If the cost for this node is reasonable, then go to the next one
     if (sbp_node->Cost[sbp_id] + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order)
         < cut_cost) {
-      if (DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
-        // If we found one strategy, then exist the DFS.
+      if (DfsFindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
+        // If we found one strategy, then exist the Dfs.
         return true;
       }
     }
@@ -689,8 +689,8 @@ Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
   for (int32_t nbh_id = 0; nbh_id < nbh_id2NodeListId.size(); nbh_id++) {
     nbh_id2order[nbh_id] = nbh_id;
   }
-  // DFS
-  CHECK(DFS_FindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, 0))
+  // Combining deep first search and pruning based on cut ratio
+  CHECK(DfsFindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, 0))
       << "Can't find a reasonable strateggy!";
   return Maybe<void>::Ok();
 }
@@ -767,9 +767,9 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2No
         + NodeList[nbh_id2NodeListId[nbh_id]]->EvalMinInNbhCost(NodeListId2nbh_id, nbh_id2order);
   }
   // Use brute force (DFS) to adjust for the best strategy in the neighborhood.
-  DFS_AddNbhCost(nbh_id2NodeListId, NodeListId2nbh_id, order2nbh_id, nbh_id2order,
-                 order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId,
-                 MinCost, 0, 0);
+  DfsAddNbhCost(nbh_id2NodeListId, NodeListId2nbh_id, order2nbh_id, nbh_id2order,
+                order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId, MinCost,
+                0, 0);
   // Use the sbp strategy with minimum cost
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     NodeList[nbh_id2NodeListId[nbh_id]]->FinalSbpSignatureId = MinSbpSignatureId[nbh_id];

@@ -78,7 +78,7 @@ class SbpCollector {
 
  private:
   // Depth first search to collect Sbp Parallel information for different lbis
-  void DFS_SBPset(
+  void DfsSbpSet(
       HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
       HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
           consumer_bn2sbp_set,

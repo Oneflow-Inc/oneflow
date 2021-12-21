@@ -484,7 +484,7 @@ Maybe<void> Operator::GetNdSbpSignatureList(
   ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
   // ND sbp signature list would be direct product of 1D sbp signatures
   nd_sbp_sig_list.clear();
-  DFS_SetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, nd_sbp_sig_list, &sbp_sig_list);
+  DfsSetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, nd_sbp_sig_list, &sbp_sig_list);
 
   return Maybe<void>::Ok();
 }

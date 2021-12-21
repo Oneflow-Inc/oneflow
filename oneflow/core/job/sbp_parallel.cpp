@@ -259,16 +259,16 @@ void SetNdSbpSignature(const cfg::SbpSignature& sbp_signature,
   }
 }
 
-void DFS_SetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
-                           std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
-                           cfg::SbpSignatureList* sbp_sig_list) {
-  CHECK(depth <= max_depth) << "Wrong DFS while setting ND-Sbp signature";
+void DfsSetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
+                          std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
+                          cfg::SbpSignatureList* sbp_sig_list) {
+  CHECK(depth <= max_depth) << "Wrong Dfs while setting ND-Sbp signature";
   if (depth == max_depth) {
     nd_sbp_sig_list.push_back(nd_sbp_sig);
   } else if (depth < max_depth) {
     for (int32_t i = 0; i < sbp_sig_list->sbp_signature_size(); i++) {
       SetNdSbpSignature(sbp_sig_list->sbp_signature(i), &nd_sbp_sig, depth);
-      DFS_SetNdSbpSignature(nd_sbp_sig, depth + 1, max_depth, nd_sbp_sig_list, sbp_sig_list);
+      DfsSetNdSbpSignature(nd_sbp_sig, depth + 1, max_depth, nd_sbp_sig_list, sbp_sig_list);
     }
   }
 }
