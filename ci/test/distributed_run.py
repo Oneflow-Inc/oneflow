@@ -397,7 +397,10 @@ async def remove_containers_by_name(remote_hosts=None, container_name=None):
     assert container_name
     assert remote_hosts
     await asyncio.gather(
-        *[spawn_shell_ignoring_failure(f"ssh {remote_host} {rm_cmd}") for remote_host in remote_hosts],
+        *[
+            spawn_shell_ignoring_failure(f"ssh {remote_host} {rm_cmd}")
+            for remote_host in remote_hosts
+        ],
         spawn_shell_ignoring_failure(rm_cmd),
     )
 
@@ -642,7 +645,9 @@ if __name__ == "__main__":
             loop.run_until_complete(
                 asyncio.gather(
                     *[
-                        spawn_shell_ignoring_failure(f"ssh {remote_host} rm -rf {workspace_dir}",)
+                        spawn_shell_ignoring_failure(
+                            f"ssh {remote_host} rm -rf {workspace_dir}",
+                        )
                         for remote_host in remote_hosts
                     ],
                 )
