@@ -20,8 +20,6 @@ limitations under the License.
 #include <unordered_map>
 #include "binary_set.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "sbp_edge.h"
 #include "algorithm_util.h"
 
@@ -538,10 +536,6 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
           if (++nbh_id >= nbh_num) { nbh_id = 1; }
         }
       }
-    }
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Head: " << head << ", tail: " << tail << ", step: " << step
-                << ", CostRdc: " << CostRdc << std::endl;
     }
     // change of strategies
     if (CostRdc != 0) {

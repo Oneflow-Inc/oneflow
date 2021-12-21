@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "sbp_collector.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -35,16 +34,10 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
   // TODO: process mirrored node
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start GenerateNodeAndEdge" << std::endl;
   JUST(GenerateNodeAndEdge(op_graph, job));
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start FillSbpSignatureForOpNode"
-            << std::endl;
   JUST(FillSbpSignatureForOpNode(op_graph, job));
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start InitComputationCost" << std::endl;
   JUST(InitComputationCost(op_graph));
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start ApplyMainstemAlgo" << std::endl;
   if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start sbp_collector" << std::endl;
   if (use_sbp_collector_) {
     // Load logical blobs on all sbp edges.
     LoadLbi2SbpEdge(op_graph);
@@ -53,9 +46,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     sbp_collector.CollectUniverse(sbp_graph_);
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start InitCopyCost" << std::endl;
   JUST(InitCopyCost(op_graph));
-  std::cout << "Rank: " << GlobalProcessCtx::Rank() << ", Start RandomSbpSignature" << std::endl;
   // TODO:  Set all the sbp signatrure id to be 0 for initialization.
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
