@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -107,3 +109,5 @@ REGISTER_USER_OP_GRAD("nvtx_end")
     });
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
