@@ -15,8 +15,7 @@ limitations under the License.
 """
 # export DEBUG_SHUFFLE=1
 # python3 -m oneflow.distributed.launch --nproc_per_node=2 test_embedding_lookup_2gpu_unittest.py
-# cd test
-# python3 test.py
+# python3 test_unittest.py
 
 import oneflow as flow
 import numpy as np

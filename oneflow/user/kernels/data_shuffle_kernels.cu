@@ -139,37 +139,13 @@ __global__ void PartitionEmbeddingKernel(int64_t n, int64_t embedding_size,
   }
 }
 
-struct BelongTo {
-  int parallel_num;
-  int parallel_id;
-  __host__ __device__ __forceinline__ BelongTo(int parallel_num, int parallel_id)
-      : parallel_num(parallel_num), parallel_id(parallel_id) {}
-  __host__ __device__ __forceinline__ bool operator()(const int& a) const {
-    return (a % parallel_num) == parallel_id;
-  }
-};
-
-template<typename K, typename IDX>
-void GetPartitionWorkspaceSizeInBytes(ep::Stream* stream, int64_t n, int64_t parallel_num,
-                                      size_t* workspace_size_in_bytes) {
-  BelongTo belong_to(parallel_num, 0);
-  cub::DeviceSelect::If<K*, K*, IDX*>(nullptr, *workspace_size_in_bytes, nullptr, nullptr, nullptr,
-                                      n, belong_to, stream->As<ep::CudaStream>()->cuda_stream());
-}
-
 template<typename K, typename IDX>
 void Partition(ep::Stream* stream, int64_t num_ids, IDX num_valid, int64_t parallel_num, K* in,
-               K* out, IDX* num_out, IDX* out_index, void* workspace,
-               size_t workspace_size_in_bytes) {
+               K* out, IDX* num_out, IDX* out_index) {
   OF_CUDA_CHECK(cudaMemset(num_out, 0, parallel_num * sizeof(IDX)));
   PartitionKernel<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
                     stream->As<ep::CudaStream>()->cuda_stream()>>>(num_ids, num_valid, in, out,
                                                                    num_out, out_index);
-  // for (int64_t i = 0; i < parallel_num; ++i) {
-  //  BelongTo belong_to(parallel_num, i);
-  //  cub::DeviceSelect::If(workspace, workspace_size_in_bytes, in, out + i * num_ids, num_out + i,
-  //                        num_valid, belong_to, stream->As<ep::CudaStream>()->cuda_stream());
-  //}
 }
 
 template<typename K, typename IDX>
@@ -181,12 +157,6 @@ class IdShuffleTmpBufferManager final {
     int64_t unique_workspace_bytes = 0;
     UniqueKernelUtil<DeviceType::kCUDA, K, IDX>::GetUniqueWorkspaceSizeInBytes(
         nullptr, parallel_num * num_ids, &unique_workspace_bytes);
-    // size_t partition_workspace_bytes = 0;
-    // TODO: GetPartitionWorkspaceSizeInBytes have bug?
-    // GetPartitionWorkspaceSizeInBytes<K, IDX>(nullptr, num_ids, parallel_num,
-    //                                         &partition_workspace_bytes);
-    // workspace_bytes_ = GetCudaAlignedSize(
-    //    std::max(static_cast<size_t>(unique_workspace_bytes), partition_workspace_bytes));
     workspace_bytes_ = GetCudaAlignedSize(unique_workspace_bytes);
     const size_t unique_ids_bytes = GetCudaAlignedSize(num_ids * sizeof(K));
     const size_t partitioned_unique_ids_bytes =
@@ -339,9 +309,6 @@ class IdShuffleKernel final : public user_op::OpKernel {
                               sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
 
-    DumpToFile(ctx->stream(), "unique_ids", parallel_id,
-             num_ids * sizeof(K), buffer_manager.UniqueIdsPtr());
-
     LOG(ERROR) << "rank " << parallel_id << " num_unique_ids " << *host_num_unique_ids;
     K* partitioned_unique_ids = buffer_manager.PartitionedUniqueIdsPtr();
     IDX* partitioned_num_unique_ids = buffer_manager.PartitionedNumUniqueIdsPtr();
@@ -355,7 +322,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     IDX* received_num_unique_ids_matrix = num_unique_ids_matrix->mut_dptr<IDX>();
     Partition(ctx->stream(), num_ids, host_num_unique_ids[0], parallel_num,
               buffer_manager.UniqueIdsPtr(), partitioned_unique_ids, partitioned_num_unique_ids,
-              partition_index->mut_dptr<IDX>(), workspace_ptr, workspace_size);
+              partition_index->mut_dptr<IDX>());
 
     // allgather count
     ncclComm_t comm = nccl_comm->comm();
