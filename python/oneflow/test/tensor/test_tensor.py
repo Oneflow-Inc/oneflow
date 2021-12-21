@@ -365,7 +365,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(y.numpy(), np.array([[5.0]], dtype=np.float32))
         )
-    
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
     def test_matmul_with_random_data(test_case):
