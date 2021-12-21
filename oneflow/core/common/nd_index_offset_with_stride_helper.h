@@ -33,7 +33,9 @@ class NdIndexOffsetWithStrideHelper {
     InitStrides(dims_arr, n);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const int64_t* strides) { InitStrides(strides, N); }
+  OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const int64_t* strides) {
+    InitStrides(strides, N);
+  }
 
   template<typename U>
   OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const U* strides) {
@@ -42,7 +44,9 @@ class NdIndexOffsetWithStrideHelper {
     InitStrides(dims_arr, N);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const T* strides, int n) { InitStrides(strides, n); }
+  OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const T* strides, int n) {
+    InitStrides(strides, n);
+  }
 
   template<typename U>
   OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const U* strides, int n) {

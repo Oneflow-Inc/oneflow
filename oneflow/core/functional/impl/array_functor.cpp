@@ -1125,9 +1125,7 @@ class SliceUpdateFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
     const auto& stride = JUST(x->stride());
     std::vector<int64_t> strides(x->ndim());
-    for(int i=0; i<x->ndim(); ++i){
-      strides[i] = stride->At(i);
-    }
+    for (int i = 0; i < x->ndim(); ++i) { strides[i] = stride->At(i); }
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", strides));
     if (inplace) {
       JUST(CheckInplaceValid(x));

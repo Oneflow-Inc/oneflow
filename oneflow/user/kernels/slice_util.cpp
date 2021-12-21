@@ -51,11 +51,12 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
-    if(params.use_stride){
+    if (params.use_stride) {
       SwitchDoBackwardWithStride(SwitchCase(params.ndim), stream, params, sliced, entire);
-    }else{
+    } else {
       SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-      SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
+      SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced,
+                       entire);
     }
   }
 
@@ -87,13 +88,14 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 
   template<int NDIM>
   static void DoBackwardWithStride(ep::Stream* stream, const SliceParams& params, const T* sliced,
-                         T* entire) {
+                                   T* entire) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr(params.stride);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+      int64_t offset =
+          SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
     }
   }

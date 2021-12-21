@@ -46,7 +46,7 @@ struct SliceParams {
   int64_t step[kSliceMaxDims];
   int64_t size[kSliceMaxDims];
   int64_t stride[kSliceMaxDims];
-  bool use_stride=false;
+  bool use_stride = false;
 
   int64_t elem_cnt() const {
     if (ndim == 0) { return 0; }
@@ -91,9 +91,10 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
 }
 
 template<int NDIM>
-OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffsetWithStride(int64_t offset, const SliceParams& params,
-                                                 const SliceIndexWithStrideHelper<NDIM>& entire_idx_cvtr,
-                                                 const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
+OF_DEVICE_FUNC int64_t
+SliceOffsetToEntireOffsetWithStride(int64_t offset, const SliceParams& params,
+                                    const SliceIndexWithStrideHelper<NDIM>& entire_idx_cvtr,
+                                    const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
   int64_t nd_index[NDIM] = {0};
   sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);
 #ifdef __CUDA_ARCH__

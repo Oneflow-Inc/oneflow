@@ -174,9 +174,10 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   return params;
 }
 
-
-SliceParams ConstructSliceParamsWithStride(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
-                                 const user_op::Tensor* sliced, const std::vector<int64_t>& stride) {
+SliceParams ConstructSliceParamsWithStride(user_op::KernelComputeContext* ctx,
+                                           const user_op::Tensor* entire,
+                                           const user_op::Tensor* sliced,
+                                           const std::vector<int64_t>& stride) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");

@@ -45,11 +45,12 @@ __global__ void SliceBackwardGpu(const int n, SliceParams params,
 
 template<typename T, int NDIM>
 __global__ void SliceBackwardWithStrideGpu(const int n, SliceParams params,
-                                 SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr,
-                                 SliceIndexHelper<NDIM> sliced_idx_cvtr, T* entire,
-                                 const T* sliced) {
+                                           SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr,
+                                           SliceIndexHelper<NDIM> sliced_idx_cvtr, T* entire,
+                                           const T* sliced) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t offset = SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    int64_t offset =
+        SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
     entire[offset] = sliced[i];
   }
 }
@@ -80,13 +81,13 @@ void LaunchSliceBackward(ep::Stream* stream, const SliceParams& params, const T*
 
 template<typename T, int NDIM>
 void LaunchSliceBackwardWithStride(ep::Stream* stream, const SliceParams& params, const T* sliced,
-                         T* entire) {
+                                   T* entire) {
   CHECK_EQ(params.ndim, NDIM);
   int64_t elem_cnt = params.elem_cnt();
   SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr(params.stride);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
   SliceBackwardWithStrideGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
       elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
 }
 
@@ -178,16 +179,15 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
   }
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
-
     size_t pack_size;
     SliceParams packed_params{};
-    if(params.use_stride){
+    if (params.use_stride) {
       GetPackedParams<T>(params, entire, sliced, &pack_size, &packed_params);
-    }else{
+    } else {
       SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
       GetPackedParams<T>(fold_slice_params, entire, sliced, &pack_size, &packed_params);
     }
-    if(params.use_stride){
+    if (params.use_stride) {
       if (pack_size == 1) {
         SliceSwitchUtil<uint8_t>::SwitchLaunchSliceBackwardWithStride(
             SwitchCase(packed_params.ndim), stream, packed_params,
@@ -211,7 +211,7 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
       } else {
         UNIMPLEMENTED();
       }
-    }else{
+    } else {
       if (pack_size == 1) {
         SliceSwitchUtil<uint8_t>::SwitchLaunchSliceBackward(
             SwitchCase(packed_params.ndim), stream, packed_params,

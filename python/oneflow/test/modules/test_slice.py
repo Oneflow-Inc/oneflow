@@ -133,7 +133,11 @@ def _test_slice_backward(test_case, device):
 def _test_slice_update(test_case, device):
     x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
     input = flow.tensor(x, requires_grad=True, device=flow.device(device))
-    update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True, device=flow.device(device))
+    update = flow.tensor(
+        np.array([2, 3, 4]).astype(np.float32),
+        requires_grad=True,
+        device=flow.device(device),
+    )
     output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
     y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
     z = y.sum()
@@ -147,16 +151,16 @@ def _test_slice_update(test_case, device):
 
 
 def _test_slice_update_with_stride(test_case, device):
-    arr = np.arange(24).reshape(2,2,2,3).astype(np.float32)
+    arr = np.arange(24).reshape(2, 2, 2, 3).astype(np.float32)
     np_in = arr
-    np_out = np_in.transpose(1,0,2,3)
-    np_out[0:1,1:2,:,1:2] = 3.1415
+    np_out = np_in.transpose(1, 0, 2, 3)
+    np_out[0:1, 1:2, :, 1:2] = 3.1415
 
     input = flow.tensor(arr, device=flow.device(device))
-    output = input.permute(1,0,2,3)
-    output[0:1,1:2,:,1:2] = 3.1415
+    output = input.permute(1, 0, 2, 3)
+    output[0:1, 1:2, :, 1:2] = 3.1415
 
-    test_case.assertTrue(np.array_equal(output.numpy(), np_out))    
+    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -183,10 +187,7 @@ class TestSlice(flow.unittest.TestCase):
 class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_slice_update,
-            _test_slice_update_with_stride
-        ]
+        arg_dict["test_fun"] = [_test_slice_update, _test_slice_update_with_stride]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
