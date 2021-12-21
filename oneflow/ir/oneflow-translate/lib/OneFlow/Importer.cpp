@@ -647,9 +647,11 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
     auto result_size = std::get<1>(tuple);
+    std::cout << name << " " << result_size << std::endl;
     if (result_size == 0) continue;
     for (int32_t i = 0; i < result_size; i++) {
       auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
+      std::cout << op_name + "/" + name + "_" + std::to_string(i) << std::endl;
       *(out_s_ptr) = op_name + "/" + name + "_" + std::to_string(i);
     }
   }
@@ -944,6 +946,10 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   }
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
   auto* producer_op = result.getDefiningOp();
+  producer_op->dump();
+  std::cout << result.getResultNumber() << std::endl;
+  producer_op->getAttrOfType<ArrayAttr>("output_lbns").dump();
+
   auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
   output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
   for (size_t i = 1; i < op->getNumOperands(); ++i) {

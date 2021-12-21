@@ -24,26 +24,27 @@ os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 import oneflow as flow
 import oneflow.unittest
 
-
 @flow.unittest.skip_unless_1n1d()
-class TestAdaptivePool1dMLIR(oneflow.unittest.TestCase):
-    def test_adaptive_pool1d_graph(test_case):
-        data = np.random.randn(1, 2, 3)
-        x = flow.tensor(data, dtype=flow.float32)
+class TestCastMLIR(oneflow.unittest.TestCase):
+    def test_cast_graph(test_case):
+        data1 = np.random.randn(20, 30)
+        a = flow.tensor(data1, dtype=flow.float32)
 
-        AdaptivePool1d = flow.nn.AdaptiveAvgPool1d(output_size=(1))
-        y_eager = AdaptivePool1d(x)
+        y_eager = flow.cast(a, dtype=flow.int8)
 
-        class AdaptivePool1dGraph(flow.nn.Graph):
+        class CastGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.cc_adaptive_pool = AdaptivePool1d
 
-            def build(self, x):
-                return self.cc_adaptive_pool(x)
+            def build(self, a):
+                return flow.cast(a, dtype=flow.int8)
 
-        adaptive_pool_1d_g = AdaptivePool1dGraph()
-        y_lazy = adaptive_pool_1d_g(x)
+        cast_g = CastGraph()
+        y_lazy = cast_g(a)
+
+        # for i in range(100):
+        #     y_lazy = conv2d_g(x)
+
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
 

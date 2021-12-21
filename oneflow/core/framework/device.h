@@ -30,7 +30,7 @@ class ParallelDesc;
 class MemoryCase;
 class LocalDepObject;
 
-inline size_t GetInstructionHighWaterMark() { return 500; }
+inline size_t GetInstructionHighWaterMark() { return 50000; }
 inline size_t GetInstructionLowWaterMark() { return 200; }
 
 class Device final {

@@ -18,37 +18,31 @@ import os
 import unittest
 import numpy as np
 
-import oneflow as flow
-import oneflow.unittest
-
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 
+import oneflow.compatible.single_client as flow
+import oneflow.compatible.single_client.typing as oft
+import oneflow.unittest
+import typing
+
+func_config = flow.FunctionConfig()
+
 @flow.unittest.skip_unless_1n1d()
-class TestMatMulMLIR(oneflow.unittest.TestCase):
-    def test_matmul_graph(test_case):
-        data1 = np.random.randn(20, 30)
-        a = flow.tensor(data1, dtype=flow.float32)
-        data2 = np.random.randn(30, 30)
-        b = flow.tensor(data2, dtype=flow.float32)
+class TestMatMulToTosa(flow.unittest.TestCase):
+    def test_idempotent(test_case):
+        @flow.global_function(function_config=func_config)
+        def MatMulJob(
+            x: oft.Numpy.Placeholder((20, 30)),
+            y: oft.Numpy.Placeholder((30, 20))
+        ) -> oft.Numpy:
+            res = flow.matmul(x, y)
+            return res
 
-        y_eager = flow.matmul(a, b)
-
-        class MatMulGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-
-            def build(self, a, b):
-                return flow.matmul(a, b)
-
-        matmul_g = MatMulGraph()
-        y_lazy = matmul_g(a, b)
-
-        # for i in range(100):
-        #     y_lazy = conv2d_g(x)
-
-        test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
-
+        x = np.random.rand(20, 30).astype(np.float32) - 1
+        y = np.random.rand(30, 20).astype(np.float32) - 1
+        res = MatMulJob(x, y)
+        # test_case.assertTrue(np.array_equal(res.numpy(), np.matmul(x, y)))
 
 if __name__ == "__main__":
     unittest.main()
