@@ -24,7 +24,12 @@ namespace {
 
 #ifdef WITH_CUDA
 Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
-  const auto& device = JUST(Device::New(type));
+  // NOTE(chengcheng):
+  //   Lazy Job instruction need mutual exclusion nccl with Eager nccl. However, when the number of
+  //   processes is more than the number of physical GPUs, the following processes will make an
+  //   error when using local rank to create a EagerNcclLocalDepObject, but we only need an legal
+  //   device so we use device 0.
+  const auto& device = JUST(Device::New(type, 0));
   const auto& local_dep_object = device->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
   return JUST(local_dep_object);

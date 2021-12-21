@@ -27,7 +27,7 @@ import oneflow.unittest
 
 
 def _test_fused_scale_mask_softmax_dropout(
-    test_case, batch_size, num_heads, seq_length, fill_value, scale_value, p,
+    test_case, batch_size, num_heads, seq_length, fill_value, scale_value, p
 ):
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
     mask = np.random.randint(

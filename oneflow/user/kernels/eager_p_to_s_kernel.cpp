@@ -49,12 +49,12 @@ Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
 
 auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
-class EagerPToSOpKernelState final : public user_op::OpKernelState {
+class EagerPToSOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerPToSOpKernelState(user_op::KernelInitContext* ctx) : elem_cnt_per_chunk_(0) {
+  explicit EagerPToSOpKernelCache(user_op::KernelCacheContext* ctx) : elem_cnt_per_chunk_(0) {
     Init(ctx);
   }
-  ~EagerPToSOpKernelState() override = default;
+  ~EagerPToSOpKernelCache() override = default;
 
   int64_t elem_cnt_per_chunk() const { return elem_cnt_per_chunk_; }
 
@@ -67,7 +67,7 @@ class EagerPToSOpKernelState final : public user_op::OpKernelState {
   }
 
  private:
-  void Init(user_op::KernelInitContext* ctx) {
+  void Init(user_op::KernelCacheContext* ctx) {
     const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
     const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
@@ -128,24 +128,25 @@ class EagerPToSKernel final : public user_op::OpKernel {
   EagerPToSKernel() = default;
   ~EagerPToSKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerPToSOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerPToSOpKernelCache>(ctx); }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerPToSOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerPToSOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const void* in_ptr = in->dptr();
     void* tmp_buffer_ptr = tmp_buffer->mut_dptr();
 
-    int64_t elem_cnt_per_chunk = kernel_state->elem_cnt_per_chunk();
-    const auto& sorted_in_tensor_slice_copier = kernel_state->sorted_in_tensor_slice_copier();
-    const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
+    int64_t elem_cnt_per_chunk = kernel_cache->elem_cnt_per_chunk();
+    const auto& sorted_in_tensor_slice_copier = kernel_cache->sorted_in_tensor_slice_copier();
+    const auto& sorted_p2p_pair = kernel_cache->sorted_p2p_pair();
     CHECK_EQ(sorted_in_tensor_slice_copier.size(), sorted_p2p_pair.size());
 
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
