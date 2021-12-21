@@ -75,6 +75,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 # https://releases.llvm.org/11.0.0/tools/clang/docs/OpenMPSupport.html
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 11)
     set(WITH_ONEDNN OFF)
+    set(WITH_OMP_THREADING_RUNTIME OFF)
   endif()
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 5)
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})

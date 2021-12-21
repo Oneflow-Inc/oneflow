@@ -43,7 +43,7 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
     if (begin_tid < end) { func(begin_tid, end_tid); }
   }
 #else
-// TODO
+  func(begin, end);
 #endif
 }
 
