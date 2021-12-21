@@ -16,9 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_PARALLEL_H_
 #define ONEFLOW_CORE_EP_PARALLEL_H_
 #include <iostream>
-#include <omp.h>
 #include <unistd.h>
 #include <sys/types.h>
+
+#if WITH_OMP_THREADING_RUNTIME
+#include <omp.h>
+#endif
 
 namespace oneflow {
 namespace ep {
