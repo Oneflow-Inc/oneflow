@@ -2077,29 +2077,29 @@ class MeshgridFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
     CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
-    
+
     for (int i = 0; i < size - 1; ++i) {
       CHECK_OR_RETURN(
           (tensors[i]->dtype() == tensors[i + 1]->dtype())
           && (JUST(tensors[i]->device())->type() == JUST(tensors[i + 1]->device())->type()))
           << "meshgrid expects all tensors to have the same dtype and device";
     }
-    
-    std::vector<std::shared_ptr<Tensor>> tensor_consts(tensors.begin(),tensors.end());
+
+    std::vector<std::shared_ptr<Tensor>> tensor_consts(tensors.begin(), tensors.end());
 
     bool swap_first_and_second_tensors = false;
-    if(indexing == "xy"){
-       swap_first_and_second_tensors = (size >= 2);
-       if (swap_first_and_second_tensors) {
-          std::swap(tensor_consts[0], tensor_consts[1]);
-       }
-    }else{
-      CHECK_EQ_OR_RETURN(indexing, "ij") << "flow.meshgrid: indexing must be one of \"xy\" or \"ij\", "
-                "but received: ,"<< indexing;
+    if (indexing == "xy") {
+      swap_first_and_second_tensors = (size >= 2);
+      if (swap_first_and_second_tensors) { std::swap(tensor_consts[0], tensor_consts[1]); }
+    } else {
+      CHECK_EQ_OR_RETURN(indexing, "ij")
+          << "flow.meshgrid: indexing must be one of \"xy\" or \"ij\", "
+             "but received: ,"
+          << indexing;
     }
-    
-    TensorTuple grids(size);  
-    DimVector grids_vec(size);       
+
+    TensorTuple grids(size);
+    DimVector grids_vec(size);
     for (int i = 0; i < size; ++i) {
       CHECK_LE_OR_RETURN(tensor_consts[i]->shape()->NumAxes(), 1)
           << "Expected scalar or 1D tensor in the tensor list but got: "
@@ -2109,9 +2109,9 @@ class MeshgridFunctor {
       } else {
         grids_vec[i] = tensor_consts[i]->shape()->At(0);
       }
-    } 
+    }
     Shape grids_shape(grids_vec);
-    
+
     DimVector view_shape_vec(size, 1);
     Shape view_shape(view_shape_vec);
     for (int i = 0; i < size; ++i) {
@@ -2120,11 +2120,9 @@ class MeshgridFunctor {
       grids[i] = JUST(Expand(reshaped, grids_shape));
       view_shape.Set(i, 1);
     }
-    
-    if (swap_first_and_second_tensors) {
-       std::swap(grids[0], grids[1]);
-    }
-  
+
+    if (swap_first_and_second_tensors) { std::swap(grids[0], grids[1]); }
+
     return grids;
   }
 };
