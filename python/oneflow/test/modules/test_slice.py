@@ -166,6 +166,22 @@ class TestSliceUpdate(flow.unittest.TestCase):
         np_grad[4] = 1
         test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
         test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
+    
+    def test_slice_update_with_stride(test_case):
+        arr = np.arange(24).reshape(2,2,2,3).astype(np.float32)
+        np_in = arr
+        np_out = np_in.transpose(1,0,2,3)
+        np_out[0:1,1:2,:,1:2] = 3.1415
+
+        input = flow.tensor(arr)
+        output = input.permute(1,0,2,3)
+        output[0:1,1:2,:,1:2] = 3.1415
+
+        test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+    
+        
+        
+        
 
 
 @flow.unittest.skip_unless_1n1d()
