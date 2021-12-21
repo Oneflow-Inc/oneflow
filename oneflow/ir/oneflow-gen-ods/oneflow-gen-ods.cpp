@@ -389,18 +389,51 @@ bool ShouldSkipOperandAndResultsAndAttrs(const std::string& op_name) {
   return IsInvolutionOp(op_name) || IsIdempotentOp(op_name);
 }
 
+uint32_t NumMultipleVariadic(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  uint32_t num_variadic_op = 0;
+  for (const auto& arg_def : arg_defs) {
+    if (arg_def.is_optional()) { num_variadic_op += 1; }
+    if (arg_def.num_as_min()) { num_variadic_op += 1; }
+  }
+  return num_variadic_op;
+}
+
+bool HasAtLeastTwoVariadic(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  return NumMultipleVariadic(arg_defs) > 1;
+}
+
+bool HasVariadic(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  return NumMultipleVariadic(arg_defs) > 0;
+}
+
+bool HasNumAsMin(
+    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
+  uint32_t num_as_num = 0;
+  for (const auto& arg_def : arg_defs) {
+    if (arg_def.num_as_min()) { num_as_num += 1; }
+  }
+  return num_as_num > 0;
+}
+
+bool HasCheck(const ::oneflow::user_op::OpRegistryResult& r) {
+  return r.has_real_check_fn_ || HasNumAsMin(r.op_def.input()) || HasNumAsMin(r.op_def.output());
+}
+
 bool HasOneFlow_BasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
-  return !r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn
-         && r.has_real_physical_tensor_desc_infer_fn_ && r.get_sbp_fn && !r.sbp_signature_infer_fn
-         && r.data_type_infer_fn && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn
-         && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
+  return !HasCheck(r) && r.logical_tensor_desc_infer_fn && r.has_real_physical_tensor_desc_infer_fn_
+         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn
+         && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn && !r.output_arg_modify_fn
+         && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
 }
 
 bool HasOneFlow_BasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& r) {
-  return r.has_real_check_fn_ && r.logical_tensor_desc_infer_fn
-         && r.has_real_physical_tensor_desc_infer_fn_ && r.get_sbp_fn && !r.sbp_signature_infer_fn
-         && r.data_type_infer_fn && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn
-         && !r.output_arg_modify_fn && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
+  return HasCheck(r) && r.logical_tensor_desc_infer_fn && r.has_real_physical_tensor_desc_infer_fn_
+         && r.get_sbp_fn && !r.sbp_signature_infer_fn && r.data_type_infer_fn
+         && !r.has_real_device_infer_fn_ && !r.input_arg_modify_fn && !r.output_arg_modify_fn
+         && !r.output_blob_time_shape_infer_fn && !r.nd_sbp_infer_fn;
 }
 
 void PrintHas1(const std::string& var_name) { std::cout << "  let has_" << var_name << " = 1;\n"; }
@@ -418,7 +451,7 @@ void PrintBasicBaseOpHasFnWithCheck(const ::oneflow::user_op::OpRegistryResult& 
 }
 
 void PrintBasicBaseOpHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
-  if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
+  if (HasCheck(r)) { PrintHas1("check_fn"); }
   PrintAdvancedHasFns(r);
 }
 
@@ -433,7 +466,7 @@ void PrintHasFn(const ::oneflow::user_op::OpRegistryResult& r) {
       return;
     }
   }
-  if (r.has_real_check_fn_) { PrintHas1("check_fn"); }
+  if (HasCheck(r)) { PrintHas1("check_fn"); }
   if (r.logical_tensor_desc_infer_fn) { PrintHas1("logical_tensor_desc_infer_fn"); }
   if (r.has_real_physical_tensor_desc_infer_fn_) { PrintHas1("physical_tensor_desc_infer_fn"); }
   if (r.get_sbp_fn) { PrintHas1("get_sbp_fn"); }
@@ -463,26 +496,6 @@ void PrintArgDef(const UserOpDef_ArgDef& arg_def) {
   if (arg_def.num_as_min()) {
     // TODO: add verifier
   }
-}
-
-uint32_t NumMultipleVariadic(
-    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
-  uint32_t num_variadic_op = 0;
-  for (const auto& arg_def : arg_defs) {
-    if (arg_def.is_optional()) { num_variadic_op += 1; }
-    if (arg_def.num_as_min()) { num_variadic_op += 1; }
-  }
-  return num_variadic_op;
-}
-
-bool HasAtLeastTwoVariadic(
-    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
-  return NumMultipleVariadic(arg_defs) > 1;
-}
-
-bool HasVariadic(
-    const ::google::protobuf::RepeatedPtrField<::oneflow::UserOpDef_ArgDef>& arg_defs) {
-  return NumMultipleVariadic(arg_defs) > 0;
 }
 
 std::string GetOperandKeys(
