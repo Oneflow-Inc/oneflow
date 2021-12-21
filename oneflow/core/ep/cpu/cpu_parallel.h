@@ -28,22 +28,14 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-class Parallel {
- public:
-  static void set_computing_cores();
-
-  static int _computing_cores;
-};
-
 inline size_t divup(int64_t x, int64_t y) { return (x + y - 1) / y; }
 
 template<typename F>
-void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size) {
+void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size_t nthr) {
   if (begin >= end) { return; }
 
 #if WITH_OMP_THREADING_RUNTIME
 
-  size_t nthr = Parallel::_computing_cores;
   if (grain_size > 0) { nthr = std::min(nthr, divup((end - begin), grain_size)); }
 #pragma omp parallel num_threads(nthr)
   {
@@ -55,21 +47,21 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size) {
     if (begin_tid < end) { func(begin_tid, end_tid); }
   }
 #else
-  size_t num = end - begin;
-  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-  thread_num = std::min(thread_num, divup(num, grain_size));
-  BalancedSplitter bs(num, thread_num);
-  BlockingCounter bc(thread_num);
-  FOR_RANGE(size_t, range_id, 0, thread_num) {
-    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, func] {
-      size_t start = bs.At(range_id).begin();
-      size_t end = bs.At(range_id).end();
-      func(start, end);
-      bc.Decrease();
-    });
-  }
-  // buzy loop wait.
-  bc.WaitUntilCntEqualZero();
+  // size_t num = end - begin;
+  // size_t thread_num = Global<ThreadPool>::Get()->thread_num();
+  // thread_num = std::min(thread_num, divup(num, grain_size));
+  // BalancedSplitter bs(num, thread_num);
+  // BlockingCounter bc(thread_num);
+  // FOR_RANGE(size_t, range_id, 0, thread_num) {
+  //   Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, func] {
+  //     size_t start = bs.At(range_id).begin();
+  //     size_t end = bs.At(range_id).end();
+  //     func(start, end);
+  //     bc.Decrease();
+  //   });
+  // }
+  // // buzy loop wait.
+  // bc.WaitUntilCntEqualZero();
 #endif
 }
 
