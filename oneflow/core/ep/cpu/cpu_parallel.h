@@ -19,8 +19,8 @@ limitations under the License.
 #include <unistd.h>
 #include <sys/types.h>
 
-#if WITH_OMP_THREADING_RUNTIME
-#include "omp.h"
+#ifdef WITH_OMP_THREADING_RUNTIME
+#include <omp.h>
 #endif
 
 namespace oneflow {
@@ -33,7 +33,7 @@ template<typename F>
 void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size_t nthr) {
   if (begin >= end) { return; }
 
-#if WITH_OMP_THREADING_RUNTIME
+#ifdef WITH_OMP_THREADING_RUNTIME
 
   if (grain_size > 0) { nthr = std::min(nthr, divup((end - begin), grain_size)); }
 #pragma omp parallel num_threads(nthr)
