@@ -50,6 +50,11 @@ class TestNegativeModule(flow.unittest.TestCase):
         z = torch.neg(x)
         return z
 
+    @autotest(check_graph=False)
+    def test_tensor_negative_with_0dim_data(test_case):
+        x = random_pytorch_tensor(ndim=0).to(random_device())
+        return x.negative()
+
 
 if __name__ == "__main__":
     unittest.main()
