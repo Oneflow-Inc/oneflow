@@ -20,6 +20,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
@@ -107,8 +108,13 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
 
         add_out = g_add()
         mul_out = g_mul()
-        test_case.assertTrue(np.allclose(add_out.numpy(), np_x + np_y, atol=1e-4, rtol=1e-4))
-        test_case.assertTrue(np.allclose(mul_out.numpy(), np_x * np_y, atol=1e-4, rtol=1e-4))
+        test_case.assertTrue(
+            np.allclose(add_out.numpy(), np_x + np_y, atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(mul_out.numpy(), np_x * np_y, atol=1e-4, rtol=1e-4)
+        )
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
