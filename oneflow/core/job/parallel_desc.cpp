@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/vm_util.h"
 #ifdef WITH_CUDA
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 #endif  // WITH_CUDA
 
 namespace oneflow {
