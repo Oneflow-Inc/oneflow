@@ -2031,7 +2031,7 @@ class ChunkFunctor {
     if ((split_size * chunks) != dim_size) {
       std::vector<int64_t> sections;
       for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
-      sections.emplace_back(x->shape()->At(axis) - split_size * (chunks - 1));
+      sections.emplace_back(dim_size - split_size * (chunks - 1));
       int64_t num_splits = sections.size();
       TensorTuple splits(num_splits);
       int64_t start_idx = 0;
