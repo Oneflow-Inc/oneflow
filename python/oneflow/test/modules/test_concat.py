@@ -141,7 +141,7 @@ class TestModule(flow.unittest.TestCase):
         return torch.cat((x, x, x), random(0, 2).to(int))
 
     @autotest(n=10, auto_backward=False, check_graph=False)
-    def test_concat_with_input_0shape_data(test_case):
+    def test_concat_with_input_ (test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 2, 4).to(device)
         y = random_pytorch_tensor(4, 2, 3, random(0, 3), 4).to(device)
