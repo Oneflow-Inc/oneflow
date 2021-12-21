@@ -51,10 +51,10 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
-    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    if(fold_slice_params.use_stride){
-      SwitchDoBackwardWithStride(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
+    if(params.use_stride){
+      SwitchDoBackwardWithStride(SwitchCase(params.ndim), stream, params, sliced, entire);
     }else{
+      SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
       SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
     }
   }
