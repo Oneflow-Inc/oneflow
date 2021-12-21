@@ -416,6 +416,7 @@ REGISTER_USER_OP("slice_update")
     .Attr<std::vector<int64_t>>("start")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
+    .Attr<std::vector<int64_t>>("stride")
     .SetTensorDescInferFn(InferSliceUpdateOpTensorDesc)
     .SetDataTypeInferFn(InferSliceUpdateOpDataType)
     .SetGetSbpFn(GetSliceUpdateOpSbpSignature);

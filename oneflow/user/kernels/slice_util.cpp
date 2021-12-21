@@ -19,26 +19,27 @@ limitations under the License.
 namespace oneflow {
 
 SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
-  SliceParams fold_slice_params;
-  std::memset(&fold_slice_params, 0, sizeof(SliceParams));
-  bool full_slice_on_prev_axis = false;
-  FOR_RANGE(int, i, 0, params.ndim) {
-    bool full_slice_on_cur_axis = params.IsFullSlice(i);
-    if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
-      int cur_dim = fold_slice_params.ndim - 1;
-      fold_slice_params.dims[cur_dim] *= params.dims[i];
-      fold_slice_params.size[cur_dim] *= params.size[i];
-    } else {
-      int cur_dim = fold_slice_params.ndim;
-      fold_slice_params.dims[cur_dim] = params.dims[i];
-      fold_slice_params.start[cur_dim] = params.start[i];
-      fold_slice_params.step[cur_dim] = params.step[i];
-      fold_slice_params.size[cur_dim] = params.size[i];
-      fold_slice_params.ndim += 1;
-    }
-    full_slice_on_prev_axis = full_slice_on_cur_axis;
-  }
-  return fold_slice_params;
+  // SliceParams fold_slice_params;
+  // std::memset(&fold_slice_params, 0, sizeof(SliceParams));
+  // bool full_slice_on_prev_axis = false;
+  // FOR_RANGE(int, i, 0, params.ndim) {
+  //   bool full_slice_on_cur_axis = params.IsFullSlice(i);
+  //   if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
+  //     int cur_dim = fold_slice_params.ndim - 1;
+  //     fold_slice_params.dims[cur_dim] *= params.dims[i];
+  //     fold_slice_params.size[cur_dim] *= params.size[i];
+  //   } else {
+  //     int cur_dim = fold_slice_params.ndim;
+  //     fold_slice_params.dims[cur_dim] = params.dims[i];
+  //     fold_slice_params.start[cur_dim] = params.start[i];
+  //     fold_slice_params.step[cur_dim] = params.step[i];
+  //     fold_slice_params.size[cur_dim] = params.size[i];
+  //     fold_slice_params.ndim += 1;
+  //   }
+  //   full_slice_on_prev_axis = full_slice_on_cur_axis;
+  // }
+  // return fold_slice_params;
+  return params;
 }
 
 template<typename T>
@@ -58,11 +59,18 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void DoForward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
-    SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
+    // SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+    SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
+    SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
-      sliced[i] = entire[offset];
+      // int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr,
+      // sliced_idx_cvtr);
+      int64_t sliced_offset = 0;
+      int64_t entire_offset = 0;
+      SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
+                                      sliced_strided_idx_cvtr, &sliced_offset, &entire_offset);
+      sliced[sliced_offset] = entire[entire_offset];
     }
   }
 
@@ -71,11 +79,18 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
                          T* entire) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
-    SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
+    // SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+    SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
+    SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
-      entire[offset] = sliced[i];
+      // int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr,
+      // sliced_idx_cvtr);
+      int64_t sliced_offset = 0;
+      int64_t entire_offset = 0;
+      SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
+                                      sliced_strided_idx_cvtr, &sliced_offset, &entire_offset);
+      entire[entire_offset] = sliced[sliced_offset];
     }
   }
 
