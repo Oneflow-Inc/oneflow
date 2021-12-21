@@ -169,7 +169,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("num_unique_ids",
                        AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
                 .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
-                .Input("context", embedding_prefetch_op.output("context", 0))
+                .Input("context", AddIdentityOp(embedding_prefetch_op.output("context", 0)))
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
                 .Input("embedding_diff",
                        embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0))
