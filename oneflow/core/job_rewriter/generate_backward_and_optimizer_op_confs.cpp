@@ -224,11 +224,16 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
         AddOptimizerOp(ctx, *op_node, model_diff_lbn, optimizer_conf, job_builder.get());
       });
     }
+    std::vector<std::string> embedding_lookup_op_names;
+    op_graph.ForEachNode([&](OpNode* op_node) {
+      if (op_node->op().op_conf().has_user_conf()
+          && op_node->op().op_conf().user_conf().op_type_name() == "embedding_lookup_placeholder") {
+        embedding_lookup_op_names.push_back(op_node->op().op_name());
+      }
+    });
+    // if multi optimizer, may have error
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
-      // TODO(guoran):add optimizer_conf.embedding_lookup_op_names() in python
-      std::vector<std::string> embedding_lookup_op_names;
-      embedding_lookup_op_names.push_back("embedding_lookup-embedding_lookup_placeholder_0");
       FilterCurModelLbi2ModelDiffLbiByEmbeddingName(
           embedding_lookup_op_names, model_lbi2model_diff_lbi, &cur_model_lbi2model_diff_lbi);
       op_graph.ForEachNode([&](OpNode* op_node) {

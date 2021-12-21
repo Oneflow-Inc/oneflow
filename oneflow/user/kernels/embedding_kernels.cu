@@ -77,7 +77,6 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
-    LOG(ERROR) << "EmbeddingPrefetchKernel";
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
@@ -183,7 +182,6 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
-    LOG(ERROR) << "EmbeddingUpdateKernel";
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
 
@@ -194,7 +192,6 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
     const int64_t embedding_size =
         unique_embeddings->shape().elem_cnt() / unique_ids->shape().elem_cnt();
-    LOG(ERROR) << "embedding_size " << embedding_size;
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     T* update_unique_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
 

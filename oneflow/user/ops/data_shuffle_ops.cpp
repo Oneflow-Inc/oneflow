@@ -25,6 +25,7 @@ REGISTER_USER_OP("id_shuffle")
     .Output("cur_rank_unique_ids")
     .Output("cur_rank_reverse_idx")
     .Output("num_unique_ids_matrix")
+    .Output("partition_index")
     .Attr<std::string>("partitioning")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& ids_shape = ctx->InputShape("ids", 0);
@@ -36,6 +37,7 @@ REGISTER_USER_OP("id_shuffle")
       *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
       *ctx->OutputShape("cur_rank_reverse_idx", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
       *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
+      *ctx->OutputShape("partition_index", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
 
       *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
       *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
@@ -55,6 +57,7 @@ REGISTER_USER_OP("id_shuffle")
       *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
       *ctx->OutputShape("cur_rank_reverse_idx", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
       *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
+      *ctx->OutputShape("partition_index", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
 
       *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
       *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
@@ -73,6 +76,7 @@ REGISTER_USER_OP("id_shuffle")
           .Split(user_op::OpArg("cur_rank_unique_ids", 0), 0)
           .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)
           .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
+          .Split(user_op::OpArg("partition_index", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     })
@@ -83,6 +87,7 @@ REGISTER_USER_OP("id_shuffle")
       *ctx->OutputDType("cur_rank_unique_ids", 0) = ctx->InputDType("ids", 0);
       *ctx->OutputDType("cur_rank_reverse_idx", 0) = DataType::kInt32;
       *ctx->OutputDType("num_unique_ids_matrix", 0) = DataType::kInt32;
+      *ctx->OutputDType("partition_index", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 
@@ -171,6 +176,7 @@ REGISTER_USER_OP("embedding_shuffle")
     .Input("num_unique_ids")
     .Input("ids_reverse_idx")
     .Input("num_unique_ids_matrix")
+    .Input("partition_index")
     .Output("embeddings")
     .Attr<int64_t>("embedding_size")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -179,6 +185,7 @@ REGISTER_USER_OP("embedding_shuffle")
       const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
       out_dim_vec.push_back(embedding_size);
       *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
+      *ctx->OutputIsDynamic("embeddings", 0) = false;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -190,6 +197,7 @@ REGISTER_USER_OP("embedding_shuffle")
           .Split(user_op::OpArg("num_unique_ids", 0), 0)
           .Split(user_op::OpArg("ids_reverse_idx", 0), 0)
           .Split(user_op::OpArg("embeddings", 0), 0)
+          .Split(user_op::OpArg("partition_index", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     })
@@ -205,6 +213,7 @@ REGISTER_USER_OP("embedding_gradient_shuffle")
     .Input("num_unique_ids")
     .Input("ids_reverse_idx")
     .Input("num_unique_ids_matrix")
+    .Input("partition_index")
     .Output("cur_rank_unique_embedding_diff")
     .Attr<int64_t>("embedding_size")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -225,6 +234,7 @@ REGISTER_USER_OP("embedding_gradient_shuffle")
           .Split(user_op::OpArg("ids_reverse_idx", 0), 0)
           .Split(user_op::OpArg("embedding_diff", 0), 0)
           .Split(user_op::OpArg("cur_rank_unique_embedding_diff", 0), 0)
+          .Split(user_op::OpArg("partition_index", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     })

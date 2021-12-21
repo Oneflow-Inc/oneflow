@@ -119,6 +119,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Input("ids_reverse_idx", AddIdentityOp(id_shuffle_op.output("ids_reverse_idx", 0)))
             .Input("num_unique_ids_matrix",
                    AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
+            .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
             .Output("embeddings")
             .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
@@ -135,6 +136,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
         if (update_op_conf.op_type_name() != "sgd_embedding_update_placeholder") { continue; }
+        if (update_op_conf.attr<std::string>("name") != user_op_conf.attr<std::string>("name")) {
+          continue;
+        }
         delete_op_names.push_back(update_op_conf.op_name());
         // embedding_gradient_shuffle op
         user_op::UserOpConfWrapperBuilder embedding_gradient_shuffle_op_builder(
@@ -150,6 +154,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("embedding_diff", update_op_conf.input("embedding_diff", 0))
                 .Input("num_unique_ids_matrix",
                        AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
+                .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
                 .Output("cur_rank_unique_embedding_diff")
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())

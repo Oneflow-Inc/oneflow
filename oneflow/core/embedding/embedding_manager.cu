@@ -23,12 +23,8 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
                                                          int64_t parallel_id) {
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
-  LOG(ERROR) << "GetKeyValueStore " << name << " " << parallel_id;
   auto it = key_value_store_map_.find(map_key);
-  if (it != key_value_store_map_.end()) {
-    LOG(ERROR) << "find " << name << " " << parallel_id;
-    return it->second.get();
-  }
+  if (it != key_value_store_map_.end()) { return it->second.get(); }
   embedding::CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
   options.value_length = 128;
@@ -38,7 +34,6 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   std::unique_ptr<embedding::KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
   CHECK(pair.second);
-  LOG(ERROR) << "not found, create " << name << " " << parallel_id;
   return pair.first->second.get();
 }
 
