@@ -44,6 +44,10 @@ include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
+if(LLVM_PROVIDER STREQUAL "in-tree")
+  add_subdirectory(${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen ${PROJECT_BINARY_DIR}/oneflow-tblgen)
+endif()
+
 set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
   -Wl,--no-as-needed oneflow -Wl,--as-needed
   -Wl,--no-as-needed ${oneflow_exe_third_party_libs} -Wl,--as-needed

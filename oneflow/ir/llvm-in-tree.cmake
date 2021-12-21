@@ -45,8 +45,7 @@ set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir)
 set(MLIR_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include)
 set(MLIR_GENERATED_INCLUDE_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
 set(MLIR_INCLUDE_DIRS "${MLIR_INCLUDE_DIR};${MLIR_GENERATED_INCLUDE_DIR}")
-set(LLVM_EXTERNAL_PROJECTS OneFlowTableGen)
-set(LLVM_EXTERNAL_ONEFLOWTABLEGEN_SOURCE_DIR ${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen)
+
 
 set(llvm_monorepo_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
 install(TARGETS oneflow of_protoobj of_cfgobj of_functional_obj EXPORT oneflow DESTINATION lib)
