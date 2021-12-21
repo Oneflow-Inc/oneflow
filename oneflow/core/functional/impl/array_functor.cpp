@@ -2028,7 +2028,7 @@ class ChunkFunctor {
         << "Dimension out of range (expected to be in range of [" << -(x->ndim()) << ", "
         << x->ndim() - 1 << "], but got " << dim;
     int64_t dim_size = x->shape()->At(axis);
-    if ((split_size * chunks) != x->shape()->At(axis)) {
+    if ((split_size * chunks) != dim_size) {
       std::vector<int64_t> sections;
       for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
       sections.emplace_back(x->shape()->At(axis) - split_size * (chunks - 1));
