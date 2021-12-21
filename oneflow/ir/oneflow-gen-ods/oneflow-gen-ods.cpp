@@ -658,10 +658,6 @@ std::string GetTraits(const ::oneflow::user_op::OpRegistryResult& r) {
     if (ret != "") ret += ", ";
     ret += "CpuOnly";
   }
-  if (IsCudnnOp(r.op_type_name) || IsCUDAOp(r.op_type_name) || IsCUDAOnlyImplOp(r.op_type_name)) {
-    if (ret != "") ret += ", ";
-    ret += "CudaOnly";
-  }
   const bool need_operand_segment_sizes = HasAtLeastTwoVariadic(op_def.input());
   const bool need_result_segment_sizes = HasAtLeastTwoVariadic(op_def.output());
   if (need_operand_segment_sizes) {

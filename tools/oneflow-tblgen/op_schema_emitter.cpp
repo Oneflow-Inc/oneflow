@@ -130,7 +130,6 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitInt(def, "same_output_regst_num", &op);
     emitTrait(def, "no_grad", "NoGrad", &op);
     emitTrait(def, "cpu_only", "CpuOnly", &op);
-    emitTrait(def, "cuda_only", "CudaOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);
     emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
