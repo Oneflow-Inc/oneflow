@@ -64,11 +64,8 @@ template<typename T>
 __global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
                                  int64_t cs_down_space, int64_t nele) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       i < cs_up_space * cs_down_space; i += step) {
-    // auto cs_up_space_id = i / (cs_space * cs_down_space);
+       i < nele; i += step) {
     auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
-    // auto cs_down_space_id = (i % (cs_space * cs_down_space)) % cs_down_space;
-
     pout[i] = (cs_space - cs_space_id) * pin[i]; 
   }
 }
