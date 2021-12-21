@@ -83,4 +83,9 @@ def CpuOnly : OpInterface<"CpuOnly"> {
   }];
 }
 
+def CudaOnly : OpInterface<"CudaOnly"> {
+  let description = [{
+  }];
+}
+
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

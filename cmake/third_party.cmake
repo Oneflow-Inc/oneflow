@@ -19,7 +19,6 @@ endif()
 include(half)
 include(re2)
 include(json)
-include(inja)
 if (RPC_BACKEND MATCHES "GRPC")
   include(absl)
   include(cares)
@@ -185,7 +184,6 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
-  inja_copy_headers_to_destination
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination

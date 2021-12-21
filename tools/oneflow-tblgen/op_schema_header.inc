@@ -31,6 +31,7 @@ using GetOutputArgModifier =
     std::function<OutputBlobModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 
 {% for opname, op in ops %}
+{%- if op.cuda_only %}#ifdef WITH_CUDA{% endif %}
 class {{opname}} : public OpBase {
  public:
   virtual ~{{opname}}() = default;
@@ -95,6 +96,7 @@ class {{opname}} : public oneflow::{{opname}} {
   {% endfor %}
 };
 }  // namespace schema
+{%- if op.cuda_only %}#endif // WITH_CUDA{% endif %}
 {% endfor %}
 } // namespace oneflow
 )OP_SCHEMA_INC"
