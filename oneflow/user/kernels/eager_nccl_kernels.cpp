@@ -27,15 +27,15 @@ namespace oneflow {
 
 namespace {
 
-class EagerCclOpKernelState final : public user_op::OpKernelState {
+class EagerCclOpKernelCache final : public user_op::OpKernelCache {
  public:
-  EagerCclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerCclOpKernelState() override = default;
+  explicit EagerCclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerCclOpKernelCache() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
  private:
-  void Init(user_op::KernelInitContext* ctx) {
+  void Init(user_op::KernelCacheContext* ctx) {
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     ParallelConf parallel_conf;
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
@@ -67,6 +67,12 @@ Maybe<std::vector<std::pair<int64_t, int64_t>>> RawGroupP2PPair(
 
 static constexpr auto* GroupP2PPair = DECORATE(&RawGroupP2PPair, ThreadLocal);
 
+void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
+                               std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
+  // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
+  // once parallel_conf is determined, so only init the cache at the first time.
+  if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclOpKernelCache>(ctx); }
+}
 }  // namespace
 
 class EagerCclBroadcastKernel final : public user_op::OpKernel {
@@ -74,15 +80,16 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
   EagerCclBroadcastKernel() = default;
   ~EagerCclBroadcastKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
@@ -94,7 +101,7 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     }
     CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
                                                 out->data_type(), root,
-                                                kernel_state->parallel_desc(), ctx->stream()));
+                                                kernel_cache->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -108,16 +115,17 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
   EagerCclReduceKernel() = default;
   ~EagerCclReduceKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
@@ -129,7 +137,7 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
     }
     CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(),
                                              in->data_type(), ccl::kSum, root,
-                                             kernel_state->parallel_desc(), ctx->stream()));
+                                             kernel_cache->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -143,15 +151,16 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
   EagerCclAllReduceKernel() = default;
   ~EagerCclAllReduceKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
@@ -159,7 +168,7 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
 
     CHECK_JUST(ccl::AllReduce<DeviceType::kCPU>(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_state->parallel_desc(), ctx->stream()));
+        kernel_cache->parallel_desc(), ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -173,16 +182,17 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
   EagerCclReduceScatterKernel() = default;
   ~EagerCclReduceScatterKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
@@ -190,7 +200,7 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(op_type, "sum");
     CHECK_JUST(ccl::ReduceScatter<DeviceType::kCPU>(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_state->parallel_desc(), ctx->stream()));
+        kernel_cache->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -204,21 +214,22 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
   EagerCclAllGatherKernel() = default;
   ~EagerCclAllGatherKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     CHECK_JUST(ccl::AllGather<DeviceType::kCPU>(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                                out->data_type(), kernel_state->parallel_desc(),
+                                                out->data_type(), kernel_cache->parallel_desc(),
                                                 ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -234,16 +245,17 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
   EagerCclS2SKernel() = default;
   ~EagerCclS2SKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -257,7 +269,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     CHECK_EQ(tmp_size, data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
-    const int64_t num_ranks = kernel_state->parallel_desc()->parallel_num();
+    const int64_t num_ranks = kernel_cache->parallel_desc()->parallel_num();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt())
         << in->shape().ToString() << " vs " << out->shape().ToString();
     const int64_t elem_cnt = in->shape().elem_cnt();
@@ -279,9 +291,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
       std::vector<int32_t> perm;
-      perm.push_back(out_split_axis);
+      perm.emplace_back(out_split_axis);
       FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
-        if (i != out_split_axis) { perm.push_back(i); }
+        if (i != out_split_axis) { perm.emplace_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), transpose_in_dim_vec.size());
@@ -301,13 +313,13 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       // NOTE: Do S2S
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
       const int64_t chunk_size = elem_per_chunk * dtype_size;
-      const auto& p2p_pairs = CHECK_JUST(GroupP2PPair(kernel_state->parallel_desc()));
+      const auto& p2p_pairs = CHECK_JUST(GroupP2PPair(kernel_cache->parallel_desc()));
       for (const auto& pair : *p2p_pairs) {
         int64_t src = pair.first;
         int64_t dst = pair.second;
 
         if (GlobalProcessCtx::Rank() == src) {
-          Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+          Symbol<ParallelDesc> parallel_desc = kernel_cache->parallel_desc();
           int64_t device_id = GlobalProcessCtx::LocalRank(dst);
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(dst, device_id));
@@ -318,7 +330,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
               elem_per_chunk, in->data_type(), dst, ctx->stream()));
         }
         if (GlobalProcessCtx::Rank() == dst) {
-          Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+          Symbol<ParallelDesc> parallel_desc = kernel_cache->parallel_desc();
           int64_t device_id = GlobalProcessCtx::LocalRank(src);
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(src, device_id));
@@ -341,7 +353,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
       std::vector<int32_t> perm;
-      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
+      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), unpack_from_dim_vec.size());

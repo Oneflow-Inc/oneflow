@@ -66,11 +66,13 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
 
   DimVector dim_vec;
 
-  for (int i = 0; i < start_dim; ++i) { dim_vec.push_back(in_shape.At(i)); }
+  for (int i = 0; i < start_dim; ++i) { dim_vec.emplace_back(in_shape.At(i)); }
   int64_t flatten_dim = 1;
   for (int i = start_dim; i <= true_end_dim; ++i) { flatten_dim *= in_shape.At(i); }
-  dim_vec.push_back(flatten_dim);
-  for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) { dim_vec.push_back(in_shape.At(i)); }
+  dim_vec.emplace_back(flatten_dim);
+  for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) {
+    dim_vec.emplace_back(in_shape.At(i));
+  }
 
   *out_shape = Shape(dim_vec);
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());

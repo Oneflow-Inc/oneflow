@@ -105,10 +105,10 @@ class GpuArgSortKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
+#define REGISTER_CUDA_ARG_SORT_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
       .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
@@ -136,11 +136,11 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;               \
       });
 
-REGISTER_GPU_ARG_SORT_KERNEL(float)
-REGISTER_GPU_ARG_SORT_KERNEL(double)
-REGISTER_GPU_ARG_SORT_KERNEL(int8_t)
-REGISTER_GPU_ARG_SORT_KERNEL(uint8_t)
-REGISTER_GPU_ARG_SORT_KERNEL(int32_t)
-REGISTER_GPU_ARG_SORT_KERNEL(int64_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(float)
+REGISTER_CUDA_ARG_SORT_KERNEL(double)
+REGISTER_CUDA_ARG_SORT_KERNEL(int8_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(uint8_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(int32_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(int64_t)
 
 }  // namespace oneflow

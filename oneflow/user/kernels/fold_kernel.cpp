@@ -60,7 +60,7 @@ class FoldKernel final : public OpKernel {
   ~FoldKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
 
@@ -95,8 +95,8 @@ REGISTER_FOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
-REGISTER_FOLD_KERNEL(DeviceType::kGPU, float)
-REGISTER_FOLD_KERNEL(DeviceType::kGPU, double)
+REGISTER_FOLD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_FOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

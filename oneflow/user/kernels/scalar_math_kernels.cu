@@ -35,7 +35,7 @@ struct UnaryByScalarFunctor<Op, float16> {
 };
 
 template<template<typename> class BIN_OP, typename T>
-struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, T> final {
+struct ScalarMathFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     OF_CUDA_CHECK(cuda::elementwise::Unary(UnaryByScalarFunctor<BIN_OP, T>(scalar), elem_cnt, out,
                                            in, stream->As<ep::CudaStream>()->cuda_stream()));
@@ -43,7 +43,7 @@ struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, T> final {
 };
 
 template<template<typename> class BIN_OP>
-struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, float16> final {
+struct ScalarMathFunctor<DeviceType::kCUDA, BIN_OP, float16> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, float16 scalar, const float16* in,
                   float16* out) {
     OF_CUDA_CHECK(cuda::elementwise::Unary(
@@ -53,11 +53,11 @@ struct ScalarMathFunctor<DeviceType::kGPU, BIN_OP, float16> final {
   }
 };
 
-INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncAdd);
-INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncFloorDiv);
-INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncFMod);
-INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncMul);
-INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kGPU, BinaryFuncPow);
+INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncAdd);
+INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncFloorDiv);
+INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncFMod);
+INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncMul);
+INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncPow);
 
 template<typename T>
 struct ScalarPowGradFunctor {
@@ -111,17 +111,17 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("scalar_pow_grad")                      \
-      .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)    \
+#define REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("scalar_pow_grad")                       \
+      .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, uint8_t);
-REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, int64_t);
-REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kGPU, double);
+REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, uint8_t);
+REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int8_t);
+REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int32_t);
+REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int64_t);
+REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 
 }  // namespace oneflow

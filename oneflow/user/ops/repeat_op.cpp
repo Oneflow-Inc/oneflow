@@ -45,7 +45,7 @@ REGISTER_USER_OP("repeat")
     .SetOutputBlobTimeShapeInferFn(
         [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
           DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
-          dim_vec.push_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
+          dim_vec.emplace_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
           *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
           return Maybe<void>::Ok();
         })

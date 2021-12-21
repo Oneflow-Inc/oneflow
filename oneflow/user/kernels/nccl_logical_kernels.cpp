@@ -76,7 +76,8 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -102,7 +103,8 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -129,7 +131,8 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -156,7 +159,8 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -188,7 +192,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
     unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
     std::vector<int32_t> perm;
-    FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
+    FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
     perm.insert(perm.begin() + in_split_axis, 0);
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
         ctx->stream()->device_type(), unpack_from_dim_vec.size());
@@ -217,7 +221,8 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -254,9 +259,9 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
       transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
       std::vector<int32_t> perm;
-      perm.push_back(out_split_axis);
+      perm.emplace_back(out_split_axis);
       FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
-        if (i != out_split_axis) { perm.push_back(i); }
+        if (i != out_split_axis) { perm.emplace_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), transpose_in_dim_vec.size());
@@ -302,7 +307,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
       unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
       std::vector<int32_t> perm;
-      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.push_back(i); }
+      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
           ctx->stream()->device_type(), unpack_from_dim_vec.size());
@@ -331,20 +336,20 @@ size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 REGISTER_USER_KERNEL("_nccl_logical_all_reduce")
     .SetCreateFn<NcclLogicalAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter")
     .SetCreateFn<NcclLogicalReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU);
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 #define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                         \
       .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
@@ -359,7 +364,7 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 #define REGISTER_S2S_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
       .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);

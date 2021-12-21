@@ -23,9 +23,9 @@ REGISTER_NO_GRAD_USER_OP("eye")
     .Attr<DataType>("dtype")
     .Attr<std::vector<std::string>>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      int64_t n = ctx->Attr<int64_t>("n");
-      int64_t m = ctx->Attr<int64_t>("m");
-      *ctx->OutputShape("out", 0) = Shape({n, m});
+      int64_t rows = ctx->Attr<int64_t>("rows");
+      int64_t cols = ctx->Attr<int64_t>("cols");
+      *ctx->OutputShape("out", 0) = Shape({rows, cols});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

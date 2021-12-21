@@ -18,69 +18,36 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> CheckLossReductionAndInferOutputTenserDesc(
-    user_op::InferContext* ctx, const std::string& output_name, bool output_is_dynamic,
-    const Shape& output_shape_when_reduction_is_none) {
-  const std::string reduction = ctx->Attr<std::string>("reduction");
-  CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc(output_name, 0);
-  *out_desc->mut_is_dynamic() = output_is_dynamic;
-  if (reduction == "none") {
-    *out_desc->mut_shape() = output_shape_when_reduction_is_none;
-  } else {
-    *out_desc->mut_shape() = Shape();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CheckLossReductionAndCheckInputTenserDesc(
-    user_op::InferContext* ctx, const std::string& input_name,
-    const Shape& input_shape_when_reduction_is_none) {
-  const std::string reduction = ctx->Attr<std::string>("reduction");
-  CHECK_OR_RETURN(LossReductionTypeIsRight(reduction));
-  const auto& input_desc = ctx->InputTensorDesc(input_name, 0);
-  if (reduction == "none") {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), input_shape_when_reduction_is_none);
-  } else {
-    CHECK_EQ_OR_RETURN(input_desc.shape(), Shape());
-  }
-  return Maybe<void>::Ok();
-}
-
 user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
+                             user_op::SbpContext* ctx)>& f) {
   return [=](user_op::SbpContext* ctx) -> Maybe<void> {
-    const auto reduction = ctx->Attr<std::string>("reduction");
     auto builder = ctx->NewBuilder()
                        .Split(user_op::OpArg("input", 0), 0)
                        .Split(user_op::OpArg("target", 0), 0)
-                       .Broadcast(user_op::OpArg("weight", 0));
-    f(builder);
-    if (reduction != "none") {
-      builder.Broadcast(user_op::OpArg("out", 0));
-    } else {
-      builder.Split(user_op::OpArg("out", 0), 0);
+                       .Split(user_op::OpArg("out", 0), 0);
+    if (ctx->user_op_conf().has_input("weight", 0)) {
+      builder.Broadcast(user_op::OpArg("weight", 0));
     }
+    f(builder, ctx);
     builder.Build();
     return Maybe<void>::Ok();
   };
 }
 
 user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
+                             user_op::SbpContext* ctx)>& f) {
   return [=](user_op::SbpContext* ctx) -> Maybe<void> {
-    const auto& dy_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape();
     auto builder = ctx->NewBuilder()
                        .Split(user_op::OpArg("input", 0), 0)
                        .Split(user_op::OpArg("target", 0), 0)
-                       .Broadcast(user_op::OpArg("weight", 0))
-                       .Split(user_op::OpArg("dx", 0), 0);
-    f(builder);
-    if (dy_shape.NumAxes() == 0) {
-      builder.Broadcast(user_op::OpArg("dy", 0));
-    } else {
-      builder.Split(user_op::OpArg("dy", 0), 0);
+                       .Split(user_op::OpArg("dx", 0), 0)
+                       .Split(user_op::OpArg("dy", 0), 0);
+    if (ctx->user_op_conf().has_input("weight", 0)) {
+      builder.Broadcast(user_op::OpArg("weight", 0));
     }
+    f(builder, ctx);
     builder.Build();
     return Maybe<void>::Ok();
   };

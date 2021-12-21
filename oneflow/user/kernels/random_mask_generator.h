@@ -46,7 +46,7 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
 
 #ifdef WITH_CUDA
 template<>
-class RandomMaskGenerator<DeviceType::kGPU> final {
+class RandomMaskGenerator<DeviceType::kCUDA> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {

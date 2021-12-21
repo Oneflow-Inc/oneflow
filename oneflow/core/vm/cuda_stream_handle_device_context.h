@@ -59,14 +59,14 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
   vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
-  DeviceType device_type() const override { return DeviceType::kGPU; }
+  DeviceType device_type() const override { return DeviceType::kCUDA; }
 
  private:
   ep::CudaStream* GetOrCreateCudaStream() const {
     if (unlikely(stream_ == nullptr)) {
       CHECK(!device_);
       device_ = std::dynamic_pointer_cast<ep::CudaDevice>(
-          Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kGPU, device_id_));
+          Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_id_));
       CHECK(device_);
       stream_ = dynamic_cast<ep::CudaStream*>(device_->CreateStream());
       CHECK(stream_ != nullptr);

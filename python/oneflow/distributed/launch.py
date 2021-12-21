@@ -160,7 +160,10 @@ def main():
             for process in processes:
                 print(f"Killing subprocess {process.pid}")
                 try:
-                    process.kill()
+                    # Note: use os.kill or process.kill() may only kill current process
+                    # use killpg will kill(use signal) this process and all sub-processes
+                    # if orphan sub-processes still exist, use signal.SIGKILL instead.
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 except Exception:
                     pass
             if last_return_code is not None:

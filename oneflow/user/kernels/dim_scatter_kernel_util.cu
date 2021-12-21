@@ -31,7 +31,7 @@ __global__ void DoCUDADimScatter(const DimOpIndexNdHelper<IDX_T> src_nd_helper,
 }
 
 template<typename IN_T, typename IDX_T, template<typename T> class Opt>
-struct DimScatterFunctor<DeviceType::kGPU, IN_T, IDX_T, Opt> final {
+struct DimScatterFunctor<DeviceType::kCUDA, IN_T, IDX_T, Opt> final {
   void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
@@ -44,7 +44,7 @@ struct DimScatterFunctor<DeviceType::kGPU, IN_T, IDX_T, Opt> final {
 };
 
 template<typename IDX_T, template<typename T> class Opt>
-struct DimScatterFunctor<DeviceType::kGPU, float16, IDX_T, Opt> final {
+struct DimScatterFunctor<DeviceType::kCUDA, float16, IDX_T, Opt> final {
   void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
@@ -57,8 +57,8 @@ struct DimScatterFunctor<DeviceType::kGPU, float16, IDX_T, Opt> final {
   }
 };
 
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kGPU, BinOpAddFunctor);
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kGPU, BinOpUpdateFunctor);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpAddFunctor);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpUpdateFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow
