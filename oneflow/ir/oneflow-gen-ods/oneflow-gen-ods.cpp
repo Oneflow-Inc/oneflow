@@ -280,7 +280,8 @@ bool IsCrossEntropyOp(const std::string& op_name) {
 }
 bool IsCUDAOp(const std::string& op_name) { return (op_name.find("nvtx") != std::string::npos); }
 bool IsCUDAOnlyImplOp(const std::string& op_name) {
-  return (op_name.find("fused_scale_mask_softmax_dropout_grad") != std::string::npos);
+  return false;
+  // return (op_name.find("fused_scale_mask_softmax_dropout_grad") != std::string::npos);
 }
 bool IsCudnnOp(const std::string& op_name) { return (op_name.find("cudnn") != std::string::npos); }
 bool IsMatmulOp(const std::string& op_name) {
