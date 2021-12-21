@@ -103,11 +103,11 @@ void DebugIdShuffle(user_op::KernelComputeContext* ctx) {
 }
 
 template<typename K, typename IDX>
-__global__ void PartitionKernel(int64_t n, const IDX num_ids, const K* ids, K* out_ids,
+__global__ void PartitionKernel(int64_t n, const IDX num_ids, const int parallel_num, const K* ids, K* out_ids,
                                 IDX* num_out, IDX* out_index) {
   CUDA_1D_KERNEL_LOOP(i, num_ids) {
     const K id = ids[i];
-    int64_t partition_id = id % 2;
+    int64_t partition_id = id % parallel_num;
     IDX old_key_offset = cuda::atomic::Add(num_out + partition_id, 1);
     IDX offset = partition_id * n + old_key_offset;
     out_ids[offset] = id;
@@ -144,7 +144,7 @@ void Partition(ep::Stream* stream, int64_t num_ids, IDX num_valid, int64_t paral
                K* out, IDX* num_out, IDX* out_index) {
   OF_CUDA_CHECK(cudaMemset(num_out, 0, parallel_num * sizeof(IDX)));
   PartitionKernel<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
-                    stream->As<ep::CudaStream>()->cuda_stream()>>>(num_ids, num_valid, in, out,
+                    stream->As<ep::CudaStream>()->cuda_stream()>>>(num_ids, num_valid, parallel_num, in, out,
                                                                    num_out, out_index);
 }
 
@@ -323,7 +323,6 @@ class IdShuffleKernel final : public user_op::OpKernel {
     Partition(ctx->stream(), num_ids, host_num_unique_ids[0], parallel_num,
               buffer_manager.UniqueIdsPtr(), partitioned_unique_ids, partitioned_num_unique_ids,
               partition_index->mut_dptr<IDX>());
-
     // allgather count
     ncclComm_t comm = nccl_comm->comm();
     OF_NCCL_CHECK(ncclAllGather(reinterpret_cast<const void*>(partitioned_num_unique_ids),
@@ -335,7 +334,6 @@ class IdShuffleKernel final : public user_op::OpKernel {
                               received_num_unique_ids_matrix,
                               parallel_num * parallel_num * sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
-
     // send recv
     int64_t recv_offset = 0;
     OF_NCCL_CHECK(ncclGroupStart());
