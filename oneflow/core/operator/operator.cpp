@@ -741,7 +741,7 @@ Maybe<void> Operator::InferNdSbpSignature(
       if (!matched_sbp_signature) {
         std::ostringstream err;
         err << "op: " << op_name() << " can't find available sbp signature at hierarchy dim " << i
-            << ".\nSupported sbp signatures are: ";
+            << ".\nSupported SBP signatures are: ";
         err << *JUST(StringifySbpSignatureList(input_bns(), output_bns(), list));
         err << ", but got SBP of inputs are: ";
         for (size_t i = 0; i < input_bns().size(); ++i) {
