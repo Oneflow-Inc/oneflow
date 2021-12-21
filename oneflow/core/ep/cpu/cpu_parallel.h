@@ -20,7 +20,7 @@ limitations under the License.
 #include <sys/types.h>
 
 #if WITH_OMP_THREADING_RUNTIME
-#include <omp.h>
+#include "omp.h"
 #endif
 
 namespace oneflow {
