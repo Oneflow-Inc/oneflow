@@ -150,6 +150,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> TensorBufferToListOfTensorsOp::CheckAttr(
+    const user_op::UserOpDefWrapper&, const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 1);
+  return Maybe<void>::Ok();
+}
+
 /*static*/ Maybe<void> TensorBufferToListOfTensorsV2Op::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
@@ -193,6 +199,11 @@ namespace oneflow {
       out_i_modifier->set_header_infered_before_compute(false);
     }
   }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> TensorBufferToListOfTensorsV2Op::CheckAttr(
+    const user_op::UserOpDefWrapper&, const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 1);
   return Maybe<void>::Ok();
 }
 
