@@ -232,6 +232,10 @@ function(set_compile_options_to_oneflow_target target)
   target_try_compile_options(${target} -Wno-mismatched-tags)
   target_try_compile_options(${target} -Wno-covered-switch-default)
 
+  if(CMAKE_CXX_FLAGS_OMP)
+    target_try_compile_options(${target} ${CMAKE_CXX_FLAGS_OMP})
+  endif()
+
   if(BUILD_CUDA)
     if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
       target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
