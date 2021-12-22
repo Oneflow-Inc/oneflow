@@ -29,7 +29,7 @@ import typing
 func_config = flow.FunctionConfig()
 
 @flow.unittest.skip_unless_1n1d()
-class TestMatMulToTosa(flow.unittest.TestCase):
+class TestMatMulCPUToTosa(flow.unittest.TestCase):
     def test_idempotent(test_case):
         @flow.global_function(function_config=func_config)
         def BatchMatMulJob(
@@ -38,12 +38,14 @@ class TestMatMulToTosa(flow.unittest.TestCase):
         ) -> oft.Numpy:
             with flow.scope.placement('cpu', "0:0-0"):
                 res = flow.matmul(x, y)
+                print(res.shape)
                 return res
 
         x = np.random.rand(1, 20, 30).astype(np.float32) - 1
         y = np.random.rand(1, 30, 20).astype(np.float32) - 1
         res = BatchMatMulJob(x, y)
-        # test_case.assertTrue(np.array_equal(res.numpy(), np.matmul(x, y)))
+        print(res.shape)
+        test_case.assertTrue(np.allclose(res.flatten(), np.matmul(x, y).flatten(), rtol=1e-4))
 
 if __name__ == "__main__":
     unittest.main()
