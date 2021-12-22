@@ -44,5 +44,6 @@ class TestUnfoldTensor(flow.unittest.TestCase):
         y = x.unfold(dimension, size, step)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()
