@@ -42,7 +42,7 @@ namespace oneflow {
                                                                                                 \
   REGISTER_USER_OP_GRAD(math_binary_elementwise_type)                                           \
       .SetGenBackwardOpConfFn(                                                                  \
-          [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {         \
+          [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {  \
             if (op.NeedGenGradTensor4OpInput("x", 0)) {                                         \
               user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_x_grad");              \
               user_op::UserOpConfWrapper binary_grad_op =                                       \

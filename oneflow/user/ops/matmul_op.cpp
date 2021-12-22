@@ -404,15 +404,15 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   return InferDataType4Matmul(ctx);
 }
 
-REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
-  GenBackwardOpConf4Matmul("matmul", op, AddOp);
-  return Maybe<void>::Ok();
-});
+REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn(
+    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      GenBackwardOpConf4Matmul("matmul", op, AddOp);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP_GRAD("batch_matmul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       GenBackwardOpConf4Matmul("batch_matmul", op, AddOp);
       return Maybe<void>::Ok();
     });
