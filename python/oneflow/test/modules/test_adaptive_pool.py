@@ -85,7 +85,7 @@ class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
         return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
 
     @unittest.skipIf(
-        version.parse(torch_original.__version__) < version.parse("1.10.0"),
+        version.parse(torch_original.__version__) <= version.parse("1.10.0"),
         "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
     )
     @autotest()
