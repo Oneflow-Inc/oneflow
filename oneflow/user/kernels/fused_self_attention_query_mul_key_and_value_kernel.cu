@@ -159,6 +159,15 @@ SliceParams ConstructSliceParams4Value(int64_t seq_len, int64_t batch_size, int6
   params.size[1] = batch_size;
   params.size[2] = num_heads;
   params.size[3] = head_size;
+
+  params.entire_strides[3] = 1;
+  params.entire_strides[2] = 3 * head_size;
+  params.entire_strides[1] = num_heads * params.entire_strides[2];
+  params.entire_strides[0] = batch_size * params.entire_strides[1];
+  params.sliced_strides[3] = 1;
+  params.sliced_strides[2] = head_size;
+  params.sliced_strides[1] = num_heads * params.sliced_strides[2];
+  params.sliced_strides[0] = batch_size * params.sliced_strides[1];
   return params;
 }
 

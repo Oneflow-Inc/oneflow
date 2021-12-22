@@ -48,6 +48,9 @@ struct SliceParams {
   int64_t stride[kSliceMaxDims];
   bool use_stride = false;
 
+  int64_t sliced_strides[kSliceMaxDims];
+  int64_t entire_strides[kSliceMaxDims];
+
   int64_t elem_cnt() const {
     if (ndim == 0) { return 0; }
     int64_t elem_cnt = 1;
@@ -69,6 +72,8 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params);
 
 template<int NDIM>
 using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
+template<int NDIM>
+using SliceStridedIndexHelper = NdIndexStridedOffsetHelper<int64_t, NDIM>;
 
 template<int NDIM>
 using SliceIndexWithStrideHelper = NdIndexOffsetWithStrideHelper<int64_t, NDIM>;
@@ -91,12 +96,17 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
 }
 
 template<int NDIM>
-OF_DEVICE_FUNC int64_t
-SliceOffsetToEntireOffsetWithStride(int64_t offset, const SliceParams& params,
-                                    const SliceIndexWithStrideHelper<NDIM>& entire_idx_cvtr,
-                                    const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
+OF_DEVICE_FUNC void SliceIndexToStridedOffset(
+    int64_t idx, const SliceParams& params,
+    const SliceStridedIndexHelper<NDIM>& entire_strided_idx_cvtr,
+    const SliceIndexHelper<NDIM>& sliced_idx_cvtr,
+    const SliceStridedIndexHelper<NDIM>& sliced_strided_idx_cvtr, int64_t* sliced_offset,
+    int64_t* entire_offset) {
   int64_t nd_index[NDIM] = {0};
-  sliced_idx_cvtr.OffsetToNdIndex(offset, nd_index);
+  sliced_idx_cvtr.OffsetToNdIndex(idx, nd_index);
+  // *sliced_offset = sliced_strided_idx_cvtr.NdIndexToOffset(nd_index);
+  // assert(*sliced_offset == idx);
+  *sliced_offset = idx;
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
@@ -105,7 +115,8 @@ SliceOffsetToEntireOffsetWithStride(int64_t offset, const SliceParams& params,
     assert(nd_index[i] >= 0);
     assert(nd_index[i] < params.dims[i]);
   }
-  return entire_idx_cvtr.NdIndexToOffset(nd_index);
+  *entire_offset = entire_strided_idx_cvtr.NdIndexToOffset(nd_index);
+  // return entire_strided_idx_cvtr.NdIndexToOffset(nd_index);
 }
 
 template<DeviceType device_type, typename T>

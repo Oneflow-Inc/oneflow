@@ -151,6 +151,8 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
     params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape().At(0));
     params.step[0] = step_vec.at(0);
     params.size[0] = 1;
+    params.sliced_strides[0] = 1;
+    params.entire_strides[0] = 1;
     return params;
   }
   params.ndim = ndim;
@@ -170,6 +172,12 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
     params.start[i] = start;
     params.step[i] = step;
     params.size[i] = slice_size;
+  }
+  params.sliced_strides[ndim - 1] = 1;
+  params.entire_strides[ndim - 1] = 1;
+  for (int i = ndim - 2; i >= 0; --i) {
+    params.sliced_strides[i] = params.sliced_strides[i + 1] * params.size[i + 1];
+    params.entire_strides[i] = params.entire_strides[i + 1] * params.dims[i + 1];
   }
   return params;
 }
@@ -441,7 +449,11 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     Memcpy<device_type>(ctx->stream(), y_tensor->mut_dptr<T>(), x_tensor->dptr<T>(),
                         y_tensor->shape().elem_cnt() * sizeof(T));
-    SliceParams params = ConstructSliceParamsWithStride(ctx, y_tensor, update_tensor, stride);
+    SliceParams params = ConstructSliceParams(ctx, y_tensor, update_tensor);
+    auto stride = ctx->Attr<std::vector<int64_t>>("stride");
+    CHECK(stride.size() == 0 || stride.size() == params.ndim)
+        << "stride size should be " << params.ndim;
+    for (int i = 0; i < stride.size(); ++i) { params.entire_strides[i] = stride[i]; }
     SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, update_tensor->dptr<T>(),
                                               y_tensor->mut_dptr<T>());
   }
