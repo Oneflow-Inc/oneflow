@@ -124,9 +124,9 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   auto* curand_states = generator_->curand_states();
   const int32_t elem_cnt_per_block = thread_num * sizeof(PackType) * kMinPackPerThread;
   const int32_t block_num_final =
-      std::min(static_cast<int32_t>((n + elem_cnt_per_block - 1) / elem_cnt_per_block), block_num);
+      std::min(static_cast<int32_t>((elem_cnt + elem_cnt_per_block - 1) / elem_cnt_per_block), block_num);
   GenerateGpu<<<block_num_final, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, n, rate, mask);
+      curand_states, elem_cnt, rate, mask);
   
   // printf("Here>>??? \n"); 
   // // unsigned int grid_size = ComputeGridSize(kBlockSize, elem_cnt);
@@ -160,7 +160,7 @@ void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const 
   //       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
   //           seed, cuda_gen_state, /*inc_offset,*/ elem_cnt, rate, /*n_tail, */mask/*, mask+tail_offset*/);
 
-  // }
+  }
 
 template class RandomMaskGenerator<DeviceType::kCUDA>;
 
