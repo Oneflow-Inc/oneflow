@@ -748,7 +748,7 @@ Maybe<void> Operator::InferNdSbpSignature(
         std::ostringstream got_input_sbp_ss;
         std::ostringstream all_input_sbp_ss;
         for (size_t j = 0; j < input_bns().size(); ++j) {
-          // NOTE: i is hierarchy dim and j is input_order 
+          // NOTE: i is hierarchy dim and j is input_order
           const auto& ibn = input_bns()[j];
           cfg::NdSbp nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
           if (j > 0) {
