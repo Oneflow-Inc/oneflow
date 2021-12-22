@@ -445,7 +445,6 @@ class SliceUpdateKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* update_tensor = ctx->Tensor4ArgNameAndIndex("update", 0);
-    auto stride = ctx->Attr<std::vector<int64_t>>("stride");
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     Memcpy<device_type>(ctx->stream(), y_tensor->mut_dptr<T>(), x_tensor->dptr<T>(),
                         y_tensor->shape().elem_cnt() * sizeof(T));

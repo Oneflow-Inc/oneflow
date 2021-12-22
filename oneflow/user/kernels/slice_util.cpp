@@ -18,45 +18,16 @@ limitations under the License.
 
 namespace oneflow {
 
-SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
-  // SliceParams fold_slice_params;
-  // std::memset(&fold_slice_params, 0, sizeof(SliceParams));
-  // bool full_slice_on_prev_axis = false;
-  // FOR_RANGE(int, i, 0, params.ndim) {
-  //   bool full_slice_on_cur_axis = params.IsFullSlice(i);
-  //   if (full_slice_on_cur_axis && full_slice_on_prev_axis) {
-  //     int cur_dim = fold_slice_params.ndim - 1;
-  //     fold_slice_params.dims[cur_dim] *= params.dims[i];
-  //     fold_slice_params.size[cur_dim] *= params.size[i];
-  //   } else {
-  //     int cur_dim = fold_slice_params.ndim;
-  //     fold_slice_params.dims[cur_dim] = params.dims[i];
-  //     fold_slice_params.start[cur_dim] = params.start[i];
-  //     fold_slice_params.step[cur_dim] = params.step[i];
-  //     fold_slice_params.size[cur_dim] = params.size[i];
-  //     fold_slice_params.ndim += 1;
-  //   }
-  //   full_slice_on_prev_axis = full_slice_on_cur_axis;
-  // }
-  // return fold_slice_params;
-  return params;
-}
 
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
-    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-    SwitchDoForward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, entire, sliced);
+    SwitchDoForward(SwitchCase(params.ndim), stream, params, entire, sliced);
   }
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
-    if (params.use_stride) {
-      SwitchDoBackwardWithStride(SwitchCase(params.ndim), stream, params, sliced, entire);
-    } else {
-      SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-      SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced,
+    SwitchDoBackward(SwitchCase(params.ndim), stream, params, sliced,
                        entire);
-    }
   }
 
  private:
@@ -64,7 +35,6 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void DoForward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
-    // SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
     SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
@@ -84,13 +54,10 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
                          T* entire) {
     CHECK_EQ(params.ndim, NDIM);
     int64_t elem_cnt = params.elem_cnt();
-    // SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
     SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
     SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      // int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr,
-      // sliced_idx_cvtr);
       int64_t sliced_offset = 0;
       int64_t entire_offset = 0;
       SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
@@ -99,19 +66,6 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  template<int NDIM>
-  static void DoBackwardWithStride(ep::Stream* stream, const SliceParams& params, const T* sliced,
-                                   T* entire) {
-    CHECK_EQ(params.ndim, NDIM);
-    int64_t elem_cnt = params.elem_cnt();
-    SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr(params.stride);
-    SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t offset =
-          SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
-      entire[offset] = sliced[i];
-    }
-  }
 
 #define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \
   SliceKernelUtil<DeviceType::kCPU, T>::func_name<N>
@@ -121,7 +75,6 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
 
   DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoForward);
   DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoBackward);
-  DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD(DoBackwardWithStride);
 #undef DEFINE_SLICE_KERNEL_UTIL_SWITCH_STATIC_METHOD
 #undef MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY
 };

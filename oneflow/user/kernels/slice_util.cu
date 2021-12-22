@@ -55,17 +55,6 @@ __global__ void SliceBackwardGpu(const int n, SliceParams params,
   }
 }
 
-template<typename T, int NDIM>
-__global__ void SliceBackwardWithStrideGpu(const int n, SliceParams params,
-                                           SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr,
-                                           SliceIndexHelper<NDIM> sliced_idx_cvtr, T* entire,
-                                           const T* sliced) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t offset =
-        SliceOffsetToEntireOffsetWithStride<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
-    entire[offset] = sliced[i];
-  }
-}
 
 template<typename T, int NDIM>
 void LaunchSliceForward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
@@ -96,17 +85,6 @@ void LaunchSliceBackward(ep::Stream* stream, const SliceParams& params, const T*
       sliced);
 }
 
-template<typename T, int NDIM>
-void LaunchSliceBackwardWithStride(ep::Stream* stream, const SliceParams& params, const T* sliced,
-                                   T* entire) {
-  CHECK_EQ(params.ndim, NDIM);
-  int64_t elem_cnt = params.elem_cnt();
-  SliceIndexWithStrideHelper<NDIM> entire_idx_cvtr(params.stride);
-  SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-  SliceBackwardWithStrideGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
-}
 
 template<typename T>
 struct SliceSwitchUtil final {
@@ -116,7 +94,6 @@ struct SliceSwitchUtil final {
 
   DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceForward)
   DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceBackward)
-  DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD(LaunchSliceBackwardWithStride)
 #undef DEFINE_SLICE_SWITCH_UTIL_STATIC_METHOD
 #undef MAKE_SLICE_SWITCH_ENTRY
 };
@@ -166,10 +143,9 @@ void GetPackedParams(const SliceParams& params, const T* entire, const T* sliced
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCUDA, T> {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
-    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
     size_t pack_size;
     SliceParams packed_params{};
-    GetPackedParams<T>(fold_slice_params, entire, sliced, &pack_size, &packed_params);
+    GetPackedParams<T>(params, entire, sliced, &pack_size, &packed_params);
     if (pack_size == 1) {
       SliceSwitchUtil<uint8_t>::SwitchLaunchSliceForward(
           SwitchCase(packed_params.ndim), stream, packed_params,
@@ -198,60 +174,29 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
     size_t pack_size;
     SliceParams packed_params{};
-    if (params.use_stride) {
-      GetPackedParams<T>(params, entire, sliced, &pack_size, &packed_params);
+    GetPackedParams<T>(params, entire, sliced, &pack_size, &packed_params);
+    if (pack_size == 1) {
+      SliceSwitchUtil<uint8_t>::SwitchLaunchSliceBackward(
+          SwitchCase(packed_params.ndim), stream, packed_params,
+          reinterpret_cast<const uint8_t*>(sliced), reinterpret_cast<uint8_t*>(entire));
+    } else if (pack_size == 2) {
+      SliceSwitchUtil<uint16_t>::SwitchLaunchSliceBackward(
+          SwitchCase(packed_params.ndim), stream, packed_params,
+          reinterpret_cast<const uint16_t*>(sliced), reinterpret_cast<uint16_t*>(entire));
+    } else if (pack_size == 4) {
+      SliceSwitchUtil<uint32_t>::SwitchLaunchSliceBackward(
+          SwitchCase(packed_params.ndim), stream, packed_params,
+          reinterpret_cast<const uint32_t*>(sliced), reinterpret_cast<uint32_t*>(entire));
+    } else if (pack_size == 8) {
+      SliceSwitchUtil<uint64_t>::SwitchLaunchSliceBackward(
+          SwitchCase(packed_params.ndim), stream, packed_params,
+          reinterpret_cast<const uint64_t*>(sliced), reinterpret_cast<uint64_t*>(entire));
+    } else if (pack_size == 16) {
+      SliceSwitchUtil<ulonglong2>::SwitchLaunchSliceBackward(
+          SwitchCase(packed_params.ndim), stream, packed_params,
+          reinterpret_cast<const ulonglong2*>(sliced), reinterpret_cast<ulonglong2*>(entire));
     } else {
-      SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
-      GetPackedParams<T>(fold_slice_params, entire, sliced, &pack_size, &packed_params);
-    }
-    if (params.use_stride) {
-      if (pack_size == 1) {
-        SliceSwitchUtil<uint8_t>::SwitchLaunchSliceBackwardWithStride(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint8_t*>(sliced), reinterpret_cast<uint8_t*>(entire));
-      } else if (pack_size == 2) {
-        SliceSwitchUtil<uint16_t>::SwitchLaunchSliceBackwardWithStride(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint16_t*>(sliced), reinterpret_cast<uint16_t*>(entire));
-      } else if (pack_size == 4) {
-        SliceSwitchUtil<uint32_t>::SwitchLaunchSliceBackwardWithStride(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint32_t*>(sliced), reinterpret_cast<uint32_t*>(entire));
-      } else if (pack_size == 8) {
-        SliceSwitchUtil<uint64_t>::SwitchLaunchSliceBackwardWithStride(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint64_t*>(sliced), reinterpret_cast<uint64_t*>(entire));
-      } else if (pack_size == 16) {
-        SliceSwitchUtil<ulonglong2>::SwitchLaunchSliceBackwardWithStride(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const ulonglong2*>(sliced), reinterpret_cast<ulonglong2*>(entire));
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else {
-      if (pack_size == 1) {
-        SliceSwitchUtil<uint8_t>::SwitchLaunchSliceBackward(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint8_t*>(sliced), reinterpret_cast<uint8_t*>(entire));
-      } else if (pack_size == 2) {
-        SliceSwitchUtil<uint16_t>::SwitchLaunchSliceBackward(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint16_t*>(sliced), reinterpret_cast<uint16_t*>(entire));
-      } else if (pack_size == 4) {
-        SliceSwitchUtil<uint32_t>::SwitchLaunchSliceBackward(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint32_t*>(sliced), reinterpret_cast<uint32_t*>(entire));
-      } else if (pack_size == 8) {
-        SliceSwitchUtil<uint64_t>::SwitchLaunchSliceBackward(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const uint64_t*>(sliced), reinterpret_cast<uint64_t*>(entire));
-      } else if (pack_size == 16) {
-        SliceSwitchUtil<ulonglong2>::SwitchLaunchSliceBackward(
-            SwitchCase(packed_params.ndim), stream, packed_params,
-            reinterpret_cast<const ulonglong2*>(sliced), reinterpret_cast<ulonglong2*>(entire));
-      } else {
-        UNIMPLEMENTED();
-      }
+      UNIMPLEMENTED();
     }
   }
 };
