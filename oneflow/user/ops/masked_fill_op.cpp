@@ -86,8 +86,8 @@ Maybe<void> GetMaskedFillInputArgModify(const user_op::GetInputArgModifier& GetI
   return GetMaskedFillSbpSignatures(ctx);
 }
 
-/* static */ Maybe<void> MaskedFillOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> MaskedFillOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return GetMaskedFillInputArgModify(GetInputArgModifierFn, conf);
 }
 

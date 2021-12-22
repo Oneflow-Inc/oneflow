@@ -140,7 +140,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SliceGradOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
+/*static*/ Maybe<void> SliceGradOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                    const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
   CHECK_NOTNULL_OR_RETURN(dy_modifier);
@@ -194,7 +194,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 
 /*static*/ Maybe<void> LogicalSliceAssignOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK_OR_RETURN(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);

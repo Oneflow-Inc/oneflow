@@ -43,7 +43,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
   CHECK_OR_RETURN(out_modifier != nullptr);
   // NOTE(chengcheng): OFRecordReader Only support static shape infer which will read all batch

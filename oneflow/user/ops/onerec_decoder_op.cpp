@@ -40,8 +40,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> OnerecDecoderOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                         const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> OnerecDecoderOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
   CHECK_NOTNULL_OR_RETURN(in_modifier);
   in_modifier->set_requires_grad(false);
@@ -49,7 +49,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OnerecDecoderOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   // NOTE(yaochi): refer to tensor_buffer_to_list_of_tensors
   // In order to support consistent tensor, set set_header_infered_before_compute to false
   // only when is_dynamic == true

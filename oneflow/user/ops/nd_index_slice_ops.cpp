@@ -159,8 +159,8 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> GatherNdOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                    const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> GatherNdOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
@@ -209,8 +209,8 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> ScatterNdOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                     const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> ScatterNdOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
@@ -280,7 +280,7 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> TensorScatterNdUpdateOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
@@ -304,7 +304,7 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> TensorScatterNdAddOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);

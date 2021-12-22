@@ -227,8 +227,8 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   return FwGetSbpFn(ctx);
 }
 
-/* static */ Maybe<void> NormalizationOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                         const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> NormalizationOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return FwInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -273,7 +273,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
 }
 
 /* static */ Maybe<void> NormalizationAddReluOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return FwInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -393,7 +393,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
 }
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
 }
 

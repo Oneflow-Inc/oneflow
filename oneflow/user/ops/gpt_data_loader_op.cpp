@@ -42,8 +42,8 @@ namespace oneflow {
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }
 /*static*/ auto MegatronGptMmapDataLoaderOp::ModifyInputArg(
-    user_op::GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf)
-    -> Maybe<void> {
+    const user_op::GetInputArgModifier& GetInputArgModifierFn,
+    const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
   if (!conf.has_input("iteration", 0)) { return Maybe<void>::Ok(); }
   user_op::InputArgModifier* input_modifier = GetInputArgModifierFn("iteration", 0);
   CHECK_OR_RETURN(input_modifier != nullptr);

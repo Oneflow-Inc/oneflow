@@ -74,7 +74,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
   CHECK_NOTNULL_OR_RETURN(label_modifier);
   label_modifier->set_requires_grad(false);

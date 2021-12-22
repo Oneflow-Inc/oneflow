@@ -104,7 +104,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
       })(ctx);
 }
 
-/* static */ Maybe<void> NllOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
+/* static */ Maybe<void> NllOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
   CHECK_OR_RETURN(target_modifier != nullptr);

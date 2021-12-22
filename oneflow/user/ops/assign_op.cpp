@@ -78,26 +78,26 @@ Maybe<void> InferDataType_(user_op::InferContext* ctx) {
 
 }  // namespace
 
-#define DEF_ASSIGN_OP(op_class_name)                                                           \
-  /* static */ Maybe<void> op_class_name::InferLogicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferTensorDesc(ctx);                                                               \
-  }                                                                                            \
-                                                                                               \
-  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {  \
-    return InferLogicalTensorDesc(ctx);                                                        \
-  }                                                                                            \
-                                                                                               \
-  /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                   \
-    return GetSbpSignatures(ctx);                                                              \
-  }                                                                                            \
-                                                                                               \
-  /* static */ Maybe<void> op_class_name::ModifyInputArg(                                      \
-      GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {     \
-    return InputArgModifierFn(GetInputArgModifierFn, conf);                                    \
-  }                                                                                            \
-                                                                                               \
-  /* static */ Maybe<void> op_class_name::InferDataType(user_op::InferContext* ctx) {          \
-    return InferDataType_(ctx);                                                                \
+#define DEF_ASSIGN_OP(op_class_name)                                                              \
+  /* static */ Maybe<void> op_class_name::InferLogicalTensorDesc(user_op::InferContext* ctx) {    \
+    return InferTensorDesc(ctx);                                                                  \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
+    return GetSbpSignatures(ctx);                                                                 \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::ModifyInputArg(                                         \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) { \
+    return InputArgModifierFn(GetInputArgModifierFn, conf);                                       \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::InferDataType(user_op::InferContext* ctx) {             \
+    return InferDataType_(ctx);                                                                   \
   }
 
 DEF_ASSIGN_OP(AssignOp)

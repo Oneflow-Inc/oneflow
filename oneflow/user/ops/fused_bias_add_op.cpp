@@ -166,7 +166,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedBiasAddMaskScaleOp::ModifyInputArg(
-    user_op::GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&)
+    const user_op::GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&)
     -> Maybe<void> {
   user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
   CHECK_OR_RETURN(mask_modifier != nullptr);

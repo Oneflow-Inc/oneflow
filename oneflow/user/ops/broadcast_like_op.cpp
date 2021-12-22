@@ -92,8 +92,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return GetSbpSignatures(ctx);
 }
 
-/* static */ Maybe<void> BroadcastLikeOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                         const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> BroadcastLikeOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
   CHECK_OR_RETURN(like_modifier != nullptr);
   like_modifier->set_requires_grad(false);

@@ -118,8 +118,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> NarrowGradOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> NarrowGradOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
   CHECK_NOTNULL_OR_RETURN(dy_modifier);
   dy_modifier->set_requires_grad(false);

@@ -71,8 +71,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> BatchGatherOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                       const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> BatchGatherOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);

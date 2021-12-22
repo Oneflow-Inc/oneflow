@@ -451,8 +451,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> SgdUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                     const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> SgdUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return SgdInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -492,7 +492,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> IndexedSlicesSgdUpdateOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return IndexedSlicesSgdInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -521,8 +521,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> MomentumUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                          const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> MomentumUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return MomentumInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -564,7 +564,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return IndexedSlicesMomentumInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -595,8 +595,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> AdamUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> AdamUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return AdamInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -625,8 +625,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> AdagradUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                         const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> AdagradUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return AdagradInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -673,7 +673,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> IndexedSlicesAdamUpdateOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return AdamInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -693,8 +693,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> LambUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> LambUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return LambInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -754,8 +754,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> RmspropUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                         const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> RmspropUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return RmsPropUpdateInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
@@ -784,8 +784,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> LarsUpdateOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> LarsUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return LarsUpdateInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 

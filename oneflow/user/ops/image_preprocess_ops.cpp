@@ -223,7 +223,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ImageRandomCropOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
   CHECK_NOTNULL_OR_RETURN(in_modifier);
   in_modifier->set_requires_grad(false);
