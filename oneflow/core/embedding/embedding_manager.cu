@@ -19,6 +19,22 @@ namespace oneflow {
 
 namespace embedding {}  // namespace embedding
 
+embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parallel_id) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = cache_map_.find(map_key);
+  if (it != cache_map_.end()) { return it->second.get(); }
+  embedding::CudaLruCacheOptions options{};
+  const uint32_t line_size = 128;
+  options.line_size = line_size;
+  options.log2_n_set = 8;
+  options.max_query_length = 65536;
+  std::unique_ptr<embedding::Cache> cache = embedding::NewCudaLruCache(options);
+  auto pair = cache_map_.emplace(map_key, std::move(cache));
+  CHECK(pair.second);
+  return pair.first->second.get();
+}
+
 embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name,
                                                          int64_t parallel_id) {
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
