@@ -112,6 +112,12 @@ Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) 
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> ConcatOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                           const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
 
 }  // namespace oneflow
