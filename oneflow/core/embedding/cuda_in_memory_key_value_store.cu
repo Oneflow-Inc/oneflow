@@ -272,7 +272,7 @@ class OrdinalEncoder {
                       table_size_, num_keys, keys, context);
     } else {
       RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, uint64_t>), stream, num_keys, capacity_,
-                      table_, table_size_, num_keys, keys, context);
+                      table_, num_keys, keys, context);
     }
   }
 
