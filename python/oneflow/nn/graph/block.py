@@ -486,9 +486,7 @@ class ModuleBlock(Block):
 
         _s_block = _states[name]
         if graph_build_util.lazy_mode.is_enabled():
-            #  lazy
-            if not _s_block.build_finished:
-                    _s_block.build()
+            _s_block.try_build()
             return _s_block.lazy_origin
         elif (
             not graph_build_util.lazy_mode.is_enabled()
@@ -556,20 +554,23 @@ class ModuleBlock(Block):
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg)
 
+
 class LazyBuilder(object):
-    def __init__(self, name: str = None, method = None):
+    def __init__(self, name: str = None, method=None):
         self.name = name
         self.method = method
         self.result = None
         self.finished = False
 
-    def build(self, block = None):
-        assert self.name is not None
-        assert self.method is not None
-        assert self.result is None
-        with block.scope_context():
-            self.result = self.method()
-        self.finished = True
+    def try_build(self, block=None):
+        if not self.finished:
+            assert self.name is not None
+            assert self.method is not None
+            assert self.result is None
+            with block.scope_context():
+                self.result = self.method()
+            self.finished = True
+
 
 class TensorBlock(Block):
     def __init__(
@@ -612,11 +613,11 @@ class TensorBlock(Block):
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         self._lazy_origin_builder = builder
-    
-    def build(self):
-        assert not self.build_finished
-        self._lazy_origin_builder.build(self)
-        self.build_finished = True
+
+    def try_build(self):
+        if not self.build_finished:
+            self._lazy_origin_builder.try_build(self)
+            self.build_finished = True
 
     def __repr__(self):
         lines = None

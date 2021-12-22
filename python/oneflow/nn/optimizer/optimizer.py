@@ -305,7 +305,7 @@ class Optimizer(object):
                 if not param.requires_grad:
                     continue
 
-                if parm not in vars_conf:
+                if param not in vars_conf:
                     raise ValueError(
                         f"Parameter <{param}> is not in the corresponding nn.Graph/nn.Module."
                         " Please make sure you call the module's to(..)/to_consistent(...) method first,"

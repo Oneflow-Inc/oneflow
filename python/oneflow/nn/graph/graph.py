@@ -438,7 +438,7 @@ class Graph(object):
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
-            
+
             if state_block.type == BlockType.PARAMETER:
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
@@ -469,29 +469,27 @@ class Graph(object):
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
-                print("get same tensor ", op_name)
             else:
-                if state_block.type == BlockType.PARAMETER
+                if state_block.type == BlockType.PARAMETER:
                     assert state_tensor in self._variables_conf
                     state_config = self._variables_conf[state_tensor]
                     op_name = state_config.name
                 else:
                     state_config = None
                 # Init a new lazy tensor builder
-                state_block.lazy_origin_builder.name = op_name
-                state_block.lazy_origin_builder.method = 
-                    partial(
-                        graph_build_util.build_graph_state,
-                        op_name,
-                        state_tensor,
-                        state_config,
-                    )
-                state2lazy_builder[state_tensor] = state_block.lazy_origin_builder
-    
+                state_block.lazy_origin_builder().name = op_name
+                state_block.lazy_origin_builder().method = partial(
+                    graph_build_util.build_graph_state,
+                    op_name,
+                    state_tensor,
+                    state_config,
+                )
+                state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
+
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " Start building graph.")
+            self._print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
@@ -502,7 +500,7 @@ class Graph(object):
                 0,
                 0,
                 self._shallow_repr()
-                + " Building graph Done! Cost time: "
+                + " building graph Done! Cost time: "
                 + str(round(build_graph_end - build_graph_start, 2))
                 + "s."
                 + "\n",
@@ -521,23 +519,21 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self._print(
-                0,
-                0,
-                self._shallow_repr() + " Start building plan.",
+                0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
-            compile_and_init_end = time.perf_counter)
+            compile_and_init_end = time.perf_counter()
             self._print(
                 0,
                 0,
                 self._shallow_repr()
-                + " Building plan Done! Cost time: "
+                + " building plan Done! Cost time: "
                 + str(round(compile_and_init_end - compile_and_init_start, 2))
                 + "s."
                 + "\n"
                 + self._shallow_repr()
-                + " The total time consumed to build graph and plan : "
+                + "'s total time to build graph and plan : "
                 + str(round(compile_and_init_end - build_graph_start, 2))
                 + "s."
                 + "\n",
@@ -569,13 +565,15 @@ class Graph(object):
         self._print(
             0,
             1,
-            self._shallow_repr() + " start building graph builders of parameters and buffers.",
+            self._shallow_repr()
+            + " start building graph builders of parameters and buffers.",
         )
         self._create_states_builder()
         self._print(
             0,
             1,
-            self._shallow_repr() + " end building graph builders of parameters and buffers.",
+            self._shallow_repr()
+            + " end building graph builders of parameters and buffers.",
         )
 
         with graph_build_util.graph_build_context(self.config.proto, session):
