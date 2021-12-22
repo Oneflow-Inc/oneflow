@@ -28,10 +28,10 @@ func @main()  {
   %c_buffer = bufferization.to_memref %c : memref<96x96xf32>
   %cast_c_buffer = memref.cast %c_buffer : memref<96x96xf32> to memref<*xf32>
   call @print_memref_f32(%cast_c_buffer) : (memref<*xf32>) -> ()
+  // CHECK: [96, 96]
 
   %cast_b_data = memref.cast %b_data : memref<1xf32> to memref<*xf32>
   call @print_memref_f32(%cast_b_data) : (memref<*xf32>) -> ()
-  // CHECK: [96, 96]
   return
 }
 func private @print_memref_f32(memref<*xf32>)
