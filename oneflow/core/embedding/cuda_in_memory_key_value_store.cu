@@ -197,7 +197,7 @@ __global__ void UpdateKernel(uint32_t value_length, uint64_t num_keys, uint64_t 
   CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
     const uint64_t key_id = i / value_length;
     const uint64_t ctx = context[key_id] - 1;
-    if (ctx < 0) { continue; }
+    if (ctx == 0) { continue; }
     const uint64_t row_id = ctx - 1;
     const uint64_t col_id = i - key_id * value_length;
     const Elem elem = values[i];
