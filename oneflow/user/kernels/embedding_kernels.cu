@@ -90,8 +90,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_keys = *host_num_keys;
-    store->Prefetch(ctx->stream(), num_keys, unique_ids->dptr(),
-                    reinterpret_cast<uint64_t*>(context->mut_dptr()));
+    //    store->Prefetch(ctx->stream(), num_keys, unique_ids->dptr(),
+    //                    reinterpret_cast<uint64_t*>(context->mut_dptr()));
 
     if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
       int64_t embedding_size = 128;
@@ -101,8 +101,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
           <<<BlocksNum4ThreadsNum(num_keys * embedding_size), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               embedding_size, num_unique_ids->dptr<IDX>(), unique_ids->dptr<K>(), unique_values);
-      store->Update(ctx->stream(), num_keys, unique_ids->dptr(),
-                    reinterpret_cast<const uint64_t*>(context->dptr()), unique_values);
+      //      store->Update(ctx->stream(), num_keys, unique_ids->dptr(),
+      //                    reinterpret_cast<const uint64_t*>(context->dptr()), unique_values);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -148,8 +148,8 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK(copyd2h_primitive);
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
-    store->Lookup(ctx->stream(), *host_num_keys, unique_ids->dptr(),
-                  reinterpret_cast<const uint64_t*>(context->dptr()), embeddings->mut_dptr());
+    //    store->Lookup(ctx->stream(), *host_num_keys, unique_ids->dptr(),
+    //                  reinterpret_cast<const uint64_t*>(context->dptr()), embeddings->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -216,8 +216,9 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
             embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, learning_rate_val,
             embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(), update_unique_embeddings);
 
-    store->Update(ctx->stream(), *host_num_keys, unique_ids->dptr(),
-                  reinterpret_cast<const uint64_t*>(context->dptr()), update_unique_embeddings);
+    //    store->Update(ctx->stream(), *host_num_keys, unique_ids->dptr(),
+    //                  reinterpret_cast<const uint64_t*>(context->dptr()),
+    //                  update_unique_embeddings);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

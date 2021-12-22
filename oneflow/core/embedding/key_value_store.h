@@ -29,12 +29,11 @@ class KeyValueStore {
   KeyValueStore() = default;
   virtual ~KeyValueStore() = default;
 
-  virtual void Prefetch(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                        uint64_t* context) = 0;
-  virtual void Lookup(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                      const uint64_t* context, void* values) = 0;
-  virtual void Update(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                      const uint64_t* context, const void* values) = 0;
+  virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
+                   uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
+                   uint64_t* context) = 0;
+  virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
+                   uint64_t* context) = 0;
 };
 
 }  // namespace embedding
