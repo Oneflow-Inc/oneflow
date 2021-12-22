@@ -425,19 +425,34 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
+    def _filter_states(self):
+        state_tensor_set = set()
+        state_tensors = []
+        state_op_names = []
+
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            if state_tensor in state_tensor_set:
+                continue
+            op_name = state_block.name_prefix + state_block.name
+            state_tensor_set.add(state_tensor)
+            state_tensors.append(state_tensor)
+            state_op_names.append(op_name)
+            
+            if state_block.type == BlockType.PARAMETER:
+                self._variables_conf[state_tensor] = VariableConfig(op_name)
+
+        self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+        return state_op_names
+
     def _generate_config_proto(self):
         self.config.proto.set_job_name(self._name)
+        self._outputs_buffer_size = self.config._outputs_buffer_size
 
         if self._grad_scaler is not None:
             self._grad_scaler._generate_conf_for_graph(
                 self.config.proto.mutable_train_conf()
             )
-
-        for state_block in self._state():
-            if state_block.type == BlockType.PARAMETER:
-                self._variables_conf[state_block.origin] = VariableConfig(
-                    state_block.name_prefix + state_block.name
-                )
 
         for opt in self._opts:
             opt_dict = OptDict(opt)
@@ -446,8 +461,6 @@ class Graph(object):
             )
 
     def _create_states_builder(self):
-        state_op_names = []
-        state_tensors = []
         state2lazy_builder = dict()
         for state_block in self._state():
             state_tensor = state_block.origin
@@ -458,14 +471,13 @@ class Graph(object):
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
                 print("get same tensor ", op_name)
             else:
-                if (
-                    state_block.type == BlockType.PARAMETER
-                    and state_block.origin in self._variables_conf
-                ):
-                    state_config = self._variables_conf[state_block.origin]
+                if state_block.type == BlockType.PARAMETER
+                    assert state_tensor in self._variables_conf
+                    state_config = self._variables_conf[state_tensor]
+                    op_name = state_config.name
                 else:
                     state_config = None
-                # Create a new lazy tensor builder
+                # Init a new lazy tensor builder
                 state_block.lazy_origin_builder.name = op_name
                 state_block.lazy_origin_builder.method = 
                     partial(
@@ -475,11 +487,7 @@ class Graph(object):
                         state_config,
                     )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder
-                state_op_names.append(op_name)
-                state_tensors.append(state_tensor)
-        state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
-        return state_op_names, state_tensor_tuple
-
+    
     def _compile(self, *args):
         # Build graph
         try:
@@ -552,8 +560,9 @@ class Graph(object):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
 
-        # Get config form GraphConfig
-        self._outputs_buffer_size = self.config._outputs_buffer_size
+        # Filter to get unique states in graph
+        state_op_names = self._filter_states()
+
         self._generate_config_proto()
 
         # Deal with parameter and buffer
@@ -562,7 +571,7 @@ class Graph(object):
             1,
             self._shallow_repr() + " start building graph builders of parameters and buffers.",
         )
-        state_op_names, self._states_tensor_tuple = self._create_states_builder()
+        self._create_states_builder()
         self._print(
             0,
             1,
@@ -638,7 +647,7 @@ class Graph(object):
                 output_op_names, self._outputs_tensor_tuple
             )
             self._c_nn_graph.register_variable_op_names_and_tensors(
-                state_op_names, self._states_tensor_tuple
+                state_op_names, self._state_tensor_tuple
             )
 
         return seq_to_func_return(self._eager_outputs_buffer[0])
@@ -738,7 +747,7 @@ class Graph(object):
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
-                self._states_tensor_tuple,
+                self._state_tensor_tuple,
                 self._c_nn_graph,
             )
             # Update outputs buffer reading index

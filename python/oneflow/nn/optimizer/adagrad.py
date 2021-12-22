@@ -188,6 +188,8 @@ class Adagrad(Optimizer):
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    print("add one param ", vars_conf[param].name)
+                    print(optimizer_conf)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

@@ -15,7 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 from functools import partial
-from typing import Iterator, Optional, Set, Union, List, NamedTuple
+from typing import Iterator, Optional, Set, Union, List
 
 import oneflow._C
 import oneflow._oneflow_internal
