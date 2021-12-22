@@ -285,7 +285,8 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
-    const ParallelConf& parallel_conf = builder_->ParallelConf4OpName(folded_nodes_[i][0]->name());
+    const ParallelConf& parallel_conf =
+        CHECK_JUST(builder_->ParallelConf4OpName(folded_nodes_[i][0]->name()));
     // TODO(hjchen2) check parallel conf over all folded nodes
 
     builder_->AddOps(parallel_conf, {op_conf});
