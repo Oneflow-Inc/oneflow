@@ -25,7 +25,7 @@ REGISTER_NO_GRAD_USER_OP("uniform")
     .Attr<int64_t>("seed")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
-    .Attr<std::string>("nd_sbp")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
