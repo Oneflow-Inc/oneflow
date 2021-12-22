@@ -22,6 +22,7 @@ limitations under the License.
 #include <vector>
 
 #include "binary_set.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "algorithm_util.h"
 
@@ -46,18 +47,18 @@ class SbpNode {
   // compound edge out
   std::vector<SbpEdge<SbpSignature>*> EdgesOut;
   // Identity, use it to distinguish itself from node set
-  int32_t id;
+  int32_t id = -1;
 
   // We should use Sbp-signature for edge with lowest OrderValue
   std::vector<int32_t> OrderValue;
   // Lowest OrderValue
-  int32_t LowOrderValue;
+  int32_t LowOrderValue = -1;
   // Available SbpSignature pointer for this node
   std::vector<SbpSignature*> SbpSignatureList;
   // Available SbpSignature object for this node
   std::vector<SbpSignature> SbpSignatureObjList;
   // Global SbpSignature List Size
-  int32_t GlobalSbpSigSize;
+  int32_t GlobalSbpSigSize = -1;
   // Decide to use SbpSignature with this id
   int32_t FinalSbpSignatureId;
   // Location in NodeList
@@ -200,6 +201,8 @@ class SbpNode {
 
   // Get the minimum element in Cost
   double GetMinCost();
+  // get the cut ratio
+  double GetCutRatio();
 
   // Judge if this node is on the mainstem
   // If so, judge it for its producer/upstream nodes
@@ -249,33 +252,40 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
   if (common_edge) {
-    double edge_threshold = cut_cost;
-    double min_cost = 1e100;
+    double min_cost = GetMaxVal<float>();
     for (const auto& row : common_edge->Cost) {
       for (const double& c : row) min_cost = std::min(min_cost, c);
     }
-    // If there is no one case can choose, we will choose pairs whose cost in [min_cost,
-    // min_cost*10]
-    edge_threshold = min_cost > edge_threshold ? min_cost * 10 : edge_threshold;
+    // If there is no one case can choose, we will blow up
     for (int32_t i = 0; i < first->Cost.size(); i++) {
       for (int32_t j = 0; j < second->Cost.size(); j++) {
         const double edge_cost =
             common_edge->StartNode == first ? common_edge->Cost[i][j] : common_edge->Cost[j][i];
-        if (edge_cost < edge_threshold) {
+        if (edge_cost < cut_cost) {
           MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
           Cost.emplace_back(edge_cost + first->Cost[i] + second->Cost[j]);
         }
       }
     }
-    if (MergedSigId2ChildrenSigId.size() <= 0) {
-      std::cout << "0 size for merge child edge, min cost: " << min_cost << std::endl;
-    }
+    CHECK(MergedSigId2ChildrenSigId.size() > 0)
+        << "0 size for merge child edge, min cost: " << min_cost;
   } else {
     for (int32_t i = 0; i < first->Cost.size(); i++) {
       for (int32_t j = 0; j < second->Cost.size(); j++) {
         MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
         Cost.emplace_back(first->Cost[i] + second->Cost[j]);
       }
+    }
+  }
+
+  // Initialize default sbp choice
+  // If the original sbp pair does not go through, then use 0 as default.
+  FinalSbpSignatureId = 0;
+  // Track the original strategy
+  for (int32_t sig_id = 0; sig_id < MergedSigId2ChildrenSigId.size(); sig_id++) {
+    if (MergedSigId2ChildrenSigId[sig_id].first == first->FinalSbpSignatureId
+        && MergedSigId2ChildrenSigId[sig_id].second == second->FinalSbpSignatureId) {
+      FinalSbpSignatureId = sig_id;
     }
   }
 
@@ -320,9 +330,6 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
       RemoveFrom<SbpEdge<SbpSignature>*>(EdgesOut, k);
     }
   }
-
-  // Initialize default sbp choice
-  FinalSbpSignatureId = 0;
 }
 
 template<class SbpSignature>
@@ -516,6 +523,7 @@ double SbpNode<SbpSignature>::EvalOutNbhCost(
   return CurrCost;
 }
 
+// Compute the cost between this node and adjacent nodes with a lower order
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
                                             std::vector<int32_t>& nbh_id2order) {
@@ -533,6 +541,8 @@ double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>
     // if the start node is in the neighborhood
     if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
       CurrCost += this_edge->Cost[this_edge->StartNode->FinalSbpSignatureId][FinalSbpSignatureId];
+      // End this function and return infinity.
+      if (CurrCost > cut_cost) { return GetMaxVal<float>(); }
     }
   }
   for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
@@ -540,6 +550,7 @@ double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>
     // if the end node is in the neighborhood
     if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
       CurrCost += this_edge->Cost[FinalSbpSignatureId][this_edge->EndNode->FinalSbpSignatureId];
+      if (CurrCost > cut_cost) { return GetMaxVal<float>(); }
     }
   }
   return CurrCost;
@@ -727,6 +738,15 @@ double SbpNode<SbpSignature>::GetMinCost() {
   CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
   return *std::min_element(Cost.begin(), Cost.end());
+}
+
+// Set the cut ratio
+template<class SbpSignature>
+double SbpNode<SbpSignature>::GetCutRatio() {
+  double curr_cut_ratio = 1.0;
+  for (auto* this_edge : EdgesIn) { curr_cut_ratio *= this_edge->GetCutRatio(); }
+  for (auto* this_edge : EdgesOut) { curr_cut_ratio *= this_edge->GetCutRatio(); }
+  return curr_cut_ratio;
 }
 
 // Judge if this node is on the mainstem

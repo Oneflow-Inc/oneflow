@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
@@ -46,7 +47,16 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
   JUST(InitCopyCost(op_graph));
-  sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  // TODO:  Set all the sbp signatrure id to be 0 for initialization.
+  //        Could revert it back to
+  // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
+  //        after settling down the synchronization of sbp strategy.
+  sbp_graph_.Set0SbpSignature();
+  double ori_cost = sbp_graph_.ComputeCost();
+  LOG(INFO) << "Initial cost: " << ori_cost;
+  JUST(StealSbpSignatureFromOpNode(op_graph, job));
+  ori_cost = sbp_graph_.ComputeCost();
+  LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();
 }
 
@@ -55,12 +65,18 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Initial cost: " << ori_cost;
   int elimination_num = sbp_graph_.NodeAndEdgeEliminations();
   LOG(INFO) << "Elimination number: " << elimination_num;
-  sbp_graph_.GreedyStrategy(5);
+  if (ori_cost > cut_cost) {
+    JUST(sbp_graph_.Find1Strategy4Greedy());
+    ori_cost = sbp_graph_.ComputeCost();
+    LOG(INFO) << "Greedy cost: " << ori_cost;
+  }
+  sbp_graph_.GreedyStrategy(4);
   sbp_graph_.FinalizeSbp();
 
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
   if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
+  // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, cut_cost)
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
   return Maybe<void>::Ok();
@@ -100,7 +116,9 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
 
 Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job) {
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
-  // Create sbp nodes
+
+  // Collect op_node
+  std::vector<OpNode*> OpNodeList;
   op_graph.ForEachNode([&](OpNode* op_node) {
     // TODO: support mirror op
     bool is_mirrored_conf = false;
@@ -110,22 +128,42 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
       if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
     CHECK(is_mirrored_conf == false) << "Haven't deal with mirror operators.";
+    OpNodeList.push_back(op_node);
+  });
+
+  // Decide the order to visit the op
+  std::vector<int32_t> order;
+  auto comp_op_name = [&](OpNode* a, OpNode* b) {
+    return a->op().op_name().compare(b->op().op_name()) > 0;
+  };
+  auto_parallel::DecideOrder(OpNodeList, order, comp_op_name);
+  std::vector<int32_t> output_order;
+
+  // Create sbp nodes
+  for (int32_t i = 0; i < OpNodeList.size(); i++) {
+    OpNode* op_node = OpNodeList[order[i]];
     // Generate sbp node in cost model and link it with corresponding op node
     SbpNode<cfg::NdSbpSignature>* sbp_node = sbp_graph_.GenerateNode();
     // Mapping from sbp_node to op_node
     sbp_node->op_node = op_node;  // TODO: SetOpNode()
     op_name2sbp_node_[op_node->op().op_name()] = sbp_node;
-  });
+  }
   // Create sbp edges
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  for (int32_t i = 0; i < OpNodeList.size(); i++) {
+    OpNode* op_node = OpNodeList[order[i]];
     // Get corresponding sbp node
     SbpNode<cfg::NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+    std::vector<OpNode*> OutputNodeList;
     for (const auto op_edge : op_node->out_edges()) {
-      const auto& end_node_name = op_edge->dst_node()->op().op_name();
+      OutputNodeList.push_back(op_edge->dst_node());
+    }
+    auto_parallel::DecideOrder(OutputNodeList, output_order, comp_op_name);
+    for (int32_t j : output_order) {
+      const auto& end_node_name = OutputNodeList[j]->op().op_name();
       // Generate sbp edge in cost model
       sbp_node->PointTo(op_name2sbp_node_[end_node_name]);
     }
-  });
+  }
   return Maybe<void>::Ok();
 }
 
@@ -134,12 +172,16 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
   // const JobParallelViewConf& job_parallel_view_conf(job.job_parallel_view_conf());
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     HashMap<std::string, const BlobDesc*> ibn2blob_desc;
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-      OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
-      const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-      ibn2blob_desc.emplace(ibn, logical_blob_desc);
-    }
+    auto FindShape4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
+      for (const std::string& ibn : bns) {
+        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+        const BlobDesc* logical_blob_desc = &op_node->LogicalBlobDesc4Lbi(lbi);
+        ibn2blob_desc.emplace(ibn, logical_blob_desc);
+      }
+      return Maybe<void>::Ok();
+    };
+    JUST(FindShape4Blobs(op_node->op().input_bns()));
+    JUST(FindShape4Blobs(op_node->op().output_bns()));
     // Get logical blob description
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       auto it = ibn2blob_desc.find(ibn);
@@ -157,6 +199,23 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job) {
+  // Steal some strategy from original op graph
+  for (auto* sbp_node : sbp_graph_.NodeList) {
+    // sbp_collectors do not have op_node
+    if (sbp_node->op_node) {
+      for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureObjList.size(); sbp_id++) {
+        if (*JUST(sbp_node->op_node->op().nd_sbp_signature())
+            == sbp_node->SbpSignatureObjList[sbp_id]) {
+          sbp_node->FinalSbpSignatureId = sbp_id;
+          break;
+        }
+      }
+    }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -337,12 +396,11 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     // Print out SBP information for input operator
     for (int32_t j : str_order) {
       const auto& ibn = op_input_bns[j];
-      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
-      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const auto& producer_node = op_node->SrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node.op().op_name() << ": " << ibn;
       const auto& this_sbp_parallel = sbp_signature.bn_in_op2nd_sbp()[ibn];
       std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
-      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
-      if (IsSameSBP(op_node, ibn)) { std::cout << ", same SBP"; }
+      if (IsSameSbp(op_node, ibn)) { std::cout << ", same SBP"; }
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
       std::cout << std::endl;

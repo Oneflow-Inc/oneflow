@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -47,7 +48,21 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast)
+    .SetGetNdSbpSignatureListFn([](user_op::GetNdSbpSignatureListContext* ctx) -> Maybe<void> {
+      const auto& conf = ctx->Attr<std::vector<std::string>>("nd_sbp");
+      cfg::NdSbpSignature nd_sbp_signature;
+      for (const std::string& sbp_str : conf) {
+        cfg::SbpParallel sbp_parallel;
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+        *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("in", 0)].add_sbp_parallel() =
+            sbp_parallel;
+        *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("out", 0)].add_sbp_parallel() =
+            sbp_parallel;
+      }
+      ctx->AddNdSbpSignature(nd_sbp_signature);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP("hierarchical_parallel_cast_like")
     .Input("in")

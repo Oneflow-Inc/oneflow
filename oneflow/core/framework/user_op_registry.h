@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 
 namespace oneflow {
@@ -39,6 +40,7 @@ class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceInferContext;
 class ComputeComplexityFnContext;
+class GetNdSbpSignatureListContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -58,16 +60,16 @@ using OutputArgModifyFn =
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 using ComputeComplexityFn = std::function<Maybe<double>(ComputeComplexityFnContext*)>;
+// TODO: set up another context
+using GetNdSbpSignatureListFn = std::function<Maybe<void>(GetNdSbpSignatureListContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult()
-      : cpu_only_supported(false), no_grad(false), add_broadcast(true), same_output_regst_num(-1) {}
+  OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
-  bool add_broadcast;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -84,6 +86,7 @@ struct OpRegistryResult {
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
   NdSbpInferFn nd_sbp_infer_fn;
   ComputeComplexityFn compute_complexity_fn;
+  GetNdSbpSignatureListFn get_nd_sbp_list_fn;
 };
 
 class OpRegistry final {
@@ -106,7 +109,6 @@ class OpRegistry final {
 
   OpRegistry& SupportCpuOnly();
   OpRegistry& NoGrad();
-  OpRegistry& NoBroadcast();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
   __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type);
@@ -131,6 +133,7 @@ class OpRegistry final {
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
   OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
+  OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
 
   Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }

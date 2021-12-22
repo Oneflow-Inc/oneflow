@@ -57,6 +57,7 @@ class SbpConstructor final {
   Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job);
   Maybe<void> GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job);
   Maybe<void> FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job);
+  Maybe<void> StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);
   Maybe<void> ApplyMainstemAlgo();

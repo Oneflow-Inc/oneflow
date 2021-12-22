@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
-    .NoBroadcast()
     .Output("out")
     .Attr<std::string>("data_dir")
     .Attr<int32_t>("data_part_num")
@@ -59,6 +60,17 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
       cfg::SbpParallel default_sbp;
       default_sbp.mutable_split_parallel()->set_axis(0);
       return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+    })
+    .SetGetNdSbpSignatureListFn([](user_op::GetNdSbpSignatureListContext* ctx) -> Maybe<void> {
+      cfg::NdSbpSignature nd_sbp_signature;
+      cfg::SbpParallel split_sbp_parallel;
+      split_sbp_parallel.mutable_split_parallel()->set_axis(0);
+      for (int32_t dim_sbp = 0; dim_sbp < ctx->parallel_hierarchy().NumAxes(); dim_sbp++) {
+        *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("out", 0)].add_sbp_parallel() =
+            split_sbp_parallel;
+      }
+      ctx->AddNdSbpSignature(nd_sbp_signature);
+      return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {

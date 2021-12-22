@@ -14,12 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/operator/output_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
+
+namespace {
+Maybe<void> InferOutputOpNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                                        const ParallelDesc& parallel_desc,
+                                        const OperatorConf& op_conf) {
+  const InterfaceBlobConf& blob_conf = op_conf.output_conf().blob_conf();
+  cfg::NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
+  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &in_nd_sbp));
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
+  return Maybe<void>::Ok();
+}
+}  // anonymous namespace
 
 Maybe<void> OutputOp::InitFromOpConf() {
   CHECK(op_conf().has_output_conf());
@@ -87,6 +101,15 @@ Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) cons
   return Maybe<void>::Ok();
 }
 
+Maybe<void> OutputOp::GetNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+  cfg::NdSbpSignature nd_sbp_signature;
+  JUST(InferOutputOpNdSbpSignature(&nd_sbp_signature, parallel_desc, op_conf()));
+  nd_sbp_sig_list.emplace_back(nd_sbp_signature);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> OutputOp::InferSbpSignature(
     cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -101,12 +124,7 @@ Maybe<void> OutputOp::InferNdSbpSignature(
     cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
-  const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
-  cfg::NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
-  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
-  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &in_nd_sbp));
-  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
-
+  JUST(InferOutputOpNdSbpSignature(nd_sbp_signature, parallel_desc, op_conf()));
   return Maybe<void>::Ok();
 }
 

@@ -373,7 +373,8 @@ REGISTER_USER_OP("broadcast_matmul")
           .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("broadcast_matmul_grad_b")
     .Input("a")
@@ -437,6 +438,22 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
           .Build();
 
       return Maybe<void>::Ok();
+    })
+    .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
+      Shape* shape_a = ctx->Shape4ArgNameAndIndex("a", 0);
+      int64_t n = shape_a->At(shape_a->NumAxes() - 2);
+
+      double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("b", 0)->elem_cnt() * n;
+      const auto& nd_sbp_a = ctx->NdSbp4ArgNameAndIndex("a", 0);
+      const auto& nd_sbp_b = ctx->NdSbp4ArgNameAndIndex("b", 0);
+      const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+      for (int32_t sbp_dim = 0; sbp_dim < nd_sbp_a.sbp_parallel_size(); sbp_dim++) {
+        if (nd_sbp_a.sbp_parallel(sbp_dim).has_split_parallel()
+            || nd_sbp_b.sbp_parallel(sbp_dim).has_split_parallel()) {
+          logical_computation_cost /= parallel_hierarchy->At(sbp_dim);
+        }
+      }
+      return logical_computation_cost;
     });
 
 REGISTER_USER_OP_GRAD("broadcast_matmul")

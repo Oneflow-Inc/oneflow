@@ -88,11 +88,6 @@ OpRegistry& OpRegistry::NoGrad() {
   return *this;
 }
 
-OpRegistry& OpRegistry::NoBroadcast() {
-  result_.add_broadcast = false;
-  return *this;
-}
-
 OpRegistry& OpRegistry::SetOutputBufferNum(int32_t num) {
   result_.same_output_regst_num = num;
   return *this;
@@ -215,6 +210,11 @@ OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
 
 OpRegistry& OpRegistry::SetComputeComplexityFn(ComputeComplexityFn compute_complexity_fn) {
   result_.compute_complexity_fn = std::move(compute_complexity_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_nd_sbp_list_fn) {
+  result_.get_nd_sbp_list_fn = std::move(get_nd_sbp_list_fn);
   return *this;
 }
 

@@ -20,6 +20,25 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+Maybe<void> InferInputOpNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                                       const ParallelDesc& parallel_desc,
+                                       const OperatorConf& op_conf) {
+  const auto& parallel_hierarchy = parallel_desc.hierarchy();
+  const InterfaceBlobConf& blob_conf = op_conf.input_conf().blob_conf();
+  if (op_conf.input_conf().has_tick()) {
+    cfg::NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
+    tick_nd_sbp.clear_sbp_parallel();
+    FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
+      tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    }
+  }
+  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
+  return Maybe<void>::Ok();
+}
+}  // namespace
+
 Maybe<void> InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
   if (op_conf().input_conf().has_tick()) { EnrollInputBn("tick", false); }
@@ -64,21 +83,20 @@ Maybe<void> InputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InputOp::GetNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+  cfg::NdSbpSignature nd_sbp_signature;
+  JUST(InferInputOpNdSbpSignature(&nd_sbp_signature, parallel_desc, op_conf()));
+  nd_sbp_sig_list.emplace_back(nd_sbp_signature);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InputOp::InferNdSbpSignature(
     cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
-  const auto& parallel_hierarchy = parallel_desc.hierarchy();
-  const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
-  if (op_conf().input_conf().has_tick()) {
-    cfg::NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
-    tick_nd_sbp.clear_sbp_parallel();
-    FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
-      tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-    }
-  }
-  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
-  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
+  JUST(InferInputOpNdSbpSignature(nd_sbp_signature, parallel_desc, op_conf()));
   return Maybe<void>::Ok();
 }
 

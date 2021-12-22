@@ -17,10 +17,12 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 #include "oneflow/core/framework/compute_complexity_fn_context.h"
+#include "oneflow/core/framework/get_nd_sbp_signature_list_context.h"
 
 namespace oneflow {
 
@@ -551,6 +553,39 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
+class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureListContext {
+ public:
+  UserOpGetNdSbpSignatureListContext(
+      const UserOp* op,
+      std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list)
+      : user_op::GetNdSbpSignatureListContext(user_op::UserOpConfWrapper(op->user_op_conf())),
+        op_(op),
+        logical_blob_desc4ibn_(std::move(LogicalBlobDesc4Ibn)),
+        parallel_desc_(parallel_desc),
+        nd_sbp_sig_list_(nd_sbp_sig_list) {}
+  ~UserOpGetNdSbpSignatureListContext() override = default;
+
+  void AddNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig) override {
+    nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
+  }
+
+  const Shape& parallel_hierarchy() override {
+    return *(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy());
+  }
+
+  const Shape& BlobShape4InputArgNameAndIndex(const std::string& arg_name,
+                                              int32_t index) const override {
+    return CHECK_JUST(logical_blob_desc4ibn_(GenRepeatedBn(arg_name, index))).shape();
+  }
+
+ private:
+  const UserOp* op_;
+  std::function<Maybe<const BlobDesc&>(const std::string&)> logical_blob_desc4ibn_;
+  const ParallelDesc parallel_desc_;
+  std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list_;
+};
+
 Maybe<void> UserOp::InitFromOpConf() {
   CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -853,6 +888,20 @@ Maybe<void> UserOp::InferNdSbpSignature(
         sbp_list->Add()->mutable_broadcast_parallel();
       }
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::GetNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+  if (val_->get_nd_sbp_list_fn) {
+    cfg::NdSbpSignature empty_sbp_signature;
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
+        this, LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list);
+    return val_->get_nd_sbp_list_fn(&user_op_get_nd_sbp_list_context);
+  } else {
+    JUST(Operator::GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   }
   return Maybe<void>::Ok();
 }

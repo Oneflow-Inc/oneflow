@@ -42,7 +42,7 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
                                          bool is_same_sbp, bool allow_cpu2gpu);
 
 // Judge whether we need the same SBP for both producer and consumer
-bool IsSameSBP(OpNode* consumer, const std::string& ibn);
+bool IsSameSbp(OpNode* consumer, const std::string& ibn);
 
 }  // namespace auto_parallel
 }  // namespace oneflow
