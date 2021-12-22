@@ -103,8 +103,8 @@ void DebugIdShuffle(user_op::KernelComputeContext* ctx) {
 }
 
 template<typename K, typename IDX>
-__global__ void PartitionKernel(int64_t n, const IDX num_ids, const int parallel_num, const K* ids, K* out_ids,
-                                IDX* num_out, IDX* out_index) {
+__global__ void PartitionKernel(int64_t n, const IDX num_ids, const int parallel_num, const K* ids,
+                                K* out_ids, IDX* num_out, IDX* out_index) {
   CUDA_1D_KERNEL_LOOP(i, num_ids) {
     const K id = ids[i];
     int64_t partition_id = id % parallel_num;
@@ -144,8 +144,8 @@ void Partition(ep::Stream* stream, int64_t num_ids, IDX num_valid, int64_t paral
                K* out, IDX* num_out, IDX* out_index) {
   OF_CUDA_CHECK(cudaMemset(num_out, 0, parallel_num * sizeof(IDX)));
   PartitionKernel<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
-                    stream->As<ep::CudaStream>()->cuda_stream()>>>(num_ids, num_valid, parallel_num, in, out,
-                                                                   num_out, out_index);
+                    stream->As<ep::CudaStream>()->cuda_stream()>>>(num_ids, num_valid, parallel_num,
+                                                                   in, out, num_out, out_index);
 }
 
 template<typename K, typename IDX>

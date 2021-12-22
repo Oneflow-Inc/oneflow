@@ -120,6 +120,7 @@ REGISTER_USER_OP("embedding_lookup")
     .Input("unique_ids")
     .Input("context")
     .Output("embeddings")
+    .Output("out_context")
     .SetOutputBufferNum(1)
     .Attr<int64_t>("embedding_size")
     .Attr<DataType>("dtype")
@@ -130,6 +131,7 @@ REGISTER_USER_OP("embedding_lookup")
       const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
       out_dim_vec.push_back(embedding_size);
       *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
+      *ctx->OutputShape("out_context", 0) = ctx->InputShape("context", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -138,11 +140,13 @@ REGISTER_USER_OP("embedding_lookup")
           .Split(user_op::OpArg("context", 0), 0)
           .Split(user_op::OpArg("unique_ids", 0), 0)
           .Split(user_op::OpArg("embeddings", 0), 0)
+          .Split(user_op::OpArg("out_context", 0), 0)
           .Build();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+      *ctx->OutputDType("out_context", 0) = ctx->InputDType("context", 0);
       return Maybe<void>::Ok();
     });
 

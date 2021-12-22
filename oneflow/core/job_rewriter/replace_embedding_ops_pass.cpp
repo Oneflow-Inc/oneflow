@@ -101,6 +101,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
             .Input("context", embedding_prefetch_op.output("context", 0))
             .Output("embeddings")
+            .Output("out_context")
             .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
             .Attr<DataType>("dtype", user_op_conf.attr<DataType>("dtype"))
             .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
@@ -173,7 +174,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("num_unique_ids",
                        AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
                 .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
-                .Input("context", AddIdentityOp(embedding_prefetch_op.output("context", 0)))
+                .Input("context", embedding_lookup_op.output("out_context", 0))
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
                 .Input("embedding_diff",
                        embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0))

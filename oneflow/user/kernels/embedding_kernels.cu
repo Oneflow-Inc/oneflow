@@ -148,8 +148,17 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK(copyd2h_primitive);
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
+
+    user_op::Tensor* out_context = ctx->Tensor4ArgNameAndIndex("out_context", 0);
+    std::unique_ptr<ep::primitive::Memcpy> copyd2d_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
+                                                                  ep::primitive::MemcpyKind::kDtoD);
+    CHECK(copyd2d_primitive);
+    copyd2d_primitive->Launch(ctx->stream(), out_context->mut_dptr(), context->dptr(),
+                              context->shape().elem_cnt() * sizeof(uint64_t));
+
     store->Lookup(ctx->stream(), *host_num_keys, unique_ids->dptr(),
-                  reinterpret_cast<const uint64_t*>(context->dptr()), embeddings->mut_dptr());
+                  reinterpret_cast<uint64_t*>(out_context->mut_dptr()), embeddings->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
