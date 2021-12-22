@@ -23,10 +23,22 @@ namespace embedding {
 
 namespace {
 
-template<typename Key>
+template<typename Key, bool insert>
 __global__ void PlainEncodingKernel(Key num_shards, uint32_t num_keys, const Key* keys,
-                                    uint64_t* context) {
-  CUDA_1D_KERNEL_LOOP(i, num_keys) { context[i] = keys[i] / num_shards; }
+                                    uint8_t* valid, uint64_t* context) {
+  CUDA_1D_KERNEL_LOOP(i, num_keys) {
+    const Key key = keys[i];
+    const uint64_t idx = key / num_shards + 1;
+    uint64_t ctx = idx;
+    if (valid[idx] == 0) {
+      if (insert) {
+        valid[idx] = 1;
+      } else {
+        ctx = 0;
+      }
+    }
+    context[i] = ctx;
+  }
 }
 
 template<typename Key, typename Index>
@@ -118,9 +130,24 @@ __device__ bool GetOrInsertOne(const size_t capacity, TableEntry<Key, Index>* ta
 }
 
 template<typename Key, typename Index>
-__global__ void OrdinalEncodingKernel(uint64_t capacity, TableEntry<Key, Index>* table,
-                                      uint64_t* table_size, uint32_t num_keys, const Key* keys,
-                                      uint64_t* context) {
+__device__ bool GetOne(const size_t capacity, TableEntry<Key, Index>* table, Key key, size_t hash,
+                       uint64_t* out) {
+  const size_t start_idx = hash % capacity;
+  for (size_t count = 0; count < capacity; ++count) {
+    const size_t idx = (start_idx + count) % capacity;
+    TableEntry<Key, Index> entry = table[idx];
+    if (entry.key == key) {
+      *out = entry.index;
+      return true;
+    }
+  }
+  return false;
+}
+
+template<typename Key, typename Index>
+__global__ void OrdinalEncodeKernel(uint64_t capacity, TableEntry<Key, Index>* table,
+                                    uint64_t* table_size, uint32_t num_keys, const Key* keys,
+                                    uint64_t* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
     uint64_t hash = XXH64()(key);
@@ -129,14 +156,36 @@ __global__ void OrdinalEncodingKernel(uint64_t capacity, TableEntry<Key, Index>*
   }
 }
 
-template<typename Elem>
+template<typename Key, typename Index>
+__global__ void OrdinalEncodeLookupKernel(uint64_t capacity, TableEntry<Key, Index>* table,
+                                          uint32_t num_keys, const Key* keys, uint64_t* context) {
+  CUDA_1D_KERNEL_LOOP(i, num_keys) {
+    Key key = keys[i];
+    uint64_t hash = XXH64()(key);
+    bool success = GetOne<Key, Index>(capacity, table, key, hash, context + i);
+    assert(success);
+  }
+}
+
+template<typename Key, typename Elem>
 __global__ void LookupKernel(uint32_t value_length, uint64_t num_keys, uint64_t num_device_keys,
                              const Elem* device_values, const Elem* host_values,
-                             uint32_t values_elem_cnt, const uint64_t* context, Elem* values) {
+                             uint32_t values_elem_cnt, const Key* keys, const uint64_t* context,
+                             Elem* values, uint32_t* n_missing, Key* missing_keys,
+                             uint32_t* missing_indices) {
   CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
     const uint64_t key_id = i / value_length;
-    const uint64_t row_id = context[key_id];
+    const uint64_t ctx = context[key_id];
+    const uint64_t row_id = ctx - 1;
     const uint64_t col_id = i - key_id * value_length;
+    if (ctx == 0) {
+      if (col_id == 0) {
+        const uint32_t old_n_missing = atomicAdd(n_missing, 1);
+        missing_keys[old_n_missing] = keys[i];
+        missing_indices[old_n_missing] = i;
+      }
+      continue;
+    }
     Elem elem;
     if (row_id < num_device_keys) {
       elem = device_values[row_id * value_length + col_id];
@@ -155,7 +204,9 @@ __global__ void UpdateKernel(uint32_t value_length, uint64_t num_keys, uint64_t 
                              const uint64_t* context, const Elem* values) {
   CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
     const uint64_t key_id = i / value_length;
-    const uint64_t row_id = context[key_id];
+    const uint64_t ctx = context[key_id];
+    if (ctx == 0) { continue; }
+    const uint64_t row_id = ctx - 1;
     const uint64_t col_id = i - key_id * value_length;
     const Elem elem = values[i];
     if (row_id < num_device_keys) {
@@ -173,16 +224,27 @@ class PlainEncoder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PlainEncoder);
   explicit PlainEncoder(const CudaInMemoryKeyValueStoreOptions& options)
-      : num_shards_(options.num_shards) {}
-  ~PlainEncoder() = default;
+      : num_shards_(options.num_shards), capacity_(options.num_keys) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(cudaMalloc(&valid_, sizeof(uint8_t) * capacity_));
+    OF_CUDA_CHECK(cudaMemset(valid_, 0, sizeof(uint8_t) * capacity_));
+  }
+  ~PlainEncoder() {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFree(valid_));
+  }
 
+  template<bool insert>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, uint64_t* context) {
-    RUN_CUDA_KERNEL((PlainEncodingKernel<Key>), stream, num_keys, num_shards_, num_keys, keys,
-                    context);
+    RUN_CUDA_KERNEL((PlainEncodingKernel<Key, insert>), stream, num_keys, num_shards_, num_keys,
+                    keys, valid_, context);
   }
 
  private:
+  int device_index_{};
+  uint8_t* valid_{};
   uint32_t num_shards_;
+  size_t capacity_;
 };
 
 template<typename Key, typename Index>
@@ -194,6 +256,8 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
     OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
+    OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(uint64_t)));
+    OF_CUDA_CHECK(cudaMemset(table_, 0, capacity_ * sizeof(TableEntry<Key, Index>)));
   }
   ~OrdinalEncoder() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -201,9 +265,15 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFree(table_));
   }
 
+  template<bool insert>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, uint64_t* context) {
-    RUN_CUDA_KERNEL((OrdinalEncodingKernel<Key, uint64_t>), stream, num_keys, capacity_, table_,
-                    table_size_, num_keys, keys, context);
+    if (insert) {
+      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, uint64_t>), stream, num_keys, capacity_, table_,
+                      table_size_, num_keys, keys, context);
+    } else {
+      RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, uint64_t>), stream, num_keys, capacity_,
+                      table_, num_keys, keys, context);
+    }
   }
 
  private:
@@ -239,12 +309,11 @@ class KeyValueStoreImpl : public KeyValueStore {
     OF_CUDA_CHECK(cudaFreeHost(host_values_));
   }
 
-  void Prefetch(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                uint64_t* context) override;
-  void Lookup(ep::Stream* stream, uint32_t num_keys, const void* keys, const uint64_t* context,
-              void* values) override;
-  void Update(ep::Stream* stream, uint32_t num_keys, const void* keys, const uint64_t* context,
-              const void* values) override;
+  void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
+           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
+           uint64_t* context) override;
+  void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
+           uint64_t* context) override;
 
  private:
   Encoder encoder_;
@@ -257,25 +326,25 @@ class KeyValueStoreImpl : public KeyValueStore {
 };
 
 template<typename Encoder, typename Key, typename Elem>
-void KeyValueStoreImpl<Encoder, Key, Elem>::Prefetch(ep::Stream* stream, uint32_t num_keys,
-                                                     const void* keys, uint64_t* context) {
-  encoder_.Encode(stream, num_keys, static_cast<const Key*>(keys), context);
-}
-
-template<typename Encoder, typename Key, typename Elem>
-void KeyValueStoreImpl<Encoder, Key, Elem>::Lookup(ep::Stream* stream, uint32_t num_keys,
-                                                   const void* keys, const uint64_t* context,
-                                                   void* values) {
+void KeyValueStoreImpl<Encoder, Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys,
+                                                const void* keys, void* values, uint32_t* n_missing,
+                                                void* missing_keys, uint32_t* missing_indices,
+                                                uint64_t* context) {
+  OF_CUDA_CHECK(
+      cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
+  encoder_.template Encode<false>(stream, num_keys, static_cast<const Key*>(keys), context);
   const uint32_t values_elem_cnt = num_keys * value_length_;
-  RUN_CUDA_KERNEL((LookupKernel<Elem>), stream, values_elem_cnt, value_length_, num_keys_,
-                  num_device_keys_, device_values_, host_values_, values_elem_cnt, context,
-                  static_cast<Elem*>(values));
+  RUN_CUDA_KERNEL((LookupKernel<Key, Elem>), stream, values_elem_cnt, value_length_, num_keys_,
+                  num_device_keys_, device_values_, host_values_, values_elem_cnt,
+                  static_cast<const Key*>(keys), context, static_cast<Elem*>(values), n_missing,
+                  static_cast<Key*>(missing_keys), missing_indices);
 }
 
 template<typename Encoder, typename Key, typename Elem>
-void KeyValueStoreImpl<Encoder, Key, Elem>::Update(ep::Stream* stream, uint32_t num_keys,
-                                                   const void* keys, const uint64_t* context,
-                                                   const void* values) {
+void KeyValueStoreImpl<Encoder, Key, Elem>::Put(ep::Stream* stream, uint32_t num_keys,
+                                                const void* keys, const void* values,
+                                                uint64_t* context) {
+  encoder_.template Encode<true>(stream, num_keys, static_cast<const Key*>(keys), context);
   const uint32_t values_elem_cnt = num_keys * value_length_;
   RUN_CUDA_KERNEL((UpdateKernel<Elem>), stream, values_elem_cnt, value_length_, num_keys_,
                   num_device_keys_, device_values_, host_values_, values_elem_cnt, context,
