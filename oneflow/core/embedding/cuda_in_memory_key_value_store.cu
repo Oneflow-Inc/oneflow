@@ -30,7 +30,7 @@ __global__ void PlainEncodingKernel(Key num_shards, uint32_t num_keys, const Key
     const Key key = keys[i];
     const uint64_t idx = key / num_shards + 1;
     uint64_t ctx = idx;
-    if (valid[idx] != 0) {
+    if (valid[idx] == 0) {
       if (insert) {
         valid[idx] = 1;
       } else {
