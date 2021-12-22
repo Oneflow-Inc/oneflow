@@ -92,7 +92,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
@@ -101,7 +101,7 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputScalarArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> InputScalarArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                      const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
@@ -234,7 +234,7 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
 }
 
 /* static */ Maybe<void> DimScatterAddLikeOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return InputArgModifierFn(GetInputArgModifierFn, conf);
 }
 
@@ -242,48 +242,48 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
   return InferDtype(ctx);
 }
 
-#define DEF_SCATTER_OP(op_class_name)                                                          \
-  /* static */ Maybe<void> op_class_name::InferLogicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferTensorDesc(ctx);                                                               \
-  }                                                                                            \
-                                                                                               \
-  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {  \
-    return InferLogicalTensorDesc(ctx);                                                        \
-  }                                                                                            \
-                                                                                               \
-  /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                   \
-    return SetSbpScatter(ctx);                                                                 \
-  }                                                                                            \
-                                                                                               \
-  /* static */ Maybe<void> op_class_name::ModifyInputArg(                                      \
-      GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {     \
-    return InputArgModifierFn(GetInputArgModifierFn, conf);                                    \
-  }                                                                                            \
-                                                                                               \
-  /* static */ Maybe<void> op_class_name::InferDataType(user_op::InferContext* ctx) {          \
-    return InferDtype(ctx);                                                                    \
+#define DEF_SCATTER_OP(op_class_name)                                                             \
+  /* static */ Maybe<void> op_class_name::InferLogicalTensorDesc(user_op::InferContext* ctx) {    \
+    return InferTensorDesc(ctx);                                                                  \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
+    return SetSbpScatter(ctx);                                                                    \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::ModifyInputArg(                                         \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) { \
+    return InputArgModifierFn(GetInputArgModifierFn, conf);                                       \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::InferDataType(user_op::InferContext* ctx) {             \
+    return InferDtype(ctx);                                                                       \
   }
 
-#define DEF_SCATTER_SCALAR_OP(optypename)                                                        \
-  /* static */ Maybe<void> optypename::InferLogicalTensorDesc(user_op::InferContext* ctx) {      \
-    return InferScalarTensorDesc(ctx);                                                           \
-  }                                                                                              \
-                                                                                                 \
-  /*static*/ Maybe<void> optypename::InferPhysicalTensorDesc(user_op::InferContext* ctx) {       \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
-                                                                                                 \
-  /* static */ Maybe<void> optypename::GetSbp(user_op::SbpContext* ctx) {                        \
-    return SetSbpScatter(ctx);                                                                   \
-  }                                                                                              \
-                                                                                                 \
-  /* static */ Maybe<void> optypename::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, \
-                                                      const user_op::UserOpConfWrapper& conf) {  \
-    return InputScalarArgModifierFn(GetInputArgModifierFn, conf);                                \
-  }                                                                                              \
-                                                                                                 \
-  /* static */ Maybe<void> optypename::InferDataType(user_op::InferContext* ctx) {               \
-    return InferScalarDtype(ctx);                                                                \
+#define DEF_SCATTER_SCALAR_OP(optypename)                                                         \
+  /* static */ Maybe<void> optypename::InferLogicalTensorDesc(user_op::InferContext* ctx) {       \
+    return InferScalarTensorDesc(ctx);                                                            \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> optypename::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> optypename::GetSbp(user_op::SbpContext* ctx) {                         \
+    return SetSbpScatter(ctx);                                                                    \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> optypename::ModifyInputArg(                                            \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) { \
+    return InputScalarArgModifierFn(GetInputArgModifierFn, conf);                                 \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> optypename::InferDataType(user_op::InferContext* ctx) {                \
+    return InferScalarDtype(ctx);                                                                 \
   }
 
 #define REGISTER_SCATTER_GRAD(optypename) \

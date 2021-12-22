@@ -51,8 +51,8 @@ namespace oneflow {
 
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SmoothL1LossOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> SmoothL1LossOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
   CHECK_OR_RETURN(target_modifier != nullptr);
   target_modifier->set_requires_grad(false);

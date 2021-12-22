@@ -73,8 +73,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> DimGatherOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                     const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> DimGatherOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);

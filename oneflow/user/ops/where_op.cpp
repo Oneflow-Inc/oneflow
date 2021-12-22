@@ -240,7 +240,7 @@ Maybe<void> GetWhereXYScalarSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifierFn,
                                    const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
   cond_arg_modifier->set_requires_grad(false);
@@ -266,7 +266,7 @@ Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModif
   *ctx->OutputDType("out", 0) = x_dtype;
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> WhereOp::ModifyInputArg(GetInputArgModifier f,
+/*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& f,
                                                const user_op::UserOpConfWrapper& conf) {
   return GetWhereInputArgModify(f, conf);
 }
@@ -294,7 +294,7 @@ Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModif
   *ctx->OutputDType("out", 0) = y_dtype;
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(GetInputArgModifier f,
+/*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(const GetInputArgModifier& f,
                                                       const user_op::UserOpConfWrapper& conf) {
   return GetWhereInputArgModify(f, conf);
 }
@@ -322,7 +322,7 @@ Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModif
   *ctx->OutputDType("out", 0) = x_dtype;
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(GetInputArgModifier f,
+/*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(const GetInputArgModifier& f,
                                                       const user_op::UserOpConfWrapper& conf) {
   return GetWhereInputArgModify(f, conf);
 }
@@ -348,7 +348,7 @@ Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModif
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> WhereScalarXyOp::ModifyInputArg(GetInputArgModifier f,
+/*static*/ Maybe<void> WhereScalarXyOp::ModifyInputArg(const GetInputArgModifier& f,
                                                        const user_op::UserOpConfWrapper& conf) {
   return GetWhereInputArgModify(f, conf);
 }

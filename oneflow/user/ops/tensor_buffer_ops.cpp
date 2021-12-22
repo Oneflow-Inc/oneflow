@@ -139,7 +139,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TensorBufferToListOfTensorsOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   if (conf.attr<bool>("dynamic_out")) {
     FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
       user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
@@ -191,7 +191,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TensorBufferToListOfTensorsV2Op::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   if (conf.attr<bool>("dynamic_out")) {
     FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
       user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);

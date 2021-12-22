@@ -84,8 +84,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReflectionPad2DOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                         const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ReflectionPad2DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
   CHECK_NOTNULL_OR_RETURN(x_modifier);
   x_modifier->set_requires_grad(true);
@@ -173,8 +173,8 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReplicationPad2DOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                          const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ReplicationPad2DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
   CHECK_NOTNULL_OR_RETURN(x_modifier);
   x_modifier->set_requires_grad(true);
@@ -260,8 +260,8 @@ REGISTER_USER_OP_GRAD("replication_pad2d")
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ConstantPad1DOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                       const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ConstantPad1DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
   CHECK_NOTNULL_OR_RETURN(x_modifier);
   x_modifier->set_requires_grad(true);
@@ -349,8 +349,8 @@ REGISTER_USER_OP_GRAD("constant_pad1d")
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ConstantPad2DOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                       const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ConstantPad2DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
   CHECK_NOTNULL_OR_RETURN(x_modifier);
   x_modifier->set_requires_grad(true);
@@ -445,8 +445,8 @@ REGISTER_USER_OP_GRAD("constant_pad2d")
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ConstantPad3DOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                       const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ConstantPad3DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
   CHECK_NOTNULL_OR_RETURN(x_modifier);
   x_modifier->set_requires_grad(true);

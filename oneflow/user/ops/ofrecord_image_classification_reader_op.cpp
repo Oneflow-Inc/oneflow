@@ -50,7 +50,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
   CHECK_OR_RETURN(image_modifier != nullptr);
   image_modifier->set_header_infered_before_compute(false);

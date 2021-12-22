@@ -254,7 +254,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestDynamicSourceOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
   CHECK_OR_RETURN(out_modifier != nullptr);
   out_modifier->set_header_infered_before_compute(false);

@@ -41,7 +41,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OfrecordRawDecoderOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
   CHECK_NOTNULL_OR_RETURN(in_modifier);
   in_modifier->set_requires_grad(false);
@@ -74,7 +74,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OfrecordBytesDecoderOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
   CHECK_NOTNULL_OR_RETURN(in_modifier);
   in_modifier->set_requires_grad(false);
@@ -108,7 +108,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OfrecordImageDecoderOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
   CHECK_NOTNULL_OR_RETURN(in_modifier);
   in_modifier->set_requires_grad(false);
@@ -143,7 +143,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OfrecordImageDecoderRandomCropOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
   CHECK_NOTNULL_OR_RETURN(in_modifier);
   in_modifier->set_requires_grad(false);

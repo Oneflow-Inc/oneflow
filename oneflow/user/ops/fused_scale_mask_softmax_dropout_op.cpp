@@ -43,7 +43,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedScaleMaskSoftmaxDropoutOp::ModifyInputArg(
-    user_op::GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&)
+    const user_op::GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&)
     -> Maybe<void> {
   user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
   user_op::InputArgModifier* dropout_mask_modifier = GetInputArgModifierFn("dropout_mask", 0);

@@ -167,8 +167,8 @@ Maybe<void> GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_ty
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {               \
     return oneflow::InferDataType(ctx);                                                         \
   }                                                                                             \
-  /*static*/ Maybe<void> op_name##Op::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn, \
-                                                     const user_op::UserOpConfWrapper&) {       \
+  /*static*/ Maybe<void> op_name##Op::ModifyInputArg(                                           \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {    \
     user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);              \
     CHECK_OR_RETURN(label_modifier != nullptr);                                                 \
     label_modifier->set_requires_grad(false);                                                   \

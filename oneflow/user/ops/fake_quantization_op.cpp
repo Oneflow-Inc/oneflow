@@ -78,7 +78,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FakeQuantizationOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* scale = GetInputArgModifierFn("scale", 0);
   CHECK_OR_RETURN(scale != nullptr);
   scale->set_requires_grad(false);

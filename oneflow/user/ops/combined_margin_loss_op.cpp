@@ -52,7 +52,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CombinedMarginLossOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* label_arg_modifier = GetInputArgModifierFn("label", 0);
   label_arg_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();

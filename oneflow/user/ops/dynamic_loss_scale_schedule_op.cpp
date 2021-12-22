@@ -48,7 +48,7 @@ bool IsTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
 }
 
 /* static */ Maybe<void> DynamicLossScaleScheduleOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* loss_scale = GetInputArgModifierFn("loss_scale", 0);
   CHECK_OR_RETURN(loss_scale != nullptr);
   loss_scale->set_is_mutable(true);

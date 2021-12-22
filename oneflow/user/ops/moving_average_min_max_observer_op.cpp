@@ -48,7 +48,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MovingAverageMinMaxObserverOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
   CHECK_OR_RETURN(in != nullptr);
   in->set_requires_grad(false);

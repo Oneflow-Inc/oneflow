@@ -56,10 +56,10 @@ class {{opname}} : public OpBase {
   static Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx);
   {% endif -%}
   {% if op.has_input_arg_modify_fn -%}
-  static Maybe<void> ModifyInputArg(GetInputArgModifier, const user_op::UserOpConfWrapper&);
+  static Maybe<void> ModifyInputArg(const GetInputArgModifier&, const user_op::UserOpConfWrapper&);
   {% endif -%}
   {% if op.has_output_arg_modify_fn -%}
-  static Maybe<void> ModifyOutputArg(GetOutputArgModifier, const user_op::UserOpConfWrapper&);
+  static Maybe<void> ModifyOutputArg(const GetOutputArgModifier&, const user_op::UserOpConfWrapper&);
   {% endif -%}
   {% if op.has_output_blob_time_shape_infer_fn -%}
   static Maybe<void> InferOutputBlobTimeShape(user_op::InferOutputBlobTimeShapeFnContext* ctx);

@@ -49,7 +49,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CategoricalOrdinalEncodeOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* table = GetInputArgModifierFn("table", 0);
   table->set_is_mutable(true);
   table->set_requires_grad(false);

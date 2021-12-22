@@ -78,8 +78,8 @@ namespace oneflow {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> QuantizationOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                      const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> QuantizationOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* scale = GetInputArgModifierFn("scale", 0);
   CHECK_OR_RETURN(scale != nullptr);
   scale->set_requires_grad(false);

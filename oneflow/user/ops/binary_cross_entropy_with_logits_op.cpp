@@ -122,7 +122,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
   CHECK_OR_RETURN(target_modifier != nullptr);
   target_modifier->set_requires_grad(false);

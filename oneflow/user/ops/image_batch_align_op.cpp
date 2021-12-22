@@ -52,7 +52,7 @@ bool PowerOfTwo(T x) {
 }
 
 /* static */ Maybe<void> ImageBatchAlignOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
   CHECK_OR_RETURN(out_modifier != nullptr);
   out_modifier->set_header_infered_before_compute(false);

@@ -47,8 +47,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> MinMaxObserverOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                          const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> MinMaxObserverOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
   CHECK_OR_RETURN(in != nullptr);
   in->set_requires_grad(false);

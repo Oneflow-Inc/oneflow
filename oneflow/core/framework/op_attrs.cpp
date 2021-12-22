@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_attrs.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
@@ -48,8 +49,8 @@ namespace std {
 size_t hash<oneflow::OpAttrs>::operator()(const oneflow::OpAttrs& attrs) const {
   size_t hash_val = 0;
   for (const auto& it : attrs) {
-    hash_val = std::hash<std::string>()(it.first);
-    hash_val = it.second->hash_value();
+    oneflow::AddHash(&hash_val, it.first);
+    oneflow::HashCombine(&hash_val, it.second->hash_value());
   }
   return hash_val;
 }

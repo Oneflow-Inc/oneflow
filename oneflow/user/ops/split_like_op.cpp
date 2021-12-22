@@ -110,7 +110,7 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SplitLikeOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
+/*static*/ Maybe<void> SplitLikeOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                    const user_op::UserOpConfWrapper& user_op_conf) {
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);

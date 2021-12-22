@@ -40,7 +40,7 @@ namespace oneflow {
 /*static*/ auto GatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return GatherOp::InferLogicalTensorDesc(ctx);
 }
-/*static*/ auto GatherOp::ModifyInputArg(user_op::GetInputArgModifier GetInputArgModifierFn,
+/*static*/ auto GatherOp::ModifyInputArg(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                          const user_op::UserOpConfWrapper&) -> Maybe<void> {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
