@@ -464,21 +464,23 @@ class ConcatFunctor {
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
     TensorTuple outputs;
-    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
-      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
-      TensorTuple partial_inputs(size);
-      if(size==1){
-        partial_inputs[0] = inputs[0];
+    if(inputs.size()==1){
+      TensorTuple input_tuple(1);
+      input_tuple[0] = inputs[0];
         outputs.emplace_back(
-            JUST(OpInterpUtil::Dispatch<Tensor>(*op_, partial_inputs, attrs)));
-      }else{
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs)));
+    }else{
+      for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
+        size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
+        TensorTuple partial_inputs(size);
         for (int j = 0; j < size; ++j) { 
           partial_inputs[j] = inputs[i + j]; 
         }
         outputs.emplace_back(
             JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
-        }
+      }
     }
+    
     if (outputs.size() == 1) { return outputs.at(0); }
     return this->operator()(outputs, axis);
   }

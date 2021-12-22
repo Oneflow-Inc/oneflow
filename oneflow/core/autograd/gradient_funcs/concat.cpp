@@ -66,9 +66,7 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_
   TensorTuple like(ctx->input_num);
   for (int i = 0; i < ctx->input_num; ++i) { like[i] = ctx->SavedTensors().at(i); }
   if(ctx->input_num==1){
-    const auto& result = out_grads.at(0);
-    CHECK_EQ_OR_RETURN(1, ctx->input_num);
-    in_grads->at(0) = result;
+    in_grads->at(0) = out_grads.at(0);
   }else{
     const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, ctx->axis));
     CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
