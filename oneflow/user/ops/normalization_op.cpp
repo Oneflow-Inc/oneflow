@@ -363,7 +363,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
 }
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return FwInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
