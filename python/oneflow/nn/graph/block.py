@@ -15,7 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 from functools import partial
-from typing import Iterator, Optional, Set, Union, List
+from typing import Iterator, Optional, Set, Union, List, NamedTuple
 
 import oneflow._C
 import oneflow._oneflow_internal
@@ -487,17 +487,9 @@ class ModuleBlock(Block):
         _s_block = _states[name]
         if graph_build_util.lazy_mode.is_enabled():
             #  lazy
-            if _s_block._lazy_origin is None:
-                assert _s_block._lazy_origin_builder is not None, (
-                    repr(_s_block) + " has no lazy Tensor creation function."
-                )
-                assert self._is_executing_forward, (
-                    repr(_s_block)
-                    + "'s first get must happened in it's nn.Module.forward() to generate the right scope."
-                )
-                with _s_block.scope_context():
-                    _s_block._lazy_origin = _s_block._lazy_origin_builder()
-            return _s_block._lazy_origin
+            if not _s_block.build_finished:
+                    _s_block.build()
+            return _s_block.lazy_origin
         elif (
             not graph_build_util.lazy_mode.is_enabled()
         ) and self._is_executing_forward:
@@ -564,6 +556,20 @@ class ModuleBlock(Block):
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg)
 
+class LazyBuilder(object):
+    def __init__(self, name: str = None, method = None):
+        self.name = name
+        self.method = method
+        self.result = None
+        self.finished = False
+
+    def build(self, block = None):
+        assert self.name is not None
+        assert self.method is not None
+        assert self.result is None
+        with block.scope_context():
+            self.result = self.method()
+        self.finished = True
 
 class TensorBlock(Block):
     def __init__(
@@ -577,8 +583,8 @@ class TensorBlock(Block):
             self._type = BlockType.BUFFER
         else:
             raise NotImplementedError()
-        self._lazy_origin = None
-        self._lazy_origin_builder = None
+        self._lazy_origin_builder = LazyBuilder()
+        self.build_finished = False
         self.set_origin(origin)
 
     @property
@@ -593,7 +599,7 @@ class TensorBlock(Block):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin"
-        return self._lazy_origin
+        return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
@@ -601,11 +607,16 @@ class TensorBlock(Block):
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         return self._lazy_origin_builder
 
-    def set_lazy_origin_builder(self, fn=None):
+    def set_lazy_origin_builder(self, builder=None):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
-        self._lazy_origin_builder = fn
+        self._lazy_origin_builder = builder
+    
+    def build(self):
+        assert not self.build_finished
+        self._lazy_origin_builder.build(self)
+        self.build_finished = True
 
     def __repr__(self):
         lines = None
