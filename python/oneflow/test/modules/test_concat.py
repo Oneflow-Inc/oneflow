@@ -156,6 +156,12 @@ class TestModule(flow.unittest.TestCase):
         dim = random(0, 4).to(int).value()
         z = torch.cat((x, y), dim=dim)
         return z
+    
+    @autotest(n=10, check_graph=False)
+    def test_cat_one_tensor(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 3, random(0, 3)).to(device)
+        return torch.cat((x,), 0)
 
 
 if __name__ == "__main__":

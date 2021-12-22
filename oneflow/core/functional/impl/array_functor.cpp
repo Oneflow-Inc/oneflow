@@ -429,6 +429,7 @@ class BroadcastLikeFunctor {
 class ConcatFunctor {
  public:
   ConcatFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("concat").Input("in", 1).Output("out").Build());
     ops_.resize(kMaxInputCount);
     for (int n = 1; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
@@ -438,7 +439,7 @@ class ConcatFunctor {
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
-    CHECK_GE_OR_RETURN(inputs.size(), 2);
+    CHECK_GE_OR_RETURN(inputs.size(), 1);
     CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim - 1)))
         << " IndexError: Dimension out of range, expected to be in range of [" << -ndim << ", "
         << ndim - 1 << "], but got " << dim;
@@ -466,15 +467,24 @@ class ConcatFunctor {
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
-      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+      if(size==1){
+        partial_inputs[0] = inputs[0];
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_, partial_inputs, attrs)));
+      }else{
+        for (int j = 0; j < size; ++j) { 
+          partial_inputs[j] = inputs[i + j]; 
+        }
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+        }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
     return this->operator()(outputs, axis);
   }
 
  private:
+  std::shared_ptr<OpExpr> op_;
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
