@@ -746,14 +746,14 @@ Maybe<void> Operator::InferNdSbpSignature(
         err << *JUST(SbpSignatureListAsString(list, input_bns(), output_bns()));
         err << ", but got (";
         std::ostringstream ss;
-        for (size_t i = 0; i < input_bns().size(); ++i) {
-          const auto& ibn = input_bns()[i];
+        for (size_t j = 0; j < input_bns().size(); ++j) {
+          const auto& ibn = input_bns()[j];
           cfg::NdSbp nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
-          if (i > 0) {
+          if (j > 0) {
             err << ", ";
             ss << ", ";
           }
-          err << SbpParallelToString(nd_sbp.sbp_parallel(i));
+          err << SbpParallelToString(nd_sbp.sbp_parallel(j));
           ss << ibn << ": " << NdSbpToString(nd_sbp);
         }
         err << ") -> ? at hierarchy dim " << i << ", since the SBP of inputs are: " << ss.str();
