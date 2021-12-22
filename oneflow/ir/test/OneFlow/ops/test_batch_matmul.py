@@ -47,5 +47,24 @@ class TestMatMulCPUToTosa(flow.unittest.TestCase):
         print(res.shape)
         test_case.assertTrue(np.allclose(res.flatten(), np.matmul(x, y).flatten(), rtol=1e-4))
 
+@flow.unittest.skip_unless_1n1d()
+class TestMatMulGPUToTosa(flow.unittest.TestCase):
+    def test_idempotent(test_case):
+        @flow.global_function(function_config=func_config)
+        def BatchMatMulJob(
+            x: oft.Numpy.Placeholder((1, 20, 30)),
+            y: oft.Numpy.Placeholder((1, 30, 20))
+        ) -> oft.Numpy:
+            with flow.scope.placement('gpu', "0:0-0"):
+                res = flow.matmul(x, y)
+                print(res.shape)
+                return res
+
+        x = np.random.rand(1, 20, 30).astype(np.float32) - 1
+        y = np.random.rand(1, 30, 20).astype(np.float32) - 1
+        res = BatchMatMulJob(x, y)
+        print(res.shape)
+        test_case.assertTrue(np.allclose(res.flatten(), np.matmul(x, y).flatten(), rtol=1e-4))
+
 if __name__ == "__main__":
     unittest.main()
