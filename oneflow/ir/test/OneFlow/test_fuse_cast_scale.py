@@ -51,7 +51,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
     def test_gpu(self):
         d = OrderedDict(
             {
-                "shape": [(96, 96)],
+                "shape": [(96, 96), (3, 3)],
                 "in_type": [flow.int64],
                 "out_type": [flow.float32],
                 "device": ["gpu"],
