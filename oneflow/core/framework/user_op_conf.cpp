@@ -281,7 +281,8 @@ Maybe<void> CheckArgDefIsValidInUserOpConf(
     if (arg_blob_num == 0) {
       CHECK_OR_RETURN(arg.is_optional())
           << " op_name: " << op_name << " op_type_name: " << op_type_name
-          << " arg name: " << arg.name() << " in OpDef must have blob in op_conf";
+          << " arg name: " << arg.name()
+          << " in OpDef must have blob in op_conf: " << op_conf.DebugString();
     }
     op_def_arg_names.insert(arg.name());
   }
