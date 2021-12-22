@@ -24,7 +24,7 @@ namespace oneflow {
 extern Maybe<BoxingDividor> (*ReplaceInDeviceType)(DeviceType device_type);
 extern Maybe<BoxingDividor> (*ReplaceOutDeviceType)(DeviceType device_type);
 extern Maybe<BoxingDividor> (*FlattenInHierarchy)();
-extern Maybe<BoxingDividor> (*StackInHierarchy)();
+extern Maybe<BoxingDividor> (*UnflattenInHierarchy)();
 extern Maybe<BoxingDividor> (*OutPlacementAndPartialSum)();
 extern Maybe<BoxingDividor> (*InPlacementAndBroadcast)();
 extern Maybe<BoxingDividor> (*OutPlacementAndBroadcast)();

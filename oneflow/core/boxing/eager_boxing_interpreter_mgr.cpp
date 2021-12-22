@@ -63,7 +63,7 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
 
 Maybe<BoxingExprIf> SymmetricOnedToNdBoxingExpr() {
   return JUST(
-      BoxingExpr(JUST(StackInHierarchy()), JUST(BoxingExpr("stack-hierarchy")),
+      BoxingExpr(JUST(UnflattenInHierarchy()), JUST(BoxingExpr("unflatten-hierarchy")),
                  JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity"))));
 }
 

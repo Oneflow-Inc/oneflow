@@ -22,30 +22,30 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckStackHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_GT_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   for (int i = 0; i < out->nd_sbp()->sbp_parallel_size(); ++i) {
-    const auto& sbp_parallel = in->nd_sbp()->sbp_parallel(i);
+    const auto& sbp_parallel = out->nd_sbp()->sbp_parallel(i);
     CHECK_OR_RETURN(sbp_parallel == out->nd_sbp()->sbp_parallel(0)) << "nd_sbp axis: " << i;
   }
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), out->placement()->device_type());
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), out->placement()->parallel_num());
-  ParallelConf stacked_parallel_conf(in->placement()->parallel_conf());
-  stacked_parallel_conf.mutable_hierarchy()->CopyFrom(
+  ParallelConf unflattened_parallel_conf(in->placement()->parallel_conf());
+  unflattened_parallel_conf.mutable_hierarchy()->CopyFrom(
       out->placement()->parallel_conf().hierarchy());
-  const auto& stack_placement = SymbolOf(ParallelDesc(stacked_parallel_conf));
-  CHECK_OR_RETURN(stack_placement == out->placement())
-      << "The output placement is not a hierarch-stacked version of the input placement";
+  const auto& unflatten_placement = SymbolOf(ParallelDesc(unflattened_parallel_conf));
+  CHECK_OR_RETURN(unflatten_placement == out->placement())
+      << "The output placement is not a hierarch-unflattened version of the input placement";
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-static constexpr auto* CheckStackHierarchy = DECORATE(&RawCheckStackHierarchy, ThreadLocal);
+static constexpr auto* CheckUnflattenHierarchy = DECORATE(&RawCheckUnflattenHierarchy, ThreadLocal);
 
-Maybe<one::Tensor> StackHierarchy(const std::shared_ptr<one::Tensor>& tensor,
-                                  Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> UnflattenHierarchy(const std::shared_ptr<one::Tensor>& tensor,
+                                      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
@@ -56,6 +56,7 @@ Maybe<one::Tensor> StackHierarchy(const std::shared_ptr<one::Tensor>& tensor,
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("stack-hierarchy", CheckStackHierarchy, &StackHierarchy));
+COMMAND(RegisterBoxingFunction("unflatten-hierarchy", CheckUnflattenHierarchy,
+                               &UnflattenHierarchy));
 
 }  // namespace oneflow
