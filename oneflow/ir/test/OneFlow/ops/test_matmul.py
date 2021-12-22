@@ -32,16 +32,16 @@ func_config = flow.FunctionConfig()
 class TestMatMulToTosa(flow.unittest.TestCase):
     def test_idempotent(test_case):
         @flow.global_function(function_config=func_config)
-        def MatMulJob(
-            x: oft.Numpy.Placeholder((20, 30)),
-            y: oft.Numpy.Placeholder((30, 20))
+        def BatchMatMulJob(
+            x: oft.Numpy.Placeholder((1, 20, 30)),
+            y: oft.Numpy.Placeholder((1, 30, 20))
         ) -> oft.Numpy:
             res = flow.matmul(x, y)
             return res
 
-        x = np.random.rand(20, 30).astype(np.float32) - 1
-        y = np.random.rand(30, 20).astype(np.float32) - 1
-        res = MatMulJob(x, y)
+        x = np.random.rand(1, 20, 30).astype(np.float32) - 1
+        y = np.random.rand(1, 30, 20).astype(np.float32) - 1
+        res = BatchMatMulJob(x, y)
         # test_case.assertTrue(np.array_equal(res.numpy(), np.matmul(x, y)))
 
 if __name__ == "__main__":
