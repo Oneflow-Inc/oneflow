@@ -53,6 +53,7 @@ class TestSign(flow.unittest.TestCase):
     def test_sign_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
+        x = random_pytorch_tensor().to(device)
         y = torch.sign(x)
         return y
 
@@ -60,6 +61,13 @@ class TestSign(flow.unittest.TestCase):
     def test_sign_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
+        y = torch.sign(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_sign_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
         y = torch.sign(x)
         return y
 
