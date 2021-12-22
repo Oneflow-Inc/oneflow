@@ -79,7 +79,8 @@ SerializeToCubinPass::SerializeToCubinPass() {
     printf("%s\n", cudaGetErrorString(err));
     exit(1);
   }
-  const std::string arch = std::to_string(prop.major) + std::to_string(prop.minor);
+  std::string arch = std::to_string(prop.major) + std::to_string(prop.minor);
+  if (arch == "sm_75") { arch = "sm_72"; }
   maybeSetOption(this->triple, "nvptx64-nvidia-cuda");
   maybeSetOption(this->chip, ("sm_" + arch).c_str());
   maybeSetOption(this->features, ("+ptx" + arch).c_str());

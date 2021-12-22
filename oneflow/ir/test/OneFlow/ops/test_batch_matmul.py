@@ -36,8 +36,9 @@ class TestMatMulToTosa(flow.unittest.TestCase):
             x: oft.Numpy.Placeholder((1, 20, 30)),
             y: oft.Numpy.Placeholder((1, 30, 20))
         ) -> oft.Numpy:
-            res = flow.matmul(x, y)
-            return res
+            with flow.scope.placement('cpu', "0:0-0"):
+                res = flow.matmul(x, y)
+                return res
 
         x = np.random.rand(1, 20, 30).astype(np.float32) - 1
         y = np.random.rand(1, 30, 20).astype(np.float32) - 1
