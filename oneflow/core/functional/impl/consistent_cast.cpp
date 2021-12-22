@@ -343,7 +343,7 @@ class ToConsistentFunctor {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     JUST(PlacementConsistencyCheck(parallel_desc));
     JUST(NdSbpConsistencyCheck(sbp_parallels));
-    if (grad_sbp_parallels.size() > 0) { JUST(NdSbpConsistencyCheck(grad_sbp_parallels)); }
+    JUST(NdSbpConsistencyCheck(grad_sbp_parallels));
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
