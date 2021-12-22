@@ -120,6 +120,13 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> SplitLikeOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                              const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("like") >= 2);
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 2);
+  return Maybe<void>::Ok();
+}
+
 namespace {
 
 Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

@@ -58,6 +58,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> AddNOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                         const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP_GRAD("add_n").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
   int32_t in_size = op.input_size("in");

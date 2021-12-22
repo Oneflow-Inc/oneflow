@@ -257,9 +257,7 @@ endif()
 
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
-set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools")
-oneflow_add_executable(oneflow-gen-ods EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-gen-ods/oneflow-gen-ods.cpp)
-set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${ONEFLOW_TOOLS_DIR}")
+set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools" CACHE STRING "dir to put binary for debugging and development")
 
 set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
@@ -284,11 +282,6 @@ elseif(UNIX)
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
-endif()
-
-target_link_libraries(oneflow-gen-ods -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-if (BUILD_CUDA)
-  target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
 
 if(BUILD_PYTHON)
