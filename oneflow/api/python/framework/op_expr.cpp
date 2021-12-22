@@ -51,6 +51,7 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDesc>& placement,
                                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                   const AttrMap& attrs) {
+  JUST(CheckDeviceIdsIsValid(placement));
   CHECK_EQ_OR_RETURN(op.input_size(), 0)
       << " the op :  " << op.op_type_name()
       << " is NOT source op with input_size = " << op.input_size();
