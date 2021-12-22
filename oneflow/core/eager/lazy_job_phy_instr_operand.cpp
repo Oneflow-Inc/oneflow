@@ -43,9 +43,6 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(inputs_local_dep_object_->mut_mirrored_object());
-  DoEach(outputs_local_dep_object_->mut_mirrored_object());
-
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
   }
@@ -56,21 +53,6 @@ void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
   CHECK_EQ(sync_launched_nccl, async_launched_nccl);
   DoEach(async_launched_nccl->mut_mirrored_object());
 #endif  // WITH_CUDA
-}
-
-void LaunchLazyJobPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(inputs_local_dep_object_->mut_mirrored_object());
-}
-
-void LaunchLazyJobPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(outputs_local_dep_object_->mut_mirrored_object());
-}
-
-Maybe<SharedEventRecord> LaunchLazyJobPhyInstrOperand::EndEventRecord4OpName(
-    const std::string& op_name) const {
-  return JUST(MapAt(*op_name2end_event_record_, op_name));
 }
 
 }  // namespace vm
