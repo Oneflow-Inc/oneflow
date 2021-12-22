@@ -744,19 +744,22 @@ Maybe<void> Operator::InferNdSbpSignature(
         err << "op: " << op_name()
             << " can't find available sbp signature.\nSupported SBP signatures are: ";
         err << *JUST(SbpSignatureListAsString(list, input_bns(), output_bns()));
-        err << ", but got (";
-        std::ostringstream ss;
+
+        std::ostringstream got_input_sbp_ss;
+        std::ostringstream all_input_sbp_ss;
         for (size_t j = 0; j < input_bns().size(); ++j) {
           const auto& ibn = input_bns()[j];
           cfg::NdSbp nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
           if (j > 0) {
-            err << ", ";
-            ss << ", ";
+            got_input_sbp_ss << ", ";
+            all_input_sbp_ss << ", ";
           }
-          err << SbpParallelToString(nd_sbp.sbp_parallel(j));
-          ss << ibn << ": " << NdSbpToString(nd_sbp);
+          got_input_sbp_ss << SbpToString(nd_sbp.sbp_parallel(i));
+          all_input_sbp_ss << ibn << ": " << NdSbpToString(nd_sbp);
         }
-        err << ") -> ? at hierarchy dim " << i << ", since the SBP of inputs are: " << ss.str();
+        err << ", but got (" << got_input_sbp_ss.str();
+        err << ") -> ? at hierarchy dim " << i
+            << ", since the SBP of inputs are: " << all_input_sbp_ss.str();
         return Error::RuntimeError() << err.str();
       }
       for (const auto& bn : input_bns()) {
