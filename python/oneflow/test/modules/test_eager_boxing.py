@@ -3169,6 +3169,7 @@ class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
         z = y.to_consistent(placement=placement, sbp=[flow.sbp.split(0)])
         test_case.assertEqual(y.consistent_id(), z.consistent_id())
 
+
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
