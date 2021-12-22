@@ -114,6 +114,8 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   options.num_keys = 1024 * 16;
   options.num_device_keys = 1024 * 4;
   options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain;
+  options.key_type = DataType::kUInt64;
+  options.value_type = DataType::kFloat;
   std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
 
   TestKeyValueStore(store.get(), options.num_keys, options.num_keys, options.value_length,
@@ -128,6 +130,8 @@ TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
   options.num_keys = 1024 * 16;
   options.num_device_keys = 1024 * 4;
   options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
+  options.key_type = DataType::kUInt64;
+  options.value_type = DataType::kFloat;
   std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
 
   TestKeyValueStore(store.get(), options.num_keys, options.num_keys * 0.75, options.value_length,

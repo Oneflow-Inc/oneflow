@@ -394,6 +394,31 @@ class CudaLruCache : public Cache {
   CudaLruCacheContext<Key, Elem> ctx_;
 };
 
+template<typename Key>
+std::unique_ptr<Cache> DispatchValueType(const CudaLruCacheOptions& options) {
+  if (options.value_type == DataType::kFloat) {
+    return std::unique_ptr<Cache>(new CudaLruCache<Key, float>(options));
+  } else {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+}
+
+std::unique_ptr<Cache> DispatchKeyType(const CudaLruCacheOptions& options) {
+  if (options.key_type == DataType::kInt32) {
+    return DispatchValueType<int32_t>(options);
+  } else if (options.key_type == DataType::kUInt32) {
+    return DispatchValueType<uint32_t>(options);
+  } else if (options.key_type == DataType::kInt64) {
+    return DispatchValueType<int64_t>(options);
+  } else if (options.key_type == DataType::kUInt64) {
+    return DispatchValueType<uint64_t>(options);
+  } else {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+}
+
 }  // namespace
 
 std::unique_ptr<Cache> NewCudaLruCache(const CudaLruCacheOptions& options) {

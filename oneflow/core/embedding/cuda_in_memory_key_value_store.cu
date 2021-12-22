@@ -53,6 +53,10 @@ __device__ __inline__ int32_t AtomicCAS(int32_t* address, int32_t compare, int32
   return atomicCAS(address, compare, val);
 }
 
+__device__ __inline__ int32_t AtomicCAS(uint32_t* address, uint32_t compare, uint32_t val) {
+  return atomicCAS(address, compare, val);
+}
+
 __device__ __inline__ int64_t AtomicCAS(int64_t* address, int64_t compare, int64_t val) {
   static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
   return static_cast<int64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
@@ -352,20 +356,51 @@ void KeyValueStoreImpl<Encoder, Key, Elem>::Put(ep::Stream* stream, uint32_t num
                   static_cast<const Elem*>(values));
 }
 
-}  // namespace
-
-std::unique_ptr<KeyValueStore> NewCudaInMemoryKeyValueStore(
+template<typename Key, typename Elem>
+std::unique_ptr<KeyValueStore> DispatchEncodingType(
     const CudaInMemoryKeyValueStoreOptions& options) {
   if (options.encoding_type == CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain) {
     return std::unique_ptr<KeyValueStore>(
-        new KeyValueStoreImpl<PlainEncoder<int64_t>, int64_t, float>(options));
+        new KeyValueStoreImpl<PlainEncoder<Key>, Key, Elem>(options));
   } else if (options.encoding_type == CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal) {
     return std::unique_ptr<KeyValueStore>(
-        new KeyValueStoreImpl<OrdinalEncoder<int64_t, uint64_t>, int64_t, float>(options));
+        new KeyValueStoreImpl<OrdinalEncoder<Key, uint64_t>, Key, Elem>(options));
   } else {
     UNIMPLEMENTED();
     return nullptr;
   }
+}
+
+template<typename Key>
+std::unique_ptr<KeyValueStore> DispatchValueType(const CudaInMemoryKeyValueStoreOptions& options) {
+  if (options.value_type == DataType::kFloat) {
+    return DispatchEncodingType<Key, float>(options);
+  } else {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+}
+
+std::unique_ptr<KeyValueStore> DispatchKeyType(const CudaInMemoryKeyValueStoreOptions& options) {
+  if (options.key_type == DataType::kInt32) {
+    return DispatchValueType<int32_t>(options);
+  } else if (options.key_type == DataType::kUInt32) {
+    return DispatchValueType<uint32_t>(options);
+  } else if (options.key_type == DataType::kInt64) {
+    return DispatchValueType<int64_t>(options);
+  } else if (options.key_type == DataType::kUInt64) {
+    return DispatchValueType<uint64_t>(options);
+  } else {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+}
+
+}  // namespace
+
+std::unique_ptr<KeyValueStore> NewCudaInMemoryKeyValueStore(
+    const CudaInMemoryKeyValueStoreOptions& options) {
+  return DispatchKeyType(options);
 }
 
 }  // namespace embedding
