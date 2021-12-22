@@ -105,9 +105,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const int64_t w_idx = 3;
 
   DimVector dx_dim_vec(dy_shape.NumAxes());
-  int64_t h_dy, w_dy;
-  h_dy = dy_shape.At(h_idx);
-  w_dy = dy_shape.At(w_idx);
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
   dx_dim_vec[n_idx] = dy_shape.At(0);
   dx_dim_vec[c_idx] = dy_shape.At(1);
@@ -194,9 +193,8 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
   const int64_t w_idx = 3;
 
   DimVector dx_dim_vec(dy_shape.NumAxes());
-  int64_t h_dy, w_dy;
-  h_dy = dy_shape.At(h_idx);
-  w_dy = dy_shape.At(w_idx);
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
   dx_dim_vec[n_idx] = dy_shape.At(0);
   dx_dim_vec[c_idx] = dy_shape.At(1);
@@ -281,8 +279,7 @@ REGISTER_USER_OP_GRAD("replication_pad2d")
   const int64_t w_idx = 2;
 
   DimVector dx_dim_vec(dy_shape.NumAxes());
-  int64_t w_dy;
-  w_dy = dy_shape.At(w_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
   dx_dim_vec[n_idx] = dy_shape.At(0);
   dx_dim_vec[c_idx] = dy_shape.At(1);
@@ -370,9 +367,8 @@ REGISTER_USER_OP_GRAD("constant_pad1d")
   const int64_t w_idx = 3;
 
   DimVector dx_dim_vec(dy_shape.NumAxes());
-  int64_t h_dy, w_dy;
-  h_dy = dy_shape.At(h_idx);
-  w_dy = dy_shape.At(w_idx);
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
   dx_dim_vec[n_idx] = dy_shape.At(0);
   dx_dim_vec[c_idx] = dy_shape.At(1);
@@ -467,10 +463,9 @@ REGISTER_USER_OP_GRAD("constant_pad2d")
   const int64_t w_idx = 4;
 
   DimVector dx_dim_vec(dy_shape.NumAxes());
-  int64_t d_dy, h_dy, w_dy;
-  d_dy = dy_shape.At(d_idx);
-  h_dy = dy_shape.At(h_idx);
-  w_dy = dy_shape.At(w_idx);
+  int64_t d_dy = dy_shape.At(d_idx);
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
   dx_dim_vec[n_idx] = dy_shape.At(0);
   dx_dim_vec[c_idx] = dy_shape.At(1);

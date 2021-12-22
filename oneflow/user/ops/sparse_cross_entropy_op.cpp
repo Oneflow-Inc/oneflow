@@ -74,7 +74,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
 
 Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
                                                  const user_op::UserOpWrapper& op,
-                                                 user_op::AddOpFn AddOp) {
+                                                 const user_op::AddOpFn& AddOp) {
   if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op(op_type_name)
