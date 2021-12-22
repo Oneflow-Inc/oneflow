@@ -46,14 +46,14 @@ struct MatMulOpLowering final : public OpConversionPattern<MatmulOp> {
 
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    std::cout << "here" << std::endl;
-    auto a = op.a();
-    auto b = op.b();
-    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op,
-                                                /* output */
-                                                op.out().getType(),
-                                                /* a  */ a,
-                                                /* b */ b);
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(
+        op,
+        /* output */
+        op->getResultTypes().front().cast<TensorType>(),
+        /* a  */
+        RankedTensorType::get({1, 1}, op.a().getType().cast<TensorType>().getElementType()),
+        /* b */
+        RankedTensorType::get({1, 1}, op.b().getType().cast<TensorType>().getElementType()));
     return success();
   }
 };
@@ -109,11 +109,13 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
+  std::cout << "lower begin" << std::endl;
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, MatMulOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
   }
+  std::cout << "lower end" << std::endl;
 }
 
 }  // namespace oneflow

@@ -146,7 +146,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
                                                     mlir::OpResult matmul_res) {
   if (auto matmul_op = llvm::dyn_cast<MatmulOp>(matmul_res.getDefiningOp())) {
     auto op_name = matmul_op.op_name();
-    SmallVector<::mlir::Value, 4> operands;
+    SmallVector<::mlir::Value, 2> operands;
     operands.push_back(matmul_op.a());
     operands.push_back(matmul_op.b());
     SmallVector<::mlir::Value, 1> results;
