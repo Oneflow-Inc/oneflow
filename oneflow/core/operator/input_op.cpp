@@ -37,7 +37,7 @@ Maybe<void> InferInputOpNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
   JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
   return Maybe<void>::Ok();
 }
-}  // anonymous namespace
+}  // namespace
 
 Maybe<void> InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
