@@ -26,31 +26,43 @@ namespace {
 template<size_t ndims>
 struct StrideParam {
   int64_t stride[SHAPE_MAX_AXIS_SIZE];
+  int64_t coordinates[SHAPE_MAX_AXIS_SIZE];
 
   // NOLINTNEXTLINE
   StrideParam(const int64_t* stride_vec) {
-    for (int i = 0; i < ndims; ++i) { stride[i] = stride_vec[i]; }
+    for (int i = 0; i < ndims; ++i) { 
+      stride[i] = stride_vec[i]; 
+      coordinates[i] = 0;
+    }
   }
 
-  __device__ int64_t compute_index(int64_t output_idx, const StrideParam& input_params) const {
-    int64_t input_idx = 0;
+};
+
+template<size_t ndim>
+__device__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_params, const StrideParam<ndim>& in_params) {
+  int64_t in_offset = 0;
+  int64_t remaining = out_offset;
 
 #pragma unroll
-    for (int i = 0; i < ndims; ++i) {
-      int64_t idx = output_idx / stride[i];
-      output_idx -= idx * stride[i];
-      input_idx += idx * input_params.stride[i];
-    }
-
-    return input_idx;
+  // compute coords(output offset to coords)
+  for (int i = 0; i < ndim; ++i) {
+    const int64_t idx = remaining / out_params.stride[i];
+    out_params.coordinates[i] = idx;
+    remaining = remaining - idx * out_params.stride[i];
   }
-};
+  // compute input offset
+  for (int64_t dim = 0; dim < ndim; ++dim) {
+    in_offset = in_offset + out_params.coordinates[dim] * in_params.stride[dim];
+  }
+  return in_offset;
+
+}
 
 template<typename T, size_t ndim>
 __global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, out_idx, count) {
-    int64_t in_idx = out_stride.compute_index(out_idx, in_stride);
+    int64_t in_idx = compute_index<ndim>(out_idx, out_stride, in_stride);
 
     out_dptr[out_idx] = in_dptr[in_idx];
   }
