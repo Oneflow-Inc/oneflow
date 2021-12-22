@@ -277,8 +277,9 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
-                                filter=["to", "tensor", "_to", "train"]
+                                filter = ["to", "tensor", "_to", "train"]
                                 if isinstance(oneflow, flow.nn.Module):
+
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -299,10 +300,16 @@ def GetDualObject(name, pytorch, oneflow):
                                             id(oneflow_res)
                                         ] = test_g_res
 
-
                                 elif oneflow.__name__ in filter:
                                     pass
-                                elif "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow) or (inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__):
+                                elif (
+                                    "oneflow.nn.modules" not in oneflow.__module__
+                                    or inspect.isfunction(oneflow)
+                                    or (
+                                        inspect.ismethod(oneflow)
+                                        and "oneflow.nn.modules" in oneflow.__module__
+                                    )
+                                ):
                                     tensor_args = []
                                     other_args = []
                                     for a in oneflow_args:
@@ -318,7 +325,9 @@ def GetDualObject(name, pytorch, oneflow):
 
                                         def build(self, *tensor_args):
                                             return self.test_func(
-                                                *tensor_args, *other_args, **oneflow_kwargs
+                                                *tensor_args,
+                                                *other_args,
+                                                **oneflow_kwargs,
                                             )
 
                                     test_g = TestGraphOfFunctional()

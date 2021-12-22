@@ -65,7 +65,6 @@ def _test_unsqueeze_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestUnsqueeze(flow.unittest.TestCase):
-    
     def test_unsqueeze(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -77,7 +76,7 @@ class TestUnsqueeze(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(check_graph=True)
     def test_flow_unsqueeze_with_random_data(test_case):
         device = random_device()

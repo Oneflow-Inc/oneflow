@@ -92,6 +92,7 @@ class TestArgmin(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
     @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
     def test_argmin_with_random_data(test_case):
         device = random_device()
