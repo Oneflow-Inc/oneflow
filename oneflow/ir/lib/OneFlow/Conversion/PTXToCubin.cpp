@@ -18,7 +18,6 @@ This file is ported from mlir/lib/Dialect/GPU/Transforms/SerializeToCubin.cpp
 */
 
 #include "mlir/Dialect/GPU/Passes.h"
-
 #ifdef WITH_MLIR_CUDA_CODEGEN
 
 #include "mlir/Pass/Pass.h"
@@ -27,6 +26,7 @@ This file is ported from mlir/lib/Dialect/GPU/Transforms/SerializeToCubin.cpp
 #include "llvm/Support/TargetSelect.h"
 
 #include <cuda.h>
+#include <cuda_runtime_api.h>
 
 using namespace mlir;
 
@@ -73,10 +73,16 @@ static void maybeSetOption(Pass::Option<std::string>& option, const char* value)
 }
 
 SerializeToCubinPass::SerializeToCubinPass() {
-  // TODO: infer target info with cudaGetDeviceProperties
+  cudaDeviceProp prop{};
+  cudaError_t err = cudaGetDeviceProperties(&prop, 0);
+  if (err != cudaSuccess) {
+    printf("%s\n", cudaGetErrorString(err));
+    exit(1);
+  }
+  const std::string arch = std::to_string(prop.major) + std::to_string(prop.minor);
   maybeSetOption(this->triple, "nvptx64-nvidia-cuda");
-  maybeSetOption(this->chip, "sm_61");
-  maybeSetOption(this->features, "+ptx61");
+  maybeSetOption(this->chip, ("sm_" + arch).c_str());
+  maybeSetOption(this->features, ("+ptx" + arch).c_str());
 }
 
 void SerializeToCubinPass::getDependentDialects(DialectRegistry& registry) const {
