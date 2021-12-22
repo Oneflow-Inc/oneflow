@@ -115,13 +115,13 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     );
     let output = (outs AnyType:$out);
     let attrs = (ins
-      SI32Attr:$filters,
+      DefaultValuedAttr<SI32Attr, "0">:$filters,
       SI32ArrayAttr:$padding_before,
       StrAttr:$data_format,
       SI32ArrayAttr:$kernel_size,
       SI32ArrayAttr:$strides,
       SI32ArrayAttr:$dilation_rate,
-      DefaultValuedAttr<SI32Attr, "1">:$group
+      DefaultValuedAttr<SI32Attr, "1">:$groups
     );
     let trait_attrs = (ins
       I32ElementsAttr:$operand_segment_sizes
