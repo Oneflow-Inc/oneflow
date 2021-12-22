@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -109,6 +110,8 @@ class ReadOneRecFunctor {
       JUST(CheckDeviceIdsIsValid(JUST(placement)));
       CHECK_OR_RETURN(sbp.has_value())
           << "placement is not None, but sbp is None. It's not allowed.";
+      JUST(PlacementConsistencyCheck(JUST(placement)));
+      JUST(NdSbpConsistencyCheck(*JUST(sbp)));
       AttrMap attrmap(attrs);
       return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
           *op_, {},

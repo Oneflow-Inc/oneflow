@@ -19,11 +19,18 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement);
+
+Maybe<void> PlacementConsistencyCheck(Symbol<ParallelDesc> placement);
+
+Maybe<void> NdSbpConsistencyCheck(Symbol<cfg::NdSbp> nd_sbp);
+
+Maybe<void> NdSbpConsistencyCheck(const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple);
 
 }  // namespace oneflow
 

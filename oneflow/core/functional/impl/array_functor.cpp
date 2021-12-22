@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -131,6 +132,8 @@ class ConsistentConstantFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
+    JUST(PlacementConsistencyCheck(placement));
+    JUST(NdSbpConsistencyCheck(sbp_tuple));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
@@ -212,6 +215,8 @@ class ConsistentEmptyFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
+    JUST(PlacementConsistencyCheck(placement));
+    JUST(NdSbpConsistencyCheck(sbp_tuple));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
