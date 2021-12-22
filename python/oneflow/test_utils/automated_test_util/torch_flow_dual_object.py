@@ -292,11 +292,11 @@ def GetDualObject(name, pytorch, oneflow):
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
                                             eager_tensor_2_graph_tensor[
-                                                id(oneflow_res[idx])
+                                                oneflow_res[idx]
                                             ] = g_res
                                     else:
                                         eager_tensor_2_graph_tensor[
-                                            id(oneflow_res)
+                                            oneflow_res
                                         ] = test_g_res
 
 
