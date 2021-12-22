@@ -62,8 +62,8 @@ __global__ void CumsumForwardGpu(const T* pin, T* pout, int64_t cs_up_space, int
 // dmn, ..., d1n, d0n
 template<typename T>
 __global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                                  int64_t cs_down_space, int64_t nele) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < nele;
+                                  int64_t cs_down_space, int64_t elem_cnt) {
+  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
        i += step) {
     auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
     pout[i] = (cs_space - cs_space_id) * pin[i];
@@ -72,7 +72,7 @@ __global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, in
 
 template<typename T>
 __global__ void CumsumBackwardGpu3D(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                                    int64_t cs_down_space, int64_t nele) {
+                                    int64_t cs_down_space, int64_t elem_cnt) {
   for (auto i = blockIdx.z * blockDim.z + threadIdx.z; i < cs_up_space; i++) {
     for (auto j = blockIdx.y * blockDim.y + threadIdx.y; j < cs_space; j++) {
       for (auto k = blockIdx.x * blockDim.x + threadIdx.x; k < cs_down_space; k++) {
@@ -95,8 +95,8 @@ class GpuCumsumKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     // judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    auto nele = in->shape().elem_cnt();
-    if (!nele) { return; }
+    auto elem_cnt = in->shape().elem_cnt();
+    if (!elem_cnt) { return; }
 
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dim = ctx->Attr<int64_t>("dim");
@@ -105,7 +105,7 @@ class GpuCumsumKernel final : public user_op::OpKernel {
 
     // take cumsum's abbreviation as `cs`
     // data partition: cs_up_space|cs_space|cs_down_space
-    auto cs_up_space = nele / in->shape().Count(dim);
+    auto cs_up_space = elem_cnt / in->shape().Count(dim);
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
@@ -135,8 +135,8 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     // judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto nele = in->shape().elem_cnt();
-    if (!nele) { return; }
+    auto elem_cnt = in->shape().elem_cnt();
+    if (!elem_cnt) { return; }
     auto* out = ctx->Tensor4ArgNameAndIndex("dx", 0);
     auto dim = ctx->Attr<int64_t>("dim");
     const auto* pin = in->dptr<T>();
@@ -144,13 +144,13 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
 
     // take cumsum's abbreviation as `cs`
     // data partition: cs_up_space|cs_space|cs_down_space
-    auto cs_up_space = nele / in->shape().Count(dim);
+    auto cs_up_space = elem_cnt / in->shape().Count(dim);
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    auto thread_num = nele;
+    auto thread_num = elem_cnt;
     RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
-                    cs_space, cs_down_space, nele);
+                    cs_space, cs_down_space, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
