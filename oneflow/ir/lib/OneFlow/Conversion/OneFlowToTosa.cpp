@@ -28,6 +28,7 @@ limitations under the License.
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -40,14 +41,12 @@ namespace mlir {
 
 namespace oneflow {
 
-struct MatMulOpLowering final : public OpConversionPattern<MatmulOp> {
+struct BatchMatMulOpLowering final : public OpConversionPattern<BatchMatmulOp> {
  public:
-  using OpConversionPattern<MatmulOp>::OpConversionPattern;
+  using OpConversionPattern<BatchMatmulOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
+  LogicalResult matchAndRewrite(BatchMatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    op.a().dump();
-    op.b().dump();
     rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op,
                                                 /* output */
                                                 op->getResultTypes().front().cast<TensorType>(),
@@ -110,13 +109,12 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
-  llvm::errs() << "lower begin\n";
-  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, MatMulOpLowering>(&getContext());
+  patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, BatchMatMulOpLowering>(
+      &getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
   }
-  llvm::errs() << "lower end\n";
 }
 
 }  // namespace oneflow

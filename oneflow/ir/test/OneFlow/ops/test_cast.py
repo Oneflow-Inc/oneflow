@@ -21,32 +21,25 @@ import numpy as np
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
 
-import oneflow as flow
+import oneflow.compatible.single_client as flow
+import oneflow.compatible.single_client.typing as oft
 import oneflow.unittest
+import typing
+
+func_config = flow.FunctionConfig()
 
 @flow.unittest.skip_unless_1n1d()
-class TestCastMLIR(oneflow.unittest.TestCase):
-    def test_cast_graph(test_case):
-        data1 = np.random.randn(20, 30)
-        a = flow.tensor(data1, dtype=flow.float32)
+class TestCastToTosa(flow.unittest.TestCase):
+    def test_idempotent(test_case):
+        @flow.global_function(function_config=func_config)
+        def CastJob(
+            x: oft.Numpy.Placeholder((20, 30))
+        ) -> oft.Numpy:
+            res = flow.cast(x, dtype=flow.int32)
+            return res
 
-        y_eager = flow.cast(a, dtype=flow.int8)
-
-        class CastGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-
-            def build(self, a):
-                return flow.cast(a, dtype=flow.int8)
-
-        cast_g = CastGraph()
-        y_lazy = cast_g(a)
-
-        # for i in range(100):
-        #     y_lazy = conv2d_g(x)
-
-        test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
-
+        x = np.random.rand(20, 30).astype(np.float32) - 1
+        res = CastJob(x)
 
 if __name__ == "__main__":
     unittest.main()
