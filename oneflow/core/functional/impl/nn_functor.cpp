@@ -1836,8 +1836,6 @@ class FusedBiasAddDropoutFunctor {
                                                    .Input("mask")
                                                    .Output("out")
                                                    .Build());
-    bias_add_op_ =
-        CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
@@ -1877,7 +1875,6 @@ class FusedBiasAddDropoutFunctor {
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
-  std::shared_ptr<OpExpr> bias_add_op_;
 };
 
 class FusedScaleTrilFunctor {
