@@ -47,7 +47,12 @@ class BiasAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = x->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    JUST(attrs.SetAttr<int32_t>("axis", axis_val));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
   }
 
@@ -1831,6 +1836,8 @@ class FusedBiasAddDropoutFunctor {
                                                    .Input("mask")
                                                    .Output("out")
                                                    .Build());
+    bias_add_op_ =
+        CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
@@ -1845,23 +1852,32 @@ class FusedBiasAddDropoutFunctor {
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
-    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-
-    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-             return OpInterpUtil::Dispatch<Tensor>(
-                 *random_mask_like_op_, {a},
-                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
-           })
-        .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
-                                                fused_bias_add_mask_attrs);
-        })
-        .call();
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = a->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis_val));
+    if (p >= 0.0) {
+      return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+               return OpInterpUtil::Dispatch<Tensor>(
+                   *random_mask_like_op_, {a},
+                   OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+             })
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                  fused_bias_add_mask_attrs);
+          })
+          .call();
+    } else {
+      return functional::BiasAdd(a, b, axis_val);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
+  std::shared_ptr<OpExpr> bias_add_op_;
 };
 
 class FusedScaleTrilFunctor {
