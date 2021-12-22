@@ -465,7 +465,7 @@ Maybe<void> Operator::GetSbpSignaturesIf(
       .Broadcast(input_bns())
       .Broadcast(output_bns())
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  FilterAndCheckSbpSignature4bn(sbp_sig_list);
+  JUST(FilterAndCheckSbpSignature4bn(sbp_sig_list));
   return Maybe<void>::Ok();
 }
 
@@ -711,7 +711,7 @@ Maybe<void> Operator::FilterAndCheckSbpSignature4bn(cfg::SbpSignatureList* sbp_s
       << "0 candidate before filter in " << op_name();
   int32_t sbp_size = sbp_sig_list->sbp_signature(0).bn_in_op2sbp_parallel_size();
   int32_t bn_size = input_bns().size() + output_bns().size();
-  CHECK_GT_OR_RETURN(sbp_size, bn_size) << " some blob don not have sbp in " << op_name();
+  CHECK_GE_OR_RETURN(sbp_size, bn_size) << " some blob do not have sbp in " << op_name();
   // Might change filter to CHECK if all the operators are set up properly.
   if (sbp_size > bn_size) {
     cfg::SbpSignatureList filtered_sbp_sig_list;

@@ -205,6 +205,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
 Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job) {
   // Steal some strategy from original op graph
   for (auto* sbp_node : sbp_graph_.NodeList) {
+    // sbp_collectors do not have op_node
     if (sbp_node->op_node) {
       for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureObjList.size(); sbp_id++) {
         if (*JUST(sbp_node->op_node->op().nd_sbp_signature())
