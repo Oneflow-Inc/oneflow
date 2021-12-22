@@ -37,9 +37,12 @@ class TestGraphResueVar(flow.unittest.TestCase):
                 super().__init__()
                 self.linear1 = flow.nn.Linear(2, 2)
                 self.linear2 = flow.nn.Linear(2, 2)
+                # Reuse parameter
                 self.linear2.weight = self.linear1.weight
 
             def forward(self, x):
+                # Allow user to call parameter outside it's module.
+                self.linear1.weight
                 x = self.linear1(x)
                 x = self.linear2(x)
                 return x
