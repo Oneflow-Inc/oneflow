@@ -35,6 +35,30 @@ class ReplaceEmbeddingOps final : public JobPass {
 };
 
 Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
+  auto AddScheduleOp = [&](const OptimizerConf& optimizer_conf,
+                           const std::string& op_name) -> std::string {
+    const class oneflow::OpNode* op_node =
+        op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
+    CHECK_OR_RETURN(op_node != nullptr) << "op node not found in op graph, op name: " << op_name;
+    const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
+    OperatorConf schedule_op_conf{};
+    schedule_op_conf.set_name(op_name);
+    auto* schedule_conf = schedule_op_conf.mutable_learning_rate_schedule_conf();
+    schedule_conf->set_train_step(train_conf.train_step_lbn());
+    schedule_conf->set_learning_rate(optimizer_conf.base_learning_rate());
+    schedule_conf->set_out("out");
+    if (optimizer_conf.has_warmup_conf()) {
+      *schedule_conf->mutable_warmup_conf() = optimizer_conf.warmup_conf();
+    }
+    if (optimizer_conf.has_learning_rate_decay()) {
+      *schedule_conf->mutable_learning_rate_decay() = optimizer_conf.learning_rate_decay();
+    }
+    schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
+    job_builder->AddOps(parallel_conf, {schedule_op_conf});
+    return GenLogicalBlobName(op_name, schedule_conf->out());
+  };
+
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -130,9 +154,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
     // add_ops.push_back(embedding_shuffle_op.op_conf());
-    job_builder->MutOpOnlyOnce(embedding_shuffle_op.op_conf());
-
     // delete_op_names.push_back(user_op_conf.op_name());
+    job_builder->MutOpOnlyOnce(embedding_shuffle_op.op_conf());
 
     LogicalBlobId ids_lbi = GenLogicalBlobId(user_op_conf.input("ids", 0));
     const OpNode* producer = op_graph.OpNode4OpName(ids_lbi.op_name());
@@ -167,6 +190,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         add_ops.push_back(embedding_gradient_shuffle_op.op_conf());
 
         // embedding_update op
+        // optimizer_conf as embedding param, now use train_conf.optimizer_conf(0) to test
+        const auto& optimizer_conf = train_conf.optimizer_conf(0);
+        const std::string& learning_rate_lbn =
+            AddScheduleOp(optimizer_conf, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
         user_op::UserOpConfWrapperBuilder sgd_embedding_update_op_builder(
             user_op_conf.op_name() + "_sgd_embedding_update");
         user_op::UserOpConfWrapper sgd_embedding_update_op =
@@ -178,7 +205,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
                 .Input("embedding_diff",
                        embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0))
-                .Input("train_step", job_builder->job().job_conf().train_conf().train_step_lbn())
+                .Input("learning_rate", learning_rate_lbn)
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
                 .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
@@ -195,9 +222,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     // OperatorConf new_op_conf = op_conf;
     // new_op_conf.set_stream_name_hint("EMBEDDING");
   });
-  srand((unsigned)time(NULL));
-  int job_id = rand();
-  TeePersistentLogStream::Create(StrCat("my_optimized_job", job_id))->Write(job_builder->job());
   return Maybe<void>::Ok();
 }
 
