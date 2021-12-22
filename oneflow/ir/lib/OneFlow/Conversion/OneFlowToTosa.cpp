@@ -46,14 +46,15 @@ struct MatMulOpLowering final : public OpConversionPattern<MatmulOp> {
 
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(
-        op,
-        /* output */
-        op->getResultTypes().front().cast<TensorType>(),
-        /* a  */
-        RankedTensorType::get({1, 1}, op.a().getType().cast<TensorType>().getElementType()),
-        /* b */
-        RankedTensorType::get({1, 1}, op.b().getType().cast<TensorType>().getElementType()));
+    op.a().dump();
+    op.b().dump();
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op,
+                                                /* output */
+                                                op->getResultTypes().front().cast<TensorType>(),
+                                                /* a  */
+                                                op.a(),
+                                                /* b */
+                                                op.b());
     return success();
   }
 };
