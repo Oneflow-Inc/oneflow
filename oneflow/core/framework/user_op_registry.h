@@ -133,8 +133,7 @@ class OpRegistry final {
   OpRegistryResult GetResult() { return result_; }
 
  private:
-  OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
-                      bool num_as_min);
+  OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional);
   OpRegistry& DefaultedAttr(const std::string& name, AttrType type,
                             const std::function<void(UserOpDef::AttrDef*)>& SetDefault);
 
