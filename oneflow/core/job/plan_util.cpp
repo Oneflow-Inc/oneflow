@@ -260,6 +260,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     if (is_variable_regst) {
       CHECK(!var_name.empty());
       CHECK_EQ(regst_desc->register_num(), 1);
+      // TODO(chengcheng, wyg): some wrong with these checks in auto_parallel
       // CHECK_EQ(regst_desc->min_register_num(), 1);
       // CHECK_EQ(regst_desc->max_register_num(), 1);
       regst_desc->set_variable_op_name(var_name);
