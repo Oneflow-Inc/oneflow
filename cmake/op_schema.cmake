@@ -65,6 +65,10 @@ elseif(LLVM_PROVIDER STREQUAL "install")
     set(ONEFLOW_TABLE_GEN_TARGET ${ONEFLOW_TABLE_GEN_EXE})
 endif()
 
+file(GLOB_RECURSE ODS_FILES LIST_DIRECTORIES false "${SOURCE_IR_INCLUDE_DIR}/*.td")
+if(NOT ODS_FILES)
+    message(FATAL_ERROR "ODS_FILES not found: ${ODS_FILES}")
+endif()
 add_custom_command(
     OUTPUT ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP}
     COMMAND ${CMAKE_COMMAND}
@@ -74,9 +78,8 @@ add_custom_command(
     COMMAND ${ONEFLOW_TABLE_GEN_EXE}
     ARGS --gen-op-schema-cpp ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS}
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
-    DEPENDS ${ONEFLOW_TABLE_GEN_TARGET} ${ONEFLOW_ODS}
-            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOps.td
-            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowUserOps.td
+    DEPENDS ${ONEFLOW_TABLE_GEN_TARGET}
+            ${ODS_FILES}
     VERBATIM
 )
 set_source_files_properties(
