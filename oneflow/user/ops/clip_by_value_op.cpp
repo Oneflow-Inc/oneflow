@@ -83,7 +83,7 @@ Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
   }                                                                                              \
                                                                                                  \
   /* static */ Maybe<void> op_class_name_prefix##Op::InferDataType(user_op::InferContext* ctx) { \
-    return InferClipGradDataType(ctx);                                                           \
+    return InferClipTensorDataType(ctx);                                                         \
   }                                                                                              \
   /* static */ Maybe<void> op_class_name_prefix##GradOp::InferLogicalTensorDesc(                 \
       user_op::InferContext* ctx) {                                                              \
