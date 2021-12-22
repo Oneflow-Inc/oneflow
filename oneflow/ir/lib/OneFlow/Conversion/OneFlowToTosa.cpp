@@ -110,13 +110,11 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
-  std::cout << "lower begin" << std::endl;
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering, MatMulOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
   }
-  std::cout << "lower end" << std::endl;
 }
 
 }  // namespace oneflow

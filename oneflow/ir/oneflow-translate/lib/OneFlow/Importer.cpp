@@ -946,9 +946,6 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   }
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
   auto* producer_op = result.getDefiningOp();
-  producer_op->dump();
-  std::cout << result.getResultNumber() << std::endl;
-  producer_op->getAttrOfType<ArrayAttr>("output_lbns").dump();
 
   auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
   output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
