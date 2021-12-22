@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -179,17 +180,7 @@ bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sb
 }
 
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
-  std::string sbp_str = "";
-  if (sbp_parallel.has_broadcast_parallel()) {
-    sbp_str = "B";
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    sbp_str = "P";
-  } else if (sbp_parallel.has_split_parallel()) {
-    sbp_str = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return sbp_str;
+  return SbpToString(sbp_parallel);
 }
 
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
@@ -227,9 +218,9 @@ void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
   }
 }
 
-Maybe<std::string> StringifySbpSignatureList(const PbRpf<std::string>& inputs,
-                                             const PbRpf<std::string>& outputs,
-                                             const cfg::SbpSignatureList& sbp_signatures) {
+Maybe<std::string> SbpSignatureListAsString(const cfg::SbpSignatureList& sbp_signatures,
+                                            const PbRpf<std::string>& inputs,
+                                            const PbRpf<std::string>& outputs) {
   std::ostringstream ss;
   if (sbp_signatures.sbp_signature_size() == 0) { return ss.str(); }
 
@@ -264,17 +255,6 @@ Maybe<std::string> StringifySbpSignatureList(const PbRpf<std::string>& inputs,
       return SbpParallelToString(it->second);
     }));
     ss << ",\n";
-  }
-  ss << "]";
-  return ss.str();
-}
-
-std::string StringifyNdSbp(const cfg::NdSbp& nd_sbp) {
-  std::ostringstream ss;
-  ss << "[";
-  for (size_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
-    ss << SbpParallelToString(nd_sbp.sbp_parallel(i));
-    if (i != nd_sbp.sbp_parallel_size() - 1) { ss << ", "; }
   }
   ss << "]";
   return ss.str();
