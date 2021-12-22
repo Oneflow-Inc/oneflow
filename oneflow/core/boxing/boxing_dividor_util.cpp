@@ -74,9 +74,32 @@ Maybe<BoxingDividor> RawFlattenInHierarchy() {
       });
 }
 
+Maybe<Symbol<PlacedNdSbp>> RawStackHierarchy(Symbol<PlacedNdSbp> in_placed_nd_sbp,
+                                             Symbol<PlacedNdSbp> out_placed_nd_sbp) {
+  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  const auto& in_sbp_parallel = in_placed_nd_sbp->nd_sbp()->sbp_parallel(0);
+  cfg::NdSbp stacked_nd_sbp;
+  for (int64_t i = 0; i < out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {
+    stacked_nd_sbp.mutable_sbp_parallel()->Add()->CopyFrom(in_sbp_parallel);
+  }
+  return JUST(PlacedNdSbp::New(stacked_nd_sbp, out_placed_nd_sbp->placement()));
+}
+
+static constexpr auto* StackHierarchy = DECORATE(&RawStackHierarchy, ThreadLocal);
+
+Maybe<BoxingDividor> RawStackInHierarchy() {
+  return std::make_shared<BoxingDividor>(
+      "StackInHierarchy",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return StackHierarchy(in, out);
+      });
+}
+
 }  // namespace
 
 decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarchy, ThreadLocal);
+decltype(StackInHierarchy) StackInHierarchy = DECORATE(&RawStackInHierarchy, ThreadLocal);
 
 namespace {
 
