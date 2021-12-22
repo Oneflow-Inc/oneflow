@@ -239,16 +239,17 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<FuncOp>(
-      createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
-  pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());
-  pm.addPass(createCanonicalizerPass());  // canonicalize
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());
+      createConvertLinalgToParallelLoopsPass());             // convert-linalg-to-parallel-loops
+  pm.addPass(createMapSCFToGPUPass());                       // gpu-greedy-parallel-loop-mapping
+  pm.addPass(createParallelLoopToGpuPass());                 // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuKernelOutliningPass());                // gpu-kernel-outlining
+  pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
+  pm.addPass(createCanonicalizerPass());                     // canonicalize
+  // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
+  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
+  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
   pm.addPass(createGpuToLLVMConversionPass());
   return pm.run(module);
 }

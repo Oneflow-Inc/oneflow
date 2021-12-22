@@ -2,10 +2,11 @@
 // RUN:   -gpu-kernel-outlining -buffer-host-register  \
 // RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
 // RUN:   -gpu-to-llvm \
-// RUN: | mlir-cpu-runner \
+// RUN: | oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
-// RUN:   --entry-point-result=void
+// RUN:   --entry-point-result=void \
+// RUN: | FileCheck %s
 func @main() {
   %data = memref.alloc() : memref<2x6xi32>
   %sum = memref.alloc() : memref<2xi32>
