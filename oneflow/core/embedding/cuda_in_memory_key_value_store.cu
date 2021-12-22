@@ -330,8 +330,8 @@ void KeyValueStoreImpl<Encoder, Key, Elem>::Get(ep::Stream* stream, uint32_t num
                                                 const void* keys, void* values, uint32_t* n_missing,
                                                 void* missing_keys, uint32_t* missing_indices,
                                                 uint64_t* context) {
-  OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(n_missing),
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(
+      cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   encoder_.template Encode<false>(stream, num_keys, static_cast<const Key*>(keys), context);
   const uint32_t values_elem_cnt = num_keys * value_length_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem>), stream, values_elem_cnt, value_length_, num_keys_,

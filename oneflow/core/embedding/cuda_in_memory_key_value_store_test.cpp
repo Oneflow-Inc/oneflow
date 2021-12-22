@@ -99,6 +99,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaFree(values));
   OF_CUDA_CHECK(cudaFreeHost(keys_host));
   OF_CUDA_CHECK(cudaFreeHost(values_host));
+  OF_CUDA_CHECK(cudaFree(n_missing));
   OF_CUDA_CHECK(cudaFree(missing_keys));
   OF_CUDA_CHECK(cudaFree(missing_indices));
   CHECK_JUST(stream->Sync());
