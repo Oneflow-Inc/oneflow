@@ -5,7 +5,8 @@
 // RUN: | oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
-// RUN:   --entry-point-result=void
+// RUN:   --entry-point-result=void \
+// RUN: | FileCheck %s
 func @main() {
   %data = memref.alloc() : memref<2x6xi32>
   %sum = memref.alloc() : memref<2xi32>
