@@ -68,10 +68,10 @@ class {{opname}} : public OpBase {
   static Maybe<void> CheckAttr(const user_op::UserOpDefWrapper&, const user_op::UserOpConfWrapper&);
   {% endif -%}
 
-  {% for name, attr in op.attrs -%}
-  virtual const {{attr.type}}& {{name}}() const = 0;
-  virtual {{attr.type}}* mutable_{{name}}() = 0;
-  virtual void set_{{name}}(const {{attr.type}}& {{name}}) = 0;
+  {% for attr in op.attrs -%}
+  virtual const {{attr.type}}& {{attr.name}}() const = 0;
+  virtual {{attr.type}}* mutable_{{attr.name}}() = 0;
+  virtual void set_{{attr.name}}(const {{attr.type}}& {{attr.name}}) = 0;
 
   {% endfor -%}
   const HashSet<std::string>& AttrNames() const;
@@ -80,18 +80,18 @@ class {{opname}} : public OpBase {
 namespace schema {
 class {{opname}} : public oneflow::{{opname}} {
  public:
-  {% for name, attr in op.attrs -%}
-  const {{attr.type}}& {{name}}() const override { return {{name}}_; }
-  {{attr.type}}* mutable_{{name}}() override { return &{{name}}_; }
-  void set_{{name}}(const {{attr.type}}& {{name}}) override { {{name}}_ = {{name}}; }
+  {% for attr in op.attrs -%}
+  const {{attr.type}}& {{attr.name}}() const override { return {{attr.name}}_; }
+  {{attr.type}}* mutable_{{attr.name}}() override { return &{{attr.name}}_; }
+  void set_{{attr.name}}(const {{attr.type}}& {{attr.name}}) override { {{attr.name}}_ = {{attr.name}}; }
 
   {% endfor -%}
 
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override;
 
  private:
-  {% for name, attr in op.attrs -%}
-  {{attr.type}} {{name}}_{% if existsIn(attr, "default") %} = {{attr.default}}{% endif %};
+  {% for attr in op.attrs -%}
+  {{attr.type}} {{attr.name}}_{% if existsIn(attr, "default") %} = {{attr.default}}{% endif %};
   {% endfor %}
 };
 }  // namespace schema
