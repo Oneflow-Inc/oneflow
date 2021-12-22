@@ -184,8 +184,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   if (out_parallel_id->has_value()) {
     const auto& nd_sbp = JUST(tensor->nd_sbp());
     const auto& parallel_desc = JUST(tensor->parallel_desc());
-    CHECK_OR_RETURN(nd_sbp == out_nd_sbp) << ". nd_sbp: " << *JUST(NdSbpToString(nd_sbp))
-                                          << ", out_nd_sbp" << *JUST(NdSbpToString(out_nd_sbp));
+    CHECK_OR_RETURN(nd_sbp == out_nd_sbp)
+        << ". nd_sbp: " << NdSbpToString(nd_sbp) << ", out_nd_sbp" << NdSbpToString(out_nd_sbp);
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {
