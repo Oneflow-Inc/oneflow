@@ -33,7 +33,7 @@ from collections import OrderedDict
 
 @flow.unittest.skip_unless_1n1d()
 class TestMLIROptimizations(flow.unittest.TestCase):
-    @unittest.skip("")
+    # @unittest.skip("")
     def test_cpu(self):
         d = OrderedDict(
             {
@@ -46,12 +46,12 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         for arg in GenArgDict(d):
             self.run_fuse_cast_scale_mlir(**arg)
 
-    # @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
-    @unittest.skip("")
+    @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
+    # @unittest.skip("")
     def test_gpu(self):
         d = OrderedDict(
             {
-                "shape": [(3, 3)],
+                "shape": [(96, 96)],
                 "in_type": [flow.int64],
                 "out_type": [flow.float32],
                 "device": ["gpu"],

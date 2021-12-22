@@ -214,8 +214,10 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<FuncOp>(createTensorBufferizePass());  // tensor-bufferize
   pm.addPass(createTensorConstantBufferizePass());        // tensor-constant-bufferize
   pm.addPass(createFuncBufferizePass());                  // func-bufferize
-  pm.addPass(createBufferResultsToOutParamsPass());       // buffer-results-to-out-params
-  pm.addPass(createCanonicalizerPass());                  // canonicalize
+  // TODO: update the invoke to the version with result
+  // NOTE: comment the pass below to prevent segfault of memref copy
+  // pm.addPass(createBufferResultsToOutParamsPass());       // buffer-results-to-out-params
+  pm.addPass(createCanonicalizerPass());  // canonicalize
   pm.addNestedPass<FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
