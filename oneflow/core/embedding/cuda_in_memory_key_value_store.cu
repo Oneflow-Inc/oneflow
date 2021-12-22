@@ -305,7 +305,8 @@ class KeyValueStoreImpl : public KeyValueStore {
   }
   ~KeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFree(device_values_));
+    const size_t device_values_size = num_device_keys_ * value_length_ * sizeof(Elem);
+    if (device_values_size > 0) { OF_CUDA_CHECK(cudaFree(device_values_)); }
     OF_CUDA_CHECK(cudaFreeHost(host_values_));
   }
 

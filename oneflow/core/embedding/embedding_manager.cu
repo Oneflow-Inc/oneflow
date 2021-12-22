@@ -45,7 +45,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   options.num_shards = 4;
   options.value_length = 128;
   options.num_keys = 1024 * 1024;
-  options.num_device_keys = 1024 * 128;
+  options.num_device_keys = 0;
   options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
   std::unique_ptr<embedding::KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
