@@ -68,6 +68,20 @@ __global__ void InitValueKernel(const int64_t embedding_size, const uint32_t* nu
 }
 
 template<typename T, typename K>
+__global__ void ScatterKernel(const int64_t embedding_size, const T* missing_values,
+                              const uint32_t* num_missing_keys, const K* missing_keys,
+                              const uint32_t* missing_indices, T* values) {
+  for (int row = blockIdx.x; row < *num_missing_keys; row += gridDim.x) {
+    const uint32_t index = missing_indices[row];
+    for (int col = threadIdx.x; col < embedding_size; col += blockDim.x) {
+      const int64_t missing_offset = row * embedding_size + col;
+      const int64_t offset = index * embedding_size + col;
+      values[offset] = missing_values[missing_offset];
+    }
+  }
+}
+
+template<typename T, typename K>
 class PrefetchTmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PrefetchTmpBufferManager);
@@ -347,19 +361,23 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
     LOG(ERROR) << "num_cache_missing" << *host_num_keys;
-    if (*host_num_keys != 0) {
-      store->Get(ctx->stream(), *host_num_keys, buffer_manager.CacheMissingKeysPtr(),
+    uint32_t num_cache_missing = *host_num_keys;
+    if (num_cache_missing != 0) {
+      LOG(ERROR) << "num_cache_missing != 0 " << num_cache_missing;
+      store->Get(ctx->stream(), num_cache_missing, buffer_manager.CacheMissingKeysPtr(),
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
                  buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
-                 reinterpret_cast<uint64_t*>(context->mut_dptr()));
-      copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheMissingPtr(),
-                              sizeof(uint32_t));
+                 reinterpret_cast<uint64_t*>(out_context->mut_dptr()));
+      copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumStoreMissingPtr(),
+                                sizeof(uint32_t));
       CHECK_JUST(ctx->stream()->Sync());
-      CHECK_GT(*host_num_keys, 0); //we think keys must be in cache or kv_store.
-      //scatter
-
+      CHECK_EQ(*host_num_keys, 0);  // we think keys must be in cache or kv_store.
+      ScatterKernel<T, K><<<BlocksNum4ThreadsNum(num_cache_missing), embedding_size, 0,
+                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          embedding_size, buffer_manager.StoreValuesPtr(), buffer_manager.NumCacheMissingPtr(),
+          buffer_manager.CacheMissingKeysPtr(), buffer_manager.CacheMissingIndicesPtr(),
+          embeddings->mut_dptr<T>());
     }
-    
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
