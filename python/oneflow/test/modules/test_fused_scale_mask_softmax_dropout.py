@@ -36,7 +36,9 @@ def _test_fused_scale_mask_softmax_dropout(
     p,
     broadcast_dim,
 ):
-    x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
+    x = np.random.randn(batch_size, num_heads, seq_length, seq_length).astype(
+        np.float32
+    )
     mask_size = [batch_size, num_heads, seq_length, seq_length]
     if broadcast_dim == 3:
         mask_size[0] = 1
@@ -95,7 +97,8 @@ class TestFusedScaleMaskSoftmaxDropout(flow.unittest.TestCase):
         args_dict["fill_value"] = [-10000.0]
         args_dict["scale_value"] = [1.0, 2.0, 4.0]
         args_dict["p"] = [0.0, 1.0]
-        args_dict["broadcast_dim"] = [-1, 0, 1, 2, 3]
+        # args_dict["broadcast_dim"] = [-1, 0, 1, 2, 3]
+        args_dict["broadcast_dim"] = [3]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
