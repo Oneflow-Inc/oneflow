@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestStackModule(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_stack_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
