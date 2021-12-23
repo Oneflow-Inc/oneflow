@@ -114,8 +114,8 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"
-                              << ". from_nd_sbp: " << *JUST(NdSbpToString(in_nd_sbp))
-                              << ", to_nd_sbp: " << *JUST(NdSbpToString(out_nd_sbp))
+                              << ". from_nd_sbp: " << NdSbpToString(in_nd_sbp)
+                              << ", to_nd_sbp: " << NdSbpToString(out_nd_sbp)
                               << ", from_placement: " << *JUST(PlacementToString(in_parallel_desc))
                               << ", to_placement: " << *JUST(PlacementToString(out_parallel_desc));
 }
