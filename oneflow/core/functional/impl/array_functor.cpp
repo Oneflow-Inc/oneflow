@@ -429,9 +429,8 @@ class BroadcastLikeFunctor {
 class ConcatFunctor {
  public:
   ConcatFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("concat").Input("in", 1).Output("out").Build());
     ops_.resize(kMaxInputCount);
-    for (int n = 1; n < ops_.size(); ++n) {
+    for (int n = 0; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
     }
   }
@@ -465,18 +464,12 @@ class ConcatFunctor {
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
     TensorTuple outputs;
-    if (ninput == 1) {
-      TensorTuple input_tuple(1);
-      input_tuple[0] = inputs[0];
-      outputs.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs)));
-    } else {
-      for (int i = 0; i < ninput; i += kMaxInputCount) {
-        size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
-        TensorTuple partial_inputs(size);
-        for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-        outputs.emplace_back(
-            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
-      }
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      outputs.emplace_back(
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -484,7 +477,6 @@ class ConcatFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
