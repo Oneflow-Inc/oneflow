@@ -53,7 +53,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   }
   // A piece of code to generator the current sbp transfer table
   if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "================================================" << std::endl;
+    std::cout << "====================original copy cost====================" << std::endl;
     // Generate possible sbp parallel list
     std::vector<cfg::SbpParallel> sbp_lists;
     cfg::SbpParallel sbp;
@@ -80,6 +80,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     // other parameters
     Shape hierarchy44({8, 2});
     std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
+    double logical_blob_size = 1024.0;
 
     // Store the origin transfer cost information
     int32_t n = nd_sbp_lists.size();
@@ -88,12 +89,12 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
       origin_copy_cost[i].resize(n);
       for (int32_t j = 0; j < n; j++) {
         origin_copy_cost[i][j] = JUST(ComputCopyCostBetweenNdSbp(
-            nd_sbp_lists[i], nd_sbp_lists[j], 1024.0, in_hierarchy, in_hierarchy));
+            nd_sbp_lists[i], nd_sbp_lists[j], logical_blob_size, in_hierarchy, in_hierarchy));
       }
     }
 
     // Print the origin copy cost table
-    std::cout << "\t";
+    std::cout << "Cost\t";
     for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
     std::cout << std::endl;
     for (int32_t i = 0; i < n; i++) {
@@ -107,6 +108,92 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
       }
       std::cout << std::endl;
     }
+
+    std::cout << std::endl;
+    std::cout << "Original Copy Cost" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
+
+    std::cout << "===================minimum copy cost==================" << std::endl;
+
+    // Compute the smallest transfer cost
+    std::vector<std::vector<double>> minimum_copy_cost(origin_copy_cost);
+    for (int32_t i = 0; i < n; i++) {
+      for (int32_t j = 0; j < n; j++) {
+        if (origin_copy_cost[i][j] < cut_cost) { continue; }
+        for (int32_t k = 0; k < n; k++) {
+          double curr_copy_cost = origin_copy_cost[i][k] + origin_copy_cost[k][j];
+          if (curr_copy_cost < minimum_copy_cost[i][j]) {
+            minimum_copy_cost[i][j] = curr_copy_cost;
+          }
+        }
+      }
+    }
+
+    // Print the minimum copy cost table
+    std::cout << "Cost\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (minimum_copy_cost[i][j] > cut_cost) {
+          std::cout << "X\t";
+        } else {
+          std::cout << minimum_copy_cost[i][j] << "\t";
+        }
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+    std::cout << "Minimum Copy Cost after first search" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
+
+    std::cout << "============================middle nodes===========================" << std::endl;
+    // Pick the middle nodes with the minimum copy cost
+    std::vector<std::vector<std::vector<int32_t>>> middle_nodes(n);
+    for (int32_t i = 0; i < n; i++) {
+      middle_nodes[i].resize(n);
+      for (int32_t j = 0; j < n; j++) {
+        if (origin_copy_cost[i][j] < cut_cost) { continue; }
+        for (int32_t k = 0; k < n; k++) {
+          double curr_copy_cost = origin_copy_cost[i][k] + origin_copy_cost[k][j];
+          if (curr_copy_cost < cut_cost && curr_copy_cost == minimum_copy_cost[i][j]) {
+            middle_nodes[i][j].push_back(k);
+          }
+        }
+      }
+    }
+
+    // Print the middle nodes
+    std::cout << "Middle Sbp\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (origin_copy_cost[i][j] > cut_cost) {
+          if (middle_nodes[i][j].size() == 0) {
+            std::cout << "X";
+          } else {
+            std::cout << NdSbpParallelToString(nd_sbp_lists[middle_nodes[i][j][0]]);
+            for (int32_t k = 1; k < middle_nodes[i][j].size(); k++) {
+              std::cout << ", " << NdSbpParallelToString(nd_sbp_lists[middle_nodes[i][j][k]]);
+            }
+          }
+        }
+        std::cout << "\t";
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+    std::cout << "Minimum Copy Cost after first search" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
+
     std::cout << "================================================" << std::endl;
   }
   JUST(InitCopyCost(op_graph));
