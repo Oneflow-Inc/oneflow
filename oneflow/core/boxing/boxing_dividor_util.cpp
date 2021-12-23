@@ -96,11 +96,21 @@ Maybe<BoxingDividor> RawUnflattenInHierarchy() {
       });
 }
 
+Maybe<BoxingDividor> RawUnflattenOutHierarchy() {
+  return std::make_shared<BoxingDividor>(
+      "UnflattenOutHierarchy",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return UnflattenHierarchy(out, in);
+      });
+}
+
 }  // namespace
 
 decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarchy, ThreadLocal);
 decltype(UnflattenInHierarchy) UnflattenInHierarchy =
     DECORATE(&RawUnflattenInHierarchy, ThreadLocal);
+decltype(UnflattenOutHierarchy) UnflattenOutHierarchy =
+    DECORATE(&RawUnflattenOutHierarchy, ThreadLocal);
 
 namespace {
 

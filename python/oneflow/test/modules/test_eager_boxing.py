@@ -3189,10 +3189,7 @@ class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
         )
         test_case.assertEqual(z.placement, placement2)
         test_case.assertTrue(
-            np.array_equal(
-                z.to_local().numpy(),
-                np.ones((2, 8), dtype=np.int32),
-            )
+            np.array_equal(z.to_local().numpy(), np.ones((2, 8), dtype=np.int32),)
         )
 
 
