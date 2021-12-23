@@ -2024,16 +2024,16 @@ class ChunkFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& chunks,
                                 const int64_t& dim) const {
     int64_t axis = dim;
-    int64_t split_size = x->shape()->At(dim) / chunks;
-    int64_t dim_size = x->shape()->At(axis);
     if (axis < 0) { axis += x->ndim(); }
+    int64_t split_size = x->shape()->At(axis) / chunks;
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
         << "Dimension out of range (expected to be in range of [" << -(x->ndim()) << ", "
         << x->ndim() - 1 << "], but got " << dim;
-    if ((split_size * chunks) != x->shape()->At(dim)) {
+    int64_t dim_size = x->shape()->At(axis);
+    if ((split_size * chunks) != dim_size) {
       std::vector<int64_t> sections;
       for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
-      sections.emplace_back(x->shape()->At(dim) - split_size * (chunks - 1));
+      sections.emplace_back(dim_size - split_size * (chunks - 1));
       int64_t num_splits = sections.size();
       TensorTuple splits(num_splits);
       int64_t start_idx = 0;
