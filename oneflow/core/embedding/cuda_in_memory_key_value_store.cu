@@ -140,6 +140,7 @@ __device__ bool GetOne(const size_t capacity, TableEntry<Key, Index>* table, Key
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     TableEntry<Key, Index> entry = table[idx];
+    if (entry.key == 0) { break; }
     if (entry.key == key) {
       *out = entry.index;
       return true;
