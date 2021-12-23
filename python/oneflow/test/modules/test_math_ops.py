@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from numpy.core.fromnumeric import ndim
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *

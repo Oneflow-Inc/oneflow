@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from numpy.core.fromnumeric import ndim
 
 from oneflow.test_utils.automated_test_util import *
 from test_util import GenArgList
@@ -106,11 +107,30 @@ class TestLess(flow.unittest.TestCase):
         return y
 
     @autotest(n=60, auto_backward=False, check_graph=False)
+    def test_less_with_0dim_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(ndim=0).to(device)
+        x2 = random_pytorch_tensor(ndim=0).to(device)
+        y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
+        return y
+
+    @autotest(n=60, auto_backward=False, check_graph=False)
     def test_tensor_less_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
         x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y1 = x1.lt(oneof(x2, random().to(int), random().to(float)))
+        y2 = x1 < x2
+        return (y1, y2)
+
+    @autotest(n=60, auto_backward=False, check_graph=False)
+    def test_tensor_less_with_0dim_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(ndim=0).to(device)
+        x2 = random_pytorch_tensor(ndim=0).to(device)
         y1 = x1.lt(oneof(x2, random().to(int), random().to(float)))
         y2 = x1 < x2
         return (y1, y2)
