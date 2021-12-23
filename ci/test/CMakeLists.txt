@@ -14,7 +14,12 @@ foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
   set_tests_properties(${TEST_NAME}
     PROPERTIES
       ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>"
-    RESOURCE_GROUPS
-      "vram:2000"
+      RESOURCE_GROUPS
+        "vram:2000"
   )
 endforeach()
+set_tests_properties(python/oneflow/test/modules/test_rnn.py
+  PROPERTIES
+    RESOURCE_GROUPS
+      "vram:4000"
+)
