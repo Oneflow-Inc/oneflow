@@ -90,7 +90,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
-    // check consistency placment and nd_sbp
+    // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
+    // InferSbp in op is a deterministic algorithm
     const auto& nd_sbp = JUST(ctx.nd_sbp);
     JUST(PlacementConsistencyCheck(parallel_desc));
     JUST(NdSbpConsistencyCheck(nd_sbp));
