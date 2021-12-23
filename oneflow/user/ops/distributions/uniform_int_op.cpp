@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -26,14 +27,26 @@ REGISTER_NO_GRAD_USER_OP("uniform_int")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::vector<std::string>>("nd_sbp")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& shape = ctx->Attr<Shape>("shape");
-      DimVector dim_vec;
-      if (shape.NumAxes() > 0) {
-        dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
+      DimVector dim_vec{shape.dim_vec()};
+
+      const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      if (out_sbp_para.has_split_parallel()) {
+        const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
+        if (parallel_num > 1) {
+          const int64_t& split_axis = out_sbp_para.split_parallel().axis();
+          CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
+          BalancedSplitter bs(shape.At(split_axis), parallel_num);
+          dim_vec[split_axis] = bs.At(ctx->parallel_ctx().parallel_id()).size();
+        }
       }
-      *out_shape = Shape(dim_vec);
+
+      *ctx->OutputShape("out", 0) = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
