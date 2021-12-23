@@ -281,6 +281,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["to", "tensor", "_to", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
+
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -293,10 +294,18 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g_res = test_g(*oneflow_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
-                                # "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module brach graph test, such as test_fold.py.
-                                # inspect.isfunction(oneflow): For op graph test like addmm.
-                                # inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op graph test like masked_fill.
-                                elif  "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow) or (inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__):
+                                # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module brach graph test, like fold op call Fold Module actually.
+                                # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
+                                # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
+                                elif (
+                                    "oneflow.nn.modules" not in oneflow.__module__
+                                    or inspect.isfunction(oneflow)
+                                    or (
+                                        inspect.ismethod(oneflow)
+                                        and "oneflow.nn.modules" in oneflow.__module__
+                                    )
+                                ):
+
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -353,6 +362,7 @@ def GetDualObject(name, pytorch, oneflow):
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
+
                             class TestGraphOfTensorMethod(flow.nn.Graph):
                                 def __init__(self):
                                     super().__init__()
@@ -361,6 +371,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     return oneflow_method(
                                         *oneflow_args, **oneflow_kwargs
                                     )
+
                             test_g = TestGraphOfTensorMethod()
                             test_g_res = test_g()
                             if isinstance(test_g_res, tuple):
@@ -369,9 +380,7 @@ def GetDualObject(name, pytorch, oneflow):
                                         oneflow_res[idx]
                                     ] = g_res
                             else:
-                                eager_tensor_2_graph_tensor[
-                                    oneflow_res
-                                ] = test_g_res
+                                eager_tensor_2_graph_tensor[oneflow_res] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
