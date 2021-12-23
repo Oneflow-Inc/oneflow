@@ -29,6 +29,8 @@ embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parall
   options.line_size = line_size;
   options.log2_n_set = 8;
   options.max_query_length = 65536;
+  options.key_type = DataType::kInt64;
+  options.value_type = DataType::kFloat;
   std::unique_ptr<embedding::Cache> cache = embedding::NewCudaLruCache(options);
   auto pair = cache_map_.emplace(map_key, std::move(cache));
   CHECK(pair.second);
@@ -46,6 +48,8 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   options.value_length = 128;
   options.num_keys = 1024 * 1024;
   options.num_device_keys = 0;
+  options.key_type = DataType::kInt64;
+  options.value_type = DataType::kFloat;
   options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
   std::unique_ptr<embedding::KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
