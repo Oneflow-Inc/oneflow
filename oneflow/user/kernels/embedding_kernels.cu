@@ -33,6 +33,7 @@ void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, s
   CHECK(copyd2h_primitive);
   copyd2h_primitive->Launch(stream, host_ptr, ptr, data_size);
   CHECK_JUST(stream->Sync());
+  OF_CUDA_CHECK(cudaGetLastError());
   std::ofstream dx_os;
   dx_os.open(StrCat("test/" + filename + "_", parallel_id));
   dx_os.write(reinterpret_cast<char*>(host_ptr), data_size);
@@ -198,6 +199,20 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   void* host_num_keys_;
 };
 
+template<typename T, typename K>
+void DebugEmbeddingPrefetch(user_op::KernelComputeContext* ctx, uint32_t num_keys,
+                            const PrefetchTmpBufferManager<T, K>& buffer_manager) {
+  const int64_t embedding_size = 128;
+  DumpToFile(ctx->stream(), "NumStoreMissingPtr", ctx->parallel_ctx().parallel_id(),
+             1 * sizeof(uint32_t), buffer_manager.NumStoreMissingPtr());
+  DumpToFile(ctx->stream(), "StoreMissingKeysPtr", ctx->parallel_ctx().parallel_id(),
+             num_keys * sizeof(K), buffer_manager.StoreMissingKeysPtr());
+  DumpToFile(ctx->stream(), "StoreMissingIndicesPtr", ctx->parallel_ctx().parallel_id(),
+             num_keys * sizeof(K), buffer_manager.StoreMissingIndicesPtr());
+  DumpToFile(ctx->stream(), "StoreValuesPtr", ctx->parallel_ctx().parallel_id(),
+             num_keys * embedding_size * sizeof(K), buffer_manager.StoreValuesPtr());
+}
+
 }  // namespace
 
 template<typename T, typename K, typename IDX>
@@ -236,56 +251,40 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_keys = *host_num_keys;
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " num_unique_ids " << num_keys;
-
+    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << num_keys;
     cache->Test(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.NumCacheMissingPtr(),
                 buffer_manager.CacheMissingKeysPtr(), buffer_manager.CacheMissingIndicesPtr());
-    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
-      DumpToFile(ctx->stream(), "CacheMissingKeysPtr", ctx->parallel_ctx().parallel_id(),
-                 num_keys * sizeof(K), buffer_manager.CacheMissingKeysPtr());
-    }
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheMissingPtr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_missing_keys = *host_num_keys;
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " num_cache_missing_keys "
-               << num_missing_keys;
-
+    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " find store num ids: " << num_missing_keys;
     store->Get(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
                buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
                buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
                reinterpret_cast<uint64_t*>(context->mut_dptr()));
-    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
-      DumpToFile(ctx->stream(), "NumStoreMissingPtr", ctx->parallel_ctx().parallel_id(),
-                 1 * sizeof(uint32_t), buffer_manager.NumStoreMissingPtr());
-      DumpToFile(ctx->stream(), "StoreMissingKeysPtr", ctx->parallel_ctx().parallel_id(),
-                 num_keys * sizeof(K), buffer_manager.StoreMissingKeysPtr());
-      DumpToFile(ctx->stream(), "StoreMissingIndicesPtr", ctx->parallel_ctx().parallel_id(),
-                 num_keys * sizeof(K), buffer_manager.StoreMissingIndicesPtr());
-      DumpToFile(ctx->stream(), "StoreValuesPtr", ctx->parallel_ctx().parallel_id(),
-                 num_keys * embedding_size * sizeof(K), buffer_manager.StoreValuesPtr());
-    }
     // init values
     InitValueKernel<T, K><<<BlocksNum4ThreadsNum(num_missing_keys), embedding_size, 0,
                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         embedding_size, buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
         buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
-    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
-      DumpToFile(ctx->stream(), "StoreValuesPtrAfterInit", ctx->parallel_ctx().parallel_id(),
-                 num_keys * sizeof(K), buffer_manager.StoreValuesPtr());
-    }
     cache->Put(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
                buffer_manager.StoreValuesPtr(), buffer_manager.NumCacheEvictedPtr(),
                buffer_manager.CacheEvictedKeysPtr(), buffer_manager.CacheEvictedValuesPtr());
-
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheEvictedPtr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_evicted_keys = *host_num_keys;
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " num_evicted_keys " << num_evicted_keys;
-    store->Put(ctx->stream(), num_evicted_keys, buffer_manager.CacheEvictedKeysPtr(),
-               buffer_manager.CacheEvictedValuesPtr(),
-               reinterpret_cast<uint64_t*>(context->mut_dptr()));
+    LOG(ERROR) << ctx->parallel_ctx().parallel_id()
+               << " put to store num ids: " << num_evicted_keys;
+    if (num_evicted_keys != 0) {
+      store->Put(ctx->stream(), num_evicted_keys, buffer_manager.CacheEvictedKeysPtr(),
+                 buffer_manager.CacheEvictedValuesPtr(),
+                 reinterpret_cast<uint64_t*>(context->mut_dptr()));
+    }
+    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
+      DebugEmbeddingPrefetch<T, K>(ctx, num_keys, buffer_manager);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -327,7 +326,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
         Global<EmbeddingMgr>::Get()->GetCache("MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
-
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
@@ -338,7 +336,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const int64_t embedding_size = 128;
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
-
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
     std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
@@ -347,25 +344,22 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
+    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << *host_num_keys;
 
     user_op::Tensor* out_context = ctx->Tensor4ArgNameAndIndex("out_context", 0);
-    std::unique_ptr<ep::primitive::Memcpy> copyd2d_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoD);
-    CHECK(copyd2d_primitive);
-    copyd2d_primitive->Launch(ctx->stream(), out_context->mut_dptr(), context->dptr(),
-                              context->shape().elem_cnt() * sizeof(uint64_t));
-
+    OF_CUDA_CHECK(cudaMemcpyAsync(out_context->mut_dptr(), context->dptr(),
+                                  context->shape().elem_cnt() * sizeof(uint64_t), cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     cache->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), embeddings->mut_dptr(),
                buffer_manager.NumCacheMissingPtr(), buffer_manager.CacheMissingKeysPtr(),
                buffer_manager.CacheMissingIndicesPtr());
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheMissingPtr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
-    LOG(ERROR) << "num_cache_missing" << *host_num_keys;
     uint32_t num_cache_missing = *host_num_keys;
     if (num_cache_missing != 0) {
-      LOG(ERROR) << "num_cache_missing != 0 " << num_cache_missing;
+      LOG(ERROR) << ctx->parallel_ctx().parallel_id()
+                 << " find store num ids: " << num_cache_missing;
       store->Get(ctx->stream(), num_cache_missing, buffer_manager.CacheMissingKeysPtr(),
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
                  buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
@@ -461,14 +455,15 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
     cache->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), update_unique_embeddings,
                buffer_manager.NumCacheEvictedPtr(), buffer_manager.CacheEvictedKeysPtr(),
                buffer_manager.CacheEvictedValuesPtr());
-
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheEvictedPtr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_evicted_keys = *host_num_keys;
     LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " num_evicted_keys " << num_evicted_keys;
-    store->Put(ctx->stream(), num_evicted_keys, buffer_manager.CacheEvictedKeysPtr(),
-               buffer_manager.CacheEvictedValuesPtr(), mut_context);
+    if (num_evicted_keys != 0) {
+      store->Put(ctx->stream(), num_evicted_keys, buffer_manager.CacheEvictedKeysPtr(),
+                 buffer_manager.CacheEvictedValuesPtr(), mut_context);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

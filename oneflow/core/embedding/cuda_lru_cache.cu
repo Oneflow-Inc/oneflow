@@ -224,7 +224,7 @@ __global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
-      if (key == 0) {
+      if (key == 0 && !test_only) {
         for (int j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
           (values + key_idx * cache_ctx.line_size)[j] = 0;
         }
