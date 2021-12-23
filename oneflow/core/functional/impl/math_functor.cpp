@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -687,8 +686,6 @@ class ConsistentArangeFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     MutableAttrMap attrs;
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();
@@ -739,8 +736,6 @@ class ConsistentArange2Functor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };

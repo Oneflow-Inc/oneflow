@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -110,8 +109,6 @@ class ConsistentRandFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
@@ -187,8 +184,6 @@ class ConsistentRandNFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     DataType dtype_val = DataType::kFloat;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
@@ -277,8 +272,6 @@ class ConsistentRandIntFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
@@ -316,8 +309,6 @@ class ConsistentRandInt2Functor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp_tuple, dtype, generator,
                              requires_grad);
   }
@@ -358,8 +349,6 @@ class ConsistentRandPermFunctor {
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));

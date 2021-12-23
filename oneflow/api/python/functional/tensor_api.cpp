@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -77,8 +76,6 @@ class ConsistentTensorWithDataFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
 
     if (PyTensorCheck(data)) {
       // Throw warnings like pytorch.
@@ -112,8 +109,6 @@ class ConsistentTensorEmptyCtorFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     Shape shape(DimVector{0});
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
   }
 };
@@ -156,8 +151,6 @@ class ConsistentTensorWithDataCtorFunctor {
   Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
       int64_t size = PyLong_AsLongLong(data);
@@ -201,8 +194,6 @@ class ConsistentTensorWithShapeCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    JUST(PlacementConsistencyCheck(placement));
-    JUST(NdSbpConsistencyCheck(sbp_tuple));
     return functional::ConsistentEmpty(shape, DType::Float(), placement, sbp_tuple);
   }
 };

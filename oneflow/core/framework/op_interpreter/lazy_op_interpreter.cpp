@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -423,7 +424,10 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc).shared_from_symbol();
+    const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
+    JUST(PlacementConsistencyCheck(parallel_desc_sym));
+    parallel_desc = parallel_desc_sym.shared_from_symbol();
+    if (ctx.nd_sbp.has_value()) { JUST(NdSbpConsistencyCheck(JUST(ctx.nd_sbp))); }
     is_local = false;
   } else {
     // NOTE(chengcheng): local
@@ -700,6 +704,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& sbp_sym = JUST(ctx.nd_sbp);
+
+  JUST(PlacementConsistencyCheck(parallel_desc_sym));
+  JUST(NdSbpConsistencyCheck(sbp_sym));
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {

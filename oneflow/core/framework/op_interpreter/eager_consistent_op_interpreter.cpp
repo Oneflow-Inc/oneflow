@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -89,8 +90,12 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
+    // check consistency placment and nd_sbp
+    const auto& nd_sbp = JUST(ctx.nd_sbp);
+    JUST(PlacementConsistencyCheck(parallel_desc));
+    JUST(NdSbpConsistencyCheck(nd_sbp));
     const auto& infer_args =
-        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
+        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, nd_sbp));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
@@ -175,6 +180,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& out_nd_sbp = JUST(ctx.nd_sbp);
   const auto& out_parallel_desc = JUST(ctx.parallel_desc);
+  JUST(PlacementConsistencyCheck(out_parallel_desc));
+  JUST(NdSbpConsistencyCheck(out_nd_sbp));
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   const auto& tensor =

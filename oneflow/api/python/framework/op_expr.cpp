@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.cfg.h"
-#include "oneflow/core/framework/consistency_check.h"
 
 namespace py = pybind11;
 
@@ -52,13 +51,11 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDesc>& placement,
                                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                   const AttrMap& attrs) {
+  JUST(CheckDeviceIdsIsValid(placement));
   CHECK_EQ_OR_RETURN(op.input_size(), 0)
       << " the op :  " << op.op_type_name()
       << " is NOT source op with input_size = " << op.input_size();
   const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-  JUST(CheckDeviceIdsIsValid(placement));
-  JUST(PlacementConsistencyCheck(placement));
-  JUST(NdSbpConsistencyCheck(nd_sbp));
   return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
       op, {}, one::OpExprInterpContext(attrs, placement, nd_sbp)));
 }
