@@ -113,7 +113,7 @@
 
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
-def OneFlow_AssignOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_AssignUserOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ref,
     AnyType:$value

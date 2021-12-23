@@ -100,7 +100,7 @@ Maybe<void> InferDataType_(user_op::InferContext* ctx) {
     return InferDataType_(ctx);                                                                   \
   }
 
-DEF_ASSIGN_OP(AssignOp)
+DEF_ASSIGN_OP(AssignUserOp)
 DEF_ASSIGN_OP(AssignIfOp)
 DEF_ASSIGN_OP(AssignIfNotOp)
 
