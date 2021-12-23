@@ -41,7 +41,7 @@ class SmartMonkey : public Monkey {
   std::set<std::vector<const std::string*>> stacks_;
 };
 
-#ifdef ENABLE_CHAOS
+#ifdef OF_ENABLE_CHAOS
 
 #define OF_SMART_MONKEY_SOURCE_CODE_POS_SCOPE()                                                    \
   ::oneflow::chaos::SourceCodePositionScope OF_CHAOS_CAT(src_code_pos_scope_, __COUNTER__)(([]() { \
@@ -49,11 +49,11 @@ class SmartMonkey : public Monkey {
     return &pos;                                                                                   \
   })())
 
-#else  // ENABLE_CHAOS
+#else  // OF_ENABLE_CHAOS
 
 #define OF_SMART_MONKEY_SOURCE_CODE_POS_SCOPE()
 
-#endif  // ENABLE_CHAOS
+#endif  // OF_ENABLE_CHAOS
 
 }  // namespace chaos
 }  // namespace oneflow

@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ENABLE_CHAOS
-#define ENABLE_CHAOS
-#endif  // ENABLE_CHAOS
+#ifndef OF_ENABLE_CHAOS
+#define OF_ENABLE_CHAOS
+#endif  // OF_ENABLE_CHAOS
 #include "oneflow/core/common/smart_monkey.h"
 #include "oneflow/core/common/util.h"
 
@@ -194,6 +194,111 @@ TEST(chaos, binary_tree) {
   }
 }
 
+Maybe<void> MaybeBinaryTreeFailed(int n) {
+  if (n <= 0) {
+    CHECK_OR_RETURN(true);
+    return Maybe<void>::Ok();
+  }
+  JUST(MaybeBinaryTreeFailed(n - 1));
+  JUST(MaybeBinaryTreeFailed(n - 1));
+  return Maybe<void>::Ok();
+}
+
+TEST(chaos, maybe_binary_tree) {
+  {
+    MonkeyScope scope(std::make_unique<SmartMonkey>());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(0)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(0)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(0)).IsOk());
+  }
+  {
+    MonkeyScope scope(std::make_unique<SmartMonkey>());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(1)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(1)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(1)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(1)).IsOk());
+  }
+  {
+    MonkeyScope scope(std::make_unique<SmartMonkey>());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(2)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(2)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(2)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(2)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(2)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(2)).IsOk());
+  }
+  {
+    MonkeyScope scope(std::make_unique<SmartMonkey>());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(3)).IsOk());
+  }
+  {
+    MonkeyScope scope(std::make_unique<SmartMonkey>());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(4)).IsOk());
+  }
+  {
+    MonkeyScope scope(std::make_unique<SmartMonkey>());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_FALSE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+    ASSERT_TRUE(TRY(MaybeBinaryTreeFailed(5)).IsOk());
+  }
+}
 }  // namespace test
 }  // namespace chaos
 }  // namespace oneflow

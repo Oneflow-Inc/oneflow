@@ -385,6 +385,7 @@ Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::str
     if (op_def.attr(i).name() == attr_name) { return op_def.attr(i).type(); }
   }
   CHECK_OR_RETURN(false) << " Cannot find attr " << attr_name << " in op " << op_type_name;
+  return static_cast<long long>(0);
 }
 
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) {

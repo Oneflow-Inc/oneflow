@@ -53,25 +53,25 @@ class MonkeyScope {
   std::unique_ptr<Monkey> old_monkey_;
 };
 
-#ifdef ENABLE_CHAOS
+#ifdef OF_ENABLE_CHAOS
 
 #define OF_CHAOS_MODE_SCOPE(enable_mode) \
   ::oneflow::chaos::ChaosModeScope OF_CHAOS_CAT(chaos_mode_scope_, __COUNTER__)(enable_mode)
 
-#define OF_CHAOS_BOOL_EXPR(expr)                           \
-  ({                                                       \
-    bool expr_ret = (expr);                                \
-    if (ThreadLocalMonkey()->Fail()) { expr_ret = false; } \
-    expr_ret;                                              \
+#define OF_CHAOS_BOOL_EXPR(expr)                                             \
+  ({                                                                         \
+    bool expr_ret = static_cast<bool>(expr);                                 \
+    if (::oneflow::chaos::ThreadLocalMonkey()->Fail()) { expr_ret = false; } \
+    expr_ret;                                                                \
   })
 
-#else  // ENABLE_CHAOS
+#else  // OF_ENABLE_CHAOS
 
 #define OF_CHAOS_MODE_SCOPE(enable_mode)
 
 #define OF_CHAOS_BOOL_EXPR(expr) (expr)
 
-#endif  // ENABLE_CHAOS
+#endif  // OF_ENABLE_CHAOS
 
 #define OF_CHAOS_CAT(a, b) OF_CHAOS_CAT_I(a, b)
 #define OF_CHAOS_CAT_I(a, b) a##b

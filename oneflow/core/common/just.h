@@ -21,6 +21,7 @@ limitations under the License.
 #include <type_traits>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/smart_monkey.h"
 
 namespace oneflow {
 
@@ -92,6 +93,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
 
 #define JUST(...)                                                                              \
   ::oneflow::private_details::RemoveRValConst(({                                               \
+    OF_SMART_MONKEY_SOURCE_CODE_POS_SCOPE();                                                   \
     auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                        \
       return ::oneflow::private_details::JustErrorAddStackFrame(                               \
@@ -103,6 +105,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
 
 #define CHECK_JUST(...)                                                                            \
   ([&](const char* _just_closure_func_name_) {                                                     \
+    OF_CHAOS_MODE_SCOPE(false);                                                                    \
     auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                         \
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                            \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                         \
@@ -116,6 +119,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
 
 #define JUST_MSG(value, ...)                                                                \
   ::oneflow::private_details::RemoveRValConst(({                                            \
+    OF_SMART_MONKEY_SOURCE_CODE_POS_SCOPE();                                                \
     auto&& _just_value_to_check_ = (value);                                                 \
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                     \
       return ::oneflow::private_details::JustErrorAddMessage(                               \
@@ -128,6 +132,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
 
 #define CHECK_JUST_MSG(value, ...)                                                              \
   ([&](const char* _just_closure_func_name_) {                                                  \
+    OF_CHAOS_MODE_SCOPE(false);                                                                 \
     auto&& _just_value_to_check_ = (value);                                                     \
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                         \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                      \

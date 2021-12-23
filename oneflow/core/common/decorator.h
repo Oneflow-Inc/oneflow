@@ -18,8 +18,10 @@ limitations under the License.
 
 #include <type_traits>
 #include <unordered_map>
+#include <memory>
 #include "tuple_hash.h"
 #include "static_check.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
@@ -46,8 +48,18 @@ template<typename RetT>
 struct ThreadLocalCopiable<RetT> {
   template<RetT (*func)()>
   static RetT Call() {
-    static thread_local RetT value = func();
+#ifndef OF_ENABLE_CHAOS
+    static thread_local std::unique_ptr<RetT> value;
+    if (!value) {
+      RetT ret = func();
+      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
+      value = std::make_unique<RetT>(std::move(ret));
+    }
+    return *value;
+#else  // OF_ENABLE_CHAOS
+    static thread_local RetT value(func());
     return value;
+#endif  // OF_ENABLE_CHAOS
   }
 };
 
@@ -59,7 +71,13 @@ struct ThreadLocalCopiable<RetT, Arg0> {
     using MappedT = typename std::decay<RetT>::type;
     static thread_local std::unordered_map<KeyT, MappedT> map;
     auto iter = map.find(arg0);
-    if (iter == map.end()) { iter = map.emplace(arg0, func(arg0)).first; }
+    if (iter == map.end()) {
+      auto ret = func(arg0);
+#ifndef OF_ENABLE_CHAOS
+      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
+#endif  // OF_ENABLE_CHAOS
+      iter = map.emplace(arg0, std::move(ret)).first;
+    }
     return iter->second;
   }
 
@@ -78,7 +96,13 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
     static thread_local std::unordered_map<KeyT0, std::unordered_map<KeyT1, MappedT>> map;
     auto* last_map = &map[arg0];
     auto iter = last_map->find(arg1);
-    if (iter == last_map->end()) { iter = last_map->emplace(arg1, func(arg0, arg1)).first; }
+    if (iter == last_map->end()) {
+      auto ret = func(arg0, arg1);
+#ifndef OF_ENABLE_CHAOS
+      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
+#endif  // OF_ENABLE_CHAOS
+      iter = last_map->emplace(arg1, std::move(ret)).first;
+    }
     return iter->second;
   }
 
@@ -99,7 +123,13 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
         map;
     auto* last_map = &map[arg0][arg1];
     auto iter = last_map->find(arg2);
-    if (iter == last_map->end()) { iter = last_map->emplace(arg2, func(arg0, arg1, arg2)).first; }
+    if (iter == last_map->end()) {
+      auto ret = func(arg0, arg1, arg2);
+#ifndef OF_ENABLE_CHAOS
+      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
+#endif  // OF_ENABLE_CHAOS
+      iter = last_map->emplace(arg2, std::move(ret)).first;
+    }
     return iter->second;
   }
 
@@ -121,7 +151,13 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
     static thread_local std::unordered_map<KeyT, MappedT> map;
     const auto& key = KeyT(arg0, arg1, arg2, arg3, args...);
     auto iter = map.find(key);
-    if (iter == map.end()) { iter = map.emplace(key, func(arg0, arg1, arg2, arg3, args...)).first; }
+    if (iter == map.end()) {
+      auto ret = func(arg0, arg1, arg2, arg3, args...);
+#ifndef OF_ENABLE_CHAOS
+      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
+#endif  // OF_ENABLE_CHAOS
+      iter = map.emplace(key, std::move(ret)).first;
+    }
     return iter->second;
   }
 

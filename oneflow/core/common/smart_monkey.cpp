@@ -32,13 +32,11 @@ const std::vector<const std::string*>& ThreadLocalSourceCodePositionStack() {
 }
 
 SourceCodePositionScope::SourceCodePositionScope(const std::string* src_code_pos) {
-  if (ThreadLocalEnableChaos()) {
-    MutThreadLocalSourceCodePositionStack()->push_back(src_code_pos);
-  }
+  MutThreadLocalSourceCodePositionStack()->push_back(src_code_pos);
 }
 
 SourceCodePositionScope::~SourceCodePositionScope() {
-  if (ThreadLocalEnableChaos()) { MutThreadLocalSourceCodePositionStack()->pop_back(); }
+  MutThreadLocalSourceCodePositionStack()->pop_back();
 }
 
 bool SmartMonkey::Fail() {

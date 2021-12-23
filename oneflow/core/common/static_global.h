@@ -38,6 +38,9 @@ struct StaticGlobalCopiable<RetT, Arg0> {
       if (iter != map.end()) { return iter->second; }
     }
     auto obj = func(arg0);
+#ifndef OF_ENABLE_CHAOS
+    if (!IsMaybeOk<RetT>::Call(obj)) { return obj; }
+#endif  // OF_ENABLE_CHAOS
     {
       std::unique_lock<std::mutex> lock(mutex);
       return map.emplace(arg0, std::move(obj)).first->second;

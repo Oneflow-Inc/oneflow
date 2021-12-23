@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/chaos.h"
 
 namespace oneflow {
 
@@ -263,6 +264,16 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe<PtrT> maybe_ptr_;
 };
 
+template<typename T>
+struct IsMaybeOk {
+  static constexpr bool Call(T&& obj) { return true; }
+};
+
+template<typename T>
+struct IsMaybeOk<Maybe<T>> {
+  static bool Call(T&& maybe) { return maybe.IsOk(); }
+};
+
 namespace {
 std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
   // return error msg got from formatted function or debugstring.
@@ -306,7 +317,7 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
          << " Compile option wrong: "
 
 #define CHECK_OR_RETURN(expr)                                                      \
-  if (!(expr))                                                                     \
+  if (!OF_CHAOS_BOOL_EXPR(expr))                                                   \
   return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
