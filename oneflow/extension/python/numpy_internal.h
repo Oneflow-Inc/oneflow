@@ -60,7 +60,6 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
 using FixedVector = fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE>;
 std::vector<size_t> OFShapeToNumpyShape(const FixedVector& fixed_vec);
 std::vector<size_t> OFStrideToNumpyStride(const FixedVector& fixed_vec, const DataType data_type);
-
 Maybe<void> InitNumpyCAPI();
 
 }  // namespace numpy

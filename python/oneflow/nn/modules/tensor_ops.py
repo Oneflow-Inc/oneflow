@@ -221,6 +221,8 @@ def item_op(input):
         1.0
     """
     assert input.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    if input.device != flow.device("cpu"):
+        return input.cpu().numpy().item()
     return input.numpy().item()
 
 
@@ -245,6 +247,8 @@ def tolist_op(input):
     """
     if input.numel() == 1 and input.ndim == 0:
         return input.item()
+    if input.device != flow.device("cpu"):
+        return input.to(device="cpu").numpy().tolist()
     return input.numpy().tolist()
 
 

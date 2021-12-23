@@ -733,7 +733,7 @@ def _get_device(self):
 
 def _format(self, format_spec):
     if self.dim() == 0:
-        return self.numpy().tolist().__format__(format_spec)
+        return self.tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
 
 
@@ -745,13 +745,23 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
+def _cpu(self):
+    assert self.device != flow.device("cpu")
+    return self.to(device="cpu")
+
+
+def _numpy(self):
+    assert self.device == flow.device("cpu")
+    return self.to_numpy()
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.ndim = property(_ndim)
-    Tensor.numpy = _tensor_numpy
+    Tensor.numpy = _numpy
     Tensor.size = _size
     Tensor.dim = _ndim
     Tensor.ndimension = _ndim
@@ -893,6 +903,7 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
+    Tensor.cpu = _cpu
 
 
 def register_tensor_op(op_name):
