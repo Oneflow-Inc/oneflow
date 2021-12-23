@@ -367,16 +367,17 @@ class CudaLruCache : public Cache {
             void* missing_keys, uint32_t* missing_indices) override {
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
-    stream->As<ep::CudaStream>()->LaunchKernel(GetKernel<Key, Elem, true>, GetLaunchConfig(n_keys),
-                                               ctx_, n_keys, static_cast<const Key*>(keys), nullptr,
-                                               n_missing, static_cast<Key*>(missing_keys),
-                                               missing_indices);
+    if (n_keys == 0) { return; }
+    cuda_stream->LaunchKernel(GetKernel<Key, Elem, true>, GetLaunchConfig(n_keys), ctx_, n_keys,
+                              static_cast<const Key*>(keys), nullptr, n_missing,
+                              static_cast<Key*>(missing_keys), missing_indices);
   }
 
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override {
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(GetKernel<Key, Elem, false>, GetLaunchConfig(n_keys), ctx_, n_keys,
                               static_cast<const Key*>(keys), static_cast<Elem*>(values), n_missing,
                               static_cast<Key*>(missing_keys), missing_indices);
@@ -386,6 +387,7 @@ class CudaLruCache : public Cache {
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override {
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(PutWithoutEvictingKernel<Key, Elem>, GetLaunchConfig(n_keys), ctx_,
                               n_keys, static_cast<const Key*>(keys),
                               static_cast<const Elem*>(values), n_evicted, ctx_.query_keys_buffer,

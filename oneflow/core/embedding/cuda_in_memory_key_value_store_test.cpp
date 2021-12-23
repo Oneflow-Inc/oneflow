@@ -70,6 +70,10 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaMemcpy(keys, keys_host, keys_size, cudaMemcpyDefault));
   OF_CUDA_CHECK(cudaMemcpy(values, values_host, values_size, cudaMemcpyDefault));
 
+  store->Put(stream, 0, keys, values, context);
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+  OF_CUDA_CHECK(cudaGetLastError());
+
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     //    store->Prefetch(stream, num_keys, keys + offset, context + offset);
