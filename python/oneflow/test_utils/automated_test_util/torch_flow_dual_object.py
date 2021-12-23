@@ -297,7 +297,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 # inspect.isfunction(oneflow): For op graph test like addmm.
                                 # inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op graph test like masked_fill.
                                 elif  "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow) or (inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__):
-                                    print(oneflow.__module__)
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
