@@ -1374,3 +1374,43 @@ add_docstr(
                 [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow.cumsum,
+    r"""This operator computes the cumulative sum of input elements in the given dimension.
+    
+    The equation is:
+    
+	$$		
+	​   \\y_{i}=x_{0}+x_{1}+...+x_{i}
+	$$
+    
+    Args:
+        input (Tensor):  the input ND tensor.
+        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cumsum result.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input=flow.ones(3,3,3,device="cpu")
+        >>> dim=2
+        >>> flow.cumsum(input,dim)
+        tensor([[[1., 2., 3.],
+            [1., 2., 3.],
+            [1., 2., 3.]],
+
+            [[1., 2., 3.],
+            [1., 2., 3.],
+            [1., 2., 3.]],
+
+            [[1., 2., 3.],
+            [1., 2., 3.],
+            [1., 2., 3.]]], dtype=oneflow.float32)
+        
+    """,
+)
