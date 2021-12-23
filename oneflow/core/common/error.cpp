@@ -37,10 +37,12 @@ std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
 
 Error&& Error::AddStackFrame(const std::string& file, const int64_t& line,
                              const std::string& function) {
-  auto* stack_frame = error_proto_->add_stack_frame();
-  stack_frame->set_file(file);
-  stack_frame->set_line(line);
-  stack_frame->set_function(function);
+  if (IsDebugModeEnabled()) {
+    auto* stack_frame = error_proto_->add_stack_frame();
+    stack_frame->set_file(file);
+    stack_frame->set_line(line);
+    stack_frame->set_function(function);
+  }
   return std::move(*this);
 }
 

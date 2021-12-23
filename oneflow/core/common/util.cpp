@@ -160,4 +160,10 @@ std::string GetStringFromEnv(const std::string& env_var, const std::string& defa
   }
 }
 
+bool IsDebugModeEnabled() {
+  static bool is_debug_mode_enabled = ParseBooleanFromEnv("ONEFLOW_DEBUG_MODE", false)
+                                      || ParseBooleanFromEnv("ONEFLOW_DEBUG", false);
+  return is_debug_mode_enabled;
+}
+
 }  // namespace oneflow

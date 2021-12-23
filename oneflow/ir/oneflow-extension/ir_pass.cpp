@@ -177,9 +177,7 @@ template class IRRoundTrip<kAfterAD>;
 
 Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   // TODO: check path is valid dir
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
-    TeePersistentLogStream::Create("saved_job")->Write(*job);
-  }
+  if (IsDebugModeEnabled()) { TeePersistentLogStream::Create("saved_job")->Write(*job); }
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   ::mlir::oneflow::SaveJobToIR(job_wrapper, path);
   return Maybe<void>::Ok();
