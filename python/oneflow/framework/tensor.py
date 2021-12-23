@@ -756,10 +756,6 @@ def _numpy(self):
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
-    if self.dtype == flow.tensor_buffer:
-        shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
-        tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
-        return [t.cpu().numpy() for t in tensors]
     return self.to_numpy()
 
 
