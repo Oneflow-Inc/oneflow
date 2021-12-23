@@ -337,10 +337,10 @@ def _FindFreePort():
 
 def HasAllMultiClientEnvVars():
     env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
-    has_all_env_vars = all([os.getenv(x) for x in env_var_names])
-    if not has_all_env_vars:
-        has_at_least_one_env_var = any([os.getenv(x) for x in env_var_names])
-        assert not has_at_least_one_env_var
+    env_var_values = [os.getenv(x) for x in env_var_names]
+    has_no_env_vars = not any(env_var_values)
+    has_all_env_vars = all(env_var_values)
+    assert has_no_env_vars or has_all_env_vars, list(zip(env_var_names, env_var_values))
     return has_all_env_vars
 
 
