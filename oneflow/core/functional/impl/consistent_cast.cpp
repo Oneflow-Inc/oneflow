@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -296,8 +295,6 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
-    JUST(PlacementConsistencyCheck(parallel_desc));
-    JUST(NdSbpConsistencyCheck(sbp_parallels));
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
@@ -341,9 +338,6 @@ class ToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
-    JUST(PlacementConsistencyCheck(parallel_desc));
-    JUST(NdSbpConsistencyCheck(sbp_parallels));
-    JUST(NdSbpConsistencyCheck(grad_sbp_parallels));
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));

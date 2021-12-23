@@ -707,6 +707,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
 
   JUST(PlacementConsistencyCheck(parallel_desc_sym));
   JUST(NdSbpConsistencyCheck(sbp_sym));
+  if (op_expr.grad_nd_sbp().has_value()) {
+    JUST(NdSbpConsistencyCheck(JUST(op_expr.grad_nd_sbp())));
+  } else {
+    JUST(NdSbpConsistencyCheck(GetNoneSbpList()));
+  }
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {

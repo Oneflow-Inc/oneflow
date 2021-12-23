@@ -182,6 +182,11 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& out_parallel_desc = JUST(ctx.parallel_desc);
   JUST(PlacementConsistencyCheck(out_parallel_desc));
   JUST(NdSbpConsistencyCheck(out_nd_sbp));
+  if (op_expr.grad_nd_sbp().has_value()) {
+    JUST(NdSbpConsistencyCheck(JUST(op_expr.grad_nd_sbp())));
+  } else {
+    JUST(NdSbpConsistencyCheck(GetNoneSbpList()));
+  }
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   const auto& tensor =
