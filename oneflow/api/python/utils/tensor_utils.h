@@ -48,11 +48,11 @@ inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
   CHECK_OR_RETURN(JUST(t->device()) == JUST(Device::New("cpu")));
   CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
   if (t->is_local()) {
-    tensor = CHECK_JUST(t->AsMirroredTensor());
+    tensor = JUST(t->AsMirroredTensor());
     // set base object attr
     handle = py::handle(py_tensor.ptr());
   } else {
-    const Symbol<ConsistentTensorMeta>& tensor_meta = CHECK_JUST(t->consistent_tensor_meta());
+    const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
     const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
     CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
     cfg::SbpParallel broadcast_sbp;
@@ -61,14 +61,14 @@ inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
                                                     SymbolOf(broadcast_sbp));
     std::vector<Symbol<cfg::SbpParallel>> none;
     const auto& consistent_tensor =
-        CHECK_JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
-    tensor = CHECK_JUST(consistent_tensor->cur_rank_phy_tensor());
+        JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
+    tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
   }
 
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
   // using byte
-  const auto stride = numpy::OFStrideToNumpyStride(CHECK_JUST(tensor->stride())->StrideVec(),
+  const auto stride = numpy::OFStrideToNumpyStride(JUST(tensor->stride())->StrideVec(),
                                                    tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
