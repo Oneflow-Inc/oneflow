@@ -183,9 +183,12 @@ __global__ void LookupKernel(uint32_t value_length, uint64_t num_keys, uint64_t 
     const uint64_t row_id = ctx - 1;
     const uint64_t col_id = i - key_id * value_length;
     if (ctx == 0) {
-      if (col_id == 0) {
+      const Key missing_key = keys[key_id];
+      if (missing_key == 0) {
+        values[col_id] = 0;
+      } else if (col_id == 0) {
         const uint32_t old_n_missing = atomicAdd(n_missing, 1);
-        missing_keys[old_n_missing] = keys[key_id];
+        missing_keys[old_n_missing] = missing_key;
         missing_indices[old_n_missing] = key_id;
       }
       continue;
