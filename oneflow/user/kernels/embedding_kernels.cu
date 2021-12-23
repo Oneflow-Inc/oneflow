@@ -58,7 +58,7 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
 }
 
 template<typename T, typename K>
-__global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+__global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
                                 const int64_t embedding_size, const uint32_t* num_missing_keys,
                                 const K* missing_keys, const uint32_t* missing_indices, T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -78,7 +78,7 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
       cuda_gen_state->dev_counter = 0;  // reset counter to zero
-      cuda_gen_state->dev_offset += 0;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
@@ -290,9 +290,11 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
                buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
                reinterpret_cast<uint64_t*>(context->mut_dptr()));
     // init values
+    const int64_t grid_size = BlocksNum4ThreadsNum(num_missing_keys);
+    uint64_t inc_offset = num_missing_keys / grid_size + 1;
     InitValueKernel<T, K><<<BlocksNum4ThreadsNum(num_missing_keys), embedding_size, 0,
                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        seed, cuda_gen_state, embedding_size, buffer_manager.NumStoreMissingPtr(),
+        seed, cuda_gen_state, inc_offset, embedding_size, buffer_manager.NumStoreMissingPtr(),
         buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
         buffer_manager.StoreValuesPtr());
     cache->Put(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
