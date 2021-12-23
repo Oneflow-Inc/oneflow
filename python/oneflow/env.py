@@ -28,11 +28,19 @@ import oneflow._oneflow_internal
 
 
 def get_local_rank():
+    """Returns the local rank of current machine.
+    Local rank is not globally unique, it is only unique per process on a machine. 
+
+    Returns:
+        The the local rank of process on current machine.
+
+    """
     return oneflow._oneflow_internal.GetLocalRank()
 
 
 def get_rank():
     """Returns the rank of current process group.
+    Local rank is globally unique, range of which is from 0 to world_size. 
 
     Returns:
         The rank of the process group.
@@ -42,6 +50,12 @@ def get_rank():
 
 
 def get_node_size():
+    """Returns the number of machines in the current process group.
+
+    Returns:
+        The the number of machines in the process group.
+
+    """
     return oneflow._oneflow_internal.GetNodeSize()
 
 
@@ -56,4 +70,10 @@ def get_world_size():
 
 
 def is_multi_client():
+    """Returns whether it is currently in multi client mode.
+
+    Returns:
+        True if currently in multi client mode, otherwise return Flase.
+
+    """
     return oneflow._oneflow_internal.IsMultiClient()
