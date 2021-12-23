@@ -232,8 +232,8 @@ function(set_compile_options_to_oneflow_target target)
   target_try_compile_options(${target} -Wno-mismatched-tags)
   target_try_compile_options(${target} -Wno-covered-switch-default)
 
-  if(CMAKE_CXX_FLAGS_OMP)
-    target_try_compile_options(${target} ${CMAKE_CXX_FLAGS_OMP})
+  if(OMP_FLAGS)
+    target_try_compile_options(${target} ${OMP_FLAGS})
   endif()
 
   if(BUILD_CUDA)
