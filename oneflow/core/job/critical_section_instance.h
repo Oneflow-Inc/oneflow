@@ -13,27 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_JOB_INSTANCE_H_
-#define ONEFLOW_CORE_JOB_JOB_INSTANCE_H_
+#ifndef ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
+#define ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
 
 #include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
 
-class JobInstance {
+class CriticalSectionInstance {
  public:
-  JobInstance() = default;
+  CriticalSectionInstance() = default;
 
-  virtual ~JobInstance() = default;
+  virtual const std::string& job_name() const = 0;
 
-  virtual std::string job_name() const { UNIMPLEMENTED(); }
-  virtual std::string sole_input_op_name_in_user_job() const { UNIMPLEMENTED(); }
-  virtual std::string sole_output_op_name_in_user_job() const { UNIMPLEMENTED(); }
-  virtual void PushBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
-  virtual void PullBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+  virtual ~CriticalSectionInstance() = default;
+
+  virtual void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const {
+    UNIMPLEMENTED();
+  }
   virtual void Finish() const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_JOB_INSTANCE_H_
+#endif  // ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
