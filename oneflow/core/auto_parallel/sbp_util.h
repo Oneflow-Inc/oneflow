@@ -40,6 +40,12 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
                                          const ParallelDesc& producer_parallel_desc,
                                          const ParallelDesc& consumer_parallel_desc,
                                          bool is_same_sbp, bool allow_cpu2gpu);
+// compute copy cost
+Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                         const cfg::NdSbp& consumer_sbp_parallel,
+                                         double logical_blob_size,
+                                         const std::shared_ptr<Shape>& in_hierarchy,
+                                         const std::shared_ptr<Shape>& out_hierarchy);
 
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSbp(OpNode* consumer, const std::string& ibn);

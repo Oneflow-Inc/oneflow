@@ -282,6 +282,50 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
   return GetMaxVal<float>();
 }
 
+// compute copy cost
+Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                         const cfg::NdSbp& consumer_sbp_parallel,
+                                         double logical_blob_size,
+                                         const std::shared_ptr<Shape>& in_hierarchy,
+                                         const std::shared_ptr<Shape>& out_hierarchy) {
+  if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
+    return Error::RuntimeError() << "Illegal sbp parallel has been found.";
+  }
+
+  int32_t in_dim = in_hierarchy->NumAxes();
+  int32_t out_dim = out_hierarchy->NumAxes();
+  // Not supporting n-D sbp with n >= 3
+  // TODO: Support it in the future
+  if (in_dim <= 0 || in_dim >= 3 || out_dim <= 0 || out_dim >= 3) { return GetMaxVal<float>(); }
+
+  bool same_nd_sbp = producer_sbp_parallel == consumer_sbp_parallel;
+  if (same_nd_sbp && (*in_hierarchy == *out_hierarchy)) { return 0.0; }
+
+  // Not supporting different hierarchy
+  // TODO: Support it in the future
+  if (in_hierarchy->elem_cnt() != out_hierarchy->elem_cnt()) { return GetMaxVal<float>(); }
+
+  // reduced to 1d sbp
+  if (producer_sbp_parallel.sbp_parallel(0) == producer_sbp_parallel.sbp_parallel(1)
+      && consumer_sbp_parallel.sbp_parallel(0) == consumer_sbp_parallel.sbp_parallel(1)) {
+    return ComputCopyCostBetweenTwoDiffSbpParallel(
+        producer_sbp_parallel.sbp_parallel(0), consumer_sbp_parallel.sbp_parallel(1),
+        logical_blob_size, in_hierarchy->elem_cnt(), true);
+  }
+
+  if (in_dim == 2 && out_dim == 2) {
+    // Not supporting different hierarchy
+    // TODO: Support it in the future
+    if (*in_hierarchy != *out_hierarchy) { return GetMaxVal<float>(); }
+    return ComputCopyCostBetweenTwoNdSbp(producer_sbp_parallel, consumer_sbp_parallel,
+                                         logical_blob_size, in_hierarchy, true);
+  }
+
+  CHECK(false) << "Should not reach here. Something went wrong in ComputCopyCostBetweenNdSbp() in "
+                  "sbp_util.cpp.";
+  return GetMaxVal<float>();
+}
+
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSbp(OpNode* consumer, const std::string& ibn) {
   // is mutable

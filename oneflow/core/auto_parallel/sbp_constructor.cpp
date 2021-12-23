@@ -15,12 +15,17 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include <memory>
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "sbp_collector.h"
 
 namespace oneflow {
@@ -45,6 +50,64 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     SbpCollector sbp_collector;
     sbp_collector.CollectUniverse(sbp_graph_);
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
+  }
+  // A piece of code to generator the current sbp transfer table
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "================================================" << std::endl;
+    // Generate possible sbp parallel list
+    std::vector<cfg::SbpParallel> sbp_lists;
+    cfg::SbpParallel sbp;
+    sbp.mutable_broadcast_parallel();
+    sbp_lists.push_back(sbp);
+    sbp.mutable_split_parallel()->set_axis(0);
+    sbp_lists.push_back(sbp);
+    sbp.mutable_split_parallel()->set_axis(1);
+    sbp_lists.push_back(sbp);
+    sbp.mutable_partial_sum_parallel();
+    sbp_lists.push_back(sbp);
+    // Generate possible nd_sbp lists
+    std::vector<cfg::NdSbp> nd_sbp_lists;
+    cfg::NdSbp nd_sbp;
+    nd_sbp.add_sbp_parallel();
+    nd_sbp.add_sbp_parallel();
+    for (int32_t i = 0; i < sbp_lists.size(); i++) {
+      *nd_sbp.mutable_sbp_parallel(0) = sbp_lists[i];
+      for (int32_t j = 0; j < sbp_lists.size(); j++) {
+        *nd_sbp.mutable_sbp_parallel(1) = sbp_lists[j];
+        nd_sbp_lists.push_back(nd_sbp);
+      }
+    }
+    // other parameters
+    Shape hierarchy44({8, 2});
+    std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
+
+    // Store the origin transfer cost information
+    int32_t n = nd_sbp_lists.size();
+    std::vector<std::vector<double>> origin_copy_cost(n);
+    for (int32_t i = 0; i < n; i++) {
+      origin_copy_cost[i].resize(n);
+      for (int32_t j = 0; j < n; j++) {
+        origin_copy_cost[i][j] = JUST(ComputCopyCostBetweenNdSbp(
+            nd_sbp_lists[i], nd_sbp_lists[j], 1024.0, in_hierarchy, in_hierarchy));
+      }
+    }
+
+    // Print the origin copy cost table
+    std::cout << "\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (origin_copy_cost[i][j] > cut_cost) {
+          std::cout << "X\t";
+        } else {
+          std::cout << origin_copy_cost[i][j] << "\t";
+        }
+      }
+      std::cout << std::endl;
+    }
+    std::cout << "================================================" << std::endl;
   }
   JUST(InitCopyCost(op_graph));
   // TODO:  Set all the sbp signatrure id to be 0 for initialization.
