@@ -108,7 +108,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 }  // namespace
 
 REGISTER_USER_OP("concat")
-    .InputWithMinimum("in", 2)
+    .InputWithMinimum("in", 1)
     .Output("out")
     .Attr<int64_t>("axis")
     .Attr<int64_t>("max_dim_size")
