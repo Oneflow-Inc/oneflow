@@ -8,16 +8,8 @@ foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
   add_test(NAME ${TEST_NAME}
     COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose
   )
-  if(NOT BUILD_CUDA)
-    set_tests_properties(${TEST_NAME}
+  set_tests_properties(${TEST_NAME}
     PROPERTIES
-      ENVIRONMENT "ONEFLOW_TEST_CPU_ONLY=1"
-    )
-  endif()
-  if(IS_DEV)
-    set_tests_properties(${TEST_NAME}
-      PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}"
-    )
-  endif()
+      ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>"
+  )
 endforeach()
