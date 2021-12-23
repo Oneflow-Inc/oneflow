@@ -1692,13 +1692,7 @@ class CumsumGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // check dim validation
-    auto ndim = input->ndim();
-    if (dim < 0) { dim += ndim; }
-    CHECK_OR_RETURN(dim >= 0 && dim < ndim)
-        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-        << ndim << " ) but got " << dim;
-
+    // No need to check dim validation here, while CumsumFunctor handled already
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);

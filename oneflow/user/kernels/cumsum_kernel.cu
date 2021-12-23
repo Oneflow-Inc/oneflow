@@ -100,19 +100,25 @@ __global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, in
     pout[i] = (cs_space - cs_space_id) * pin[i];
   }
 }
-
 template<typename T>
-__global__ void CumsumBackwardGpu3D(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                                    int64_t cs_down_space, int64_t elem_cnt) {
-  for (auto i = blockIdx.z * blockDim.z + threadIdx.z; i < cs_up_space; i++) {
-    for (auto j = blockIdx.y * blockDim.y + threadIdx.y; j < cs_space; j++) {
-      for (auto k = blockIdx.x * blockDim.x + threadIdx.x; k < cs_down_space; k++) {
-        auto idx = i * cs_space * cs_down_space + j * cs_down_space + k;
-        pout[idx] = (cs_space - j) * pin[idx];
-      }
-    }
+__global__ void CumsumBackwardGpu_UpSpaceIs1(const T* pin, T* pout, int64_t cs_space,
+                                  int64_t cs_down_space, int64_t elem_cnt) {
+  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
+       i += step) {
+    auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
+    pout[i] = (cs_space - cs_space_id) * pin[i];
   }
 }
+template<typename T>
+__global__ void CumsumBackwardGpu_DownSpaceIs1(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+                                  int64_t elem_cnt) {
+  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
+       i += step) {
+    auto cs_space_id = i % cs_space;
+    pout[i] = (cs_space - cs_space_id) * pin[i];
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -186,10 +192,18 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
     auto cs_up_space = elem_cnt / in->shape().Count(dim);
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
-
     auto thread_num = elem_cnt;
-    RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
-                    cs_space, cs_down_space, elem_cnt);
+
+    if (cs_up_space == 1) {
+      RUN_CUDA_KERNEL((CumsumBackwardGpu_UpSpaceIs1<T>), ctx->stream(), thread_num, pin, pout,
+                      cs_space, cs_down_space, elem_cnt);
+    } else if (cs_down_space == 1) {
+      RUN_CUDA_KERNEL((CumsumBackwardGpu_DownSpaceIs1<T>), ctx->stream(), thread_num, pin, pout,
+                      cs_up_space, cs_space, elem_cnt);
+    } else {
+      RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
+                      cs_space, cs_down_space, elem_cnt);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
