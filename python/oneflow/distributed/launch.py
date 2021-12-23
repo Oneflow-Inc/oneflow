@@ -158,6 +158,7 @@ def main():
 
         # set killing flag to make sure killing signal only executed once
         kill_flag = True
+
         def sigkill_handler(signum, frame):
             nonlocal kill_flag
             if not kill_flag:
