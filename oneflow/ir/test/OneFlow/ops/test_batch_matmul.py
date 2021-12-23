@@ -38,7 +38,6 @@ class TestMatMulCPUToTosa(flow.unittest.TestCase):
         ) -> oft.Numpy:
             with flow.scope.placement('cpu', "0:0-0"):
                 res = flow.matmul(x, y)
-                print(res.shape)
                 return res
 
         x = np.random.rand(1, 20, 30).astype(np.float32) - 1
@@ -57,7 +56,6 @@ class TestMatMulGPUToTosa(flow.unittest.TestCase):
         ) -> oft.Numpy:
             with flow.scope.placement('gpu', "0:0-0"):
                 res = flow.matmul(x, y)
-                print(res.shape)
                 return res
 
         x = np.random.rand(1, 20, 30).astype(np.float32) - 1

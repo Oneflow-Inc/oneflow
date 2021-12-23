@@ -80,9 +80,9 @@ SerializeToCubinPass::SerializeToCubinPass() {
     exit(1);
   }
   std::string arch = std::to_string(prop.major) + std::to_string(prop.minor);
-  if (arch == "sm_75") { arch = "sm_72"; }
   maybeSetOption(this->triple, "nvptx64-nvidia-cuda");
   maybeSetOption(this->chip, ("sm_" + arch).c_str());
+  if (arch == "75") { arch = "72"; }
   maybeSetOption(this->features, ("+ptx" + arch).c_str());
 }
 
