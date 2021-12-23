@@ -277,8 +277,8 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
-                                flag = True
-                                filter=["to", "tensor", "_to", "train"]
+                                find_check_module_func = True
+                                ignore_apis_list = ["to", "tensor", "_to", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
                                     class TestGraphOfModule(flow.nn.Graph):
@@ -291,9 +291,13 @@ def GetDualObject(name, pytorch, oneflow):
 
                                     test_g = TestGraphOfModule()
                                     test_g_res = test_g(*oneflow_args)
-                                elif oneflow.__name__ in filter:
-                                    flag = False
+                                elif oneflow.__name__ in ignore_apis_list:
+                                    find_check_module_func = False
+                                # "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module brach graph test, such as test_fold.py.
+                                # inspect.isfunction(oneflow): For op graph test like addmm.
+                                # inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op graph test like masked_fill.
                                 elif  "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow) or (inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__):
+                                    print(oneflow.__module__)
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -306,7 +310,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                                     test_g = TestGraphOfFunctional()
                                     test_g_res = test_g()
-                                if flag:
+                                if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
                                             eager_tensor_2_graph_tensor[
