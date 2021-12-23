@@ -19,6 +19,10 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/embedding/embedding_manager.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/framework/random_generator_impl.h"
+#include "oneflow/core/cuda/atomic.cuh"
+
 namespace oneflow {
 
 namespace {
@@ -54,16 +58,27 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
 }
 
 template<typename T, typename K>
-__global__ void InitValueKernel(const int64_t embedding_size, const uint32_t* num_missing_keys,
+__global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+                                const int64_t embedding_size, const uint32_t* num_missing_keys,
                                 const K* missing_keys, const uint32_t* missing_indices, T* values) {
-  if (blockIdx.x == 0 && threadIdx.x == 0) {
-    printf("num_store_missing_keys %d\n", static_cast<int>(*num_missing_keys));
-  }
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   for (int row = blockIdx.x; row < *num_missing_keys; row += gridDim.x) {
     const uint32_t index = missing_indices[row];
     for (int col = threadIdx.x; col < embedding_size; col += blockDim.x) {
       const int64_t offset = index * embedding_size + col;
-      values[offset] = missing_keys[row];  // for debug, random init
+      const T value = (curand_uniform(&state) - 0.5) * 0.1;  // [-0.05, 0.05]
+      values[offset] = value;
+      // values[offset] = missing_keys[row];  // for debug
+    }
+  }
+  __syncthreads();
+  if (threadIdx.x == 0) {
+    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
+    if (new_counter == gridDim.x) {
+      cuda_gen_state->dev_counter = 0;  // reset counter to zero
+      cuda_gen_state->dev_offset += 0;  // maintain the state of generator's dev_offset
     }
   }
 }
@@ -188,15 +203,19 @@ class PrefetchTmpBufferManager final {
 
 class EmbeddingKernelState final : public user_op::OpKernelState {
  public:
-  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx) {
+  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx)
+      : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
   }
   ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
 
   void* HostNumKeys() { return host_num_keys_; }
 
+  one::Generator* generator() { return generator_.get(); }
+
  private:
   void* host_num_keys_;
+  std::shared_ptr<one::Generator> generator_;
 };
 
 template<typename T, typename K>
@@ -232,6 +251,13 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
+    const auto& generator = kernel_state->generator();
+    CHECK_NOTNULL(generator);
+    std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
+        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    uint64_t seed = cuda_generator->current_seed();
+    one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
+
     embedding::Cache* cache =
         Global<EmbeddingMgr>::Get()->GetCache("MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
@@ -266,8 +292,9 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     // init values
     InitValueKernel<T, K><<<BlocksNum4ThreadsNum(num_missing_keys), embedding_size, 0,
                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        embedding_size, buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-        buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
+        seed, cuda_gen_state, embedding_size, buffer_manager.NumStoreMissingPtr(),
+        buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
+        buffer_manager.StoreValuesPtr());
     cache->Put(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
                buffer_manager.StoreValuesPtr(), buffer_manager.NumCacheEvictedPtr(),
                buffer_manager.CacheEvictedKeysPtr(), buffer_manager.CacheEvictedValuesPtr());
