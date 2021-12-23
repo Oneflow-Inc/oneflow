@@ -6,4 +6,11 @@ foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
   add_test(NAME ${PYTHON_TEST_FILE}
     COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose
   )
+  if(NOT BUILD_CUDA)
+    set_tests_properties(
+      ${PYTHON_TEST_FILE}
+    PROPERTIES
+      ENVIRONMENT "ONEFLOW_TEST_CPU_ONLY=1"
+    )
+  endif()
 endforeach()
