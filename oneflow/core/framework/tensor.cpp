@@ -104,7 +104,9 @@ Maybe<Tensor> ConsistentTensor::detach() const {
 }
 
 Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
-  CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+  CHECK_OR_RETURN(this->is_leaf())
+      << "Only leaf tensor's data can be set, because non-leaf tensor's data has been captured in "
+         "the backward graph in autograd.";
   const auto& consistent_tensor =
       std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
   CHECK_NOTNULL_OR_RETURN(consistent_tensor);
