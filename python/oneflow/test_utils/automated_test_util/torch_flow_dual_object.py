@@ -294,7 +294,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g_res = test_g(*oneflow_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
-                                # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module brach graph test, like fold op call Fold Module actually.
+                                # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
                                 # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
                                 # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
                                 elif (
