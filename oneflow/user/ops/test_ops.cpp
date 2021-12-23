@@ -81,8 +81,8 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> TestReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("x", 0);
-  Shape* out_shape = ctx->OutputShape("y", 0);
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
   const Shape& conf_shape = ctx->Attr<Shape>("shape");
   CHECK_EQ_OR_RETURN(in_shape.NumAxes(), conf_shape.NumAxes());
   *out_shape = conf_shape;
@@ -92,7 +92,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TestReshapeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -101,7 +101,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestSourceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("y", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
   *out_shape = Shape({5});
   return Maybe<void>::Ok();
 }
@@ -109,7 +109,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TestSourceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = DataType::kFloat;
+  *ctx->OutputDType("out", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 
@@ -118,7 +118,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestMultiOutputOrderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("x", 0);
+  const Shape& in_shape = ctx->InputShape("in", 0);
   Shape* out1_shape = ctx->OutputShape("out1", 0);
   Shape* out2_shape = ctx->OutputShape("out2", 0);
   *out1_shape = in_shape;
@@ -131,8 +131,8 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TestMultiOutputOrderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out1", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("out2", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("out1", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("out2", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -146,25 +146,25 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
 }
 /*static*/ Maybe<void> TestSourceMultiGpuFixedOutNumOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("y", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
   int64_t out_num = ctx->Attr<int64_t>("out_num");
   *out_shape = Shape({out_num});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestSourceMultiGpuFixedOutNumOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("y", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
   int64_t out_num = ctx->Attr<int64_t>("out_num");
   const ParallelContext& parallel_ctx = ctx->parallel_ctx();
   BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
   *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
 
-  const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+  const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   CHECK_OR_RETURN(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestSourceMultiGpuFixedOutNumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = DataType::kFloat;
+  *ctx->OutputDType("out", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 
@@ -241,7 +241,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestDynamicSourceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = Shape({5});
   out_tensor->set_is_dynamic(true);
   return Maybe<void>::Ok();
@@ -250,12 +250,12 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TestDynamicSourceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = DataType::kFloat;
+  *ctx->OutputDType("out", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestDynamicSourceOp::ModifyOutputArg(
     const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
-  user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("y", 0);
+  user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
   CHECK_OR_RETURN(out_modifier != nullptr);
   out_modifier->set_header_infered_before_compute(false);
   return Maybe<void>::Ok();
@@ -265,7 +265,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> TestRandomSourceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = Shape({5});
   return Maybe<void>::Ok();
 }
@@ -273,7 +273,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TestRandomSourceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = DataType::kFloat;
+  *ctx->OutputDType("out", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 
@@ -281,8 +281,8 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> TestDataTypeAttrOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("x", 0);
-  Shape* out_shape = ctx->OutputShape("y", 0);
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
   *out_shape = in_shape;
   return Maybe<void>::Ok();
 }
@@ -290,7 +290,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TestDataTypeAttrOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->Attr<DataType>("output_type");
+  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("output_type");
   return Maybe<void>::Ok();
 }
 
@@ -302,7 +302,9 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
     user_op::InferContext* ctx) {
   const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
   const auto& string_list = ctx->Attr<std::vector<std::string>>("string_list");
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) { *ctx->OutputShape("y", i) = out_shapes.at(i); }
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    *ctx->OutputShape("out", i) = out_shapes.at(i);
+  }
   CHECK_GT_OR_RETURN(string_list.size(), 0);
   return Maybe<void>::Ok();
 }
@@ -313,7 +315,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
 /*static*/ Maybe<void> TestListDataTypeAndListShapeAndListStringAttrOp::InferDataType(
     user_op::InferContext* ctx) {
   const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) { *ctx->OutputDType("y", i) = out_types.at(i); }
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) { *ctx->OutputDType("out", i) = out_types.at(i); }
   return Maybe<void>::Ok();
 }
 
@@ -337,8 +339,8 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> CpuOnlyReluTestOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const auto& in_desc = ctx->InputTensorDesc("x", 0);
-  auto* out_desc = ctx->OutputTensorDesc("y", 0);
+  const auto& in_desc = ctx->InputTensorDesc("in", 0);
+  auto* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_shape() = in_desc.shape();
   *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -347,7 +349,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> CpuOnlyReluTestOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

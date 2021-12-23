@@ -359,6 +359,11 @@ function(oneflow_add_test target_name)
   endif()
   set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
   add_test(NAME ${arg_TEST_NAME} COMMAND ${target_name})
+  set_tests_properties(
+    ${arg_TEST_NAME}
+  PROPERTIES
+    ENVIRONMENT "HTTP_PROXY='';HTTPS_PROXY='';http_proxy='';https_proxy='';"
+  )
 endfunction()
 
 # build test
