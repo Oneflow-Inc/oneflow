@@ -1382,7 +1382,7 @@ add_docstr(
     The equation is:
     
 	$$		
-	​   y_{i}=x_{0}+x_{1}+...+x_{i}
+        y_{i}=x_{0}+x_{1}+...+x_{i}
 	$$
     
     Args:
