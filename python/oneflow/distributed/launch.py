@@ -156,15 +156,15 @@ def main():
         sig_names = {2: "SIGINT", 15: "SIGTERM"}
         last_return_code = None
 
-        flag = True
-
+        # set killing flag to make sure killing signal only executed once
+        kill_flag = True
         def sigkill_handler(signum, frame):
-            nonlocal flag
-            if not flag:
+            nonlocal kill_flag
+            if not kill_flag:
                 return
             for process in processes:
                 print(f"Killing subprocess {process.pid}")
-            flag = False
+            kill_flag = False
             try:
                 # Note: use os.kill or process.kill() may only kill current process
                 # use killpg will kill(use signal) this process and all sub-processes
