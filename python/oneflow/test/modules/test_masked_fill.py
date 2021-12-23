@@ -37,6 +37,16 @@ class TestMaskedFill(flow.unittest.TestCase):
         return input.masked_fill(mask > 0, value)
 
     @autotest(check_graph=False)
+    def test_flow_masked_fill_with_0dim_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        input = random_pytorch_tensor(ndim=0).to(device)
+        mask = random_pytorch_tensor(ndim=0).to(device)
+        value = random().to(float)
+        return input.masked_fill(mask > 0, value)
+
+    @autotest(check_graph=False)
     def test_flow_masked_fill_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -45,6 +55,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         mask = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1).to(device)
         value = random().to(float)
         return input.masked_fill(mask > 0, value)
+
 
     @autotest(check_graph=False)
     def test_flow_masked_fill_int_with_random_data(test_case):
