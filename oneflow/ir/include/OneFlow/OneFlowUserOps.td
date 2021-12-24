@@ -8697,3 +8697,179 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 }
 
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
+
+// Group: Embedding
+// embedding_lookup_placeholder, sgd_embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update
+// Total: 8
+
+#ifdef GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS
+
+def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_placeholder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$ids
+  );
+  let output = (outs
+    AnyType:$embeddings
+  );
+  let attrs = (ins
+    StrAttr:$name,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    OneFlow_DataType:$dtype,
+    StrAttr:$encoder,
+    StrAttr:$partitioning,
+    StrAttr:$initializer,
+    StrAttr:$optimizer,
+    StrAttr:$backend
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+def OneFlow_SgdEmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"sgd_embedding_update_placeholder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$ids,
+    AnyType:$embedding_diff,
+    Optional<AnyType>:$learning_rate
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    StrAttr:$name,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$ids
+  );
+  let output = (outs
+    AnyType:$num_unique_ids,
+    AnyType:$ids_reverse_idx,
+    AnyType:$cur_rank_num_unique_ids,
+    AnyType:$cur_rank_unique_ids,
+    AnyType:$cur_rank_reverse_idx,
+    AnyType:$num_unique_ids_matrix,
+    AnyType:$partition_index
+  );
+  let attrs = (ins
+    StrAttr:$partitioning
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$cur_rank_embeddings,
+    AnyType:$cur_rank_num_unique_ids,
+    AnyType:$cur_rank_reverse_idx,
+    AnyType:$num_unique_ids,
+    AnyType:$ids_reverse_idx,
+    AnyType:$num_unique_ids_matrix,
+    AnyType:$partition_index
+  );
+  let output = (outs
+    AnyType:$embeddings
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$embedding_diff,
+    AnyType:$cur_rank_num_unique_ids,
+    AnyType:$cur_rank_reverse_idx,
+    AnyType:$num_unique_ids,
+    AnyType:$ids_reverse_idx,
+    AnyType:$num_unique_ids_matrix,
+    AnyType:$partition_index
+  );
+  let output = (outs
+    AnyType:$cur_rank_unique_embedding_diff
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$num_unique_ids,
+    AnyType:$unique_ids
+  );
+  let output = (outs
+    AnyType:$context
+  );
+  let attrs = (ins
+    StrAttr:$name
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$num_unique_ids,
+    AnyType:$unique_ids,
+    AnyType:$context
+  );
+  let output = (outs
+    AnyType:$embeddings,
+    AnyType:$out_context
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    OneFlow_DataType:$dtype,
+    StrAttr:$name
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$num_unique_ids,
+    AnyType:$unique_ids,
+    AnyType:$context,
+    AnyType:$unique_embeddings,
+    AnyType:$embedding_diff,
+    Optional<AnyType>:$learning_rate
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    StrAttr:$name,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS

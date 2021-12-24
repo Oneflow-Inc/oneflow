@@ -92,6 +92,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Output("cur_rank_unique_ids")
             .Output("cur_rank_reverse_idx")
             .Output("num_unique_ids_matrix")
+            .Output("partition_index")
             .Attr<std::string>("partitioning", user_op_conf.attr<std::string>("partitioning"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
