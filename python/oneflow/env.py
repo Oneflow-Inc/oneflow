@@ -29,7 +29,7 @@ import oneflow._oneflow_internal
 
 def get_local_rank():
     """Returns the local rank of current machine.
-    Local rank is not globally unique, it is only unique per process on a machine. 
+    Local rank is not globally unique. It is only unique per process on a machine. 
 
     Returns:
         The the local rank of process on current machine.
@@ -40,7 +40,7 @@ def get_local_rank():
 
 def get_rank():
     """Returns the rank of current process group.
-    Rank is globally unique, range of which is from 0 to world_size. 
+    Rank is globally unique, range of which is [0, world_size). 
 
     Returns:
         The rank of the process group.
@@ -73,7 +73,7 @@ def is_multi_client():
     """Returns whether it is currently in multi client mode.
 
     Returns:
-        True if currently in multi client mode, otherwise return Flase.
+        True if currently in multi client mode, otherwise returns Flase.
 
     """
     return oneflow._oneflow_internal.IsMultiClient()
