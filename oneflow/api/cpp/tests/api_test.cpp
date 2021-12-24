@@ -59,10 +59,12 @@ std::string GetExeDir() {
   char result[PATH_MAX];
   ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
   std::string exe_path(result, (count > 0) ? count : 0);
-  size_t pos = exe_path.rfind('/');
-  if (pos != std::string::npos) { return exe_path.substr(0, pos); }
+
+  // string(path).rfind('/') will never be string::npos on linux.
+  return exe_path.substr(0, exe_path.rfind('/'));
+#else
+#error oneflow_api::GetExeDir() has not been supported on windows.
 #endif
-  return ".";
 }
 
 }  // namespace oneflow_api
