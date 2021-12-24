@@ -63,11 +63,11 @@ __inline__ __device__ T Div(T a, T b);
 
 template<>
 __inline__ __device__ float Div<float>(float a, float b) {
-#ifdef OF_LAYER_NORM_USE_FAST_MATH
-  return __fdividef(a, b);
-#else
+// #ifdef OF_LAYER_NORM_USE_FAST_MATH
+//   return __fdividef(a, b);
+// #else
   return a / b;
-#endif
+// #endif
 }
 
 template<>
@@ -80,11 +80,11 @@ __inline__ __device__ T Rsqrt(T x);
 
 template<>
 __inline__ __device__ float Rsqrt<float>(float x) {
-#ifdef OF_LAYER_NORM_USE_FAST_MATH
-  return __frsqrt_rn(x);
-#else
+// #ifdef OF_LAYER_NORM_USE_FAST_MATH
+//   return __frsqrt_rn(x);
+// #else
   return rsqrt(x);
-#endif
+// #endif
 }
 
 template<>
