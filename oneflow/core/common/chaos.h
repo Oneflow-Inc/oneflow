@@ -36,10 +36,20 @@ class Monkey {
  public:
   virtual ~Monkey() {}
 
+  size_t failed_cnt() const { return failed_cnt_; }
+
+  bool FailIf() {
+    bool ret = Fail();
+    failed_cnt_ += static_cast<int>(ret);
+    return ret;
+  }
   virtual bool Fail() = 0;
 
  protected:
-  Monkey() = default;
+  Monkey() : failed_cnt_() {}
+
+ private:
+  size_t failed_cnt_;
 };
 
 Monkey* ThreadLocalMonkey();
@@ -49,8 +59,11 @@ class MonkeyScope {
   MonkeyScope(std::unique_ptr<Monkey>&& monkey);
   ~MonkeyScope();
 
+  const Monkey& current_monkey() const { return *current_monkey_; }
+
  private:
   std::unique_ptr<Monkey> old_monkey_;
+  const Monkey* current_monkey_;
 };
 
 #ifdef OF_ENABLE_CHAOS
@@ -58,11 +71,11 @@ class MonkeyScope {
 #define OF_CHAOS_MODE_SCOPE(enable_mode) \
   ::oneflow::chaos::ChaosModeScope OF_CHAOS_CAT(chaos_mode_scope_, __COUNTER__)(enable_mode)
 
-#define OF_CHAOS_BOOL_EXPR(expr)                                             \
-  ({                                                                         \
-    bool expr_ret = static_cast<bool>(expr);                                 \
-    if (::oneflow::chaos::ThreadLocalMonkey()->Fail()) { expr_ret = false; } \
-    expr_ret;                                                                \
+#define OF_CHAOS_BOOL_EXPR(expr)                                               \
+  ({                                                                           \
+    bool expr_ret = static_cast<bool>(expr);                                   \
+    if (::oneflow::chaos::ThreadLocalMonkey()->FailIf()) { expr_ret = false; } \
+    expr_ret;                                                                  \
   })
 
 #else  // OF_ENABLE_CHAOS

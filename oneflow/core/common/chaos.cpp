@@ -60,6 +60,7 @@ std::unique_ptr<Monkey>* MutThreadLocalMonkey() {
 Monkey* ThreadLocalMonkey() { return MutThreadLocalMonkey()->get(); }
 
 MonkeyScope::MonkeyScope(std::unique_ptr<Monkey>&& monkey) {
+  current_monkey_ = monkey.get();
   old_monkey_ = std::move(*MutThreadLocalMonkey());
   *MutThreadLocalMonkey() = std::move(monkey);
 }

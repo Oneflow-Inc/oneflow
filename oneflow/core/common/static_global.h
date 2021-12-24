@@ -28,6 +28,7 @@ template<typename RetT, typename Arg0>
 struct StaticGlobalCopiable<RetT, Arg0> {
   template<RetT (*func)(Arg0)>
   static RetT Call(Arg0 arg0) {
+    OF_CHAOS_MODE_SCOPE(false);
     using KeyT = typename std::decay<Arg0>::type;
     using MappedT = typename std::decay<RetT>::type;
     static std::mutex mutex;
@@ -38,9 +39,6 @@ struct StaticGlobalCopiable<RetT, Arg0> {
       if (iter != map.end()) { return iter->second; }
     }
     auto obj = func(arg0);
-#ifndef OF_ENABLE_CHAOS
-    if (!IsMaybeOk<RetT>::Call(obj)) { return obj; }
-#endif  // OF_ENABLE_CHAOS
     {
       std::unique_lock<std::mutex> lock(mutex);
       return map.emplace(arg0, std::move(obj)).first->second;

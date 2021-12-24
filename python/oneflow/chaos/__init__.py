@@ -20,6 +20,14 @@ class smart_monkey:
     def __init__(self):
         self.smart_monkey_guard_ = None
 
+    @property
+    def failed_cnt(self):
+        return (
+            self.smart_monkey_guard_.failed_cnt()
+            if self.smart_monkey_guard_ is not None
+            else 0
+        )
+
     def __enter__(self):
         self.smart_monkey_guard_ = flow._oneflow_internal.chaos.smart_monkey_guard()
 

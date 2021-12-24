@@ -18,10 +18,9 @@ limitations under the License.
 
 #include <type_traits>
 #include <unordered_map>
-#include <memory>
 #include "tuple_hash.h"
 #include "static_check.h"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/chaos.h"
 
 namespace oneflow {
 
@@ -48,18 +47,9 @@ template<typename RetT>
 struct ThreadLocalCopiable<RetT> {
   template<RetT (*func)()>
   static RetT Call() {
-#ifndef OF_ENABLE_CHAOS
-    static thread_local std::unique_ptr<RetT> value;
-    if (!value) {
-      RetT ret = func();
-      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
-      value = std::make_unique<RetT>(std::move(ret));
-    }
-    return *value;
-#else  // OF_ENABLE_CHAOS
-    static thread_local RetT value(func());
+    OF_CHAOS_MODE_SCOPE(false);
+    static thread_local RetT value = func();
     return value;
-#endif  // OF_ENABLE_CHAOS
   }
 };
 
@@ -67,17 +57,12 @@ template<typename RetT, typename Arg0>
 struct ThreadLocalCopiable<RetT, Arg0> {
   template<RetT (*func)(Arg0)>
   static RetT Call(Arg0 arg0) {
+    OF_CHAOS_MODE_SCOPE(false);
     using KeyT = typename std::decay<Arg0>::type;
     using MappedT = typename std::decay<RetT>::type;
     static thread_local std::unordered_map<KeyT, MappedT> map;
     auto iter = map.find(arg0);
-    if (iter == map.end()) {
-      auto ret = func(arg0);
-#ifndef OF_ENABLE_CHAOS
-      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
-#endif  // OF_ENABLE_CHAOS
-      iter = map.emplace(arg0, std::move(ret)).first;
-    }
+    if (iter == map.end()) { iter = map.emplace(arg0, func(arg0)).first; }
     return iter->second;
   }
 
@@ -90,19 +75,14 @@ template<typename RetT, typename Arg0, typename Arg1>
 struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
   template<RetT (*func)(Arg0, Arg1)>
   static RetT Call(Arg0 arg0, Arg1 arg1) {
+    OF_CHAOS_MODE_SCOPE(false);
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
     using MappedT = typename std::decay<RetT>::type;
     static thread_local std::unordered_map<KeyT0, std::unordered_map<KeyT1, MappedT>> map;
     auto* last_map = &map[arg0];
     auto iter = last_map->find(arg1);
-    if (iter == last_map->end()) {
-      auto ret = func(arg0, arg1);
-#ifndef OF_ENABLE_CHAOS
-      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
-#endif  // OF_ENABLE_CHAOS
-      iter = last_map->emplace(arg1, std::move(ret)).first;
-    }
+    if (iter == last_map->end()) { iter = last_map->emplace(arg1, func(arg0, arg1)).first; }
     return iter->second;
   }
 
@@ -114,6 +94,7 @@ template<typename RetT, typename Arg0, typename Arg1, typename Arg2>
 struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
   template<RetT (*func)(Arg0, Arg1, Arg2)>
   static RetT Call(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
+    OF_CHAOS_MODE_SCOPE(false);
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
     using KeyT2 = typename std::decay<Arg2>::type;
@@ -123,13 +104,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
         map;
     auto* last_map = &map[arg0][arg1];
     auto iter = last_map->find(arg2);
-    if (iter == last_map->end()) {
-      auto ret = func(arg0, arg1, arg2);
-#ifndef OF_ENABLE_CHAOS
-      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
-#endif  // OF_ENABLE_CHAOS
-      iter = last_map->emplace(arg2, std::move(ret)).first;
-    }
+    if (iter == last_map->end()) { iter = last_map->emplace(arg2, func(arg0, arg1, arg2)).first; }
     return iter->second;
   }
 
@@ -142,6 +117,7 @@ template<typename RetT, typename Arg0, typename Arg1, typename Arg2, typename Ar
 struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
   template<RetT (*func)(Arg0, Arg1, Arg2, Arg3, Args...)>
   static RetT Call(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Args... args) {
+    OF_CHAOS_MODE_SCOPE(false);
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
     using KeyT2 = typename std::decay<Arg2>::type;
@@ -151,13 +127,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
     static thread_local std::unordered_map<KeyT, MappedT> map;
     const auto& key = KeyT(arg0, arg1, arg2, arg3, args...);
     auto iter = map.find(key);
-    if (iter == map.end()) {
-      auto ret = func(arg0, arg1, arg2, arg3, args...);
-#ifndef OF_ENABLE_CHAOS
-      if (!IsMaybeOk<RetT>::Call(ret)) { return ret; }
-#endif  // OF_ENABLE_CHAOS
-      iter = map.emplace(key, std::move(ret)).first;
-    }
+    if (iter == map.end()) { iter = map.emplace(key, func(arg0, arg1, arg2, arg3, args...)).first; }
     return iter->second;
   }
 

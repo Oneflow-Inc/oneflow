@@ -62,7 +62,7 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  return ThreadLocalGetOrNew(type, device_id);
+  return JUST(ThreadLocalGetOrNew(type, device_id));
 }
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
@@ -96,7 +96,7 @@ Maybe<const std::string&> Device::of_type() const {
       {"critical_section", "cpu"},
       {"auto", "auto"},  // Only used for auto generator currently.
   };
-  return MapAt(type2device_tag, type());
+  return JUST_MSG(MapAt(type2device_tag, type()), std::stringstream() << "type: " << type());
 }
 
 Maybe<const Optional<std::string>&> Device::GetSharedTransportDeviceType() const {

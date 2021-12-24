@@ -264,16 +264,6 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe<PtrT> maybe_ptr_;
 };
 
-template<typename T>
-struct IsMaybeOk {
-  static constexpr bool Call(T&& obj) { return true; }
-};
-
-template<typename T>
-struct IsMaybeOk<Maybe<T>> {
-  static bool Call(T&& maybe) { return maybe.IsOk(); }
-};
-
 namespace {
 std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
   // return error msg got from formatted function or debugstring.

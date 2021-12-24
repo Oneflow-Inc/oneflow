@@ -15,13 +15,32 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/smart_monkey.h"
+
+namespace oneflow {
+
+namespace {
+
+Maybe<chaos::MonkeyScope> MakeSmartMonkeyScope() {
+  OF_CHAOS_MODE_SCOPE(false);
+#ifdef OF_ENABLE_CHAOS
+  return std::make_shared<chaos::MonkeyScope>(std::make_unique<chaos::SmartMonkey>());
+#else
+  return Error::CompileOptionWrongError();
+#endif
+}
+
+}  // namespace
+
+}  // namespace oneflow
 
 ONEFLOW_API_PYBIND11_MODULE("chaos", m) {
   using namespace oneflow;
   namespace py = pybind11;
-  py::class_<chaos::MonkeyScope, std::shared_ptr<chaos::MonkeyScope>>(m, "MonkeyGuard");
-  m.def("smart_monkey_guard", []() {
-    return std::make_shared<chaos::MonkeyScope>(std::make_unique<chaos::SmartMonkey>());
-  });
+  py::class_<chaos::MonkeyScope, std::shared_ptr<chaos::MonkeyScope>>(m, "MonkeyGuard")
+      .def("failed_cnt", [&](const chaos::MonkeyScope& monkey_scope) {
+        return monkey_scope.current_monkey().failed_cnt();
+      });
+  m.def("smart_monkey_guard", []() { return MakeSmartMonkeyScope().GetPtrOrThrow(); });
 }
