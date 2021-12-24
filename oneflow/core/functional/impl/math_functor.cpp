@@ -1531,7 +1531,7 @@ class VarianceFunctor {
           << "], but got " << dims.size();
       axis.assign(dims.begin(), dims.end());
     }
-    attrs.SetAttr<std::vector<int32_t>>("axis", axis);
+    attrs.SetAttr<std::vector<int32_t>>("dim", axis);
     attrs.SetAttr<DataType>("dtype", input->dtype()->data_type());
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);

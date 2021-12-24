@@ -58,7 +58,7 @@ Maybe<void> Variance::Capture(VarianceState* ctx, const TensorTuple& inputs,
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->keepdim = JUST(composed_attrs.GetAttr<bool>("keepdim"));
   ctx->unbiased = JUST(composed_attrs.GetAttr<bool>("unbiased"));
-  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dim"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

@@ -41,7 +41,7 @@ class VarKernel final : public user_op::OpKernel {
       *out_ptr = std::numeric_limits<double>::quiet_NaN();
       return;
     }
-    const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
+    const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
 
     VarParamHelper param_helper(input->shape(), axis, unbiased);
     VarFunctor<device_type, T>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
@@ -53,7 +53,7 @@ class VarKernel final : public user_op::OpKernel {
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const Shape& input_shape = input.shape();
-  const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
+  const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
   if (axis.size() == input_shape.NumAxes()) {
     return  static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
          * GetSizeOfDataType(input.data_type()) * 3; }
