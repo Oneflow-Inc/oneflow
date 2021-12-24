@@ -967,17 +967,18 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   const auto& job_name = job().job_conf().job_name();
   auto LogJob = [&](const std::string& name_suffix) -> void {
-    std::string full_log_name = job_name  + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
+    std::string full_log_name =
+        job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
     TeePersistentLogStream::Create(full_log_name)->Write(job());
     Global<OpGraph>::New(job());
     Global<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
     Global<OpGraph>::Delete();
   };
   std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
-  auto NeedLogJob = [&] (const std::string& pass_name) -> bool {
+  auto NeedLogJob = [&](const std::string& pass_name) -> bool {
     if ("ALL" == debug_pass_name) {
       return true;
-    } else if ( pass_name == debug_pass_name) {
+    } else if (pass_name == debug_pass_name) {
       return true;
     } else {
       return false;
