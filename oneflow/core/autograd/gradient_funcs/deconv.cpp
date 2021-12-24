@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -53,7 +53,7 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const T
   if (state->weight_requires_grad) {
     state->SaveTensorForBackward(inputs.at(0));  // x
   }
-  auto* interp_ctx = dynamic_cast<const Deconv3DOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const Deconv3DOp*>(ctx);
   state->data_format = interp_ctx->data_format();
   state->padding_before = interp_ctx->padding_before();
   state->kernel_size = interp_ctx->kernel_size();

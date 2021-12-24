@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -33,7 +33,7 @@ class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const ScalarMulOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const ScalarMulOp*>(ctx);
     bool has_float_operand = interp_ctx->has_float_operand();
     if (has_float_operand) {
       state->operand = Scalar(interp_ctx->float_operand());

@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -46,7 +46,7 @@ class BiasAddFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
-    auto ctx = std::make_shared<BiasAddOpInterpCtxImpl<schema::BiasAddOp>>();
+    auto ctx = std::make_shared<schema::BiasAddOp>();
     ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, ctx);
   }
@@ -91,7 +91,7 @@ class ConvBaseFunctor {
 
 class Conv1dFunctor : public ConvBaseFunctor<Conv1dFunctor> {
  public:
-  using ContextT = Conv1DOpInterpCtxImpl<schema::Conv1DOp>;
+  using ContextT = schema::Conv1DOp;
   static constexpr int num_spatial_dims_ = 1;
   Conv1dFunctor() : ConvBaseFunctor<Conv1dFunctor>() {
     conv_op_ =
@@ -101,7 +101,7 @@ class Conv1dFunctor : public ConvBaseFunctor<Conv1dFunctor> {
 
 class Conv2dFunctor : public ConvBaseFunctor<Conv2dFunctor> {
  public:
-  using ContextT = Conv2DOpInterpCtxImpl<schema::Conv2DOp>;
+  using ContextT = schema::Conv2DOp;
   static constexpr int num_spatial_dims_ = 2;
   Conv2dFunctor() : ConvBaseFunctor<Conv2dFunctor>() {
     conv_op_ =
@@ -111,7 +111,7 @@ class Conv2dFunctor : public ConvBaseFunctor<Conv2dFunctor> {
 
 class Conv3dFunctor : public ConvBaseFunctor<Conv3dFunctor> {
  public:
-  using ContextT = Conv3DOpInterpCtxImpl<schema::Conv3DOp>;
+  using ContextT = schema::Conv3DOp;
   static constexpr int num_spatial_dims_ = 3;
   Conv3dFunctor() : ConvBaseFunctor<Conv3dFunctor>() {
     conv_op_ =
@@ -154,7 +154,7 @@ class DeConvBaseFunctor {
 
 class DeConv1dFunctor : public DeConvBaseFunctor<DeConv1dFunctor> {
  public:
-  using ContextT = Deconv1DOpInterpCtxImpl<schema::Deconv1DOp>;
+  using ContextT = schema::Deconv1DOp;
   DeConv1dFunctor() : DeConvBaseFunctor<DeConv1dFunctor>() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
@@ -163,7 +163,7 @@ class DeConv1dFunctor : public DeConvBaseFunctor<DeConv1dFunctor> {
 
 class DeConv2dFunctor : public DeConvBaseFunctor<DeConv2dFunctor> {
  public:
-  using ContextT = Deconv2DOpInterpCtxImpl<schema::Deconv2DOp>;
+  using ContextT = schema::Deconv2DOp;
   DeConv2dFunctor() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv2d").Input("in").Input("weight").Output("out").Build());
@@ -172,7 +172,7 @@ class DeConv2dFunctor : public DeConvBaseFunctor<DeConv2dFunctor> {
 
 class DeConv3dFunctor : public DeConvBaseFunctor<DeConv3dFunctor> {
  public:
-  using ContextT = Deconv3DOpInterpCtxImpl<schema::Deconv3DOp>;
+  using ContextT = schema::Deconv3DOp;
   DeConv3dFunctor() : DeConvBaseFunctor<DeConv3dFunctor>() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
@@ -199,14 +199,14 @@ class MatMulFunctor {
     if (a_shape->NumAxes() != b_shape->NumAxes()) {
       CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
           << "Not support number of dimensions of a being less than number of dimensions of b!";
-      auto ctx = std::make_shared<BroadcastMatmulOpInterpCtxImpl<schema::BroadcastMatmulOp>>();
+      auto ctx = std::make_shared<schema::BroadcastMatmulOp>();
       ctx->set_transpose_a(transpose_a);
       ctx->set_transpose_b(transpose_b);
       ctx->set_alpha(alpha);
       return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, ctx);
     }
     if (a_shape->NumAxes() > 2) { return BatchMatMul(a, b, transpose_a, transpose_b, alpha); }
-    auto ctx = std::make_shared<MatmulOpInterpCtxImpl<schema::MatmulOp>>();
+    auto ctx = std::make_shared<schema::MatmulOp>();
     ctx->set_transpose_a(transpose_a);
     ctx->set_transpose_b(transpose_b);
     ctx->set_alpha(alpha);
@@ -236,7 +236,7 @@ class BatchMatMulFunctor {
     CHECK_GE_OR_RETURN(a_shape->At(2), b_shape->At(1))
         << "matmul dim not match, please check input!";
 
-    auto ctx = std::make_shared<BatchMatmulOpInterpCtxImpl<schema::BatchMatmulOp>>();
+    auto ctx = std::make_shared<schema::BatchMatmulOp>();
     ctx->set_transpose_a(transpose_a);
     ctx->set_transpose_b(transpose_b);
     ctx->set_alpha(alpha);
@@ -259,7 +259,7 @@ class LayerNormFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& begin_norm_axis,
                            const int64_t& begin_params_axis, const double& epsilon) const {
-    auto ctx = std::make_shared<LayerNormOpInterpCtxImpl<schema::LayerNormOp>>();
+    auto ctx = std::make_shared<schema::LayerNormOp>();
     ctx->set_begin_norm_axis(begin_norm_axis);
     ctx->set_begin_params_axis(begin_params_axis);
     ctx->set_epsilon(epsilon);
@@ -289,7 +289,7 @@ class LayerNormAffineFunctor {
                            const std::shared_ptr<one::Tensor>& gamma,
                            const std::shared_ptr<one::Tensor>& beta, const int64_t& begin_norm_axis,
                            const int64_t& begin_params_axis, const double& epsilon) const {
-    auto ctx = std::make_shared<LayerNormOpInterpCtxImpl<schema::LayerNormOp>>();
+    auto ctx = std::make_shared<schema::LayerNormOp>();
     ctx->set_begin_norm_axis(begin_norm_axis);
     ctx->set_begin_params_axis(begin_params_axis);
     ctx->set_epsilon(epsilon);
@@ -360,7 +360,7 @@ class PoolingNDFunctor {
 
 class TFAvgPool2DFunctor : public PoolNDFunctor<TFAvgPool2DFunctor> {
  public:
-  using ContextT = TfAvgPool2DOpInterpCtxImpl<schema::TfAvgPool2DOp>;
+  using ContextT = schema::TfAvgPool2DOp;
   TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
   }
@@ -368,7 +368,7 @@ class TFAvgPool2DFunctor : public PoolNDFunctor<TFAvgPool2DFunctor> {
 
 class TFMaxPool2DFunctor : public PoolNDFunctor<TFMaxPool2DFunctor> {
  public:
-  using ContextT = TfMaxPool2DOpInterpCtxImpl<schema::TfMaxPool2DOp>;
+  using ContextT = schema::TfMaxPool2DOp;
   TFMaxPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
@@ -376,7 +376,7 @@ class TFMaxPool2DFunctor : public PoolNDFunctor<TFMaxPool2DFunctor> {
 
 class Maxpool1DFunctor : public PoolingNDFunctor<Maxpool1DFunctor> {
  public:
-  using ContextT = MaxPool1DOpInterpCtxImpl<schema::MaxPool1DOp>;
+  using ContextT = schema::MaxPool1DOp;
   Maxpool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_1d").Input("x").Output("y").Output("indice").Build());
   }
@@ -384,7 +384,7 @@ class Maxpool1DFunctor : public PoolingNDFunctor<Maxpool1DFunctor> {
 
 class Maxpool2DFunctor : public PoolingNDFunctor<Maxpool2DFunctor> {
  public:
-  using ContextT = MaxPool3DOpInterpCtxImpl<schema::MaxPool3DOp>;
+  using ContextT = schema::MaxPool3DOp;
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
   }
@@ -392,7 +392,7 @@ class Maxpool2DFunctor : public PoolingNDFunctor<Maxpool2DFunctor> {
 
 class Maxpool3DFunctor : public PoolingNDFunctor<Maxpool3DFunctor> {
  public:
-  using ContextT = MaxPool3DOpInterpCtxImpl<schema::MaxPool3DOp>;
+  using ContextT = schema::MaxPool3DOp;
   Maxpool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_3d").Input("x").Output("y").Output("indice").Build());
   }
@@ -414,7 +414,7 @@ class AdaptivePoolNDFunctor {
 
 class AdaptiveAvgPool1DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool1DFunctor> {
  public:
-  using ContextT = AdaptiveAvgPool1DOpInterpCtxImpl<schema::AdaptiveAvgPool1DOp>;
+  using ContextT = schema::AdaptiveAvgPool1DOp;
   AdaptiveAvgPool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool1d").Input("x").Output("y").Build());
   }
@@ -422,7 +422,7 @@ class AdaptiveAvgPool1DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool1DF
 
 class AdaptiveAvgPool2DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool2DFunctor> {
  public:
-  using ContextT = AdaptiveAvgPool2DOpInterpCtxImpl<schema::AdaptiveAvgPool2DOp>;
+  using ContextT = schema::AdaptiveAvgPool2DOp;
   AdaptiveAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool2d").Input("x").Output("y").Build());
   }
@@ -430,7 +430,7 @@ class AdaptiveAvgPool2DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool2DF
 
 class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor<AdaptiveAvgPool3DFunctor> {
  public:
-  using ContextT = AdaptiveAvgPool3DOpInterpCtxImpl<schema::AdaptiveAvgPool3DOp>;
+  using ContextT = schema::AdaptiveAvgPool3DOp;
   AdaptiveAvgPool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool3d").Input("x").Output("y").Build());
   }
@@ -483,7 +483,7 @@ class SmoothL1LossFunctor : LossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const float& beta,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<SmoothL1LossOpInterpCtxImpl<schema::SmoothL1LossOp>>();
+    auto ctx = std::make_shared<schema::SmoothL1LossOp>();
     ctx->set_beta(beta);
     return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, ctx), reduction);
   }
@@ -501,7 +501,7 @@ class KLDivLossFunctor : public LossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const bool log_target,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<KlDivLossOpInterpCtxImpl<schema::KlDivLossOp>>();
+    auto ctx = std::make_shared<schema::KlDivLossOp>();
     ctx->set_log_target(log_target);
     return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, ctx), reduction);
   }
@@ -548,7 +548,7 @@ class BinaryCrossEntropyLossFunctor : public LossFunctorBase {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<BinaryCrossEntropyOpInterpCtxImpl<schema::BinaryCrossEntropyOp>>();
+    auto ctx = std::make_shared<schema::BinaryCrossEntropyOp>();
     auto out = weight
                    ? OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, ctx)
                    : OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, ctx);
@@ -594,7 +594,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
     auto ctx = std::make_shared<
-        BinaryCrossEntropyWithLogitsOpInterpCtxImpl<schema::BinaryCrossEntropyWithLogitsOp>>();
+ schema::BinaryCrossEntropyWithLogitsOp>();
     ctx->set_has_pos_weight(pos_weight.has_value());
     std::shared_ptr<Tensor> out;
     if (weight) {
@@ -663,7 +663,7 @@ class NllLossFunctor {
 
     std::shared_ptr<TensorTuple> kernel_result;
     std::shared_ptr<Tensor> result;
-    auto ctx = std::make_shared<NllOpInterpCtxImpl<schema::NllOp>>();
+    auto ctx = std::make_shared<schema::NllOp>();
     ctx->set_ignore_index(ignore_index);
     if (weight) {
       kernel_result = JUST(
@@ -728,7 +728,7 @@ class CrossEntropyFunctor {
 
     std::shared_ptr<TensorTuple> kernel_result;
     std::shared_ptr<Tensor> result;
-    auto ctx = std::make_shared<NllOpInterpCtxImpl<schema::NllOp>>();
+    auto ctx = std::make_shared<schema::NllOp>();
     ctx->set_ignore_index(ignore_index);
     if (weight) {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
@@ -762,7 +762,7 @@ class SparseCrossEntropyFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    auto ctx = std::make_shared<SparseCrossEntropyOpInterpCtxImpl<schema::SparseCrossEntropyOp>>();
+    auto ctx = std::make_shared<schema::SparseCrossEntropyOp>();
     ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, ctx);
   }
@@ -783,7 +783,7 @@ class SparseCrossEntropyMsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
     auto ctx =
-        std::make_shared<SparseCrossEntropyMsOpInterpCtxImpl<schema::SparseCrossEntropyMsOp>>();
+        std::make_shared<schema::SparseCrossEntropyMsOp>();
     ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, ctx);
   }
@@ -863,7 +863,7 @@ class SparseSoftmaxCrossEntropyFunctor {
                                                   const std::shared_ptr<one::Tensor>& label) const {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     auto ctx = std::make_shared<
-        SparseSoftmaxCrossEntropyOpInterpCtxImpl<schema::SparseSoftmaxCrossEntropyOp>>();
+ schema::SparseSoftmaxCrossEntropyOp>();
     ctx->set_depth(depth);
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_,
                                                                   {logits, label}, ctx));
@@ -874,7 +874,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     auto ctx = std::make_shared<
-        SparseSoftmaxCrossEntropyMsOpInterpCtxImpl<schema::SparseSoftmaxCrossEntropyMsOp>>();
+ schema::SparseSoftmaxCrossEntropyMsOp>();
     ctx->set_depth(depth);
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_sparse_softmax_cross_entropy_ms_, {logits, label}, ctx));
@@ -887,7 +887,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     int32_t axis = logits->shape()->NumAxes() - 1;
     auto reduce_max_device_stage_ctx =
-        std::make_shared<ReduceMaxDeviceStageOpInterpCtxImpl<schema::ReduceMaxDeviceStageOp>>();
+        std::make_shared<schema::ReduceMaxDeviceStageOp>();
     reduce_max_device_stage_ctx->set_axis({axis});
     const auto& max_device_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_reduce_max_device_stage_, {logits}, reduce_max_device_stage_ctx));
@@ -913,7 +913,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     }
     // op_reduce_max_global_stage_
     auto reduce_max_global_stage_ctx =
-        std::make_shared<ReduceMaxGlobalStageOpInterpCtxImpl<schema::ReduceMaxGlobalStageOp>>();
+        std::make_shared<schema::ReduceMaxGlobalStageOp>();
     reduce_max_global_stage_ctx->set_axis({axis});
     reduce_max_global_stage_ctx->set_keepdims(true);
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
@@ -1002,7 +1002,7 @@ class CombinedMarginLossFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& label, const float& m1,
                            const float& m2, const float& m3) const {
-    auto ctx = std::make_shared<CombinedMarginLossOpInterpCtxImpl<schema::CombinedMarginLossOp>>();
+    auto ctx = std::make_shared<schema::CombinedMarginLossOp>();
     ctx->set_m1(m1);
     ctx->set_m2(m2);
     ctx->set_m3(m3);
@@ -1033,7 +1033,7 @@ class CtcLossFunctor {
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const int64_t& max_target_length, const int& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
-    auto ctx = std::make_shared<CtcLossOpInterpCtxImpl<schema::CtcLossOp>>();
+    auto ctx = std::make_shared<schema::CtcLossOp>();
     ctx->set_blank(blank);
     ctx->set_zero_infinity(zero_infinity);
     ctx->set_max_target_length(max_target_length);
@@ -1121,7 +1121,7 @@ class AffineGridFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& theta, const Shape& size,
                            const bool& align_corners) const {
-    auto ctx = std::make_shared<AffineGridOpInterpCtxImpl<schema::AffineGridOp>>();
+    auto ctx = std::make_shared<schema::AffineGridOp>();
     ctx->set_size(size);
     ctx->set_align_corners(align_corners);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {theta}, ctx);
@@ -1141,7 +1141,7 @@ class GridSampleFunctor {
                            const std::shared_ptr<one::Tensor>& grid,
                            const std::string& interpolation_mode, const std::string& padding_mode,
                            const bool& align_corners) const {
-    auto ctx = std::make_shared<GridSampleOpInterpCtxImpl<schema::GridSampleOp>>();
+    auto ctx = std::make_shared<schema::GridSampleOp>();
     ctx->set_interpolation_mode(interpolation_mode);
     ctx->set_padding_mode(padding_mode);
     ctx->set_align_corners(align_corners);
@@ -1189,7 +1189,7 @@ class NormalizationFunctor {
                            const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
                            const float& epsilon, const float& momentum,
                            const bool& training) const {
-    auto ctx = std::make_shared<NormalizationOpInterpCtxImpl<schema::NormalizationOp>>();
+    auto ctx = std::make_shared<schema::NormalizationOp>();
     ctx->set_epsilon(epsilon);
     ctx->set_axis(axis);
     // convert torch momentum to tensorflow momentum
@@ -1286,7 +1286,7 @@ class NormalizationAddReluFunctor {
     if (!is_training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
-      auto ctx = std::make_shared<NormalizationOpInterpCtxImpl<schema::NormalizationOp>>();
+      auto ctx = std::make_shared<schema::NormalizationOp>();
       ctx->set_epsilon(epsilon);
       ctx->set_axis(axis);
       // convert torch momentum to tensorflow momentum
@@ -1302,7 +1302,7 @@ class NormalizationAddReluFunctor {
       }
     }
     auto ctx = std::make_shared<
-        NormalizationAddReluBaseOpInterpCtxImpl<schema::NormalizationAddReluBaseOp>>();
+ schema::NormalizationAddReluBaseOp>();
     ctx->set_epsilon(epsilon);
     ctx->set_axis(axis);
     // convert torch momentum to tensorflow momentum
@@ -1351,7 +1351,7 @@ class PadFunctor {
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     if (mode == "constant") {
-      auto ctx = std::make_shared<PadOpInterpCtxImpl<schema::PadOp>>();
+      auto ctx = std::make_shared<schema::PadOp>();
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << "Length of pad must be even but instead it equals " << pad.size();
       if (IsFloatingDataType(x->dtype()->data_type())) {
@@ -1377,7 +1377,7 @@ class PadFunctor {
 
     } else if (mode == "reflect") {
       auto ctx =
-          std::make_shared<ReflectionPad2DGradOpInterpCtxImpl<schema::ReflectionPad2DGradOp>>();
+          std::make_shared<schema::ReflectionPad2DGradOp>();
       ctx->set_padding(pad);
       const int64_t pad_h = x->shape()->dim_vec().at(2);
       const int64_t pad_w = x->shape()->dim_vec().at(3);
@@ -1386,7 +1386,7 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, ctx);
     } else if (mode == "replicate") {
       auto ctx =
-          std::make_shared<ReplicationPad2DGradOpInterpCtxImpl<schema::ReplicationPad2DGradOp>>();
+          std::make_shared<schema::ReplicationPad2DGradOp>();
       ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, ctx);
     } else {
@@ -1419,7 +1419,7 @@ class DropoutFunctor {
                            const bool& training, const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-    auto ctx = std::make_shared<DropoutOpInterpCtxImpl<schema::DropoutOp>>();
+    auto ctx = std::make_shared<schema::DropoutOp>();
     ctx->set_rate(p);
     ctx->state = dropout_state;
     if (addend) {
@@ -1451,7 +1451,7 @@ class DropoutGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
-    auto ctx = std::make_shared<DropoutGradOpInterpCtxImpl<schema::DropoutGradOp>>();
+    auto ctx = std::make_shared<schema::DropoutGradOp>();
     ctx->set_scale(scale);
     return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, ctx);
   }
@@ -1493,7 +1493,7 @@ class AvgPoolingNDFunctor {
 
 class Avgpool1DFunctor : public AvgPoolingNDFunctor<Avgpool1DFunctor> {
  public:
-  using ContextT = AvgPool1DOpInterpCtxImpl<schema::AvgPool1DOp>;
+  using ContextT = schema::AvgPool1DOp;
   Avgpool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_1d").Input("x").Output("y").Build());
   }
@@ -1501,7 +1501,7 @@ class Avgpool1DFunctor : public AvgPoolingNDFunctor<Avgpool1DFunctor> {
 
 class Avgpool2DFunctor : public AvgPoolingNDFunctor<Avgpool2DFunctor> {
  public:
-  using ContextT = AvgPool2DOpInterpCtxImpl<schema::AvgPool2DOp>;
+  using ContextT = schema::AvgPool2DOp;
   Avgpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_2d").Input("x").Output("y").Build());
   }
@@ -1509,7 +1509,7 @@ class Avgpool2DFunctor : public AvgPoolingNDFunctor<Avgpool2DFunctor> {
 
 class Avgpool3DFunctor : public AvgPoolingNDFunctor<Avgpool3DFunctor> {
  public:
-  using ContextT = AvgPool3DOpInterpCtxImpl<schema::AvgPool3DOp>;
+  using ContextT = schema::AvgPool3DOp;
   Avgpool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
   }
@@ -1528,7 +1528,7 @@ class UnfoldFunctor {
     const auto& x_shape = x->shape();
     // Only Support 4d tensor now.
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 4) << "Input Tensor dim should == 4";
-    auto ctx = std::make_shared<UnfoldOpInterpCtxImpl<schema::UnfoldOp>>();
+    auto ctx = std::make_shared<schema::UnfoldOp>();
     ctx->set_data_format(data_format);
     ctx->set_kernel_size(kernel_size);
     ctx->set_dilation_rate(dilation_rate);
@@ -1553,7 +1553,7 @@ class FoldFunctor {
     const auto& x_shape = x->shape();
     // Only Support 3d tensor fold now. format is (N, C*K*K, L)
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3) << "Input Tensor dim should == 3";
-    auto ctx = std::make_shared<FoldOpInterpCtxImpl<schema::FoldOp>>();
+    auto ctx = std::make_shared<schema::FoldOp>();
     ctx->set_output_size(output_size);
     ctx->set_kernel_size(kernel_size);
     ctx->set_dilation_rate(dilation_rate);
@@ -1587,7 +1587,7 @@ class OneHotFunctor {
     if (IsFloatingDataType(input->dtype()->data_type())) {
       OF_RUNTIME_ERROR() << "one_hot is only applicable to index tensor.";
     }
-    auto ctx = std::make_shared<OneHotOpInterpCtxImpl<schema::OneHotOp>>();
+    auto ctx = std::make_shared<schema::OneHotOp>();
     if (num_classes == -1) {
       std::vector<int32_t> axis(input->ndim());
       std::iota(axis.begin(), axis.end(), 0);
@@ -1635,7 +1635,7 @@ class L2NormalizeFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
                                 const float& epsilon) const {
-    auto ctx = std::make_shared<L2NormalizeOpInterpCtxImpl<schema::L2NormalizeOp>>();
+    auto ctx = std::make_shared<schema::L2NormalizeOp>();
     ctx->set_axis(axis);
     ctx->set_epsilon(epsilon);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, ctx);
@@ -1656,8 +1656,7 @@ class FusedSelfAttentionFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
                                 const int64_t& head_size, const float& alpha) const {
-    auto ctx = std::make_shared<FusedSelfAttentionQueryMulKeyAndValueOpInterpCtxImpl<
-        schema::FusedSelfAttentionQueryMulKeyAndValueOp>>();
+    auto ctx = std::make_shared<schema::FusedSelfAttentionQueryMulKeyAndValueOp>();
     ctx->set_head_size(head_size);
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {hidden_states}, ctx);
@@ -1681,8 +1680,7 @@ class FusedSelfAttentionGradFunctor {
                            const std::shared_ptr<one::Tensor>& value_grad,
                            const std::shared_ptr<one::Tensor>& hidden_states,
                            const float& alpha) const {
-    auto ctx = std::make_shared<FusedSelfAttentionQueryMulKeyAndValueGradOpInterpCtxImpl<
-        schema::FusedSelfAttentionQueryMulKeyAndValueGradOp>>();
+    auto ctx = std::make_shared<schema::FusedSelfAttentionQueryMulKeyAndValueGradOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {query_mul_key_grad, value_grad, hidden_states},
                                           ctx);
@@ -1709,7 +1707,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
                                 const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    auto mask_ctx = std::make_shared<RandomMaskLikeOpInterpCtxImpl<schema::RandomMaskLikeOp>>();
+    auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(p);
     mask_ctx->set_seed(gen->current_seed());
     mask_ctx->state = random_mask_like_state;
@@ -1718,7 +1716,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     float mask_scale_value = 1.0;
     if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
     auto ctx = std::make_shared<
-        FusedTrilScaleSoftmaxMaskScaleOpInterpCtxImpl<schema::FusedTrilScaleSoftmaxMaskScaleOp>>();
+ schema::FusedTrilScaleSoftmaxMaskScaleOp>();
     ctx->set_diagonal(diagonal);
     ctx->set_tril_scale_value(tril_scale_value);
     ctx->set_mask_scale_value(mask_scale_value);
@@ -1744,7 +1742,7 @@ class L2NormalizeGradFunctor {
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& square_x_sum, const int32_t& axis,
                            const float& epsilon) const {
-    auto ctx = std::make_shared<L2NormalizeGradOpInterpCtxImpl<schema::L2NormalizeGradOp>>();
+    auto ctx = std::make_shared<schema::L2NormalizeGradOp>();
     ctx->set_axis(axis);
     ctx->set_epsilon(epsilon);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, square_x_sum}, ctx);
@@ -1762,7 +1760,7 @@ class FusedBiasAddGeluFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const int32_t& axis) const {
-    auto ctx = std::make_shared<FusedBiasAddGeluOpInterpCtxImpl<schema::FusedBiasAddGeluOp>>();
+    auto ctx = std::make_shared<schema::FusedBiasAddGeluOp>();
     ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, ctx);
   }
@@ -1785,7 +1783,7 @@ class FusedBiasAddGeluGradFunctor {
                            const std::shared_ptr<one::Tensor>& b,
                            const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
     auto ctx =
-        std::make_shared<FusedBiasAddGeluGradOpInterpCtxImpl<schema::FusedBiasAddGeluGradOp>>();
+        std::make_shared<schema::FusedBiasAddGeluGradOp>();
     ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, ctx);
   }
@@ -1811,7 +1809,7 @@ class FusedBiasAddDropoutFunctor {
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    auto mask_ctx = std::make_shared<RandomMaskLikeOpInterpCtxImpl<schema::RandomMaskLikeOp>>();
+    auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(p);
     mask_ctx->set_seed(gen->current_seed());
     mask_ctx->state = random_mask_like_state;
@@ -1819,7 +1817,7 @@ class FusedBiasAddDropoutFunctor {
     float scale = 0.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     auto ctx =
-        std::make_shared<FusedBiasAddMaskScaleOpInterpCtxImpl<schema::FusedBiasAddMaskScaleOp>>();
+        std::make_shared<schema::FusedBiasAddMaskScaleOp>();
     ctx->set_scale(scale);
     ctx->set_axis(axis);
     return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
@@ -1844,7 +1842,7 @@ class FusedScaleTrilFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal,
                            const Scalar& fill_value, const Scalar& scale) const {
-    auto ctx = std::make_shared<FusedScaleTrilOpInterpCtxImpl<schema::FusedScaleTrilOp>>();
+    auto ctx = std::make_shared<schema::FusedScaleTrilOp>();
     ctx->set_diagonal(diagonal);
     bool is_fill_value_double = fill_value.IsFloatingPoint();
     bool is_scale_double = scale.IsFloatingPoint();
@@ -1884,7 +1882,7 @@ class FusedScaleMaskSoftmaxFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
                            const float& scale) const {
     auto ctx =
-        std::make_shared<FusedScaleMaskSoftmaxOpInterpCtxImpl<schema::FusedScaleMaskSoftmaxOp>>();
+        std::make_shared<schema::FusedScaleMaskSoftmaxOp>();
     ctx->set_scale_value(scale);
     ctx->set_mask_fill_value(fill_value);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, ctx);
@@ -1916,7 +1914,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     if (!training) rate = 0.0;
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    auto mask_ctx = std::make_shared<RandomMaskLikeOpInterpCtxImpl<schema::RandomMaskLikeOp>>();
+    auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(rate);
     mask_ctx->set_seed(gen->current_seed());
     mask_ctx->state = random_mask_like_state;
@@ -1926,7 +1924,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
     auto ctx = std::make_shared<
-        FusedScaleMaskSoftmaxDropoutOpInterpCtxImpl<schema::FusedScaleMaskSoftmaxDropoutOp>>();
+ schema::FusedScaleMaskSoftmaxDropoutOp>();
     ctx->set_scale_value(scale);
     ctx->set_mask_fill_value(fill_value);
     ctx->set_dropout_scale_value(dropout_scale);
@@ -1952,7 +1950,7 @@ class CtcGreedyDecoderFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& log_probs,
                                 const std::shared_ptr<one::Tensor>& input_lengths,
                                 const bool& merge_repeated) const {
-    auto ctx = std::make_shared<CtcGreedyDecoderOpInterpCtxImpl<schema::CtcGreedyDecoderOp>>();
+    auto ctx = std::make_shared<schema::CtcGreedyDecoderOp>();
     ctx->set_merge_repeated(merge_repeated);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {log_probs, input_lengths}, ctx);
   }
@@ -1976,7 +1974,7 @@ class PartialFCSampleFunctor {
                                 const std::shared_ptr<one::Tensor>& label,
                                 const int64_t& num_sample) const {
     auto ctx = std::make_shared<
-        DistributedPartialFcSampleOpInterpCtxImpl<schema::DistributedPartialFcSampleOp>>();
+ schema::DistributedPartialFcSampleOp>();
     ctx->set_num_sample(num_sample);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, ctx);
   }
@@ -2010,7 +2008,7 @@ class NmsFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& iou_threshold,
                            const int32_t& keep_n) const {
-    auto ctx = std::make_shared<NmsOpInterpCtxImpl<schema::NmsOp>>();
+    auto ctx = std::make_shared<schema::NmsOp>();
     ctx->set_iou_threshold(iou_threshold);
     ctx->set_keep_n(keep_n);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
@@ -2030,7 +2028,7 @@ class RoiAlignFunctor {
                            const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
                            const int32_t& pooled_h, const int32_t& pooled_w,
                            const int32_t& sampling_ratio, const bool& aligned) const {
-    auto ctx = std::make_shared<RoiAlignOpInterpCtxImpl<schema::RoiAlignOp>>();
+    auto ctx = std::make_shared<schema::RoiAlignOp>();
     ctx->set_spatial_scale(spatial_scale);
     ctx->set_pooled_h(pooled_h);
     ctx->set_pooled_w(pooled_w);
@@ -2059,7 +2057,7 @@ class RoiAlignGradFunctor {
                            const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
                            const int32_t& pooled_h, const int32_t& pooled_w,
                            const int32_t& sampling_ratio, const bool& aligned) const {
-    auto ctx = std::make_shared<RoiAlignGradOpInterpCtxImpl<schema::RoiAlignGradOp>>();
+    auto ctx = std::make_shared<schema::RoiAlignGradOp>();
     ctx->set_spatial_scale(spatial_scale);
     ctx->set_pooled_h(pooled_h);
     ctx->set_pooled_w(pooled_w);

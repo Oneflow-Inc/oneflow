@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
@@ -74,7 +74,7 @@ Maybe<one::Tensor> SymmetricSToP(const std::shared_ptr<one::Tensor>& tensor, Sym
 
   std::shared_ptr<one::OpExpr> op_expr = JUST(
       CachedEagerSymmetricSToPOpExpr(tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0))));
-  auto ctx = std::make_shared<EagerSymmetricSToPOpInterpCtxImpl<schema::EagerSymmetricSToPOp>>();
+  auto ctx = std::make_shared<schema::EagerSymmetricSToPOp>();
   ctx->set_in_split_axis(tensor_nd_sbp->sbp_parallel(0).split_parallel().axis());
   ctx->set_parallel_conf(PbMessage2TxtString(tensor_placement->parallel_conf()));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}, ctx));

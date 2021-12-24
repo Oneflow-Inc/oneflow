@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -754,8 +754,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   }
   std::shared_ptr<UserOpExpr> parallel_cast_op_expr = JUST(
       OpBuilder("hierarchical_parallel_cast", "trivial_op_name").Input("in").Output("out").Build());
-  auto cast_ctx = std::make_shared<
-      HierarchicalParallelCastOpInterpCtxImpl<schema::HierarchicalParallelCastOp>>();
+  auto cast_ctx = std::make_shared<schema::HierarchicalParallelCastOp>();
   cast_ctx->set_nd_sbp(*sbp_list_ptr);
   cast_ctx->set_grad_mode(grad_mode);
   cast_ctx->set_grad_nd_sbp(grad_sbp_str_list);

@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 namespace one {
@@ -42,7 +42,7 @@ Maybe<void> Upsample::Capture(UpsampleCaptureState* state, const TensorTuple& in
                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const UpsampleOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const UpsampleOp*>(ctx);
   state->height_scale = interp_ctx->height_scale();
   state->width_scale = interp_ctx->width_scale();
   state->align_corners = interp_ctx->align_corners();
@@ -82,7 +82,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleNearest2DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleNearest2DOp*>(ctx);
     state->height_scale = interp_ctx->height_scale();
     state->width_scale = interp_ctx->width_scale();
     state->data_format = interp_ctx->data_format();
@@ -121,7 +121,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleBilinear2DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleBilinear2DOp*>(ctx);
     state->height_scale = interp_ctx->height_scale();
     state->width_scale = interp_ctx->width_scale();
     state->align_corners = interp_ctx->align_corners();
@@ -161,7 +161,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleLinear1DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleLinear1DOp*>(ctx);
     state->scale_factor = interp_ctx->scale_factor();
     state->align_corners = interp_ctx->align_corners();
     state->data_format = interp_ctx->data_format();
@@ -198,7 +198,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleNearest1DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleNearest1DOp*>(ctx);
     state->scale_factor = interp_ctx->scale_factor();
     state->data_format = interp_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
@@ -236,7 +236,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleBicubic2DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleBicubic2DOp*>(ctx);
     state->height_scale = interp_ctx->height_scale();
     state->width_scale = interp_ctx->width_scale();
     state->align_corners = interp_ctx->align_corners();
@@ -276,7 +276,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleNearest3DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleNearest3DOp*>(ctx);
     state->depth_scale = interp_ctx->depth_scale();
     state->height_scale = interp_ctx->height_scale();
     state->width_scale = interp_ctx->width_scale();
@@ -318,7 +318,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleTrilinear3DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const UpsampleTrilinear3DOp*>(ctx);
     state->depth_scale = interp_ctx->depth_scale();
     state->height_scale = interp_ctx->height_scale();
     state->width_scale = interp_ctx->width_scale();

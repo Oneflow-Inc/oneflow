@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -41,7 +41,7 @@ Maybe<void> Fold::Capture(FoldInterpState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpInterpCtx* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FoldOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const FoldOp*>(ctx);
   state->kernel_size = interp_ctx->kernel_size();
   state->dilation_rate = interp_ctx->dilation_rate();
   state->padding = interp_ctx->padding();

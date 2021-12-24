@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -47,7 +47,7 @@ class PoolNdGrad : public OpExprGradFunction<PoolCaptureState> {
   virtual ~PoolNdGrad() = default;
 
   Maybe<void> Capture(PoolCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const PoolCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -57,14 +57,14 @@ class PoolNdGrad : public OpExprGradFunction<PoolCaptureState> {
 
 template<typename T>
 Maybe<void> PoolNdGrad<T>::Capture(PoolCaptureState* state, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                   const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
+  auto* interp_ctx = dynamic_cast<const typename T::OpT*>(ctx);
   state->data_format = interp_ctx->data_format();
   state->padding = interp_ctx->padding();
   state->padding_before = interp_ctx->padding_before();
@@ -98,19 +98,19 @@ Maybe<void> PoolNdGrad<T>::Apply(const PoolCaptureState* state, const TensorTupl
 
 class MaxPool1DGrad : public PoolNdGrad<MaxPool1DGrad> {
  public:
-  using ContextT = TfMaxPool1DOpInterpCtx;
+  using OpT = TfMaxPool1DOp;
   MaxPool1DGrad() : PoolNdGrad<MaxPool1DGrad>("max") {}
 };
 
 class MaxPool2DGrad : public PoolNdGrad<MaxPool2DGrad> {
  public:
-  using ContextT = TfMaxPool2DOpInterpCtx;
+  using OpT = TfMaxPool2DOp;
   MaxPool2DGrad() : PoolNdGrad<MaxPool2DGrad>("max") {}
 };
 
 class MaxPool3DGrad : public PoolNdGrad<MaxPool3DGrad> {
  public:
-  using ContextT = TfMaxPool3DOpInterpCtx;
+  using OpT = TfMaxPool3DOp;
   MaxPool3DGrad() : PoolNdGrad<MaxPool3DGrad>("max") {}
 };
 
@@ -120,19 +120,19 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_3d", MaxPool3DGrad);
 
 class AvgPool1DGrad : public PoolNdGrad<AvgPool1DGrad> {
  public:
-  using ContextT = TfAvgPool1DOpInterpCtx;
+  using OpT = TfAvgPool1DOp;
   AvgPool1DGrad() : PoolNdGrad<AvgPool1DGrad>("avg") {}
 };
 
 class AvgPool2DGrad : public PoolNdGrad<AvgPool2DGrad> {
  public:
-  using ContextT = TfAvgPool2DOpInterpCtx;
+  using OpT = TfAvgPool2DOp;
   AvgPool2DGrad() : PoolNdGrad<AvgPool2DGrad>("avg") {}
 };
 
 class AvgPool3DGrad : public PoolNdGrad<AvgPool3DGrad> {
  public:
-  using ContextT = TfAvgPool3DOpInterpCtx;
+  using OpT = TfAvgPool3DOp;
   AvgPool3DGrad() : PoolNdGrad<AvgPool3DGrad>("avg") {}
 };
 

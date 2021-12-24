@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
@@ -115,7 +115,7 @@ class HardTanhFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
                            const double& max_val) const {
-    auto ctx = std::make_shared<HardtanhOpInterpCtxImpl<schema::HardtanhOp>>();
+    auto ctx = std::make_shared<schema::HardtanhOp>();
     ctx->set_min_val(min_val);
     ctx->set_max_val(max_val);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
@@ -133,7 +133,7 @@ class HardTanhGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& min_val,
                            const double& max_val) const {
-    auto ctx = std::make_shared<HardtanhGradOpInterpCtxImpl<schema::HardtanhGradOp>>();
+    auto ctx = std::make_shared<schema::HardtanhGradOp>();
     ctx->set_min_val(min_val);
     ctx->set_max_val(max_val);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, ctx);
@@ -147,7 +147,7 @@ class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha) const {
-    auto ctx = std::make_shared<EluOpInterpCtxImpl<schema::EluOp>>();
+    auto ctx = std::make_shared<schema::EluOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
   }
@@ -163,7 +163,7 @@ class EluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    auto ctx = std::make_shared<EluGradOpInterpCtxImpl<schema::EluGradOp>>();
+    auto ctx = std::make_shared<schema::EluGradOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, ctx);
   }
@@ -177,7 +177,7 @@ class CeluFunctor {
   CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
                            bool inplace) const {
-    auto ctx = std::make_shared<CeluOpInterpCtxImpl<schema::CeluOp>>();
+    auto ctx = std::make_shared<schema::CeluOp>();
     ctx->set_alpha(alpha);
     if (inplace) {
       JUST(CheckInplaceValid(x));
@@ -201,7 +201,7 @@ class CeluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    auto ctx = std::make_shared<CeluOpInterpCtxImpl<schema::CeluOp>>();
+    auto ctx = std::make_shared<schema::CeluOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, ctx);
   }
@@ -367,7 +367,7 @@ class LeakyReluFunctor {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
-    auto ctx = std::make_shared<LeakyReluOpInterpCtxImpl<schema::LeakyReluOp>>();
+    auto ctx = std::make_shared<schema::LeakyReluOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, ctx);
   }
@@ -383,7 +383,7 @@ class LeakyReluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
-    auto ctx = std::make_shared<LeakyReluGradOpInterpCtxImpl<schema::LeakyReluGradOp>>();
+    auto ctx = std::make_shared<schema::LeakyReluGradOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, ctx);
   }

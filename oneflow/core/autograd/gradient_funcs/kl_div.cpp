@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -38,7 +38,7 @@ Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* state, const TensorTuple& 
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const KlDivLossOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const KlDivLossOp*>(ctx);
   state->log_target = interp_ctx->log_target();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target

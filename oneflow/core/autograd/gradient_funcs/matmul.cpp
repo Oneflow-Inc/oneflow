@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -47,7 +47,7 @@ Maybe<void> Matmul::Capture(MatmulCaptureState* state, const TensorTuple& inputs
   state->requires_grad_b = inputs.at(1)->requires_grad();
   if (!state->requires_grad_a && !state->requires_grad_b) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const MatmulOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const MatmulOp*>(ctx);
   state->transpose_a = interp_ctx->transpose_a();
   state->transpose_b = interp_ctx->transpose_b();
   state->alpha = interp_ctx->alpha();

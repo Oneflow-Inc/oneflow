@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -44,7 +44,7 @@ Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* state,
   state->bias_requires_grad = inputs.at(1)->requires_grad();   // bias
 
   if (!state->input_requires_grad && !state->bias_requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FusedBiasAddMaskScaleOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const FusedBiasAddMaskScaleOp*>(ctx);
   state->scale = interp_ctx->scale();
   state->axis = interp_ctx->axis();
 

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -42,7 +42,7 @@ Maybe<void> DimGather::Capture(DimGatherCaptureState* state, const TensorTuple& 
   state->SaveTensorForBackward(inputs.at(1));
   state->SaveTensorForBackward(inputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const DimGatherOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const DimGatherOp*>(ctx);
   state->dim = interp_ctx->dim();
   return Maybe<void>::Ok();
 }

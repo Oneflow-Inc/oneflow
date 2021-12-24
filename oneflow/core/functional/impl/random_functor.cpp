@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -51,7 +51,7 @@ class BernoulliFunctor {
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    auto ctx = std::make_shared<BernoulliOpInterpCtxImpl<schema::BernoulliOp>>();
+    auto ctx = std::make_shared<schema::BernoulliOp>();
     ctx->set_dtype(dtype->data_type());
     ctx->set_seed(gen->current_seed());
     ctx->state = distribution_state;
@@ -79,7 +79,7 @@ class RandFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    auto ctx = std::make_shared<UniformOpInterpCtxImpl<schema::UniformOp>>();
+    auto ctx = std::make_shared<schema::UniformOp>();
     ctx->set_from(0);
     ctx->set_to(1);
     ctx->set_shape(shape);
@@ -115,7 +115,7 @@ class ConsistentRandFunctor {
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    auto ctx = std::make_shared<UniformOpInterpCtxImpl<schema::UniformOp>>();
+    auto ctx = std::make_shared<schema::UniformOp>();
     ctx->set_from(0);
     ctx->set_to(1);
     ctx->set_shape(shape);
@@ -150,7 +150,7 @@ class RandNFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    auto ctx = std::make_shared<NormalOpInterpCtxImpl<schema::NormalOp>>();
+    auto ctx = std::make_shared<schema::NormalOp>();
     ctx->set_mean(0);
     ctx->set_std(1);
     ctx->set_shape(shape);
@@ -185,7 +185,7 @@ class ConsistentRandNFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    auto ctx = std::make_shared<NormalOpInterpCtxImpl<schema::NormalOp>>();
+    auto ctx = std::make_shared<schema::NormalOp>();
     ctx->set_mean(0);
     ctx->set_std(1);
     ctx->set_shape(shape);
@@ -219,7 +219,7 @@ class RandIntFunctor {
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    auto ctx = std::make_shared<UniformIntOpInterpCtxImpl<schema::UniformIntOp>>();
+    auto ctx = std::make_shared<schema::UniformIntOp>();
     ctx->set_shape(shape);
     ctx->set_from(low);
     ctx->set_to(high);
@@ -264,7 +264,7 @@ class ConsistentRandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    auto ctx = std::make_shared<UniformIntOpInterpCtxImpl<schema::UniformIntOp>>();
+    auto ctx = std::make_shared<schema::UniformIntOp>();
     ctx->set_shape(shape);
     ctx->set_from(low);
     ctx->set_to(high);
@@ -306,7 +306,7 @@ class RandPermFunctor {
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    auto ctx = std::make_shared<RandpermOpInterpCtxImpl<schema::RandpermOp>>();
+    auto ctx = std::make_shared<schema::RandpermOp>();
     ctx->set_n(n);
     ctx->set_seed(gen->current_seed());
     ctx->state = distribution_state;
@@ -333,7 +333,7 @@ class ConsistentRandPermFunctor {
     JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    auto ctx = std::make_shared<RandpermOpInterpCtxImpl<schema::RandpermOp>>();
+    auto ctx = std::make_shared<schema::RandpermOp>();
     ctx->set_n(n);
     ctx->set_seed(gen->current_seed());
     ctx->set_nd_sbp(*JUST(NdSbpToString(JUST(ctx->sbp))));

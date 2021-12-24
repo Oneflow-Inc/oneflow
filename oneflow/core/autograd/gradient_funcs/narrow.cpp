@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/lazy_mode.h"
 
@@ -40,7 +40,7 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const NarrowOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const NarrowOp*>(ctx);
     state->dim = interp_ctx->dim();
     state->start = interp_ctx->start();
     state->length = interp_ctx->length();

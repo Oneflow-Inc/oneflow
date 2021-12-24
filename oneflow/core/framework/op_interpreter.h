@@ -40,7 +40,7 @@ class OpExprInterpreter {
   virtual ~OpExprInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op, inputs, outputs, std::make_shared<FakeOpInterpCtx>());
+    return Apply(op, inputs, outputs, std::make_shared<OpInterpCtx>(nullptr));
   }
 
   virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
@@ -135,7 +135,7 @@ class AutogradInterpreter {
   virtual ~AutogradInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op_expr, inputs, outputs, std::make_shared<FakeOpInterpCtx>());
+    return Apply(op_expr, inputs, outputs, std::make_shared<OpInterpCtx>(nullptr));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,

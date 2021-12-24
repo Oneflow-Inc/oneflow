@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -226,7 +226,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
-  auto ctx = std::make_shared<EagerNcclBroadcastOpInterpCtxImpl<schema::EagerNcclBroadcastOp>>();
+  auto ctx = std::make_shared<schema::EagerNcclBroadcastOp>();
   ctx->set_root(src_rank);
   ctx->set_parallel_conf(PbMessage2TxtString(parallel_desc->parallel_conf()));
   ctx->parallel_desc = parallel_desc;

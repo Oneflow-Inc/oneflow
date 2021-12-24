@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
@@ -57,7 +57,7 @@ class DecodeOneRecFunctor {
     bool has_reshape = false;
     bool has_batch_padding = false;
 
-    auto ctx = std::make_shared<OnerecDecoderOpInterpCtxImpl<schema::OnerecDecoderOp>>();
+    auto ctx = std::make_shared<schema::OnerecDecoderOp>();
     if (reshape.has_value()) {
       has_reshape = true;
       ctx->set_reshape(*JUST(reshape));
@@ -96,7 +96,7 @@ class ReadOneRecFunctor {
                            const bool verify_example,
                            const Optional<Symbol<ParallelDesc>>& placement,
                            const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp) const {
-    auto ctx = std::make_shared<OneRecReaderOpInterpCtxImpl<schema::OneRecReaderOp>>();
+    auto ctx = std::make_shared<schema::OneRecReaderOp>();
     ctx->set_files(files);
     ctx->set_batch_size(batch_size);
     ctx->set_random_shuffle(random_shuffle);

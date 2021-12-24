@@ -86,7 +86,7 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherSh
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
   const auto& send_buffer = JUST(FlatShapeAndDataType::New(shape, dtype));
-  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>>();
+  const auto& map = std::make_shared<FlatShapeAndDataType>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
   NaiveAsyncTransportCtx ctx(
       transport_token,

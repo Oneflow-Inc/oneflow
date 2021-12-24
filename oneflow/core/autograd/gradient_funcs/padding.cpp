@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -34,7 +34,7 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const ReflectionPad2DOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const ReflectionPad2DOp*>(ctx);
     state->paddings = interp_ctx->padding();
     return Maybe<void>::Ok();
   }
@@ -81,7 +81,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const PadOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const PadOp*>(ctx);
     const auto& pad_before = interp_ctx->padding_before();
     const auto& pad_after = interp_ctx->padding_after();
 

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -43,7 +43,7 @@ Maybe<void> CTCLoss::Capture(CTCLossCaptureState* state, const TensorTuple& inpu
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const CtcLossOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const CtcLossOp*>(ctx);
   state->max_target_length = interp_ctx->max_target_length();
   state->blank = interp_ctx->blank();
   state->zero_infinity = interp_ctx->zero_infinity();

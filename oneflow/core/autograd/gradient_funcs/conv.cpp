@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -41,14 +41,14 @@ template<typename T>
 class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
  public:
   Maybe<void> Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const Op* ctx) const override;
   Maybe<void> Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 template<typename T>
 Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                      const TensorTuple& outputs, const Op* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->input_requires_grad = inputs.at(0)->requires_grad();
   state->weight_requires_grad = inputs.at(1)->requires_grad();
@@ -91,17 +91,17 @@ Maybe<void> ConvolutionNd<T>::Apply(const ConvolutionNdCaptureState* state,
 
 class Convolution1D : public ConvolutionNd<Convolution1D> {
  public:
-  using ContextT = Conv1DOpInterpCtx;
+  using ContextT = Conv1DOp;
 };
 
 class Convolution2D : public ConvolutionNd<Convolution2D> {
  public:
-  using ContextT = Conv2DOpInterpCtx;
+  using ContextT = Conv2DOp;
 };
 
 class Convolution3D : public ConvolutionNd<Convolution3D> {
  public:
-  using ContextT = Conv3DOpInterpCtx;
+  using ContextT = Conv3DOp;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("conv1d", Convolution1D);

@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -35,7 +35,7 @@ class AffineGrid : public OpExprGradFunction<AffineGridInterpState> {
     state->requires_grad = inputs.at(0)->requires_grad();  // theta
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const AffineGridOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const AffineGridOp*>(ctx);
     state->size = interp_ctx->size();
     state->align_corners = interp_ctx->align_corners();
     return Maybe<void>::Ok();

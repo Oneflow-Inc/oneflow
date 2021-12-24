@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
@@ -33,7 +33,7 @@ class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
  public:
   Maybe<void> Capture(SelectTopNCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
-    auto* interp_ctx = dynamic_cast<const SelectTopNOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const SelectTopNOp*>(ctx);
     state->inputs = inputs;
     state->top_n = interp_ctx->top_n;
     state->requires_grad.resize(inputs.size());

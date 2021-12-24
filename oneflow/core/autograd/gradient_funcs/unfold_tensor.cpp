@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -41,7 +41,7 @@ Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* state, const TensorT
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const UnfoldTensorOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const UnfoldTensorOp*>(ctx);
   state->dimension = interp_ctx->dimension();
   state->size = interp_ctx->size();
   state->step = interp_ctx->step();

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 
 #include "oneflow/core/functional/functional.h"
 
@@ -37,7 +37,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddCaptureState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->input_requires_grad = inputs.at(0)->requires_grad();
     state->bias_requires_grad = inputs.at(1)->requires_grad();
-    auto* interp_ctx = dynamic_cast<const BiasAddOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const BiasAddOp*>(ctx);
     state->axis = interp_ctx->axis();
     return Maybe<void>::Ok();
   }

@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -42,7 +42,7 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* state, const Tenso
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const BroadcastLikeOpInterpCtx*>(ctx);
+  auto* interp_ctx = dynamic_cast<const BroadcastLikeOp*>(ctx);
   state->broadcast_axes = interp_ctx->broadcast_axes();
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();

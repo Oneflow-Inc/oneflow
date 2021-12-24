@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -66,7 +66,7 @@ Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTu
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
   state->indice_index = state->SaveTensorForBackward(outputs.at(1));
 
-  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
+  auto* interp_ctx = dynamic_cast<const typename T::OpT*>(ctx);
   state->data_format = interp_ctx->data_format();
   state->padding = interp_ctx->padding();
   state->kernel_size = interp_ctx->kernel_size();
@@ -101,19 +101,19 @@ Maybe<void> PoolingNdGrad<T>::Apply(const PoolingCaptureState* state, const Tens
 
 class Maxpool1DGrad final : public PoolingNdGrad<Maxpool1DGrad> {
  public:
-  using ContextT = MaxPool1DGradOpInterpCtx;
+  using OpT = MaxPool1DGradOp;
   Maxpool1DGrad() : PoolingNdGrad<Maxpool1DGrad>("max") {}
 };
 
 class Maxpool2DGrad final : public PoolingNdGrad<Maxpool2DGrad> {
  public:
-  using ContextT = MaxPool2DGradOpInterpCtx;
+  using OpT = MaxPool2DGradOp;
   Maxpool2DGrad() : PoolingNdGrad<Maxpool2DGrad>("max") {}
 };
 
 class Maxpool3DGrad final : public PoolingNdGrad<Maxpool3DGrad> {
  public:
-  using ContextT = MaxPool3DGradOpInterpCtx;
+  using OpT = MaxPool3DGradOp;
   Maxpool3DGrad() : PoolingNdGrad<Maxpool3DGrad>("max") {}
 };
 

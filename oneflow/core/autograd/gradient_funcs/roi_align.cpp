@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -40,7 +40,7 @@ class RoiAlign : public OpExprGradFunction<RoiAlignCaptureState> {
     state->SaveTensorForBackward(inputs.at(0));
     state->SaveTensorForBackward(inputs.at(1));
 
-    const auto* interp_ctx = dynamic_cast<const RoiAlignOpInterpCtx*>(ctx);
+    const auto* interp_ctx = dynamic_cast<const RoiAlignOp*>(ctx);
     state->spatial_scale = interp_ctx->spatial_scale();
     state->pooled_h = interp_ctx->pooled_h();
     state->pooled_w = interp_ctx->pooled_w();

@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"

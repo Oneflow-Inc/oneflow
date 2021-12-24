@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_interp_ctx_generated.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -35,7 +35,7 @@ class ClipByScalar : public OpExprGradFunction<ClipByScalarCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     state->SaveTensorForBackward(inputs.at(0));
 
-    auto* interp_ctx = dynamic_cast<const ClipByScalarOpInterpCtx*>(ctx);
+    auto* interp_ctx = dynamic_cast<const ClipByScalarOp*>(ctx);
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
       state->min = interp_ctx->floating_min();
       state->max = interp_ctx->floating_max();
