@@ -965,8 +965,36 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
+  const auto& job_name = job().job_conf().job_name();
+  auto LogJob = [&](const std::string& name_suffix) -> void {
+    std::string full_log_name =
+        job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
+    TeePersistentLogStream::Create(full_log_name)->Write(job());
+    Global<OpGraph>::New(job());
+    Global<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
+    Global<OpGraph>::Delete();
+  };
+  std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
+  auto NeedLogJob = [&](const std::string& pass_name) -> bool {
+    if ("ALL" == debug_pass_name) {
+      return true;
+    } else if (pass_name == debug_pass_name) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob(pass_name + cnt_str + "-before");
+    }
+    JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob(pass_name + cnt_str + "-after");
+    }
+    return Maybe<void>::Ok();
   };
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
@@ -1007,7 +1035,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
-    JUST(DoPass("FuseAddToOutputPass"));
+    JUST(DoPass("FuseAddToOutputPass", 1));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
