@@ -31,9 +31,7 @@ namespace oneflow_api {
 namespace {
 
 inline Graph LoadGraph(const Device& device) {
-  const std::string file_name = __FILE__;
-  const std::string directory = file_name.substr(0, file_name.rfind('/'));
-  Graph graph = Graph::Load(directory + "/graph_test_model/affine_with_parameter", device);
+  Graph graph = Graph::Load(GetExeDir() + "/graph_test_model/affine_with_parameter", device);
   return graph;
 }
 
@@ -165,10 +163,8 @@ TEST(Api, graph_thread_test) {
 TEST(Api, graph_input_order_test) {
   EnvScope scope;
 
-  const std::string file_name = __FILE__;
-  const std::string directory = file_name.substr(0, file_name.rfind('/'));
   Device device("cpu");
-  Graph graph = Graph::Load(directory + "/graph_test_model/affine_no_parameter", device);
+  Graph graph = Graph::Load(GetExeDir() + "/graph_test_model/affine_no_parameter", device);
 
   std::vector<Tensor> inputs;
   std::vector<float> x(3);

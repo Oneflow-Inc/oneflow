@@ -15,7 +15,14 @@ limitations under the License.
 */
 
 #include "oneflow/api/cpp/tests/api_test.h"
+#include <cstddef>
 #include <random>
+#ifdef __linux__
+
+#include <unistd.h>        // readlink
+#include <linux/limits.h>  // PATH_MAX
+
+#endif
 
 namespace oneflow_api {
 
@@ -46,5 +53,16 @@ REGISTER_RANDOM_DATA(double)
 REGISTER_RANDOM_DATA(int8_t)
 REGISTER_RANDOM_DATA(int32_t)
 REGISTER_RANDOM_DATA(int64_t)
+
+std::string GetExeDir() {
+#ifdef __linux__
+  char result[PATH_MAX];
+  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+  std::string exe_path(result, (count > 0) ? count : 0);
+  size_t pos = exe_path.rfind('/');
+  if (pos != std::string::npos) { return exe_path.substr(0, pos); }
+#endif
+  return ".";
+}
 
 }  // namespace oneflow_api
