@@ -92,17 +92,7 @@ __global__ void CumsumForwardGpu_DownSpaceIs1(const T* pin, T* pout, int64_t cs_
 // ...       ...  ...
 // dmn, ..., d1n, d0n
 template<typename T>
-__global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
-                                  int64_t cs_down_space, int64_t elem_cnt) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
-       i += step) {
-    auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
-    pout[i] = (cs_space - cs_space_id) * pin[i];
-  }
-}
-template<typename T>
-__global__ void CumsumBackwardGpu_UpSpaceIs1(const T* pin, T* pout, int64_t cs_space,
-                                  int64_t cs_down_space, int64_t elem_cnt) {
+__global__ void CumsumBackwardGpu(const T* pin, T* pout, int64_t cs_space, int64_t cs_down_space, int64_t elem_cnt) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
        i += step) {
     auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
@@ -195,15 +185,12 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
     auto cs_down_space = in->shape().Count(dim) / cs_space;
     auto thread_num = elem_cnt;
 
-    if (cs_up_space == 1) {
-      RUN_CUDA_KERNEL((CumsumBackwardGpu_UpSpaceIs1<T>), ctx->stream(), thread_num, pin, pout,
-                      cs_space, cs_down_space, elem_cnt);
-    } else if (cs_down_space == 1) {
+    if (cs_down_space == 1) {
       RUN_CUDA_KERNEL((CumsumBackwardGpu_DownSpaceIs1<T>), ctx->stream(), thread_num, pin, pout,
                       cs_up_space, cs_space, elem_cnt);
     } else {
-      RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_up_space,
-                      cs_space, cs_down_space, elem_cnt);
+      RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, pin, pout, cs_space, 
+                      cs_down_space, elem_cnt);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
