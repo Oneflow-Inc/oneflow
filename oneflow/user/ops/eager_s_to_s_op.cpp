@@ -19,12 +19,11 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerNaiveSToSOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
   const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
@@ -40,28 +39,25 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+/*static*/ Maybe<void> EagerNaiveSToSOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-// Can only be called in mirrored
-REGISTER_NO_GRAD_USER_OP("eager_naive_s_to_s")
-    .Input("in")
-    .Output("out")
-    .Attr<int64_t>("in_split_axis", -1)
-    .Attr<int64_t>("out_split_axis", -1)
-    .Attr<std::string>("in_parallel_conf")
-    .Attr<std::string>("out_parallel_conf")
-    .Attr<Shape>("shape")
-    .SetTensorDescInferFn(TensorDescInfer)
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
-    })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> EagerNaiveSToSOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
+}
+
+/* static */ Maybe<void> EagerNaiveSToSOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
+}
+
+/* static */ Maybe<void> EagerNaiveSToSOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Device>> EagerNaiveSToSOp::InferDevice(user_op::DeviceInferContext* ctx) {
+  return DeviceInferFn<&SyncLaunched>(ctx);
+}
 
 }  // namespace oneflow

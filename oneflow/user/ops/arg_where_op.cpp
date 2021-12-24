@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -31,20 +32,25 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_NO_GRAD_USER_OP("argwhere")
-    .Input("input")
-    .Output("output")
-    .Output("output_size")
-    .Attr<DataType>("dtype", DataType::kInt32)
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType dtype = ctx->Attr<DataType>("dtype");
-      user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
-      *output_desc->mut_data_type() = dtype;
-      user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
-      *output_size_desc->mut_data_type() = dtype;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/* static */ Maybe<void> ArgwhereOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ArgwhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> ArgwhereOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> ArgwhereOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType dtype = ctx->Attr<DataType>("dtype");
+  user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
+  *output_desc->mut_data_type() = dtype;
+  user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
+  *output_size_desc->mut_data_type() = dtype;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
