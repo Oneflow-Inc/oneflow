@@ -179,17 +179,17 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
 class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    Optional<Tensor>:$addend,
-    Optional<Tensor>:$moving_mean,
-    Optional<Tensor>:$moving_variance,
+    Optional<OneFlow_Tensor>:$addend,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
     OneFlow_Tensor:$gamma,
     OneFlow_Tensor:$beta
   );
   let output = (outs
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$reserve_space,
-    Optional<Tensor>:$mean,
-    Optional<Tensor>:$inv_variance
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -1063,7 +1063,7 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, Dec
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$filter,
     OneFlow_Tensor:$x_like,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$dx
@@ -1195,7 +1195,7 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSid
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
-    Optional<Tensor>:$weight
+    Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -1211,7 +1211,7 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
-    Optional<Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$weight,
     OneFlow_Tensor:$dy
   );
   let output = (outs
@@ -1227,8 +1227,8 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
-    Optional<Tensor>:$weight,
-    Optional<Tensor>:$pos_weight
+    Optional<OneFlow_Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$pos_weight
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -1250,8 +1250,8 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
-    Optional<Tensor>:$weight,
-    Optional<Tensor>:$pos_weight,
+    Optional<OneFlow_Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$pos_weight,
     OneFlow_Tensor:$dy
   );
   let output = (outs
@@ -1514,7 +1514,7 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEff
 
 def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Optional<Tensor>:$iteration
+    Optional<OneFlow_Tensor>:$iteration
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -2100,17 +2100,17 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    Optional<Tensor>:$addend,
-    Optional<Tensor>:$moving_mean,
-    Optional<Tensor>:$moving_variance,
+    Optional<OneFlow_Tensor>:$addend,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
     OneFlow_Tensor:$gamma,
     OneFlow_Tensor:$beta
   );
   let output = (outs
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$reserve_space,
-    Optional<Tensor>:$mean,
-    Optional<Tensor>:$inv_variance
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2143,7 +2143,7 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
     OneFlow_Tensor:$gamma_diff,
     OneFlow_Tensor:$beta_diff,
     OneFlow_Tensor:$dx,
-    Optional<Tensor>:$addend_diff
+    Optional<OneFlow_Tensor>:$addend_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2195,7 +2195,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
     OneFlow_Tensor:$mask,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -2422,7 +2422,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
     OneFlow_Tensor:$gamma_diff,
     OneFlow_Tensor:$beta_diff,
     OneFlow_Tensor:$dx,
-    Optional<Tensor>:$addend_diff
+    Optional<OneFlow_Tensor>:$addend_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2512,10 +2512,10 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, 
 
 def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<Tensor>:$in
+    Variadic<OneFlow_Tensor>:$in
   );
   let output = (outs
-    Variadic<Tensor>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -3987,7 +3987,7 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, Declar
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4007,7 +4007,7 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4027,7 +4027,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4108,7 +4108,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4154,7 +4154,7 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
 
 def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<Tensor>:$in
+    Variadic<OneFlow_Tensor>:$in
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4208,7 +4208,7 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, NoGrad, CpuO
 
 def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<Tensor>:$in
+    Variadic<OneFlow_Tensor>:$in
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4246,7 +4246,7 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, Decla
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out,
@@ -4269,8 +4269,8 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
     OneFlow_Tensor:$y
   );
   let output = (outs
-    Optional<Tensor>:$dx,
-    Optional<Tensor>:$dy
+    Optional<OneFlow_Tensor>:$dx,
+    Optional<OneFlow_Tensor>:$dy
   );
   let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
@@ -4288,8 +4288,8 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
     OneFlow_Tensor:$y
   );
   let output = (outs
-    Optional<Tensor>:$dx,
-    Optional<Tensor>:$dy
+    Optional<OneFlow_Tensor>:$dx,
+    Optional<OneFlow_Tensor>:$dy
   );
   let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
@@ -4357,7 +4357,7 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect,
 
 def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<Tensor>:$x
+    Variadic<OneFlow_Tensor>:$x
   );
   let output = (outs
     OneFlow_Tensor:$y
@@ -4371,7 +4371,7 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [No
 
 def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<Tensor>:$x
+    Variadic<OneFlow_Tensor>:$x
   );
   let output = (outs
     OneFlow_Tensor:$y
@@ -4387,7 +4387,7 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
-    Optional<Tensor>:$weight
+    Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs
     OneFlow_Tensor:$out,
@@ -4408,7 +4408,7 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
     OneFlow_Tensor:$total_weight,
-    Optional<Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$weight,
     OneFlow_Tensor:$dy
   );
   let output = (outs
@@ -4520,10 +4520,10 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInte
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
-    Variadic<Tensor>:$like
+    Variadic<OneFlow_Tensor>:$like
   );
   let output = (outs
-    Variadic<Tensor>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$axis
@@ -4832,7 +4832,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
 def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
-    Optional<Tensor>:$mirror
+    Optional<OneFlow_Tensor>:$mirror
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4857,7 +4857,7 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
 def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
-    Optional<Tensor>:$mirror
+    Optional<OneFlow_Tensor>:$mirror
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -4936,14 +4936,14 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffec
 def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    Optional<Tensor>:$beta,
-    Optional<Tensor>:$gamma
+    Optional<OneFlow_Tensor>:$beta,
+    Optional<OneFlow_Tensor>:$gamma
   );
   let output = (outs
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$mean,
     OneFlow_Tensor:$inv_variance,
-    Optional<Tensor>:$normalized
+    Optional<OneFlow_Tensor>:$normalized
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$center,
@@ -4967,7 +4967,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$mean,
     OneFlow_Tensor:$inv_variance,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$dx
@@ -4985,14 +4985,14 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
 def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    Optional<Tensor>:$normalized,
-    Optional<Tensor>:$gamma
+    Optional<OneFlow_Tensor>:$normalized,
+    Optional<OneFlow_Tensor>:$gamma
   );
   let output = (outs
-    Optional<Tensor>:$normalized_diff,
-    Optional<Tensor>:$beta_diff,
-    Optional<Tensor>:$gamma_diff,
-    Optional<Tensor>:$reduce_buf
+    Optional<OneFlow_Tensor>:$normalized_diff,
+    Optional<OneFlow_Tensor>:$beta_diff,
+    Optional<OneFlow_Tensor>:$gamma_diff,
+    Optional<OneFlow_Tensor>:$reduce_buf
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis
@@ -5030,16 +5030,16 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, NoGrad, DeclareOp
 def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
-    Optional<Tensor>:$moving_mean,
-    Optional<Tensor>:$moving_variance,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
     OneFlow_Tensor:$gamma,
     OneFlow_Tensor:$beta,
-    Optional<Tensor>:$_add_to_output
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$y,
-    Optional<Tensor>:$mean,
-    Optional<Tensor>:$inv_variance
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -5093,10 +5093,10 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [NoGrad, AttrSize
   let input = (ins
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
-    Optional<Tensor>:$learning_rate,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if,
-    Optional<Tensor>:$train_step,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
+    Optional<OneFlow_Tensor>:$train_step,
     OneFlow_Tensor:$sum
   );
   let attrs = (ins
@@ -5139,11 +5139,11 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoGrad, AttrSizedOpera
   let input = (ins
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
-    Optional<Tensor>:$learning_rate,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if,
-    Optional<Tensor>:$bias_correction1,
-    Optional<Tensor>:$bias_correction2,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
+    Optional<OneFlow_Tensor>:$bias_correction1,
+    Optional<OneFlow_Tensor>:$bias_correction2,
     OneFlow_Tensor:$m,
     OneFlow_Tensor:$v,
     OneFlow_Tensor:$max_v
@@ -5178,8 +5178,8 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     OneFlow_Tensor:$model_diff_indices,
     OneFlow_Tensor:$model_diff_values,
     OneFlow_Tensor:$learning_rate,
-    Optional<Tensor>:$bias_correction1,
-    Optional<Tensor>:$bias_correction2,
+    Optional<OneFlow_Tensor>:$bias_correction1,
+    Optional<OneFlow_Tensor>:$bias_correction2,
     OneFlow_Tensor:$m,
     OneFlow_Tensor:$v,
     OneFlow_Tensor:$max_v
@@ -5248,8 +5248,8 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [NoGrad, AttrSizedOpera
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
     OneFlow_Tensor:$learning_rate,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$beta1,
@@ -5276,8 +5276,8 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [NoGrad, AttrSizedOpera
     OneFlow_Tensor:$model_diff,
     OneFlow_Tensor:$learning_rate,
     OneFlow_Tensor:$momentum,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale,
@@ -5303,9 +5303,9 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [NoGrad, AttrSi
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
     OneFlow_Tensor:$momentum,
-    Optional<Tensor>:$learning_rate,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5329,11 +5329,11 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [NoGrad, AttrSize
   let input = (ins
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
-    Optional<Tensor>:$learning_rate,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
     OneFlow_Tensor:$mean_square,
-    Optional<Tensor>:$mean_gradient
+    Optional<OneFlow_Tensor>:$mean_gradient
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5359,9 +5359,9 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoGrad, AttrSizedOperand
   let input = (ins
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
-    Optional<Tensor>:$learning_rate,
-    Optional<Tensor>:$scale_by_tensor,
-    Optional<Tensor>:$skip_if
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -6955,7 +6955,7 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
     OneFlow_Tensor:$in
   );
   let output = (outs
-    Variadic<Tensor>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
     ShapeAttr:$out_shape,
@@ -6975,7 +6975,7 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
     OneFlow_Tensor:$in
   );
   let output = (outs
-    Variadic<Tensor>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
     ShapeArrayAttr:$out_shapes,
