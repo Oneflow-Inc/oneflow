@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestEq(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_eq_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(3, 2, 0, 3).to(device)

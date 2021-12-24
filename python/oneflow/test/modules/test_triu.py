@@ -44,7 +44,6 @@ def _test_triu(test_case, diagonal, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTriu(flow.unittest.TestCase):
-    
     def test_triu(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_triu]
@@ -52,7 +51,7 @@ class TestTriu(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(auto_backward=False, check_graph=False)
     def test_triu_with_0shape_data(test_case):
         device = random_device()

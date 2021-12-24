@@ -183,7 +183,7 @@ class TestAddModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(2, 2, 3, requires_grad=False).to(device)
         y = random_pytorch_tensor(1, 10).to(device)
-        x =x+ y.mean()
+        x = x + y.mean()
         return x
 
     @autotest(check_graph=True)
@@ -191,9 +191,9 @@ class TestAddModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(2, 2, 3).to(device).mean()
         y = random_pytorch_tensor(2, 2, 3).to(device)
-        x =x+ y.mean()
+        x = x + y.mean()
         return x
-  
+
     @autotest(check_graph=True)
     def test_add_with_alpha(test_case):
         device = random_device()

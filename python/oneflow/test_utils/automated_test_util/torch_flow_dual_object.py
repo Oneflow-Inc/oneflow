@@ -277,8 +277,9 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
-                                filter=["to", "tensor", "_to", "train"]
+                                filter = ["to", "tensor", "_to", "train"]
                                 if isinstance(oneflow, flow.nn.Module):
+
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -299,10 +300,17 @@ def GetDualObject(name, pytorch, oneflow):
                                             oneflow_res
                                         ] = test_g_res
 
-
                                 elif oneflow.__name__ in filter:
                                     pass
-                                elif "oneflow.nn.modules" not in oneflow.__module__ or inspect.isfunction(oneflow) or (inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__):
+                                elif (
+                                    "oneflow.nn.modules" not in oneflow.__module__
+                                    or inspect.isfunction(oneflow)
+                                    or (
+                                        inspect.ismethod(oneflow)
+                                        and "oneflow.nn.modules" in oneflow.__module__
+                                    )
+                                ):
+
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -357,25 +365,21 @@ def GetDualObject(name, pytorch, oneflow):
                                 )
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
+
                         class TestGraphOfFunctional(flow.nn.Graph):
                             def __init__(self):
                                 super().__init__()
 
                             def build(self):
-                                return oneflow_method(
-                                    *oneflow_args, **oneflow_kwargs
-                                )
+                                return oneflow_method(*oneflow_args, **oneflow_kwargs)
+
                         test_g = TestGraphOfFunctional()
                         test_g_res = test_g()
                         if isinstance(test_g_res, tuple):
                             for idx, g_res in enumerate(test_g_res):
-                                eager_tensor_2_graph_tensor[
-                                    oneflow_res[idx]
-                                ] = g_res
+                                eager_tensor_2_graph_tensor[oneflow_res[idx]] = g_res
                         else:
-                            eager_tensor_2_graph_tensor[
-                                oneflow_res
-                            ] = test_g_res
+                            eager_tensor_2_graph_tensor[oneflow_res] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 

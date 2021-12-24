@@ -55,7 +55,7 @@ class TestFmodModule(flow.unittest.TestCase):
         other = 3
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_fmod_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)

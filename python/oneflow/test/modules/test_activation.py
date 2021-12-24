@@ -102,7 +102,7 @@ class TestTanh(flow.unittest.TestCase):
         y = torch.tanh(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_tanh_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
@@ -122,7 +122,7 @@ class TestELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_elu_module_with_0shape_data(test_case):
         m = torch.nn.ELU(alpha=random() | nothing())
         m.train(random())
@@ -145,7 +145,7 @@ class TestCELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_celu_module_with_0shape_data(test_case):
         m = torch.nn.CELU(alpha=random() | nothing())
         m.train(random())
