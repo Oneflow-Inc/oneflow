@@ -435,8 +435,4 @@ if (BUILD_CPP_API)
     file(GLOB mlir_shared_libs "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib/*.14git")
     copy_files("${mlir_shared_libs}" "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib" "${LIBONEFLOW_LIBRARY_DIR}" of_include_copy)
   endif(WITH_MLIR)
-  
-  if(BUILD_TESTING)
-    copy_all_files_in_dir("${PROJECT_SOURCE_DIR}/oneflow/api/cpp/tests/graph_test_model" "${PROJECT_BINARY_DIR}/bin/graph_test_model" of_include_copy)
-  endif(BUILD_TESTING)
 endif(BUILD_CPP_API)
