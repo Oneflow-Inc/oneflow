@@ -15,6 +15,12 @@ limitations under the License.
 """
 
 import os
+
+if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
+    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
+    gpu_id = vram_str.split(",")[0].split(":")[-1]
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+
 import sys
 import collections
 
@@ -72,6 +78,9 @@ from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
+from oneflow._C import broadcast_like
+from oneflow._C import chunk
+from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh
 from oneflow._C import tan
@@ -117,12 +126,14 @@ from oneflow._C import clamp
 from oneflow._C import clamp as clip
 from oneflow._C import cos
 from oneflow._C import cosh
+from oneflow._C import diagonal
 from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import log
+from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import pow
@@ -153,8 +164,13 @@ from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
+from oneflow._C import dim_gather as gather
+from oneflow._C import gather_nd
 from oneflow._C import roi_align
+from oneflow._C import read_onerec
+from oneflow._C import decode_onerec
 from oneflow._C import dot
+from oneflow._C import eye
 
 
 from . import sbp
@@ -245,6 +261,7 @@ del oneflow
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
+from oneflow._C import from_numpy
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
@@ -277,10 +294,9 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
+from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
-from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
-from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
@@ -290,8 +306,6 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.gather import gather_op as gather
-from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
@@ -330,8 +344,6 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
-from oneflow.nn.modules.split import split_op as split
-from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
