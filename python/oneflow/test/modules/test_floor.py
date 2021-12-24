@@ -67,5 +67,6 @@ class TestFloor(flow.unittest.TestCase):
         y = torch.floor(x)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()

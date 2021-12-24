@@ -96,5 +96,6 @@ class TestMeshGridModule(flow.unittest.TestCase):
         res = torch.meshgrid(x, y)
         return res[0], res[1]
 
+
 if __name__ == "__main__":
     unittest.main()

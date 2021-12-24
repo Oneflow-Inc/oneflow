@@ -150,6 +150,7 @@ add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${ONEFLOW_PYTHON_DIR} --fix --exclude="oneflow/include" --exclude="oneflow/core"
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR} --fix
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools/oneflow-tblgen --fix --quiet
   )
 # clang tidy
 add_custom_target(of_tidy
@@ -244,6 +245,7 @@ oneflow_add_library(oneflow ${of_all_obj_cc})
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
+add_dependencies(oneflow of_op_schema)
 add_dependencies(oneflow of_git_version)
 
 if (USE_CLANG_FORMAT)
@@ -255,36 +257,31 @@ endif()
 
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
-set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools")
-oneflow_add_executable(oneflow-gen-ods EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-gen-ods/oneflow-gen-ods.cpp)
-set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${ONEFLOW_TOOLS_DIR}")
+set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools" CACHE STRING "dir to put binary for debugging and development")
 
 set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
 set(LLVM_MONO_REPO_MD5 "9bda804e5cc61899085fb0f0dce1089f" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if (WITH_MLIR)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
 endif()
 
+include(op_schema)
+
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj)
+  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
 elseif(WIN32)
-  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
+  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
-endif()
-
-target_link_libraries(oneflow-gen-ods ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-if (BUILD_CUDA)
-  target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
 
 if(BUILD_PYTHON)
@@ -301,7 +298,7 @@ if(BUILD_PYTHON)
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-  add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
+  add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj of_op_schema)
   set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
   set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(oneflow_internal PRIVATE
@@ -340,7 +337,7 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 if (BUILD_CPP_API)
-  file(GLOB_RECURSE of_cpp_api_files 
+  file(GLOB_RECURSE of_cpp_api_files
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
   if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
@@ -362,6 +359,11 @@ function(oneflow_add_test target_name)
   endif()
   set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
   add_test(NAME ${arg_TEST_NAME} COMMAND ${target_name})
+  set_tests_properties(
+    ${arg_TEST_NAME}
+  PROPERTIES
+    ENVIRONMENT "HTTP_PROXY='';HTTPS_PROXY='';http_proxy='';https_proxy='';"
+  )
 endfunction()
 
 # build test

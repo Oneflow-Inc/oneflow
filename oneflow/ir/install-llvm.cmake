@@ -38,6 +38,13 @@ if(NOT llvm_monorepo_POPULATED)
     -DLLVM_ENABLE_BINDINGS=OFF
     -DMLIR_ENABLE_CUDA_RUNNER=${WITH_MLIR_CUDA_CODEGEN}
     -DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}
+    -DINJA_URL=${INJA_URL}
+    -DINJA_MD5=${INJA_MD5}
+    -DJSON_URL=${JSON_URL}
+    -DJSON_MD5=${JSON_MD5}
+    -DCMAKE_CUDA_COMPILER=${CMAKE_CUDA_COMPILER}
+    -DLLVM_EXTERNAL_PROJECTS=OneFlowTableGen
+    -DLLVM_EXTERNAL_ONEFLOWTABLEGEN_SOURCE_DIR=${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen
     -G ${CMAKE_GENERATOR}
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret)
@@ -46,24 +53,21 @@ if(NOT llvm_monorepo_POPULATED)
   endif()
   include(ProcessorCount)
   ProcessorCount(PROC_NUM)
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM}
+  if(WITH_MLIR)
+    set(INSTALL_ALL "install")
+  endif()
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target ${INSTALL_ALL} install-oneflow-tblgen install-mlir-headers
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret
   )
   if(ret EQUAL "1")
       message( FATAL_ERROR "Bad exit status")
   endif()
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target install
-    WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
-    RESULT_VARIABLE ret
-  )
-  if(ret EQUAL "1")
-      message( FATAL_ERROR "Bad exit status")
-  endif()
-  set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
-  set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 endif()
 
+if (WITH_MLIR)
+set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
+set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 find_package(MLIR REQUIRED CONFIG)
 
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
@@ -78,3 +82,4 @@ include(AddLLVM)
 include(AddMLIR)
 include(HandleLLVMOptions)
 set(LLVM_EXTERNAL_LIT "${llvm_monorepo_BINARY_DIR}/bin/llvm-lit" CACHE STRING "" FORCE)
+endif()
