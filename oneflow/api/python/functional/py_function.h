@@ -17,11 +17,15 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_
 
 #include <pybind11/pybind11.h>
+#include <Python.h>
+#include <string>
 
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
 #include "oneflow/core/common/throw.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 
 namespace py = pybind11;
 
@@ -70,6 +74,10 @@ class PyFunctionDispatcher {
     return py::none();
   }
 
+  std::string get_func_name() {
+    return func_name_;
+  }
+
  private:
   template<size_t... I>
   void InitSignatures(std::index_sequence<I...>) {
@@ -83,9 +91,29 @@ class PyFunctionDispatcher {
   std::vector<const char*> signatures_;
 };
 
+static std::string get_frame_str(PyObject *obj) {
+    PyObject* repr = PyObject_Repr(obj);
+    PyObject* str = PyUnicode_AsEncodedString(repr, "utf-8", "~E~");
+    const char *bytes = PyBytes_AS_STRING(str);
+    Py_XDECREF(repr);
+    Py_XDECREF(str);
+    return std::string(bytes);
+}
+
 template<typename... SchemaT>
 inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   static PyFunctionDispatcher<SchemaT...> dispatcher;
+
+  if (unlikely(LazyMode::is_enabled())) {
+    PyFrameObject* cur_frame = PyEval_GetFrame();
+    std::string cur_f_str = get_frame_str((PyObject *)cur_frame);
+    std::cout << dispatcher.get_func_name() << " : " << cur_f_str << std::endl;
+    cur_f_str = cur_f_str + ":" + dispatcher.get_func_name();
+    DispatchFrame::Guard f_guard(cur_f_str);
+    return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+  }
+
+
   return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
 }
 
