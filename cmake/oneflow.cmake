@@ -397,23 +397,35 @@ if(BUILD_PYTHON)
   set(OF_CORE_HDRS)
   list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "ep/include")
   foreach(of_core_dir_name ${of_core_dir_name_list})
-    file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
+    file(GLOB_RECURSE h_files LIST_DIRECTORIES false RELATIVE ${PROJECT_SOURCE_DIR} "oneflow/core/${of_core_dir_name}/*.h")
     list(APPEND OF_CORE_HDRS ${h_files})
-    file(GLOB_RECURSE hpp_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.hpp")
+    file(GLOB_RECURSE hpp_files LIST_DIRECTORIES false RELATIVE ${PROJECT_SOURCE_DIR} "oneflow/core/${of_core_dir_name}/*.hpp")
     list(APPEND OF_CORE_HDRS ${hpp_files})
   endforeach()
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_observer.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
-  copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-
+  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/new_kernel_util.h")
+  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/kernel_context.h")
+  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/kernel_observer.h")
+  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/kernel_util.cuh")
+  list(APPEND OF_CORE_HDRS "oneflow/core/job/sbp_signature_builder.h")
+  list(APPEND OF_CORE_HDRS "oneflow/core/common/symbol.h")
+  list(APPEND OF_CORE_HDRS "oneflow/core/job/parallel_desc.h")
+  list(APPEND OF_CORE_HDRS "oneflow/core/autograd/autograd_meta.h")
+  foreach(HEADER ${OF_CORE_HDRS})
+    get_filename_component(SUB_DIR ${HEADER} DIRECTORY)
+    install(
+      FILES ${HEADER}
+      DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
+      COMPONENT oneflow_py_include
+      EXCLUDE_FROM_ALL
+    )
+  endforeach()
+  add_custom_target(install_oneflow_py_include
+    COMMAND
+        "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_py_include
+        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  )
   add_custom_target(oneflow_py ALL)
-  add_dependencies(oneflow_py of_include_copy)
+  add_dependencies(oneflow_py of_include_copy install_oneflow_py_include)
 
 endif(BUILD_PYTHON)
 
