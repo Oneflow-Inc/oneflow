@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/ndarray/binary_func.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -83,32 +84,27 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-#define REGISTER_REDUCE_USER_OP(op_name, binary_func) \
-  REGISTER_USER_OP(op_name)                           \
-      .Input("input_tensor")                          \
-      .Output("output_tensor")                        \
-      .Attr<std::vector<int32_t>>("axis")             \
-      .Attr<bool>("keepdims")                         \
-      .SetTensorDescInferFn(InferTensorDescFn)        \
-      .SetGetSbpFn(GetSbpFn<binary_func>)             \
-      .SetDataTypeInferFn(InferDataType);
+#define IMPLEMENT_REDUCE_OP_FUNCS(name, binary_func, infer_dtype_func)                   \
+  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
+    return GetSbpFn<binary_func>(ctx);                                                   \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    return InferTensorDescFn(ctx);                                                       \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                  \
+  }                                                                                      \
+  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
+    return infer_dtype_func(ctx);                                                        \
+  }
 
-#define REGISTER_REDUCE_LOGICAL_USER_OP(op_name, binary_func) \
-  REGISTER_USER_OP(op_name)                                   \
-      .Input("input_tensor")                                  \
-      .Output("output_tensor")                                \
-      .Attr<std::vector<int32_t>>("axis")                     \
-      .Attr<bool>("keepdims")                                 \
-      .SetTensorDescInferFn(InferTensorDescFn)                \
-      .SetGetSbpFn(GetSbpFn<binary_func>)                     \
-      .SetDataTypeInferFn(InferLogicalDataType);
-
-REGISTER_REDUCE_LOGICAL_USER_OP("reduce_any", BinaryFuncAny)
-REGISTER_REDUCE_LOGICAL_USER_OP("reduce_all", BinaryFuncAll)
-REGISTER_REDUCE_USER_OP("reduce_min", BinaryFuncMin)
-REGISTER_REDUCE_USER_OP("reduce_prod", BinaryFuncProd)
-REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
-REGISTER_REDUCE_USER_OP("reduce_max", BinaryFuncMax)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceAny, BinaryFuncAny, InferLogicalDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceAll, BinaryFuncAll, InferLogicalDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceMin, BinaryFuncMin, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceMax, BinaryFuncMax, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceSum, BinaryFuncSum, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceProd, BinaryFuncProd, oneflow::InferDataType)
+#undef IMPLEMENT_REDUCE_OP_FUNCS
 
 REGISTER_USER_OP_GRAD("reduce_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
