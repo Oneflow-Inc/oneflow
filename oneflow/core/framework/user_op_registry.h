@@ -68,16 +68,12 @@ struct OpRegistryResult {
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
-  bool has_real_check_fn_ = true;  // NOTE: this field should be remove once ods gen is done
   TensorDescInferFn logical_tensor_desc_infer_fn;
   TensorDescInferFn physical_tensor_desc_infer_fn;
-  bool has_real_physical_tensor_desc_infer_fn_ =
-      false;  // NOTE: this field should be remove once ods gen is done
   GetSbpFn get_sbp_fn;
   SbpSignatureInferFn sbp_signature_infer_fn;
   DataTypeInferFn data_type_infer_fn;
   DeviceInferFn device_infer_fn;
-  bool has_real_device_infer_fn_ = false;  // NOTE: this field should be remove once ods gen is done
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;

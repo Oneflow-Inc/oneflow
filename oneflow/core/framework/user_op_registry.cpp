@@ -152,7 +152,6 @@ OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_des
 
 OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
   result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
-  result_.has_real_physical_tensor_desc_infer_fn_ = true;
   return *this;
 }
 
@@ -197,7 +196,6 @@ OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
 }
 
 OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
-  result_.has_real_device_infer_fn_ = true;
   result_.device_infer_fn = std::move(device_infer_fn);
   return *this;
 }
@@ -232,13 +230,9 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       return Maybe<void>::Ok();
     };
   }
-  if (result_.check_fn == nullptr) {
-    result_.check_fn = CheckAttrFnUtil::NoCheck;
-    result_.has_real_check_fn_ = false;
-  }
+  if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
-    result_.has_real_device_infer_fn_ = false;
     result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
       for (const auto& pair : ctx->inputs()) {
         const Symbol<Device>& input_device =
