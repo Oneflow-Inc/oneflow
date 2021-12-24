@@ -14,56 +14,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/*static*/ Maybe<void> AccOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> AccOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> AccOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return AccOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> AccOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> AccOp::InferOutputBlobTimeShape(
+    user_op::InferOutputBlobTimeShapeFnContext* ctx) {
+  const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
+  const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
+  DimVector time_shape_dim_vec = in_time_shape.dim_vec();
+  CHECK_OR_RETURN(!time_shape_dim_vec.empty());
+  if (time_shape_dim_vec.back() == max_acc_num) {
+    time_shape_dim_vec.pop_back();
+  } else if (time_shape_dim_vec.back() % max_acc_num == 0) {
+    time_shape_dim_vec.back() /= max_acc_num;
+  } else {
+    const int64_t elem_cnt = in_time_shape.elem_cnt();
+    time_shape_dim_vec.resize(1);
+    time_shape_dim_vec.back() = elem_cnt / max_acc_num;
+  }
+  *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("acc")
-    .Input("in")
-    .Output("out")
-    .Attr<int32_t>("max_acc_num")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetOutputBlobTimeShapeInferFn(
-        [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
-          const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
-          const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
-          DimVector time_shape_dim_vec = in_time_shape.dim_vec();
-          CHECK_OR_RETURN(!time_shape_dim_vec.empty());
-          if (time_shape_dim_vec.back() == max_acc_num) {
-            time_shape_dim_vec.pop_back();
-          } else if (time_shape_dim_vec.back() % max_acc_num == 0) {
-            time_shape_dim_vec.back() /= max_acc_num;
-          } else {
-            const int64_t elem_cnt = in_time_shape.elem_cnt();
-            time_shape_dim_vec.resize(1);
-            time_shape_dim_vec.back() = elem_cnt / max_acc_num;
-          }
-          *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
-          return Maybe<void>::Ok();
-        })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+namespace {
 
 REGISTER_USER_OP_GRAD("acc").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
                                                         -> Maybe<void> {
