@@ -40,7 +40,7 @@ def get_local_rank():
 
 def get_rank():
     """Returns the rank of current process group.
-    Local rank is globally unique, range of which is from 0 to world_size. 
+    Rank is globally unique, range of which is from 0 to world_size. 
 
     Returns:
         The rank of the process group.
