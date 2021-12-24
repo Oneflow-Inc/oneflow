@@ -22,22 +22,22 @@ namespace oneflow {
 
 namespace {
 template<typename T>
-void cumsum_forward_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+void cumsum_forward_norm(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
                          int64_t cs_down_space, int64_t elem_cnt) {
-  std::copy_n(pin, elem_cnt, pout);
-  auto* tmp_pout_base = pout;
+  std::copy_n(in_ptr, elem_cnt, out_ptr);
+  auto* tmp_out_ptr_base = out_ptr;
   for (auto i = 0; i < cs_up_space; i++) {
-    tmp_pout_base += cs_space * cs_down_space;
+    tmp_out_ptr_base += cs_space * cs_down_space;
     for (auto j = 1; j < cs_space; j++) {
-      auto* tmp_pout = tmp_pout_base + j * cs_down_space;
-      auto* last_tmp_pout = tmp_pout - cs_down_space;
-      for (auto k = 0; k < cs_down_space; k++) { tmp_pout[k] += last_tmp_pout[k]; }
+      auto* tmp_out_ptr = tmp_out_ptr_base + j * cs_down_space;
+      auto* last_tmp_out_ptr = tmp_out_ptr - cs_down_space;
+      for (auto k = 0; k < cs_down_space; k++) { tmp_out_ptr[k] += last_tmp_out_ptr[k]; }
     }
   }
 }
 
 template<typename T>
-void cumsum_forward_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+void cumsum_forward_thread(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
                            int64_t cs_down_space, int64_t elem_cnt) {
   auto CPU_NUM = sysconf(_SC_NPROCESSORS_CONF);
 
@@ -58,14 +58,16 @@ void cumsum_forward_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t c
             auto cs_up_space_id = i / cs_down_space;
             auto cs_down_space_id = i % cs_down_space;
 
-            auto* pin_base = pin + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
-            auto* pout_base = pout + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+            auto* in_ptr_base =
+                in_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
+            auto* out_ptr_base =
+                out_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
 
             // calculate cs_space data in one thread
             for (auto j = 0; j < cs_space; j++) {
               auto idx = j * cs_down_space;
-              pout_base[idx] = pin_base[idx];
-              if (j != 0) { pout_base[idx] += pout_base[idx - cs_down_space]; }
+              out_ptr_base[idx] = in_ptr_base[idx];
+              if (j != 0) { out_ptr_base[idx] += out_ptr_base[idx - cs_down_space]; }
             }
           }
         },
@@ -76,16 +78,16 @@ void cumsum_forward_thread(const T* pin, T* pout, int64_t cs_up_space, int64_t c
 }
 
 template<typename T>
-void cumsum_backward_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
+void cumsum_backward_norm(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
                           int64_t cs_down_space, int64_t elem_cnt) {
   for (auto i = 0; i < cs_up_space; i++) {
-    auto* tmp_pin_base = pin + i * cs_space * cs_down_space;
-    auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
+    auto* tmp_in_ptr_base = in_ptr + i * cs_space * cs_down_space;
+    auto* tmp_out_ptr_base = out_ptr + i * cs_space * cs_down_space;
     for (auto j = 0; j < cs_space; j++) {
-      auto* tmp_pin = tmp_pin_base + j * cs_down_space;
-      auto* tmp_pout = tmp_pout_base + j * cs_down_space;
-      std::fill_n(tmp_pout, cs_down_space, cs_space - j);
-      for (auto k = 0; k < cs_down_space; k++) { tmp_pout[k] *= tmp_pin[k]; }
+      auto* tmp_in_ptr = tmp_in_ptr_base + j * cs_down_space;
+      auto* tmp_out_ptr = tmp_out_ptr_base + j * cs_down_space;
+      std::fill_n(tmp_out_ptr, cs_down_space, cs_space - j);
+      for (auto k = 0; k < cs_down_space; k++) { tmp_out_ptr[k] *= tmp_in_ptr[k]; }
     }
   }
 }
@@ -106,8 +108,8 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dim = ctx->Attr<int64_t>("dim");
-    const auto* pin = in->dptr<T>();
-    auto* pout = out->mut_dptr<T>();
+    const auto* in_ptr = in->dptr<T>();
+    auto* out_ptr = out->mut_dptr<T>();
 
     // take cumsum's abbreviation as `cs`
     // data partition: cs_up_space|cs_space|cs_down_space
@@ -115,8 +117,8 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    // cumsum_forward_norm<T>(pin, pout, cs_up_space, cs_space, cs_down_space, elem_cnt);
-    cumsum_forward_thread<T>(pin, pout, cs_up_space, cs_space, cs_down_space, elem_cnt);
+    // cumsum_forward_norm<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
+    cumsum_forward_thread<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
   }
 
   // TODO: what's it used for?
