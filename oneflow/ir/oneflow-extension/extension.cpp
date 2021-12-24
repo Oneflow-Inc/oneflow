@@ -40,8 +40,8 @@ namespace {
 
 REGISTER_USER_OP("mlir_jit")
     .Attr<std::string>("mlir_assembly")
-    .InputWithMinimum("in", 0)
-    .OutputWithMinimum("out", 0)
+    .Input("in")
+    .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // TODO: infer shape by extracting Ops from mlir_assembly
       CHECK_EQ(ctx->inputs().size(), 2);
