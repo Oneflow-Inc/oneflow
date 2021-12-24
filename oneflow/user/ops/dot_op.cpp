@@ -31,7 +31,6 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
-
 /* static */ Maybe<void> DotOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), 0)
@@ -45,8 +44,7 @@ namespace oneflow {
 /* static */ Maybe<void> DotOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-  CHECK_OR_RETURN(x.data_type() == y.data_type())
-          << "The data type of input tensors are different";
+  CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The data type of input tensors are different";
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
