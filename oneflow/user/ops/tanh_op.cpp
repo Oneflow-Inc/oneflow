@@ -14,23 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("tanh")
-    .Input("x")
-    .Output("y")
-    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
-    .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType);
+/*static*/ Maybe<void> TanhOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
+}
+/*static*/ Maybe<void> TanhOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::Unchanged(ctx);
+}
+/*static*/ Maybe<void> TanhOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> TanhOp::InferDataType(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
+}
 
-REGISTER_USER_OP((std::string("") + "tanh" + "_grad"))
-    .Input("x")
-    .Input("dy")
-    .Output("dx")
-    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
-    .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType);
+/*static*/ Maybe<void> TanhGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
+}
+/*static*/ Maybe<void> TanhGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::Unchanged(ctx);
+}
+/*static*/ Maybe<void> TanhGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> TanhGradOp::InferDataType(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
+}
 
 REGISTER_USER_OP_GRAD("tanh").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
