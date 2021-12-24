@@ -23,8 +23,8 @@
 - name: "add"
   signature:
     [
-      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
       "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Add",
+      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
       "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarAdd",
       "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) => ScalarAdd",
     ]
