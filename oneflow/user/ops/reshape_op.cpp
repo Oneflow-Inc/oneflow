@@ -17,12 +17,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/reshape_user_op_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->Attr<Shape>("shape");
   const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
@@ -31,14 +30,14 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
 }
 
-Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
   const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
   return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, *out_shape);
 }
 
-Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
@@ -70,7 +69,7 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
@@ -115,20 +114,12 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP("reshape")
-    .Input("in")
-    .Output("out")
-    .Attr<Shape>("shape")
-    .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
-    .SetPhysicalTensorDescInferFn(TensorDescInferFn)
-    .SetGetSbpFn(GetSbpFn)
-    .SetNdSbpInferFn(InferNdSbpFn)
-    .SetDataTypeInferFn(InferDataType);
+namespace {
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {
