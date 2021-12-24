@@ -1265,7 +1265,7 @@ class NormalizationAddReluFunctor {
                                    .Output("y")
                                    .Attr("training", false)
                                    .Build());
-    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("in").Output("out").Build());
+    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("x").Output("y").Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
     fused_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
                                                    .Input("x")
