@@ -25,8 +25,9 @@ template<typename T>
 void cumsum_forward_norm(const T* pin, T* pout, int64_t cs_up_space, int64_t cs_space,
                          int64_t cs_down_space, int64_t elem_cnt) {
   std::copy_n(pin, elem_cnt, pout);
+  auto* tmp_pout_base = pout;
   for (auto i = 0; i < cs_up_space; i++) {
-    auto* tmp_pout_base = pout + i * cs_space * cs_down_space;
+    tmp_pout_base += cs_space * cs_down_space;
     for (auto j = 1; j < cs_space; j++) {
       auto* tmp_pout = tmp_pout_base + j * cs_down_space;
       auto* last_tmp_pout = tmp_pout - cs_down_space;
@@ -127,6 +128,7 @@ class CpuCumsumKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUMSUM_KERNEL(int)
 REGISTER_CUMSUM_KERNEL(float)
 REGISTER_CUMSUM_KERNEL(double)
 
@@ -161,6 +163,7 @@ class CpuCumsumGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_CPU_CUMSUM_GRAD_KERNEL(int)
 REGISTER_CPU_CUMSUM_GRAD_KERNEL(float)
 REGISTER_CPU_CUMSUM_GRAD_KERNEL(double)
 

@@ -20,8 +20,8 @@ namespace oneflow {
 namespace one {
 
 struct CumsumCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  int64_t dim;
+  bool requires_grad = false;
+  int64_t dim = 0;
 };
 
 class CumsumGrad : public OpExprGradFunction<CumsumCaptureState> {
