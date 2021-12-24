@@ -1397,7 +1397,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input=flow.ones(3,3,3,device="cpu")
+        >>> input=flow.ones(3,3,3)
         >>> dim=2
         >>> flow.cumsum(input,dim)
         tensor([[[1., 2., 3.],
