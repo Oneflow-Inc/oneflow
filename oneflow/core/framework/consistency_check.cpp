@@ -143,8 +143,7 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::PrepareRecvBufferAndCallb
 
 Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
   if (!flat_meta_info_consistency_) { return Maybe<void>::Ok(); }
-  JUST(flat_meta_info_consistency_->Check(
-      placement_, nd_sbp_, grad_nd_sbp_));
+  JUST(flat_meta_info_consistency_->Check(placement_, nd_sbp_, grad_nd_sbp_));
   return Maybe<void>::Ok();
 }
 
