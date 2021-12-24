@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -738,7 +739,30 @@ Maybe<void> Operator::InferNdSbpSignature(
           break;
         }
       }
-      CHECK_OR_RETURN(matched_sbp_signature != nullptr) << " op_name " << op_name();
+      if (!matched_sbp_signature) {
+        std::ostringstream err;
+        err << "op: " << op_name()
+            << " can't find available sbp signature.\nSupported SBP signatures are: ";
+        err << *JUST(SbpSignatureListAsString(list, input_bns(), output_bns()));
+
+        std::ostringstream got_input_sbp_ss;
+        std::ostringstream all_input_sbp_ss;
+        for (size_t j = 0; j < input_bns().size(); ++j) {
+          // NOTE: i is hierarchy dim and j is input_order
+          const auto& ibn = input_bns()[j];
+          cfg::NdSbp nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+          if (j > 0) {
+            got_input_sbp_ss << ", ";
+            all_input_sbp_ss << ", ";
+          }
+          got_input_sbp_ss << SbpToString(nd_sbp.sbp_parallel(i));
+          all_input_sbp_ss << ibn << ": " << NdSbpToString(nd_sbp);
+        }
+        err << ", but got (" << got_input_sbp_ss.str();
+        err << ") -> ? at hierarchy dim " << i
+            << ", since the SBP of inputs are: " << all_input_sbp_ss.str();
+        return Error::RuntimeError() << err.str();
+      }
       for (const auto& bn : input_bns()) {
         *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[bn].add_sbp_parallel()) =
             matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
