@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
+#include "oneflow/core/embedding/rocks_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -76,7 +77,6 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
 
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
-    //    store->Prefetch(stream, num_keys, keys + offset, context + offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
                missing_keys, missing_indices, context + offset);
     store->Put(stream, num_keys, keys + offset, values + offset * embedding_vec_size,
@@ -140,6 +140,19 @@ TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
 
   TestKeyValueStore(store.get(), options.num_keys, options.num_keys * 0.75, options.value_length,
                     options.num_shards);
+}
+
+TEST(RocksKeyValueStore, RocksKeyValueStore) {
+  if (!HasCudaDevice()) { return; }
+  RocksKeyValueStoreOptions options{};
+  options.path = "/tmp/test_db";
+  options.value_length = 128;
+  options.key_type = DataType::kUInt64;
+  options.value_type = DataType::kFloat;
+  options.max_query_length = 128;
+  std::unique_ptr<KeyValueStore> store = NewRocksKeyValueStore(options);
+
+  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, options.value_length, 4);
 }
 
 #endif  // WITH_CUDA

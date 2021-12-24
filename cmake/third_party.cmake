@@ -45,7 +45,6 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
-
 option(CUDA_STATIC "" ON)
 
 if (BUILD_CUDA)
@@ -153,6 +152,7 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    ${ROCKSDB_STATIC_LIB}
 )
 if (WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})

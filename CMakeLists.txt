@@ -196,9 +196,7 @@ else()
   if (APPLE)
      set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations -Wno-mismatched-tags")
   endif()
-  if(WITH_ONEDNN)
-    set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -fopenmp")
-  endif()
+  set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -fopenmp")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}")
@@ -233,6 +231,11 @@ set(JSON_URL https://github.com/nlohmann/json/releases/download/v3.7.3/include.z
 use_mirror(VARIABLE JSON_URL URL ${JSON_URL})
 set(JSON_MD5 fb96f95cdf609143e998db401ca4f324 CACHE STRING "")
 include(third_party)
+
+set(ROCKSDB_URL https://github.com/facebook/rocksdb/archive/refs/tags/v6.27.3.tar.gz)
+use_mirror(VARIABLE ROCKSDB_URL URL ${ROCKSDB_URL})
+set(ROCKSDB_MD5 e4a0625f0cec82060e62c81b787a1124)
+add_subdirectory(external)
 
 if (BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
