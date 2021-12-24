@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -81,7 +82,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
@@ -97,8 +98,8 @@ Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext* ctx) {
 }
 
 template<size_t NDims>
-Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
-                      const user_op::UserOpConfWrapper& conf) {
+Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
+                       const user_op::UserOpConfWrapper& conf) {
   bool is_checked = true;
   std::stringstream err;
   err << "Illegal value for " << conf.op_type_name() << " op " << conf.op_name() << ": ";
@@ -199,56 +200,68 @@ Maybe<void> GenerateBackwardOpConf4DeConv(const user_op::UserOpWrapper& op,
 
 }  // namespace
 
-REGISTER_USER_OP("deconv1d")
-    .Input("in")
-    .Input("weight")
-    .Output("out")
-    .Attr<int32_t>("filters")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("output_padding")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<int32_t>("groups", 1)
-    .SetCheckAttrFn(CheckAttr<1>)
-    .SetTensorDescInferFn(InferTensorDesc4DeConv<1>)
-    .SetGetSbpFn(GetSbpSignatures4DeConv)
-    .SetDataTypeInferFn(InferDataType);
+/* static */ Maybe<void> Deconv1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDesc4DeConv<1>(ctx);
+}
 
-REGISTER_USER_OP("deconv2d")
-    .Input("in")
-    .Input("weight")
-    .Output("out")
-    .Attr<int32_t>("filters")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("output_padding")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<int32_t>("groups", 1)
-    .SetCheckAttrFn(CheckAttr<2>)
-    .SetTensorDescInferFn(InferTensorDesc4DeConv<2>)
-    .SetGetSbpFn(GetSbpSignatures4DeConv)
-    .SetDataTypeInferFn(InferDataType);
+/*static*/ Maybe<void> Deconv1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-REGISTER_USER_OP("deconv3d")
-    .Input("in")
-    .Input("weight")
-    .Output("out")
-    .Attr<int32_t>("filters")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("output_padding")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<int32_t>("groups", 1)
-    .SetCheckAttrFn(CheckAttr<3>)
-    .SetTensorDescInferFn(InferTensorDesc4DeConv<3>)
-    .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GetSbpSignatures4DeConv);
+/* static */ Maybe<void> Deconv1DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetSbpSignatures4DeConv(ctx);
+}
+
+/* static */ Maybe<void> Deconv1DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                               const user_op::UserOpConfWrapper& conf) {
+  return CheckAttr_<1>(def, conf);
+}
+
+/* static */ Maybe<void> Deconv1DOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataType_(ctx);
+}
+
+/* static */ Maybe<void> Deconv2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDesc4DeConv<2>(ctx);
+}
+
+/*static*/ Maybe<void> Deconv2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> Deconv2DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetSbpSignatures4DeConv(ctx);
+}
+
+/* static */ Maybe<void> Deconv2DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                               const user_op::UserOpConfWrapper& conf) {
+  return CheckAttr_<2>(def, conf);
+}
+
+/* static */ Maybe<void> Deconv2DOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataType_(ctx);
+}
+
+/* static */ Maybe<void> Deconv3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDesc4DeConv<3>(ctx);
+}
+
+/*static*/ Maybe<void> Deconv3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> Deconv3DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetSbpSignatures4DeConv(ctx);
+}
+
+/* static */ Maybe<void> Deconv3DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                               const user_op::UserOpConfWrapper& conf) {
+  return CheckAttr_<3>(def, conf);
+}
+
+/* static */ Maybe<void> Deconv3DOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataType_(ctx);
+}
 
 REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
 REGISTER_USER_OP_GRAD("deconv2d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
