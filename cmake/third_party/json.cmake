@@ -23,6 +23,7 @@ if(THIRD_PARTY)
     )
     add_custom_target(json_create_header_dir
         COMMAND ${CMAKE_COMMAND} -E make_directory ${JSON_INCLUDE_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${JSON_INCLUDE_DIR}/nlohmann
         DEPENDS json
     )
     add_custom_target(json_copy_headers_to_destination
@@ -31,6 +32,7 @@ if(THIRD_PARTY)
     foreach(header_file ${JSON_HEADERS})
         add_custom_command(TARGET json_copy_headers_to_destination PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${JSON_INCLUDE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${JSON_INCLUDE_DIR}/nlohmann
         )
     endforeach()
 endif(THIRD_PARTY)
