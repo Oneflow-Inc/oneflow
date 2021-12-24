@@ -11,23 +11,6 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Pass/PassBase.td"
 
-def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
-  let summary = "";
-  let attrs = (ins
-    StrArrayAttr:$output_lbns
-  );
-  let hasCanonicalizer = 1;
-}
-
-def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
-  let summary = "";
-  let attrs = (ins
-    StrArrayAttr:$input_bns,
-    StrArrayAttr:$output_lbns
-  );
-  let hasCanonicalizer = 1;
-}
-
 def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   let builders = [
     OpBuilder<(ins
@@ -52,6 +35,29 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   ];
 }
 
+#ifndef REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
+
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
+  let summary = "";
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
+  let attrs = (ins
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
+  let summary = "";
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
+  let attrs = (ins
+    StrArrayAttr:$input_bns,
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
+}
+
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
   let summary = "";
   let input = (ins
@@ -64,6 +70,8 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
 // JIT ops
 
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
@@ -223,6 +231,8 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
   let verifier = [{ return ::mlir::oneflow::verify(*this); }];
   let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
 }
+
+#endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
 #endif // ONEFLOW_OPS
 
