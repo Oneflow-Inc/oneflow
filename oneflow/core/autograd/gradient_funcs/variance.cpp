@@ -65,6 +65,7 @@ Maybe<void> Variance::Capture(VarianceState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
+  // TODO(liufengwei): replace it using kernel 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   std::shared_ptr<Tensor> x_mean = JUST(functional::ReduceMean(x, ctx->axis, /*keepdim=*/true));
   std::shared_ptr<Tensor> x_sub = JUST(functional::Sub(x, x_mean));
