@@ -704,6 +704,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& sbp_sym = JUST(ctx.nd_sbp);
 
+  JUST(MetaInfoConsistencyCheck(parallel_desc_sym, sbp_sym, op_expr.grad_nd_sbp()));
+
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {
     JUST(AddFreeEagerTensorToVariableOp(input_tensor));

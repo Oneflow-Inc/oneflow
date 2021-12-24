@@ -181,6 +181,12 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& out_parallel_desc = JUST(ctx.parallel_desc);
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  JUST(MetaInfoConsistencyCheck(out_parallel_desc, out_nd_sbp, op_expr.grad_nd_sbp()));
+  if (!op_expr.grad_nd_sbp().has_value() && JUST(input->nd_sbp()) == out_nd_sbp
+      && in_parallel_desc == out_parallel_desc) {
+    outputs->at(0) = input;
+    return Maybe<void>::Ok();
+  }
   const auto& tensor =
       JUST(RecursiveGetBoxingOutput(input, out_nd_sbp, out_parallel_desc,
                                     in_parallel_id->has_value() || out_parallel_id->has_value()));
