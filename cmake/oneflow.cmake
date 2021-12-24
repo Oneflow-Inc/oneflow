@@ -1,100 +1,5 @@
 include(python)
 
-include(CheckCXXCompilerFlag)
-
-function(target_try_compile_option target flag)
-  # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
-  # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
-  string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
-  string(REGEX REPLACE "[-=]" "_" varName CXX_FLAG${checkedFlag})
-  # Avoid double checks. A compiler will not magically support a flag it did not before
-  if(NOT DEFINED ${varName}_SUPPORTED)
-    check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
-  endif()
-  if (${varName}_SUPPORTED)
-    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${flag}>)
-    if(BUILD_CUDA)
-      if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
-          "${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${flag}>)
-      endif()
-    endif()
-  endif ()
-endfunction()
-
-function(target_try_compile_options target)
-  foreach(flag ${ARGN})
-    target_try_compile_option(${target} ${flag})
-  endforeach()
-endfunction()
-
-function(target_treat_warnings_as_errors target)
-  if (TREAT_WARNINGS_AS_ERRORS)
-    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror>)
-    if(BUILD_CUDA)
-      # Only pass flags when cuda compiler is Clang because cmake handles -Xcompiler incorrectly
-      if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Werror>)
-        # Suppress warning from cub library -- marking as system header seems not working for .cuh files
-        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Wno-pass-failed>)
-      endif()
-    endif()
-
-    # TODO: remove it while fixing all deprecated call
-    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
-
-    # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_try_compile_options(${target}
-      -Wno-error=unused-const-variable
-      -Wno-error=unused-variable
-      -Wno-error=unused-local-typedefs
-      -Wno-error=unused-private-field
-      -Wno-error=unused-lambda-capture
-    )
-
-    # there is some strict-overflow warnings in oneflow/user/kernels/ctc_loss_kernel_util.cpp for unknown reason, disable them for now
-    target_try_compile_options(${target} -Wno-error=strict-overflow)
-
-    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
-
-    # disable for pointer operations of intrusive linked lists
-    target_try_compile_options(${target} -Wno-error=array-bounds)
-
-    target_try_compile_options(${target} -Wno-error=comment)
-
-    # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
-    target_try_compile_options(${target} -Wno-error=attributes)
-  endif()
-endfunction()
-
-function(set_compile_options_to_oneflow_target target)
-  target_treat_warnings_as_errors(${target})
-  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
-  # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-  target_try_compile_options(${target} -Wno-mismatched-tags)
-
-  if(BUILD_CUDA)
-    if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
-      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-        -Xcompiler -Werror=return-type;
-        -Wno-deprecated-gpu-targets;
-        -Werror cross-execution-space-call;
-        -Xcudafe --diag_suppress=declared_but_not_referenced;
-      >)
-    elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
-      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-        -Werror=return-type;
-      >)
-    else()
-      message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
-    endif()
-    # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
-    target_compile_definitions(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
-      THRUST_IGNORE_CUB_VERSION_CHECK;
-    >)
-  endif()
-endfunction()
-
 function(oneflow_add_executable)
   add_executable(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
@@ -214,18 +119,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_pyext_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
-
-  else() # build_python
-
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*\\.(h|cpp)$")
-      if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/cpp/.*_test\\.cpp$")
-        list(APPEND of_all_test_cc ${oneflow_single_file})
-      else()
-        list(APPEND of_all_obj_cc ${oneflow_single_file})
-      endif()
-      set(group_this ON)
-    endif()
-
   endif(BUILD_PYTHON)
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|maybe)/.*\\.cpp$")
@@ -346,21 +239,12 @@ include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 # cc obj lib
-if(BUILD_PYTHON)
-  oneflow_add_library(oneflow ${of_all_obj_cc})
-else() # build_python
-  if(BUILD_SHARED_LIBONEFLOW)
-    oneflow_add_library(oneflow SHARED ${of_all_obj_cc})
-  else()
-    oneflow_add_library(oneflow ${of_all_obj_cc})
-  endif()
-endif(BUILD_PYTHON)
+oneflow_add_library(oneflow ${of_all_obj_cc})
 
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
 add_dependencies(oneflow of_git_version)
-set_target_properties(oneflow PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${ONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_LIBRARY_DIR}")
 
 if (USE_CLANG_FORMAT)
   add_dependencies(oneflow of_format)
@@ -371,16 +255,17 @@ endif()
 
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
+set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools")
+oneflow_add_executable(oneflow-gen-ods EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/oneflow/ir/oneflow-gen-ods/oneflow-gen-ods.cpp)
+set_target_properties(oneflow-gen-ods PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${ONEFLOW_TOOLS_DIR}")
+
+set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "")
+use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
+set(LLVM_MONO_REPO_MD5 "9bda804e5cc61899085fb0f0dce1089f" CACHE STRING "")
+set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 if (WITH_MLIR)
-  set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip" CACHE STRING "" FORCE)
-  use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-  set(LLVM_MONO_REPO_MD5 "9bda804e5cc61899085fb0f0dce1089f" CACHE STRING "" FORCE)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
-  include_directories(${LLVM_INCLUDE_DIRS})
-  include_directories(${MLIR_INCLUDE_DIRS})
-  include_directories(${ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS})
-  include_directories(${ONEFLOW_MLIR_BINARY_INCLUDE_DIRS})
 endif()
 
 if(APPLE)
@@ -389,9 +274,17 @@ if(APPLE)
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+  if(BUILD_CUDA)
+    target_link_libraries(oneflow CUDA::cudart_static)
+  endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
+endif()
+
+target_link_libraries(oneflow-gen-ods ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+if (BUILD_CUDA)
+  target_link_libraries(oneflow-gen-ods CUDA::cudart_static)
 endif()
 
 if(BUILD_PYTHON)
@@ -421,6 +314,9 @@ if(BUILD_PYTHON)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
   target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+  if(WITH_MLIR)
+    add_dependencies(check-oneflow oneflow_internal)
+  endif(WITH_MLIR)
 
   set(gen_pip_args "")
   if (BUILD_CUDA)
@@ -443,38 +339,44 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
+if (BUILD_CPP_API)
+  file(GLOB_RECURSE of_cpp_api_files 
+    ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
+    ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
+  if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
+    oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
+  else()
+    oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
+  endif()
+  set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
+  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} ${ONEFLOW_MLIR_LIBS} ${oneflow_third_party_libs})
+endif()
+
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+
+function(oneflow_add_test target_name)
+  cmake_parse_arguments(arg "" "TEST_NAME" "SRCS" ${ARGN})
+  oneflow_add_executable(${target_name} ${arg_SRCS})
+  if (BUILD_CUDA)
+    target_link_libraries(${target_name} CUDA::cudart_static)
+  endif()
+  set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+  add_test(NAME ${arg_TEST_NAME} COMMAND ${target_name})
+endfunction()
 
 # build test
 if(BUILD_TESTING)
   if (of_all_test_cc)
-    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-    if (BUILD_CUDA)
-      target_link_libraries(oneflow_testexe CUDA::cudart_static)
-    endif()
-    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-    add_test(NAME oneflow_test COMMAND oneflow_testexe)
+    oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs} ${oneflow_test_libs})
+  endif()
+
+  if (BUILD_CPP_API)
+    file(GLOB_RECURSE cpp_api_test_files ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/tests/*.cpp)
+    oneflow_add_test(oneflow_cpp_api_testexe SRCS ${cpp_api_test_files} TEST_NAME oneflow_cpp_api_test)
+    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs})
   endif()
 endif()
-
-
-
-set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
-set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
-set(AUTO_GEN_DEV_REG_MACRO_ID "ONEFLOW_CORE_FRAMEWORK_AUTO_GEN_DEVICE_REGISTRY_H_")
-
-message(STATUS "auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
-set(AUTO_GEN_DEV_REG_HEADER_CONTENT "#ifndef ${AUTO_GEN_DEV_REG_MACRO_ID}\n#define ${AUTO_GEN_DEV_REG_MACRO_ID}\n")
-file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
-foreach(item ${DEVICE_REGISTER_HEADERS})
-    file(RELATIVE_PATH item ${PROJECT_SOURCE_DIR} ${item})
-    message(STATUS "device register header file found: " ${item})
-    set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#include \"${item}\"\n")
-endforeach()
-set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#endif //${AUTO_GEN_DEV_REG_MACRO_ID}\n\n")
-write_file_if_different(${AUTO_GEN_DEV_REG_HEADER} ${AUTO_GEN_DEV_REG_HEADER_CONTENT})
-list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
 
 # build include
 add_custom_target(of_include_copy ALL)
@@ -511,15 +413,15 @@ if(BUILD_PYTHON)
   add_custom_target(oneflow_py ALL)
   add_dependencies(oneflow_py of_include_copy)
 
-else() # build_python
+endif(BUILD_PYTHON)
 
-  add_dependencies(of_include_copy oneflow)
+if (BUILD_CPP_API)
+  add_dependencies(of_include_copy oneflow_cpp)
 
   set(OF_API_DIRS)
   file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
   list(APPEND OF_API_DIRS ${api_h_files})
 
-  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-  copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${ONEFLOW_SHARE_DIR}" of_include_copy)
-
-endif(BUILD_PYTHON)
+  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${LIBONEFLOW_INCLUDE_DIR}" of_include_copy)
+  copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
+endif(BUILD_CPP_API)

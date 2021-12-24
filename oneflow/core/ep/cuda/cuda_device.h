@@ -20,6 +20,8 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
+#include <cuda_runtime.h>
+
 namespace oneflow {
 
 namespace ep {
@@ -27,13 +29,14 @@ namespace ep {
 class CudaDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDevice);
-  explicit CudaDevice(int device_index);
-  virtual ~CudaDevice();
+  explicit CudaDevice(int device_index, DeviceManager* device_manager);
+  ~CudaDevice() override;
 
   void SetAsActiveDevice() override;
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
   size_t device_index() const override { return device_index_; }
+  DeviceManager* device_manager() const override { return device_manager_; }
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
@@ -46,11 +49,15 @@ class CudaDevice : public Device {
   Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
   void FreePinned(const AllocationOptions& options, void* ptr) override;
 
+  const cudaDeviceProp& properties() const;
+
  private:
   int device_index_;
   std::mutex events_mutex_;
   std::vector<Event*> events_;
   unsigned int event_flags_;
+  cudaDeviceProp properties_;
+  DeviceManager* device_manager_;
 };
 
 }  // namespace ep
