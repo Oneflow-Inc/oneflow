@@ -150,8 +150,7 @@ class TestFunctionalNormalize(flow.unittest.TestCase):
         shape = tuple(shape)
 
         x = random_pytorch_tensor(len(shape), *shape).to(device)
-        m = torch.nn.functional.normalize
-        y = m(x, oneof(2, 3, 4), dim, 1e-12)
+        y = torch.nn.functional.normalize(x, oneof(2, 3, 4), dim, 1e-12)
 
         return y
 
