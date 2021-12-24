@@ -92,11 +92,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (inputs.empty()) {
     // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
-    const auto& nd_sbp = JUST(ctx.nd_sbp);
-    JUST(PlacementConsistencyCheck(parallel_desc));
-    JUST(NdSbpConsistencyCheck(nd_sbp));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
     const auto& infer_args =
-        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, nd_sbp));
+        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
@@ -181,13 +179,6 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& out_nd_sbp = JUST(ctx.nd_sbp);
   const auto& out_parallel_desc = JUST(ctx.parallel_desc);
-  JUST(PlacementConsistencyCheck(out_parallel_desc));
-  JUST(NdSbpConsistencyCheck(out_nd_sbp));
-  if (op_expr.grad_nd_sbp().has_value()) {
-    JUST(NdSbpConsistencyCheck(JUST(op_expr.grad_nd_sbp())));
-  } else {
-    JUST(NdSbpConsistencyCheck(GetNoneSbpList()));
-  }
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   const auto& tensor =

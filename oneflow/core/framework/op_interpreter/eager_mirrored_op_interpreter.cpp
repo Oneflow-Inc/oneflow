@@ -304,8 +304,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     CHECK_OR_RETURN(ctx.nd_sbp.has_value());
     const auto& nd_sbp = JUST(ctx.nd_sbp);
     const auto& parallel_desc = JUST(ctx.parallel_desc);
-    JUST(PlacementConsistencyCheck(parallel_desc));
-    JUST(NdSbpConsistencyCheck(nd_sbp));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, nd_sbp));
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
     ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,

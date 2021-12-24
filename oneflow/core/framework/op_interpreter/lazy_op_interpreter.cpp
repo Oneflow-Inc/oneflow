@@ -425,9 +425,8 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
     const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
-    JUST(PlacementConsistencyCheck(parallel_desc_sym));
     parallel_desc = parallel_desc_sym.shared_from_symbol();
-    if (ctx.nd_sbp.has_value()) { JUST(NdSbpConsistencyCheck(JUST(ctx.nd_sbp))); }
+    JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp));
     is_local = false;
   } else {
     // NOTE(chengcheng): local
@@ -704,14 +703,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& sbp_sym = JUST(ctx.nd_sbp);
-
-  JUST(PlacementConsistencyCheck(parallel_desc_sym));
-  JUST(NdSbpConsistencyCheck(sbp_sym));
-  if (op_expr.grad_nd_sbp().has_value()) {
-    JUST(NdSbpConsistencyCheck(JUST(op_expr.grad_nd_sbp())));
-  } else {
-    JUST(NdSbpConsistencyCheck(GetNoneSbpList()));
-  }
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {

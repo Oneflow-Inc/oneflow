@@ -26,12 +26,12 @@ namespace oneflow {
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement);
 
-Maybe<void> PlacementConsistencyCheck(Symbol<ParallelDesc> placement);
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
+                                     const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
 
-Maybe<void> NdSbpConsistencyCheck(Symbol<cfg::NdSbp> nd_sbp);
-
-Maybe<void> NdSbpConsistencyCheck(const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple);
-
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const Optional<Symbol<cfg::NdSbp>>& nd_sbp);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
