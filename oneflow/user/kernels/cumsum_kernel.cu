@@ -156,7 +156,7 @@ class GpuCumsumKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUDA_CUMSUM_KERNEL(int)
+REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
 REGISTER_CUDA_CUMSUM_KERNEL(float)
 REGISTER_CUDA_CUMSUM_KERNEL(double)
 
@@ -202,7 +202,6 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUDA_CUMSUM_GRAD_KERNEL(int)
 REGISTER_CUDA_CUMSUM_GRAD_KERNEL(float)
 REGISTER_CUDA_CUMSUM_GRAD_KERNEL(double)
 

@@ -22,64 +22,24 @@ namespace oneflow {
 
 namespace {
 template<typename T>
-void cumsum_forward_norm(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
-                         int64_t cs_down_space, int64_t elem_cnt) {
+void cumsum_forward(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
+                    int64_t cs_down_space, int64_t elem_cnt) {
   std::copy_n(in_ptr, elem_cnt, out_ptr);
   auto* tmp_out_ptr_base = out_ptr;
+  auto step = cs_space * cs_down_space;
   for (auto i = 0; i < cs_up_space; i++) {
-    tmp_out_ptr_base += cs_space * cs_down_space;
     for (auto j = 1; j < cs_space; j++) {
       auto* tmp_out_ptr = tmp_out_ptr_base + j * cs_down_space;
       auto* last_tmp_out_ptr = tmp_out_ptr - cs_down_space;
       for (auto k = 0; k < cs_down_space; k++) { tmp_out_ptr[k] += last_tmp_out_ptr[k]; }
     }
+    tmp_out_ptr_base += step;
   }
 }
 
 template<typename T>
-void cumsum_forward_thread(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
-                           int64_t cs_down_space, int64_t elem_cnt) {
-  auto CPU_NUM = sysconf(_SC_NPROCESSORS_CONF);
-
-  std::vector<std::future<void>> rets;
-  rets.resize(CPU_NUM);
-  auto njobs = cs_up_space * cs_down_space;
-  auto njobs_per_thr = njobs / CPU_NUM;
-  if (cs_up_space * cs_down_space % CPU_NUM) njobs_per_thr += 1;
-  // start threads according to CPU number
-  // total jobs number are cs_up_space * cs_down_space
-  // every thread handls ceil(njobs / CPU_NUM) jobs
-  for (auto thr_id = 0; thr_id < CPU_NUM; thr_id++) {
-    rets[thr_id] = std::async(
-        std::launch::async,
-        [&](auto thr_id) {
-          for (auto i = thr_id * njobs_per_thr; i < ((thr_id + 1) * njobs_per_thr) && i < njobs;
-               i++) {
-            auto cs_up_space_id = i / cs_down_space;
-            auto cs_down_space_id = i % cs_down_space;
-
-            auto* in_ptr_base =
-                in_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
-            auto* out_ptr_base =
-                out_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
-
-            // calculate cs_space data in one thread
-            for (auto j = 0; j < cs_space; j++) {
-              auto idx = j * cs_down_space;
-              out_ptr_base[idx] = in_ptr_base[idx];
-              if (j != 0) { out_ptr_base[idx] += out_ptr_base[idx - cs_down_space]; }
-            }
-          }
-        },
-        thr_id);
-  }
-
-  for (auto i = 0; i < CPU_NUM; i++) { rets[i].wait(); }
-}
-
-template<typename T>
-void cumsum_backward_norm(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
-                          int64_t cs_down_space, int64_t elem_cnt) {
+void cumsum_backward(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
+                     int64_t cs_down_space, int64_t elem_cnt) {
   for (auto i = 0; i < cs_up_space; i++) {
     auto* tmp_in_ptr_base = in_ptr + i * cs_space * cs_down_space;
     auto* tmp_out_ptr_base = out_ptr + i * cs_space * cs_down_space;
@@ -117,8 +77,7 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     auto cs_space = in->shape().At(dim);
     auto cs_down_space = in->shape().Count(dim) / cs_space;
 
-    // cumsum_forward_norm<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
-    cumsum_forward_thread<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
+    cumsum_forward<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
   }
 
   // TODO: what's it used for?
@@ -130,7 +89,7 @@ class CpuCumsumKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUMSUM_KERNEL(int)
+REGISTER_CUMSUM_KERNEL(int64_t)
 REGISTER_CUMSUM_KERNEL(float)
 REGISTER_CUMSUM_KERNEL(double)
 
@@ -154,7 +113,7 @@ class CpuCumsumGradKernel final : public user_op::OpKernel {
     auto cs_space = dx->shape().At(dim);
     auto cs_down_space = dx->shape().Count(dim) / cs_space;
 
-    cumsum_backward_norm(dy_ptr, dx_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
+    cumsum_backward(dy_ptr, dx_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -165,7 +124,6 @@ class CpuCumsumGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_CUMSUM_GRAD_KERNEL(int)
 REGISTER_CPU_CUMSUM_GRAD_KERNEL(float)
 REGISTER_CPU_CUMSUM_GRAD_KERNEL(double)
 
