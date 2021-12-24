@@ -6,6 +6,7 @@ include "OneFlow/OneFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+def OneFlow_Tensor : TensorOf<[AnyType]>;
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
 def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
