@@ -23,12 +23,11 @@ namespace ep {
 namespace primitive {
 
 template<typename Dst, typename Src>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return static_cast<Src>(0.5) * src
-           * (static_cast<Src>(1.0) + erf(static_cast<Src>(M_SQRT1_2) * src));
-  }
-};
+  struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
+    OF_DEVICE_FUNC Dst operator()(Src src) const {
+      return src * normcdff(src); 
+    }
+  };
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, half, half> {

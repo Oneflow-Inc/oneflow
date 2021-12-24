@@ -25,12 +25,11 @@ namespace {
 
 template<typename T>
 struct GeluGradFunctor {
-  const T coef = std::sqrt(static_cast<T>(2.0) / std::acos(static_cast<T>(-1.0)));
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return static_cast<T>(0.5)
-           * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
-              + x * coef * exp(static_cast<T>(-0.5) * x * x))
-           * dy;
+    constexpr T kBeta = M_2_SQRTPI * M_SQRT1_2 * static_cast<T>(0.5);
+    const T cdf = normcdff(x);
+    const T pdf = exp( static_cast<T>(-0.5) * x * x) * kBeta;
+    return dy * (cdf + x * pdf);
   }
 };
 
