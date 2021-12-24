@@ -209,7 +209,7 @@ class TestAddModule(flow.unittest.TestCase):
         return z1, z2, z3
 
     @autotest(check_graph=False)
-    def test_add_with_alpha(test_case):
+    def test_add_with_alpha_0dim(test_case):
         device = random_device()
         x1 = random_pytorch_tensor(ndim=0).to(device).mean()
         x2 = random_pytorch_tensor(ndim=0).to(device).mean()
