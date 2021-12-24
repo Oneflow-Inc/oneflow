@@ -14,51 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
-    .OptionalInput("iteration")
-    .Output("out")
-    .Attr<std::string>("data_file_prefix")
-    .Attr<int64_t>("seq_length")
-    .Attr<int64_t>("label_length", 1)
-    .Attr<int64_t>("num_samples")
-    .Attr<int64_t>("batch_size")
-    .Attr<DataType>("dtype")
-    .Attr<std::vector<int64_t>>("split_sizes")
-    .Attr<int64_t>("split_index")
-    .Attr<bool>("shuffle")
-    .Attr<int64_t>("random_seed")
-    .Attr<std::vector<std::string>>("nd_sbp")
-    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-      int64_t sample_len = ctx->Attr<int64_t>("seq_length") + ctx->Attr<int64_t>("label_length");
-      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-      *out_desc->mut_shape() = Shape({batch_size, sample_len});
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputTensorDesc("out", 0)->mut_data_type() = ctx->Attr<DataType>("dtype");
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      cfg::SbpParallel default_sbp;
-      default_sbp.mutable_split_parallel()->set_axis(0);
-      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
-    })
-    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
-      if (!conf.has_input("iteration", 0)) { return Maybe<void>::Ok(); }
-      user_op::InputArgModifier* input_modifier = GetInputArgModifierFn("iteration", 0);
-      CHECK_OR_RETURN(input_modifier != nullptr);
-      input_modifier->set_is_mutable(true);
-      input_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    });
+/*static*/ auto MegatronGptMmapDataLoaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  int64_t batch_size = ctx->Attr<int64_t>("batch_size");
+  int64_t sample_len = ctx->Attr<int64_t>("seq_length") + ctx->Attr<int64_t>("label_length");
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *out_desc->mut_shape() = Shape({batch_size, sample_len});
+  return Maybe<void>::Ok();
+}
+/*static*/ auto MegatronGptMmapDataLoaderOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  *ctx->OutputTensorDesc("out", 0)->mut_data_type() = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
+/*static*/ auto MegatronGptMmapDataLoaderOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ auto MegatronGptMmapDataLoaderOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx)
+    -> Maybe<void> {
+  cfg::SbpParallel default_sbp;
+  default_sbp.mutable_split_parallel()->set_axis(0);
+  return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+}
+/*static*/ auto MegatronGptMmapDataLoaderOp::ModifyInputArg(
+    const user_op::GetInputArgModifier& GetInputArgModifierFn,
+    const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
+  if (!conf.has_input("iteration", 0)) { return Maybe<void>::Ok(); }
+  user_op::InputArgModifier* input_modifier = GetInputArgModifierFn("iteration", 0);
+  CHECK_OR_RETURN(input_modifier != nullptr);
+  input_modifier->set_is_mutable(true);
+  input_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
