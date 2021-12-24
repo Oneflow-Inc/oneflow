@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import random
 import sys
 import traceback
@@ -202,7 +203,6 @@ class CropMirrorNormalize(Module):
     def __init__(
         self,
         color_space: str = "BGR",
-        output_layout: str = "NCHW",
         crop_h: int = 0,
         crop_w: int = 0,
         crop_pos_y: float = 0.5,
@@ -212,6 +212,10 @@ class CropMirrorNormalize(Module):
         output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            output_layout = "NHWC"
+        else:
+            output_layout = "NCHW"
         self._op_uint8_with_mirror = (
             flow.builtin_op("crop_mirror_normalize_from_uint8")
             .Input("in")

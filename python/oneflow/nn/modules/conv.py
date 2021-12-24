@@ -393,7 +393,6 @@ class Conv2d(Module):
         groups: int = 1,
         bias: bool = True,
         padding_mode: str = "zeros",
-        data_format: str = "NCHW",
     ):
         super().__init__()
         assert padding_mode == "zeros"
@@ -403,7 +402,11 @@ class Conv2d(Module):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
         self.groups = groups
-        self.data_format = data_format
+
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.data_format = "NHWC"
+        else:
+            self.data_format = "NCHW"
         if self.data_format == "NCHW":
             self.channel_first = True
             self.channel_pos = "channels_first"

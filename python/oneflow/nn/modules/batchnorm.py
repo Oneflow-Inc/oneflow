@@ -98,12 +98,15 @@ class _BatchNorm(_NormBase):
         momentum=0.1,
         affine=True,
         track_running_stats=True,
-        data_format="NCHW",
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        if data_format == "NCHW":
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.data_format = "NHWC"
+        else:
+            self.data_format = "NCHW"
+        if self.data_format == "NCHW":
             self.channel_axis = 1
-        elif data_format == "NHWC":
+        elif self.data_format == "NHWC":
             self.channel_axis = 3
         else:
             raise ValueError

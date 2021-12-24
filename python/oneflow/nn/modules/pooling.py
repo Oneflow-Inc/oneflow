@@ -221,18 +221,22 @@ class LegacyMaxPool2d(Module):
         data_format: Optional[str] = "NCHW",
     ):
         super().__init__()
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.data_format = "NHWC"
+        else:
+            self.data_format = "NCHW"
         self.ceil_mode = ceil_mode
         self.kernel_size = _pair(kernel_size)
         self.strides = _pair(stride) if (stride is not None) else kernel_size
         self.channel_pos = (
-            "channels_last" if data_format == "NHWC" else "channels_first"
+            "channels_last" if self.data_format == "NHWC" else "channels_first"
         )
 
         padding = _pair(padding)
         if len(padding) == 2:
-            if data_format == "NCHW":
+            if self.data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
-            elif data_format == "NHWC":
+            elif self.data_format == "NHWC":
                 padding = (0, padding[0], padding[1], 0)
             else:
                 raise ValueError("error padding param!")
@@ -297,9 +301,12 @@ class LegacyAvgPool2d(Module):
         count_include_pad: Optional[bool] = None,
         divisor_override: Optional[int] = None,
         name: Optional[str] = None,
-        data_format: Optional[str] = "NCHW",
     ):
         super().__init__()
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.data_format = "NHWC"
+        else:
+            self.data_format = "NCHW"
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride) if (stride is not None) else kernel_size
 
@@ -308,9 +315,9 @@ class LegacyAvgPool2d(Module):
         ), "padding can only int int or tuple of 2 ints."
         padding = _pair(padding)
         if len(padding) == 2:
-            if data_format == "NCHW":
+            if self.data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
-            elif data_format == "NHWC":
+            elif self.data_format == "NHWC":
                 padding = (0, padding[0], padding[1], 0)
             else:
                 raise ValueError("error padding param!")
@@ -319,7 +326,7 @@ class LegacyAvgPool2d(Module):
         assert divisor_override is None, "divisor_override not supported yet"
 
         self.channel_pos = (
-            "channels_last" if data_format == "NHWC" else "channels_first"
+            "channels_last" if self.data_format == "NHWC" else "channels_first"
         )
         # TODO(yaochi): align with pytorch when padding is asymmetric
         self._padding_type, _pads_list = calc_pool_padding(
