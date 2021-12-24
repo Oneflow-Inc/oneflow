@@ -391,9 +391,18 @@ if(BUILD_PYTHON)
     copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
   endforeach()
 
-  copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-  copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-
+  # copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+  # copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+  foreach(HEADER ${PROTO_HDRS} ${PROTO_HDRS})
+    file(RELATIVE_PATH GEN_HDR ${PROJECT_BINARY_DIR} ${HEADER})
+    get_filename_component(SUB_DIR ${GEN_HDR} DIRECTORY)
+    install(
+      FILES ${HEADER}
+      DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
+      COMPONENT oneflow_py_include
+      EXCLUDE_FROM_ALL
+    )
+  endforeach()
   set(OF_CORE_HDRS)
   list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "ep/include")
   foreach(of_core_dir_name ${of_core_dir_name_list})
