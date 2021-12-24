@@ -125,8 +125,9 @@ class TestDiv(flow.unittest.TestCase):
                 device=arg[1],
             )
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_0shape_div(test_case):
+        print("test_0shape_div(test_case):")
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
