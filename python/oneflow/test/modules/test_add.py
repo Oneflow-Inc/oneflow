@@ -222,5 +222,6 @@ class TestAddModule(flow.unittest.TestCase):
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
 
+
 if __name__ == "__main__":
     unittest.main()
