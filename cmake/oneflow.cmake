@@ -386,17 +386,13 @@ add_custom_target(of_include_copy ALL)
 if(BUILD_PYTHON)
 
   add_dependencies(of_include_copy oneflow_internal of_pyscript_copy)
-
-  foreach(HEADER ${PROTO_HDRS} ${CFG_HRCS})
-    file(RELATIVE_PATH GEN_HDR ${PROJECT_BINARY_DIR} ${HEADER})
-    get_filename_component(SUB_DIR ${GEN_HDR} DIRECTORY)
-    install(
-      FILES ${HEADER}
-      DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
-      COMPONENT oneflow_py_include
-      EXCLUDE_FROM_ALL
-    )
-  endforeach()
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/oneflow/core DESTINATION ${ONEFLOW_INCLUDE_DIR}/oneflow/core
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL
+    FILES_MATCHING
+    PATTERN *.h
+    PATTERN *.hpp
+  )
   install(DIRECTORY tools/cfg/include/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
