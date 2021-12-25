@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
@@ -255,8 +254,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // TODO(chengcheng): CHECK job valid for each rank.
   JUST(CreateAndRegisterNewVariableOpInJobPass());
 
-  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
-  one::TensorNameScope::Global()->Clear();
 
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
