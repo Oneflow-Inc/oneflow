@@ -333,7 +333,6 @@ if (THIRD_PARTY)
     install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR_DST}
       COMPONENT oneflow_py_include
       EXCLUDE_FROM_ALL
-      MESSAGE_NEVER
     )
   endforeach()
 else()

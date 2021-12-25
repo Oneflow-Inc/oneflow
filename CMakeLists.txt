@@ -1,6 +1,7 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.18.0)
 
+set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)

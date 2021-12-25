@@ -389,7 +389,6 @@ if(BUILD_PYTHON)
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/oneflow/core DESTINATION ${ONEFLOW_INCLUDE_DIR}/oneflow
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
-    MESSAGE_NEVER
     FILES_MATCHING
     PATTERN *.h
     PATTERN *.hpp
@@ -397,12 +396,10 @@ if(BUILD_PYTHON)
   install(DIRECTORY ${CFG_INCLUDE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
-    MESSAGE_NEVER
   )
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
-    MESSAGE_NEVER
     FILES_MATCHING
     REGEX "oneflow/core/common/.+(h|hpp)$"
     REGEX "oneflow/core/device/.+(h|hpp)$"
@@ -435,7 +432,6 @@ set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow
 install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
   COMPONENT oneflow_cpp_include
   EXCLUDE_FROM_ALL
-  MESSAGE_NEVER
   FILES_MATCHING
   PATTERN *.h
 )
