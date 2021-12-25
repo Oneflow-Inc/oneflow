@@ -401,7 +401,7 @@ if(BUILD_PYTHON)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
-    # MESSAGE_NEVER
+    MESSAGE_NEVER
     FILES_MATCHING
     REGEX "oneflow/core/common/.+(h|hpp)$"
     REGEX "oneflow/core/device/.+(h|hpp)$"
