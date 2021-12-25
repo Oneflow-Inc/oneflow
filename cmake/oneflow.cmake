@@ -389,6 +389,7 @@ if(BUILD_PYTHON)
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/oneflow/core DESTINATION ${ONEFLOW_INCLUDE_DIR}/oneflow
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
+    MESSAGE_NEVER
     FILES_MATCHING
     PATTERN *.h
     PATTERN *.hpp
@@ -402,6 +403,7 @@ if(BUILD_PYTHON)
     install(DIRECTORY ${ARGV0} DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
       COMPONENT oneflow_py_include
       EXCLUDE_FROM_ALL
+      MESSAGE_NEVER
       FILES_MATCHING
       PATTERN *.h
       PATTERN *.hpp
@@ -439,6 +441,23 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
+
+set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/api")
+install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
+  COMPONENT oneflow_cpp_include
+  EXCLUDE_FROM_ALL
+  MESSAGE_NEVER
+  FILES_MATCHING
+  PATTERN *.h
+)
+
+add_custom_target(install_oneflow_cpp_include
+  COMMAND
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_include
+      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  DEPENDS oneflow_internal
+)
+add_dependencies(of_include_copy install_oneflow_cpp_include)
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy oneflow_cpp)
 
@@ -446,6 +465,5 @@ if (BUILD_CPP_API)
   file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
   list(APPEND OF_API_DIRS ${api_h_files})
 
-  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${LIBONEFLOW_INCLUDE_DIR}" of_include_copy)
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
 endif(BUILD_CPP_API)

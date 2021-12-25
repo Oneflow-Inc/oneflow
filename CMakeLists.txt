@@ -210,10 +210,8 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 if(BUILD_CPP_API)
-  set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow")
   set(LIBONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/lib")
   set(LIBONEFLOW_SHARE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/share")
-  make_directory(${LIBONEFLOW_INCLUDE_DIR})
   make_directory(${LIBONEFLOW_LIBRARY_DIR})
   make_directory(${LIBONEFLOW_SHARE_DIR})
 
