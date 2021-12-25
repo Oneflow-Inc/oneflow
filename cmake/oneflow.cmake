@@ -397,31 +397,38 @@ if(BUILD_PYTHON)
       EXCLUDE_FROM_ALL
     )
   endforeach()
-  set(OF_CORE_HDRS)
-  list(APPEND of_core_dir_name_list "core/common" "core/device" "core/framework" "core/kernel/util" "core/persistence" "core/ep/include", "tools/cfg/include")
-  foreach(of_core_dir_name ${of_core_dir_name_list})
-    file(GLOB_RECURSE h_files LIST_DIRECTORIES false RELATIVE ${PROJECT_SOURCE_DIR} "oneflow/${of_core_dir_name}/*.h")
-    list(APPEND OF_CORE_HDRS ${h_files})
-    file(GLOB_RECURSE hpp_files LIST_DIRECTORIES false RELATIVE ${PROJECT_SOURCE_DIR} "oneflow/${of_core_dir_name}/*.hpp")
-    list(APPEND OF_CORE_HDRS ${hpp_files})
-  endforeach()
-  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/new_kernel_util.h")
-  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/kernel_context.h")
-  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/kernel_observer.h")
-  list(APPEND OF_CORE_HDRS "oneflow/core/kernel/kernel_util.cuh")
-  list(APPEND OF_CORE_HDRS "oneflow/core/job/sbp_signature_builder.h")
-  list(APPEND OF_CORE_HDRS "oneflow/core/common/symbol.h")
-  list(APPEND OF_CORE_HDRS "oneflow/core/job/parallel_desc.h")
-  list(APPEND OF_CORE_HDRS "oneflow/core/autograd/autograd_meta.h")
-  foreach(HEADER ${OF_CORE_HDRS})
-    get_filename_component(SUB_DIR ${HEADER} DIRECTORY)
-    install(
-      FILES ${HEADER}
-      DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
+  set(OF_SRC_HDRS)
+  function(add_dir_to_include_install)
+    get_filename_component(SUB_DIR ${ARGV0} DIRECTORY)
+    install(DIRECTORY ${ARGV0} DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
+      COMPONENT oneflow_py_include
+      EXCLUDE_FROM_ALL
+      FILES_MATCHING
+      PATTERN *.h
+      PATTERN *.hpp
+    )
+  endfunction()
+  function(add_file_to_include_install)
+    get_filename_component(SUB_DIR ${ARGV0} DIRECTORY)
+    install(FILES ${ARGV0} DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
       COMPONENT oneflow_py_include
       EXCLUDE_FROM_ALL
     )
-  endforeach()
+  endfunction()
+  add_dir_to_include_install("oneflow/core/common")
+  add_dir_to_include_install("oneflow/core/device")
+  add_dir_to_include_install("oneflow/core/framework")
+  add_dir_to_include_install("oneflow/core/kernel/util")
+  add_dir_to_include_install("oneflow/core/persistence")
+  add_dir_to_include_install("oneflow/core/ep/include")
+  add_file_to_include_install("oneflow/core/kernel/new_kernel_util.h")
+  add_file_to_include_install("oneflow/core/kernel/kernel_context.h")
+  add_file_to_include_install("oneflow/core/kernel/kernel_observer.h")
+  add_file_to_include_install("oneflow/core/kernel/kernel_util.cuh")
+  add_file_to_include_install("oneflow/core/job/sbp_signature_builder.h")
+  add_file_to_include_install("oneflow/core/common/symbol.h")
+  add_file_to_include_install("oneflow/core/job/parallel_desc.h")
+  add_file_to_include_install("oneflow/core/autograd/autograd_meta.h")
   add_custom_target(install_oneflow_py_include
     COMMAND
         "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_py_include
