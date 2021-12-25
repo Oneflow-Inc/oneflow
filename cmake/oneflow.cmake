@@ -386,7 +386,7 @@ add_custom_target(of_include_copy ALL)
 if(BUILD_PYTHON)
 
   add_dependencies(of_include_copy oneflow_internal of_pyscript_copy)
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/oneflow/core DESTINATION ${ONEFLOW_INCLUDE_DIR}/oneflow/core
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/oneflow/core DESTINATION ${ONEFLOW_INCLUDE_DIR}/oneflow
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
     FILES_MATCHING
