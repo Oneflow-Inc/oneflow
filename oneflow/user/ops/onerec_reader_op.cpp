@@ -14,43 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OneRecReader")
-    .Output("out")
-    .Attr<std::vector<std::string>>("files")
-    .Attr<int32_t>("batch_size")
-    .Attr<bool>("random_shuffle", false)
-    .Attr<std::string>("shuffle_mode", "instance")
-    .Attr<int64_t>("seed", -1)
-    .Attr<int32_t>("shuffle_buffer_size", 1024)
-    .Attr<bool>("shuffle_after_epoch", false)
-    .Attr<bool>("verify_example", true)
-    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-      int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-      int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      CHECK_OR_RETURN(parallel_num == 1 || sbp.has_split_parallel());
-      CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
-      local_batch_size /= parallel_num;
-      *out_tensor->mut_shape() = Shape({local_batch_size});
-      return Maybe<void>::Ok();
-    })
-    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-      int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-      *out_tensor->mut_shape() = Shape({batch_size});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> OneRecReaderOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> OneRecReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  int32_t batch_size = ctx->Attr<int32_t>("batch_size");
+  *out_tensor->mut_shape() = Shape({batch_size});
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> OneRecReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
+  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+  CHECK_OR_RETURN(parallel_num == 1 || sbp.has_split_parallel());
+  CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
+  local_batch_size /= parallel_num;
+  *out_tensor->mut_shape() = Shape({local_batch_size});
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> OneRecReaderOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

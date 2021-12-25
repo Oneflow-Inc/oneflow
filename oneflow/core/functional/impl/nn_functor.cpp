@@ -47,7 +47,12 @@ class BiasAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = x->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    JUST(attrs.SetAttr<int32_t>("axis", axis_val));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
   }
 
@@ -1260,7 +1265,7 @@ class NormalizationAddReluFunctor {
                                    .Output("y")
                                    .Attr("training", false)
                                    .Build());
-    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("in").Output("out").Build());
+    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("x").Output("y").Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
     fused_norm_training_stats_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu")
                                                    .Input("x")
@@ -1660,16 +1665,42 @@ class L2NormalizeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("l2_normalize").Input("x").Output("y").Output("square_x_sum").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
-                                const float& epsilon) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
+                           const float& epsilon) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<int32_t>("axis", 0));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
+
+    if (axis != 0) {
+      std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+      for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
+      std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
+
+      const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
+      return functional::Transpose(result->at(0), input_perm);
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NormalizeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const int32_t& dim, const float& eps) const {
+    return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
+                                          const int32_t&)>(
+               [](const auto& x, const float& p, const int32_t& dim) -> Maybe<Tensor> {
+                 return functional::ScalarNorm(x, p, dim, true, NullOpt);
+               })
+        .then([&](const auto& x) { return functional::Clamp(x, eps, NullOpt); })
+        .then([&](const auto& x) { return functional::Div(input, x); })
+        .call(input, p, dim);
+  }
 };
 
 class FusedSelfAttentionFunctor {
@@ -1845,18 +1876,26 @@ class FusedBiasAddDropoutFunctor {
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
-    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-
-    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-             return OpInterpUtil::Dispatch<Tensor>(
-                 *random_mask_like_op_, {a},
-                 OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
-           })
-        .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
-                                                fused_bias_add_mask_attrs);
-        })
-        .call();
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = a->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis_val));
+    if (p >= 0.0) {
+      return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+               return OpInterpUtil::Dispatch<Tensor>(
+                   *random_mask_like_op_, {a},
+                   OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
+             })
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                  fused_bias_add_mask_attrs);
+          })
+          .call();
+    } else {
+      return functional::BiasAdd(a, b, axis_val);
+    }
   }
 
  private:
@@ -2155,6 +2194,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
+  m.add_functor<impl::NormalizeFunctor>("Normalize");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");

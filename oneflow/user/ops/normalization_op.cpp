@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/device/cudnn_util.h"
@@ -212,76 +213,81 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
                                 user_op::TensorDesc* reserve_space)>());
 }
 
-REGISTER_USER_OP("normalization")
-    .Input("x")
-    .OptionalInput("moving_mean")
-    .OptionalInput("moving_variance")
-    .Input("gamma")
-    .Input("beta")
-    .OptionalInput("_add_to_output")
-    .Output("y")
-    .OptionalOutput("mean")
-    .OptionalOutput("inv_variance")
-    .Attr<int32_t>("axis")
-    .Attr<float>("epsilon")
-    .Attr<bool>("training")
-    .Attr<float>("momentum")
-    .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn())
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(MakeFwDataTypeInferFn());
+}  // namespace
 
-REGISTER_USER_OP("normalization_add_relu")
-    .Input("x")
-    .OptionalInput("addend")
-    .OptionalInput("moving_mean")
-    .OptionalInput("moving_variance")
-    .Input("gamma")
-    .Input("beta")
-    .Output("y")
-    .Output("reserve_space")
-    .OptionalOutput("mean")
-    .OptionalOutput("inv_variance")
-    .Attr<int32_t>("axis")
-    .Attr<float>("epsilon")
-    .Attr<bool>("training")
-    .Attr<float>("momentum")
-    .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetLogicalTensorDescInferFn(
-        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          const auto& x_desc = ctx->InputTensorDesc("x", 0);
-          size_t reserve_space_bits = x_desc.shape().elem_cnt();
-          int64_t parallel_num = ctx->parallel_num();
-          if (parallel_num != 1) {
-            // There no need to call SbpParallel4ArgNameAndIndex when parallel_num = 1 in local.
-            const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-            if (x_sbp.has_split_parallel()) {
-              CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-              reserve_space_bits = reserve_space_bits / ctx->parallel_num();
-            }
-          }
-          *reserve_space->mut_shape() =
-              Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
-          return Maybe<void>::Ok();
-        }))
-    .SetPhysicalTensorDescInferFn(
-        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          const auto& x_desc = ctx->InputTensorDesc("x", 0);
-          *reserve_space->mut_shape() =
-              Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
-          return Maybe<void>::Ok();
-        }))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(
-        MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                 user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          *reserve_space->mut_data_type() = DataType::kInt32;
-          return Maybe<void>::Ok();
-        }));
+/* static */ Maybe<void> NormalizationOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return MakeFwTensorDescInferFn()(ctx);
+}
+
+/*static*/ Maybe<void> NormalizationOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NormalizationOp::GetSbp(user_op::SbpContext* ctx) {
+  return FwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> NormalizationOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return FwInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> NormalizationOp::InferDataType(user_op::InferContext* ctx) {
+  return MakeFwDataTypeInferFn()(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    const auto& x_desc = ctx->InputTensorDesc("x", 0);
+    size_t reserve_space_bits = x_desc.shape().elem_cnt();
+    int64_t parallel_num = ctx->parallel_num();
+    if (parallel_num != 1) {
+      // There no need to call SbpParallel4ArgNameAndIndex when parallel_num = 1 in local.
+      const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+      if (x_sbp.has_split_parallel()) {
+        CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+        reserve_space_bits = reserve_space_bits / ctx->parallel_num();
+      }
+    }
+    *reserve_space->mut_shape() =
+        Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
+    return Maybe<void>::Ok();
+  })(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    const auto& x_desc = ctx->InputTensorDesc("x", 0);
+    *reserve_space->mut_shape() =
+        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
+    return Maybe<void>::Ok();
+  })(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluOp::GetSbp(user_op::SbpContext* ctx) {
+  return FwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return FwInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> NormalizationAddReluOp::InferDataType(user_op::InferContext* ctx) {
+  return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    *reserve_space->mut_data_type() = DataType::kInt32;
+    return Maybe<void>::Ok();
+  })(ctx);
+}
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+
+namespace {
 
 void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n, int64_t c,
                                 int64_t h, int64_t w, size_t* reserve_space_size) {
@@ -295,79 +301,110 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
 }
 
-REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
-    .Input("x")
-    .OptionalInput("addend")
-    .OptionalInput("moving_mean")
-    .OptionalInput("moving_variance")
-    .Input("gamma")
-    .Input("beta")
-    .Output("y")
-    .Output("reserve_space")
-    .OptionalOutput("mean")
-    .OptionalOutput("inv_variance")
-    .Attr<int32_t>("axis")
-    .Attr<float>("epsilon")
-    .Attr<float>("momentum")
-    .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetLogicalTensorDescInferFn(
-        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          const Shape& x_shape = x->shape();
-          const auto axis = ctx->Attr<int32_t>("axis");
-          CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
-          int64_t n = x_shape.At(0);
-          int64_t h = x_shape.Count(1, axis);
-          int64_t w = 1;
-          int64_t c = x_shape.At(axis);
-          const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-          if (x_sbp.has_split_parallel()) {
-            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-            n = n / ctx->parallel_num();
-          }
-          cudnnBatchNormOps_t ops;
-          if (ctx->has_input("addend", 0)) {
-            ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
-          } else {
-            ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
-          }
-          size_t reserve_space_size;
-          InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
-          reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-          *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
-          return Maybe<void>::Ok();
-        }))
-    .SetPhysicalTensorDescInferFn(
-        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          const Shape& x_shape = x->shape();
-          const auto axis = ctx->Attr<int32_t>("axis");
-          CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
-          int64_t n = x_shape.At(0);
-          int64_t h = x_shape.Count(1, axis);
-          int64_t w = 1;
-          int64_t c = x_shape.At(axis);
-          cudnnBatchNormOps_t ops;
-          if (ctx->has_input("addend", 0)) {
-            ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
-          } else {
-            ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
-          }
-          size_t reserve_space_size;
-          InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
-          reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-          *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
-          return Maybe<void>::Ok();
-        }))
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(
-        MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                 user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          *reserve_space->mut_data_type() = DataType::kChar;
-          return Maybe<void>::Ok();
-        }));
+}  // namespace
 
-#endif
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    const Shape& x_shape = x->shape();
+    const auto axis = ctx->Attr<int32_t>("axis");
+    CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+    int64_t n = x_shape.At(0);
+    int64_t h = x_shape.Count(1, axis);
+    int64_t w = 1;
+    int64_t c = x_shape.At(axis);
+    const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    if (x_sbp.has_split_parallel()) {
+      CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+      n = n / ctx->parallel_num();
+    }
+    cudnnBatchNormOps_t ops;
+    if (ctx->has_input("addend", 0)) {
+      ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+    } else {
+      ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+    }
+    size_t reserve_space_size;
+    InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
+    reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    return Maybe<void>::Ok();
+  })(ctx);
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    const Shape& x_shape = x->shape();
+    const auto axis = ctx->Attr<int32_t>("axis");
+    CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+    int64_t n = x_shape.At(0);
+    int64_t h = x_shape.Count(1, axis);
+    int64_t w = 1;
+    int64_t c = x_shape.At(axis);
+    cudnnBatchNormOps_t ops;
+    if (ctx->has_input("addend", 0)) {
+      ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+    } else {
+      ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+    }
+    size_t reserve_space_size;
+    InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
+    reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    return Maybe<void>::Ok();
+  })(ctx);
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::GetSbp(user_op::SbpContext* ctx) {
+  return FwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return FwInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
+    *reserve_space->mut_data_type() = DataType::kChar;
+    return Maybe<void>::Ok();
+  })(ctx);
+}
+
+#else
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+#endif  // WITH_CUDA
+
+namespace {
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
 #ifdef WITH_CUDA
@@ -447,60 +484,83 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP("normalization_grad")
-    .Input("x")
-    .Input("dy")
-    .Input("mean")
-    .Input("inv_variance")
-    .Input("gamma")
-    .Output("gamma_diff")
-    .Output("beta_diff")
-    .Output("dx")
-    .Attr<int32_t>("axis")
-    .Attr<float>("epsilon")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwDataTypeInferFn);
+}  // namespace
 
-REGISTER_USER_OP("normalization_add_relu_grad")
-    .Input("x")
-    .Input("dy")
-    .Input("mean")
-    .Input("inv_variance")
-    .Input("gamma")
-    .Input("beta")
-    .Input("reserve_space")
-    .Input("y")
-    .Output("gamma_diff")
-    .Output("beta_diff")
-    .Output("dx")
-    .OptionalOutput("addend_diff")
-    .Attr<int32_t>("axis")
-    .Attr<float>("epsilon")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwDataTypeInferFn);
+/* static */ Maybe<void> NormalizationGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return BwTensorDescInferFn(ctx);
+}
+
+/*static*/ Maybe<void> NormalizationGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NormalizationGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return BwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> NormalizationGradOp::InferDataType(user_op::InferContext* ctx) {
+  return BwDataTypeInferFn(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return BwTensorDescInferFn(ctx);
+}
+
+/*static*/ Maybe<void> NormalizationAddReluGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return BwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> NormalizationAddReluGradOp::InferDataType(user_op::InferContext* ctx) {
+  return BwDataTypeInferFn(ctx);
+}
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
-REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
-    .Input("x")
-    .Input("dy")
-    .Input("mean")
-    .Input("inv_variance")
-    .Input("gamma")
-    .Input("beta")
-    .Input("reserve_space")
-    .Input("y")
-    .Output("gamma_diff")
-    .Output("beta_diff")
-    .Output("dx")
-    .OptionalOutput("addend_diff")
-    .Attr<int32_t>("axis")
-    .Attr<float>("epsilon")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetGetSbpFn(BwGetSbpFn)
-    .SetDataTypeInferFn(BwDataTypeInferFn);
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return BwTensorDescInferFn(ctx);
+}
+
+/*static*/ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return BwGetSbpFn(ctx);
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return BwDataTypeInferFn(ctx);
+}
+
+#else
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/*static*/ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
+
+/* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA and CuDNN >= 7401";
+}
 
 #endif
 
@@ -708,7 +768,5 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                                 });
       return Maybe<void>::Ok();
     });
-
-}  // namespace
 
 }  // namespace oneflow
