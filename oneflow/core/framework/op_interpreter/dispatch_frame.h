@@ -29,4 +29,4 @@ class DispatchFrame{
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_DISPATCH_GUARD_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_DISPATCH_FRAME_H_

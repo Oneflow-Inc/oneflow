@@ -125,6 +125,13 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
       cur_f_str = "frame[-2]: " + back_f_str + "; frame[-1]: " + cur_f_str;
       Py_XDECREF(back_frame);
     }
+    // while (back_frame != NULL) {
+    //   std::string back_f_str = get_frame_str((PyObject *)back_frame);
+    //   cur_f_str = back_f_str + "; " + cur_f_str;
+    //   PyFrameObject* new_back_frame = get_frame_back(back_frame);
+    //   Py_XDECREF(back_frame);
+    //   back_frame = new_back_frame;
+    // }
     DispatchFrame::Guard f_guard(cur_f_str);
     return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
   }
