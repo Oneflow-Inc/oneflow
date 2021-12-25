@@ -1,4 +1,3 @@
-set(CFG_INCLUDE_DIR tools/cfg/include)
 execute_process(
   COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_convert_python_script

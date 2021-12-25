@@ -397,7 +397,10 @@ if(BUILD_PYTHON)
       EXCLUDE_FROM_ALL
     )
   endforeach()
-  set(OF_SRC_HDRS)
+  install(DIRECTORY tools/cfg/include/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL
+  )
   function(add_src_dir_to_include_install)
     get_filename_component(SUB_DIR ${ARGV0} DIRECTORY)
     install(DIRECTORY ${ARGV0} DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
