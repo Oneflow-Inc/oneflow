@@ -69,7 +69,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def FuseCastScaleJob(
             x: oft.Numpy.Placeholder(shape, dtype=in_type)
-        ) -> Tuple[oft.Numpy, oft.Numpy]:
+        ) -> Tuple[oft.Numpy, oft.Numpy, oft.Numpy]:
             with flow.scope.placement(device, "0:0-0"):
                 scale = (
                     flow.get_variable(
@@ -84,15 +84,15 @@ class TestMLIROptimizations(flow.unittest.TestCase):
                     + 2
                 )
                 loss = flow.cast(x, dtype=out_type) * scale
-                return (loss, scale)
+                return (loss, scale, x)
 
         np_in_type = dtype_util.convert_oneflow_dtype_to_numpy_dtype(in_type)
         x = (np.random.rand(*shape) * 100).astype(np_in_type)
         ret = FuseCastScaleJob(x)
-        (loss, scale) = ret
+        (loss, scale, x) = ret
         test_case.assertTrue(
             np.allclose(loss, x * scale),
-            {"scale": scale, "oneflow": loss, "numpy": x * scale,},
+            {"x": x, "scale": scale, "oneflow": loss, "numpy": x * scale,},
         )
 
 
