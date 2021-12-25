@@ -393,7 +393,7 @@ if(BUILD_PYTHON)
     PATTERN *.h
     PATTERN *.hpp
   )
-  install(DIRECTORY tools/cfg/include/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
+  install(DIRECTORY ${CFG_INCLUDE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
   )
@@ -432,6 +432,7 @@ if(BUILD_PYTHON)
     COMMAND
         "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_py_include
         -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+    DEPENDS oneflow_internal
   )
   add_custom_target(oneflow_py ALL)
   add_dependencies(oneflow_py of_include_copy install_oneflow_py_include)
