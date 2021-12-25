@@ -20,7 +20,7 @@ import oneflow.unittest
 
 
 class TestMovedim(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_movedim_with_vector(test_case):
         device = random_device()
         x = random_pytorch_tensor(
