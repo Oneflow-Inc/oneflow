@@ -92,7 +92,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         (loss, scale, x) = ret
         test_case.assertTrue(
             np.allclose(loss, x * scale),
-            {"x": x, "scale": scale, "oneflow": loss, "numpy": x * scale,},
+            {"x": x, "scale": scale, "numpy": x * scale, "oneflow": loss,},
         )
 
 
