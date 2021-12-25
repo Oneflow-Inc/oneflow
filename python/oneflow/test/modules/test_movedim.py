@@ -33,7 +33,7 @@ class TestMovedim(flow.unittest.TestCase):
         z = torch.movedim(x, (0, 1), (2, 3))
         return z
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_movedim_with_int(test_case):
         device = random_device()
         x = random_pytorch_tensor(
