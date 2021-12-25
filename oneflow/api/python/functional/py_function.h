@@ -118,11 +118,11 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   if (unlikely(LazyMode::is_enabled())) {
     PyFrameObject* cur_frame = PyEval_GetFrame();
     std::string cur_f_str = get_frame_str((PyObject *)cur_frame);
-    cur_f_str = cur_f_str + " : <operation " + dispatcher.get_func_name() + ">";
+    cur_f_str = cur_f_str + ";op: <operation " + dispatcher.get_func_name() + ">";
     PyFrameObject* back_frame = get_frame_back(cur_frame);
     if (back_frame != NULL) {
       std::string back_f_str = get_frame_str((PyObject *)back_frame);
-      cur_f_str = back_f_str + " -> " + cur_f_str;
+      cur_f_str = "frame[-2]: " + back_f_str + "; frame[-1]: " + cur_f_str;
       Py_XDECREF(back_frame);
     }
     DispatchFrame::Guard f_guard(cur_f_str);
