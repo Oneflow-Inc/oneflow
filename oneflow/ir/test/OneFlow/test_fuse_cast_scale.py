@@ -91,7 +91,8 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         ret = FuseCastScaleJob(x)
         (loss, scale) = ret
         test_case.assertTrue(
-            np.allclose(loss, x * scale), {"oneflow": loss, "numpy": x * scale,}
+            np.allclose(loss, x * scale),
+            {"scale": scale, "oneflow": loss, "numpy": x * scale,},
         )
 
 
