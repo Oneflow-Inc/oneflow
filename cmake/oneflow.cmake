@@ -445,9 +445,9 @@ add_custom_target(install_oneflow_cpp_include
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   DEPENDS oneflow_internal
 )
-add_dependencies(of_include_copy install_oneflow_cpp_include)
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy oneflow_cpp)
+  add_dependencies(of_include_copy install_oneflow_cpp_include)
 
   set(OF_API_DIRS)
   file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
