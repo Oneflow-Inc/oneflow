@@ -91,6 +91,7 @@ class PyFunctionDispatcher {
   std::vector<const char*> signatures_;
 };
 
+namespace {
 static std::string get_frame_str(PyObject *obj) {
     PyObject* repr = PyObject_Repr(obj);
     PyObject* str = PyUnicode_AsEncodedString(repr, "utf-8", "~E~");
@@ -100,6 +101,16 @@ static std::string get_frame_str(PyObject *obj) {
     return std::string(bytes);
 }
 
+PyFrameObject* get_frame_back(PyFrameObject *frame) {
+    assert(frame != NULL);
+    PyFrameObject *back = frame->f_back;
+    if (back != NULL) {
+        Py_XINCREF(back);
+    }
+    return back;
+}
+}  // namespace
+
 template<typename... SchemaT>
 inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   static PyFunctionDispatcher<SchemaT...> dispatcher;
@@ -107,8 +118,13 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   if (unlikely(LazyMode::is_enabled())) {
     PyFrameObject* cur_frame = PyEval_GetFrame();
     std::string cur_f_str = get_frame_str((PyObject *)cur_frame);
-    std::cout << dispatcher.get_func_name() << " : " << cur_f_str << std::endl;
-    cur_f_str = cur_f_str + ":" + dispatcher.get_func_name();
+    cur_f_str = cur_f_str + " : <operation " + dispatcher.get_func_name() + ">";
+    PyFrameObject* back_frame = get_frame_back(cur_frame);
+    if (back_frame != NULL) {
+      std::string back_f_str = get_frame_str((PyObject *)back_frame);
+      cur_f_str = back_f_str + " -> " + cur_f_str;
+      Py_XDECREF(back_frame);
+    }
     DispatchFrame::Guard f_guard(cur_f_str);
     return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
   }

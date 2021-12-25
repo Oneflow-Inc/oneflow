@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
+#include <string>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
@@ -28,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/autograd/autograd_function.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 
 namespace oneflow {
 namespace one {
@@ -47,8 +50,21 @@ class OpExpr {
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
+  void set_loc(const std::string& loc_str) {
+    loc_ = loc_str;
+  }
+
+  std::string get_loc() const {
+    return loc_;
+  }
+
  protected:
-  OpExpr() = default;
+  OpExpr() {
+    if (unlikely(LazyMode::is_enabled())) {
+      loc_ = DispatchFrame::get_str();
+    }
+  }
+  std::string loc_;
 };
 
 class BuiltinOpExpr : public OpExpr {

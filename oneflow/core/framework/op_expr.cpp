@@ -100,6 +100,10 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                        const AttrMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
@@ -259,6 +263,7 @@ class UserOpExprInferContext : public user_op::InferContext {
   const std::string& op_name() const override { return user_op_expr_->op_name(); }
   const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
   const std::string& device_tag() const override { return device_tag_; }
+  const std::string& op_loc() const override { return user_op_expr_->get_loc(); }
 
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
@@ -489,6 +494,10 @@ Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_con
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_input_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -503,6 +512,10 @@ Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_variable_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -517,6 +530,10 @@ Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_c
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_fetch_output_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -531,6 +548,10 @@ Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -546,6 +567,10 @@ Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -560,6 +585,10 @@ Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* o
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -574,6 +603,10 @@ Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf*
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -616,6 +649,10 @@ Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* 
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_split_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -631,6 +668,10 @@ Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* 
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -646,6 +687,10 @@ Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(OperatorConf*
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -661,6 +706,10 @@ Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_add_conf()) = op_proto_;
+  const std::string& op_loc = get_loc();
+  if (op_loc != "") {
+    *(op_conf->mutable_loc()) = op_loc;
+  }
   return Maybe<void>::Ok();
 }
 

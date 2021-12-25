@@ -1351,8 +1351,6 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
 
   const auto& scope = JUST(GetCurrentScope());
 
-  std::string cur_frame_str = DispatchFrame::get_str();
-
   std::string op_name_prefix;
   for (const std::string& prefix : scope->scope_proto().scope_op_name_prefixes()) {
     op_name_prefix += (prefix + "-");
@@ -1366,7 +1364,7 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_) + cur_frame_str;
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
   return op_name;
