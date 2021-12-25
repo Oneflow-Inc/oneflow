@@ -398,38 +398,26 @@ if(BUILD_PYTHON)
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL
   )
-  function(add_src_dir_to_include_install)
-    get_filename_component(SUB_DIR ${ARGV0} DIRECTORY)
-    install(DIRECTORY ${ARGV0} DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
-      COMPONENT oneflow_py_include
-      EXCLUDE_FROM_ALL
-      MESSAGE_NEVER
-      FILES_MATCHING
-      PATTERN *.h
-      PATTERN *.hpp
-    )
-  endfunction()
-  function(add_src_file_to_include_install)
-    get_filename_component(SUB_DIR ${ARGV0} DIRECTORY)
-    install(FILES ${ARGV0} DESTINATION ${ONEFLOW_INCLUDE_DIR}/${SUB_DIR}
-      COMPONENT oneflow_py_include
-      EXCLUDE_FROM_ALL
-    )
-  endfunction()
-  add_src_dir_to_include_install("oneflow/core/common")
-  add_src_dir_to_include_install("oneflow/core/device")
-  add_src_dir_to_include_install("oneflow/core/framework")
-  add_src_dir_to_include_install("oneflow/core/kernel/util")
-  add_src_dir_to_include_install("oneflow/core/persistence")
-  add_src_dir_to_include_install("oneflow/core/ep/include")
-  add_src_file_to_include_install("oneflow/core/kernel/new_kernel_util.h")
-  add_src_file_to_include_install("oneflow/core/kernel/kernel_context.h")
-  add_src_file_to_include_install("oneflow/core/kernel/kernel_observer.h")
-  add_src_file_to_include_install("oneflow/core/kernel/kernel_util.cuh")
-  add_src_file_to_include_install("oneflow/core/job/sbp_signature_builder.h")
-  add_src_file_to_include_install("oneflow/core/common/symbol.h")
-  add_src_file_to_include_install("oneflow/core/job/parallel_desc.h")
-  add_src_file_to_include_install("oneflow/core/autograd/autograd_meta.h")
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL
+    # MESSAGE_NEVER
+    FILES_MATCHING
+    REGEX "oneflow/core/common/.+(h|hpp)$"
+    REGEX "oneflow/core/device/.+(h|hpp)$"
+    REGEX "oneflow/core/framework/.+(h|hpp)$"
+    REGEX "oneflow/core/kernel/util/.+(h|hpp)$"
+    REGEX "oneflow/core/persistence/.+(h|hpp)$"
+    REGEX "oneflow/core/ep/include/.+(h|hpp)$"
+    PATTERN "oneflow/core/kernel/new_kernel_util.h"
+    PATTERN "oneflow/core/kernel/kernel_context.h"
+    PATTERN "oneflow/core/kernel/kernel_observer.h"
+    PATTERN "oneflow/core/kernel/kernel_util.cuh"
+    PATTERN "oneflow/core/job/sbp_signature_builder.h"
+    PATTERN "oneflow/core/common/symbol.h"
+    PATTERN "oneflow/core/job/parallel_desc.h"
+    PATTERN "oneflow/core/autograd/autograd_meta.h"
+  )
   add_custom_target(install_oneflow_py_include
     COMMAND
         "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_py_include
