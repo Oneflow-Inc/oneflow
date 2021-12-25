@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13.4)
 include(FetchContent)
 # prevent LLVM_DEFINITIONS has a TRUE in it
 unset(result CACHE)
-
+set(CMAKE_INSTALL_MESSAGE LAZY)
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
