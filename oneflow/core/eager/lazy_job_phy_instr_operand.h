@@ -41,22 +41,10 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   LaunchLazyJobPhyInstrOperand(LaunchLazyJobPhyInstrOperand&&) = delete;
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
-  LaunchLazyJobPhyInstrOperand(
-      const intrusive::shared_ptr<LocalDepObject>& inputs_local_dep_object,
-      const intrusive::shared_ptr<LocalDepObject>& outputs_local_dep_object,
-      const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-          op_name2end_event_record,
-      const one::EagerBlobObjectListPtr& input_blob_objects,
-      const one::EagerBlobObjectListPtr& output_blob_objects,
-      const one::EagerBlobObjectListPtr& param_blob_objects,
-      const std::shared_ptr<NNGraphIf>& nn_graph)
-      : inputs_local_dep_object_(inputs_local_dep_object),
-        outputs_local_dep_object_(outputs_local_dep_object),
-        op_name2end_event_record_(op_name2end_event_record),
-        input_blob_objects_(input_blob_objects),
-        output_blob_objects_(output_blob_objects),
+  LaunchLazyJobPhyInstrOperand(const std::shared_ptr<NNGraphIf>& nn_graph,
+                               const one::EagerBlobObjectListPtr& param_blob_objects)
+      : nn_graph_(nn_graph),
         param_blob_objects_(param_blob_objects),
-        nn_graph_(nn_graph),
         input_dependences_(),
         output_dependences_() {
     ForEachConstMirroredObject(SetInserter(&input_dependences_));
@@ -64,34 +52,20 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
     ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   }
 
-  const one::EagerBlobObjectListPtr& input_blob_objects() const { return input_blob_objects_; }
-  const one::EagerBlobObjectListPtr& output_blob_objects() const { return output_blob_objects_; }
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
-
-  Maybe<SharedEventRecord> EndEventRecord4OpName(const std::string& op_name) const;
-  const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-  op_name2end_event_record() const {
-    return op_name2end_event_record_;
-  }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
 
   void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
 
  private:
-  mutable intrusive::shared_ptr<LocalDepObject> inputs_local_dep_object_;
-  mutable intrusive::shared_ptr<LocalDepObject> outputs_local_dep_object_;
-  std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
-      op_name2end_event_record_;
-  one::EagerBlobObjectListPtr input_blob_objects_;
-  one::EagerBlobObjectListPtr output_blob_objects_;
-  one::EagerBlobObjectListPtr param_blob_objects_;
   std::shared_ptr<NNGraphIf> nn_graph_;
+  one::EagerBlobObjectListPtr param_blob_objects_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };

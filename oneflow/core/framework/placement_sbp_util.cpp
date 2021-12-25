@@ -446,8 +446,8 @@ std::string GetCyclicBoxingDebugString(
   CHECK_EQ(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   std::stringstream ss;
   ss << "cyclic split axis boxing are not supported. "
-     << "src_nd_sbp: " << CHECK_JUST(NdSbpToString(src_nd_sbp))
-     << ", dst_nd_sbp: " << CHECK_JUST(NdSbpToString(dst_nd_sbp)) << ". "
+     << "src_nd_sbp: " << NdSbpToString(src_nd_sbp) << ", dst_nd_sbp: " << NdSbpToString(dst_nd_sbp)
+     << ". "
      << "dst_nd_sbp axis to exclusive src_nd_sbp axis: ";
   ss << "[";
   for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
