@@ -47,7 +47,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             self.run_fuse_cast_scale_mlir(**arg)
 
     @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
-    # @unittest.skip("")
+    @unittest.skip("")
     def test_gpu(self):
         d = OrderedDict(
             {
@@ -71,21 +71,28 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             x: oft.Numpy.Placeholder(shape, dtype=in_type)
         ) -> Tuple[oft.Numpy, oft.Numpy]:
             with flow.scope.placement(device, "0:0-0"):
-                scale = flow.get_variable(
-                    "scale",
-                    shape=(1,),
-                    dtype=out_type,
-                    initializer=flow.random_uniform_initializer(),
-                    trainable=False,
+                scale = (
+                    flow.get_variable(
+                        "scale",
+                        shape=(1,),
+                        dtype=out_type,
+                        initializer=flow.random_uniform_initializer(
+                            minval=0, maxval=100
+                        ),
+                        trainable=False,
+                    )
+                    + 2
                 )
                 loss = flow.cast(x, dtype=out_type) * scale
                 return (loss, scale)
 
         np_in_type = dtype_util.convert_oneflow_dtype_to_numpy_dtype(in_type)
-        x = (np.random.rand(*shape) * 10).astype(np_in_type)
+        x = (np.random.rand(*shape) * 100).astype(np_in_type)
         ret = FuseCastScaleJob(x)
         (loss, scale) = ret
-        test_case.assertTrue(np.allclose(loss, x * scale))
+        test_case.assertTrue(
+            np.allclose(loss, x * scale), {"oneflow": loss, "numpy": x * scale,}
+        )
 
 
 # CHECK: oneflow.mlir_jit
