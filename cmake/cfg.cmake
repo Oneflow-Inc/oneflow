@@ -1,10 +1,5 @@
 execute_process(
   COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
-    --get_message_type=cfg_include_dir
-  OUTPUT_VARIABLE CFG_INCLUDE_DIR)
-
-execute_process(
-  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_convert_python_script
   OUTPUT_VARIABLE TEMPLATE_CONVERT_PYTHON_SCRIPT)
 
@@ -23,7 +18,7 @@ execute_process(
     --get_message_type=template_files
   OUTPUT_VARIABLE TEMPLATE_FILES)
 
-include_directories(${CFG_INCLUDE_DIR})
+include_directories(tools/cfg/include)
 
 
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
