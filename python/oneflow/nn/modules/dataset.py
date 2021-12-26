@@ -1030,7 +1030,6 @@ class GPTIndexedBinDataReader(Module):
 
     def forward(self):
         if self.placement is None:
-            ctx.device = self.device
             output = _C.dispatch_megatron_gpt_mmap_data_loader(
                 self.op_,
                 data_file_prefix=self.data_file_prefix,
