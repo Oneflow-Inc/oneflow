@@ -263,3 +263,81 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow._C.normalize,
+    """nn.functional.normalize(input: Tensor, p: float=2.0, dim: int=0, epsilon: float=1e-12) -> Tensor
+
+    Performs :math:`L_p` normalization of inputs over specified dimension
+
+    For a tensor :attr:`input` of sizes :math:`(n_0, ..., n_{dim}, ..., n_k)`, each
+    :math:`n_{dim}` -element vector :math:`v` along dimension :attr:`dim` is transformed as:
+
+    .. math::
+        v = \\frac{v}{\max(\\lVert v \\rVert_p, \\epsilon)}.
+
+    With the default arguments it uses the Euclidean norm over vectors along dimension :math:`1` for normalization.
+
+    But note that the gradient calculation of the input tensor has different results on different frameworks
+    when `input.shape[dim] = 1`.
+
+    Args:
+        input (oneflow.Tensor): input tensor of any shape
+        p (float): the exponent value in the norm formulation. Default: 2
+        dim (int): the dimension to reduce. Default: 1
+        eps (float): small value to avoid division by zero. Default: 1e-12 
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([[1, 2], [3, 4]], dtype=flow.float32)
+        >>> out = flow.nn.functional.normalize(x, 2, 0)
+        >>> out
+        tensor([[0.3162, 0.4472],
+                [0.9487, 0.8944]], dtype=oneflow.float32)
+        >>> out = flow.nn.functional.normalize(x, 2, 1)
+        >>> out
+        tensor([[0.4472, 0.8944],
+                [0.6000, 0.8000]], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.l2_normalize,
+    """nn.functional.l2_normalize(input: Tensor, dim: int=0, epsilon: float=1e-12) -> Tensor
+
+    Use L2 norm to normalizes along dimension `dim`
+
+    The equation is:
+
+    .. math::
+        out = \\frac{x}{max(\\sqrt{\\Sigma{x^2}}, \\epsilon)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        dim (int): The axis on which to apply L2 normalization. Defaults to 0.
+        epsilon (float): The epsilon value is used to avoid division by zero. Defaults to 1e-12.
+
+    Returns:
+        oneflow.Tensor: The normalized Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([[1, 2], [3, 4]], dtype=flow.float32)
+        >>> out = flow.nn.functional.l2_normalize(x, 0)
+        >>> out
+        tensor([[0.3162, 0.4472],
+                [0.9487, 0.8944]], dtype=oneflow.float32)
+        >>> out = flow.nn.functional.l2_normalize(x, 1)
+        >>> out
+        tensor([[0.4472, 0.8944],
+                [0.6000, 0.8000]], dtype=oneflow.float32)
+
+    """,
+)

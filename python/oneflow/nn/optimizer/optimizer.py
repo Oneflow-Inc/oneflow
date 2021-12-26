@@ -299,6 +299,19 @@ class Optimizer(object):
     def support_sparse(self):
         return False
 
+    def _check_variables_in_graph(self, vars_conf):
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                if param not in vars_conf:
+                    raise ValueError(
+                        f"Parameter <{param}> is not in the corresponding nn.Graph/nn.Module."
+                        " Please make sure you call the module's to(..)/to_consistent(...) method first,"
+                        " then add the module's parameters into an optimizer."
+                    )
+
     def _check_variables_optimizer_bound(self, vars_conf):
         for param_group in self.param_groups:
             for param in param_group.parameters:
