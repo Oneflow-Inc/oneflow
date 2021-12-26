@@ -30,7 +30,7 @@ class TestGluModule(flow.unittest.TestCase):
         dim = random(-3, 3).to(int)
         m = torch.nn.functional.glu
         x = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=6).to(device)
-        y = m(x,dim)
+        y = m(x, dim)
         return y
 
     @autotest(n=5)
