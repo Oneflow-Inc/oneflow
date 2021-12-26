@@ -88,6 +88,14 @@ class TestMeshGridModule(flow.unittest.TestCase):
         res = torch.meshgrid(x, y)
         return res[0], res[1]
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_meshgrid_input_tuple_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to(device)
+        res = torch.meshgrid((x, y))
+        return res[0], res[1]
+
 
 if __name__ == "__main__":
     unittest.main()
