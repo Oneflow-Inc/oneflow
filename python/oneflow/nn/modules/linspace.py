@@ -48,6 +48,7 @@ def linspace_op(
         dtype(flow.dtype, optional): If `dtype` is not given, the `dtype` is inferred to be `flow.float32`.
         device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
+
     For example:
 
     .. code-block:: python
