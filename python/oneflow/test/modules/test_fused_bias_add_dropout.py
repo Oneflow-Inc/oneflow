@@ -25,19 +25,16 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_fused_bias_add_dropout(test_case, channel, axis, drop_prob, seed):
-    generator = flow.Generator()
-    generator.manual_seed(seed)
-
-    x = np.random.randn(4, channel, 2, 4)
-    bias = np.random.randn(channel)
+def _test_fused_bias_add_dropout(test_case, shape, axis, drop_prob):
+    x = np.random.randn(*shape)
+    bias = np.random.randn(shape[axis])
     # fused version only support in GPU
     fused_x_tensor = flow.Tensor(x).to("cuda")
     fused_x_tensor.requires_grad = True
     fused_bias_tensor = flow.Tensor(bias).to("cuda")
     fused_bias_tensor.requires_grad = True
     fused_out = flow._C.fused_bias_add_dropout(
-        fused_x_tensor, fused_bias_tensor, p=drop_prob, axis=axis, generator=generator
+        fused_x_tensor, fused_bias_tensor, p=drop_prob, axis=axis
     )
 
     origin_x_tensor = flow.Tensor(x).to("cuda")
@@ -45,8 +42,7 @@ def _test_fused_bias_add_dropout(test_case, channel, axis, drop_prob, seed):
     origin_bias_tensor = flow.Tensor(bias).to("cuda")
     origin_bias_tensor.requires_grad = True
 
-    generator.manual_seed(seed)  # reset seed
-    origin_dropout = flow.nn.Dropout(p=drop_prob, generator=generator)
+    origin_dropout = flow.nn.Dropout(p=drop_prob)
     origin_out = origin_dropout(
         flow._C.bias_add(origin_x_tensor, origin_bias_tensor, axis=axis)
     )
@@ -78,13 +74,12 @@ def _test_fused_bias_add_dropout(test_case, channel, axis, drop_prob, seed):
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedBiasAddDropout(flow.unittest.TestCase):
-    def test_gather(test_case):
+    def test_fuse_bias_add_dropout(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_bias_add_dropout]
-        arg_dict["channels"] = [4, 6, 8]
-        arg_dict["axis"] = [1]
-        arg_dict["drop_prob"] = [0.1, 0.3, 0.5]
-        arg_dict["seed"] = [1, 2, 3, 123]
+        arg_dict["shape"] = [(16, 64, 72), (32, 16, 48)]
+        arg_dict["axis"] = [0, 1, 2, -1, -2, -3]
+        arg_dict["drop_prob"] = [0.0, 1.0]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

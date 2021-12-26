@@ -193,7 +193,7 @@ class TestLinear(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=True)
     def test_nn_functional_linear_with_random_data(test_case):
         input_size = random()
         device = random_device()
@@ -202,7 +202,7 @@ class TestLinear(flow.unittest.TestCase):
         y = torch.nn.functional.linear(x, weight)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_nn_functional_bias_linear_with_random_data(test_case):
         input_size = random()
         bias_size = random()

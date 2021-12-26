@@ -33,6 +33,8 @@ namespace oneflow {
 
 namespace ep {
 
+class CudaDevice;
+
 #ifdef WITH_CUDA_GRAPHS
 
 class CudaGraphExecutable {
@@ -54,13 +56,26 @@ class CudaGraphExecutable {
 
 #endif  // WITH_CUDA_GRAPHS
 
+struct CudaLaunchConfig {
+  dim3 grid_dim;
+  dim3 block_dim;
+  size_t shared_mem_size;
+  CudaLaunchConfig() : grid_dim{}, block_dim{}, shared_mem_size(0) {}
+
+  CudaLaunchConfig(unsigned int grid_size, unsigned int block_size, size_t shared_mem_size)
+      : grid_dim(grid_size), block_dim(block_size), shared_mem_size(shared_mem_size) {}
+};
+
 class CudaStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStream);
-  explicit CudaStream(int device_index);
+  explicit CudaStream(CudaDevice* device);
   ~CudaStream() override;
 
+  static constexpr uint32_t kDefaultBlockSize = 256;
+
   DeviceType device_type() const override;
+  Device* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
 
@@ -70,6 +85,41 @@ class CudaStream : public Stream {
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
   cudnnHandle_t cudnn_handle() const;
+  const cudaDeviceProp& device_properties() const;
+
+  void InitLaunchConfigWithWaves(CudaLaunchConfig* config, size_t elem_cnt, size_t block_size,
+                                 size_t max_waves) const {
+    const uint32_t max_grid_size = max_waves * device_properties().multiProcessorCount
+                                   * (device_properties().maxThreadsPerMultiProcessor / block_size);
+    const uint32_t grid_size =
+        std::min<uint32_t>(max_grid_size, (elem_cnt + block_size - 1) / block_size);
+    config->grid_dim = dim3(grid_size);
+    config->block_dim = dim3(block_size);
+    config->shared_mem_size = 0;
+  }
+
+#ifdef __CUDACC__
+  template<typename... Params, typename... Args>
+  void LaunchKernel(void (*kernel)(Params...), const CudaLaunchConfig& launch_config,
+                    Args... args) {
+    kernel<<<launch_config.grid_dim, launch_config.block_dim, launch_config.shared_mem_size,
+             cuda_stream()>>>(args...);
+  }
+
+  template<typename... Params, typename... Args>
+  void LaunchKernel(void (*kernel)(Params...), size_t elem_cnt, size_t max_waves, Args... args) {
+    constexpr uint32_t block_size = kDefaultBlockSize;
+    CudaLaunchConfig config{};
+    InitLaunchConfigWithWaves(&config, elem_cnt, block_size, max_waves);
+    LaunchKernel(kernel, config, args...);
+  }
+
+  template<typename... Params, typename... Args>
+  void LaunchKernelDefaultWaves(void (*kernel)(Params...), size_t elem_cnt, Args... args) {
+    const size_t default_waves = 32;
+    LaunchKernel(kernel, elem_cnt, default_waves, args...);
+  }
+#endif  // __CUDACC__
 
 #ifdef WITH_CUDA_GRAPHS
   void BeginGraphCapture();
@@ -90,6 +140,7 @@ class CudaStream : public Stream {
 #ifdef WITH_CUDA_GRAPHS
   bool is_graph_capturing_{};
 #endif  // WITH_CUDA_GRAPHS
+  CudaDevice* device_;
 };
 
 }  // namespace ep

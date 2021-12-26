@@ -527,6 +527,7 @@ class Conv3d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride)
         self.padding = _triple(padding)
@@ -691,7 +692,7 @@ class ConvTranspose1d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
-        self.filters = out_channels // groups
+        self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
         if bias:
@@ -805,45 +806,24 @@ class ConvTranspose2d(Module):
     ) -> None:
         super().__init__()
         assert padding_mode == "zeros"
-        kernel_size = _pair(kernel_size)
-        stride = _pair(stride)
-        padding = _pair(padding)
-        output_padding = _pair(output_padding)
-        dilation = _pair(dilation)
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.output_padding = _pair(output_padding)
+        self.dilation = _pair(dilation)
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
-            flow.Tensor(in_channels, out_channels // groups, *kernel_size)
+            flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
         self.in_channel_groups = in_channels // groups
+        self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
-            self._bias_add_op = (
-                flow.builtin_op("bias_add")
-                .Input("a")
-                .Input("b")
-                .Output("out")
-                .Attr("axis", 1)
-                .Build()
-            )
-        self._op = (
-            flow.builtin_op("deconv2d")
-            .Input("in")
-            .Input("weight")
-            .Attr("filters", out_channels // groups)
-            .Attr("padding_before", padding)
-            .Attr("data_format", "channels_first")
-            .Attr("kernel_size", kernel_size)
-            .Attr("strides", stride)
-            .Attr("dilation_rate", dilation)
-            .Attr("output_padding", output_padding)
-            .Attr("groups", 1)
-            .Output("out")
-            .Build()
-        )
+
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -854,31 +834,19 @@ class ConvTranspose2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if self.groups > 1:
-            in_channel_axis = 1
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    self._op(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.in_channel_groups : (i + 1)
-                            * self.in_channel_groups,
-                            :,
-                            :,
-                            :,
-                        ],
-                    )[0]
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = self._op(x, self.weight)[0]
-        if self._bias_add_op is not None:
-            res = self._bias_add_op(res, self.bias)[0]
+        res = flow._C.deconv2d(
+            x,
+            self.weight,
+            self.bias,
+            self.filters,
+            self.padding,
+            "channels_first",
+            self.kernel_size,
+            self.output_padding,
+            self.stride,
+            self.dilation,
+            self.groups,
+        )
         return res
 
 
@@ -1014,7 +982,7 @@ class ConvTranspose3d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
-        self.filters = out_channels // groups
+        self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
         if bias:

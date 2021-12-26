@@ -43,10 +43,10 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
 
 auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
 
-class EagerNaiveSToSOpKernelState final : public user_op::OpKernelState {
+class EagerNaiveSToSOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerNaiveSToSOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerNaiveSToSOpKernelState() override = default;
+  explicit EagerNaiveSToSOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerNaiveSToSOpKernelCache() override = default;
 
   const std::vector<std::pair<int64_t, std::shared_ptr<TensorSliceCopier>>>&
   sorted_elem_cnt2in_tensor_slice_copier_pair() const {
@@ -63,7 +63,7 @@ class EagerNaiveSToSOpKernelState final : public user_op::OpKernelState {
   }
 
  private:
-  void Init(user_op::KernelInitContext* ctx) {
+  void Init(user_op::KernelCacheContext* ctx) {
     const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
     const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
@@ -140,15 +140,16 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
   EagerNaiveSToSKernel() = default;
   ~EagerNaiveSToSKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerNaiveSToSOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerNaiveSToSOpKernelCache>(ctx); }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerNaiveSToSOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerNaiveSToSOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -157,10 +158,10 @@ class EagerNaiveSToSKernel final : public user_op::OpKernel {
     void* tmp_buffer_ptr = tmp_buffer->mut_dptr();
 
     const auto& sorted_elem_cnt2in_tensor_slice_copier_pair =
-        kernel_state->sorted_elem_cnt2in_tensor_slice_copier_pair();
+        kernel_cache->sorted_elem_cnt2in_tensor_slice_copier_pair();
     const auto& sorted_elem_cnt2out_tensor_slice_copier_pair =
-        kernel_state->sorted_elem_cnt2out_tensor_slice_copier_pair();
-    const auto& sorted_p2p_pair = kernel_state->sorted_p2p_pair();
+        kernel_cache->sorted_elem_cnt2out_tensor_slice_copier_pair();
+    const auto& sorted_p2p_pair = kernel_cache->sorted_p2p_pair();
     CHECK_EQ(sorted_elem_cnt2in_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
     CHECK_EQ(sorted_elem_cnt2out_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
 
