@@ -66,11 +66,16 @@ Maybe<std::string> GetDirName(const std::string& path) {
 }
 
 TEST(ParquetReader, read_and_print) {
-  std::string parquet_example_file = *CHECK_JUST(GetExecutablePath());
-  parquet_example_file = *CHECK_JUST(GetDirName(parquet_example_file));
-  parquet_example_file += "../external/arrow/arrow-src/python/pyarrow/tests/"
-                          "data/parquet/v0.7.1.some-named-index.parquet";
-  ASSERT_TRUE(ReadFromParquet(parquet_example_file, {1}));
+  // std::string parquet_example_file = *CHECK_JUST(GetExecutablePath());
+  // parquet_example_file = *CHECK_JUST(GetDirName(parquet_example_file));
+  // parquet_example_file += "../external/arrow/arrow-src/python/pyarrow/tests/"
+  //                         "data/parquet/v0.7.1.some-named-index.parquet";
+  std::string parquet_example_file =
+      "/dataset/wdl_parquet/train/"
+      "part-00000-6e6f50b9-75e8-4917-87ae-85351fe65d36-c000.snappy.parquet";
+  ASSERT_TRUE(ReadFromParquet(parquet_example_file, {0, 1, 2, 3}, /*memory_map*/ true,
+                              /*format_json*/ false, /*print_values*/ true,
+                              /*format_dump*/ true, /*print_key_value_metadata*/ true));
 }
 
 }  // namespace test
