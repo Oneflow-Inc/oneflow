@@ -58,7 +58,7 @@ class TestFeedVariableTensor(unittest.TestCase):
             var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
                 op_name, var_conf, ["in_0"], ["out_0"]
             )
-            out_tensor = _C.dispacth_feed_variable(var_op, x, l2=0)
+            out_tensor = _C.dispatch_feed_variable(var_op, x, l2=0)
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(out_tensor.is_lazy)
             test_case.assertTrue(out_tensor.is_local)
