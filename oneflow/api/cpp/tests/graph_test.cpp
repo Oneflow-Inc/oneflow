@@ -62,6 +62,7 @@ TEST(Api, graph_cpu_test) {
   Forward(graph, device, 1);
 }
 
+#ifdef WITH_CUDA
 TEST(Api, graph_gpu_test) {
   EnvScope scope;
   Device device("cuda", 0);
@@ -87,6 +88,7 @@ TEST(Api, graph_trt_test) {
   graph.enable_tensorrt();
   Forward(graph, device);
 }
+#endif
 
 TEST(Api, graph_cpu_batching_test) {
   EnvScope scope;
@@ -96,6 +98,7 @@ TEST(Api, graph_cpu_batching_test) {
   Forward(graph, device, 10);
 }
 
+#ifdef WITH_CUDA
 TEST(Api, graph_gpu_batching_test) {
   EnvScope scope;
   Device device("cuda", 0);
@@ -146,6 +149,7 @@ TEST(Api, graph_unload_test) {
     Forward(graph, device, 1);
   }
 }
+#endif
 
 TEST(Api, graph_thread_test) {
   EnvScope scope;
