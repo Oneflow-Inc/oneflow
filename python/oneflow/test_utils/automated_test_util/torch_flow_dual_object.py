@@ -623,13 +623,10 @@ def autotest(
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
                 try:
-                    global testing
-                    testing = True
                     global testing_graph
                     if check_graph:
                         testing_graph = True
                     res = f(test_case)
-                    testing = False
                     testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
@@ -690,22 +687,26 @@ def autotest(
                             flow_tensor in eager_tensor_2_graph_tensor
                             and check_allclose
                         ):
-                            test_case.assertTrue(
-                                np.allclose(
-                                    flow_tensor.numpy(),
-                                    eager_tensor_2_graph_tensor[flow_tensor].numpy(),
-                                    rtol=rtol,
-                                    atol=atol,
-                                    equal_nan=True,
-                                )
+                            equality_res = np.allclose(
+                                flow_tensor.numpy(),
+                                eager_tensor_2_graph_tensor[flow_tensor].numpy(),
+                                rtol=rtol,
+                                atol=atol,
+                                equal_nan=True,
                             )
+                            if equality_res == False:
+                                print_note_fake_program()
+                                print("---------Tensor Shape--------")
+                                print(flow_tensor.shape)
+                                print(eager_tensor_2_graph_tensor[flow_tensor].shape)
+                            test_case.assertTrue(equality_res)
                             if verbose:
                                 print(f"{f.__name__} test graph passed.")
                         else:
-                            if check_graph and check_allclose:
+                            if check_graph:
                                 test_case.assertTrue(
                                     False,
-                                    f"{f.__name__} cannot find module to check graph.",
+                                    f"{f.__name__} cannot find module/function/method to check graph.",
                                 )
                     else:
                         warnings.warn(
