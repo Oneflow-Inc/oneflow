@@ -103,7 +103,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/common/.*\\.(h|cpp)$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/(common|utils)/.*\\.(h|cpp)$")
       list(APPEND of_all_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()

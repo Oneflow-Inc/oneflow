@@ -26,7 +26,16 @@ of::DimVector ToOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
   return of::DimVector(dim_vec.begin(), dim_vec.end());
 }
 
+std::vector<int64_t> ToStdDimVector(const of::DimVector& dim_vec) {
+  return std::vector<int64_t>(dim_vec.begin(), dim_vec.end());
+}
+
 }  // namespace
+
+std::ostream& operator<<(std::ostream& os, const Shape& shape) {
+  os << shape.shape_->DebugStr();
+  return os;
+}
 
 Shape::Shape() : shape_(std::make_shared<of::Shape>(of::Shape({0}))) {}
 
@@ -60,9 +69,6 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 
 int64_t Shape::Count(int64_t begin_axis) const { return shape_->Count(begin_axis); }
 
-std::ostream& operator<<(std::ostream& os, const Shape& shape) {
-  os << shape.shape_->DebugStr();
-  return os;
-}
+std::vector<int64_t> Shape::dim_vec() const { return ToStdDimVector(shape_->dim_vec()); }
 
 }  // namespace oneflow_api

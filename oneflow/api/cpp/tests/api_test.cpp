@@ -32,6 +32,13 @@ Shape RandomShape() {
   return Shape(dims);
 }
 
+Shape RandomSmallShape() {
+  std::uniform_int_distribution<> dist_ndim(1, 4), dist_dims(2, 5);
+  std::vector<std::int64_t> dims(dist_ndim(rng), 0);
+  for (auto& x : dims) { x = dist_dims(rng); }
+  return Shape(dims);
+}
+
 template<typename T>
 std::vector<T> RandomData(size_t size) {
   std::uniform_int_distribution<> dist(-100, 100);

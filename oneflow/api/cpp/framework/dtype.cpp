@@ -27,8 +27,19 @@ std::map<DType, int32_t> DTypeSize = {
     {DType::kInt64, sizeof(int64_t)},
 };
 
-}
+std::map<DType, std::string> DTypeName = {
+    {DType::kFloat, std::string("Float")}, {DType::kDouble, std::string("Double")},
+    {DType::kInt8, std::string("Int8")},   {DType::kInt32, std::string("Int32")},
+    {DType::kInt64, std::string("Int64")},
+};
+
+}  // namespace
 
 int32_t GetDTypeSize(DType dtype) { return DTypeSize[dtype]; }
+
+std::ostream& operator<<(std::ostream& os, DType dtype) {
+  os << DTypeName[dtype];
+  return os;
+}
 
 }  // namespace oneflow_api

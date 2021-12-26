@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/shape.h"
+#include "oneflow/api/utils/tensor_format.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
@@ -31,6 +32,57 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 namespace functional = of::one::functional;
+
+namespace {
+
+template<typename T>
+std::ostream& print(std::ostream& stream, const Tensor& tensor, int64_t linesize) {
+  oneflow::FormatGuard guard(stream);
+
+  const Shape shape = tensor.shape();
+  const auto n_elems = tensor.shape().Count(0);
+
+  std::vector<double> data;
+  {
+    std::vector<T> temp_data(n_elems, 0);
+    tensor.copy_to(temp_data.data());
+    std::vector<double>(n_elems, 0).swap(data);
+    for (size_t i = 0; i < data.size(); ++i) { data[i] = static_cast<double>(temp_data[i]); }
+  }
+  oneflow::FormatTensorData(stream, data.data(), shape.dim_vec(), linesize);
+  return stream;
+}
+
+template<>
+std::ostream& print<double>(std::ostream& stream, const Tensor& tensor, int64_t linesize) {
+  oneflow::FormatGuard guard(stream);
+
+  const Shape shape = tensor.shape();
+  const auto n_elems = tensor.shape().Count(0);
+
+  std::vector<double> data(n_elems, 0);
+  tensor.copy_to(data.data());
+
+  oneflow::FormatTensorData(stream, data.data(), shape.dim_vec(), linesize);
+  return stream;
+}
+
+}  // namespace
+
+std::ostream& operator<<(std::ostream& os, const Tensor& tensor) {
+  const int64_t linesize = 80;
+  std::map<DType, std::function<std::ostream&()>> f{
+      {DType::kInt8, [&]() { return std::ref(print<int8_t>(os, tensor, linesize)); }},
+      {DType::kInt32, [&]() { return std::ref(print<int32_t>(os, tensor, linesize)); }},
+      {DType::kInt64, [&]() { return std::ref(print<int64_t>(os, tensor, linesize)); }},
+      {DType::kFloat, [&]() { return std::ref(print<float>(os, tensor, linesize)); }},
+      {DType::kDouble, [&]() { return std::ref(print<double>(os, tensor, linesize)); }}};
+  f[tensor.dtype()]();
+  os << "["
+     << "Shape: " << tensor.shape() << ", Device: " << tensor.device()
+     << ", DataType: " << tensor.dtype() << "]";
+  return os;
+}
 
 Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
   of::LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
@@ -100,7 +152,7 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
 }
 
 template<typename T>
-void Tensor::copy_to(T* buffer) {
+void Tensor::copy_to(T* buffer) const {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor_->AsMirroredTensor().GetPtrOrThrow();
   const auto shape = this->shape();
@@ -130,7 +182,7 @@ void Tensor::copy_to(T* buffer) {
 const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const { return tensor_; }
 
 #define REGISTER_TENSOR_COPY_TO(cpp_dtype) \
-  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer);
+  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer) const;
 
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)

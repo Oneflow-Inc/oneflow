@@ -56,13 +56,15 @@ class Tensor final {
   [[nodiscard]] const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
 
   template<typename T>
-  void copy_to(T* buffer);
+  void copy_to(T* buffer) const;
 
   [[nodiscard]] static Tensor from_buffer(const void* buffer, const Shape& shape,
                                           const Device& device, const DType& dtype);
 
  private:
   std::shared_ptr<oneflow::one::Tensor> tensor_ = nullptr;
+
+  friend std::ostream& operator<<(std::ostream&, const Tensor&);
 };
 
 }  // namespace oneflow_api
