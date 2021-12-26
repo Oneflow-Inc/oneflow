@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow._oneflow_internal
-import oneflow.framework.check_point_v2 as check_point_v2
-import oneflow.framework.generator as generator
-import oneflow.framework.op_expr_util as op_expr_util
-import oneflow.framework.tensor as tensor_util
+*/
+#include <string>
 
+#include "oneflow/core/common/maybe.h"
 
-def RegisterMethod4Class():
-    tensor_util.RegisterMethods()
-    check_point_v2.RegisterMethods()
-    op_expr_util.RegisterMethod4UserOpExpr()
+namespace oneflow {
+namespace one {
+
+class Tensor;
+
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier);
+}  // namespace one
+}  // namespace oneflow

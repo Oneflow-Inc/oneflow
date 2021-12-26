@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,19 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow._oneflow_internal
-import oneflow.framework.check_point_v2 as check_point_v2
-import oneflow.framework.generator as generator
-import oneflow.framework.op_expr_util as op_expr_util
-import oneflow.framework.tensor as tensor_util
+*/
 
+#ifdef WITH_MLIR
 
-def RegisterMethod4Class():
-    tensor_util.RegisterMethods()
-    check_point_v2.RegisterMethods()
-    op_expr_util.RegisterMethod4UserOpExpr()
+#include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
+#include <glog/logging.h>
+
+namespace oneflow {
+
+REGISTER_JOB_PASS("IRRoundTripBeforeAD", IRRoundTrip<kBeforeAD>);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip<kAfterAD>);
+
+}  // namespace oneflow
+
+#endif  // WITH_MLIR
