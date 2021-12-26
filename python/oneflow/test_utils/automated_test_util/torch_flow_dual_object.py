@@ -61,6 +61,15 @@ class PyTorchDoesNotSupportError(Exception):
     def __repr__(self):
         return f"PyTorch error: {str(self.exc)}"
 
+class OneFlowGraphBuildOrRunError(Exception):
+    def __init__(self, exc):
+        self.exc = exc
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"OneFlow nn.Graph Build Or Run Error: {str(self.exc)}"
 
 class BothDoNotSupportError(Exception):
     def __init__(self, th_exc, of_exc):
@@ -281,7 +290,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["to", "tensor", "_to", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -305,7 +313,6 @@ def GetDualObject(name, pytorch, oneflow):
                                         and "oneflow.nn.modules" in oneflow.__module__
                                     )
                                 ):
-
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -315,9 +322,12 @@ def GetDualObject(name, pytorch, oneflow):
                                             return self.test_module_func(
                                                 *oneflow_args, **oneflow_kwargs
                                             )
-
-                                    test_g = TestGraphOfFunctional()
-                                    test_g_res = test_g()
+                                    try:
+                                        test_g = TestGraphOfFunctional()
+                                        test_g_res = test_g()
+                                    except Exception as e:
+                                        print_note_fake_program()
+                                        raise OneFlowGraphBuildOrRunError(e)
                                 if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
@@ -330,9 +340,7 @@ def GetDualObject(name, pytorch, oneflow):
                                         ] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
-
                 else:
-
                     def dual_method(self, *args, **kwargs):
                         pytorch_method = getattr(pytorch, method_name)
                         oneflow_method = getattr(oneflow, method_name)
@@ -362,7 +370,6 @@ def GetDualObject(name, pytorch, oneflow):
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
-
                             class TestGraphOfTensorMethod(flow.nn.Graph):
                                 def __init__(self):
                                     super().__init__()
@@ -371,9 +378,12 @@ def GetDualObject(name, pytorch, oneflow):
                                     return oneflow_method(
                                         *oneflow_args, **oneflow_kwargs
                                     )
-
-                            test_g = TestGraphOfTensorMethod()
-                            test_g_res = test_g()
+                            try:
+                                test_g = TestGraphOfTensorMethod()
+                                test_g_res = test_g()
+                            except Exception as e:
+                                print_note_fake_program()
+                                raise OneFlowGraphBuildOrRunError(e)
                             if isinstance(test_g_res, tuple):
                                 for idx, g_res in enumerate(test_g_res):
                                     eager_tensor_2_graph_tensor[
