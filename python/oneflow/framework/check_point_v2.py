@@ -29,6 +29,8 @@ import oneflow._oneflow_internal
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
+from oneflow.framework.tensor import Tensor
+import oneflow.nn.graph.graph as graph_util
 import pickle
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
@@ -120,10 +122,6 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
-def _ElemCnt(shape):
-    return np.prod(shape).astype(int).item()
-
-
 def _LoadSingleVariable(
     path: Optional[str], consistent_src_rank: Optional[int] = None
 ) -> "flow.Tensor":
@@ -203,6 +201,11 @@ def tensor_setstate(self, pickle_dict):
         return self.__init__(
             flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
         )
+
+
+def RegisterMethods():
+    Tensor.__setstate__ = tensor_setstate
+    Tensor.__getstate__ = tensor_getstate
 
 
 def legacy_load(
@@ -303,12 +306,12 @@ def save(
     """
     path: Path = Path(path)
 
-    if isinstance(obj, oneflow.nn.Graph):
-        graph: oneflow.nn.Graph = obj
+    if isinstance(obj, graph_util.Graph):
+        graph: graph_util.Graph = obj
         if not graph._is_compiled:
             raise RuntimeError("graph must be compiled first.")
 
-        os.makedirs(path, exist_ok=True)
+        path.mkdir(exist_ok=True)
 
         serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
@@ -326,12 +329,6 @@ def save(
         path.mkdir(exist_ok=True)
         pickle_path = path / PICKLE_FILENAME
         pickle_path.write_bytes(pickled_bytes)
-
-
-def generate_values_by_initializer(initializer, shape, dtype):
-    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
-    length = _ElemCnt(shape)
-    return np.array(initializer(length)).astype(np_dtype).reshape(shape)
 
 
 save_load_path = None
