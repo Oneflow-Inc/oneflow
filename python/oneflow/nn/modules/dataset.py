@@ -280,7 +280,7 @@ class CropMirrorNormalize(Module):
             if mirror is not None:
                 res = _C.dispatch_crop_mirror_normalize_from_uint8(
                     self._op_uint8_with_mirror,
-                    input,
+                    (input, mirror),
                     mirror,
                     color_space=self.color_space,
                     output_layout=self.output_layout,
@@ -295,7 +295,7 @@ class CropMirrorNormalize(Module):
             else:
                 res = _C.dispatch_crop_mirror_normalize_from_uint8(
                     self._op_uint8_no_mirror,
-                    input,
+                    (input,),
                     color_space=self.color_space,
                     output_layout=self.output_layout,
                     mean=self.mean,
