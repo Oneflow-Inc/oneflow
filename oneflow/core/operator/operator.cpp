@@ -1220,36 +1220,6 @@ LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   return lbi;
 }
 
-Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, cfg::SbpParallel* sbp) {
-  size_t vbar_pos = lbn.rfind('|');
-  std::string lbn_with_split_hint = lbn.substr(0, vbar_pos);
-  size_t pos = lbn_with_split_hint.rfind(':');
-  CHECK_NE(pos, lbn_with_split_hint.length() - 1);
-  if (pos == std::string::npos) { return false; }
-  std::string split_hint = lbn_with_split_hint.substr(pos + 1);
-  if (split_hint[0] == 'S') {
-    std::string axis_str = split_hint.substr(1);
-    CHECK_OR_RETURN(IsStrInt(axis_str));
-    sbp->mutable_split_parallel()->set_axis(oneflow_cast<int64_t>(axis_str));
-  } else if (split_hint[0] == 'B') {
-    sbp->mutable_broadcast_parallel();
-  } else {
-    return Error::CheckFailedError()
-           << "split hint only support 'S' or 'B', but get:" << split_hint[0];
-  }
-  return true;
-}
-
-Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disable_boxing) {
-  size_t pos = lbn_with_hint.rfind('|');
-  if (pos == std::string::npos) { return false; }
-  CHECK_NE(pos, lbn_with_hint.length() - 1);
-  std::string disable_boxing_str = lbn_with_hint.substr(pos + 1);
-  CHECK_OR_RETURN(IsStrInt(disable_boxing_str));
-  *disable_boxing = oneflow_cast<int64_t>(disable_boxing_str);
-  return true;
-}
-
 std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
                                           const std::string& fd_name_may_have_idx) {
   const PbMessage& msg = GetMessageInPbMessage(op_conf, op_conf.op_type_case());
