@@ -44,7 +44,7 @@ namespace oneflow {
 /* static */ Maybe<void> DotOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-  CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The input tensor type is different";
+  CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The data type of input tensors are different";
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
