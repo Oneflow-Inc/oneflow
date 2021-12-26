@@ -68,7 +68,7 @@ class TestConstantModule(flow.unittest.TestCase):
         ).to(device)
         return y1, y2, y3, y4
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_zeros_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -82,7 +82,8 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.zeros_like(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_ones_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
@@ -96,7 +97,7 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.ones_like(x)
         return y
 
-    @autotest(auto_backward=True, check_graph=False)
+    @autotest(auto_backward=True, check_graph=True)
     def test_flow_new_ones_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
