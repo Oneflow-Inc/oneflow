@@ -293,7 +293,7 @@ class TestNormModule(flow.unittest.TestCase):
         m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
         return m
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_tuple_dim_norm_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2).to(device)

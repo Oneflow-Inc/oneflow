@@ -39,7 +39,7 @@ class TestReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_relu_module_with_0shape_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
@@ -62,7 +62,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_relu6_module_with_0shape_data(test_case):
         m = torch.nn.ReLU6()
         m.train(random())
@@ -85,7 +85,7 @@ class TestTanh(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_tanh_module_with_0shapedata(test_case):
         m = torch.nn.Tanh()
         m.train(random())

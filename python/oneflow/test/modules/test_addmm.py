@@ -82,7 +82,7 @@ class TestAddmm(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_addmm_broadcast_flow_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=1, dim1=1).to(device)
