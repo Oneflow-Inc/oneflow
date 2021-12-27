@@ -959,18 +959,6 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    // if input tensor is eager local, than try return tensor's view first
-    if (x->is_eager() && x->is_local()) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        // in some case, view operate is not allowed, so need to check it's validation,
-        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid = checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(), JUST(x->stride())->StrideVec(), shape.dim_vec());
-        if(is_view_valid){
-          return view::Reshape(x->contiguous(), shape);
-        }
-      }
-    }
-
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -998,6 +986,18 @@ class ReshapeFunctor {
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+    }
+
+    // if input tensor is eager local, than try return tensor's view first
+    if (x->is_eager() && x->is_local()) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        // in some case, view operate is not allowed, so need to check it's validation,
+        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+        bool is_view_valid = checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(), JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        if(is_view_valid){
+          return view::Reshape(x->contiguous(), infered_shape);
+        }
+      }
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
@@ -1013,16 +1013,6 @@ class ViewFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    if (x->is_eager() && x->is_local()) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        // in some case, view operate is not allowed, so need to check it's validation,
-        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid = checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(), JUST(x->stride())->StrideVec(), shape.dim_vec());
-        CHECK_OR_RETURN(is_view_valid) << "  >> view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x->contiguous(), shape);
-      }
-    }
-
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -1050,6 +1040,16 @@ class ViewFunctor {
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+    }
+
+    if (x->is_eager() && x->is_local()) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        // in some case, view operate is not allowed, so need to check it's validation,
+        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+        bool is_view_valid = checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(), JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        CHECK_OR_RETURN(is_view_valid) << " >> view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+        return view::Reshape(x->contiguous(), infered_shape);
+      }
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
