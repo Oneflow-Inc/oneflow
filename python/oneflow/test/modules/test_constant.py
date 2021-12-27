@@ -82,7 +82,6 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.zeros_like(x)
         return y
 
-
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_ones_like_list_with_random_data(test_case):
         device = random_device()
