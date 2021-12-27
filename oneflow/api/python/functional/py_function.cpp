@@ -47,15 +47,15 @@ void ReportKwargsError(const py::kwargs& kwargs, const FunctionDef& function, si
 // The argument parsing refers to the implementation of Pytorch.
 bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<PythonArg>* parsed_args,
                const FunctionDef& function, size_t max_pos_args, bool raise_exception) {
-  bool treat_args_as_intlist = false;
+  bool treat_args_as_list = false;
   size_t nargs = args.size();
   size_t remaining_kwargs = kwargs.size();
 
   if (max_pos_args == 1) {
     const auto& type = function.argument_def.at(0).type;
-    treat_args_as_intlist = IsIntegralListType(type) || type == kSHAPE;
+    treat_args_as_list = IsIntegralListType(type) || type == kSHAPE || type == kTENSOR_TUPLE;
   }
-  if (nargs > max_pos_args && !treat_args_as_intlist) {
+  if (nargs > max_pos_args && !treat_args_as_list) {
     if (raise_exception) {
       THROW(TypeError) << function.name << "(): takes " << max_pos_args
                        << " positional arguments but " << nargs << " were given.";
@@ -83,7 +83,8 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
     }
 
     if (obj) {
-      if (arg_pos == 0 && treat_args_as_intlist && !param.keyword_only && PyLong_Check(obj.ptr())) {
+      if (arg_pos == 0 && treat_args_as_list && !param.keyword_only
+          && (PyLong_Check(obj.ptr()) || PyTensorCheck(obj.ptr()))) {
         obj = args;
         arg_pos = nargs;
       } else {
