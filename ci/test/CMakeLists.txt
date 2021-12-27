@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.19.0)
 set(PYTHON_EXECUTABLE python3 CACHE STRING "python3 exe to run test, usually is the python3 installation oneflow is linked to")
 set(ONEFLOW_SRC_DIR ${CMAKE_SOURCE_DIR} CACHE STRING "source dir of oneflow")
 set(IS_DEV ON CACHE BOOL "")
