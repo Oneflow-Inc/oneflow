@@ -48,10 +48,10 @@ Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerSymmetricSToPOpExpr =
-    DECORATE(&EagerSymmetricSToP, ThreadLocalCopiable);
+static constexpr auto* CachedEagerSymmetricSToPOpExpr = DECORATE(&EagerSymmetricSToP, ThreadLocal);
 
-Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                  const std::shared_ptr<const Shape>& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -62,7 +62,7 @@ Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricSToP = DECORATE(&RawCheckSymmetricSToP, ThreadLocal);
+static constexpr auto* CheckSymmetricSToP = DECORATE(&RawCheckSymmetricSToP, ThreadLocalCopiable);
 
 }  // namespace
 

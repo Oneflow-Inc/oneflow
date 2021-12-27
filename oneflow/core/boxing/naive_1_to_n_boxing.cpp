@@ -31,14 +31,15 @@ bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
-Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                              const std::shared_ptr<const Shape>& logical_shape) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_OR_RETURN(IsAllPartialSumNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocal);
+static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocalCopiable);
 
 }  // namespace
 

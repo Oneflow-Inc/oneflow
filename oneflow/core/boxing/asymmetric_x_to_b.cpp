@@ -28,7 +28,8 @@ bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
-Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                   const std::shared_ptr<const Shape>& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
@@ -38,7 +39,7 @@ Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> o
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckAsymmetricXToB = DECORATE(&RawCheckAsymmetricXToB, ThreadLocal);
+static constexpr auto* CheckAsymmetricXToB = DECORATE(&RawCheckAsymmetricXToB, ThreadLocalCopiable);
 
 Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
   cfg::NdSbp broadcast_nd_sbp;

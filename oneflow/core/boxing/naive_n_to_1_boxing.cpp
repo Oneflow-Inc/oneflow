@@ -31,14 +31,15 @@ bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
-Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                              const std::shared_ptr<const Shape>& logical_shape) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocal);
+static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocalCopiable);
 
 }  // namespace
 

@@ -54,7 +54,8 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbpWithAxisEqualZero(int64_t ndim) {
 auto* CachedGetAllSplitNdSbpWithAxisEqualZero =
     DECORATE(&GetAllSplitNdSbpWithAxisEqualZero, ThreadLocal);
 
-Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                  const std::shared_ptr<const Shape>& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
@@ -63,7 +64,7 @@ Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricXToB = DECORATE(&RawCheckSymmetricXToB, ThreadLocal);
+static constexpr auto* CheckSymmetricXToB = DECORATE(&RawCheckSymmetricXToB, ThreadLocalCopiable);
 
 }  // namespace
 
