@@ -428,8 +428,20 @@ if(BUILD_PYTHON)
     PATTERN "oneflow/user" EXCLUDE
     PATTERN "oneflow/extension" EXCLUDE
     PATTERN "oneflow/maybe" EXCLUDE
-    PATTERN "oneflow/lazy" EXCLUDE
-    PATTERN "oneflow/graph_impl" EXCLUDE
+    PATTERN "oneflow/core/lazy" EXCLUDE
+    PATTERN "oneflow/core/graph_impl" EXCLUDE
+    PATTERN "oneflow/core/job_rewriter" EXCLUDE
+    PATTERN "oneflow/core/hardware" EXCLUDE
+    PATTERN "oneflow/core/intrusive" EXCLUDE
+    PATTERN "oneflow/core/stream" EXCLUDE
+    PATTERN "oneflow/core/functional" EXCLUDE
+    PATTERN "oneflow/core/platform" EXCLUDE
+    PATTERN "oneflow/core/boxing" EXCLUDE
+    PATTERN "oneflow/core/rpc" EXCLUDE
+    PATTERN "oneflow/core/profiler" EXCLUDE
+    PATTERN "oneflow/core/transport" EXCLUDE
+    PATTERN "oneflow/core/comm_network" EXCLUDE
+    PATTERN "oneflow/ir" EXCLUDE
   )
   add_custom_target(install_oneflow_py_include
     COMMAND
