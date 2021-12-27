@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.19.0)
+project(oneflow-ci-test)
+include(CMakeDependentOption)
 set(PYTHON_EXECUTABLE python3 CACHE STRING "python3 exe to run test, usually is the python3 installation oneflow is linked to")
 set(ONEFLOW_SRC_DIR ${CMAKE_SOURCE_DIR} CACHE STRING "source dir of oneflow")
 set(IS_DEV ON CACHE BOOL "")
@@ -6,6 +8,19 @@ set(RUN_IN_DOCKER ON CACHE BOOL "")
 set(TEST_WITH_TF_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f" CACHE STRING "")
 set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae" CACHE STRING "")
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
+
+function(pull_docker_img)
+  execute_process(
+    COMMAND ${DOCKER_EXE} pull ${ARGV0}
+    COMMAND_ERROR_IS_FATAL ANY
+  )
+endfunction()
+
+if(RUN_IN_DOCKER)
+  set(DOCKER_EXE docker)
+  pull_docker_img(${TEST_WITH_TF_IMG_TAG})
+  pull_docker_img(${TEST_WITH_TORCH_IMG_TAG})
+endif()
 
 # CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=20 ninja test
 
