@@ -157,6 +157,8 @@ def kaiming_normal_(
         >>> w = flow.empty(3, 5)
         >>> nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
     """
+    if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+        data_format = "NHWC"
     with flow.no_grad():
         return tensor.kaiming_normal_(a, mode, nonlinearity, data_format=data_format)
 

@@ -45,9 +45,6 @@ def kaiming_uniform_(
 def kaiming_normal_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-   
-    if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-        data_format = "NHWC"
     tensor.kaiming_normal_(a, mode, nonlinearity, data_format=data_format)
 
 
