@@ -330,12 +330,11 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
     size_t simplified_num_dims = 0;
     int64_t simplified_input_dims[kMaxNumDims];
     int64_t simplified_mask_dims[kMaxNumDims];
-    int64_t simplified_dst_dims[kMaxNumDims];
     SimplifyBroadcastDims(num_input_dims, input_dims, num_mask_dims, mask_dims,
                           &simplified_num_dims, simplified_input_dims, simplified_mask_dims);
 
     printf("Here simplified num dims is: %d \n", simplified_num_dims);
-
+    
     if (simplified_num_dims == 2) {
       LaunchForwardKernel<T, ComputeType, MASK, 2>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x->dptr<T>(), y->mut_dptr<T>(),
@@ -383,25 +382,36 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
     CHECK_GE(dy_shape.NumAxes(), 2);
     const int64_t cols = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);
-    const size_t num_dims = dy_shape.NumAxes();
     const int64_t* input_dims = dy_shape.ptr();
+    const size_t num_input_dims = dy_shape.NumAxes();
     const int64_t* mask_dims = mask_shape.ptr();
+    const size_t num_mask_dims = mask_shape.NumAxes(); 
+
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
     cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y->dptr<T>(), cols);
-    if (num_dims == 2) {
+
+    size_t simplified_num_dims = 0;
+    int64_t simplified_input_dims[kMaxNumDims];
+    int64_t simplified_mask_dims[kMaxNumDims];
+    SimplifyBroadcastDims(num_input_dims, input_dims, num_mask_dims, mask_dims,
+                          &simplified_num_dims, simplified_input_dims, simplified_mask_dims);
+
+    printf("Here simplified num dims is: %d \n", simplified_num_dims);
+
+    if (simplified_num_dims == 2) {
       LaunchBackwardKernel<T, ComputeType, MASK, 2>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(),
           dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), elem_cnt, rows, cols,
           static_cast<float>(0.0), ctx->Attr<float>("scale_value"),
-          ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);
+          ctx->Attr<float>("dropout_scale_value"), simplified_input_dims, simplified_mask_dims);
     }
 #define DEFINE_ONE_ELIF(dims)                                                                      \
-  else if (num_dims == dims) {                                                                     \
+  else if (simplified_num_dims == dims) {                                                                     \
     LaunchBackwardKernel<T, ComputeType, MASK, dims>(                                              \
         ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(),   \
         dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), elem_cnt, rows, cols, \
         static_cast<float>(0.0), ctx->Attr<float>("scale_value"),                                  \
-        ctx->Attr<float>("dropout_scale_value"), input_dims, mask_dims);                           \
+        ctx->Attr<float>("dropout_scale_value"), simplified_input_dims, simplified_mask_dims);                           \
   }
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
