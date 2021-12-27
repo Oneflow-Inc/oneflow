@@ -24,7 +24,7 @@ namespace oneflow {
 namespace embedding {
 
 struct CudaLruCacheOptions {
-  uint32_t log2_n_set;
+  uint64_t memory_budget_mb;
   uint32_t line_size;
   uint32_t max_query_length;
   DataType key_type;
