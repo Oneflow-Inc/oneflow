@@ -67,7 +67,8 @@ using BoxingFunctionT = std::function<Maybe<one::Tensor>(
     const std::shared_ptr<one::Tensor>& input, Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out)>;
 
 Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
-                                         Symbol<PlacedNdSbp> out);
+                                         Symbol<PlacedNdSbp> out,
+                                         const std::shared_ptr<const Shape>& logical_shape);
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Check,
                             const BoxingFunctionT& BoxingFunction);

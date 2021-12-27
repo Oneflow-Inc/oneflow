@@ -76,11 +76,13 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
   CHECK_OR_RETURN(tensor_placement == in->placement());
   if (IsBroadcastSbp(tensor_nd_sbp->sbp_parallel(0))) { return tensor; }
   if (IsPartialSumSbp(tensor_nd_sbp->sbp_parallel(0))) {
-    const auto& NcclPToBBoxingFunction = *JUST(GetBoxingFunction("nccl-p-to-b", in, out));
+    const auto& NcclPToBBoxingFunction =
+        *JUST(GetBoxingFunction("nccl-p-to-b", in, out, tensor->shape()));
     return JUST(NcclPToBBoxingFunction(tensor, in, out));
   }
   if (IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
-    const auto& NcclSToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out));
+    const auto& NcclSToBBoxingFunction =
+        *JUST(GetBoxingFunction("nccl-s-to-b", in, out, tensor->shape()));
     return JUST(NcclSToBBoxingFunction(tensor, in, out));
   }
   if (IsSplitSbpWithAxisNotEqualZero(in->nd_sbp()->sbp_parallel(0))) {
@@ -88,12 +90,12 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
         JUST(CachedGetAllSplitNdSbpWithAxisEqualZero(in->nd_sbp()->sbp_parallel_size()));
     const auto& split_with_zero_axis_in_placed_nd_sbp =
         JUST(PlacedNdSbp::New(split_with_zero_axis_nd_sbp, tensor_placement));
-    const auto& NcclSToSBoxingFunction =
-        *JUST(GetBoxingFunction("nccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp));
+    const auto& NcclSToSBoxingFunction = *JUST(GetBoxingFunction(
+        "nccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp, tensor->shape()));
     const auto& tensor_with_s0_sbp =
         JUST(NcclSToSBoxingFunction(tensor, in, split_with_zero_axis_in_placed_nd_sbp));
-    const auto& NcclSToBBoxingFunction =
-        *JUST(GetBoxingFunction("nccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out));
+    const auto& NcclSToBBoxingFunction = *JUST(GetBoxingFunction(
+        "nccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out, tensor_with_s0_sbp->shape()));
     return JUST(
         NcclSToBBoxingFunction(tensor_with_s0_sbp, split_with_zero_axis_in_placed_nd_sbp, out));
   }

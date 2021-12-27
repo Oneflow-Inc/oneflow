@@ -62,12 +62,12 @@ Maybe<one::Tensor> AsymmetricXToB(const std::shared_ptr<one::Tensor>& tensor,
   const auto& broadcast_in_placed_nd_sbp =
       JUST(PlacedNdSbp::New(broadcast_nd_sbp, tensor_placement));
   const auto& SymXToBBoxingFunction =
-      *JUST(GetBoxingFunction("symmetric-x-to-b", in, broadcast_in_placed_nd_sbp));
+      *JUST(GetBoxingFunction("symmetric-x-to-b", in, broadcast_in_placed_nd_sbp, tensor->shape()));
   std::shared_ptr<one::Tensor> broadcast_input =
       JUST(SymXToBBoxingFunction(tensor, in, broadcast_in_placed_nd_sbp));
 
-  const auto& AsymBroadcastBoxingFunction =
-      *JUST(GetBoxingFunction("asymmetric-broadcast", broadcast_in_placed_nd_sbp, out));
+  const auto& AsymBroadcastBoxingFunction = *JUST(GetBoxingFunction(
+      "asymmetric-broadcast", broadcast_in_placed_nd_sbp, out, broadcast_input->shape()));
   return AsymBroadcastBoxingFunction(broadcast_input, broadcast_in_placed_nd_sbp, out);
 }
 
