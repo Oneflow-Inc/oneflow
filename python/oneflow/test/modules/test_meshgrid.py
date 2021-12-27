@@ -86,8 +86,6 @@ class TestMeshGridModule(flow.unittest.TestCase):
         res = torch.meshgrid(x, y)
         return res[0], res[1]
 
-
-
     @autotest(auto_backward=True, check_graph=False)
     @unittest.skip("pytorch 1.9.0 exist not indexing")
     def test_meshgrid_with_random_data_xy(test_case):
