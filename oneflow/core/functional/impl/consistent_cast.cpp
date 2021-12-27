@@ -224,12 +224,10 @@ Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
-  NonRecursiveMetaInfoConsistencyCheckScope scope;
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, sbp_parallels));
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
@@ -298,6 +296,8 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
+    NonRecursiveMetaInfoConsistencyCheckScope scope;
+    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels));
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
@@ -341,6 +341,8 @@ class ToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
+    NonRecursiveMetaInfoConsistencyCheckScope scope;
+    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels));
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));

@@ -231,12 +231,21 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                                                 const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_tuple) {
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_tuple) {
   Optional<Symbol<cfg::NdSbp>> nd_sbp;
   Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
   if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
   if (!grad_sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_tuple)); }
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) {
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;
+  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
+  if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
   JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
   return Maybe<void>::Ok();
 }

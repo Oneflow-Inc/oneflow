@@ -44,6 +44,9 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                      const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_tuple);
 
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
