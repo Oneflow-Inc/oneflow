@@ -425,19 +425,34 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
+    def _filter_states(self):
+        state_tensor_set = set()
+        state_tensors = []
+        state_op_names = []
+
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            if state_tensor in state_tensor_set:
+                continue
+            op_name = state_block.name_prefix + state_block.name
+            state_tensor_set.add(state_tensor)
+            state_tensors.append(state_tensor)
+            state_op_names.append(op_name)
+
+            if state_block.type == BlockType.PARAMETER:
+                self._variables_conf[state_tensor] = VariableConfig(op_name)
+
+        self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+        return state_op_names
+
     def _generate_config_proto(self):
         self.config.proto.set_job_name(self._name)
+        self._outputs_buffer_size = self.config._outputs_buffer_size
 
         if self._grad_scaler is not None:
             self._grad_scaler._generate_conf_for_graph(
                 self.config.proto.mutable_train_conf()
             )
-
-        for state_block in self._state():
-            if state_block.type == BlockType.PARAMETER:
-                self._variables_conf[state_block.origin] = VariableConfig(
-                    state_block.name_prefix + state_block.name
-                )
 
         for opt in self._opts:
             opt_dict = OptDict(opt)
@@ -445,10 +460,36 @@ class Graph(object):
                 opt_dict, self._variables_conf
             )
 
+    def _create_states_builder(self):
+        state2lazy_builder = dict()
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            op_name = state_block.name_prefix + state_block.name
+            if state_tensor in state2lazy_builder:
+                # Differe tensor block shares the same tensor, so they need to share the same
+                # builder.
+                state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
+            else:
+                if state_block.type == BlockType.PARAMETER:
+                    assert state_tensor in self._variables_conf
+                    state_config = self._variables_conf[state_tensor]
+                    op_name = state_config.name
+                else:
+                    state_config = None
+                # Init a new lazy tensor builder
+                state_block.lazy_origin_builder().name = op_name
+                state_block.lazy_origin_builder().method = partial(
+                    graph_build_util.build_graph_state,
+                    op_name,
+                    state_tensor,
+                    state_config,
+                )
+                state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
+
     def _compile(self, *args):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " Start building graph.")
+            self._print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
@@ -459,7 +500,7 @@ class Graph(object):
                 0,
                 0,
                 self._shallow_repr()
-                + " Done! cost time: "
+                + " building graph Done! Cost time: "
                 + str(round(build_graph_end - build_graph_start, 2))
                 + "s."
                 + "\n",
@@ -470,7 +511,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " build graph got error: "
+                + " building graph got error: "
                 + sys_exc_error_msg(),
             )
             raise
@@ -478,9 +519,7 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self._print(
-                0,
-                0,
-                self._shallow_repr() + " Start compiling plan and init graph runtime.",
+                0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
@@ -489,12 +528,12 @@ class Graph(object):
                 0,
                 0,
                 self._shallow_repr()
-                + " Done! cost time: "
+                + " building plan Done! Cost time: "
                 + str(round(compile_and_init_end - compile_and_init_start, 2))
                 + "s."
                 + "\n"
                 + self._shallow_repr()
-                + " The total time consumed to complete build graph, compiling plan and init graph runtime: "
+                + "'s total time to build graph and plan : "
                 + str(round(compile_and_init_end - build_graph_start, 2))
                 + "s."
                 + "\n",
@@ -505,7 +544,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " compiling plan or initialing graph runtime got error: "
+                + " building plan got error: "
                 + sys_exc_error_msg(),
             )
             raise
@@ -517,9 +556,25 @@ class Graph(object):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
 
-        # Get config form GraphConfig
-        self._outputs_buffer_size = self.config._outputs_buffer_size
+        # Filter to get unique states in graph
+        state_op_names = self._filter_states()
+
         self._generate_config_proto()
+
+        # Deal with parameter and buffer
+        self._print(
+            0,
+            1,
+            self._shallow_repr()
+            + " start building graph builders of parameters and buffers.",
+        )
+        self._create_states_builder()
+        self._print(
+            0,
+            1,
+            self._shallow_repr()
+            + " end building graph builders of parameters and buffers.",
+        )
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
@@ -528,19 +583,6 @@ class Graph(object):
                 "input", graph_build_util.build_graph_input_arg, *args
             )
             self._print(0, 1, self._shallow_repr() + " end building graph inputs.")
-
-            # Deal with parameter and buffer
-            self._print(
-                0,
-                1,
-                self._shallow_repr() + " start building graph parameters and buffers.",
-            )
-            state_op_names, self._states_tensor_tuple = self._build_states()
-            self._print(
-                0,
-                1,
-                self._shallow_repr() + " end building graph parameters and buffers.",
-            )
 
             # Deal with module in self.build(*args)
             self._print(0, 1, self._shallow_repr() + " start building graph modules.")
@@ -603,7 +645,7 @@ class Graph(object):
                 output_op_names, self._outputs_tensor_tuple
             )
             self._c_nn_graph.register_variable_op_names_and_tensors(
-                state_op_names, self._states_tensor_tuple
+                state_op_names, self._state_tensor_tuple
             )
 
         return seq_to_func_return(self._eager_outputs_buffer[0])
@@ -703,7 +745,7 @@ class Graph(object):
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
-                self._states_tensor_tuple,
+                self._state_tensor_tuple,
                 self._c_nn_graph,
             )
             # Update outputs buffer reading index
@@ -919,32 +961,6 @@ class Graph(object):
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
-
-    def _build_states(self):
-        state_op_names = []
-        state_tensors = []
-        for state_block in self._state():
-            op_name = state_block.name_prefix + state_block.name
-            state_tensor = state_block.origin
-            state_op_names.append(op_name)
-            state_tensors.append(state_tensor)
-            if (
-                state_block.type == BlockType.PARAMETER
-                and state_block.origin in self._variables_conf
-            ):
-                state_config = self._variables_conf[state_block.origin]
-            else:
-                state_config = None
-            state_block.set_lazy_origin_builder(
-                partial(
-                    graph_build_util.build_graph_state,
-                    op_name,
-                    state_tensor,
-                    state_config,
-                )
-            )
-        state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
-        return state_op_names, state_tensor_tuple
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will
