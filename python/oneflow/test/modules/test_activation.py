@@ -40,7 +40,7 @@ class TestReLUModule(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_relu_module_with_0shape_data(test_case):
+    def test_relu_module_with_0_size_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
         device = random_device()
@@ -63,7 +63,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_relu6_module_with_0shape_data(test_case):
+    def test_relu6_module_with_0_size_data(test_case):
         m = torch.nn.ReLU6()
         m.train(random())
         device = random_device()
@@ -103,7 +103,7 @@ class TestTanh(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_flow_tanh_with_0shape_data(test_case):
+    def test_flow_tanh_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 3).to(device)
         y = torch.tanh(x)
@@ -123,7 +123,7 @@ class TestELUModule(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_elu_module_with_0shape_data(test_case):
+    def test_elu_module_with_0_size_data(test_case):
         m = torch.nn.ELU(alpha=random() | nothing())
         m.train(random())
         device = random_device()
@@ -146,7 +146,7 @@ class TestCELUModule(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_celu_module_with_0shape_data(test_case):
+    def test_celu_module_with_0_size_data(test_case):
         m = torch.nn.CELU(alpha=random() | nothing())
         m.train(random())
         device = random_device()
