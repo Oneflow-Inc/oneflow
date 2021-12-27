@@ -153,6 +153,10 @@ def _test_consistent_tensor_str_2d(test_case, device):
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
 
+    x = flow.ones((2, 5), placement=placement, sbp=[flow.sbp.split(0)])
+    tensor_str = str(x)
+    test_case.assertTrue("1." in tensor_str)
+
 
 class TestTensorStrModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
