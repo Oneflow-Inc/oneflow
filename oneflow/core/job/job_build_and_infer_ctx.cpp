@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/user/summary/summary_converter.h"
-#include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 
 #include <google/protobuf/text_format.h>
 #include <json.hpp>
@@ -1364,7 +1363,7 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
   return op_name;

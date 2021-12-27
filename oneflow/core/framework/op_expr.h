@@ -50,19 +50,13 @@ class OpExpr {
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
-  void set_loc(const std::string& loc_str) {
-    loc_ = loc_str;
-  }
+  void set_loc(const std::string& loc_str) { loc_ = loc_str; }
 
-  std::string get_loc() const {
-    return loc_;
-  }
+  std::string get_loc() const { return loc_; }
 
  protected:
   OpExpr() {
-    if (unlikely(LazyMode::is_enabled())) {
-      loc_ = DispatchFrame::get_str();
-    }
+    if (OF_PREDICT_FALSE(LazyMode::is_enabled())) { loc_ = DispatchFrame::get_str(); }
   }
   std::string loc_;
 };

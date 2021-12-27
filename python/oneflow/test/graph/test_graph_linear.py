@@ -64,7 +64,7 @@ class TestLinearGraph(oneflow.unittest.TestCase):
     def test_linear_graph_gpu(test_case):
         _test_linear_graph(test_case, flow.device("cuda"))
 
-    def _test_linear_graph_cpu(test_case):
+    def test_linear_graph_cpu(test_case):
         _test_linear_graph(test_case, flow.device("cpu"))
 
 
