@@ -8303,7 +8303,7 @@ def OneFlow_TrilFlatOp : OneFlow_BaseOp<"tril_flat", [NoSideEffect, DeclareOpInt
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$diagonal,
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8320,7 +8320,7 @@ def OneFlow_TrilFlatGradOp : OneFlow_BaseOp<"tril_flat_grad", [NoSideEffect, Dec
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$diagonal,
+    DefaultValuedAttr<SI64Attr, "0">:$diagonal
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
