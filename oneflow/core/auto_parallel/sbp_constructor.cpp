@@ -78,7 +78,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
       }
     }
     // other parameters
-    Shape hierarchy44({8, 2});
+    Shape hierarchy44({800, 20});
     std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
     double logical_blob_size = 1024.0;
 
@@ -191,6 +191,90 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
 
     std::cout << std::endl;
     std::cout << "Minimum Copy Cost after first search" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
+
+    std::cout << "===================minimum copy cost 2==================" << std::endl;
+
+    // Compute the smallest transfer cost
+    std::vector<std::vector<double>> minimum_copy_cost2(origin_copy_cost);
+    for (int32_t i = 0; i < n; i++) {
+      for (int32_t j = 0; j < n; j++) {
+        if (origin_copy_cost[i][j] < cut_cost) { continue; }
+        for (int32_t k = 0; k < n; k++) {
+          double curr_copy_cost = minimum_copy_cost[i][k] + origin_copy_cost[k][j];
+          if (curr_copy_cost < minimum_copy_cost2[i][j]) {
+            minimum_copy_cost2[i][j] = curr_copy_cost;
+          }
+        }
+      }
+    }
+
+    // Print the minimum copy cost table
+    std::cout << "Cost\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (minimum_copy_cost2[i][j] > cut_cost) {
+          std::cout << "X\t";
+        } else {
+          std::cout << minimum_copy_cost2[i][j] << "\t";
+        }
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+    std::cout << "Minimum Copy Cost after second search" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
+
+    std::cout << "============================middle nodes 2==========================="
+              << std::endl;
+    // Pick the middle nodes with the minimum copy cost
+    std::vector<std::vector<std::vector<std::pair<int32_t, int32_t>>>> middle_nodes2(n);
+    for (int32_t i = 0; i < n; i++) {
+      middle_nodes2[i].resize(n);
+      for (int32_t j = 0; j < n; j++) {
+        if (minimum_copy_cost[i][j] < cut_cost) { continue; }
+        for (int32_t k = 0; k < n; k++) {
+          double curr_copy_cost = minimum_copy_cost[i][k] + origin_copy_cost[k][j];
+          if (curr_copy_cost < cut_cost && curr_copy_cost < minimum_copy_cost2[i][j] * 1.00001) {
+            for (int32_t l : middle_nodes[i][k]) { middle_nodes2[i][j].push_back({l, k}); }
+          }
+        }
+      }
+    }
+
+    // Print the middle nodes
+    std::cout << "Middle Sbp\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (minimum_copy_cost[i][j] > cut_cost) {
+          if (middle_nodes2[i][j].size() == 0) {
+            std::cout << "X";
+          } else {
+            std::cout << NdSbpParallelToString(nd_sbp_lists[middle_nodes2[i][j][0].first]) << "->"
+                      << NdSbpParallelToString(nd_sbp_lists[middle_nodes2[i][j][0].second]);
+            for (int32_t k = 1; k < middle_nodes2[i][j].size(); k++) {
+              std::cout << "; " << NdSbpParallelToString(nd_sbp_lists[middle_nodes2[i][j][k].first])
+                        << "->"
+                        << NdSbpParallelToString(nd_sbp_lists[middle_nodes2[i][j][k].second]);
+            }
+          }
+        }
+        std::cout << "\t";
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+    std::cout << "Minimum Copy Cost after second search" << std::endl;
     std::cout << "logical blob size: " << logical_blob_size << std::endl;
     std::cout << "hierarchy: " << *in_hierarchy << std::endl;
 
