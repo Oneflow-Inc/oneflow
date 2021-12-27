@@ -1563,6 +1563,8 @@ class TrilFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
+    JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2364,6 +2366,94 @@ class To4Functor {
   }
 };
 
+class TopKFunctor {
+ public:
+  TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("k", k));
+    JUST(attrs.SetAttr<bool>("sorted", sorted));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class InTopKFunctor {
+ public:
+  InTopKFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("in_top_k").Input("targets").Input("predictions").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& targets,
+                           const std::shared_ptr<Tensor>& predictions, int32_t k) const {
+    CHECK_EQ_OR_RETURN(targets->shape()->At(0), predictions->shape()->At(0))
+        << "The num of targets must equal the num of predictions";
+    CHECK_EQ_OR_RETURN(targets->ndim(), 1) << "The dimension of targets must be 1";
+    CHECK_EQ_OR_RETURN(predictions->ndim(), 2) << "The dimension of predictions must be 2";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("k", k));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets, predictions}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TensorBufferToTensorFunctor {
+ public:
+  TensorBufferToTensorFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_buffer_to_tensor").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Shape& instance_shape,
+                           const Symbol<DType>& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("instance_shape", instance_shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TensorToTensorBufferFunctor {
+ public:
+  TensorToTensorBufferFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tensor_to_tensor_buffer").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t instance_dims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("instance_dims", instance_dims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GenTensorBufferFunctor {
+ public:
+  GenTensorBufferFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("gen_tensor_buffer").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const std::vector<Shape>& shape_list,
+                           const std::vector<float>& value_list, const Symbol<DType>& dtype,
+                           bool dynamic_out) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<std::vector<Shape>>("shape_list", shape_list));
+    JUST(attrs.SetAttr<std::vector<float>>("value_list", value_list));
+    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
+    JUST(attrs.SetAttr<bool>("dynamic_out", dynamic_out));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2461,6 +2551,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
+  m.add_functor<impl::TopKFunctor>("TopK");
+  m.add_functor<impl::InTopKFunctor>("InTopK");
+  m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
+  m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
+  m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
 };
 
 }  // namespace functional
