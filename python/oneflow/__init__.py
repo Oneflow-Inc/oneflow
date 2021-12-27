@@ -355,7 +355,7 @@ from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
