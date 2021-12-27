@@ -103,11 +103,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/common/.*\\.(h|cpp)$")
-      list(APPEND of_all_obj_cc ${oneflow_single_file})
-      set(group_this ON)
-    endif()
-
   if(BUILD_PYTHON)
 
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.(h|cpp)$")
@@ -284,6 +279,18 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
+# oneflow api common
+if (BUILD_PYTHON OR BUILD_CPP_API)
+  file(GLOB_RECURSE of_api_common_files
+    ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.h
+    ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.cpp)
+  oneflow_add_library(of_api_common OBJECT ${of_api_common_files})
+  target_link_libraries(of_api_common oneflow)
+  if (WITH_MLIR)
+    target_link_libraries(of_api_common ${ONEFLOW_MLIR_LIBS})
+  endif()
+endif()
+
 if(BUILD_PYTHON)
 
   # py ext lib
@@ -304,7 +311,7 @@ if(BUILD_PYTHON)
   target_link_libraries(oneflow_internal PRIVATE
                         ${of_libs}
                         of_functional_tensor_obj
-                        ${ONEFLOW_MLIR_LIBS}
+                        of_api_common
                         ${oneflow_third_party_libs}
                         of_pyext_obj
                         ${oneflow_exe_third_party_libs})
@@ -346,19 +353,19 @@ if (BUILD_CPP_API)
     oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
   endif()
   set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
-  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} ${ONEFLOW_MLIR_LIBS} ${oneflow_third_party_libs})
+  target_link_libraries(oneflow_cpp PRIVATE ${of_libs} of_api_common ${oneflow_third_party_libs})
 endif()
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
 function(oneflow_add_test target_name)
-  cmake_parse_arguments(arg "" "TEST_NAME" "SRCS" ${ARGN})
+  cmake_parse_arguments(arg "" "TEST_NAME;WORKING_DIRECTORY" "SRCS" ${ARGN})
   oneflow_add_executable(${target_name} ${arg_SRCS})
   if (BUILD_CUDA)
     target_link_libraries(${target_name} CUDA::cudart_static)
   endif()
   set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-  add_test(NAME ${arg_TEST_NAME} COMMAND ${target_name})
+  add_test(NAME ${arg_TEST_NAME} COMMAND ${target_name} WORKING_DIRECTORY ${arg_WORKING_DIRECTORY})
   set_tests_properties(
     ${arg_TEST_NAME}
   PROPERTIES
@@ -375,10 +382,11 @@ if(BUILD_TESTING)
 
   if (BUILD_CPP_API)
     file(GLOB_RECURSE cpp_api_test_files ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/tests/*.cpp)
-    oneflow_add_test(oneflow_cpp_api_testexe SRCS ${cpp_api_test_files} TEST_NAME oneflow_cpp_api_test)
+    oneflow_add_test(oneflow_cpp_api_testexe SRCS ${cpp_api_test_files} TEST_NAME oneflow_cpp_api_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
     target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs})
   endif()
 endif()
+
 
 # build include
 add_custom_target(of_include_copy ALL)
@@ -420,10 +428,12 @@ endif(BUILD_PYTHON)
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy oneflow_cpp)
 
-  set(OF_API_DIRS)
   file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
-  list(APPEND OF_API_DIRS ${api_h_files})
-
-  copy_files("${OF_API_DIRS}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${LIBONEFLOW_INCLUDE_DIR}" of_include_copy)
+  copy_files("${api_h_files}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${LIBONEFLOW_INCLUDE_DIR}" of_include_copy)
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
+
+  if(WITH_MLIR)
+    file(GLOB mlir_shared_libs "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib/*.14git")
+    copy_files("${mlir_shared_libs}" "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib" "${LIBONEFLOW_LIBRARY_DIR}" of_include_copy)
+  endif(WITH_MLIR)
 endif(BUILD_CPP_API)
