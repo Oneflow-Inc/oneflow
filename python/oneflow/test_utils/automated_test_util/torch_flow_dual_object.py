@@ -24,6 +24,7 @@ import oneflow as flow
 
 try:
     import torch as torch_original
+
     torch_original.set_printoptions(profile="full")
 except ImportError:
     print(
@@ -511,6 +512,7 @@ def clear_note_fake_program():
     vis_parameters.clear()
     extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
+
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
