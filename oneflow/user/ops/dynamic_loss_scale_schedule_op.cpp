@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -27,24 +28,27 @@ bool IsTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
   return desc->data_type() == data_type;
 }
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+}  // namespace
+
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("count_not_finite", 0))));
   CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("loss_scale", 0))));
   CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("good_step_counter", 0))));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  CHECK_OR_RETURN(
-      IsTensorWithType(&(ctx->InputTensorDesc("count_not_finite", 0)), DataType::kInt64));
-  CHECK_OR_RETURN(IsTensorWithType(&(ctx->InputTensorDesc("loss_scale", 0)), DataType::kFloat));
-  CHECK_OR_RETURN(
-      IsTensorWithType(&(ctx->InputTensorDesc("good_step_counter", 0)), DataType::kInt64));
-  return Maybe<void>::Ok();
+/*static*/ Maybe<void> DynamicLossScaleScheduleOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
 }
 
-Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                               const user_op::UserOpConfWrapper& conf) {
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* loss_scale = GetInputArgModifierFn("loss_scale", 0);
   CHECK_OR_RETURN(loss_scale != nullptr);
   loss_scale->set_is_mutable(true);
@@ -54,17 +58,13 @@ Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgMo
   return Maybe<void>::Ok();
 }
 
-}  // namespace
-
-REGISTER_USER_OP("dynamic_loss_scale_schedule")
-    .Input("count_not_finite")
-    .Input("loss_scale")
-    .Input("good_step_counter")
-    .Attr<int64_t>("increment_period", 2000)
-    .Attr<float>("multiplier", 2.0)
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetInputArgModifyFn(InputArgModifierFn)
-    .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/* static */ Maybe<void> DynamicLossScaleScheduleOp::InferDataType(user_op::InferContext* ctx) {
+  CHECK_OR_RETURN(
+      IsTensorWithType(&(ctx->InputTensorDesc("count_not_finite", 0)), DataType::kInt64));
+  CHECK_OR_RETURN(IsTensorWithType(&(ctx->InputTensorDesc("loss_scale", 0)), DataType::kFloat));
+  CHECK_OR_RETURN(
+      IsTensorWithType(&(ctx->InputTensorDesc("good_step_counter", 0)), DataType::kInt64));
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

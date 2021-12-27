@@ -29,7 +29,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestReLUModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=True)
     def test_relu_module_with_random_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
@@ -52,7 +52,7 @@ class TestReLUModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestReLU6Module(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=True)
     def test_relu6_module_with_random_data(test_case):
         m = torch.nn.ReLU6()
         m.train(random())
