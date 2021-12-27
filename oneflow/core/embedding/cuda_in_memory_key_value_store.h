@@ -35,6 +35,7 @@ struct CudaInMemoryKeyValueStoreOptions {
   size_t num_keys = 0;
   size_t num_device_keys = 0;
   EncodingType encoding_type = EncodingType::kOrdinal;
+  float load_factor = 0.75;
 };
 
 std::unique_ptr<KeyValueStore> NewCudaInMemoryKeyValueStore(

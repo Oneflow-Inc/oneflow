@@ -260,7 +260,8 @@ class OrdinalEncoder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
   explicit OrdinalEncoder(const CudaInMemoryKeyValueStoreOptions& options)
-      : capacity_(options.num_keys) {
+      : capacity_(
+          static_cast<size_t>(static_cast<double>(options.num_keys) / options.load_factor)) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
     OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
