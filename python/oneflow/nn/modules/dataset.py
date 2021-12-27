@@ -281,7 +281,6 @@ class CropMirrorNormalize(Module):
                 res = _C.dispatch_crop_mirror_normalize_from_uint8(
                     self._op_uint8_with_mirror,
                     (input, mirror),
-                    mirror,
                     color_space=self.color_space,
                     output_layout=self.output_layout,
                     mean=self.mean,
