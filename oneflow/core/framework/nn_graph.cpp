@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
@@ -56,7 +57,7 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
   std::string ret = "shape=" + tensor->shape()->ToString() + ", dtype=" + tensor->dtype()->name();
   if (tensor->is_consistent()) {
     ret += ", placement=" + *JUST(PlacementToString(JUST(tensor->parallel_desc())));
-    ret += ", nd_sbp=" + *JUST(NdSbpToString(JUST(tensor->nd_sbp())));
+    ret += ", nd_sbp=" + NdSbpToString(JUST(tensor->nd_sbp()));
   } else {
     ret += ", device=" + JUST(tensor->device())->ToString();
   }
@@ -253,6 +254,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
   JUST(CreateAndRegisterNewVariableOpInJobPass());
+
+  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
+  one::TensorNameScope::Global()->Clear();
 
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }

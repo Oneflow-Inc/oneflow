@@ -15,8 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/api/python/functional/python_arg.h"
-
-#include "oneflow/api/common/device.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/core/common/scalar.h"
@@ -126,7 +124,7 @@ template<>
 Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
   if (PyStringCheck(object_)) {
     const char* device_str = JUST(PyStringAsString(object_));
-    return DeviceExportUtil::ParseAndNew(device_str);
+    return Device::ParseAndNew(device_str);
   }
   return PyUnpackDevice(object_);
 }

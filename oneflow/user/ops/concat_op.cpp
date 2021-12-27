@@ -14,12 +14,40 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
+  bool need_grad = false;
+  const int32_t in_size = op.input_size("in");
+  FOR_RANGE(int32_t, i, 0, in_size) {
+    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
+  }
+  if (need_grad) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    builder = builder.Op("split_like");
+    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
+    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                                             .Output("out", in_size)
+                                             .Attr("axis", op.attr<int64_t>("axis"))
+                                             .Build();
+
+    FOR_RANGE(int32_t, i, 0, in_size) {
+      if (op.NeedGenGradTensor4OpInput("in", i)) {
+        op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
+      }
+    }
+    AddOp(grad_op);
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+/* static */ Maybe<void> ConcatOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
@@ -57,7 +85,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> ConcatOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> ConcatOp::GetSbp(user_op::SbpContext* ctx) {
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
@@ -68,32 +100,7 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-  bool need_grad = false;
-  const int32_t in_size = op.input_size("in");
-  FOR_RANGE(int32_t, i, 0, in_size) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
-  }
-  if (need_grad) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("split_like");
-    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
-    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out", in_size)
-                                             .Attr("axis", op.attr<int64_t>("axis"))
-                                             .Build();
-
-    FOR_RANGE(int32_t, i, 0, in_size) {
-      if (op.NeedGenGradTensor4OpInput("in", i)) {
-        op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
-      }
-    }
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> ConcatOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
@@ -105,16 +112,11 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace
-
-REGISTER_USER_OP("concat")
-    .InputWithMinimum("in", 2)
-    .Output("out")
-    .Attr<int64_t>("axis")
-    .Attr<int64_t>("max_dim_size")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignature)
-    .SetDataTypeInferFn(InferDataType);
+/*static*/ Maybe<void> ConcatOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                           const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
 
