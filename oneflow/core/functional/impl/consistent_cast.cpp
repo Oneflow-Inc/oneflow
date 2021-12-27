@@ -296,7 +296,7 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
-    NonRecursiveMetaInfoConsistencyCheckScope scope;
+    NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels));
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
