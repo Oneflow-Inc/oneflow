@@ -21,9 +21,11 @@ limitations under the License.
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 
@@ -147,6 +149,12 @@ void WithMlirContext(
   llvm::InitializeNativeTargetAsmPrinter();
   lower(&mlir_ctx, *module);
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_IR", false)) {
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
+  }
   auto jit_or_error = mlir::ExecutionEngine::create(
       /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
       /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);

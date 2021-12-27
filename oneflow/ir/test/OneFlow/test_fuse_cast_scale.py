@@ -19,6 +19,7 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+os.environ["ONEFLOW_MLIR_DUMP_IR"] = "1"
 
 from typing import Tuple
 import unittest
@@ -90,6 +91,9 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         x = (np.random.rand(*shape) * 100).astype(np_in_type)
         ret = FuseCastScaleJob(x)
         (loss, scale, x) = ret
+        print(
+            {"x": x, "scale": scale, "numpy": x * scale, "oneflow": loss,}
+        )
         test_case.assertTrue(
             np.allclose(loss, x * scale),
             {"x": x, "scale": scale, "numpy": x * scale, "oneflow": loss,},
