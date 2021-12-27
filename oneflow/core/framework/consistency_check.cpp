@@ -201,6 +201,10 @@ int64_t* MutThreadLocalMetaInfoConsistencyCheckDepth() {
   return &recursive_depth;
 }
 
+inline bool IsMetaInfoConsistencyCheckDisable() {
+  return *MutThreadLocalMetaInfoConsistencyCheckDepth() > 1;
+}
+
 }  // namespace
 
 NonRecursiveMetaInfoConsistencyCheckScope::NonRecursiveMetaInfoConsistencyCheckScope() {
@@ -216,15 +220,13 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
                                      const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
-  auto* recursive_depth = MutThreadLocalMetaInfoConsistencyCheckDepth();
-  if (*recursive_depth == 1) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp)); }
+  if (IsMetaInfoConsistencyCheckDisable()) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp)); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<cfg::NdSbp>>& nd_sbp) {
-  auto* recursive_depth = MutThreadLocalMetaInfoConsistencyCheckDepth();
-  if (*recursive_depth == 1) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>())); }
+  if (IsMetaInfoConsistencyCheckDisable()) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>())); }
   return Maybe<void>::Ok();
 }
 
