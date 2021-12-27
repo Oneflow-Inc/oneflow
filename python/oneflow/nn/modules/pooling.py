@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import Optional
+import os
 
 import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
@@ -241,6 +242,7 @@ class MaxPool2d(Module):
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.data_format = "NHWC"
+            self.channel_pos = "channels_last"
             padding = _pair(padding)
             if len(padding) == 2:
                 if self.data_format == "NCHW":
@@ -249,13 +251,12 @@ class MaxPool2d(Module):
                     padding = (0, padding[0], padding[1], 0)
                 else:
                     raise ValueError("error padding param!")
-
+            self.padding = padding
             self.padding_type, pads_list = calc_pool_padding(
                 padding, get_dhw_offset(self.channel_pos), 2
             )
             self.padding_before = [pad[0] for pad in pads_list]
             self.padding_after = [pad[1] for pad in pads_list]
-            self.channel_pos = "channels_last"
             if return_indices == True:
                 raise ValueError(
                     "MaxPool2d with NHWC data format don't support return indices for now."
@@ -264,13 +265,14 @@ class MaxPool2d(Module):
                 raise ValueError(
                     "MaxPool2d with NHWC data format only support dilation == 1 for now."
                 )
+            self.dilation = _pair(dilation)
 
         else:
             self.data_format = "NCHW"
+            self.channel_pos = "channels_first"
             self.padding = _pair(padding)
             self.dilation = _pair(dilation)
             self.return_indices = return_indices
-            self.channel_pos = "channels_first"
 
     def forward(self, x):
         if self.data_format == "NCHW":
@@ -292,7 +294,7 @@ class MaxPool2d(Module):
             return flow._C.max_pool_2d(
                 x,
                 kernel_size=self.kernel_size,
-                stride=self.strides,
+                stride=self.stride,
                 padding=self.padding_type,
                 padding_before=self.padding_before,
                 padding_after=self.padding_after,
@@ -559,12 +561,13 @@ class AvgPool2d(Module):
                     padding = (0, padding[0], padding[1], 0)
                 else:
                     raise ValueError("error padding param!")
+            self.padding = padding
 
-            if count_include_pad is not None:
+            if not count_include_pad:
                 raise ValueError(
                     "AvgPool2d with NHWC data format don't support count_include_pad for now."
                 )
-            if divisor_override is not None:
+            if divisor_override != 0:
                 raise ValueError(
                     "AvgPool2d with NHWC data format don't support divisor_override for now."
                 )
