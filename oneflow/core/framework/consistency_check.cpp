@@ -220,13 +220,13 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
                                      const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
-  if (IsMetaInfoConsistencyCheckDisable()) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp)); }
+  if (!IsMetaInfoConsistencyCheckDisable()) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp)); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<cfg::NdSbp>>& nd_sbp) {
-  if (IsMetaInfoConsistencyCheckDisable()) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>())); }
+  if (!IsMetaInfoConsistencyCheckDisable()) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>())); }
   return Maybe<void>::Ok();
 }
 
