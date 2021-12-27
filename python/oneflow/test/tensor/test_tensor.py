@@ -351,17 +351,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(x1.dtype, flow.float32)
         test_case.assertEqual(x1.shape, flow.Size((1, 2)))
         x2 = flow.Tensor([[1.0], [2.0]])
-        op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", float(1.0))
-            .Output("out")
-            .Build()
-        )
-        y = op(x1, x2)[0]
+        y = flow.matmul(x1, x2)
         test_case.assertTrue(
             np.allclose(y.numpy(), np.array([[5.0]], dtype=np.float32))
         )
