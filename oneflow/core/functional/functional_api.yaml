@@ -23,10 +23,10 @@
 - name: "add"
   signature:
     [
-      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
       "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Add",
       "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarAdd",
       "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) => ScalarAdd",
+      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
     ]
   bind_python: true
 
@@ -1716,8 +1716,12 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
 
+- name: "normalize"
+  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12) => Normalize"
+  bind_python: True
+
 - name: "l2_normalize"
-  signature: "TensorTuple (Tensor input, Int32 axis, Float epsilon) => L2Normalize"
+  signature: "Tensor (Tensor input, Int32 axis=0, Float epsilon=1e-12) => L2Normalize"
   bind_python: True
 
 - name: "l2_normalize_grad"
