@@ -24,6 +24,7 @@ import oneflow as flow
 
 try:
     import torch as torch_original
+    torch_original.set_printoptions(profile="full")
 except ImportError:
     print(
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
@@ -509,7 +510,7 @@ def clear_note_fake_program():
     eager_tensor_2_graph_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
-
+    flow.set_printoptions(profile="full")
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
