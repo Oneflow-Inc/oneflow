@@ -147,7 +147,7 @@ struct VarFunctor<DeviceType::kCUDA, T> final {
     SetGridDimAndBlockDim(var_param.elem_cnt, &grid_dim, &block_dim);
     if (var_param.parallel_num == 1) {
         const size_t shm_size = grid_dim * sizeof(T) * 3;
-        ComputeVarScalarOut<T><<<grid_dim, block_dim, shm_size, RunCudaKernelGetStream(stream)>>>(
+        ComputeVarScalarOut<T><<<grid_dim, block_dim, shm_size, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             in_ptr, out_ptr, tmp_buffer_ptr, var_param);
     } else {
       RUN_CUDA_KERNEL(ComputeVarUsingWelfordWrapper<T>, stream, var_param.parallel_num, in_ptr,
