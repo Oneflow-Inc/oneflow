@@ -160,6 +160,7 @@ def calc_pool_padding(padding, dhw_offset, ndims):
         raise ValueError("padding must be str or a list.")
     return (padding_type, ndim_pads_list)
 
+
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
@@ -256,9 +257,13 @@ class MaxPool2d(Module):
             self.padding_after = [pad[1] for pad in pads_list]
             self.channel_pos = "channels_last"
             if return_indices == True:
-                raise ValueError("MaxPool2d with NHWC data format don't support return indices for now.")
+                raise ValueError(
+                    "MaxPool2d with NHWC data format don't support return indices for now."
+                )
             if dilation != 1:
-                raise ValueError("MaxPool2d with NHWC data format only support dilation == 1 for now.")
+                raise ValueError(
+                    "MaxPool2d with NHWC data format only support dilation == 1 for now."
+                )
 
         else:
             self.data_format = "NCHW"
@@ -268,7 +273,7 @@ class MaxPool2d(Module):
             self.channel_pos = "channels_first"
 
     def forward(self, x):
-        if self.data_format = "NCHW":
+        if self.data_format == "NCHW":
             y, indice = flow._C.max_pool2d(
                 x,
                 kernel_size=self.kernel_size,
@@ -556,9 +561,13 @@ class AvgPool2d(Module):
                     raise ValueError("error padding param!")
 
             if count_include_pad is not None:
-                raise ValueError("AvgPool2d with NHWC data format don't support count_include_pad for now.")
+                raise ValueError(
+                    "AvgPool2d with NHWC data format don't support count_include_pad for now."
+                )
             if divisor_override is not None:
-                raise ValueError("AvgPool2d with NHWC data format don't support divisor_override for now.")
+                raise ValueError(
+                    "AvgPool2d with NHWC data format don't support divisor_override for now."
+                )
 
             # TODO(yaochi): align with pytorch when padding is asymmetric
             self._padding_type, _pads_list = calc_pool_padding(

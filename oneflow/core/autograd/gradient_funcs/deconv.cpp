@@ -94,9 +94,9 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 2) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv2d(
+          out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
+          ctx->dilation_rate, ctx->groups, ctx->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 3) {
