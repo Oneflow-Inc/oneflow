@@ -29,29 +29,6 @@ Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
 
-def _tensor_numpy(eager_local_tensor):
-    assert (
-        not eager_local_tensor.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
-    if eager_local_tensor.dtype == flow.tensor_buffer:
-        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
-        tensors = flow.tensor_buffer_to_list_of_tensors(
-            eager_local_tensor, shapes, dtypes
-        )
-        return [t.numpy() for t in tensors]
-    method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
-    copy_to_numpy = getattr(eager_local_tensor, method_name)
-
-    ndarray = np.empty(
-        shape=tuple(eager_local_tensor.shape),
-        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
-    )
-
-    if ndarray.size != 0:
-        copy_to_numpy(ndarray)
-    return ndarray
-
-
 def _size(self, idx=None):
     if idx is None:
         return self.shape
