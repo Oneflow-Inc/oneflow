@@ -38,7 +38,7 @@ __global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_spac
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
        i < cs_up_space * cs_down_space; i += step) {
     auto cs_up_space_id = i / cs_down_space;
-    auto cs_down_space_id = i % cs_down_space;
+    auto cs_down_space_id = i - (i / cs_down_space) * cs_down_space;
 
     auto* in_ptr_base = in_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
     auto* out_ptr_base = out_ptr + cs_up_space_id * cs_space * cs_down_space + cs_down_space_id;
@@ -95,7 +95,8 @@ template<typename T>
 __global__ void CumsumBackwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_space, int64_t cs_down_space, int64_t elem_cnt) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
        i += step) {
-    auto cs_space_id = (i % (cs_space * cs_down_space)) / cs_down_space;
+    auto tmp = cs_space * cs_down_space; 
+    auto cs_space_id = (i - (i / tmp) * tmp) / cs_down_space;
     out_ptr[i] = (cs_space - cs_space_id) * in_ptr[i];
   }
 }
@@ -104,7 +105,7 @@ __global__ void CumsumBackwardGpu_DownSpaceIs1(const T* in_ptr, T* out_ptr, int6
                                   int64_t elem_cnt) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
        i += step) {
-    auto cs_space_id = i % cs_space;
+    auto cs_space_id = i - (i / cs_space) * cs_space;
     out_ptr[i] = (cs_space - cs_space_id) * in_ptr[i];
   }
 }

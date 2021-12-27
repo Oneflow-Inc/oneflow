@@ -1670,7 +1670,6 @@ class CumsumFunctor {
  public:
   CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // check dim validation
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
     CHECK_OR_RETURN(dim >= 0 && dim < ndim)

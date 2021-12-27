@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "unistd.h"
-#include <thread>
-#include <future>
 
 namespace oneflow {
 
@@ -40,15 +37,18 @@ void cumsum_forward(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs
 template<typename T>
 void cumsum_backward(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
                      int64_t cs_down_space, int64_t elem_cnt) {
+  auto* tmp_in_ptr_base = in_ptr;
+  auto* tmp_out_ptr_base = out_ptr;
+  auto step = cs_space * cs_down_space;
   for (auto i = 0; i < cs_up_space; i++) {
-    auto* tmp_in_ptr_base = in_ptr + i * cs_space * cs_down_space;
-    auto* tmp_out_ptr_base = out_ptr + i * cs_space * cs_down_space;
     for (auto j = 0; j < cs_space; j++) {
       auto* tmp_in_ptr = tmp_in_ptr_base + j * cs_down_space;
       auto* tmp_out_ptr = tmp_out_ptr_base + j * cs_down_space;
       std::fill_n(tmp_out_ptr, cs_down_space, cs_space - j);
       for (auto k = 0; k < cs_down_space; k++) { tmp_out_ptr[k] *= tmp_in_ptr[k]; }
     }
+    tmp_in_ptr_base += step;
+    tmp_out_ptr_base += step;
   }
 }
 }  // namespace
@@ -61,9 +61,9 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     auto elem_cnt = in->shape().elem_cnt();
+    // judge whether tensor has 0 size dimension first
     if (!elem_cnt) { return; }
 
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -80,7 +80,6 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     cumsum_forward<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
   }
 
-  // TODO: what's it used for?
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
