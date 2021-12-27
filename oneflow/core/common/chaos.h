@@ -88,6 +88,9 @@ class MonkeyScope {
 
 #define OF_CHAOS_CAT(a, b) OF_CHAOS_CAT_I(a, b)
 #define OF_CHAOS_CAT_I(a, b) a##b
+#define OF_CHAOS_STRINGIZE(...) OF_CHAOS_STRINGIZE_I(__VA_ARGS__)
+#define OF_CHAOS_STRINGIZE_I(...) #__VA_ARGS__
+
 }  // namespace chaos
 }  // namespace oneflow
 

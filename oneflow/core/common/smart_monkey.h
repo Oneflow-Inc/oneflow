@@ -26,7 +26,7 @@ namespace chaos {
 
 class SourceCodePositionScope final {
  public:
-  explicit SourceCodePositionScope(const std::string* src_code_pos);
+  explicit SourceCodePositionScope(const char* src_code_pos);
   ~SourceCodePositionScope();
 };
 
@@ -38,16 +38,14 @@ class SmartMonkey : public Monkey {
   bool Fail() override;
 
  private:
-  std::set<std::vector<const std::string*>> stacks_;
+  std::set<std::vector<const char*>> stacks_;
 };
 
 #ifdef OF_ENABLE_CHAOS
 
-#define OF_SMART_MONKEY_SOURCE_CODE_POS_SCOPE()                                                    \
-  ::oneflow::chaos::SourceCodePositionScope OF_CHAOS_CAT(src_code_pos_scope_, __COUNTER__)(([]() { \
-    static std::string pos(std::string(__FILE__ ":") + std::to_string(__LINE__));                  \
-    return &pos;                                                                                   \
-  })())
+#define OF_SMART_MONKEY_SOURCE_CODE_POS_SCOPE()           \
+  ::oneflow::chaos::SourceCodePositionScope OF_CHAOS_CAT( \
+      src_code_pos_scope_, __COUNTER__)(__FILE__ ":" OF_CHAOS_STRINGIZE(__LINE__))
 
 #else  // OF_ENABLE_CHAOS
 

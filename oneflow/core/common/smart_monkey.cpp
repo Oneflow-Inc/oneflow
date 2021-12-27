@@ -22,16 +22,16 @@ limitations under the License.
 namespace oneflow {
 namespace chaos {
 
-std::vector<const std::string*>* MutThreadLocalSourceCodePositionStack() {
-  thread_local std::vector<const std::string*> stack;
+std::vector<const char*>* MutThreadLocalSourceCodePositionStack() {
+  thread_local std::vector<const char*> stack;
   return &stack;
 }
 
-const std::vector<const std::string*>& ThreadLocalSourceCodePositionStack() {
+const std::vector<const char*>& ThreadLocalSourceCodePositionStack() {
   return *MutThreadLocalSourceCodePositionStack();
 }
 
-SourceCodePositionScope::SourceCodePositionScope(const std::string* src_code_pos) {
+SourceCodePositionScope::SourceCodePositionScope(const char* src_code_pos) {
   MutThreadLocalSourceCodePositionStack()->push_back(src_code_pos);
 }
 
