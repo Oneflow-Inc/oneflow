@@ -704,25 +704,26 @@ def autotest(
                     if isinstance(flow_tensor, flow.Tensor):
                         if (
                             flow_tensor in eager_tensor_2_graph_tensor
-                            and check_allclose
                         ):
-                            equality_res = np.allclose(
-                                flow_tensor.numpy(),
-                                eager_tensor_2_graph_tensor[flow_tensor].numpy(),
-                                rtol=rtol,
-                                atol=atol,
-                                equal_nan=True,
-                            )
-                            if equality_res == False:
-                                print_note_fake_program()
-                                print("---------Tensor Shape--------")
-                                print(flow_tensor.shape)
-                                print(eager_tensor_2_graph_tensor[flow_tensor].shape)
-                            test_case.assertTrue(equality_res)
+                            if check_allclose:
+                                equality_res = np.allclose(
+                                    flow_tensor.numpy(),
+                                    eager_tensor_2_graph_tensor[flow_tensor].numpy(),
+                                    rtol=rtol,
+                                    atol=atol,
+                                    equal_nan=True,
+                                )
+                                if equality_res == False:
+                                    print_note_fake_program()
+                                    print("---------Tensor Shape--------")
+                                    print(flow_tensor.shape)
+                                    print(eager_tensor_2_graph_tensor[flow_tensor].shape)
+                                test_case.assertTrue(equality_res)
                             if verbose:
                                 print(f"{f.__name__} test graph passed.")
                         else:
                             if check_graph:
+                                print_note_fake_program()
                                 test_case.assertTrue(
                                     False,
                                     f"{f.__name__} cannot find module/function/method to check graph.",
