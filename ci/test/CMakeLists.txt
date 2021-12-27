@@ -10,17 +10,20 @@ set(TEST_WITH_TF_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-
 set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae" CACHE STRING "")
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
 
-function(pull_docker_img)
-  execute_process(
-    COMMAND ${DOCKER_EXE} pull ${ARGV0}
-    COMMAND_ERROR_IS_FATAL ANY
+add_custom_target(pull_all_docker_img)
+function(add_docker_img)
+  set(target_name "pull_docker_img_${ARGV0}")
+  add_custom_target(${target_name})
+  add_custom_command(TARGET ${target_name}
+    COMMAND ${DOCKER_EXE} pull ${ARGV1}
   )
+  add_dependencies(pull_all_docker_img ${target_name})
 endfunction()
 
 if(RUN_IN_DOCKER)
   set(DOCKER_EXE docker)
-  pull_docker_img(${TEST_WITH_TF_IMG_TAG})
-  pull_docker_img(${TEST_WITH_TORCH_IMG_TAG})
+  add_docker_img(test_with_tf "${TEST_WITH_TF_IMG_TAG}")
+  add_docker_img(test_with_torch "${TEST_WITH_TORCH_IMG_TAG}")
 endif()
 
 # CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=20 ninja test
