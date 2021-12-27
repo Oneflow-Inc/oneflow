@@ -33,9 +33,12 @@ Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> o
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
+  if (in->nd_sbp()->sbp_parallel(0).has_split_parallel()) {
+    int64_t split_axis = in->nd_sbp()->sbp_parallel(0).split_parallel().axis();
+    CHECK_OR_RETURN(logical_shape->At(split_axis) % in->placement()->parallel_num() == 0);
+  }
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
                   || in->placement()->Bigger(*out->placement()));
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 
