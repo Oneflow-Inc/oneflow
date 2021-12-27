@@ -419,6 +419,7 @@ namespace {
 Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_expr,
                                                         TensorTuple* outputs,
                                                         const OpExprInterpContext& ctx) {
+  NonRecursiveMetaInfoConsistencyCheckScope non_scope;
   bool is_local;
   std::shared_ptr<const ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
@@ -703,8 +704,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& sbp_sym = JUST(ctx.nd_sbp);
-
-  JUST(MetaInfoConsistencyCheck(parallel_desc_sym, sbp_sym, op_expr.grad_nd_sbp()));
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {

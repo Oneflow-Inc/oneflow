@@ -287,6 +287,7 @@ namespace {
 
 Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const TensorTuple& inputs,
                                  TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  NonRecursiveMetaInfoConsistencyCheckScope scope;
   std::shared_ptr<MirroredTensor> input_mirrored_tensor;
   {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);

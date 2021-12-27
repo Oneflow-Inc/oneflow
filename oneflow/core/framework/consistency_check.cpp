@@ -180,7 +180,9 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+namespace {
+
+Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
     const Optional<Symbol<cfg::NdSbp>>& nd_sbp, const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
@@ -194,9 +196,46 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
   return Maybe<void>::Ok();
 }
 
+int64_t* MutThreadLocalConsistentIdDepth() {
+  static thread_local int64_t recursive_depth = 0;
+  return &recursive_depth;
+}
+
+}  // namespace
+
+NonRecursiveMetaInfoConsistencyCheckScope::NonRecursiveMetaInfoConsistencyCheckScope() {
+  auto* recursive_depth = MutThreadLocalConsistentIdDepth();
+  ++*recursive_depth;
+}
+
+NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheckScope() {
+ auto* recursive_depth = MutThreadLocalConsistentIdDepth();
+  --*recursive_depth;
+}
+
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-    const Optional<Symbol<cfg::NdSbp>>& nd_sbp) {
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>()));
+                                     const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
+                                     const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+  auto* recursive_depth = MutThreadLocalConsistentIdDepth();
+  if (*recursive_depth == 1) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp)); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const Optional<Symbol<cfg::NdSbp>>& nd_sbp) {
+  auto* recursive_depth = MutThreadLocalConsistentIdDepth();
+  if (*recursive_depth == 1) { JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>())); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                                 const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_tuple) {
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;
+  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
+  if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
+  if (!grad_sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_tuple)); }
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
   return Maybe<void>::Ok();
 }
 

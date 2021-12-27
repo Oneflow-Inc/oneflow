@@ -23,6 +23,13 @@ limitations under the License.
 
 namespace oneflow {
 
+class NonRecursiveMetaInfoConsistencyCheckScope final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NonRecursiveMetaInfoConsistencyCheckScope);
+  NonRecursiveMetaInfoConsistencyCheckScope();
+  ~NonRecursiveMetaInfoConsistencyCheckScope();
+};
+
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement);
 
@@ -32,6 +39,11 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<cfg::NdSbp>>& nd_sbp);
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_tuple);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_

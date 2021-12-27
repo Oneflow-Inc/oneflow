@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/tensor.h"
@@ -223,10 +224,16 @@ Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
+  NonRecursiveMetaInfoConsistencyCheckScope scope;
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, sbp_parallels));
+  if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
+      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+    return x;
+  }
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
