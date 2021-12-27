@@ -33,23 +33,17 @@ def _test_meshgrid_forawd(test_case, device, indexing):
     input2 = flow.tensor(
         np.array([4, 5, 6]), dtype=flow.float32, device=flow.device(device)
     )
-    (np_x, np_y) = np.meshgrid(input1.numpy(), input2.numpy(), indexing="ij")
-    (of_x, of_y) = flow.meshgrid(input1, input2)
     (np_x, np_y) = np.meshgrid(input1.numpy(), input2.numpy(), indexing=indexing)
     (of_x, of_y) = flow.meshgrid(input1, input2, indexing=indexing)
     test_case.assertTrue(np.allclose(of_x.numpy(), np_x, 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(of_y.numpy(), np_y, 0.0001, 0.0001))
 
 
 def _test_meshgrid_forawd_scalar(test_case, device, indexing):
     input1 = flow.tensor(np.array(1.0), dtype=flow.float32, device=flow.device(device))
     input2 = flow.tensor(np.array(2.0), dtype=flow.float32, device=flow.device(device))
-    (np_x, np_y) = np.meshgrid(input1.numpy(), input2.numpy(), indexing="ij")
-    (of_x, of_y) = flow.meshgrid(input1, input2)
     (np_x, np_y) = np.meshgrid(input1.numpy(), input2.numpy(), indexing=indexing)
     (of_x, of_y) = flow.meshgrid(input1, input2, indexing=indexing)
     test_case.assertTrue(np.allclose(of_x.numpy(), np_x, 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(of_y.numpy(), np_y, 0.0001, 0.0001))
 
 
 def _test_meshgrid_forawd_3tensor(test_case, device, indexing):
@@ -63,14 +57,10 @@ def _test_meshgrid_forawd_3tensor(test_case, device, indexing):
         np.array([7, 8, 9]), dtype=flow.float32, device=flow.device(device)
     )
     (np_x, np_y, np_z) = np.meshgrid(
-        input1.numpy(), input2.numpy(), input3.numpy(), indexing="ij"
         input1.numpy(), input2.numpy(), input3.numpy(), indexing=indexing
     )
-    (of_x, of_y, of_z) = flow.meshgrid(input1, input2, input3)
     (of_x, of_y, of_z) = flow.meshgrid(input1, input2, input3, indexing=indexing)
     test_case.assertTrue(np.allclose(of_x.numpy(), np_x, 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(of_y.numpy(), np_y, 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(of_z.numpy(), np_z, 0.0001, 0.0001))
 
 
 @flow.unittest.skip_unless_1n1d()
