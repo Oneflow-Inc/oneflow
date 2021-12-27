@@ -48,7 +48,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             self.run_fuse_cast_scale_mlir(**arg)
 
     @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
-    @unittest.skip("")
+    # @unittest.skip("")
     def test_gpu(self):
         d = OrderedDict(
             {
@@ -91,9 +91,6 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         x = (np.random.rand(*shape) * 100).astype(np_in_type)
         ret = FuseCastScaleJob(x)
         (loss, scale, x) = ret
-        print(
-            {"x": x, "scale": scale, "numpy": x * scale, "oneflow": loss,}
-        )
         test_case.assertTrue(
             np.allclose(loss, x * scale),
             {"x": x, "scale": scale, "numpy": x * scale, "oneflow": loss,},
