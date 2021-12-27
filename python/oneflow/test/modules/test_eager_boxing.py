@@ -3170,5 +3170,49 @@ class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
         test_case.assertEqual(y.consistent_id(), z.consistent_id())
 
 
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
+    def test_eager_consistent_cast_1d_to_2d_sbp(test_case):
+        x = np.ones((4, 8), dtype=np.int32)
+        placement1 = flow.placement("cuda", {0: range(4)})
+        placement2 = flow.placement("cuda", {0: range(4)}, (2, 2))
+        y = flow.tensor(
+            x,
+            dtype=flow.float32,
+            placement=placement1,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        z = y.to_consistent(
+            placement=placement2, sbp=[flow.sbp.broadcast, flow.sbp.split(0)]
+        )
+        test_case.assertEqual(z.placement, placement2)
+        test_case.assertTrue(
+            np.array_equal(z.to_local().numpy(), np.ones((2, 8), dtype=np.int32),)
+        )
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
+    def test_eager_consistent_cast_2d_to_1d_sbp(test_case):
+        x = np.ones((4, 8), dtype=np.int32)
+        placement1 = flow.placement("cuda", {0: range(4)})
+        placement2 = flow.placement("cuda", {0: range(4)}, (2, 2))
+        y = flow.tensor(
+            x,
+            dtype=flow.float32,
+            placement=placement2,
+            sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
+            requires_grad=False,
+        )
+        z = y.to_consistent(placement=placement1, sbp=[flow.sbp.split(0)])
+        test_case.assertEqual(z.placement, placement1)
+        test_case.assertTrue(
+            np.array_equal(z.to_local().numpy(), np.ones((1, 8), dtype=np.int32),)
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
