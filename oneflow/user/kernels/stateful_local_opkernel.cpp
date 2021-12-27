@@ -185,8 +185,12 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   void Update(const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
               EagerBlobObjectListRawPtr outputs,
               ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
+    OF_PROFILER_RANGE_PUSH("ResetPrior");
     composed_attrs_->ResetPrior(attrs);
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("Update");
     base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
+    OF_PROFILER_RANGE_POP();
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -426,7 +430,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
     const user_op::OpKernel** user_opkernel, bool* need_temp_storage, const AttrMap& attrs,
     EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
-  OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
+  OF_PROFILER_RANGE_SCOPE("ChooseOpKernel");
   reg_ctx_->Update(attrs, inputs, outputs, consistent_tensor_infer_result);
 
   DataType primary_dtype = kInvalidDataType;
@@ -438,6 +442,8 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
     // do nothing
   }
 
+  OF_PROFILER_RANGE_SCOPE("FindOrCreate");
+
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
     if (likely(pair.first->is_matched_hob->get(*reg_ctx_))) {
       reg_ctx_->Update(AttrMap{}, nullptr, nullptr, nullptr);
@@ -447,7 +453,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
     }
   }
 
-  OF_PROFILER_RANGE_GUARD("fallback");
+  OF_PROFILER_RANGE_SCOPE("fallback");
 
   const auto& op_type_name = user_op_conf_->op_type_name();
   const auto* kernel_reg_val =

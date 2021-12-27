@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -33,6 +34,7 @@ namespace impl {
 class UnaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    OF_PROFILER_RANGE_SCOPE("UnaryFunctor");
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 

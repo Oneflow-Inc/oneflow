@@ -829,6 +829,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
+  OF_PROFILER_RANGE_PUSH("SoftSyncStream");
   const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
   for (const auto& input : *input_eager_blob_objects) {
     const auto& blob_last_used_device = JUST(input->last_used_device());
@@ -838,12 +839,18 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     }
     input->set_last_used_device(op_device);
   }
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("LocalCallOpKernelPhyInstrOperand");
   auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode()));
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("MakeInstructionMsg");
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), JUST(op_device->local_call_instruction_name()),
       parallel_desc_sym, phy_instr_operand);
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("init_producer_op_device");
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
     if (!output->producer_op_device().has_value()) {
@@ -851,6 +858,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     }
     output->set_last_used_device(op_device);
   }
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 

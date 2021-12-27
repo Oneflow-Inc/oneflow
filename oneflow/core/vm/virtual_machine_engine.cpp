@@ -92,7 +92,6 @@ void VirtualMachineEngine::HandlePending() {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
   }
-  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
     if (likely(Dispatchable(instruction))) {

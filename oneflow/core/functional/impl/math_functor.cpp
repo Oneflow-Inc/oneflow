@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -81,6 +82,7 @@ class ScalarMathBaseFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }
+    OF_PROFILER_RANGE_SCOPE("ScalarMathBaseFunctor");
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
@@ -312,6 +314,7 @@ class ReduceSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     // const DataType dtype = x->dtype()->data_type();
+    OF_PROFILER_RANGE_PUSH("Reduce Functor");
     MutableAttrMap attrs;
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -324,7 +327,9 @@ class ReduceSumFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    auto ret = OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    OF_PROFILER_RANGE_POP();
+    return ret;
   }
 
  private:

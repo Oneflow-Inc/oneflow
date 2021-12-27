@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -85,6 +86,7 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            const Symbol<Device>& default_device, TensorTuple* outputs,
                            const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_PUSH("EagerBlobObjectList");
   const auto& attrs = ctx.attrs;
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
@@ -109,6 +111,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
     }
   }
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("Infer devices");
   Symbol<Device> op_device;
   bool need_check_mem_case = true;
 
@@ -123,7 +127,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     need_check_mem_case = false;
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
   }
-
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("Infer shapes and dtypes");
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
   JUST(user_op_expr.InferPhysicalShapeAndDType(
@@ -136,7 +141,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         // using tensor_impl TensorMeta pointer if not inplace.
         return output_tensor_metas->at(i);
       }));
-
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("InitEagerBlobObject");
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
@@ -151,18 +157,22 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
-
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("Init Kernel");
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
+  OF_PROFILER_RANGE_POP();
 
+  OF_PROFILER_RANGE_PUSH("PhysicalRun");
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, op_device);
   }));
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
@@ -191,7 +201,10 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
-  return NaiveInterpret(op_expr, inputs, outputs, ctx);
+  OF_PROFILER_RANGE_PUSH("NaiveInterpret: " + op_expr.op_type_name());
+  auto ret = NaiveInterpret(op_expr, inputs, outputs, ctx);
+  OF_PROFILER_RANGE_POP();
+  return ret;
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
