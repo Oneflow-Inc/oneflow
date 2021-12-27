@@ -194,7 +194,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_add_with_alpha(test_case):
         device = random_device()
         x1 = random_pytorch_tensor(2, 2, 3).to(device).mean()
