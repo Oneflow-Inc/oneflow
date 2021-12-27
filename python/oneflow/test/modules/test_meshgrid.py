@@ -26,7 +26,6 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_meshgrid_forawd(test_case, device):
 def _test_meshgrid_forawd(test_case, device, indexing):
     input1 = flow.tensor(
         np.array([1, 2, 3]), dtype=flow.float32, device=flow.device(device)
@@ -42,7 +41,6 @@ def _test_meshgrid_forawd(test_case, device, indexing):
     test_case.assertTrue(np.allclose(of_y.numpy(), np_y, 0.0001, 0.0001))
 
 
-def _test_meshgrid_forawd_scalar(test_case, device):
 def _test_meshgrid_forawd_scalar(test_case, device, indexing):
     input1 = flow.tensor(np.array(1.0), dtype=flow.float32, device=flow.device(device))
     input2 = flow.tensor(np.array(2.0), dtype=flow.float32, device=flow.device(device))
@@ -54,7 +52,6 @@ def _test_meshgrid_forawd_scalar(test_case, device, indexing):
     test_case.assertTrue(np.allclose(of_y.numpy(), np_y, 0.0001, 0.0001))
 
 
-def _test_meshgrid_forawd_3tensor(test_case, device):
 def _test_meshgrid_forawd_3tensor(test_case, device, indexing):
     input1 = flow.tensor(
         np.array([1, 2, 3]), dtype=flow.float32, device=flow.device(device)
