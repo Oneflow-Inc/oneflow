@@ -83,7 +83,7 @@ class TestPermute(flow.unittest.TestCase):
         y = torch.permute(x, dims=permute_list)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_permute5d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 5
@@ -100,7 +100,7 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_permute4d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 4
@@ -116,7 +116,7 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_permute3d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 3

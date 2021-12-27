@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
@@ -31,8 +31,8 @@ class ReluKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     CHECK_NOTNULL(tmp);
     NewKernelUtil<DeviceType::kCUDA>::Relu(ctx->stream(), in_blob->shape().elem_cnt(),
@@ -64,7 +64,7 @@ REGISTER_USER_KERNEL("ccrelu")
     .SetInferTmpSizeFn([](user_op::InferContext*) { return 10; })
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));
       return Maybe<void>::Ok();
     });
 
@@ -287,7 +287,8 @@ class TestRandomSourceKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCPU>>*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);

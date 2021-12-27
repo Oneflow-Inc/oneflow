@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -193,26 +194,36 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix)      \
-  REGISTER_USER_OP(op_name)                                            \
-      .Input("x")                                                      \
-      .Input("y")                                                      \
-      .Output("z")                                                     \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastNormal)      \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
-      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastNormal);
+#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix)                        \
+  /* static */ Maybe<void> op_name::InferLogicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferTensorDescBinaryBroadcastNormal(ctx);                                    \
+  }                                                                                      \
+  /*static*/ Maybe<void> op_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {  \
+    return InferLogicalTensorDesc(ctx);                                                  \
+  }                                                                                      \
+  /* static */ Maybe<void> op_name::GetSbp(user_op::SbpContext* ctx) {                   \
+    return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);                      \
+  }                                                                                      \
+  /* static */ Maybe<void> op_name::InferDataType(user_op::InferContext* ctx) {          \
+    return InferDataTypeBinaryBroadcastNormal(ctx);                                      \
+  }
 
-#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)     \
-  REGISTER_NO_GRAD_USER_OP(op_name)                                    \
-      .Input("x")                                                      \
-      .Input("y")                                                      \
-      .Output("z")                                                     \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastLogical)     \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
-      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastLogical);
+#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)                       \
+  /* static */ Maybe<void> op_name::InferLogicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferTensorDescBinaryBroadcastLogical(ctx);                                   \
+  }                                                                                      \
+  /*static*/ Maybe<void> op_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {  \
+    return InferLogicalTensorDesc(ctx);                                                  \
+  }                                                                                      \
+  /* static */ Maybe<void> op_name::GetSbp(user_op::SbpContext* ctx) {                   \
+    return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);                      \
+  }                                                                                      \
+  /* static */ Maybe<void> op_name::InferDataType(user_op::InferContext* ctx) {          \
+    return InferDataTypeBinaryBroadcastLogical(ctx);                                     \
+  }
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ_ODS)
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP,
-                     MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ)
+                     MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ_ODS)
 
 }  // namespace oneflow

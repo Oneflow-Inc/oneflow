@@ -367,6 +367,17 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_matmul_with_random_data(test_case):
+        device = random_device()
+        dim0 = random(low=2, high=10).to(int)
+        dim1 = random(low=3, high=20).to(int)
+        dim2 = random(low=2, high=11).to(int)
+        a = random_pytorch_tensor(ndim=2, dim0=dim0, dim1=dim1)
+        b = random_pytorch_tensor(ndim=2, dim0=dim1, dim1=dim2)
+        return a @ b
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_list(test_case):
         list_data = [[1.0, 3.0], [5.0, 6.0]]
         input = flow.Tensor(list_data)
@@ -1622,6 +1633,29 @@ class TestTensorNumpy(flow.unittest.TestCase):
         input2 = random_pytorch_tensor(ndim=3, dim0=t, dim1=k, dim2=5)
         of_out = input1.bmm(input2)
         return of_out
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_tensor_split(test_case):
+        k0 = random(2, 6)
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        rand_dim = random(0, 3).to(int)
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = x.split(2, dim=rand_dim)
+        return torch.cat(res, rand_dim)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_tensor_split_sizes(test_case):
+        k0 = random(2, 6)
+        k1 = 7
+        k2 = random(2, 6)
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        res = x.split([1, 2, 3, 1], dim=-2)
+        return torch.cat(res, dim=1)
 
 
 if __name__ == "__main__":

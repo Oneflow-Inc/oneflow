@@ -23,8 +23,8 @@ namespace oneflow {
 
 namespace ep {
 
-CudaDevice::CudaDevice(int device_index)
-    : device_index_(device_index), event_flags_{}, properties_{} {
+CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
+    : device_index_(device_index), event_flags_{}, properties_{}, device_manager_(device_manager) {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaGetDeviceProperties(&properties_, device_index_));
   event_flags_ = cudaEventDisableTiming;

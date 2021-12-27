@@ -15,6 +15,12 @@ limitations under the License.
 """
 
 import os
+
+if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
+    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
+    gpu_id = vram_str.split(",")[0].split(":")[-1]
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+
 import sys
 import collections
 
@@ -74,6 +80,7 @@ from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
 from oneflow._C import broadcast_like
 from oneflow._C import chunk
+from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh
 from oneflow._C import tan
@@ -126,6 +133,7 @@ from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import log
+from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import pow
@@ -148,6 +156,7 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
+from oneflow._C import meshgrid
 from oneflow._C import stack
 from oneflow._C import squeeze
 from oneflow._C import narrow
@@ -162,6 +171,7 @@ from oneflow._C import roi_align
 from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
+from oneflow._C import eye
 
 
 from . import sbp
@@ -252,6 +262,7 @@ del oneflow
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
+from oneflow._C import from_numpy
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
@@ -284,6 +295,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
+from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
@@ -311,7 +323,6 @@ from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
-from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
@@ -333,8 +344,6 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
-from oneflow.nn.modules.split import split_op as split
-from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.modules.interpolate import interpolate
-from oneflow.nn.modules.norm import l2_normalize
 from oneflow.nn.modules.affine_grid import affine_grid
 from oneflow.nn.modules.grid_sample import grid_sample
 from oneflow.nn.modules.sparse_softmax_cross_entropy import sparse_softmax_cross_entropy
@@ -43,6 +42,7 @@ from oneflow._C import prelu
 from oneflow._C import gelu
 from oneflow._C import glu
 from oneflow._C import logsigmoid
+from oneflow._C import log_softmax
 from oneflow._C import softsign
 from oneflow._C import softmax
 from oneflow._C import softplus
@@ -57,6 +57,8 @@ from oneflow._C import upsample
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
+from oneflow._C import l2_normalize
+from oneflow._C import normalize
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
 from oneflow.nn.modules.activation import relu6
