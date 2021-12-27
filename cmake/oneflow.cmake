@@ -423,6 +423,13 @@ if(BUILD_PYTHON)
     PATTERN "oneflow/core/common/symbol.h"
     PATTERN "oneflow/core/job/parallel_desc.h"
     PATTERN "oneflow/core/autograd/autograd_meta.h"
+    PATTERN "oneflow/api" EXCLUDE
+    PATTERN "oneflow/xrt" EXCLUDE
+    PATTERN "oneflow/user" EXCLUDE
+    PATTERN "oneflow/extension" EXCLUDE
+    PATTERN "oneflow/maybe" EXCLUDE
+    PATTERN "oneflow/lazy" EXCLUDE
+    PATTERN "oneflow/graph_impl" EXCLUDE
   )
   add_custom_target(install_oneflow_py_include
     COMMAND
@@ -441,7 +448,7 @@ install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
   COMPONENT oneflow_cpp_include
   EXCLUDE_FROM_ALL
   FILES_MATCHING
-  PATTERN *.h
+  PATTERN "*.h"
 )
 
 add_custom_target(install_oneflow_cpp_include
