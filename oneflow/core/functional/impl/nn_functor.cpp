@@ -1721,7 +1721,7 @@ class L2NormalizeFunctor {
       std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
 
       const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
+          *op_, {JUST(functional::Transpose(input, input_perm))->contiguous()}, attrs));
       return functional::Transpose(result->at(0), input_perm);
     }
 
@@ -1743,7 +1743,7 @@ class NormalizeFunctor {
                })
         .then([&](const auto& x) { return functional::Clamp(x, eps, NullOpt); })
         .then([&](const auto& x) { return functional::Div(input, x); })
-        .call(input, p, dim);
+        .call(input->contiguous(), p, dim);
   }
 };
 
