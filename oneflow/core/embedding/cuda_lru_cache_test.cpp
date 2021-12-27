@@ -44,7 +44,7 @@ TEST(CudaLruCache, CudaLruCache) {
   CudaLruCacheOptions options{};
   const uint32_t line_size = 128;
   options.line_size = line_size;
-  options.log2_n_set = 8;
+  options.memory_budget_mb = 8;
   options.max_query_length = 65536;
   options.key_type = DataType::kInt64;
   options.value_type = DataType::kFloat;

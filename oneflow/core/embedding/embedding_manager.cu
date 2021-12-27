@@ -27,7 +27,7 @@ embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parall
   embedding::CudaLruCacheOptions options{};
   const uint32_t line_size = 128;
   options.line_size = line_size;
-  options.log2_n_set = 19;
+  options.memory_budget_mb = 8 * 1024;
   options.max_query_length = 65536 * 26;
   options.key_type = DataType::kInt64;
   options.value_type = DataType::kFloat;
