@@ -55,3 +55,4 @@ def _try_convert_to_local_tensor(tensor):
             sbp=flow.sbp.broadcast,
         ).to_local()
     return tensor
+    
