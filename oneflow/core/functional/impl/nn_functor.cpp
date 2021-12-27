@@ -1682,6 +1682,9 @@ class NormalizeFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const int32_t& dim, const float& eps) const {
+    if (std::fabs(p - 2.0f) < std::numeric_limits<float>::min()) {
+      return functional::L2Normalize(input, dim, eps);
+    }
     return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
                                           const int32_t&)>(
                [](const auto& x, const float& p, const int32_t& dim) -> Maybe<Tensor> {
