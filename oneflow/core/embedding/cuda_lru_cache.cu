@@ -44,7 +44,7 @@ struct CudaLruCacheContext {
   uint32_t* query_indices_buffer;
   Key* query_keys_buffer;
   cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
-  uint32_t log2_n_set;
+  uint64_t n_set;
   uint32_t line_size;
 };
 
@@ -57,19 +57,26 @@ __global__ void InitCacheSetMutex(uint32_t n_set,
 template<typename Key, typename Elem>
 void InitCudaLruCacheContext(const CudaLruCacheOptions& options,
                              CudaLruCacheContext<Key, Elem>* ctx) {
-  ctx->log2_n_set = options.log2_n_set;
+  const size_t key_size_per_set = kWarpSize * sizeof(Key);
+  const size_t lines_size_per_set = kWarpSize * options.line_size * sizeof(Elem);
+  const size_t lru_size_per_set = kWarpSize * sizeof(uint8_t);
+  const size_t mutex_size_per_set = sizeof(cuda::binary_semaphore<cuda::thread_scope_device>);
+  const size_t size_per_set =
+      key_size_per_set + lines_size_per_set + lru_size_per_set + mutex_size_per_set;
+  const size_t n_set = options.memory_budget_mb * 1024 * 1024 / size_per_set;
+  CHECK_GT(n_set, 0);
+  ctx->n_set = n_set;
   ctx->line_size = options.line_size;
-  const size_t n_set = 1ULL << options.log2_n_set;
-  const size_t keys_size = n_set * kWarpSize * sizeof(Key);
+  const size_t keys_size = n_set * key_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
   OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, keys_size));
-  const size_t lines_size = n_set * kWarpSize * options.line_size * sizeof(Elem);
+  const size_t lines_size = n_set * lines_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
   OF_CUDA_CHECK(cudaMemset(ctx->lines, 0, lines_size));
-  const size_t lru_queue_size = n_set * kWarpSize * sizeof(uint8_t);
+  const size_t lru_queue_size = n_set * lru_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lru_queue), lru_queue_size));
   OF_CUDA_CHECK(cudaMemset(ctx->lru_queue, 0, lru_queue_size));
-  const size_t mutex_size = n_set * sizeof(cuda::binary_semaphore<cuda::thread_scope_device>);
+  const size_t mutex_size = n_set * mutex_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->mutex), mutex_size));
   OF_CUDA_CHECK(
       cudaMalloc(&(ctx->query_indices_buffer), options.max_query_length * sizeof(uint32_t)));
@@ -210,12 +217,16 @@ __global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num
                           Key* missing_keys, uint32_t* missing_indices) {
   ThreadContext thread_ctx{};
   __shared__ Key block_keys[kNumWarpPerBlock][kWarpSize];
+  __shared__ size_t block_set_ids[kNumWarpPerBlock][kWarpSize];
   for (uint32_t batch_offset = thread_ctx.global_warp_id * kWarpSize; batch_offset < num_keys;
        batch_offset += thread_ctx.num_warps * kWarpSize) {
     const uint32_t n_batch_keys = min(kWarpSize, num_keys - batch_offset);
     if (thread_ctx.lane_id < n_batch_keys) {
-      block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] =
-          keys[batch_offset + thread_ctx.lane_id];
+      const Key key = keys[batch_offset + thread_ctx.lane_id];
+      const size_t hash = XXH64()(key);
+      const uint32_t set_id = hash % cache_ctx.n_set;
+      block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
+      block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
     __syncwarp();
     uint32_t n_warp_missing = 0;
@@ -230,8 +241,7 @@ __global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num
         }
         continue;
       }
-      const size_t hash = XXH64()(key);
-      const uint32_t set_id = hash >> (64 - cache_ctx.log2_n_set);
+      const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
       SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
       const int way = set_ctx.Lookup(thread_ctx, key);
       if (way < 0) {
@@ -267,12 +277,16 @@ __global__ void PutWithoutEvictingKernel(CudaLruCacheContext<Key, Elem> cache_ct
                                          uint32_t* missing_indices) {
   ThreadContext thread_ctx{};
   __shared__ Key block_keys[kNumWarpPerBlock][kWarpSize];
+  __shared__ size_t block_set_ids[kNumWarpPerBlock][kWarpSize];
   for (uint32_t batch_offset = thread_ctx.global_warp_id * kWarpSize; batch_offset < num_keys;
        batch_offset += thread_ctx.num_warps * kWarpSize) {
     const uint32_t n_batch_keys = min(kWarpSize, num_keys - batch_offset);
     if (thread_ctx.lane_id < n_batch_keys) {
-      block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] =
-          keys[batch_offset + thread_ctx.lane_id];
+      const Key key = keys[batch_offset + thread_ctx.lane_id];
+      const size_t hash = XXH64()(key);
+      const uint32_t set_id = hash % cache_ctx.n_set;
+      block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
+      block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
     __syncwarp();
     uint32_t n_warp_missing = 0;
@@ -282,8 +296,7 @@ __global__ void PutWithoutEvictingKernel(CudaLruCacheContext<Key, Elem> cache_ct
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
       if (key == 0) { continue; }
-      const size_t hash = XXH64()(key);
-      const uint32_t set_id = hash >> (64 - cache_ctx.log2_n_set);
+      const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
       SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
       set_ctx.Lock(thread_ctx);
       Key evicted_key = 0;
@@ -321,19 +334,22 @@ __global__ void EvictKernel(CudaLruCacheContext<Key, Elem> cache_ctx, const Key*
   ThreadContext thread_ctx{};
   uint32_t num_evict = *n_evict;
   __shared__ Key block_keys[kNumWarpPerBlock][kWarpSize];
+  __shared__ size_t block_set_ids[kNumWarpPerBlock][kWarpSize];
   for (uint32_t batch_offset = thread_ctx.global_warp_id * kWarpSize; batch_offset < num_evict;
        batch_offset += thread_ctx.num_warps * kWarpSize) {
     const uint32_t n_batch_keys = min(kWarpSize, num_evict - batch_offset);
     if (thread_ctx.lane_id < n_batch_keys) {
-      block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] =
-          keys[batch_offset + thread_ctx.lane_id];
+      const Key key = keys[batch_offset + thread_ctx.lane_id];
+      const size_t hash = XXH64()(key);
+      const uint32_t set_id = hash % cache_ctx.n_set;
+      block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
+      block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
     }
     __syncwarp();
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
-      const size_t hash = XXH64()(key);
-      const uint32_t set_id = hash >> (64 - cache_ctx.log2_n_set);
+      const uint32_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
       SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
       set_ctx.Lock(thread_ctx);
       int evicted_way = -1;
