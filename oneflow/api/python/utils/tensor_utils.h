@@ -67,7 +67,7 @@ inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
 
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
-  // using byte
+  // NumPy strides use bytes. OneFlow strides use element counts.
   const auto stride = numpy::OFStrideToNumpyStride(JUST(tensor->stride())->StrideVec(),
                                                    tensor->dtype()->data_type());
 

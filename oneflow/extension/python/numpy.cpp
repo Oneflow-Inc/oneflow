@@ -71,14 +71,15 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
   return NumpyTypeToOFDataType(np_array_type);
 }
 
-std::vector<size_t> OFShapeToNumpyShape(const FixedVector& fixed_vec) {
+std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec) {
   size_t ndim = fixed_vec.size();
   auto result = std::vector<size_t>(ndim);
   for (int i = 0; i < ndim; i++) { result[i] = fixed_vec.at(i); }
   return result;
 }
 
-std::vector<size_t> OFStrideToNumpyStride(const FixedVector& fixed_vec, const DataType data_type) {
+// NumPy strides use bytes. OneFlow strides use element counts.
+std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type) {
   size_t ndim = fixed_vec.size();
   auto result = std::vector<size_t>(ndim);
   int byte_per_elem = GetSizeOfDataType(data_type);
