@@ -34,19 +34,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchFeedInput",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
-        auto ctx = std::make_shared<FeedInputOp>();
+        auto ctx = std::make_shared<schema::FeedInputOp>();
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
       });
   m.add_functor(
       "DispatchFetchOutput",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
-        auto ctx = std::make_shared<FetchOutputOp>();
+        auto ctx = std::make_shared<schema::FetchOutputOp>();
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
       });
   m.add_functor("DispatchFeedVariable",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
-                  auto ctx = std::make_shared<FeedVariableOp>();
+                  auto ctx = std::make_shared<schema::FeedVariableOp>();
                   ctx->l2 = JUST(l2.As<double>());
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
@@ -193,7 +193,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                    int64_t max_num_pixels, float random_area_min, float random_area_max,
                    float random_aspect_ratio_min, float random_aspect_ratio_max,
                    int64_t warmup_size, int64_t num_attempts) -> Maybe<Tensor> {
-                  auto ctx = std::make_shared<ImageDecoderRandomCropResizeOp>();
+                  auto ctx = std::make_shared<schema::ImageDecoderRandomCropResizeOp>();
                   ctx->target_width = target_width;
                   ctx->target_height = target_height;
                   ctx->seed = seed;
@@ -344,7 +344,7 @@ OpExprInterpContext interp_ctx(ctx);
         ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
         auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<TensorTuple>(*op, {},
-                                                   OpExprInterpContext(attrs, placement, nd_sbp));
+                                                   OpExprInterpContext(ctx, placement, nd_sbp));
       });
   m.add_functor(
       "DispatchImageBatchAlign",
