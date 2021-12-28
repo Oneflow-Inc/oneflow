@@ -16,10 +16,10 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/multi_client.h"
-#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -166,17 +166,20 @@ class ParquetReader final : public user_op::OpKernelState {
   ~ParquetReader() { Close(); };
 
   Maybe<void> Init(user_op::KernelInitContext* ctx);
-  void GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size);
   void Close();
-  bool IsClosed() { return is_closed_.load(); }
-  size_t NumColumns() { return num_columns_; }
+
+  Maybe<void> GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size);
+  Maybe<void> GetColumnBatch(int col, user_op::Tensor* tensor);
 
  private:
   Maybe<void> InitParallelInfo(user_op::KernelInitContext* ctx);
   Maybe<void> InitParquetFiles(const std::string& path);
   Maybe<void> InitWorkers(size_t buffer_size);
 
+  bool IsClosed() { return is_closed_.load(); }
   bool AllColumnsRanOut();
+  size_t NumColumns() { return num_columns_; }
+
   Maybe<bool> ReadColumn(int col);
   Maybe<void> NextRowGroup();
   Maybe<void> NextParquetFile();
@@ -215,7 +218,7 @@ void ParquetReader::Close() {
   }
 }
 
-void ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size) {
+Maybe<void> ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size) {
   std::vector<std::shared_ptr<TensorBuffer>> batch;
   batch.reserve(batch_size);
   buffers_[col]->PullMany(&batch, batch_size);
@@ -224,6 +227,26 @@ void ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_s
     buffer->Swap(sample.get());
     buffer++;
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
+  CHECK_GT_OR_RETURN(tensor->shape().NumAxes(), 0);
+  size_t batch_size = tensor->shape().At(0);
+  std::vector<std::shared_ptr<TensorBuffer>> batch;
+  batch.reserve(batch_size);
+  buffers_[col]->PullMany(&batch, batch_size);
+  CHECK_EQ_OR_RETURN(batch.size(), batch_size);
+  char* dptr = static_cast<char*>(tensor->mut_dptr());
+  DataType dtype = tensor->data_type();
+  int64_t sample_size = tensor->shape().Count(1);
+  for (auto& sample : batch) {
+    CHECK_EQ_OR_RETURN(sample->data_type(), dtype);
+    CHECK_EQ_OR_RETURN(sample->elem_cnt(), sample_size);
+    memcpy(dptr, sample->mut_data(), sample->nbytes());
+    dptr += sample->nbytes();
+  }
+  return Maybe<void>::Ok();
 }
 
 bool ParquetReader::AllColumnsRanOut() {
@@ -397,13 +420,42 @@ Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
 
 }  // namespace data
 
-// #define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)                        \
-//   REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")               \
-//       .SetCreateFn<GPTDataLoaderKernel<dtype>>()                      \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-//                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
+class ParquetReaderKernel final : public user_op::OpKernel {
+ public:
+  ParquetReaderKernel() = default;
+  ~ParquetReaderKernel() = default;
 
-// REGISTER_GPT_DATA_LOADER_KERNEL(int32_t);
-// REGISTER_GPT_DATA_LOADER_KERNEL(int64_t);
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    auto parquet_reader = std::make_shared<data::ParquetReader>();
+    parquet_reader->Init(ctx);
+    return parquet_reader;
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
+    auto* parquet_reader = static_cast<data::ParquetReader*>(state);
+    size_t output_size = ctx->output_size("out");
+    // NOTE(zwx): Could use MultiThreadLoop to process output tensors parallelly
+    for (size_t i = 0; i < output_size; ++i) {
+      user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
+      if (out_i->data_type() == DataType::kTensorBuffer) {
+        TensorBuffer* out_buffer = out_i->mut_dptr<TensorBuffer>();
+        size_t batch_size = out_i->shape().At(0);
+        parquet_reader->GetColumnBatch(i, out_buffer, batch_size);
+        // TODO(zwx): get tensor shape from column schema and resize tensor buffer
+        // out_buffer->Resize(shape);
+      } else {
+        parquet_reader->GetColumnBatch(i, out_i);
+      }
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("parquet_reader")
+    .SetCreateFn<ParquetReaderKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 }  // namespace oneflow
