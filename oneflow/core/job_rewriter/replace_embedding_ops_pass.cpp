@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 
 namespace oneflow {
 
@@ -24,17 +25,21 @@ class ReplaceEmbeddingOps final : public JobPass {
   ~ReplaceEmbeddingOps() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const { return true; }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
+    return Apply(op_graph, &job_builder, ctx);
   }
 };
 
-Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_builder,
+                                       JobPassCtx* ctx) const {
+  srand((unsigned)time(NULL));
+  int job_id = rand();
+  TeePersistentLogStream::Create(StrCat("my_optimized_job", job_id))->Write(job_builder->job());
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   auto AddScheduleOp = [&](const OptimizerConf& optimizer_conf,
                            const std::string& op_name) -> std::string {
@@ -190,6 +195,88 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Build();
         add_ops.push_back(embedding_gradient_shuffle_op.op_conf());
 
+        std::string embedding_diff_lbn =
+            embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0);
+        // dynamic loss scale
+        if (train_conf.has_dynamic_loss_scale_policy()) {
+          const auto& dynamic_loss_scale_state =
+              CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+
+          const LogicalBlobId count_not_finite_lbi =
+              GenLogicalBlobId(dynamic_loss_scale_state.count_not_finite_lbn());
+          LOG(ERROR) << "count_not_finite_lbi" << count_not_finite_lbi.op_name();
+          const OpNode* identity =
+              op_graph.OpNode4OpName(count_not_finite_lbi.op_name());  // identity
+          const LogicalBlobId identity_in_lbi = identity->op().BnInOp2Lbi("in_0");
+          const OpNode* producer =
+              op_graph.OpNode4OpName(identity_in_lbi.op_name());  // parallel_cast or add
+
+          OperatorConf last_multi_input_op_conf;
+          LOG(ERROR) << "producer " << producer->op().op_conf().user_conf().op_type_name();
+          if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
+            if (producer->op().op_conf().has_user_conf()
+                && producer->op().op_conf().user_conf().op_type_name()
+                       == "multi_count_not_finite") {
+              last_multi_input_op_conf = producer->op().op_conf();
+              user_op::UserOpConfWrapper multi_count_not_finite_op_conf(last_multi_input_op_conf);
+              user_op::UserOpConfWrapperBuilder new_multi_count_not_finite_op_builder(
+                  multi_count_not_finite_op_conf.op_name());
+              new_multi_count_not_finite_op_builder.OpTypeName("multi_count_not_finite");
+              for (int j = 0; j < multi_count_not_finite_op_conf.input_size("x"); ++j) {
+                new_multi_count_not_finite_op_builder.Input(
+                    "x", multi_count_not_finite_op_conf.input("x", j));
+              }
+              new_multi_count_not_finite_op_builder.Input("x", embedding_diff_lbn);
+              const auto new_multi_count_not_finite_op =
+                  new_multi_count_not_finite_op_builder.Output("y")
+                      .ScopeSymbolId(multi_count_not_finite_op_conf.op_conf().scope_symbol_id())
+                      .Build();
+              // only support one embedding
+              job_builder->MutOpsOnlyOnce({new_multi_count_not_finite_op.op_conf()});
+            } else {
+              UNIMPLEMENTED();
+            }
+          } else {
+            const auto count_not_finite_op =
+                user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-CountNotFinite-"
+                                                  + NewUniqueId())
+                    .Op("count_not_finite")
+                    .Input("x", embedding_diff_lbn)
+                    .Output("y")
+                    .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
+                    .Build();
+            add_ops.push_back(count_not_finite_op.op_conf());
+            if (producer->op().op_conf().has_user_conf()
+                && producer->op().op_conf().user_conf().op_type_name() == "add_n") {
+              last_multi_input_op_conf = producer->op().op_conf();
+            } else if (producer->op().op_conf().has_user_conf()
+                       && producer->op().op_conf().user_conf().op_type_name()
+                              == "hierarchical_parallel_cast") {
+              const LogicalBlobId in_lbi = producer->op().BnInOp2Lbi("in_0");
+              LOG(ERROR) << "in op:" << in_lbi.op_name();
+              const OpNode* add_n_node =
+                  op_graph.OpNode4OpName(in_lbi.op_name());  // parallel_cast or add
+              CHECK(add_n_node->op().op_conf().has_user_conf()
+                    && producer->op().op_conf().user_conf().op_type_name() == "add_n");
+              last_multi_input_op_conf = add_n_node->op().op_conf();
+            }
+            LOG(ERROR) << "last_multi_input_op_conf " << last_multi_input_op_conf.DebugString();
+            user_op::UserOpConfWrapper add_n_op_conf(last_multi_input_op_conf);
+            user_op::UserOpConfWrapperBuilder new_add_n_op_builder(add_n_op_conf.op_name());
+            new_add_n_op_builder.OpTypeName("add_n");
+            for (int j = 0; j < add_n_op_conf.input_size("in"); ++j) {
+              new_add_n_op_builder.Input("in", add_n_op_conf.input("in", j));
+            }
+            new_add_n_op_builder.Input("in", count_not_finite_op.output("y", 0));
+            new_add_n_op_builder.Output("out");
+            const auto new_add_n_op = new_add_n_op_builder.Output("out")
+                                          .ScopeSymbolId(add_n_op_conf.op_conf().scope_symbol_id())
+                                          .Build();
+            // only support one embedding
+            job_builder->MutOpsOnlyOnce({new_add_n_op.op_conf()});
+          }
+        }
+
         // embedding_update op
         // optimizer_conf as embedding param, now use train_conf.optimizer_conf(0) to test
         const auto& optimizer_conf = train_conf.optimizer_conf(0);
@@ -204,8 +291,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                 .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
                 .Input("context", embedding_lookup_op.output("out_context", 0))
                 .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
-                .Input("embedding_diff",
-                       embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0))
+                .Input("embedding_diff", embedding_diff_lbn)
                 .Input("learning_rate", learning_rate_lbn)
                 .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
                 .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
@@ -223,6 +309,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     // OperatorConf new_op_conf = op_conf;
     // new_op_conf.set_stream_name_hint("EMBEDDING");
   });
+  srand((unsigned)time(NULL));
+  job_id = rand();
+  TeePersistentLogStream::Create(StrCat("after_my_optimized_job", job_id))
+      ->Write(job_builder->job());
   return Maybe<void>::Ok();
 }
 
