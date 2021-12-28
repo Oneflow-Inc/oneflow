@@ -1791,10 +1791,16 @@ class DiagonalFunctor {
       if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
     }
 
-    std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
+    std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
+
+    // if input tensor is eager local, than try return tensor's view
+    if (x->is_eager() && x->is_local()) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::Diagonal(x, d_x, offset, p_dim1, p_dim2);
+      }
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x->contiguous()}, attrs);
   }
 

@@ -318,6 +318,62 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
   return output;
 }
 
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const std::shared_ptr<Tensor>& dx, const int32_t offset, const int32_t dim1, const int32_t dim2){
+  const auto& shape = input->shape();
+  const auto& stride = JUST(input->stride());
+  const int64_t ndim = shape->NumAxes();
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+
+  // infer output storage_offset
+  int64_t diag_size;
+  if (offset >= 0) {
+    diag_size = std::max<int64_t>(std::min(shape->At(dim1), shape->At(dim2)-offset), 0);
+  } else {
+    diag_size = std::max<int64_t>(std::min(shape->At(dim1)+offset, shape->At(dim2)), 0);
+  }
+  if (diag_size == 0) {
+    // skip
+  } else if (offset >= 0) {
+    storage_offset += offset * stride->At(dim2);
+  } else {
+    storage_offset -= offset * stride->At(dim1);
+  }
+
+  CHECK_GE_OR_RETURN(ndim, 2);
+  // infer output shape and stride
+  DimVector out_shape(shape->dim_vec());
+  StrideVector out_stride(stride->StrideVec());
+  out_shape.erase(out_shape.begin() + std::max(dim1, dim2));
+  out_stride.erase(out_stride.begin() + std::max(dim1, dim2));
+  out_shape.erase(out_shape.begin() + std::min(dim1, dim2));
+  out_stride.erase(out_stride.begin() + std::min(dim1, dim2));
+  out_shape.emplace_back(diag_size);
+  out_stride.emplace_back(stride->At(dim1) + stride->At(dim2));  
+
+  // generate view tensor
+  auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
+  // autograd 
+  if (input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
+              in_grads->at(0) =
+                  JUST(functional::DiagonalGrad(out_grads.at(0), dx, offset));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::diagonal_backward",
+                                                            backward_fn, {dx}, &outputs));
+  }
+
+  return output;
+}
+
+
 }  // namespace view
 }  // namespace one
 }  // namespace oneflow
