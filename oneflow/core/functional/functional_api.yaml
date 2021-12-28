@@ -1827,7 +1827,7 @@
   bind_python: False
 
 - name: "meshgrid"
-  signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
+  signature: 'TensorTuple (TensorTuple tensors, String indexing="ij") => Meshgrid'
   bind_python: True
 
 - name: "decode_onerec"
