@@ -24,6 +24,8 @@ import oneflow as flow
 
 try:
     import torch as torch_original
+
+    torch_original.set_printoptions(profile="full")
 except ImportError:
     print(
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
@@ -509,6 +511,7 @@ def clear_note_fake_program():
     eager_tensor_2_graph_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
+    flow.set_printoptions(profile="full")
 
 
 class DualObject:
@@ -702,27 +705,28 @@ def autotest(
                 for output in func_outputs:
                     flow_tensor = output.oneflow
                     if isinstance(flow_tensor, flow.Tensor):
-                        if (
-                            flow_tensor in eager_tensor_2_graph_tensor
-                            and check_allclose
-                        ):
-                            equality_res = np.allclose(
-                                flow_tensor.numpy(),
-                                eager_tensor_2_graph_tensor[flow_tensor].numpy(),
-                                rtol=rtol,
-                                atol=atol,
-                                equal_nan=True,
-                            )
-                            if equality_res == False:
-                                print_note_fake_program()
-                                print("---------Tensor Shape--------")
-                                print(flow_tensor.shape)
-                                print(eager_tensor_2_graph_tensor[flow_tensor].shape)
-                            test_case.assertTrue(equality_res)
+                        if flow_tensor in eager_tensor_2_graph_tensor:
+                            if check_allclose:
+                                equality_res = np.allclose(
+                                    flow_tensor.numpy(),
+                                    eager_tensor_2_graph_tensor[flow_tensor].numpy(),
+                                    rtol=rtol,
+                                    atol=atol,
+                                    equal_nan=True,
+                                )
+                                if equality_res == False:
+                                    print_note_fake_program()
+                                    print("---------Tensor Shape--------")
+                                    print(flow_tensor.shape)
+                                    print(
+                                        eager_tensor_2_graph_tensor[flow_tensor].shape
+                                    )
+                                test_case.assertTrue(equality_res)
                             if verbose:
                                 print(f"{f.__name__} test graph passed.")
                         else:
                             if check_graph:
+                                print_note_fake_program()
                                 test_case.assertTrue(
                                     False,
                                     f"{f.__name__} cannot find module/function/method to check graph.",

@@ -37,7 +37,7 @@ class TestTile(flow.unittest.TestCase):
         y = x.tile(reps)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tile_with_0dim_data(test_case):
         x = random_pytorch_tensor(ndim=0)
         reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))

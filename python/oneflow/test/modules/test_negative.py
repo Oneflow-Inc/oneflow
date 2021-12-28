@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestNegativeModule(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False)
     def test_ne_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)
@@ -33,24 +33,24 @@ class TestNegativeModule(flow.unittest.TestCase):
         y3 = -x
         return (y1, y2, y3)
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_tensor_negative_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         return x.negative()
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_negative_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         z = torch.negative(x)
         return z
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_neg_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         z = torch.neg(x)
         return z
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_tensor_negative_with_0dim_data(test_case):
         x = random_pytorch_tensor(ndim=0).to(random_device())
         return x.negative()

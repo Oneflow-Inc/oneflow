@@ -34,7 +34,7 @@ class TestUnfoldTensor(flow.unittest.TestCase):
         y = x.unfold(dimension, size, step)
         return y
 
-    @autotest(n=10, auto_backward=True, check_graph=False)
+    @autotest(n=10, auto_backward=True, check_graph=True)
     def test_unfold_tensor_with_0dim_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=0).to(device)
