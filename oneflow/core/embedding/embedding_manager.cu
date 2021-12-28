@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/embedding/rocks_key_value_store.h"
 
 namespace oneflow {
 
@@ -44,16 +45,32 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) { return it->second.get(); }
-  embedding::CudaInMemoryKeyValueStoreOptions options{};
-  options.num_shards = 4;
-  options.value_length = 128;
-  options.num_keys = ParseIntegerFromEnv("NUM_KEYS", 0);
-  CHECK_GT(options.num_keys, 0);
-  options.num_device_keys = ParseIntegerFromEnv("NUM_DEVICE_KEYS", 0);
-  options.key_type = DataType::kInt64;
-  options.value_type = DataType::kFloat;
-  options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
-  std::unique_ptr<embedding::KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
+
+  std::unique_ptr<embedding::KeyValueStore> store;
+  std::string kv_store = GetStringFromEnv("KEY_VALUE_STORE", "");
+  if (kv_store == "cuda_in_memory") {
+    embedding::CudaInMemoryKeyValueStoreOptions options{};
+    options.num_shards = 4;
+    options.value_length = 128;
+    options.num_keys = ParseIntegerFromEnv("NUM_KEYS", 0);
+    CHECK_GT(options.num_keys, 0);
+    options.num_device_keys = ParseIntegerFromEnv("NUM_DEVICE_KEYS", 0);
+    options.key_type = DataType::kInt64;
+    options.value_type = DataType::kFloat;
+    options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
+    store = NewCudaInMemoryKeyValueStore(options);
+  } else if (kv_store == "rocks") {
+    std::string path = GetStringFromEnv("ROCKS_PATH", "");
+    embedding::RocksKeyValueStoreOptions options{};
+    options.path = path + std::to_string(parallel_id);
+    options.value_length = 128;
+    options.key_type = DataType::kInt64;
+    options.value_type = DataType::kFloat;
+    options.max_query_length = 65536 * 26;
+    store = NewRocksKeyValueStore(options);
+  } else {
+    UNIMPLEMENTED();
+  }
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
   CHECK(pair.second);
   return pair.first->second.get();
