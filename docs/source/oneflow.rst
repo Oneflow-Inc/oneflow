@@ -135,6 +135,7 @@ oneflow
             to, 
             transpose,
             tril, 
+            tril_flat, 
             unsqueeze, 
             permute,
             var, 

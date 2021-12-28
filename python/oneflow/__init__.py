@@ -145,6 +145,7 @@ from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
 from oneflow._C import tril
+from oneflow._C import tril_flat
 from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import distributed_partial_fc_sample

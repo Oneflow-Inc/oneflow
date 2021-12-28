@@ -153,6 +153,7 @@ OneFlow Tensor Class
             topk, 
             transpose,
             tril, 
+            tril_flat, 
             triu, 
             type_as, 
             unfold, 
