@@ -150,6 +150,7 @@ void KeyValueStoreImpl::Get(ep::Stream* stream, uint32_t num_keys, const void* k
       std::memcpy(static_cast<char*>(host_missing_keys_) + (*host_n_missing_) * key_size_,
                   static_cast<char*>(host_query_keys_) + i * key_size_, key_size_);
       host_missing_indices_[*host_n_missing_] = i;
+      *host_n_missing_ += 1;
     } else {
       LOG(FATAL) << statuses_[i].ToString();
     }
