@@ -49,10 +49,9 @@ class FakeBN(nn.Module):
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
-        self._op = flow.builtin_op("identity").Input("in").Output("out").Build()
 
     def forward(self, input):
-        return self._op(input)[0]
+        return flow._C.identity(input)
 
 
 def conv3x3(
