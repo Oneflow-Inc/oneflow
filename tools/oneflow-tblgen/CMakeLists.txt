@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
 )
 include(FetchContent)
 
+set(JSON_Install ON)
 FetchContent_Declare(
   json
   URL ${JSON_URL}
@@ -10,6 +11,8 @@ FetchContent_Declare(
 )
 
 set(INJA_USE_EMBEDDED_JSON OFF)
+set(INJA_BUILD_TESTS OFF)
+set(BUILD_BENCHMARK OFF)
 FetchContent_Declare(
   inja
   URL ${INJA_URL}
