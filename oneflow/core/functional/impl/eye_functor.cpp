@@ -19,10 +19,11 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -32,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/api/common/device.h"
 
 namespace oneflow {
 namespace one {
@@ -46,13 +46,14 @@ class EyeDevcieFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    OpExprInterpContext ctx(attrs);
-    ctx.device = device;
-    auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    auto ctx = std::make_shared<schema::EyeOp>();
+    ctx->set_rows(JUST(rows.As<int64_t>()));
+    ctx->set_cols(JUST(cols.value_or(rows).As<int64_t>()));
+    ctx->set_dtype(dtype->data_type());
+
+    OpExprInterpContext interp_ctx(ctx);
+    interp_ctx.device = device;
+    auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, interp_ctx));
     JUST(res->set_requires_grad(requires_grad));
     return res;
   }
@@ -66,7 +67,7 @@ class EyeDeviceStrFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const std::string& device,
                            const bool& requires_grad) const {
-    const Symbol<Device>& dev = JUST(DeviceExportUtil::ParseAndNew(device));
+    const Symbol<Device>& dev = JUST(Device::ParseAndNew(device));
     return JUST(functional::Eye(rows, cols, dtype, dev, requires_grad));
   }
 };
@@ -78,7 +79,6 @@ class ConsistentEyeSbpListFunctor {
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
@@ -88,22 +88,14 @@ class ConsistentEyeSbpListFunctor {
       CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel())
           << "sbp of eye should be broadcast only";
     }
-
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
+    auto ctx = std::make_shared<schema::EyeOp>();
+    ctx->set_rows(JUST(rows.As<int64_t>()));
+    ctx->set_cols(JUST(cols.value_or(rows).As<int64_t>()));
+    ctx->set_dtype(dtype->data_type());
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     auto res = JUST(
-        OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp)));
+        OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, nd_sbp)));
     JUST(res->set_requires_grad(requires_grad));
     return res;
   }

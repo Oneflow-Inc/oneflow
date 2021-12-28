@@ -31,7 +31,7 @@ struct ReshapeCaptureState : public AutoGradCaptureState {
 class ReshapeOpExprGrad : public OpExprGradFunction<ReshapeCaptureState> {
  public:
   Maybe<void> Capture(ReshapeCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     state->input_shape_vec = inputs.at(0)->shape()->dim_vec();
     return Maybe<void>::Ok();
   }

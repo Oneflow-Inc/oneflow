@@ -34,7 +34,7 @@ class FusedScaleMaskSoftmaxDropout
     : public OpExprGradFunction<FusedScaleMaskSoftmaxDropoutInterState> {
  public:
   Maybe<void> Capture(FusedScaleMaskSoftmaxDropoutInterState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const FusedScaleMaskSoftmaxDropoutInterState* state,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
@@ -42,14 +42,14 @@ class FusedScaleMaskSoftmaxDropout
 Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutInterState* state,
                                                   const TensorTuple& inputs,
                                                   const TensorTuple& outputs,
-                                                  const OpInterpCtx* ctx) const {
+                                                  const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 3);  // input, mask, dropout_mask
   state->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FusedScaleMaskSoftmaxDropoutOp*>(ctx);
-  state->scale = interp_ctx->scale_value();
-  state->dropout_scale = interp_ctx->dropout_scale_value();
+  auto* op_ctx = dynamic_cast<const FusedScaleMaskSoftmaxDropoutOp*>(ctx);
+  state->scale = op_ctx->scale_value();
+  state->dropout_scale = op_ctx->dropout_scale_value();
 
   state->SaveTensorForBackward(inputs.at(1));   // mask
   state->SaveTensorForBackward(inputs.at(2));   // dropout_mask

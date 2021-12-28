@@ -32,13 +32,13 @@ template<bool is_distributed>
 class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureState> {
  public:
   Maybe<void> Capture(SparseCrossEntropyCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const SparseCrossEntropyOp*>(ctx);
-    state->depth = interp_ctx->depth();
+    auto* op_ctx = dynamic_cast<const SparseCrossEntropyOp*>(ctx);
+    state->depth = op_ctx->depth();
     state->prediction_index = state->SaveTensorForBackward(inputs.at(0));  // prediction
     state->label_index = state->SaveTensorForBackward(inputs.at(1));       // label
     return Maybe<void>::Ok();

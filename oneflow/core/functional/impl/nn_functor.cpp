@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
@@ -46,8 +47,13 @@ class BiasAddFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = x->shape()->NumAxes();
+      axis_val += num_axes;
+    }
     auto ctx = std::make_shared<schema::BiasAddOp>();
-    ctx->set_axis(axis);
+    ctx->set_axis(axis_val);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, ctx);
   }
 
@@ -1301,8 +1307,7 @@ class NormalizationAddReluFunctor {
         return Relu(normalize_result, /*inplace=*/false);
       }
     }
-    auto ctx = std::make_shared<
- schema::NormalizationAddReluBaseOp>();
+    auto ctx = std::make_shared<schema::NormalizationAddReluOp>();
     ctx->set_epsilon(epsilon);
     ctx->set_axis(axis);
     // convert torch momentum to tensorflow momentum
@@ -1412,7 +1417,6 @@ class DropoutFunctor {
                                         .Output("out")
                                         .Output("mask")
                                         .Build());
-    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& addend, const float& p,
@@ -1421,12 +1425,11 @@ class DropoutFunctor {
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     auto ctx = std::make_shared<schema::DropoutOp>();
     ctx->set_rate(p);
-    ctx->state = dropout_state;
     if (addend) {
       if ((!training) || p == 0.0) {
-        return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)}, ctx);
+        return functional::Add(x, JUST(addend), /*alpha=*/1.f, /*inplace=*/false);
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)}, ctx);
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)}, OpExprInterpContext(ctx, dropout_state));
       }
     } else {
       if (!training || p == 0.0) {
@@ -1440,7 +1443,6 @@ class DropoutFunctor {
  private:
   std::shared_ptr<OpExpr> dropout_op_;
   std::shared_ptr<OpExpr> dropout_addend_op_;
-  std::shared_ptr<OpExpr> add_op_;
 };
 
 class DropoutGradFunctor {
@@ -1566,17 +1568,6 @@ class FoldFunctor {
   std::shared_ptr<OpExpr> fold_op_;
 };
 
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
-
 class OneHotFunctor {
  public:
   OneHotFunctor() {
@@ -1633,16 +1624,41 @@ class L2NormalizeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("l2_normalize").Input("x").Output("y").Output("square_x_sum").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
-                                const float& epsilon) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
+                           const float& epsilon) const {
     auto ctx = std::make_shared<schema::L2NormalizeOp>();
-    ctx->set_axis(axis);
+    ctx->set_axis(0);
     ctx->set_epsilon(epsilon);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, ctx);
+    if (axis != 0) {
+      std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+      for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
+      std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
+
+      const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_, {JUST(functional::Transpose(input, input_perm))}, ctx));
+      return functional::Transpose(result->at(0), input_perm);
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NormalizeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const int32_t& dim, const float& eps) const {
+    return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
+                                          const int32_t&)>(
+               [](const auto& x, const float& p, const int32_t& dim) -> Maybe<Tensor> {
+                 return functional::ScalarNorm(x, p, dim, true, NullOpt);
+               })
+        .then([&](const auto& x) { return functional::Clamp(x, eps, NullOpt); })
+        .then([&](const auto& x) { return functional::Div(input, x); })
+        .call(input, p, dim);
+  }
 };
 
 class FusedSelfAttentionFunctor {
@@ -1710,8 +1726,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(p);
     mask_ctx->set_seed(gen->current_seed());
-    mask_ctx->state = random_mask_like_state;
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, mask_ctx));
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, OpExprInterpContext(mask_ctx, random_mask_like_state)));
 
     float mask_scale_value = 1.0;
     if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
@@ -1807,26 +1822,33 @@ class FusedBiasAddDropoutFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
-    mask_ctx->set_rate(p);
-    mask_ctx->set_seed(gen->current_seed());
-    mask_ctx->state = random_mask_like_state;
-
-    float scale = 0.0;
-    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
-    auto ctx =
-        std::make_shared<schema::FusedBiasAddMaskScaleOp>();
-    ctx->set_scale(scale);
-    ctx->set_axis(axis);
-    return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-             return OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {a}, mask_ctx);
-           })
-        .then([&](const std::shared_ptr<one::Tensor>& x) {
-          return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x}, ctx);
-        })
-        .call();
+    int32_t axis_val = axis;
+    if (axis_val < 0) {
+      const int64_t num_axes = a->shape()->NumAxes();
+      axis_val += num_axes;
+    }
+    if (p >= 0.0) {
+      float scale = 0.0;
+      if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+      const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+      const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+      auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
+      mask_ctx->set_rate(p);
+      mask_ctx->set_seed(gen->current_seed());
+      auto ctx =
+          std::make_shared<schema::FusedBiasAddMaskScaleOp>();
+      ctx->set_scale(scale);
+      ctx->set_axis(axis_val);
+      return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+               return OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {a}, OpExprInterpContext(mask_ctx, random_mask_like_state));
+             })
+          .then([&](const std::shared_ptr<one::Tensor>& x) {
+            return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x}, ctx);
+          })
+          .call();
+    } else {
+      return functional::BiasAdd(a, b, axis_val);
+    }
   }
 
  private:
@@ -1917,9 +1939,8 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(rate);
     mask_ctx->set_seed(gen->current_seed());
-    mask_ctx->state = random_mask_like_state;
     const auto& dropout_mask =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, mask_ctx));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, OpExprInterpContext(mask_ctx, random_mask_like_state)));
 
     float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
@@ -2124,6 +2145,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
+  m.add_functor<impl::NormalizeFunctor>("Normalize");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");

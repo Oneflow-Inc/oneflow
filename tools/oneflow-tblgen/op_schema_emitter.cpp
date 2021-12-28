@@ -63,6 +63,7 @@ class OpSchemaEmitter {
 
   void emitInt(const Record* def, StringRef fieldname, json* op) const;
   void emitBit(const Record* def, StringRef fieldname, json* op) const;
+  void emitTrait(const Record* def, StringRef fieldname, StringRef traitname, json* op) const;
 
  private:
   static std::string emitType(const std::string& ods_type) {
@@ -120,15 +121,15 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
       PrintFatalError(def, "op name is not start with `OneFlow_`: " + op_name.str());
     }
     json op{{"name", op_type_name},
-            {"input", json::object()},
-            {"output", json::object()},
-            {"attrs", json::object()}};
+            {"input", json::array()},
+            {"output", json::array()},
+            {"attrs", json::array()}};
 
     emitInputAndOutput(def, &op);
     emitAttrs(def, &op);
     emitInt(def, "same_output_regst_num", &op);
-    emitBit(def, "no_grad", &op);
-    emitBit(def, "cpu_only", &op);
+    emitTrait(def, "no_grad", "NoGrad", &op);
+    emitTrait(def, "cpu_only", "CpuOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);
     emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
@@ -163,14 +164,14 @@ void OpSchemaEmitter<Target>::emitInputAndOutput(const Record* def, json* op) co
     const auto* A = dyn_cast<DefInit>(input->getArg(i))->getDef();
     bool is_optional = A->isSubClassOf("Optional");
     auto NS = input->getArgName(i)->getAsUnquotedString();
-    (*op)["input"][NS] = {{"is_optional", is_optional}, {"size", 1}};
+    (*op)["input"].push_back({{"name", NS}, {"is_optional", is_optional}, {"size", 1}});
   }
   const auto* output = def->getValueAsDag("output");
   for (size_t i = 0; i < output->getNumArgs(); ++i) {
     const auto* A = dyn_cast<DefInit>(output->getArg(i))->getDef();
     bool is_optional = A->isSubClassOf("Optional");
     auto NS = output->getArgName(i)->getAsUnquotedString();
-    (*op)["output"][NS] = {{"is_optional", is_optional}, {"size", 1}};
+    (*op)["output"].push_back({{"name", NS}, {"is_optional", is_optional}, {"size", 1}});
   }
 }
 
@@ -186,17 +187,32 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
       AS = A->getValueAsDef("baseAttr")->getNameInitAsString();
     }
     auto NS = attrs->getArgName(i)->getAsUnquotedString();
-    (*op)["attrs"][NS] = {{"type", emitType(AS)}};
+    json attr{{"name", NS}, {"type", emitType(AS)}};
 
-    if (auto DV = A->getValueAsOptionalString("defaultValue")) {
-      (*op)["attrs"][NS]["default"] = DV.getValue();
-    }
+    if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.getValue(); }
+
+    (*op)["attrs"].push_back(attr);
   }
 }
 
 template<FileTarget Target>
 void OpSchemaEmitter<Target>::emitBit(const Record* def, StringRef fieldname, json* op) const {
   (*op)[fieldname.str()] = def->getValueAsBit(fieldname);
+}
+
+template<FileTarget Target>
+void OpSchemaEmitter<Target>::emitTrait(const Record* def, StringRef fieldname, StringRef traitname,
+                                        json* op) const {
+  bool hasTrait = false;
+
+  for (auto elem : *def->getValueAsListInit("traits")) {
+    if (elem->getAsString() == traitname) {
+      hasTrait = true;
+      break;
+    }
+  }
+
+  (*op)[fieldname.str()] = hasTrait;
 }
 
 template<FileTarget Target>

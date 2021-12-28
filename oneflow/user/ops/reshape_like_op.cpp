@@ -55,8 +55,8 @@ namespace oneflow {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReshapeLikeOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                     const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ReshapeLikeOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
   CHECK_NOTNULL_OR_RETURN(like_modifier);
   like_modifier->set_requires_grad(false);

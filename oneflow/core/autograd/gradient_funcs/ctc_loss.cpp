@@ -33,20 +33,20 @@ struct CTCLossCaptureState : public AutoGradCaptureState {
 class CTCLoss : public OpExprGradFunction<CTCLossCaptureState> {
  public:
   Maybe<void> Capture(CTCLossCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const CTCLossCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> CTCLoss::Capture(CTCLossCaptureState* state, const TensorTuple& inputs,
-                             const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                             const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const CtcLossOp*>(ctx);
-  state->max_target_length = interp_ctx->max_target_length();
-  state->blank = interp_ctx->blank();
-  state->zero_infinity = interp_ctx->zero_infinity();
+  auto* op_ctx = dynamic_cast<const CtcLossOp*>(ctx);
+  state->max_target_length = op_ctx->max_target_length();
+  state->blank = op_ctx->blank();
+  state->zero_infinity = op_ctx->zero_infinity();
 
   CHECK_EQ_OR_RETURN(inputs.size(), 4);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);

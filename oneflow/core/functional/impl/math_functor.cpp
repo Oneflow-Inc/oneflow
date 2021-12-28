@@ -16,10 +16,12 @@ limitations under the License.
 
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/system_ops.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -29,8 +31,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
-
-#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -84,7 +84,7 @@ class ScalarMathBaseFunctor {
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }
-    auto ctx = std::make_shared<typename T::ContextT>();
+    auto ctx = std::make_shared<T>();
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
@@ -125,10 +125,9 @@ class ScalarMathBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarAddFunctor : public ScalarMathBaseFunctor<ScalarAddFunctor> {
+class ScalarAddFunctor : public ScalarMathBaseFunctor<schema::ScalarAddOp> {
  public:
-  using ContextT = schema::ScalarAddOp;
-  ScalarAddFunctor() : ScalarMathBaseFunctor<ScalarAddFunctor>(/*op_name=*/"scalar_add") {}
+  ScalarAddFunctor() : ScalarMathBaseFunctor<schema::ScalarAddOp>(/*op_name=*/"scalar_add") {}
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& other,
                            const Scalar& alpha, const bool& inplace) const {
@@ -143,7 +142,7 @@ class ScalarAddFunctor : public ScalarMathBaseFunctor<ScalarAddFunctor> {
     } else {
       scalar = Scalar(other.Value<int64_t>() * alpha.Value<int64_t>());
     }
-    return ScalarMathBaseFunctor<ScalarAddFunctor>::operator()(input, scalar, inplace);
+    return ScalarMathBaseFunctor<schema::ScalarAddOp>::operator()(input, scalar, inplace);
   }
 };
 
@@ -184,10 +183,9 @@ class ScalarSub2Functor {
   }
 };
 
-class ScalarMulFunctor : public ScalarMathBaseFunctor<ScalarMulFunctor> {
+class ScalarMulFunctor : public ScalarMathBaseFunctor<schema::ScalarMulOp> {
  public:
-  using ContextT = schema::ScalarMulOp;
-  ScalarMulFunctor() : ScalarMathBaseFunctor<ScalarMulFunctor>(/*op_name=*/"scalar_mul") {}
+  ScalarMulFunctor() : ScalarMathBaseFunctor<schema::ScalarMulOp>(/*op_name=*/"scalar_mul") {}
 };
 
 class ScalarMul2Functor {
@@ -197,11 +195,11 @@ class ScalarMul2Functor {
   }
 };
 
-class InplaceScalarMulFunctor : public ScalarMathBaseFunctor<ScalarMulFunctor> {
+class InplaceScalarMulFunctor : public ScalarMathBaseFunctor<schema::ScalarMulOp> {
  public:
-  InplaceScalarMulFunctor() : ScalarMathBaseFunctor<ScalarMulFunctor>(/*op_name=*/"scalar_mul") {}
+  InplaceScalarMulFunctor() : ScalarMathBaseFunctor<schema::ScalarMulOp>(/*op_name=*/"scalar_mul") {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarMathBaseFunctor<ScalarMulFunctor>::operator()(x, scalar, true);
+    return ScalarMathBaseFunctor<schema::ScalarMulOp>::operator()(x, scalar, true);
   }
 };
 
@@ -219,10 +217,9 @@ class ScalarDiv2Functor {
   }
 };
 
-class ScalarPowFunctor : public ScalarMathBaseFunctor<ScalarPowFunctor> {
+class ScalarPowFunctor : public ScalarMathBaseFunctor<schema::ScalarPowOp> {
  public:
-  using ContextT = schema::ScalarPowOp;
-  ScalarPowFunctor() : ScalarMathBaseFunctor<ScalarPowFunctor>(/*op_name=*/"scalar_pow") {}
+  ScalarPowFunctor() : ScalarMathBaseFunctor<schema::ScalarPowOp>(/*op_name=*/"scalar_pow") {}
 };
 
 class ScalarPowGradFunctor {
@@ -251,17 +248,15 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarFloorDivFunctor : public ScalarMathBaseFunctor<ScalarFloorDivFunctor> {
+class ScalarFloorDivFunctor : public ScalarMathBaseFunctor<schema::ScalarFloordivOp> {
  public:
-  using ContextT = schema::ScalarFloordivOp;
   ScalarFloorDivFunctor()
-      : ScalarMathBaseFunctor<ScalarFloorDivFunctor>(/*op_name=*/"scalar_floordiv") {}
+      : ScalarMathBaseFunctor<schema::ScalarFloordivOp>(/*op_name=*/"scalar_floordiv") {}
 };
 
-class ScalarFModFunctor : public ScalarMathBaseFunctor<ScalarFModFunctor> {
+class ScalarFModFunctor : public ScalarMathBaseFunctor<schema::ScalarFmodOp> {
  public:
-  using ContextT = schema::ScalarFmodOp;
-  ScalarFModFunctor() : ScalarMathBaseFunctor<ScalarFModFunctor>(/*op_name=*/"scalar_fmod") {}
+  ScalarFModFunctor() : ScalarMathBaseFunctor<schema::ScalarFmodOp>(/*op_name=*/"scalar_fmod") {}
 };
 
 class ReduceMaxFunctor {
@@ -590,7 +585,6 @@ class TransposeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& permute) const {
-    MutableAttrMap attrs;
     auto ndim = input->ndim();
     CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
 
@@ -604,8 +598,9 @@ class TransposeFunctor {
           << ndim << " ) but got " << positive_perm[i];
     }
 
-    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    auto ctx = std::make_shared<schema::TransposeOp>();
+    ctx->set_perm(positive_perm);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, ctx);
   }
 
  private:
@@ -653,7 +648,7 @@ class ArangeFunctor {
     auto ctx = std::make_shared<schema::ArangeOp>();
     DataType range_dtype;
     if (dtype.has_value()) {
-      range_dtype = dtype->data_type();
+      range_dtype = JUST(dtype)->data_type();
     } else {
       range_dtype = delta.IsIntegral() ? DType::Int64()->data_type() : DType::Float()->data_type();
     }
@@ -667,8 +662,9 @@ class ArangeFunctor {
       ctx->set_float_limit(JUST(limit.As<double>()));
       ctx->set_float_delta(JUST(delta.As<double>()));
     }
-    ctx->device = device;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    OpExprInterpContext interp_ctx(ctx);
+    interp_ctx.device = device;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, interp_ctx);
   }
 
  private:
@@ -694,7 +690,7 @@ class ConsistentArangeFunctor {
     auto ctx = std::make_shared<schema::ArangeOp>();
     DataType range_dtype;
     if (dtype.has_value()) {
-      range_dtype = dtype->data_type();
+      range_dtype = JUST(dtype)->data_type();
     } else {
       range_dtype = delta.IsIntegral() ? DType::Int64()->data_type() : DType::Float()->data_type();
     }
@@ -709,9 +705,7 @@ class ConsistentArangeFunctor {
       ctx->set_float_delta(JUST(delta.As<double>()));
     }
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
   }
 
  private:
@@ -1249,7 +1243,7 @@ class SelectTopNFunctor {
   SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
 
   Maybe<TensorTuple> operator()(const TensorTuple& inputs, int32_t n) const {
-    auto ctx = std::make_shared<SelectTopNOpInterpCtx>();
+    auto ctx = std::make_shared<schema::SelectTopNOp>();
     ctx->top_n = n;
     std::vector<bool> require_grad(n);
     std::vector<bool> is_leaf(n);
@@ -1318,13 +1312,13 @@ class MaximumFunctor {
 template<typename T>
 class ScalarLogicalBaseFunctor {
  public:
-  explicit ScalarLogicalBaseFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder(T::op_type_name_).Input("in").Output("out").Build());
+  explicit ScalarLogicalBaseFunctor(const std::string& op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
   }
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     const DataType dtype = x->dtype()->data_type();
-    auto ctx = std::make_shared<typename T::ContextT>();
+    auto ctx = std::make_shared<T>();
 
     if (IsFloatingDataType(dtype)) {
       ctx->set_float_operand(JUST(scalar.As<double>()));
@@ -1345,10 +1339,9 @@ class ScalarLogicalBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalEqualFunctor> {
+class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalEqualOp> {
  public:
-  using ContextT = schema::ScalarLogicalEqualOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_equal";
+  ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalEqualOp>("scalar_logical_equal") {}
 };
 
 // (scalar == x) = (x == scalar)
@@ -1359,10 +1352,9 @@ class ScalarLogicalEqual2Functor {
   }
 };
 
-class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalNotEqualFunctor> {
+class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalNotEqualOp> {
  public:
-  using ContextT = schema::ScalarLogicalNotEqualOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_not_equal";
+  ScalarLogicalNotEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalNotEqualOp>("scalar_logical_not_equal") {}
 };
 
 // (scalar != x) = (x != scalar)
@@ -1373,10 +1365,9 @@ class ScalarLogicalNotEqual2Functor {
   }
 };
 
-class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterFunctor> {
+class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterOp> {
  public:
-  using ContextT = schema::ScalarLogicalGreaterOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_greater";
+  ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterOp>("scalar_logical_greater") {}
 };
 
 // (scalar > x) = (x < scalar)
@@ -1388,10 +1379,9 @@ class ScalarLogicalGreater2Functor {
 };
 
 class ScalarLogicalGreaterEqualFunctor
-    : public ScalarLogicalBaseFunctor<ScalarLogicalGreaterEqualFunctor> {
+    : public ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterEqualOp> {
  public:
-  using ContextT = schema::ScalarLogicalGreaterEqualOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_greater_equal";
+  ScalarLogicalGreaterEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterEqualOp>("scalar_logical_greater_equal") {}
 };
 
 // (scalar >= x) = (x <= scalar)
@@ -1402,10 +1392,9 @@ class ScalarLogicalGreaterEqual2Functor {
   }
 };
 
-class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalLessFunctor> {
+class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalLessOp> {
  public:
-  using ContextT = schema::ScalarLogicalLessOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_less";
+  ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalLessOp>("scalar_logical_less") {}
 };
 
 // (scalar < x) = (x > scalar)
@@ -1417,10 +1406,9 @@ class ScalarLogicalLess2Functor {
 };
 
 class ScalarLogicalLessEqualFunctor
-    : public ScalarLogicalBaseFunctor<ScalarLogicalLessEqualFunctor> {
+    : public ScalarLogicalBaseFunctor<schema::ScalarLogicalLessEqualOp> {
  public:
-  using ContextT = schema::ScalarLogicalLessEqualOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_less_equal";
+  ScalarLogicalLessEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalLessEqualOp>("scalar_logical_less_equal") {}
 };
 
 // (scalar <= x) = (x >= scalar)
@@ -1431,10 +1419,9 @@ class ScalarLogicalLessEqual2Functor {
   }
 };
 
-class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalAndFunctor> {
+class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalAndOp> {
  public:
-  using ContextT = schema::ScalarLogicalAndOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_and";
+  ScalarLogicalAndFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalAndOp>("scalar_logical_and") {}
 };
 
 // (scalar && x) = (x && scalar)
@@ -1445,10 +1432,9 @@ class ScalarLogicalAnd2Functor {
   }
 };
 
-class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalOrFunctor> {
+class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalOrOp> {
  public:
-  using ContextT = schema::ScalarLogicalOrOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_or";
+  ScalarLogicalOrFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalOrOp>("scalar_logical_or") {}
 };
 
 // (scalar || x) = (x || scalar)
@@ -1459,10 +1445,9 @@ class ScalarLogicalOr2Functor {
   }
 };
 
-class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor<ScalarLogicalXorFunctor> {
+class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalXorOp> {
  public:
-  using ContextT = schema::ScalarLogicalXorOp;
-  static constexpr const char* op_type_name_ = "scalar_logical_xor";
+  ScalarLogicalXorFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalXorOp>("scalar_logical_xor") {}
 };
 
 // (scalar ^ x) = (x ^ scalar)

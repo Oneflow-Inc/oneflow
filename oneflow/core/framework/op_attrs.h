@@ -27,11 +27,11 @@ namespace oneflow {
 
 using user_op::AttrVal;
 
-class OpInterpCtx;
+class OpBase;
 
 class OpAttrs {
  public:
-  explicit OpAttrs(const OpInterpCtx* ctx) : ctx_(ctx) {}
+  explicit OpAttrs(const OpBase* op) : op_ctx_(op) {}
 
   size_t count(const std::string& attr_name) const;
 
@@ -85,7 +85,7 @@ class OpAttrs {
   bool operator==(const OpAttrs& other) const;
 
  private:
-  const OpInterpCtx* ctx_;
+  const OpBase* op_ctx_;
 };
 
 }  // namespace oneflow

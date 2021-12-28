@@ -31,27 +31,37 @@ namespace one {
 class OpInterpUtil {
  public:
   template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const std::shared_ptr<OpBase>& op_ctx) {
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext(op_ctx));
+  }
+
+  template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, std::make_shared<OpInterpCtx>(nullptr));
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext());
   }
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                           const std::shared_ptr<OpInterpCtx>& ctx);
+                           const OpExprInterpContext& ctx);
 
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                              TensorTuple* outputs) {
-    return Dispatch(op_expr, inputs, outputs, std::make_shared<OpInterpCtx>(nullptr));
+                              TensorTuple* outputs, const std::shared_ptr<OpBase>& op_ctx) {
+    return Dispatch(op_expr, inputs, outputs, OpExprInterpContext(op_ctx));
   }
 
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                              TensorTuple* outputs, const std::shared_ptr<OpInterpCtx>& ctx);
+                              TensorTuple* outputs) {
+    return Dispatch(op_expr, inputs, outputs, OpExprInterpContext());
+  }
+
+  static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                              TensorTuple* outputs, const OpExprInterpContext& ctx);
 
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
-                                              const std::shared_ptr<OpInterpCtx>& ctx);
+                                              const std::shared_ptr<OpBase>& op_ctx);
 
   static Maybe<Tensor> BuildTensor(
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,

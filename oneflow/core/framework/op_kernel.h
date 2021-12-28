@@ -140,7 +140,7 @@ class KernelCacheContext {
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
-    return AttrValueCast<T>(*Attr4Name(attr_name));
+    return AttrValueCast<T>(*CHECK_JUST(Attr4Name(attr_name)));
   }
 
   template<typename T>
@@ -150,7 +150,7 @@ class KernelCacheContext {
   KernelCacheContext() = default;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+  virtual Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInferContext {

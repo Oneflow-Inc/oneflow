@@ -29,7 +29,7 @@ struct SmoothL1LossCaptureState : public AutoGradCaptureState {
 class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
  public:
   Maybe<void> Capture(SmoothL1LossCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     state->requires_grad = inputs.at(0)->requires_grad();  // prediction
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -37,8 +37,8 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
     state->SaveTensorForBackward(inputs.at(0));  // prediction
     state->SaveTensorForBackward(inputs.at(1));  // label
 
-    auto* interp_ctx = dynamic_cast<const SmoothL1LossOp*>(ctx);
-    state->beta = interp_ctx->beta();
+    auto* op_ctx = dynamic_cast<const SmoothL1LossOp*>(ctx);
+    state->beta = op_ctx->beta();
     return Maybe<void>::Ok();
   }
 

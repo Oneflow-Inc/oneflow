@@ -47,7 +47,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
   cond_arg_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
@@ -87,7 +87,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
   cond_arg_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();

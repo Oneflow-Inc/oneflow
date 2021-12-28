@@ -36,9 +36,7 @@ namespace impl {
 
 class ReluFunctor {
  public:
-  ReluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
-  }
+  ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("x", 1).Output("y", 1).Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(x));

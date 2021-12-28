@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -27,41 +27,30 @@ struct DiagonalInterpState : public AutoGradCaptureState {
 
 class Diagonal : public OpExprGradFunction<DiagonalInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DiagonalInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DiagonalInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(DiagonalInterpState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
+  Maybe<void> Apply(const DiagonalInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-
- private:
-  AttrMap base_attrs_;
 };
 
-Maybe<void> Diagonal::Init(const OpExpr& op) {
-  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> Diagonal::Capture(DiagonalInterpState* ctx, const TensorTuple& inputs,
-                              const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> Diagonal::Capture(DiagonalInterpState* state, const TensorTuple& inputs,
+                              const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
-  ctx->requires_grad = inputs.at(0)->requires_grad();
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->offset = JUST(composed_attrs.GetAttr<int32_t>("offset"));
-  ctx->SaveTensorForBackward(inputs.at(0));
+  state->requires_grad = inputs.at(0)->requires_grad();
+  if (!state->requires_grad) { return Maybe<void>::Ok(); }
+  const auto* op_ctx = dynamic_cast<const DiagonalOp*>(ctx);
+  state->offset = JUST(op_ctx->GetAttr<int32_t>("offset"));
+  state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Diagonal::Apply(const DiagonalInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Diagonal::Apply(const DiagonalInterpState* state, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(2);
-  if (ctx->requires_grad) {
-    const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(functional::DiagonalGrad(out_grads.at(0), x, ctx->offset));
+  if (state->requires_grad) {
+    const auto& x = state->SavedTensors().at(0);
+    in_grads->at(0) = JUST(functional::DiagonalGrad(out_grads.at(0), x, state->offset));
   }
   return Maybe<void>::Ok();
 }

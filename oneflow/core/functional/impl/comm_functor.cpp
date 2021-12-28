@@ -135,13 +135,9 @@ namespace {
 
 Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
                                                               DeviceType device_type) {
-  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
   return one::OpBuilder("eager_nccl_all_reduce")
       .Input("in")
       .Output("out")
-      // TODO(hjchen2)
-      // .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      // .Attr<bool>("async_launch", true)
       .Build();
 }
 
@@ -162,11 +158,15 @@ class LocalAllReduceFunctor {
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
+    const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+    auto ctx = std::make_shared<schema::EagerNcclAllReduceOp>();
+    ctx->set_parallel_conf(PbMessage2TxtString(parallel_desc->parallel_conf()));
+    ctx->set_async_launch(true);
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
       return OpInterpUtil::Dispatch<Tensor>(*op_expr,
-                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
+                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, ctx);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx);
     }
   }
 };
@@ -320,17 +320,16 @@ class RecvFunctor {
     ctx->set_dtype(data_type);
     ctx->set_device_type(device->type());
     ctx->set_device_id(device->device_id());
-    ctx->device = device;
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       CHECK_OR_RETURN(out_tensor_device == device);
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = out_tensor;
-      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), ctx));
+      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), OpExprInterpContext(ctx, device)));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, ctx);
+    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, OpExprInterpContext(ctx, device));
   }
 
  private:

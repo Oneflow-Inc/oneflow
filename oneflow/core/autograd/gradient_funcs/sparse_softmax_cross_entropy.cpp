@@ -29,7 +29,7 @@ struct SparseSoftmaxCrossEntropyCaptureState : public AutoGradCaptureState {
 class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyCaptureState> {
  public:
   Maybe<void> Capture(SparseSoftmaxCrossEntropyCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const SparseSoftmaxCrossEntropyCaptureState* state,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
@@ -37,9 +37,9 @@ class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEn
 Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureState* state,
                                                const TensorTuple& inputs,
                                                const TensorTuple& outputs,
-                                               const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const SparseSoftmaxCrossEntropyOp*>(ctx);
-  state->depth = interp_ctx->depth();
+                                               const OpBase* ctx) const {
+  auto* op_ctx = dynamic_cast<const SparseSoftmaxCrossEntropyOp*>(ctx);
+  state->depth = op_ctx->depth();
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);
   state->SaveTensorForBackward(outputs.at(0));  // prob

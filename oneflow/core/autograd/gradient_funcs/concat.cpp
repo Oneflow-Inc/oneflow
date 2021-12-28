@@ -32,20 +32,20 @@ struct ConcatCaptureState : public AutoGradCaptureState {
 class Concat : public OpExprGradFunction<ConcatCaptureState> {
  public:
   Maybe<void> Capture(ConcatCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const ConcatCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Concat::Capture(ConcatCaptureState* state, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                            const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad.resize(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     state->requires_grad[i] = inputs.at(i)->requires_grad();
   }
 
-  auto* interp_ctx = dynamic_cast<const ConcatOp*>(ctx);
-  state->axis = interp_ctx->axis();
+  auto* op_ctx = dynamic_cast<const ConcatOp*>(ctx);
+  state->axis = op_ctx->axis();
   for (const auto& input : inputs) { state->SaveTensorForBackward(input); }
   state->input_num = inputs.size();
   return Maybe<void>::Ok();
@@ -57,11 +57,15 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* state, const TensorTuple& ou
   in_grads->resize(state->input_num);
   TensorTuple like(state->input_num);
   for (int i = 0; i < state->input_num; ++i) { like[i] = state->SavedTensors().at(i); }
-  const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, state->axis));
-  CHECK_EQ_OR_RETURN(results->size(), state->input_num);
+  if (state->input_num == 1) {
+    in_grads->at(0) = out_grads.at(0);
+  } else {
+    const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, state->axis));
+    CHECK_EQ_OR_RETURN(results->size(), state->input_num);
 
-  for (int i = 0; i < state->input_num; ++i)
-    if (state->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }
+    for (int i = 0; i < state->input_num; ++i)
+      if (state->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }
+  }
   return Maybe<void>::Ok();
 }
 

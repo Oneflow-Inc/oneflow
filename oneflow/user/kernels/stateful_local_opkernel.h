@@ -206,7 +206,7 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
-                          const std::shared_ptr<const OpInterpCtx>* op_interp_ctx,
+                          const std::shared_ptr<const OpBase>* op_ctx,
                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~LocalUserOpInferContext() override = default;
@@ -316,11 +316,11 @@ class LocalUserOpInferContext : public user_op::InferContext {
   }
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    return (*op_interp_ctx_)->GetAttr(attr_name);
+    return (*op_ctx_)->GetAttr(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_;
+  const std::shared_ptr<const OpBase>* op_ctx_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
@@ -328,7 +328,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
-                                         const std::shared_ptr<const OpInterpCtx>* op_interp_ctx,
+                                         const std::shared_ptr<const OpBase>* op_ctx,
                                          const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                          vm::EagerBlobObject* tmp_buffer);
@@ -360,11 +360,11 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   Maybe<user_op::AttrVal> Attr4Name(const std::string& attr_name) const override {
-    return (*op_interp_ctx_)->GetAttr(attr_name);
+    return (*op_ctx_)->GetAttr(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_;
+  const std::shared_ptr<const OpBase>* op_ctx_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -394,21 +394,21 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_for_scheduler_thread() const {
-    return op_interp_ctx_for_scheduler_thread_.get();
+  const std::shared_ptr<const OpBase>* op_ctx_for_scheduler_thread() const {
+    return op_ctx_for_scheduler_thread_.get();
   }
 
-  void set_op_interp_ctx_for_scheduler_thread(
-      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx) {
-    *op_interp_ctx_for_scheduler_thread_.get() = op_interp_ctx;
+  void set_op_ctx_for_scheduler_thread(
+      const std::shared_ptr<const OpBase>& op_ctx) {
+    *op_ctx_for_scheduler_thread_.get() = op_ctx;
   }
 
-  const std::shared_ptr<const OpInterpCtx>* op_interp_ctx_for_main_thread() const {
-    return op_interp_ctx_for_main_thread_.get();
+  const std::shared_ptr<const OpBase>* op_ctx_for_main_thread() const {
+    return op_ctx_for_main_thread_.get();
   }
 
-  void set_op_interp_ctx_for_main_thread(const std::shared_ptr<const OpInterpCtx>& op_interp_ctx) {
-    *op_interp_ctx_for_main_thread_.get() = op_interp_ctx;
+  void set_op_ctx_for_main_thread(const std::shared_ptr<const OpBase>& op_ctx) {
+    *op_ctx_for_main_thread_.get() = op_ctx;
   }
 
   LocalUserOpInferContext* op_infer_ctx_for_scheduler_thread() const {
@@ -448,8 +448,8 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
-  std::unique_ptr<std::shared_ptr<const OpInterpCtx>> op_interp_ctx_for_scheduler_thread_;
-  std::unique_ptr<std::shared_ptr<const OpInterpCtx>> op_interp_ctx_for_main_thread_;
+  std::unique_ptr<std::shared_ptr<const OpBase>> op_ctx_for_scheduler_thread_;
+  std::unique_ptr<std::shared_ptr<const OpBase>> op_ctx_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;

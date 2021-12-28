@@ -110,13 +110,20 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SplitLikeOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
+/*static*/ Maybe<void> SplitLikeOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                    const user_op::UserOpConfWrapper& user_op_conf) {
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
     CHECK_NOTNULL_OR_RETURN(like_modifier);
     like_modifier->set_requires_grad(false);
   }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> SplitLikeOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                              const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("like") >= 2);
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 2);
   return Maybe<void>::Ok();
 }
 

@@ -29,7 +29,7 @@ namespace one {
                                                           const TensorTuple& inputs) {
   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
   const auto& op = JUST(FunctionOpExpr::New(name, forward_fn, backward_fn));
-  JUST(OpInterpUtil::Dispatch(*op, inputs, outputs.get(), {}));
+  JUST(OpInterpUtil::Dispatch(*op, inputs, outputs.get(), OpExprInterpContext()));
   const HashSet<Tensor*>& non_differentiable_tensors = op->state()->NonDifferentiableTensors();
   for (const auto& tensor : *outputs) {
     if (non_differentiable_tensors.find(tensor.get()) != non_differentiable_tensors.end()) {

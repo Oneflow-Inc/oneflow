@@ -36,21 +36,21 @@ struct MatmulCaptureState : public AutoGradCaptureState {
 class Matmul : public OpExprGradFunction<MatmulCaptureState> {
  public:
   Maybe<void> Capture(MatmulCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const MatmulCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Matmul::Capture(MatmulCaptureState* state, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                            const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad_a = inputs.at(0)->requires_grad();
   state->requires_grad_b = inputs.at(1)->requires_grad();
   if (!state->requires_grad_a && !state->requires_grad_b) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const MatmulOp*>(ctx);
-  state->transpose_a = interp_ctx->transpose_a();
-  state->transpose_b = interp_ctx->transpose_b();
-  state->alpha = interp_ctx->alpha();
+  auto* op_ctx = dynamic_cast<const MatmulOp*>(ctx);
+  state->transpose_a = op_ctx->transpose_a();
+  state->transpose_b = op_ctx->transpose_b();
+  state->alpha = op_ctx->alpha();
   if (state->requires_grad_a) {
     state->b_index = state->SaveTensorForBackward(inputs.at(1));  // input b
   }

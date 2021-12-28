@@ -110,9 +110,9 @@ class ConvDataGradFunctor {
 };
 
 template<int Ndims, typename ContextT>
-class MaxPoolingNdGradFunctorImpl {
+class MaxPoolingNdGradImpl {
  public:
-  explicit MaxPoolingNdGradFunctorImpl() {
+  explicit MaxPoolingNdGradImpl() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_" + std::to_string(Ndims) + "d_grad")
                          .Input("x")
                          .Input("y")
@@ -177,18 +177,18 @@ class MaxPoolingNdGradFunctor {
   }
 
  protected:
- schema::MaxPool1DGradOp>
+ MaxPoolingNdGradImpl<1, schema::MaxPool1DGradOp>
       pool1d_func_;
- schema::MaxPool2DGradOp>
+ MaxPoolingNdGradImpl<2, schema::MaxPool2DGradOp>
       pool2d_func_;
- schema::MaxPool3DGradOp>
+ MaxPoolingNdGradImpl<3, schema::MaxPool3DGradOp>
       pool3d_func_;
 };
 
 template<int Ndims, typename ContextT>
-class AvgPoolingNdGradFunctorImpl {
+class AvgPoolingNdGradImpl {
  public:
-  AvgPoolingNdGradFunctorImpl() {
+  AvgPoolingNdGradImpl() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_" + std::to_string(Ndims) + "d_grad")
                          .Input("x")
                          .Input("y")
@@ -245,25 +245,15 @@ class AvgPoolingNdGradFunctor {
   }
 
  protected:
- schema::AvgPool1DOp> pool1d_func_;
- schema::AvgPool2DOp> pool2d_func_;
- schema::AvgPool3DOp> pool3d_func_;
-};
-
-class PoolNdGradFunctorImplBase {
- public:
-  virtual Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& y,
-      const std::shared_ptr<one::Tensor>& dy, const std::string& data_format,
-      const std::string& padding, const std::vector<int32_t>& padding_before,
-      const std::vector<int32_t>& padding_after, const std::vector<int32_t>& pool_size,
-      const std::vector<int32_t>& strides, const bool& ceil_mode) const = 0;
+ AvgPoolingNdGradImpl<1, schema::AvgPool1DOp> pool1d_func_;
+ AvgPoolingNdGradImpl<2, schema::AvgPool2DOp> pool2d_func_;
+ AvgPoolingNdGradImpl<3, schema::AvgPool3DOp> pool3d_func_;
 };
 
 template<int Ndims, typename ContextT>
-class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
+class PoolNdGradImpl {
  public:
-  PoolNdGradFunctorImpl(const std::string& mode) {
+  PoolNdGradImpl(const std::string& mode) {
     op_ = CHECK_JUST(one::OpBuilder(mode + "_pool_" + std::to_string(Ndims) + "d_grad")
                          .Input("x")
                          .Input("y")
@@ -279,7 +269,7 @@ class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides,
-                           const bool& ceil_mode) const override {
+                           const bool& ceil_mode) const {
     auto ctx = std::make_shared<ContextT>();
     ctx->set_data_format(data_format);
     ctx->set_padding(padding);
@@ -295,28 +285,79 @@ class PoolNdGradFunctorImpl : public PoolNdGradFunctorImplBase {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MaxPoolNdGradFunctor {
+ public:
+  MaxPoolNdGradFunctor() = default;
+   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const int32_t& ndims, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& pool_size,
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
+     if (ndims < 1 || ndims > 3) {
+      return Error::RuntimeError()
+             << ndims << "d is not supported for `MaxPoolingNdGrad`, and 1d, 2d or 3d is expected.";
+    }
+    if (ndims == 1) {
+      return maxpool_1d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+    } else if (ndims == 2) {
+      return maxpool_2d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+    } else {
+      return maxpool_3d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+    }
+  }
+ 
+ private:
+  template<int Ndims, typename ContextT>
+  class MaxPoolNdGradImpl : public PoolNdGradImpl<Ndims, ContextT> {
+   public:
+    MaxPoolNdGradImpl() : PoolNdGradImpl<Ndims, ContextT>("max") {}
+  };
+  MaxPoolNdGradImpl<1, schema::TfMaxPool1DGradOp> maxpool_1d_;
+  MaxPoolNdGradImpl<2, schema::TfMaxPool2DGradOp> maxpool_2d_;
+  MaxPoolNdGradImpl<3, schema::TfMaxPool3DGradOp> maxpool_3d_;
+};
+
+class AvgPoolNdGradFunctor {
+ public:
+  AvgPoolNdGradFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const int32_t& ndims, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& pool_size,
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
+     if (ndims < 1 || ndims > 3) {
+      return Error::RuntimeError()
+             << ndims << "d is not supported for `AvgPoolingNdGrad`, and 1d, 2d or 3d is expected.";
+    }
+    if (ndims == 1) {
+      return avgpool_1d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+    } else if (ndims == 2) {
+      return avgpool_2d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+    } else {
+      return avgpool_3d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+    }
+  }
+
+ private:
+  template<int Ndims, typename ContextT>
+  class AvgPoolNdGradImpl : public PoolNdGradImpl<Ndims, ContextT> {
+   public:
+    AvgPoolNdGradImpl() : PoolNdGradImpl<Ndims, ContextT>("avg") {}
+  };
+  AvgPoolNdGradImpl<1, schema::TfAvgPool1DGradOp> avgpool_1d_;
+  AvgPoolNdGradImpl<2, schema::TfAvgPool2DGradOp> avgpool_2d_;
+  AvgPoolNdGradImpl<3, schema::TfAvgPool3DGradOp> avgpool_3d_;
+};
+
 class PoolNdGradFunctor {
  public:
-  PoolNdGradFunctor() {
-    maxpool_funcs_.emplace_back(
- schema::TfMaxPool1DGradOp>(
-            "max"));
-    maxpool_funcs_.emplace_back(
- schema::TfMaxPool2DGradOp>(
-            "max"));
-    maxpool_funcs_.emplace_back(
- schema::TfMaxPool3DGradOp>(
-            "max"));
-    avgpool_funcs_.emplace_back(
- schema::TfAvgPool1DGradOp>(
-            "avg"));
-    avgpool_funcs_.emplace_back(
- schema::TfAvgPool2DGradOp>(
-            "avg"));
-    avgpool_funcs_.emplace_back(
- schema::TfAvgPool3DGradOp>(
-            "avg"));
-  }
+  PoolNdGradFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
@@ -325,30 +366,24 @@ class PoolNdGradFunctor {
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
-    if (ndims < 1 || ndims > 3) {
-      return Error::RuntimeError()
-             << ndims << "d is not supported for `PoolingNdGrad`, and 1d, 2d or 3d is expected.";
-    }
     if (mode == "max") {
-      return (*maxpool_funcs_.at(ndims - 1))(x, y, dy, data_format, padding, padding_before,
-                                             padding_after, pool_size, strides, ceil_mode);
+      return maxpool_func_(x, y, dy, ndims, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
     } else if (mode == "avg") {
-      return (*avgpool_funcs_.at(ndims - 1))(x, y, dy, data_format, padding, padding_before,
-                                             padding_after, pool_size, strides, ceil_mode);
+      return avgpool_func_(x, y, dy, ndims, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
     }
     return Error::RuntimeError()
            << mode << " mode is not supported for `PoolingNdGrad`, and max or avg is expected.";
   }
 
  protected:
-  std::vector<std::shared_ptr<PoolNdGradFunctorImplBase>> maxpool_funcs_;
-  std::vector<std::shared_ptr<PoolNdGradFunctorImplBase>> avgpool_funcs_;
+  MaxPoolNdGradFunctor maxpool_func_;
+  AvgPoolNdGradFunctor avgpool_func_;
 };
 
 template<int Ndims, typename ContextT>
-class AdaptiveAvgPoolNdGradFunctorImpl {
+class AdaptiveAvgPoolNdGradImpl {
  public:
-  AdaptiveAvgPoolNdGradFunctorImpl() {
+  AdaptiveAvgPoolNdGradImpl() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool" + std::to_string(Ndims) + "d_grad")
                          .Input("x")
                          .Input("dy")
@@ -388,11 +423,11 @@ class AdaptivePoolNdGradFunctor {
   }
 
  protected:
- schema::AdaptiveAvgPool1DOp>
+ AdaptiveAvgPoolNdGradImpl<1, schema::AdaptiveAvgPool1DOp>
       pool1d_func_;
- schema::AdaptiveAvgPool2DOp>
+ AdaptiveAvgPoolNdGradImpl<2, schema::AdaptiveAvgPool2DOp>
       pool2d_func_;
- schema::AdaptiveAvgPool3DOp>
+ AdaptiveAvgPoolNdGradImpl<3, schema::AdaptiveAvgPool3DOp>
       pool3d_func_;
 };
 

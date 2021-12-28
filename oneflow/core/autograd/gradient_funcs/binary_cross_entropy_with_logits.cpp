@@ -29,19 +29,19 @@ class BinaryCrossEntropyWithLogits
     : public OpExprGradFunction<BinaryCrossEntropyWithLogitsCaptureState> {
  public:
   Maybe<void> Capture(BinaryCrossEntropyWithLogitsCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const BinaryCrossEntropyWithLogitsCaptureState* state,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
 Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCaptureState* state,
                                                   const TensorTuple& inputs,
                                                   const TensorTuple& outputs,
-                                                  const OpInterpCtx* ctx) const {
+                                                  const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const BinaryCrossEntropyWithLogitsOp*>(ctx);
-  state->has_pos_weight = interp_ctx->has_pos_weight();
+  auto* op_ctx = dynamic_cast<const BinaryCrossEntropyWithLogitsOp*>(ctx);
+  state->has_pos_weight = op_ctx->has_pos_weight();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target
   if (inputs.size() == 3) {

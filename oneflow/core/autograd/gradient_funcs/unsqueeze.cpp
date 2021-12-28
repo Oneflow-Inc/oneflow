@@ -31,12 +31,12 @@ struct UnsqueezeCaptureState : public AutoGradCaptureState {
 class Unsqueeze : public OpExprGradFunction<UnsqueezeCaptureState> {
  public:
   Maybe<void> Capture(UnsqueezeCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const UnsqueezeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 Maybe<void> Unsqueeze::Capture(UnsqueezeCaptureState* state, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                               const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   if (LazyMode::is_enabled()) {

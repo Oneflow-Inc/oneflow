@@ -50,12 +50,11 @@ class BernoulliFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
     auto ctx = std::make_shared<schema::BernoulliOp>();
     ctx->set_dtype(dtype->data_type());
     ctx->set_seed(gen->current_seed());
-    ctx->state = distribution_state;
-    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x}, ctx);
+    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x}, OpExprInterpContext(ctx, state));
   }
 
  private:
@@ -77,7 +76,7 @@ class RandFunctor {
       }
     }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
 
     auto ctx = std::make_shared<schema::UniformOp>();
     ctx->set_from(0);
@@ -85,9 +84,11 @@ class RandFunctor {
     ctx->set_shape(shape);
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
-    ctx->device = device;
-    ctx->state = distribution_state;
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+
+    OpExprInterpContext interp_ctx(ctx);
+    interp_ctx.device = device;
+    interp_ctx.state = state;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, interp_ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -112,21 +113,18 @@ class ConsistentRandFunctor {
         OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
     }
-
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
+
     auto ctx = std::make_shared<schema::UniformOp>();
     ctx->set_from(0);
     ctx->set_to(1);
     ctx->set_shape(shape);
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
-    ctx->set_nd_sbp(*JUST(NdSbpToString(JUST(ctx->sbp))));
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
 
-    ctx->state = distribution_state;
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -148,7 +146,7 @@ class RandNFunctor {
       OF_UNIMPLEMENTED() << "Only support float and double in randn().";
     }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
 
     auto ctx = std::make_shared<schema::NormalOp>();
     ctx->set_mean(0);
@@ -156,9 +154,11 @@ class RandNFunctor {
     ctx->set_shape(shape);
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
-    ctx->state = distribution_state;
-    ctx->device = device;
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+
+    OpExprInterpContext interp_ctx(ctx);
+    interp_ctx.device = device;
+    interp_ctx.state = state;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, interp_ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -183,7 +183,7 @@ class ConsistentRandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
 
     auto ctx = std::make_shared<schema::NormalOp>();
     ctx->set_mean(0);
@@ -191,12 +191,8 @@ class ConsistentRandNFunctor {
     ctx->set_shape(shape);
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
-    ctx->set_nd_sbp(*JUST(NdSbpToString(JUST(ctx->sbp))));
-
-    ctx->state = distribution_state;
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -218,16 +214,18 @@ class RandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
     auto ctx = std::make_shared<schema::UniformIntOp>();
     ctx->set_shape(shape);
     ctx->set_from(low);
     ctx->set_to(high);
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
-    ctx->state = distribution_state;
-    ctx->device = device;
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+
+    OpExprInterpContext interp_ctx(ctx);
+    interp_ctx.device = device;
+    interp_ctx.state = state;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, interp_ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -263,19 +261,16 @@ class ConsistentRandIntFunctor {
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
+
     auto ctx = std::make_shared<schema::UniformIntOp>();
     ctx->set_shape(shape);
     ctx->set_from(low);
     ctx->set_to(high);
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
-    ctx->set_nd_sbp(*JUST(NdSbpToString(JUST(ctx->sbp))));
-
-    ctx->state = distribution_state;
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -305,14 +300,15 @@ class RandPermFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
     auto ctx = std::make_shared<schema::RandpermOp>();
     ctx->set_n(n);
     ctx->set_seed(gen->current_seed());
-    ctx->state = distribution_state;
-    ctx->device = device;
 
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
+    OpExprInterpContext interp_ctx(ctx);
+    interp_ctx.device = device;
+    interp_ctx.state = state;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, interp_ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -332,16 +328,13 @@ class ConsistentRandPermFunctor {
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& state = std::make_shared<DistributionKernelState>(gen);
+
     auto ctx = std::make_shared<schema::RandpermOp>();
     ctx->set_n(n);
     ctx->set_seed(gen->current_seed());
-    ctx->set_nd_sbp(*JUST(NdSbpToString(JUST(ctx->sbp))));
-
-    ctx->state = distribution_state;
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
+    ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }

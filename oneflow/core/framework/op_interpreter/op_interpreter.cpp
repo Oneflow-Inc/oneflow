@@ -23,13 +23,14 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs,
-                                   const std::shared_ptr<OpInterpCtx>& ctx) const {
+                                   const OpExprInterpContext& ctx) const {
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
@@ -50,7 +51,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                     TensorTuple* outputs,
-                                    const std::shared_ptr<OpInterpCtx>& ctx) const {
+                                    const OpExprInterpContext& ctx) const {
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
@@ -77,7 +78,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 
 Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
                                         TensorTuple* outputs,
-                                        const std::shared_ptr<OpInterpCtx>&) const {
+                                        const OpExprInterpContext&) const {
   // Must reset ctx in each forward
   op_expr.reset_state();
   std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();
@@ -87,7 +88,7 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs,
-                                       const std::shared_ptr<OpInterpCtx>& ctx) const {
+                                       const OpExprInterpContext& ctx) const {
   bool requires_grad = false;
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
@@ -98,9 +99,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
   }
-  if (requires_grad) {
+  // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
+  if (requires_grad && !LazyMode::is_enabled()) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    JUST(grad_closure->Capture(inputs, *outputs, ctx->op()));
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
 
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(

@@ -28,18 +28,18 @@ struct SplitLikeCaptureState : public AutoGradCaptureState {
 class SplitLike : public OpExprGradFunction<SplitLikeCaptureState> {
  public:
   Maybe<void> Capture(SplitLikeCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const SplitLikeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> SplitLike::Capture(SplitLikeCaptureState* state, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                               const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), outputs.size() + 1);
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const SplitLikeOp*>(ctx);
-  state->axis = interp_ctx->axis();
+  auto* op_ctx = dynamic_cast<const SplitLikeOp*>(ctx);
+  state->axis = op_ctx->axis();
   for (int i = 0; i < outputs.size(); ++i) { state->SaveTensorForBackward(outputs.at(i)); }
   return Maybe<void>::Ok();
 }

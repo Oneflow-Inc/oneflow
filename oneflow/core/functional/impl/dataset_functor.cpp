@@ -108,9 +108,7 @@ class ReadOneRecFunctor {
       JUST(CheckDeviceIdsIsValid(JUST(placement)));
       CHECK_OR_RETURN(sbp.has_value())
           << "placement is not None, but sbp is None. It's not allowed.";
-      ctx->parallel_desc = JUST(placement);
-      ctx->sbp = JUST(GetNdSbp(*JUST(sbp)));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, JUST(placement), JUST(GetNdSbp(*JUST(sbp)))));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }

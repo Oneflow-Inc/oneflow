@@ -13,18 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
+#define ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_
 
-#ifndef ONEFLOW_API_COMMON_DEVICE_H_
-#define ONEFLOW_API_COMMON_DEVICE_H_
-
-#include "oneflow/core/framework/device.h"
+#include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
-struct DeviceExportUtil final {
-  static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
 
-  static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
+class CriticalSectionInstance {
+ public:
+  CriticalSectionInstance() = default;
+
+  virtual const std::string& job_name() const = 0;
+
+  virtual ~CriticalSectionInstance() = default;
+
+  virtual void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const {
+    UNIMPLEMENTED();
+  }
+  virtual void Finish() const { UNIMPLEMENTED(); }
 };
+
 }  // namespace oneflow
 
-#endif  // !ONEFLOW_API_COMMON_DEVICE_H_
+#endif  // ONEFLOW_CORE_JOB_CRITICAL_SECTION_INSTANCE_H_

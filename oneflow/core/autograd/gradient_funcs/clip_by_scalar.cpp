@@ -29,19 +29,19 @@ struct ClipByScalarCaptureState : public AutoGradCaptureState {
 class ClipByScalar : public OpExprGradFunction<ClipByScalarCaptureState> {
  public:
   Maybe<void> Capture(ClipByScalarCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     state->SaveTensorForBackward(inputs.at(0));
 
-    auto* interp_ctx = dynamic_cast<const ClipByScalarOp*>(ctx);
+    auto* op_ctx = dynamic_cast<const ClipByScalarOp*>(ctx);
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      state->min = interp_ctx->floating_min();
-      state->max = interp_ctx->floating_max();
+      state->min = op_ctx->floating_min();
+      state->max = op_ctx->floating_max();
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      state->min = interp_ctx->integral_min();
-      state->max = interp_ctx->integral_max();
+      state->min = op_ctx->integral_min();
+      state->max = op_ctx->integral_max();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
     }

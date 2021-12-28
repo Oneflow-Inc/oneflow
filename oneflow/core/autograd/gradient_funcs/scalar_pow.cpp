@@ -29,18 +29,18 @@ struct ScalarPowCaptureState : public AutoGradCaptureState {
 class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
  public:
   Maybe<void> Capture(ScalarPowCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const ScalarPowOp*>(ctx);
-    bool has_float_operand = interp_ctx->has_float_operand();
+    auto* op_ctx = dynamic_cast<const ScalarPowOp*>(ctx);
+    bool has_float_operand = op_ctx->has_float_operand();
     if (has_float_operand) {
-      state->operand = Scalar(interp_ctx->float_operand());
+      state->operand = Scalar(op_ctx->float_operand());
     } else {
-      state->operand = Scalar(interp_ctx->int_operand());
+      state->operand = Scalar(op_ctx->int_operand());
     }
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();

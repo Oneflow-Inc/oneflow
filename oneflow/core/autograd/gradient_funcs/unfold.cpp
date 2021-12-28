@@ -34,23 +34,23 @@ struct UnfoldInterpState : public AutoGradCaptureState {
 class Unfold : public OpExprGradFunction<UnfoldInterpState> {
  public:
   Maybe<void> Capture(UnfoldInterpState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const UnfoldInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Unfold::Capture(UnfoldInterpState* state, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                            const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const UnfoldOp*>(ctx);
+  auto* op_ctx = dynamic_cast<const UnfoldOp*>(ctx);
   std::vector<int32_t> out_shape(2);
   const std::shared_ptr<Tensor>& x = inputs.at(0);
-  state->data_format = interp_ctx->data_format();
-  state->kernel_size = interp_ctx->kernel_size();
-  state->dilation_rate = interp_ctx->dilation_rate();
-  state->padding = interp_ctx->padding();
-  state->strides = interp_ctx->strides();
+  state->data_format = op_ctx->data_format();
+  state->kernel_size = op_ctx->kernel_size();
+  state->dilation_rate = op_ctx->dilation_rate();
+  state->padding = op_ctx->padding();
+  state->strides = op_ctx->strides();
   // Only support 4-d Tensor Input.
   for (int i = 0; i < 2; i++) { out_shape.at(i) = (x->shape()->At(i + 2)); }
   state->output_size = out_shape;

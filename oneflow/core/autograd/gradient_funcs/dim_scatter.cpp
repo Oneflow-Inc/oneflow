@@ -34,7 +34,7 @@ template<SCATTER_TYPE T>
 class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
  public:
   Maybe<void> Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const DimScatterCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
   Maybe<void> ApplyCommon(const DimScatterCaptureState* state, const TensorTuple& out_grads,
@@ -43,7 +43,7 @@ class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
 
 template<SCATTER_TYPE T>
 Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                   const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 3);
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
 
@@ -53,8 +53,8 @@ Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* state, const TensorTu
 
   state->SaveTensorForBackward(inputs.at(1));  // index saved
 
-  auto* interp_ctx = dynamic_cast<const DimScatterAddOp*>(ctx);
-  state->dim = interp_ctx->dim();
+  auto* op_ctx = dynamic_cast<const DimScatterAddOp*>(ctx);
+  state->dim = op_ctx->dim();
   return Maybe<void>::Ok();
 }
 
@@ -102,14 +102,14 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterCapture
 class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterCaptureState> {
  public:
   Maybe<void> Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const DimScatterCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* state,
                                             const TensorTuple& inputs, const TensorTuple& outputs,
-                                            const OpInterpCtx* ctx) const {
+                                            const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
 
@@ -118,8 +118,8 @@ Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* state,
 
   state->SaveTensorForBackward(inputs.at(1));  // index saved
 
-  auto* interp_ctx = dynamic_cast<const DimScatterUpdateScalarOp*>(ctx);
-  state->dim = interp_ctx->dim();
+  auto* op_ctx = dynamic_cast<const DimScatterUpdateScalarOp*>(ctx);
+  state->dim = op_ctx->dim();
   return Maybe<void>::Ok();
 }
 

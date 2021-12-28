@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/op_interp_ctx.h"
+#include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/vm/instruction_operand.h"
 
@@ -58,7 +58,8 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
-  const std::shared_ptr<const OpInterpCtx>& op_interp_ctx() const { return op_interp_ctx_; }
+  const std::shared_ptr<OpBase>& op_ctx() const { return op_interp_ctx_.op_ctx; }
+  const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
     return dev_vm_dep_object_consume_mode_;
   }
@@ -93,7 +94,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx_,
+      const one::OpExprInterpContext& op_interp_ctx_,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
       : opkernel_(opkernel),
         inputs_(inputs),
@@ -114,7 +115,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
   std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
-  const std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
+  const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
   bool need_temp_storage_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;

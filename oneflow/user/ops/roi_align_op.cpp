@@ -47,7 +47,7 @@ namespace oneflow {
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
+/*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                   const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* roi_modifier = GetInputArgModifierFn("rois", 0);
   CHECK(roi_modifier != nullptr);

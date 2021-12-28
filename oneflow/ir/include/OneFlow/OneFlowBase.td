@@ -6,6 +6,7 @@ include "OneFlow/OneFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+def OneFlow_Tensor : TensorOf<[AnyType]>;
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
 def SI64ArrayAttr : TypedArrayAttrBase<SI64Attr, "signed 64-bit integer array attribute"> {}
@@ -49,8 +50,6 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     output,
     ctrl_output
   );
-  bit no_grad = 0;
-  bit cpu_only = 0;
   int same_output_regst_num = -1;
 
   bit has_check_fn = 0;
@@ -117,13 +116,13 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     );
     let output = (outs AnyType:$out);
     let attrs = (ins
-      SI32Attr:$filters,
+      DefaultValuedAttr<SI32Attr, "0">:$filters,
       SI32ArrayAttr:$padding_before,
       StrAttr:$data_format,
       SI32ArrayAttr:$kernel_size,
       SI32ArrayAttr:$strides,
       SI32ArrayAttr:$dilation_rate,
-      DefaultValuedAttr<SI32Attr, "1">:$group
+      DefaultValuedAttr<SI32Attr, "1">:$groups
     );
     let trait_attrs = (ins
       I32ElementsAttr:$operand_segment_sizes
@@ -337,6 +336,6 @@ class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {}
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS
-include "OneFlow/OneFlowUserOpGen.td"
+include "OneFlow/OneFlowUserOps.td"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWBASE_H_

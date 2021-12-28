@@ -32,20 +32,20 @@ struct FusedScaleMaskSoftmaxInterState : public AutoGradCaptureState {
 class FusedScaleMaskSoftmax : public OpExprGradFunction<FusedScaleMaskSoftmaxInterState> {
  public:
   Maybe<void> Capture(FusedScaleMaskSoftmaxInterState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const FusedScaleMaskSoftmaxInterState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> FusedScaleMaskSoftmax::Capture(FusedScaleMaskSoftmaxInterState* state,
                                            const TensorTuple& inputs, const TensorTuple& outputs,
-                                           const OpInterpCtx* ctx) const {
+                                           const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);  // input, mask
   state->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FusedScaleMaskSoftmaxOp*>(ctx);
-  state->scale = interp_ctx->scale_value();
+  auto* op_ctx = dynamic_cast<const FusedScaleMaskSoftmaxOp*>(ctx);
+  state->scale = op_ctx->scale_value();
 
   state->SaveTensorForBackward(inputs.at(1));   // save mask
   state->SaveTensorForBackward(outputs.at(0));  // save y, ie. softmax result

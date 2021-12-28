@@ -30,7 +30,7 @@ class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
  public:
   AdaptivePoolNdGrad(const std::string& mode, const int& ndims) : mode_(mode), ndims_(ndims) {}
   Maybe<void> Capture(AdaptivePoolCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const AdaptivePoolCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -40,7 +40,7 @@ class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
 };
 
 Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolCaptureState* state, const TensorTuple& inputs,
-                                        const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                        const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 

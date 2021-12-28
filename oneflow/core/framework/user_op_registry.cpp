@@ -42,15 +42,13 @@ OpRegistry& OpRegistry::Name(const std::string& op_type_name) {
   return *this;
 }
 
-OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_optional,
-                                int32_t num, bool num_as_min) {
-  CHECK(InsertIfNotExists(name, &unique_names_));
+OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_optional) {
+  CHECK(InsertIfNotExists(name, &unique_names_))
+      << "op arg registered, name: " << name << ", op: " << result_.op_type_name;
   UserOpDef::ArgDef arg_def;
   {
     arg_def.set_name(name);
     arg_def.set_is_optional(is_optional);
-    arg_def.set_num(num);
-    arg_def.set_num_as_min(num_as_min);
   }
   if (is_input) {
     *(result_.op_def.mutable_input()->Add()) = arg_def;
@@ -60,15 +58,9 @@ OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_
   return *this;
 }
 
-#define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional)                             \
-  OpRegistry& OpRegistry::name_prefix(const std::string& name) {                               \
-    return ArgImpl(is_input, name, is_optional, 1, false);                                     \
-  }                                                                                            \
-  OpRegistry& OpRegistry::name_prefix(const std::string& name, int32_t num) {                  \
-    return ArgImpl(is_input, name, is_optional, num, false);                                   \
-  }                                                                                            \
-  OpRegistry& OpRegistry::name_prefix##WithMinimum(const std::string& name, int32_t min_num) { \
-    return ArgImpl(is_input, name, is_optional, min_num, true);                                \
+#define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional) \
+  OpRegistry& OpRegistry::name_prefix(const std::string& name) {   \
+    return ArgImpl(is_input, name, is_optional);                   \
   }
 
 OP_REG_ARG_MEMBER_FUNC(Input, true, false)
@@ -172,6 +164,7 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   result_.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
+
 OpRegistry& OpRegistry::SetSbpSignatureInferFn(SbpSignatureInferFn sbp_signature_infer_fn) {
   result_.sbp_signature_infer_fn = std::move(sbp_signature_infer_fn);
   return *this;

@@ -46,20 +46,20 @@ struct LayerNormCaptureState : public AutoGradCaptureState {
 class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
  public:
   Maybe<void> Capture(LayerNormCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
 
   Maybe<void> Apply(const LayerNormCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> LayerNorm::Capture(LayerNormCaptureState* state, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const LayerNormOp*>(ctx);
-  state->center = interp_ctx->center();
-  state->scale = interp_ctx->scale();
-  state->begin_norm_axis = interp_ctx->begin_norm_axis();
-  state->begin_params_axis = interp_ctx->begin_params_axis();
-  state->epsilon = interp_ctx->epsilon();
+                               const TensorTuple& outputs, const OpBase* ctx) const {
+  auto* op_ctx = dynamic_cast<const LayerNormOp*>(ctx);
+  state->center = op_ctx->center();
+  state->scale = op_ctx->scale();
+  state->begin_norm_axis = op_ctx->begin_norm_axis();
+  state->begin_params_axis = op_ctx->begin_params_axis();
+  state->epsilon = op_ctx->epsilon();
 
   CHECK_EQ_OR_RETURN(inputs.size(), state->center + state->scale + 1);
   CHECK_EQ_OR_RETURN(outputs.size(), state->scale + 3);

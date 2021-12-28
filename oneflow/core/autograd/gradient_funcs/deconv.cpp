@@ -38,13 +38,13 @@ struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
 class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
  public:
   Maybe<void> Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const DeConvolutionNdCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                     const TensorTuple& outputs, const OpBase* ctx) const {
   state->activation_requires_grad = inputs.at(0)->requires_grad();
   state->weight_requires_grad = inputs.at(1)->requires_grad();
   if (state->activation_requires_grad) {
@@ -53,13 +53,13 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const T
   if (state->weight_requires_grad) {
     state->SaveTensorForBackward(inputs.at(0));  // x
   }
-  auto* interp_ctx = dynamic_cast<const Deconv3DOp*>(ctx);
-  state->data_format = interp_ctx->data_format();
-  state->padding_before = interp_ctx->padding_before();
-  state->kernel_size = interp_ctx->kernel_size();
-  state->strides = interp_ctx->strides();
-  state->dilation_rate = interp_ctx->dilation_rate();
-  state->groups = interp_ctx->groups();
+  auto* op_ctx = dynamic_cast<const Deconv3DOp*>(ctx);
+  state->data_format = op_ctx->data_format();
+  state->padding_before = op_ctx->padding_before();
+  state->kernel_size = op_ctx->kernel_size();
+  state->strides = op_ctx->strides();
+  state->dilation_rate = op_ctx->dilation_rate();
+  state->groups = op_ctx->groups();
   state->ndims = state->kernel_size.size();
   return Maybe<void>::Ok();
 }
@@ -78,20 +78,20 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* state,
     const auto& weight = state->SavedTensors().at(0);
     if (state->ndims == 1) {
       std::shared_ptr<Tensor> result =
-          JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, ctx->groups));
+          JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), state->strides,
+                                  state->padding_before, state->dilation_rate, state->groups));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (state->ndims == 2) {
       std::shared_ptr<Tensor> result =
-          JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, ctx->groups));
+          JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), state->strides,
+                                  state->padding_before, state->dilation_rate, state->groups));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (state->ndims == 3) {
       std::shared_ptr<Tensor> result =
-          JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, ctx->groups));
+          JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), state->strides,
+                                  state->padding_before, state->dilation_rate, state->groups));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else {
@@ -102,8 +102,8 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* state,
     int idx = state->activation_requires_grad;
     const auto& x = state->SavedTensors().at(idx);
     in_grads->at(1) = JUST(functional::ConvFilterGrad(
-        x, out_grads.at(0), ctx->ndims, ctx->kernel_size, ctx->strides, ctx->padding_before,
-        ctx->dilation_rate, ctx->groups, ctx->data_format));
+        x, out_grads.at(0), state->ndims, state->kernel_size, state->strides, state->padding_before,
+        state->dilation_rate, state->groups, state->data_format));
   }
   return Maybe<void>::Ok();
 }

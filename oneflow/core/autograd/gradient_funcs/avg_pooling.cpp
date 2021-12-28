@@ -44,28 +44,28 @@ class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingCaptureState> {
  public:
   virtual ~AvgPoolingNdGrad() = default;
   Maybe<void> Capture(AvgPoolingCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const AvgPoolingCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 template<typename T>
 Maybe<void> AvgPoolingNdGrad<T>::Capture(AvgPoolingCaptureState* state, const TensorTuple& inputs,
-                                         const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                         const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
-  state->data_format = interp_ctx->data_format();
-  state->padding = interp_ctx->padding();
-  state->kernel_size = interp_ctx->kernel_size();
-  state->stride = interp_ctx->stride();
-  state->ceil_mode = interp_ctx->ceil_mode();
-  state->count_include_pad = interp_ctx->count_include_pad();
-  state->divisor_override = interp_ctx->divisor_override();
+  auto* op_ctx = dynamic_cast<const T*>(ctx);
+  state->data_format = op_ctx->data_format();
+  state->padding = op_ctx->padding();
+  state->kernel_size = op_ctx->kernel_size();
+  state->stride = op_ctx->stride();
+  state->ceil_mode = op_ctx->ceil_mode();
+  state->count_include_pad = op_ctx->count_include_pad();
+  state->divisor_override = op_ctx->divisor_override();
 
   return Maybe<void>::Ok();
 }
@@ -88,23 +88,11 @@ Maybe<void> AvgPoolingNdGrad<T>::Apply(const AvgPoolingCaptureState* state,
   return Maybe<void>::Ok();
 }
 
-struct AvgPooling1DGrad : public AvgPoolingNdGrad<AvgPooling1DGrad> {
-  using ContextT = AvgPool1DGradOpInterpCtx;
-};
-
-struct AvgPooling2DGrad : public AvgPoolingNdGrad<AvgPooling2DGrad> {
-  using ContextT = AvgPool2DGradOpInterpCtx;
-};
-
-struct AvgPooling3DGrad : public AvgPoolingNdGrad<AvgPooling3DGrad> {
-  using ContextT = AvgPool3DGradOpInterpCtx;
-};
-
 }  // namespace
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_1d", AvgPooling1DGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_2d", AvgPooling2DGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_3d", AvgPooling3DGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_1d", AvgPoolingNdGrad<AvgPool1DGradOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_2d", AvgPoolingNdGrad<AvgPool2DGradOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_3d", AvgPoolingNdGrad<AvgPool3DGradOp>);
 
 }  // namespace one
 }  // namespace oneflow

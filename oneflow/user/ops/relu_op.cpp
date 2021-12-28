@@ -19,15 +19,15 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> ReluOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
   }
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
   *out_shape = in_shape;
   return Maybe<void>::Ok();
 }
@@ -35,7 +35,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -75,12 +75,12 @@ REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn(
       const auto relu_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(relu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("relu_grad")
-            .InputBind("y", ctx->FwOp().output("out", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .InputBind("y", ctx->FwOp().output("y", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .Output("dx")
             .Build();
       });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
                                 [&ctx, &relu_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(relu_grad_op_name).output("dx", 0);
                                 });

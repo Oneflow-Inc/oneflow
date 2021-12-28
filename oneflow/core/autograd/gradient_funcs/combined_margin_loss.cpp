@@ -33,7 +33,7 @@ struct CombinedMarginLossCaptureState : public AutoGradCaptureState {
 class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossCaptureState> {
  public:
   Maybe<void> Capture(CombinedMarginLossCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->requires_grad = inputs.at(0)->requires_grad();  // x
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
@@ -41,11 +41,11 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossCaptureSt
     state->label_index = state->SaveTensorForBackward(inputs.at(1));   // label
     state->theta_index = state->SaveTensorForBackward(outputs.at(1));  // theta
 
-    auto* interp_ctx = dynamic_cast<const CombinedMarginLossOp*>(ctx);
-    state->m1 = interp_ctx->m1();
-    state->m2 = interp_ctx->m2();
-    state->m3 = interp_ctx->m3();
-    state->depth = interp_ctx->depth();
+    auto* op_ctx = dynamic_cast<const CombinedMarginLossOp*>(ctx);
+    state->m1 = op_ctx->m1();
+    state->m2 = op_ctx->m2();
+    state->m3 = op_ctx->m3();
+    state->depth = op_ctx->depth();
     return Maybe<void>::Ok();
   }
 

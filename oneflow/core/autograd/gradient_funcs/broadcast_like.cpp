@@ -32,18 +32,18 @@ struct BroadCastLikeCaptureState : public AutoGradCaptureState {
 class BroadCastLike : public OpExprGradFunction<BroadCastLikeCaptureState> {
  public:
   Maybe<void> Capture(BroadCastLikeCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const BroadCastLikeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* state, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                   const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const BroadcastLikeOp*>(ctx);
-  state->broadcast_axes = interp_ctx->broadcast_axes();
+  auto* op_ctx = dynamic_cast<const BroadcastLikeOp*>(ctx);
+  state->broadcast_axes = op_ctx->broadcast_axes();
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

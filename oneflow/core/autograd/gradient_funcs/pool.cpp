@@ -64,14 +64,14 @@ Maybe<void> PoolNdGrad<T>::Capture(PoolCaptureState* state, const TensorTuple& i
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* interp_ctx = dynamic_cast<const typename T::OpT*>(ctx);
-  state->data_format = interp_ctx->data_format();
-  state->padding = interp_ctx->padding();
-  state->padding_before = interp_ctx->padding_before();
-  state->padding_after = interp_ctx->padding_after();
-  state->pool_size = interp_ctx->pool_size();
-  state->strides = interp_ctx->strides();
-  state->ceil_mode = interp_ctx->ceil_mode();
+  auto* op_ctx = dynamic_cast<const typename T::OpT*>(ctx);
+  state->data_format = op_ctx->data_format();
+  state->padding = op_ctx->padding();
+  state->padding_before = op_ctx->padding_before();
+  state->padding_after = op_ctx->padding_after();
+  state->pool_size = op_ctx->pool_size();
+  state->strides = op_ctx->strides();
+  state->ceil_mode = op_ctx->ceil_mode();
   return Maybe<void>::Ok();
 }
 

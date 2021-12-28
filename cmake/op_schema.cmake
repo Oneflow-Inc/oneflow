@@ -40,14 +40,14 @@ set(ONEFLOW_OP_GROUPS
     "UPSAMPLE"
 )
 foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
-    # message(STATUS "Enable OneFlow MLIR op group: ${OP_GROUP_NAME}")
     list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-DGET_ONEFLOW_${OP_GROUP_NAME}_OP_DEFINITIONS")
 endforeach()
+list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-DREMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS")
 
 set(GENERATED_OP_SCHEMA_DIR oneflow/core/framework)
 set(GENERATED_IR_INCLUDE_DIR oneflow/ir/include)
 set(SOURCE_IR_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/oneflow/ir/include)
-set(ONEFLOW_ODS ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOpGetGen.td)
+set(ONEFLOW_ODS ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowOps.td)
 
 list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-I${GENERATED_IR_INCLUDE_DIR}")
 list(APPEND ONEFLOW_SCHEMA_TABLEGEN_FLAGS "-I${SOURCE_IR_INCLUDE_DIR}")
@@ -64,6 +64,10 @@ elseif(LLVM_PROVIDER STREQUAL "install")
     set(ONEFLOW_TABLE_GEN_TARGET ${ONEFLOW_TABLE_GEN_EXE})
 endif()
 
+file(GLOB_RECURSE ODS_FILES LIST_DIRECTORIES false "${SOURCE_IR_INCLUDE_DIR}/*.td")
+if(NOT ODS_FILES)
+    message(FATAL_ERROR "ODS_FILES not found: ${ODS_FILES}")
+endif()
 add_custom_command(
     OUTPUT ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP}
     COMMAND ${CMAKE_COMMAND}
@@ -73,14 +77,14 @@ add_custom_command(
     COMMAND ${ONEFLOW_TABLE_GEN_EXE}
     ARGS --gen-op-schema-cpp ${ONEFLOW_ODS} ${ONEFLOW_SCHEMA_TABLEGEN_FLAGS}
            --op-include ${GENERATED_OP_SCHEMA_H} -o ${GENERATED_OP_SCHEMA_CPP}
-    DEPENDS ${ONEFLOW_TABLE_GEN_TARGET} ${ONEFLOW_ODS}
-            ${SOURCE_IR_INCLUDE_DIR}/OneFlow/OneFlowUserOpGen.td
+    DEPENDS ${ONEFLOW_TABLE_GEN_TARGET}
+            ${ODS_FILES}
     VERBATIM
 )
 set_source_files_properties(
     ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP} PROPERTIES GENERATED TRUE
 )
 
-oneflow_add_library(of_op_schema STATIC ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP})
+oneflow_add_library(of_op_schema OBJECT ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP})
 add_dependencies(of_op_schema of_cfgobj)
 add_dependencies(of_op_schema prepare_oneflow_third_party)

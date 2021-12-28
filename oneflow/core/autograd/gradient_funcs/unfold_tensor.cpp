@@ -32,19 +32,19 @@ struct UnfoldTensorCaptureState : public AutoGradCaptureState {
 class UnfoldTensor : public OpExprGradFunction<UnfoldTensorCaptureState> {
  public:
   Maybe<void> Capture(UnfoldTensorCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const UnfoldTensorCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* state, const TensorTuple& inputs,
-                                  const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                  const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const UnfoldTensorOp*>(ctx);
-  state->dimension = interp_ctx->dimension();
-  state->size = interp_ctx->size();
-  state->step = interp_ctx->step();
+  auto* op_ctx = dynamic_cast<const UnfoldTensorOp*>(ctx);
+  state->dimension = op_ctx->dimension();
+  state->size = op_ctx->size();
+  state->step = op_ctx->step();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

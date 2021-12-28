@@ -27,17 +27,17 @@ struct NllCaptureState : public AutoGradCaptureState {
 class Nll : public OpExprGradFunction<NllCaptureState> {
  public:
   Maybe<void> Capture(NllCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+                      const OpBase* ctx) const override;
   Maybe<void> Apply(const NllCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 Maybe<void> Nll::Capture(NllCaptureState* state, const TensorTuple& inputs,
-                         const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                         const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const NllOp*>(ctx);
-  state->ignore_index = interp_ctx->ignore_index();
+  auto* op_ctx = dynamic_cast<const NllOp*>(ctx);
+  state->ignore_index = op_ctx->ignore_index();
   state->SaveTensorForBackward(inputs.at(0));   // input
   state->SaveTensorForBackward(inputs.at(1));   // target
   state->SaveTensorForBackward(outputs.at(1));  // total_weight

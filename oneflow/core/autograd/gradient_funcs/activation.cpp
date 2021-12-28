@@ -27,7 +27,7 @@ struct BaseActivationCaptureState : public AutoGradCaptureState {
 class BaseActivation : public OpExprGradFunction<BaseActivationCaptureState> {
  public:
   Maybe<void> Capture(BaseActivationCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
@@ -142,7 +142,7 @@ struct ReLUCaptureState : public AutoGradCaptureState {
 class ReLU : public OpExprGradFunction<ReLUCaptureState> {
  public:
   Maybe<void> Capture(ReLUCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
@@ -171,13 +171,13 @@ struct LeakyReluCaptureState : public AutoGradCaptureState {
 class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
  public:
   Maybe<void> Capture(LeakyReluCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const LeakyReluOp*>(ctx);
-    state->alpha = interp_ctx->alpha();
+    auto* op_ctx = dynamic_cast<const LeakyReluOp*>(ctx);
+    state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -203,14 +203,14 @@ struct HardTanhCaptureState : public AutoGradCaptureState {
 class HardTanh : public OpExprGradFunction<HardTanhCaptureState> {
  public:
   Maybe<void> Capture(HardTanhCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const HardtanhOp*>(ctx);
-    state->min_val = interp_ctx->min_val();
-    state->max_val = interp_ctx->max_val();
+    auto* op_ctx = dynamic_cast<const HardtanhOp*>(ctx);
+    state->min_val = op_ctx->min_val();
+    state->max_val = op_ctx->max_val();
     state->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -236,13 +236,13 @@ struct EluCaptureState : public AutoGradCaptureState {
 class Elu : public OpExprGradFunction<EluCaptureState> {
  public:
   Maybe<void> Capture(EluCaptureState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override {
+                      const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const EluOp*>(ctx);
-    state->alpha = interp_ctx->alpha();
+    auto* op_ctx = dynamic_cast<const EluOp*>(ctx);
+    state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -267,13 +267,13 @@ struct CeluCaptureState : public AutoGradCaptureState {
 class Celu : public OpExprGradFunction<CeluCaptureState> {
  public:
   Maybe<void> Capture(CeluCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const CeluOp*>(ctx);
-    state->alpha = interp_ctx->alpha();
+    auto* op_ctx = dynamic_cast<const CeluOp*>(ctx);
+    state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -298,7 +298,7 @@ struct PReLUCaptureState : public AutoGradCaptureState {
 class PReLU : public OpExprGradFunction<PReLUCaptureState> {
  public:
   Maybe<void> Capture(PReLUCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->input_requires_grad = inputs.at(0)->requires_grad();  // input
     state->alpha_requires_grad = inputs.at(1)->requires_grad();  // alpha

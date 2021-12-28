@@ -31,15 +31,15 @@ struct ReduceSumCaptureState : public AutoGradCaptureState {
 class ReduceSum : public OpExprGradFunction<ReduceSumCaptureState> {
  public:
   Maybe<void> Capture(ReduceSumCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const ReduceSumCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* state, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const ReduceSumOp*>(ctx);
-  state->axis = interp_ctx->axis();
+                               const TensorTuple& outputs, const OpBase* ctx) const {
+  auto* op_ctx = dynamic_cast<const ReduceSumOp*>(ctx);
+  state->axis = op_ctx->axis();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -55,30 +55,30 @@ Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* state, const TensorTup
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSum);
 
-struct ReduceProdOpInterpState : public AutoGradCaptureState {
+struct ReduceProdInterpState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
   bool requires_grad;
 };
 
-class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
+class ReduceProd : public OpExprGradFunction<ReduceProdInterpState> {
  public:
-  Maybe<void> Capture(ReduceProdOpInterpState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
-  Maybe<void> Apply(const ReduceProdOpInterpState* state, const TensorTuple& out_grads,
+  Maybe<void> Capture(ReduceProdInterpState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
+  Maybe<void> Apply(const ReduceProdInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* state, const TensorTuple& inputs,
-                                  const TensorTuple& outputs, const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const ReduceProdOp*>(ctx);
-  state->axis = interp_ctx->axis();
+Maybe<void> ReduceProd::Capture(ReduceProdInterpState* state, const TensorTuple& inputs,
+                                  const TensorTuple& outputs, const OpBase* ctx) const {
+  auto* op_ctx = dynamic_cast<const ReduceProdOp*>(ctx);
+  state->axis = op_ctx->axis();
   state->requires_grad = inputs.at(0)->requires_grad();
   state->SaveTensorForBackward(inputs.at(0));
   state->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* state, const TensorTuple& out_grads,
+Maybe<void> ReduceProd::Apply(const ReduceProdInterpState* state, const TensorTuple& out_grads,
                                 TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -95,7 +95,7 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* state, const Tens
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_prod", ReduceProdOp);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_prod", ReduceProd);
 
 struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
@@ -105,16 +105,16 @@ struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
 class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
  public:
   Maybe<void> Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const ReduceMaxOrMinCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
-                                    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
-  auto* interp_ctx = dynamic_cast<const ReduceMaxOp*>(ctx);
-  state->axis = interp_ctx->axis();
-  state->keepdims = interp_ctx->keepdims();
+                                    const TensorTuple& outputs, const OpBase* ctx) const {
+  auto* op_ctx = dynamic_cast<const ReduceMaxOp*>(ctx);
+  state->axis = op_ctx->axis();
+  state->keepdims = op_ctx->keepdims();
   state->SaveTensorForBackward(inputs.at(0));
   state->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();

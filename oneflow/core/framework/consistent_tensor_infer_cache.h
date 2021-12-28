@@ -20,12 +20,11 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
-
-#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 
@@ -76,7 +75,7 @@ class ConsistentTensorMetaInferArgs final {
   const std::vector<InputConsistentTensorMeta>& input_consistent_tensor_metas() const {
     return input_consistent_tensor_metas_;
   }
-  const std::shared_ptr<const OpInterpCtx>& op_interp_ctx() const { return op_interp_ctx_; }
+  const std::shared_ptr<const OpBase>& op_ctx() const { return op_ctx_; }
 
   size_t hash_value() const;
 
@@ -93,13 +92,13 @@ class ConsistentTensorMetaInferArgs final {
                                   std::vector<NdSbpInferHint>* hints) const;
 
   static Maybe<ConsistentTensorMetaInferArgs> New(
-      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, const TensorTuple& input_tensors);
+      const std::shared_ptr<const OpBase>& op_ctx, const TensorTuple& input_tensors);
 
  private:
   ConsistentTensorMetaInferArgs() = default;
   Maybe<void> InitInputConsistentTensorMetas(const TensorTuple& input_tensors);
 
-  std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
+  std::shared_ptr<const OpBase> op_ctx_;
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
 };
 
@@ -109,21 +108,25 @@ class SrcOpConsistentTensorMetaInferArgs final {
   SrcOpConsistentTensorMetaInferArgs(SrcOpConsistentTensorMetaInferArgs&&) = default;
   ~SrcOpConsistentTensorMetaInferArgs() = default;
 
-  Symbol<ParallelDesc> parallel_desc() const { return CHECK_JUST(op_interp_ctx_->parallel_desc); }
-  Symbol<cfg::NdSbp> nd_sbp() const { return CHECK_JUST(op_interp_ctx_->sbp); }
-  const std::shared_ptr<const OpInterpCtx>& op_interp_ctx() const { return op_interp_ctx_; }
+  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
+  Symbol<cfg::NdSbp> nd_sbp() const { return nd_sbp_; }
+  const std::shared_ptr<const OpBase>& op_ctx() const { return op_ctx_; }
 
   size_t hash_value() const;
 
   bool operator==(const SrcOpConsistentTensorMetaInferArgs& other) const;
 
   static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
-      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx);
+      const std::shared_ptr<const OpBase>& op_ctx,
+                                                       Symbol<ParallelDesc> parallel_desc,
+                                                       Symbol<cfg::NdSbp> nd_sbp);
 
  private:
   SrcOpConsistentTensorMetaInferArgs() = default;
 
-  std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
+  std::shared_ptr<const OpBase> op_ctx_;
+  Symbol<ParallelDesc> parallel_desc_;
+  Symbol<cfg::NdSbp> nd_sbp_;
 };
 
 class OpArgMutConsistentTensorMeta final {

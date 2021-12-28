@@ -56,15 +56,15 @@ Maybe<AttrVal> FetchOutputOp::GetAttr(const std::string& attr_name) const {
 }
 
 Maybe<AttrVal> FeedVariableOp::GetAttr(const std::string& attr_name) const {
-  if (attr_name == "_l2") {
-    return CastAttrValue(&_l2);
+  if (attr_name == "l2") {
+    return CastAttrValue(&l2);
   } else {
     return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
   }
 }
 
 const HashSet<std::string>& FeedVariableOp::AttrNames() const {
-  static HashSet<std::string> attr_names{"_l2"};
+  static HashSet<std::string> attr_names{"l2"};
   return attr_names;
 }
 

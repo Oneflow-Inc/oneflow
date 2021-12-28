@@ -25,7 +25,7 @@ struct FakeQuantizationCaptureState : public AutoGradCaptureState {
 class FakeQuantization : public OpExprGradFunction<FakeQuantizationCaptureState> {
  public:
   Maybe<void> Capture(FakeQuantizationCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);
     state->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();

@@ -43,7 +43,7 @@ struct NormalizationGradCaptureState : public AutoGradCaptureState {
 class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureState> {
  public:
   Maybe<void> Capture(NormalizationGradCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     // input_size may be 3 or 5, as inputs may be
     // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
     // ref to track_running_stats false/true
@@ -64,10 +64,10 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     }
     state->gamma_requires_grad = gamma->requires_grad();
     state->beta_requires_grad = beta->requires_grad();
-    auto* interp_ctx = dynamic_cast<const NormalizationGradOp*>(ctx);
+    auto* op_ctx = dynamic_cast<const NormalizationGradOp*>(ctx);
 
-    state->axis = interp_ctx->axis();
-    state->epsilon = interp_ctx->epsilon();
+    state->axis = op_ctx->axis();
+    state->epsilon = op_ctx->epsilon();
     state->SaveTensorForBackward(inputs.at(0));  // x
     state->SaveTensorForBackward(gamma);         // gamma
     if (state->is_training || !state->track_running_stats) {

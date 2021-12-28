@@ -28,14 +28,14 @@ struct Pad2dCaptureState : public AutoGradCaptureState {
 class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
  public:
   Maybe<void> Capture(Pad2dCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const ReflectionPad2DOp*>(ctx);
-    state->paddings = interp_ctx->padding();
+    auto* op_ctx = dynamic_cast<const ReflectionPad2DOp*>(ctx);
+    state->paddings = op_ctx->padding();
     return Maybe<void>::Ok();
   }
 };
@@ -75,15 +75,15 @@ struct ConstantPadNdCaptureState : public AutoGradCaptureState {
 class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
  public:
   Maybe<void> Capture(ConstantPadNdCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const PadOp*>(ctx);
-    const auto& pad_before = interp_ctx->padding_before();
-    const auto& pad_after = interp_ctx->padding_after();
+    auto* op_ctx = dynamic_cast<const PadOp*>(ctx);
+    const auto& pad_before = op_ctx->padding_before();
+    const auto& pad_after = op_ctx->padding_after();
 
     if (pad_before.size() != pad_after.size()) {
       return Error::RuntimeError() << "padding_before and padding_after size mismatch";
@@ -95,9 +95,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
       state->paddings[2 * i + 1] = pad_after[size - i - 1];
     }
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      state->padding_value = interp_ctx->floating_constant_value();
+      state->padding_value = op_ctx->floating_constant_value();
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      state->padding_value = interp_ctx->integral_constant_value();
+      state->padding_value = op_ctx->integral_constant_value();
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
     }

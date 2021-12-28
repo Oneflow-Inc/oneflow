@@ -35,7 +35,7 @@ struct GridSampleInterpState : public AutoGradCaptureState {
 class GridSample : public OpExprGradFunction<GridSampleInterpState> {
  public:
   Maybe<void> Capture(GridSampleInterpState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->input_requires_grad = inputs.at(0)->requires_grad();
     state->grid_requires_grad = inputs.at(1)->requires_grad();
@@ -45,10 +45,10 @@ class GridSample : public OpExprGradFunction<GridSampleInterpState> {
     state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
     state->grid_index = state->SaveTensorForBackward(inputs.at(1));   // grid
 
-    auto* interp_ctx = dynamic_cast<const GridSampleOp*>(ctx);
-    state->interpolation_mode = interp_ctx->interpolation_mode();
-    state->padding_mode = interp_ctx->padding_mode();
-    state->align_corners = interp_ctx->align_corners();
+    auto* op_ctx = dynamic_cast<const GridSampleOp*>(ctx);
+    state->interpolation_mode = op_ctx->interpolation_mode();
+    state->padding_mode = op_ctx->padding_mode();
+    state->align_corners = op_ctx->align_corners();
     return Maybe<void>::Ok();
   }
 

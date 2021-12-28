@@ -41,14 +41,14 @@ template<typename T>
 class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
  public:
   Maybe<void> Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const Op* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const ConvolutionNdCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 template<typename T>
 Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                                      const TensorTuple& outputs, const Op* ctx) const {
+                                      const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->input_requires_grad = inputs.at(0)->requires_grad();
   state->weight_requires_grad = inputs.at(1)->requires_grad();
@@ -58,13 +58,13 @@ Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const Te
   }
   state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
 
-  auto* interp_ctx = dynamic_cast<const typename T::ContextT*>(ctx);
-  state->data_format = interp_ctx->data_format();
-  state->padding_before = interp_ctx->padding_before();
-  state->kernel_size = interp_ctx->kernel_size();
-  state->strides = interp_ctx->strides();
-  state->dilation_rate = interp_ctx->dilation_rate();
-  state->groups = interp_ctx->groups();
+  auto* op_ctx = dynamic_cast<const T*>(ctx);
+  state->data_format = op_ctx->data_format();
+  state->padding_before = op_ctx->padding_before();
+  state->kernel_size = op_ctx->kernel_size();
+  state->strides = op_ctx->strides();
+  state->dilation_rate = op_ctx->dilation_rate();
+  state->groups = op_ctx->groups();
   return Maybe<void>::Ok();
 }
 
@@ -89,24 +89,9 @@ Maybe<void> ConvolutionNd<T>::Apply(const ConvolutionNdCaptureState* state,
   return Maybe<void>::Ok();
 }
 
-class Convolution1D : public ConvolutionNd<Convolution1D> {
- public:
-  using ContextT = Conv1DOp;
-};
-
-class Convolution2D : public ConvolutionNd<Convolution2D> {
- public:
-  using ContextT = Conv2DOp;
-};
-
-class Convolution3D : public ConvolutionNd<Convolution3D> {
- public:
-  using ContextT = Conv3DOp;
-};
-
-REGISTER_OP_EXPR_GRAD_FUNCTION("conv1d", Convolution1D);
-REGISTER_OP_EXPR_GRAD_FUNCTION("conv2d", Convolution2D);
-REGISTER_OP_EXPR_GRAD_FUNCTION("conv3d", Convolution3D);
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv1d", ConvolutionNd<Conv1DOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv2d", ConvolutionNd<Conv2DOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv3d", ConvolutionNd<Conv3DOp>);
 
 }  // namespace one
 }  // namespace oneflow

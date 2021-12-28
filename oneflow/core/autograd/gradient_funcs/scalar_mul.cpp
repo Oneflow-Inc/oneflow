@@ -29,16 +29,16 @@ struct ScalarMulCaptureState : public AutoGradCaptureState {
 class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
  public:
   Maybe<void> Capture(ScalarMulCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const ScalarMulOp*>(ctx);
-    bool has_float_operand = interp_ctx->has_float_operand();
+    auto* op_ctx = dynamic_cast<const ScalarMulOp*>(ctx);
+    bool has_float_operand = op_ctx->has_float_operand();
     if (has_float_operand) {
-      state->operand = Scalar(interp_ctx->float_operand());
+      state->operand = Scalar(op_ctx->float_operand());
     } else {
-      state->operand = Scalar(interp_ctx->int_operand());
+      state->operand = Scalar(op_ctx->int_operand());
     }
     return Maybe<void>::Ok();
   }

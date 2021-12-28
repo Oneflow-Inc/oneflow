@@ -34,16 +34,16 @@ struct NarrowCaptureState : public AutoGradCaptureState {
 class Narrow : public OpExprGradFunction<NarrowCaptureState> {
  public:
   Maybe<void> Capture(NarrowCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const NarrowOp*>(ctx);
-    state->dim = interp_ctx->dim();
-    state->start = interp_ctx->start();
-    state->length = interp_ctx->length();
+    auto* op_ctx = dynamic_cast<const NarrowOp*>(ctx);
+    state->dim = op_ctx->dim();
+    state->start = op_ctx->start();
+    state->length = op_ctx->length();
     if (LazyMode::is_enabled()) {
       state->SaveTensorForBackward(inputs.at(0));
     } else {

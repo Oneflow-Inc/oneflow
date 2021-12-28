@@ -61,7 +61,7 @@ class FeedVariableOp : public OpBase {
   const HashSet<std::string>& AttrNames() const override;
 
  public:
-  double _l2;
+  double l2;
 };
 
 class ImageDecoderRandomCropResizeOp : public OpBase {

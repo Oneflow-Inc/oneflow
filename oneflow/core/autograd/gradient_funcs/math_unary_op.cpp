@@ -32,7 +32,7 @@ typedef Maybe<one::Tensor> (*UnaryBwFunc)(const std::shared_ptr<one::Tensor>&,
 template<UnaryBwFunc BwFunc>
 class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
   Maybe<void> Capture(UnaryMathCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     state->x_requires_grad = inputs.at(0)->requires_grad();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();

@@ -26,7 +26,7 @@ struct ScalarFloorDivCaptureState : public AutoGradCaptureState {};
 class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
  public:
   Maybe<void> Capture(ScalarFloorDivCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     return Maybe<void>::Ok();
   }
 

@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/op_attrs.h"
 
 namespace oneflow {
 
@@ -34,20 +35,27 @@ class OpBase {
 
   virtual Maybe<AttrVal> GetAttr(const std::string& attr_name) const = 0;
 
+  template<typename T>
+  Maybe<const T&> GetAttr(const std::string& attr_name) const;
+  
+  OpAttrs GetAttrs() const;
+
+  template<typename T>
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+
+  Maybe<void> SetAttr(const std::string& attr_name, const AttrVal& attr_val);
+
+  bool HasAttr(const std::string& attr_name) const;
+
   virtual const HashSet<std::string>& AttrNames() const {
     static const HashSet<std::string> attr_names;
     return attr_names;
   }
 
+  static Maybe<OpBase> New(const std::string& name);
+
  protected:
   OpBase() = default;
-};
-
-class FakeOp : public OpBase {
- public:
-  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
-    return Error::RuntimeError() << "`FakeOp` has no attribute.";
-  }
 };
 
 }  // namespace oneflow

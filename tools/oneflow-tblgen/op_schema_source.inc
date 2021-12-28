@@ -15,14 +15,14 @@ namespace oneflow {
 
 {% for opname, op in ops %}
 const HashSet<std::string>& {{opname}}::AttrNames() const {
-  static const HashSet<std::string> attr_names = { {%- for name, attr in op.attrs -%}"{{name}}", {%- endfor -%} };
+  static const HashSet<std::string> attr_names = { {%- for attr in op.attrs -%}"{{attr.name}}", {%- endfor -%} };
   return attr_names;
 }
 
 namespace schema {
 Maybe<AttrVal> {{opname}}::GetAttr(const std::string& attr_name) const {
-  {% for name, attr in op.attrs %}if(attr_name == "{{name}}") {
-    return CastAttrValue(&{{name}}_);
+  {% for attr in op.attrs %}if(attr_name == "{{attr.name}}") {
+    return CastAttrValue(&{{attr.name}}_);
   }
   {% endfor -%}
   return Error::RuntimeError() << "{{op.name}} op has no attribute named " << attr_name;
@@ -33,29 +33,29 @@ REGISTER_OP_SCHEMA("user.{{op.name}}", schema::{{opname}});
 
 REGISTER_USER_OP("{{op.name}}")
 {%- if op.input -%}
-{%- for name, input in op.input -%}
+{%- for input in op.input -%}
 {%- if input.is_optional -%}
-    .OptionalInput("{{name}}")
+    .OptionalInput("{{input.name}}")
 {%- else -%}
-    .Input("{{name}}")
+    .Input("{{input.name}}")
 {%- endif -%}
 {%- endfor -%}
 {%- endif -%}
 {%- if op.output -%}
-{%- for name, output in op.output -%}
+{%- for output in op.output -%}
 {%- if output.is_optional -%}
-    .OptionalOutput("{{name}}")
+    .OptionalOutput("{{output.name}}")
 {%- else -%}
-    .Output("{{name}}")
+    .Output("{{output.name}}")
 {%- endif -%}
 {%- endfor -%}
 {%- endif -%}
 
-{%- for name, attr in op.attrs -%}
+{%- for attr in op.attrs -%}
 {%- if existsIn(attr, "default") -%}
-    .Attr<{{attr.type}}>("{{name}}", {{attr.default}})
+    .Attr<{{attr.type}}>("{{attr.name}}", {{attr.default}})
 {%- else -%}
-    .Attr<{{attr.type}}>("{{name}}")
+    .Attr<{{attr.type}}>("{{attr.name}}")
 {%- endif -%}
 {%- endfor -%}
 {%- if op.cpu_only -%}

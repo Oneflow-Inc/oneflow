@@ -27,13 +27,13 @@ struct SoftmaxCaptureState : public AutoGradCaptureState {
 class Softmax : public OpExprGradFunction<SoftmaxCaptureState> {
  public:
   Maybe<void> Capture(SoftmaxCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const SoftmaxCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Softmax::Capture(SoftmaxCaptureState* state, const TensorTuple& inputs,
-                             const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                             const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   state->requires_grad = inputs.at(0)->requires_grad();
 

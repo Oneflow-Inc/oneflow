@@ -36,13 +36,13 @@ template<ReduceMode mode>
 class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
  public:
   Maybe<void> Capture(ReduceDeviceCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const ReduceMaxDeviceStageOp*>(ctx);
-    state->axis = interp_ctx->axis();
+    auto* op_ctx = dynamic_cast<const ReduceMaxDeviceStageOp*>(ctx);
+    state->axis = op_ctx->axis();
     state->mask_index = state->SaveTensorForBackward(outputs.at(1));   // mask
     state->count_index = state->SaveTensorForBackward(outputs.at(2));  // count
     return Maybe<void>::Ok();
@@ -82,15 +82,15 @@ template<ReduceMode mode>
 class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
  public:
   Maybe<void> Capture(ReduceGlobalCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 2);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const ReduceMaxGlobalStageOp*>(ctx);
-    state->axis = interp_ctx->axis();
-    state->keepdims = interp_ctx->keepdims();
+    auto* op_ctx = dynamic_cast<const ReduceMaxGlobalStageOp*>(ctx);
+    state->axis = op_ctx->axis();
+    state->keepdims = op_ctx->keepdims();
     state->mask_index = state->SaveTensorForBackward(outputs.at(1));         // mask
     state->device_count_index = state->SaveTensorForBackward(inputs.at(1));  // device_count
     return Maybe<void>::Ok();

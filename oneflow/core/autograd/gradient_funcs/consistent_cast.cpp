@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/framework/system_ops.h"
 
 namespace oneflow {
 namespace one {
@@ -60,21 +61,22 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* interp_ctx) const override {
-    ctx->parallel_desc = JUST(interp_ctx->parallel_desc);
-    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(interp_ctx->sbp)));
+  Maybe<void> Capture(CastConsistentCaptureState* state, const TensorTuple& inputs,
+                      const TensorTuple& outputs,
+                      const OpExprInterpContext& interp_ctx) const override {
+    state->parallel_desc = JUST(interp_ctx.parallel_desc);
+    state->nd_sbp = JUST(GetDualNdSbp(JUST(interp_ctx.nd_sbp)));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastConsistentCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
     {
-      Symbol<cfg::NdSbp> nd_sbp_constraint = ctx->nd_sbp;
-      Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
+      Symbol<cfg::NdSbp> nd_sbp_constraint = state->nd_sbp;
+      Symbol<ParallelDesc> parallel_desc_constraint = state->parallel_desc;
       out_grad =
           JUST(RecursiveGetBoxingOutput(out_grad, nd_sbp_constraint, parallel_desc_constraint));
     }
@@ -99,7 +101,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
   }
 
   Maybe<void> Capture(CastConsistentCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     const auto& input = inputs.at(0);
     CHECK_OR_RETURN(input->is_consistent());
     state->parallel_desc = JUST(input->parallel_desc());
@@ -109,16 +111,14 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastConsistentCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    auto interp_ctx = std::make_shared<CastToConsistentOpInterpCtx>();
-    interp_ctx->shape = *ctx->shape;
-    interp_ctx->dtype = ctx->dtype->data_type();
-    interp_ctx->parallel_desc = ctx->parallel_desc;
-    interp_ctx->sbp = dual_nd_sbp;
+    const auto& dual_nd_sbp = JUST(GetDualNdSbp(state->nd_sbp));
+    auto ctx = std::make_shared<schema::CastToConsistentOp>();
+    ctx->shape = *state->shape;
+    ctx->dtype = state->dtype->data_type();
     in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, interp_ctx));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, OpExprInterpContext(ctx, state->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
   }
 

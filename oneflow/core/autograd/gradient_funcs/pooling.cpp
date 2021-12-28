@@ -48,7 +48,7 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
   virtual ~PoolingNdGrad() = default;
 
   Maybe<void> Capture(PoolingCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const PoolingCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -58,7 +58,7 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
 
 template<typename T>
 Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTuple& inputs,
-                                      const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                      const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -66,14 +66,14 @@ Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTu
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
   state->indice_index = state->SaveTensorForBackward(outputs.at(1));
 
-  auto* interp_ctx = dynamic_cast<const typename T::OpT*>(ctx);
-  state->data_format = interp_ctx->data_format();
-  state->padding = interp_ctx->padding();
-  state->kernel_size = interp_ctx->kernel_size();
-  state->stride = interp_ctx->stride();
-  state->dilation = interp_ctx->dilation();
-  state->return_indices = interp_ctx->return_indices();
-  state->ceil_mode = interp_ctx->ceil_mode();
+  auto* op_ctx = dynamic_cast<const typename T::OpT*>(ctx);
+  state->data_format = op_ctx->data_format();
+  state->padding = op_ctx->padding();
+  state->kernel_size = op_ctx->kernel_size();
+  state->stride = op_ctx->stride();
+  state->dilation = op_ctx->dilation();
+  state->return_indices = op_ctx->return_indices();
+  state->ceil_mode = op_ctx->ceil_mode();
   return Maybe<void>::Ok();
 }
 

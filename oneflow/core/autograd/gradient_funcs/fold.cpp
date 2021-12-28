@@ -32,20 +32,20 @@ struct FoldInterpState : public AutoGradCaptureState {
 class Fold : public OpExprGradFunction<FoldInterpState> {
  public:
   Maybe<void> Capture(FoldInterpState* state, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const OpInterpCtx* ctx) const override;
+                      const OpBase* ctx) const override;
   Maybe<void> Apply(const FoldInterpState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Fold::Capture(FoldInterpState* state, const TensorTuple& inputs,
-                          const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                          const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FoldOp*>(ctx);
-  state->kernel_size = interp_ctx->kernel_size();
-  state->dilation_rate = interp_ctx->dilation_rate();
-  state->padding = interp_ctx->padding();
-  state->strides = interp_ctx->strides();
+  auto* op_ctx = dynamic_cast<const FoldOp*>(ctx);
+  state->kernel_size = op_ctx->kernel_size();
+  state->dilation_rate = op_ctx->dilation_rate();
+  state->padding = op_ctx->padding();
+  state->strides = op_ctx->strides();
   return Maybe<void>::Ok();
 }
 

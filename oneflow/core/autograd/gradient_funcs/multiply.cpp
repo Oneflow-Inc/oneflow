@@ -29,13 +29,13 @@ struct MultiplyCaptureState : public AutoGradCaptureState {
 class Multiply : public OpExprGradFunction<MultiplyCaptureState> {
  public:
   Maybe<void> Capture(MultiplyCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const MultiplyCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Multiply::Capture(MultiplyCaptureState* state, const TensorTuple& inputs,
-                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                              const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->requires_grad_x = inputs.at(0)->requires_grad();
   state->requires_grad_y = inputs.at(1)->requires_grad();

@@ -30,19 +30,19 @@ struct ExpandCaptureState : public AutoGradCaptureState {
 class Expand : public OpExprGradFunction<ExpandCaptureState> {
  public:
   Maybe<void> Capture(ExpandCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const ExpandCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Expand::Capture(ExpandCaptureState* state, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                            const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const ExpandOp*>(ctx);
-  state->logical_out_shape = interp_ctx->logical_in_shape();
-  state->logical_expand_shape = interp_ctx->logical_expand_shape();
+  auto* op_ctx = dynamic_cast<const ExpandOp*>(ctx);
+  state->logical_out_shape = op_ctx->logical_in_shape();
+  state->logical_expand_shape = op_ctx->logical_expand_shape();
   return Maybe<void>::Ok();
 }
 

@@ -27,7 +27,7 @@ struct TensorScatterNdUpdateCaptureState : public AutoGradCaptureState {
 class TensorScatterNdUpdate : public OpExprGradFunction<TensorScatterNdUpdateCaptureState> {
  public:
   Maybe<void> Capture(TensorScatterNdUpdateCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->tensor_requires_grad = inputs.at(0)->requires_grad();

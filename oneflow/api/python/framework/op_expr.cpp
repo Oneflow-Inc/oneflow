@@ -17,7 +17,6 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/op_interp_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"

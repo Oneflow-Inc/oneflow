@@ -29,17 +29,17 @@ struct FlipCaptureState : public AutoGradCaptureState {
 class Flip : public OpExprGradFunction<FlipCaptureState> {
  public:
   Maybe<void> Capture(FlipCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const FlipCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Flip::Capture(FlipCaptureState* state, const TensorTuple& inputs,
-                          const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                          const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FlipOp*>(ctx);
-  state->dims = interp_ctx->dims();
+  auto* op_ctx = dynamic_cast<const FlipOp*>(ctx);
+  state->dims = op_ctx->dims();
   return Maybe<void>::Ok();
 }
 

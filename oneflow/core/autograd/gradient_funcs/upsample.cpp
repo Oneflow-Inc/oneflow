@@ -33,21 +33,21 @@ struct UpsampleCaptureState : public AutoGradCaptureState {
 class Upsample : public OpExprGradFunction<UpsampleCaptureState> {
  public:
   Maybe<void> Capture(UpsampleCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const UpsampleCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Upsample::Capture(UpsampleCaptureState* state, const TensorTuple& inputs,
-                              const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                              const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const UpsampleOp*>(ctx);
-  state->height_scale = interp_ctx->height_scale();
-  state->width_scale = interp_ctx->width_scale();
-  state->align_corners = interp_ctx->align_corners();
-  state->data_format = interp_ctx->data_format();
-  state->interpolation = interp_ctx->interpolation();
+  auto* op_ctx = dynamic_cast<const UpsampleOp*>(ctx);
+  state->height_scale = op_ctx->height_scale();
+  state->width_scale = op_ctx->width_scale();
+  state->align_corners = op_ctx->align_corners();
+  state->data_format = op_ctx->data_format();
+  state->interpolation = op_ctx->interpolation();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -77,15 +77,15 @@ struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
 class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleNearest2DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleNearest2DOp*>(ctx);
-    state->height_scale = interp_ctx->height_scale();
-    state->width_scale = interp_ctx->width_scale();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleNearest2DOp*>(ctx);
+    state->height_scale = op_ctx->height_scale();
+    state->width_scale = op_ctx->width_scale();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -116,16 +116,16 @@ struct UpsampleBilinear2DCaptureState : public AutoGradCaptureState {
 class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleBilinear2DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleBilinear2DOp*>(ctx);
-    state->height_scale = interp_ctx->height_scale();
-    state->width_scale = interp_ctx->width_scale();
-    state->align_corners = interp_ctx->align_corners();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleBilinear2DOp*>(ctx);
+    state->height_scale = op_ctx->height_scale();
+    state->width_scale = op_ctx->width_scale();
+    state->align_corners = op_ctx->align_corners();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -156,15 +156,15 @@ struct UpsampleLinear1DCaptureState : public AutoGradCaptureState {
 class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleLinear1DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleLinear1DOp*>(ctx);
-    state->scale_factor = interp_ctx->scale_factor();
-    state->align_corners = interp_ctx->align_corners();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleLinear1DOp*>(ctx);
+    state->scale_factor = op_ctx->scale_factor();
+    state->align_corners = op_ctx->align_corners();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -193,14 +193,14 @@ struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
 class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleNearest1DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleNearest1DOp*>(ctx);
-    state->scale_factor = interp_ctx->scale_factor();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleNearest1DOp*>(ctx);
+    state->scale_factor = op_ctx->scale_factor();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -231,16 +231,16 @@ struct UpsampleBicubic2DCaptureState : public AutoGradCaptureState {
 class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleBicubic2DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleBicubic2DOp*>(ctx);
-    state->height_scale = interp_ctx->height_scale();
-    state->width_scale = interp_ctx->width_scale();
-    state->align_corners = interp_ctx->align_corners();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleBicubic2DOp*>(ctx);
+    state->height_scale = op_ctx->height_scale();
+    state->width_scale = op_ctx->width_scale();
+    state->align_corners = op_ctx->align_corners();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -271,16 +271,16 @@ struct UpsampleNearest3DCaptureState : public AutoGradCaptureState {
 class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleNearest3DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleNearest3DOp*>(ctx);
-    state->depth_scale = interp_ctx->depth_scale();
-    state->height_scale = interp_ctx->height_scale();
-    state->width_scale = interp_ctx->width_scale();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleNearest3DOp*>(ctx);
+    state->depth_scale = op_ctx->depth_scale();
+    state->height_scale = op_ctx->height_scale();
+    state->width_scale = op_ctx->width_scale();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -313,17 +313,17 @@ struct UpsampleTrilinear3DCaptureState : public AutoGradCaptureState {
 class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCaptureState> {
  public:
   Maybe<void> Capture(UpsampleTrilinear3DCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const UpsampleTrilinear3DOp*>(ctx);
-    state->depth_scale = interp_ctx->depth_scale();
-    state->height_scale = interp_ctx->height_scale();
-    state->width_scale = interp_ctx->width_scale();
-    state->align_corners = interp_ctx->align_corners();
-    state->data_format = interp_ctx->data_format();
+    auto* op_ctx = dynamic_cast<const UpsampleTrilinear3DOp*>(ctx);
+    state->depth_scale = op_ctx->depth_scale();
+    state->height_scale = op_ctx->height_scale();
+    state->width_scale = op_ctx->width_scale();
+    state->align_corners = op_ctx->align_corners();
+    state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

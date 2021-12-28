@@ -44,7 +44,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SspVariableProxyOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("ref", 0);
   CHECK_OR_RETURN(out_modifier != nullptr);
   out_modifier->set_is_mutable(true);

@@ -83,8 +83,8 @@ namespace oneflow {
   *ctx->OutputDType("y", 0) = like_tensor.data_type();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReduceSumLikeOp::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,
-                                                       const user_op::UserOpConfWrapper&) {
+/*static*/ Maybe<void> ReduceSumLikeOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
   CHECK_OR_RETURN(like_arg_modifier != nullptr);
   like_arg_modifier->set_requires_grad(false);

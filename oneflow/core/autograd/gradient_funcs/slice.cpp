@@ -33,16 +33,16 @@ struct SliceCaptureState : public AutoGradCaptureState {
 class Slice : public OpExprGradFunction<SliceCaptureState> {
  public:
   Maybe<void> Capture(SliceCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const SliceOp*>(ctx);
-    state->start = interp_ctx->start();
-    state->stop = interp_ctx->stop();
-    state->step = interp_ctx->step();
+    auto* op_ctx = dynamic_cast<const SliceOp*>(ctx);
+    state->start = op_ctx->start();
+    state->stop = op_ctx->stop();
+    state->step = op_ctx->step();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -69,17 +69,17 @@ struct SliceUpdateCaptureState : public AutoGradCaptureState {
 class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
  public:
   Maybe<void> Capture(SliceUpdateCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad_x = inputs.at(0)->requires_grad();
     state->requires_grad_update = inputs.at(1)->requires_grad();
     if (!state->requires_grad_x && !state->requires_grad_update) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const SliceUpdateOp*>(ctx);
-    state->start = interp_ctx->start();
-    state->stop = interp_ctx->stop();
-    state->step = interp_ctx->step();
+    auto* op_ctx = dynamic_cast<const SliceUpdateOp*>(ctx);
+    state->start = op_ctx->start();
+    state->stop = op_ctx->stop();
+    state->step = op_ctx->step();
 
     if (state->requires_grad_x) { state->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();

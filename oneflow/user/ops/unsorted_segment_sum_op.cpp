@@ -73,7 +73,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
   CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
   segment_ids_modifier->set_requires_grad(false);
@@ -180,7 +180,7 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::ModifyInputArg(
-    GetInputArgModifier GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
   CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
   segment_ids_modifier->set_requires_grad(false);

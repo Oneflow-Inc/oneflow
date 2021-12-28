@@ -28,13 +28,13 @@ struct BatchGatherCaptureState : public AutoGradCaptureState {
 class BatchGather : public OpExprGradFunction<BatchGatherCaptureState> {
  public:
   Maybe<void> Capture(BatchGatherCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const BatchGatherCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> BatchGather::Capture(BatchGatherCaptureState* state, const TensorTuple& inputs,
-                                 const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                 const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
   const auto& in_shape = inputs.at(0)->shape();

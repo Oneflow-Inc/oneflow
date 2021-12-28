@@ -28,18 +28,18 @@ struct KLDivLossCaptureState : public AutoGradCaptureState {
 class KLDivLoss : public OpExprGradFunction<KLDivLossCaptureState> {
  public:
   Maybe<void> Capture(KLDivLossCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const KLDivLossCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* state, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                               const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const KlDivLossOp*>(ctx);
-  state->log_target = interp_ctx->log_target();
+  auto* op_ctx = dynamic_cast<const KlDivLossOp*>(ctx);
+  state->log_target = op_ctx->log_target();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target
   return Maybe<void>::Ok();

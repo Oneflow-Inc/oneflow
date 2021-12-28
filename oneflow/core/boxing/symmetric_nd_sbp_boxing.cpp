@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/system_ops.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/functional/functional.h"
@@ -40,17 +41,15 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
                                                Symbol<ParallelDesc> parallel_desc,
                                                Symbol<cfg::NdSbp> nd_sbp) {
   const auto& op = JUST(GetLocalToConsistentOpExpr());
-  auto ctx = std::make_shared<CastToConsistentOpInterpCtx>();
+  auto ctx = std::make_shared<schema::CastToConsistentOp>();
   ctx->shape = shape;
   ctx->dtype = tensor->dtype()->data_type();
-  ctx->parallel_desc = parallel_desc;
-  ctx->sbp = nd_sbp;
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   std::shared_ptr<Shape> pyhsical_shape =
       JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));
   std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
   if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op, {x}, ctx));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op, {x}, one::OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,

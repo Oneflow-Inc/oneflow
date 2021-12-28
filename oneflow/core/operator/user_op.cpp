@@ -135,8 +135,9 @@ class UserOpInferContext final : public user_op::InferContext {
     auto InitTensorDesc = [&](const ArgVec& arg_vec, const PbRpf<std::string>& bns) {
       CHECK_EQ(arg_vec.size(), bns.size());
       for (int32_t i = 0; i < arg_vec.size(); ++i) {
+        const auto& bn_i = bns.Get(i);
         BlobDesc* blob = GetBlobDesc4BnInOp(bns.Get(i));
-        CHECK_NOTNULL(blob);
+        CHECK(blob != nullptr) << bn_i;
         arg2tensor_desc_.emplace(arg_vec.at(i), GenTensorDescFromBlobDesc(blob));
       }
     };

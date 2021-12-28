@@ -30,21 +30,21 @@ struct GatherCaptureState : public AutoGradCaptureState {
 class Gather : public OpExprGradFunction<GatherCaptureState> {
  public:
   Maybe<void> Capture(GatherCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const GatherCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Gather::Capture(GatherCaptureState* state, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                            const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   state->SaveTensorForBackward(inputs.at(0));
   state->SaveTensorForBackward(inputs.at(1));
 
-  auto* interp_ctx = dynamic_cast<const GatherOp*>(ctx);
-  state->axis = interp_ctx->axis();
+  auto* op_ctx = dynamic_cast<const GatherOp*>(ctx);
+  state->axis = op_ctx->axis();
   return Maybe<void>::Ok();
 }
 

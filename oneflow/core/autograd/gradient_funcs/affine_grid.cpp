@@ -30,14 +30,14 @@ struct AffineGridInterpState : public AutoGradCaptureState {
 class AffineGrid : public OpExprGradFunction<AffineGridInterpState> {
  public:
   Maybe<void> Capture(AffineGridInterpState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();  // theta
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* interp_ctx = dynamic_cast<const AffineGridOp*>(ctx);
-    state->size = interp_ctx->size();
-    state->align_corners = interp_ctx->align_corners();
+    auto* op_ctx = dynamic_cast<const AffineGridOp*>(ctx);
+    state->size = op_ctx->size();
+    state->align_corners = op_ctx->align_corners();
     return Maybe<void>::Ok();
   }
 

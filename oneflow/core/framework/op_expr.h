@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/op_interp_ctx.h"
+#include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/user_op_registry.h"
@@ -76,7 +76,7 @@ class BuiltinOpExpr : public OpExpr {
   }
 
   virtual Maybe<void> BuildOpConf(OperatorConf* op_conf,
-                                  const std::shared_ptr<const OpInterpCtx>& ctx) const = 0;
+                                  const std::shared_ptr<const OpBase>& ctx) const = 0;
 
  protected:
   std::string op_name_;
@@ -108,7 +108,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
   Maybe<void> BuildOpConf(OperatorConf* op_conf,
-                          const std::shared_ptr<const OpInterpCtx>& ctx) const override;
+                          const std::shared_ptr<const OpBase>& ctx) const override;
 
  protected:
   explicit BuiltinOpExprImpl(const std::string& op_name, ProtoType&& op_proto,
@@ -138,15 +138,15 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }
 
   Maybe<void> InferPhysicalShapeAndDType(
-      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, const std::string& device_tag,
+      const std::shared_ptr<const OpBase>& op_ctx, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
 
   Maybe<void> InferLogicalShapeAndDType(
-      const std::shared_ptr<const OpInterpCtx>& op_interp_ctx, Symbol<ParallelDesc> parallel_desc,
+      const std::shared_ptr<const OpBase>& op_ctx, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
-  Maybe<Symbol<Device>> InferDevices(const std::shared_ptr<const OpInterpCtx>& op_interp_ctx,
+  Maybe<Symbol<Device>> InferDevices(const std::shared_ptr<const OpBase>& op_ctx,
                                      const TensorTuple& inputs, TensorTuple* outputs) const;
   ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
     return consistent_tensor_infer_cache_.get();

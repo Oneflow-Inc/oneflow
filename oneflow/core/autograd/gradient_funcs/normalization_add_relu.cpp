@@ -46,7 +46,7 @@ struct NormalizationAddReluGradCaptureState : public AutoGradCaptureState {
 class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluGradCaptureState> {
  public:
   Maybe<void> Capture(NormalizationAddReluGradCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     // input_size may be 3/4/5/6, as inputs may be
     // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
     // (x, addend, gamma, beta) or (x, addend, moving_mean, moving_variance, gamma, beta)
@@ -87,10 +87,10 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
 
     state->gamma_requires_grad = gamma->requires_grad();
     state->beta_requires_grad = beta->requires_grad();
-    auto* interp_ctx = dynamic_cast<const NormalizationAddReluGradOp*>(ctx);
+    auto* op_ctx = dynamic_cast<const NormalizationAddReluGradOp*>(ctx);
 
-    state->axis = interp_ctx->axis();
-    state->epsilon = interp_ctx->epsilon();
+    state->axis = op_ctx->axis();
+    state->epsilon = op_ctx->epsilon();
 
     state->SaveTensorForBackward(inputs.at(0));  // x 0
     state->SaveTensorForBackward(gamma);         // gamma 1

@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/system_ops.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
@@ -86,7 +87,7 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherSh
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
   const auto& send_buffer = JUST(FlatShapeAndDataType::New(shape, dtype));
-  const auto& map = std::make_shared<FlatShapeAndDataType>>();
+  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
   NaiveAsyncTransportCtx ctx(
       transport_token,
@@ -231,10 +232,7 @@ Maybe<Tensor> ConsistentToConsistent(
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
   }
-  auto ctx = std::make_shared<FakeOpInterpCtx>();
-  ctx->parallel_desc = parallel_desc;
-  ctx->sbp = nd_sbp;
-  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor}, ctx));
+  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor}, OpExprInterpContext(nullptr, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
@@ -275,12 +273,10 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
-  auto ctx = std::make_shared<CastToConsistentOpInterpCtx>();
+  auto ctx = std::make_shared<schema::CastToConsistentOp>();
   ctx->shape = *shape;
   ctx->dtype = dtype;
-  ctx->parallel_desc = parallel_desc;
-  ctx->sbp = nd_sbp;
-  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {input}, ctx));
+  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {input}, OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
   return output;
 }
 
@@ -316,13 +312,11 @@ class LocalToConsistentFunctor {
                                     GlobalProcessCtx::LocalRank()));
     }
     Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    auto ctx = std::make_shared<CastToConsistentOpInterpCtx>();
+    auto ctx = std::make_shared<schema::CastToConsistentOp>();
     ctx->shape = shape;
     ctx->dtype = dtype->data_type();
-    ctx->parallel_desc = parallel_desc;
-    ctx->sbp = nd_sbp;
     DisableCheckConsistentTensorMetaScope scope{};
-    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {input}, ctx));
+    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {input}, OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
     return tensor;
   }
 

@@ -28,7 +28,7 @@ limitations under the License.
 namespace oneflow {
 
 class BlobDesc;
-class OpInterpCtx;
+class OpBase;
 
 namespace user_op {
 
@@ -81,7 +81,7 @@ class UserOpConfWrapper final {
   friend class UserOpConfWrapperBuilder;
 
   std::shared_ptr<const OperatorConf> op_conf_;
-  std::shared_ptr<const OpInterpCtx> op_interp_ctx_;
+  std::shared_ptr<const OpBase> op_ctx_;
 };
 
 using UserOpInputGradGetFn = std::function<const std::string&()>;

@@ -34,22 +34,22 @@ class FusedScaleTrilSoftmaxMaskScale
     : public OpExprGradFunction<FusedScaleTrilSoftmaxMaskScaleInterpState> {
  public:
   Maybe<void> Capture(FusedScaleTrilSoftmaxMaskScaleInterpState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const FusedScaleTrilSoftmaxMaskScaleInterpState* state,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 };
 
 Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(
     FusedScaleTrilSoftmaxMaskScaleInterpState* state, const TensorTuple& inputs,
-    const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+    const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   state->input_requires_grad = inputs.at(0)->requires_grad();  // input
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-  auto* interp_ctx = dynamic_cast<const FusedTrilScaleSoftmaxMaskScaleOp*>(ctx);
-  state->diagonal = interp_ctx->diagonal();
-  state->tril_scale_value = interp_ctx->tril_scale_value();
-  state->mask_scale_value = interp_ctx->mask_scale_value();
+  auto* op_ctx = dynamic_cast<const FusedTrilScaleSoftmaxMaskScaleOp*>(ctx);
+  state->diagonal = op_ctx->diagonal();
+  state->tril_scale_value = op_ctx->tril_scale_value();
+  state->mask_scale_value = op_ctx->mask_scale_value();
   state->SaveTensorForBackward(inputs.at(1));   // Save Mask
   state->SaveTensorForBackward(outputs.at(1));  // Save softmax_y
   return Maybe<void>::Ok();

@@ -24,8 +24,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> CcreluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
   *out_shape = in_shape;
   return Maybe<void>::Ok();
 }
@@ -33,7 +33,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> CcreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -63,15 +63,15 @@ namespace oneflow {
 
 REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper ccrelu_grad_op =
         builder.Op("ccrelu_grad")
-            .Input("y", op.output("out", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+            .Input("y", op.output("y", 0))
+            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
             .Output("dx")
             .Build();
-    op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
+    op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "x", 0);
     AddOp(ccrelu_grad_op);
   }
   return Maybe<void>::Ok();
@@ -254,7 +254,7 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestDynamicSourceOp::ModifyOutputArg(
-    GetOutputArgModifier GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
   CHECK_OR_RETURN(out_modifier != nullptr);
   out_modifier->set_header_infered_before_compute(false);

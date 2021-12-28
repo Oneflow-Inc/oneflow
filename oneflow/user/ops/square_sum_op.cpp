@@ -67,5 +67,9 @@ namespace oneflow {
   *y->mut_data_type() = x_0.data_type();
   return Maybe<void>::Ok();
 }
-
+/*static*/ Maybe<void> MultiSquareSumOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                                   const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("x") >= 1);
+  return Maybe<void>::Ok();
+}
 }  // namespace oneflow

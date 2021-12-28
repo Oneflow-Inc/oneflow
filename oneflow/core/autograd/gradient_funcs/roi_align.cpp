@@ -33,19 +33,19 @@ struct RoiAlignCaptureState : public AutoGradCaptureState {
 class RoiAlign : public OpExprGradFunction<RoiAlignCaptureState> {
  public:
   Maybe<void> Capture(RoiAlignCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
     state->SaveTensorForBackward(inputs.at(0));
     state->SaveTensorForBackward(inputs.at(1));
 
-    const auto* interp_ctx = dynamic_cast<const RoiAlignOp*>(ctx);
-    state->spatial_scale = interp_ctx->spatial_scale();
-    state->pooled_h = interp_ctx->pooled_h();
-    state->pooled_w = interp_ctx->pooled_w();
-    state->sampling_ratio = interp_ctx->sampling_ratio();
-    state->aligned = interp_ctx->aligned();
+    const auto* op_ctx = dynamic_cast<const RoiAlignOp*>(ctx);
+    state->spatial_scale = op_ctx->spatial_scale();
+    state->pooled_h = op_ctx->pooled_h();
+    state->pooled_w = op_ctx->pooled_w();
+    state->sampling_ratio = op_ctx->sampling_ratio();
+    state->aligned = op_ctx->aligned();
     return Maybe<void>::Ok();
   }
 

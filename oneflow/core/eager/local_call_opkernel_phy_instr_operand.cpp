@@ -21,7 +21,7 @@ namespace oneflow {
 namespace vm {
 
 Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
-  mut_opkernel()->set_op_interp_ctx_for_main_thread(op_interp_ctx());
+  mut_opkernel()->set_op_ctx_for_main_thread(op_ctx());
   JUST(mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_, inputs().get(),
                                       outputs().get(), consistent_tensor_infer_result().get()));
   return Maybe<void>::Ok();

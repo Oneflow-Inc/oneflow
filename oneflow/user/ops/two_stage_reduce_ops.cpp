@@ -282,8 +282,8 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {                \
     return InferReduceGlobalStageDtypeFn(ctx);                                                   \
   }                                                                                              \
-  /*static*/ Maybe<void> op_name##Op::ModifyInputArg(GetInputArgModifier GetInputArgModifierFn,  \
-                                                     const user_op::UserOpConfWrapper&) {        \
+  /*static*/ Maybe<void> op_name##Op::ModifyInputArg(                                            \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {     \
     user_op::InputArgModifier* device_count_modifier = GetInputArgModifierFn("device_count", 0); \
     device_count_modifier->set_requires_grad(false);                                             \
     return Maybe<void>::Ok();                                                                    \

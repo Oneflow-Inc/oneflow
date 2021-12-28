@@ -30,7 +30,7 @@ struct ElementwiseXimumCaptureState : public AutoGradCaptureState {
 class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumCaptureState> {
  public:
   Maybe<void> Capture(ElementwiseXimumCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     state->x_requires_grad = inputs.at(0)->requires_grad();
     state->y_requires_grad = inputs.at(1)->requires_grad();
     state->SaveTensorForBackward(inputs.at(0));

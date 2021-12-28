@@ -29,18 +29,18 @@ struct DropoutCaptureState : public AutoGradCaptureState {
 class Dropout : public OpExprGradFunction<DropoutCaptureState> {
  public:
   Maybe<void> Capture(DropoutCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const DropoutCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inputs,
-                             const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                             const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* interp_ctx = dynamic_cast<const DropoutOp*>(ctx);
-  state->rate = interp_ctx->rate();
+  auto* op_ctx = dynamic_cast<const DropoutOp*>(ctx);
+  state->rate = op_ctx->rate();
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   if (inputs.size() == 1) {
     state->has_addend = false;

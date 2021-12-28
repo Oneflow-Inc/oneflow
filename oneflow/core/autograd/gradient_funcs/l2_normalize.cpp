@@ -32,22 +32,22 @@ struct L2NormalizeCaptureState : public AutoGradCaptureState {
 class L2Normalize : public OpExprGradFunction<L2NormalizeCaptureState> {
  public:
   Maybe<void> Capture(L2NormalizeCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override;
+                      const TensorTuple& outputs, const OpBase* ctx) const override;
   Maybe<void> Apply(const L2NormalizeCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> L2Normalize::Capture(L2NormalizeCaptureState* state, const TensorTuple& inputs,
-                                 const TensorTuple& outputs, const OpInterpCtx* ctx) const {
+                                 const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   state->SaveTensorForBackward(outputs.at(0));  // y
   state->SaveTensorForBackward(outputs.at(1));  // square_x_sum
 
-  auto* interp_ctx = dynamic_cast<const L2NormalizeOp*>(ctx);
-  state->axis = interp_ctx->axis();
-  state->epsilon = interp_ctx->epsilon();
+  auto* op_ctx = dynamic_cast<const L2NormalizeOp*>(ctx);
+  state->axis = op_ctx->axis();
+  state->epsilon = op_ctx->epsilon();
   return Maybe<void>::Ok();
 }
 

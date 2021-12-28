@@ -29,12 +29,12 @@ struct FusedSelfAttentionInterpState : public AutoGradCaptureState {
 class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpState> {
  public:
   Maybe<void> Capture(FusedSelfAttentionInterpState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpInterpCtx* ctx) const override {
+                      const TensorTuple& outputs, const OpBase* ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->input_requires_grad = inputs.at(0)->requires_grad();
     if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-    auto* interp_ctx = dynamic_cast<const FusedSelfAttentionQueryMulKeyAndValueOp*>(ctx);
-    state->alpha = interp_ctx->alpha();
+    auto* op_ctx = dynamic_cast<const FusedSelfAttentionQueryMulKeyAndValueOp*>(ctx);
+    state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

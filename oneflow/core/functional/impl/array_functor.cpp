@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -40,8 +41,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-
-#include "oneflow/core/framework/op_interp_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -144,9 +143,8 @@ class ConsistentConstantFunctor {
       ctx->set_floating_value(JUST(value.As<double>()));
     }
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    ctx->parallel_desc = placement;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, nd_sbp));
   }
 
  private:
@@ -168,8 +166,12 @@ class ConstantFunctor {
       ctx->set_is_floating_value(true);
       ctx->set_floating_value(JUST(value.As<double>()));
     }
-    ctx->device = device;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    }
   }
 
  private:
@@ -184,8 +186,12 @@ class EmptyFunctor {
     auto ctx = std::make_shared<schema::EmptyOp>();
     ctx->set_shape(shape);
     ctx->set_dtype(dtype->data_type());
-    ctx->device = device;
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    }
   }
 
  private:
@@ -203,9 +209,8 @@ class ConsistentEmptyFunctor {
     ctx->set_shape(shape);
     ctx->set_dtype(dtype->data_type());
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    ctx->parallel_desc = placement;
-    ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, nd_sbp));
   }
 
  private:
@@ -409,16 +414,16 @@ class ConcatFunctor {
  public:
   ConcatFunctor() {
     ops_.resize(kMaxInputCount);
-    for (int n = 1; n < ops_.size(); ++n) {
+    for (int n = 0; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
-    if (inputs.size() == 1) { return inputs.at(0); }
+    const int64_t ninput = inputs.size();
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
-    CHECK_GE_OR_RETURN(inputs.size(), 2);
+    CHECK_GE_OR_RETURN(ninput, 1);
     CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim - 1)))
         << " IndexError: Dimension out of range, expected to be in range of [" << -ndim << ", "
         << ndim - 1 << "], but got " << dim;
@@ -443,13 +448,14 @@ class ConcatFunctor {
     ctx->set_axis(axis);
     ctx->set_max_dim_size(max_dim_size);
     TensorTuple outputs;
-    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
-      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
       outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, ctx)));
     }
+
     if (outputs.size() == 1) { return outputs.at(0); }
     return this->operator()(outputs, axis);
   }
@@ -1631,9 +1637,9 @@ class DiagonalFunctor {
 
     std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+    auto ctx = std::make_shared<schema::DiagonalOp>();
+    ctx->set_offset(offset);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, ctx);
   }
 
  private:
@@ -1647,9 +1653,9 @@ class DiagonalGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+    auto ctx = std::make_shared<schema::DiagonalGradOp>();
+    ctx->set_offset(offset);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
   }
 
  private:
@@ -2010,16 +2016,16 @@ class ChunkFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& chunks,
                                 const int64_t& dim) const {
     int64_t axis = dim;
-    int64_t split_size = x->shape()->At(dim) / chunks;
-    int64_t dim_size = x->shape()->At(axis);
     if (axis < 0) { axis += x->ndim(); }
+    int64_t split_size = x->shape()->At(axis) / chunks;
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
         << "Dimension out of range (expected to be in range of [" << -(x->ndim()) << ", "
         << x->ndim() - 1 << "], but got " << dim;
-    if ((split_size * chunks) != x->shape()->At(dim)) {
+    int64_t dim_size = x->shape()->At(axis);
+    if ((split_size * chunks) != dim_size) {
       std::vector<int64_t> sections;
       for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
-      sections.emplace_back(x->shape()->At(dim) - split_size * (chunks - 1));
+      sections.emplace_back(dim_size - split_size * (chunks - 1));
       int64_t num_splits = sections.size();
       TensorTuple splits(num_splits);
       int64_t start_idx = 0;
