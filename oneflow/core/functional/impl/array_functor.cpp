@@ -982,7 +982,7 @@ class ReshapeFunctor {
     }
 
     // if input tensor is eager local, than try return tensor's view first
-    if (x->is_eager() && x->is_local()) {
+    if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
@@ -1033,7 +1033,7 @@ class ViewFunctor {
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
 
-    if (x->is_eager() && x->is_local()) {
+    if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
@@ -1079,7 +1079,7 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    if (x->is_eager() && x->is_local()) {
+    if (x->is_local() && !(LazyMode::is_enabled())) {
       // TODO: view support 0-dim tensor
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         return view::Slice(x, start, stop, step);
@@ -1139,7 +1139,7 @@ class NarrowFunctor {
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
-    if (input->is_eager() && input->is_local()) {
+    if (input->is_local() && !(LazyMode::is_enabled())) {
       if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
         return JUST(view::Narrow(input, narrow_dim, start, length));
       }
@@ -1350,7 +1350,7 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
     // if input tensor is eager local, than try return tensor's view
-    if (x->is_eager() && x->is_local()) {
+    if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         return view::UnfoldTensor(x->contiguous(), attrs);
       }
@@ -1796,7 +1796,7 @@ class DiagonalFunctor {
     std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
 
     // if input tensor is eager local, than try return tensor's view
-    if (x->is_eager() && x->is_local()) {
+    if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         return view::Diagonal(x, d_x, offset, p_dim1, p_dim2);
       }

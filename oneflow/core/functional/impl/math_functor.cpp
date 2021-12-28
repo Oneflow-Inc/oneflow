@@ -590,7 +590,8 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
           << ndim << " ) but got " << positive_perm[i];
     }
-    if (input->is_eager() && input->is_local()) {
+    // currently, view only support eager and local mode
+    if (input->is_local() && !(LazyMode::is_enabled())) {
       if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
         return JUST(view::Transpose(input, positive_perm));
       }
@@ -627,7 +628,7 @@ class Transpose2dimFunctor {
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
     Shape shape(DimVector(permute.begin(), permute.end()));
-    if (input->is_eager() && input->is_local()) {
+    if (input->is_local() && !(LazyMode::is_enabled())) {
       if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
         return JUST(view::Transpose(input, permute));
       }
