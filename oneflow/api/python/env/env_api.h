@@ -52,7 +52,9 @@ inline void SetIsMultiClient(bool is_multi_client) {
 
 inline size_t CudaGetDeviceCount() { return oneflow::CudaGetDeviceCount().GetOrThrow(); }
 
-inline void SetFLAGS_logtostderr(bool flag) { return oneflow::SetFLAGS_logtostderr(flag).GetOrThrow(); }
+inline void SetFLAGS_logtostderr(bool flag) {
+  return oneflow::SetFLAGS_logtostderr(flag).GetOrThrow();
+}
 
 inline bool GetFLAGS_logtostderr() { return oneflow::GetFLAGS_logtostderr().GetOrThrow(); }
 

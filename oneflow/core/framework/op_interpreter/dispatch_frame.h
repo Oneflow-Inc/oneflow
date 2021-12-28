@@ -41,7 +41,7 @@ class DispatchFrame {
 
  private:
   static std::string* get_str_ptr();
-  static void set_str(const std::string& str);
+  static void set_str(std::string str);
 };
 
 }  // namespace oneflow

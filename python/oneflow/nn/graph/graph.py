@@ -494,7 +494,9 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            with graph_build_util.GLogScopeContext(self._debug_min_s_level, self._debug_max_v_level - 1):
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level - 1
+            ):
                 eager_outputs = self._build_graph(*args)
             build_graph_end = time.perf_counter()
             self._print(
