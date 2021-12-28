@@ -290,7 +290,6 @@ def GetDualObject(name, pytorch, oneflow):
 
                                         def build(self, *args):
                                             return self.test_module(*args)
-                                            
 
                                     test_g = TestGraphOfModule()
                                     if verbose:
