@@ -69,8 +69,6 @@ class PReluFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& alpha) const {
     int num_params = alpha->dim(0);
-    // Channel dim is the 2nd dim of input. When input has dims < 2,
-    // then there is no channel dim and the number of channels = 1.
     CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
         << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});

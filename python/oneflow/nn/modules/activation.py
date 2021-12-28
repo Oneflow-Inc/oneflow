@@ -72,7 +72,7 @@ class PReLU(Module):
             device=None, dtype=None) -> None:
         super().__init__()
         self.num_parameters = num_parameters
-        self.weight = flow.nn.Parameter(flow.zeros(num_parameters,
+        self.weight = flow.nn.Parameter(flow.empty(num_parameters,
             dtype=dtype, device=device).fill_(init))
 
     def forward(self, x):
