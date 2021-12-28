@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/hardware/device_descriptor_class.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 #ifdef WITH_HWLOC
 #include <hwloc.h>
 #endif  // WITH_HWLOC
