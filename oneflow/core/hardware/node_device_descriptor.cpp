@@ -139,9 +139,9 @@ class HWLocTopologyDescriptor : public TopologyDescriptor {
     if (bus_id.empty()) { return nullptr; }
     hwloc_obj_t non_io_ancestor = GetNonIOAncestorByPCIBusID(bus_id);
     if (non_io_ancestor == nullptr) { return nullptr; }
-    if (non_io_ancestor->nodeset == nullptr) { return nullptr; }
+    if (non_io_ancestor->cpuset == nullptr) { return nullptr; }
     return std::make_shared<const HWLocMemoryAffinityDescriptor>(
-        hwloc_bitmap_dup(non_io_ancestor->nodeset), HWLOC_MEMBIND_BIND);
+        hwloc_bitmap_dup(non_io_ancestor->cpuset), HWLOC_MEMBIND_BIND);
   }
 
   void SetCPUAffinity(
