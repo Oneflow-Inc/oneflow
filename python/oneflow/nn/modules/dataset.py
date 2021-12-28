@@ -203,6 +203,7 @@ class CropMirrorNormalize(Module):
     def __init__(
         self,
         color_space: str = "BGR",
+        output_layout: str = "NCHW",
         crop_h: int = 0,
         crop_w: int = 0,
         crop_pos_y: float = 0.5,
@@ -212,6 +213,10 @@ class CropMirrorNormalize(Module):
         output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
+        if output_layout != "NCHW":
+            print(
+                "WARNING: output_layout has been deprecated. Please use Environment Variable ONEFLOW_ENABLE_NHWC, and make it equals 1."
+            )
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             output_layout = "NHWC"
         else:

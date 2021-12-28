@@ -369,20 +369,15 @@ class Conv2d(Module):
         self.groups = groups
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.data_format = "NHWC"
-        else:
-            self.data_format = "NCHW"
-        if self.data_format == "NCHW":
-            self.channel_first = True
-            self.channel_pos = "channels_first"
-        else:
-            self.channel_first = False
             self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        if self.channel_first:
+        if self.channel_pos == "channels_first":
             self.weight = flow.nn.Parameter(
                 flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
             )
@@ -405,7 +400,7 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if self.channel_first:
+        if self.channel_pos == "channels_first":
             in_channel_axis = 1
         else:
             in_channel_axis = 3
