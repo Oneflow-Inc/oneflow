@@ -22,6 +22,7 @@ import numpy as np
 import oneflow
 import oneflow as flow
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal._C as _C
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.unittest
@@ -58,7 +59,7 @@ class TestFeedInputTensor(unittest.TestCase):
                 op_name, input_conf, ["in_0"], ["out_0"]
             )
             attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-            out_tensor = input_op.apply([x], attrs)[0]
+            out_tensor = _C.dispatch_feed_input(input_op, x)
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(out_tensor.is_lazy)
             test_case.assertTrue(out_tensor.is_local)
