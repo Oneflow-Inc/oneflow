@@ -33,7 +33,7 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     state->input_requires_grad = inputs.at(0)->requires_grad();
     state->bias_requires_grad = inputs.at(1)->requires_grad();
-    auto* op_ctx = dynamic_cast<const FusedBiasAddGeluOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<FusedBiasAddGeluOp>());
     state->axis = op_ctx->axis();
     if (state->input_requires_grad || state->bias_requires_grad) {
       state->SaveTensorForBackward(inputs.at(0));

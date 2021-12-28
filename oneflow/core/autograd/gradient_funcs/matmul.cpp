@@ -33,6 +33,7 @@ struct MatmulCaptureState : public AutoGradCaptureState {
   size_t b_index;
 };
 
+template<typename T>
 class Matmul : public OpExprGradFunction<MatmulCaptureState> {
  public:
   Maybe<void> Capture(MatmulCaptureState* state, const TensorTuple& inputs,
@@ -41,13 +42,14 @@ class Matmul : public OpExprGradFunction<MatmulCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> Matmul::Capture(MatmulCaptureState* state, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const OpBase* ctx) const {
+template<typename T>
+Maybe<void> Matmul<T>::Capture(MatmulCaptureState* state, const TensorTuple& inputs,
+                               const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad_a = inputs.at(0)->requires_grad();
   state->requires_grad_b = inputs.at(1)->requires_grad();
   if (!state->requires_grad_a && !state->requires_grad_b) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const MatmulOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<T>());
   state->transpose_a = op_ctx->transpose_a();
   state->transpose_b = op_ctx->transpose_b();
   state->alpha = op_ctx->alpha();
@@ -60,8 +62,9 @@ Maybe<void> Matmul::Capture(MatmulCaptureState* state, const TensorTuple& inputs
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Matmul::Apply(const MatmulCaptureState* state, const TensorTuple& out_grads,
-                          TensorTuple* in_grads) const {
+template<typename T>
+Maybe<void> Matmul<T>::Apply(const MatmulCaptureState* state, const TensorTuple& out_grads,
+                             TensorTuple* in_grads) const {
   if (!state->requires_grad_a && !state->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
@@ -91,7 +94,7 @@ Maybe<void> Matmul::Apply(const MatmulCaptureState* state, const TensorTuple& ou
   return Maybe<void>::Ok();
 }
 
-class BroadcastMatmul : public Matmul {
+class BroadcastMatmul : public Matmul<BroadcastMatmulOp> {
  public:
   Maybe<void> Apply(const MatmulCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -128,8 +131,8 @@ Maybe<void> BroadcastMatmul::Apply(const MatmulCaptureState* state, const Tensor
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("matmul", Matmul);
-REGISTER_OP_EXPR_GRAD_FUNCTION("batch_matmul", Matmul);
+REGISTER_OP_EXPR_GRAD_FUNCTION("matmul", Matmul<MatmulOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("batch_matmul", Matmul<BatchMatmulOp>);
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_matmul", BroadcastMatmul);
 
 }  // namespace one

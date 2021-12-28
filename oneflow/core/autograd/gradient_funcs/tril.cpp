@@ -37,7 +37,7 @@ Maybe<void> Tril::Capture(TrilCaptureState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const TrilOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<TrilOp>());
   state->diagonal = op_ctx->diagonal();
   return Maybe<void>::Ok();
 }

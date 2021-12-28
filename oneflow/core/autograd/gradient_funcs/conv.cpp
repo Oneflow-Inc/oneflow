@@ -58,7 +58,7 @@ Maybe<void> ConvolutionNd<T>::Capture(ConvolutionNdCaptureState* state, const Te
   }
   state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
 
-  auto* op_ctx = dynamic_cast<const T*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<T>());
   state->data_format = op_ctx->data_format();
   state->padding_before = op_ctx->padding_before();
   state->kernel_size = op_ctx->kernel_size();

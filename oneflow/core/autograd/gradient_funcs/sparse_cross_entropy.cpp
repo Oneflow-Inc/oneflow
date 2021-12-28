@@ -37,7 +37,7 @@ class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureSt
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const SparseCrossEntropyOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<SparseCrossEntropyOp>());
     state->depth = op_ctx->depth();
     state->prediction_index = state->SaveTensorForBackward(inputs.at(0));  // prediction
     state->label_index = state->SaveTensorForBackward(inputs.at(1));       // label

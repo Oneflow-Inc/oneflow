@@ -35,7 +35,7 @@ class AffineGrid : public OpExprGradFunction<AffineGridInterpState> {
     state->requires_grad = inputs.at(0)->requires_grad();  // theta
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const AffineGridOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<AffineGridOp>());
     state->size = op_ctx->size();
     state->align_corners = op_ctx->align_corners();
     return Maybe<void>::Ok();

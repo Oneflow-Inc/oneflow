@@ -42,7 +42,7 @@ Maybe<void> Upsample::Capture(UpsampleCaptureState* state, const TensorTuple& in
                               const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const UpsampleOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<UpsampleOp>());
   state->height_scale = op_ctx->height_scale();
   state->width_scale = op_ctx->width_scale();
   state->align_corners = op_ctx->align_corners();
@@ -82,7 +82,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleNearest2DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleNearest2DOp>());
     state->height_scale = op_ctx->height_scale();
     state->width_scale = op_ctx->width_scale();
     state->data_format = op_ctx->data_format();
@@ -121,7 +121,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleBilinear2DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleBilinear2DOp>());
     state->height_scale = op_ctx->height_scale();
     state->width_scale = op_ctx->width_scale();
     state->align_corners = op_ctx->align_corners();
@@ -161,7 +161,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleLinear1DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleLinear1DOp>());
     state->scale_factor = op_ctx->scale_factor();
     state->align_corners = op_ctx->align_corners();
     state->data_format = op_ctx->data_format();
@@ -198,7 +198,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleNearest1DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleNearest1DOp>());
     state->scale_factor = op_ctx->scale_factor();
     state->data_format = op_ctx->data_format();
     state->SaveTensorForBackward(inputs.at(0));
@@ -236,7 +236,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleBicubic2DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleBicubic2DOp>());
     state->height_scale = op_ctx->height_scale();
     state->width_scale = op_ctx->width_scale();
     state->align_corners = op_ctx->align_corners();
@@ -276,7 +276,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleNearest3DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleNearest3DOp>());
     state->depth_scale = op_ctx->depth_scale();
     state->height_scale = op_ctx->height_scale();
     state->width_scale = op_ctx->width_scale();
@@ -318,7 +318,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const UpsampleTrilinear3DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<UpsampleTrilinear3DOp>());
     state->depth_scale = op_ctx->depth_scale();
     state->height_scale = op_ctx->height_scale();
     state->width_scale = op_ctx->width_scale();

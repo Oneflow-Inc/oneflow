@@ -44,7 +44,7 @@ Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* state,
   state->bias_requires_grad = inputs.at(1)->requires_grad();   // bias
 
   if (!state->input_requires_grad && !state->bias_requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const FusedBiasAddMaskScaleOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<FusedBiasAddMaskScaleOp>());
   state->scale = op_ctx->scale();
   state->axis = op_ctx->axis();
 

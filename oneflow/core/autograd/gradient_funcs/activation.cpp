@@ -176,7 +176,7 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const LeakyReluOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<LeakyReluOp>());
     state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
@@ -208,7 +208,7 @@ class HardTanh : public OpExprGradFunction<HardTanhCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const HardtanhOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<HardtanhOp>());
     state->min_val = op_ctx->min_val();
     state->max_val = op_ctx->max_val();
     state->SaveTensorForBackward(outputs.at(0));
@@ -241,7 +241,7 @@ class Elu : public OpExprGradFunction<EluCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const EluOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<EluOp>());
     state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
@@ -272,7 +272,7 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const CeluOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<CeluOp>());
     state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();

@@ -40,7 +40,7 @@ class RoiAlign : public OpExprGradFunction<RoiAlignCaptureState> {
     state->SaveTensorForBackward(inputs.at(0));
     state->SaveTensorForBackward(inputs.at(1));
 
-    const auto* op_ctx = dynamic_cast<const RoiAlignOp*>(ctx);
+    const auto* op_ctx = JUST(ctx->dyn_cast<RoiAlignOp>());
     state->spatial_scale = op_ctx->spatial_scale();
     state->pooled_h = op_ctx->pooled_h();
     state->pooled_w = op_ctx->pooled_w();

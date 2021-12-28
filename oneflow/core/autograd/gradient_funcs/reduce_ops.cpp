@@ -38,7 +38,7 @@ class ReduceSum : public OpExprGradFunction<ReduceSumCaptureState> {
 
 Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpBase* ctx) const {
-  auto* op_ctx = dynamic_cast<const ReduceSumOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<ReduceSumOp>());
   state->axis = op_ctx->axis();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
@@ -70,7 +70,7 @@ class ReduceProd : public OpExprGradFunction<ReduceProdInterpState> {
 
 Maybe<void> ReduceProd::Capture(ReduceProdInterpState* state, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const OpBase* ctx) const {
-  auto* op_ctx = dynamic_cast<const ReduceProdOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<ReduceProdOp>());
   state->axis = op_ctx->axis();
   state->requires_grad = inputs.at(0)->requires_grad();
   state->SaveTensorForBackward(inputs.at(0));
@@ -112,7 +112,7 @@ class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
 
 Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const OpBase* ctx) const {
-  auto* op_ctx = dynamic_cast<const ReduceMaxOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<ReduceMaxOp>());
   state->axis = op_ctx->axis();
   state->keepdims = op_ctx->keepdims();
   state->SaveTensorForBackward(inputs.at(0));

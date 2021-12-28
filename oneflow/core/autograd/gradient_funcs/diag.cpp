@@ -38,7 +38,7 @@ Maybe<void> Diag::Capture(DiagCaptureState* state, const TensorTuple& inputs,
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const DiagOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<DiagOp>());
   state->diagonal = op_ctx->diagonal();
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();

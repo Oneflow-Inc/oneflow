@@ -41,7 +41,7 @@ Maybe<void> Transpose::Capture(TransposeCaptureState* state, const TensorTuple& 
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const TransposeOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<TransposeOp>());
   state->perm = op_ctx->perm();
   return Maybe<void>::Ok();
 }

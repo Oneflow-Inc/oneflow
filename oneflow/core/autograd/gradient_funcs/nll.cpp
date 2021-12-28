@@ -36,7 +36,7 @@ Maybe<void> Nll::Capture(NllCaptureState* state, const TensorTuple& inputs,
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const NllOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<NllOp>());
   state->ignore_index = op_ctx->ignore_index();
   state->SaveTensorForBackward(inputs.at(0));   // input
   state->SaveTensorForBackward(inputs.at(1));   // target

@@ -41,7 +41,7 @@ class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const ReduceMaxDeviceStageOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<ReduceMaxDeviceStageOp>());
     state->axis = op_ctx->axis();
     state->mask_index = state->SaveTensorForBackward(outputs.at(1));   // mask
     state->count_index = state->SaveTensorForBackward(outputs.at(2));  // count
@@ -88,7 +88,7 @@ class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const ReduceMaxGlobalStageOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<ReduceMaxGlobalStageOp>());
     state->axis = op_ctx->axis();
     state->keepdims = op_ctx->keepdims();
     state->mask_index = state->SaveTensorForBackward(outputs.at(1));         // mask

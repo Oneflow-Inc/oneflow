@@ -33,7 +33,7 @@ class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const ScalarMulOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<ScalarMulOp>());
     bool has_float_operand = op_ctx->has_float_operand();
     if (has_float_operand) {
       state->operand = Scalar(op_ctx->float_operand());

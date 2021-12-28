@@ -39,7 +39,7 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inpu
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const DropoutOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<DropoutOp>());
   state->rate = op_ctx->rate();
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   if (inputs.size() == 1) {

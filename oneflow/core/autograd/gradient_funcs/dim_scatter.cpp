@@ -53,7 +53,7 @@ Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* state, const TensorTu
 
   state->SaveTensorForBackward(inputs.at(1));  // index saved
 
-  auto* op_ctx = dynamic_cast<const DimScatterAddOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<DimScatterAddOp>());
   state->dim = op_ctx->dim();
   return Maybe<void>::Ok();
 }
@@ -118,7 +118,7 @@ Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* state,
 
   state->SaveTensorForBackward(inputs.at(1));  // index saved
 
-  auto* op_ctx = dynamic_cast<const DimScatterUpdateScalarOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<DimScatterUpdateScalarOp>());
   state->dim = op_ctx->dim();
   return Maybe<void>::Ok();
 }

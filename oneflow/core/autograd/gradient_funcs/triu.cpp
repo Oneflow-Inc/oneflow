@@ -37,7 +37,7 @@ Maybe<void> Triu::Capture(TriuCaptureState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const TriuOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<TriuOp>());
   state->diagonal = op_ctx->diagonal();
   return Maybe<void>::Ok();
 }

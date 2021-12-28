@@ -54,7 +54,7 @@ class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
 
 Maybe<void> LayerNorm::Capture(LayerNormCaptureState* state, const TensorTuple& inputs,
                                const TensorTuple& outputs, const OpBase* ctx) const {
-  auto* op_ctx = dynamic_cast<const LayerNormOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<LayerNormOp>());
   state->center = op_ctx->center();
   state->scale = op_ctx->scale();
   state->begin_norm_axis = op_ctx->begin_norm_axis();

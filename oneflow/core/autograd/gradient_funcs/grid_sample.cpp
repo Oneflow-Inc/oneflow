@@ -45,7 +45,7 @@ class GridSample : public OpExprGradFunction<GridSampleInterpState> {
     state->input_index = state->SaveTensorForBackward(inputs.at(0));  // input
     state->grid_index = state->SaveTensorForBackward(inputs.at(1));   // grid
 
-    auto* op_ctx = dynamic_cast<const GridSampleOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<GridSampleOp>());
     state->interpolation_mode = op_ctx->interpolation_mode();
     state->padding_mode = op_ctx->padding_mode();
     state->align_corners = op_ctx->align_corners();

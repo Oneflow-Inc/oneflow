@@ -34,7 +34,7 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const ReflectionPad2DOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<ReflectionPad2DOp>());
     state->paddings = op_ctx->padding();
     return Maybe<void>::Ok();
   }
@@ -81,7 +81,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const PadOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<PadOp>());
     const auto& pad_before = op_ctx->padding_before();
     const auto& pad_after = op_ctx->padding_after();
 

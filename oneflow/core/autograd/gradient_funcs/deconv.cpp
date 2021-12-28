@@ -53,7 +53,7 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const T
   if (state->weight_requires_grad) {
     state->SaveTensorForBackward(inputs.at(0));  // x
   }
-  auto* op_ctx = dynamic_cast<const Deconv3DOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<Deconv3DOp>());
   state->data_format = op_ctx->data_format();
   state->padding_before = op_ctx->padding_before();
   state->kernel_size = op_ctx->kernel_size();

@@ -66,7 +66,7 @@ Maybe<void> PoolingNdGrad<T>::Capture(PoolingCaptureState* state, const TensorTu
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
   state->indice_index = state->SaveTensorForBackward(outputs.at(1));
 
-  auto* op_ctx = dynamic_cast<const typename T::OpT*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<typename T::OpT>());
   state->data_format = op_ctx->data_format();
   state->padding = op_ctx->padding();
   state->kernel_size = op_ctx->kernel_size();

@@ -44,7 +44,7 @@ Maybe<void> Concat::Capture(ConcatCaptureState* state, const TensorTuple& inputs
     state->requires_grad[i] = inputs.at(i)->requires_grad();
   }
 
-  auto* op_ctx = dynamic_cast<const ConcatOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<ConcatOp>());
   state->axis = op_ctx->axis();
   for (const auto& input : inputs) { state->SaveTensorForBackward(input); }
   state->input_num = inputs.size();

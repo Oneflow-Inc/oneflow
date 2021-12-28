@@ -41,7 +41,7 @@ Maybe<void> FusedScaleTril::Capture(FusedScaleTrilState* state, const TensorTupl
                                     const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const FusedScaleTrilOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<FusedScaleTrilOp>());
   state->diagonal = op_ctx->diagonal();
   state->floating_scale_value = op_ctx->floating_scale_value();
   state->integer_scale_value = op_ctx->integer_scale_value();

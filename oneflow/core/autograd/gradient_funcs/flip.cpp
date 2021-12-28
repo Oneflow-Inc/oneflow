@@ -38,7 +38,7 @@ Maybe<void> Flip::Capture(FlipCaptureState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const FlipOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<FlipOp>());
   state->dims = op_ctx->dims();
   return Maybe<void>::Ok();
 }

@@ -46,7 +46,7 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(
   state->input_requires_grad = inputs.at(0)->requires_grad();  // input
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const FusedTrilScaleSoftmaxMaskScaleOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<FusedTrilScaleSoftmaxMaskScaleOp>());
   state->diagonal = op_ctx->diagonal();
   state->tril_scale_value = op_ctx->tril_scale_value();
   state->mask_scale_value = op_ctx->mask_scale_value();

@@ -41,7 +41,7 @@ Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* state, const TensorT
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const UnfoldTensorOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<UnfoldTensorOp>());
   state->dimension = op_ctx->dimension();
   state->size = op_ctx->size();
   state->step = op_ctx->step();

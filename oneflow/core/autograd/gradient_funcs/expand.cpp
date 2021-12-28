@@ -40,7 +40,7 @@ Maybe<void> Expand::Capture(ExpandCaptureState* state, const TensorTuple& inputs
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const ExpandOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<ExpandOp>());
   state->logical_out_shape = op_ctx->logical_in_shape();
   state->logical_expand_shape = op_ctx->logical_expand_shape();
   return Maybe<void>::Ok();

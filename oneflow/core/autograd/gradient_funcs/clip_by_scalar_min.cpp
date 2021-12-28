@@ -34,7 +34,7 @@ class ClipByScalarMin : public OpExprGradFunction<ClipByScalarMinCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     state->SaveTensorForBackward(inputs.at(0));
 
-    auto* op_ctx = dynamic_cast<const ClipByScalarMinOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<ClipByScalarMinOp>());
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
       state->min = op_ctx->floating_min();
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_base.h"
+
+#include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
@@ -58,6 +60,13 @@ Maybe<void> OpBase::SetAttr(const std::string& attr_name, const AttrVal& attr_va
 
 bool OpBase::HasAttr(const std::string& attr_name) const {
   return AttrNames().count(attr_name) > 0;
+}
+
+/*static*/ Maybe<OpBase> OpBase::New(const std::string& name) {
+  CHECK_OR_RETURN((IsClassRegistered<std::string, OpBase>(name)))
+      << "Can not create op for " << name
+      << ", please check whether it has been registered correctly.";
+  return std::shared_ptr<OpBase>(NewObj<std::string, OpBase>(name));
 }
 
 }  // namespace oneflow

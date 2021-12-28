@@ -414,7 +414,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_ex
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
-  const auto* op_ctx = dynamic_cast<const schema::SelectTopNOp*>(ctx.op_ctx.get());
+  const auto* op_ctx = JUST(ctx.op_ctx->dyn_cast<schema::SelectTopNOp>());
   int top_n = op_ctx->top_n;
   outputs->assign(inputs.begin(), inputs.begin() + top_n);
   return Maybe<void>::Ok();

@@ -43,7 +43,7 @@ Maybe<void> CTCLoss::Capture(CTCLossCaptureState* state, const TensorTuple& inpu
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const CtcLossOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<CtcLossOp>());
   state->max_target_length = op_ctx->max_target_length();
   state->blank = op_ctx->blank();
   state->zero_infinity = op_ctx->zero_infinity();

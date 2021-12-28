@@ -88,7 +88,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->set_shuffle_after_epoch(shuffle_after_epoch);
         ctx->set_seed(seed);
         ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
+        return OpInterpUtil::Dispatch<Tensor>(
+            *op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
       });
   m.add_functor("DispatchOfrecordRawDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
@@ -125,7 +126,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->set_seed(seed);
                   ctx->set_has_seed(has_seed);
                   ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
+                  return OpInterpUtil::Dispatch<Tensor>(
+                      *op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
                 });
   m.add_functor(
       "DispatchCropMirrorNormalizeFromUint8",
@@ -280,8 +282,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->set_group_by_ratio(group_by_ratio);
                   ctx->set_remove_images_without_annotations(remove_images_without_annotations);
                   ctx->set_stride_partition(stride_partition);
-OpExprInterpContext interp_ctx(ctx);
-        interp_ctx.device = device;
+                  OpExprInterpContext interp_ctx(ctx);
+                  interp_ctx.device = device;
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, interp_ctx);
                 });
   m.add_functor("DispatchCOCOReader",
@@ -301,51 +303,9 @@ OpExprInterpContext interp_ctx(ctx);
                   ctx->set_remove_images_without_annotations(remove_images_without_annotations);
                   ctx->set_stride_partition(stride_partition);
                   ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-                  return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
+                  return OpInterpUtil::Dispatch<TensorTuple>(
+                      *op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
                 });
-  m.add_functor(
-      "DispatchCOCOReader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
-         const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
-         int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
-         bool stride_partition, int64_t session_id,
-         const Optional<Symbol<Device>>& device) -> Maybe<TensorTuple> {
-        auto ctx = std::make_shared<schema::COCOReaderOp>();
-        ctx->set_session_id(session_id);
-        ctx->set_annotation_file(annotation_file);
-        ctx->set_image_dir(image_dir);
-        ctx->set_batch_size(batch_size);
-        ctx->set_shuffle_after_epoch(shuffle_after_epoch);
-        ctx->set_random_seed(random_seed);
-        ctx->set_group_by_ratio(group_by_ratio);
-        ctx->set_remove_images_without_annotations(remove_images_without_annotations);
-        ctx->set_stride_partition(stride_partition);
-        OpExprInterpContext interp_ctx(ctx);
-        interp_ctx.device = device;
-        return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, interp_ctx);
-      });
-  m.add_functor(
-      "DispatchCOCOReader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
-         const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
-         int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
-         bool stride_partition, int64_t session_id, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
-        auto ctx = std::make_shared<schema::COCOReaderOp>();
-        ctx->set_session_id(session_id);
-        ctx->set_annotation_file(annotation_file);
-        ctx->set_image_dir(image_dir);
-        ctx->set_batch_size(batch_size);
-        ctx->set_shuffle_after_epoch(shuffle_after_epoch);
-        ctx->set_random_seed(random_seed);
-        ctx->set_group_by_ratio(group_by_ratio);
-        ctx->set_remove_images_without_annotations(remove_images_without_annotations);
-        ctx->set_stride_partition(stride_partition);
-        ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-        auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
-        return OpInterpUtil::Dispatch<TensorTuple>(*op, {},
-                                                   OpExprInterpContext(ctx, placement, nd_sbp));
-      });
   m.add_functor(
       "DispatchImageBatchAlign",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input, int32_t alignment,
@@ -381,7 +341,7 @@ OpExprInterpContext interp_ctx(ctx);
         ctx->set_split_index(split_index);
         ctx->set_shuffle(shuffle);
         ctx->set_random_seed(random_seed);
-OpExprInterpContext interp_ctx(ctx);
+        OpExprInterpContext interp_ctx(ctx);
         interp_ctx.device = device;
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, interp_ctx);
       });
@@ -404,7 +364,8 @@ OpExprInterpContext interp_ctx(ctx);
         ctx->set_shuffle(shuffle);
         ctx->set_random_seed(random_seed);
         ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
+        return OpInterpUtil::Dispatch<Tensor>(
+            *op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
       });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,

@@ -529,7 +529,7 @@ Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
   auto* proto = op_conf->mutable_image_decoder_random_crop_resize_conf();
-  const auto* op_ctx = dynamic_cast<const schema::ImageDecoderRandomCropResizeOp*>(ctx.get());
+  const auto* op_ctx = JUST(ctx->dyn_cast<schema::ImageDecoderRandomCropResizeOp>());
   proto->set_target_width(op_ctx->target_width);
   proto->set_target_height(op_ctx->target_height);
   proto->set_num_workers(op_ctx->num_workers);

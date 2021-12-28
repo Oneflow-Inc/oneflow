@@ -45,7 +45,7 @@ Maybe<void> L2Normalize::Capture(L2NormalizeCaptureState* state, const TensorTup
   state->SaveTensorForBackward(outputs.at(0));  // y
   state->SaveTensorForBackward(outputs.at(1));  // square_x_sum
 
-  auto* op_ctx = dynamic_cast<const L2NormalizeOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<L2NormalizeOp>());
   state->axis = op_ctx->axis();
   state->epsilon = op_ctx->epsilon();
   return Maybe<void>::Ok();

@@ -38,7 +38,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureS
                                                const TensorTuple& inputs,
                                                const TensorTuple& outputs,
                                                const OpBase* ctx) const {
-  auto* op_ctx = dynamic_cast<const SparseSoftmaxCrossEntropyOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<SparseSoftmaxCrossEntropyOp>());
   state->depth = op_ctx->depth();
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);

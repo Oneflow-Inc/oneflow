@@ -35,7 +35,7 @@ class ClipByScalar : public OpExprGradFunction<ClipByScalarCaptureState> {
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
     state->SaveTensorForBackward(inputs.at(0));
 
-    auto* op_ctx = dynamic_cast<const ClipByScalarOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<ClipByScalarOp>());
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
       state->min = op_ctx->floating_min();
       state->max = op_ctx->floating_max();

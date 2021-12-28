@@ -40,7 +40,7 @@ Maybe<void> Roll::Capture(RollCaptureState* state, const TensorTuple& inputs,
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const RollOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<RollOp>());
   state->shifts = op_ctx->shifts();
   state->dims = op_ctx->dims();
   return Maybe<void>::Ok();

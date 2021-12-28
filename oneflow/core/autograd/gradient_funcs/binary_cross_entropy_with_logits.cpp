@@ -40,7 +40,7 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const BinaryCrossEntropyWithLogitsOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<BinaryCrossEntropyWithLogitsOp>());
   state->has_pos_weight = op_ctx->has_pos_weight();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target

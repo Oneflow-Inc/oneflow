@@ -43,7 +43,7 @@ Maybe<void> Gather::Capture(GatherCaptureState* state, const TensorTuple& inputs
   state->SaveTensorForBackward(inputs.at(0));
   state->SaveTensorForBackward(inputs.at(1));
 
-  auto* op_ctx = dynamic_cast<const GatherOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<GatherOp>());
   state->axis = op_ctx->axis();
   return Maybe<void>::Ok();
 }

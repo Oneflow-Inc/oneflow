@@ -39,7 +39,7 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const SliceOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<SliceOp>());
     state->start = op_ctx->start();
     state->stop = op_ctx->stop();
     state->step = op_ctx->step();
@@ -76,7 +76,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     state->requires_grad_update = inputs.at(1)->requires_grad();
     if (!state->requires_grad_x && !state->requires_grad_update) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const SliceUpdateOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<SliceUpdateOp>());
     state->start = op_ctx->start();
     state->stop = op_ctx->stop();
     state->step = op_ctx->step();

@@ -41,7 +41,7 @@ Maybe<void> Fold::Capture(FoldInterpState* state, const TensorTuple& inputs,
                           const TensorTuple& outputs, const OpBase* ctx) const {
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const FoldOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<FoldOp>());
   state->kernel_size = op_ctx->kernel_size();
   state->dilation_rate = op_ctx->dilation_rate();
   state->padding = op_ctx->padding();

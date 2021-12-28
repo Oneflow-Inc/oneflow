@@ -38,7 +38,7 @@ Maybe<void> Diagonal::Capture(DiagonalInterpState* state, const TensorTuple& inp
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  const auto* op_ctx = dynamic_cast<const DiagonalOp*>(ctx);
+  const auto* op_ctx = JUST(ctx->dyn_cast<DiagonalOp>());
   state->offset = JUST(op_ctx->GetAttr<int32_t>("offset"));
   state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();

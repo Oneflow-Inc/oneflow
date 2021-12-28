@@ -42,7 +42,7 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* state, const Tenso
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const BroadcastLikeOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<BroadcastLikeOp>());
   state->broadcast_axes = op_ctx->broadcast_axes();
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();

@@ -58,7 +58,7 @@ Maybe<void> AvgPoolingNdGrad<T>::Capture(AvgPoolingCaptureState* state, const Te
   state->input_index = state->SaveTensorForBackward(inputs.at(0));
   state->output_index = state->SaveTensorForBackward(outputs.at(0));
 
-  auto* op_ctx = dynamic_cast<const T*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<T>());
   state->data_format = op_ctx->data_format();
   state->padding = op_ctx->padding();
   state->kernel_size = op_ctx->kernel_size();

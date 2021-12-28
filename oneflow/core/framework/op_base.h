@@ -52,6 +52,21 @@ class OpBase {
     return attr_names;
   }
 
+  template<typename T>
+  Maybe<T*> dyn_cast() {
+    T* p = dynamic_cast<T*>(this);
+    if (!p) { return Error::RuntimeError() << "Failed to cast op to another type."; }
+    return p;
+  }
+
+  template<typename T>
+  Maybe<const T*> dyn_cast() const {
+    const T* p = dynamic_cast<const T*>(this);
+    if (!p) { return Error::RuntimeError() << "Failed to cast op to another type."; }
+    return p;
+  }
+
+  // Just used for lazy
   static Maybe<OpBase> New(const std::string& name);
 
  protected:

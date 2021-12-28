@@ -47,7 +47,7 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutIn
   state->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const FusedScaleMaskSoftmaxDropoutOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<FusedScaleMaskSoftmaxDropoutOp>());
   state->scale = op_ctx->scale_value();
   state->dropout_scale = op_ctx->dropout_scale_value();
 

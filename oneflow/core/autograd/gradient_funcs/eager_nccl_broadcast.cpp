@@ -58,7 +58,7 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
   Maybe<void> Capture(EagerNcclBroadcastCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
-    auto* op_ctx = dynamic_cast<const EagerNcclBroadcastOp*>(interp_ctx.op_ctx.get());
+    auto* op_ctx = JUST(interp_ctx.op_ctx->dyn_cast<EagerNcclBroadcastOp>());
     state->root = op_ctx->root();
     state->parallel_desc = JUST(interp_ctx.parallel_desc);
     return Maybe<void>::Ok();

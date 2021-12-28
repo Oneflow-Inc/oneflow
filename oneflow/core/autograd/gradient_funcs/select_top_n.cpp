@@ -34,7 +34,7 @@ class SelectTopN : public OpExprGradFunction<SelectTopNCaptureState> {
  public:
   Maybe<void> Capture(SelectTopNCaptureState* state, const TensorTuple& inputs,
                       const TensorTuple& outputs, const OpBase* ctx) const override {
-    auto* op_ctx = dynamic_cast<const schema::SelectTopNOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<schema::SelectTopNOp>());
     state->inputs = inputs;
     state->top_n = op_ctx->top_n;
     state->requires_grad.resize(inputs.size());

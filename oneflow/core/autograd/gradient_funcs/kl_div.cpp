@@ -38,7 +38,7 @@ Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* state, const TensorTuple& 
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-  auto* op_ctx = dynamic_cast<const KlDivLossOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<KlDivLossOp>());
   state->log_target = op_ctx->log_target();
   state->SaveTensorForBackward(inputs.at(0));  // input
   state->SaveTensorForBackward(inputs.at(1));  // target

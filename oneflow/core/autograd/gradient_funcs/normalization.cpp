@@ -64,7 +64,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     }
     state->gamma_requires_grad = gamma->requires_grad();
     state->beta_requires_grad = beta->requires_grad();
-    auto* op_ctx = dynamic_cast<const NormalizationGradOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<NormalizationGradOp>());
 
     state->axis = op_ctx->axis();
     state->epsilon = op_ctx->epsilon();

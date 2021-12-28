@@ -38,7 +38,7 @@ Maybe<void> SplitLike::Capture(SplitLikeCaptureState* state, const TensorTuple& 
   CHECK_EQ_OR_RETURN(inputs.size(), outputs.size() + 1);
   state->requires_grad = inputs.at(0)->requires_grad();
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
-  auto* op_ctx = dynamic_cast<const SplitLikeOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<SplitLikeOp>());
   state->axis = op_ctx->axis();
   for (int i = 0; i < outputs.size(); ++i) { state->SaveTensorForBackward(outputs.at(i)); }
   return Maybe<void>::Ok();

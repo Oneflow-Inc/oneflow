@@ -42,7 +42,7 @@ Maybe<void> DimGather::Capture(DimGatherCaptureState* state, const TensorTuple& 
   state->SaveTensorForBackward(inputs.at(1));
   state->SaveTensorForBackward(inputs.at(0));
 
-  auto* op_ctx = dynamic_cast<const DimGatherOp*>(ctx);
+  auto* op_ctx = JUST(ctx->dyn_cast<DimGatherOp>());
   state->dim = op_ctx->dim();
   return Maybe<void>::Ok();
 }

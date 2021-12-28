@@ -41,7 +41,7 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossCaptureSt
     state->label_index = state->SaveTensorForBackward(inputs.at(1));   // label
     state->theta_index = state->SaveTensorForBackward(outputs.at(1));  // theta
 
-    auto* op_ctx = dynamic_cast<const CombinedMarginLossOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<CombinedMarginLossOp>());
     state->m1 = op_ctx->m1();
     state->m2 = op_ctx->m2();
     state->m3 = op_ctx->m3();

@@ -40,7 +40,7 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = dynamic_cast<const NarrowOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<NarrowOp>());
     state->dim = op_ctx->dim();
     state->start = op_ctx->start();
     state->length = op_ctx->length();

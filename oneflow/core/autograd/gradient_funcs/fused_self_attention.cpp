@@ -33,7 +33,7 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     state->input_requires_grad = inputs.at(0)->requires_grad();
     if (!state->input_requires_grad) { return Maybe<void>::Ok(); }
-    auto* op_ctx = dynamic_cast<const FusedSelfAttentionQueryMulKeyAndValueOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<FusedSelfAttentionQueryMulKeyAndValueOp>());
     state->alpha = op_ctx->alpha();
     state->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();

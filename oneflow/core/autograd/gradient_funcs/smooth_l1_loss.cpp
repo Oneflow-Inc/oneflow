@@ -37,7 +37,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
     state->SaveTensorForBackward(inputs.at(0));  // prediction
     state->SaveTensorForBackward(inputs.at(1));  // label
 
-    auto* op_ctx = dynamic_cast<const SmoothL1LossOp*>(ctx);
+    auto* op_ctx = JUST(ctx->dyn_cast<SmoothL1LossOp>());
     state->beta = op_ctx->beta();
     return Maybe<void>::Ok();
   }
