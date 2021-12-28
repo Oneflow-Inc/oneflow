@@ -248,7 +248,7 @@ def tolist_op(input):
     if input.numel() == 1 and input.ndim == 0:
         return input.item()
     if input.device != flow.device("cpu"):
-        return input.to(device="cpu").numpy().tolist()
+        input = input.to(device="cpu")
     return input.numpy().tolist()
 
 
