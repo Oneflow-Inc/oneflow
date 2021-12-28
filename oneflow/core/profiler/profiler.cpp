@@ -45,11 +45,15 @@ void RangePush(const std::string& name) {
 #endif  // OF_ENABLE_PROFILER
 }
 
+RangeScope::RangeScope(const std::string& name) { RangePush(name); }
+
 void RangePop() {
 #ifdef OF_ENABLE_PROFILER
   nvtxRangePop();
 #endif  // OF_ENABLE_PROFILER
 }
+
+RangeScope::~RangeScope() { RangePop(); }
 
 #ifdef OF_ENABLE_PROFILER
 
