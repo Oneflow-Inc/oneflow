@@ -26,16 +26,14 @@ namespace oneflow {
   const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
 
   DimVector out_dim_vec = {};
-  FOR_RANGE(int64_t, i, 0, input_num_axes - 2 ) { out_dim_vec.push_back(in.shape().At(i)); }
-  
-  const int64_t m = in.shape().At(input_num_axes - 2);
-  const int64_t n = in.shape().At(input_num_axes - 1);
+  FOR_RANGE(int64_t, i, 0, input_num_axes - 2) { out_dim_vec.push_back(in.shape().At(i)); }
+
+  const int64_t num_rows = in.shape().At(input_num_axes - 2);
+  const int64_t num_cols = in.shape().At(input_num_axes - 1);
   int64_t last_dim = 0;
-  FOR_RANGE(int64_t, row, 0, m) {
-    FOR_RANGE(int64_t, col, 0, n) {
-      if(row - col >= diagonal) {
-        ++last_dim;
-      }
+  FOR_RANGE(int64_t, row, 0, num_rows) {
+    FOR_RANGE(int64_t, col, 0, num_cols) {
+      if (col + diagonal < row) { ++last_dim; }
     }
   }
   out_dim_vec.push_back(last_dim);
@@ -80,7 +78,7 @@ namespace oneflow {
   const user_op::TensorDesc& dy = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   FOR_RANGE(int64_t, i, 0, dy.shape().NumAxes() - 1) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-  }  
+  }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
