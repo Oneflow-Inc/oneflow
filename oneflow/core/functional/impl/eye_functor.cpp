@@ -94,8 +94,8 @@ class ConsistentEyeSbpListFunctor {
     ctx->set_dtype(dtype->data_type());
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    auto res = JUST(
-        OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, nd_sbp)));
+    auto res =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, nd_sbp)));
     JUST(res->set_requires_grad(requires_grad));
     return res;
   }

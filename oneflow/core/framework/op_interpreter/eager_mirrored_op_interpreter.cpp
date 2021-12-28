@@ -232,10 +232,12 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   ctx->set_parallel_conf(PbMessage2TxtString(parallel_desc->parallel_conf()));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
-    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs, one::OpExprInterpContext(ctx, parallel_desc)));
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
+                                one::OpExprInterpContext(ctx, parallel_desc)));
     return tensor;
   } else {
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}, one::OpExprInterpContext(ctx, parallel_desc)));
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor},
+                                                    one::OpExprInterpContext(ctx, parallel_desc)));
   }
 }
 

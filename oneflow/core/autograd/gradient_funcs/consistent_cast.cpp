@@ -117,8 +117,8 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     auto ctx = std::make_shared<schema::CastToConsistentOp>();
     ctx->shape = *state->shape;
     ctx->dtype = state->dtype->data_type();
-    in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, OpExprInterpContext(ctx, state->parallel_desc, dual_nd_sbp)));
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *grad_op_, {out_grads.at(0)}, OpExprInterpContext(ctx, state->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
   }
 

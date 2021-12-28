@@ -232,7 +232,8 @@ Maybe<Tensor> ConsistentToConsistent(
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
   }
-  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor}, OpExprInterpContext(nullptr, parallel_desc, nd_sbp)));
+  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {consistent_tensor}, OpExprInterpContext(nullptr, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
@@ -276,7 +277,8 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   auto ctx = std::make_shared<schema::CastToConsistentOp>();
   ctx->shape = *shape;
   ctx->dtype = dtype;
-  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op, {input}, OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
+  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {input}, OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
   return output;
 }
 
@@ -316,7 +318,8 @@ class LocalToConsistentFunctor {
     ctx->shape = shape;
     ctx->dtype = dtype->data_type();
     DisableCheckConsistentTensorMetaScope scope{};
-    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {input}, OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
+    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {input}, OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
     return tensor;
   }
 

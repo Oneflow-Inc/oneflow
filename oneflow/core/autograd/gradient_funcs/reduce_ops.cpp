@@ -69,7 +69,7 @@ class ReduceProd : public OpExprGradFunction<ReduceProdInterpState> {
 };
 
 Maybe<void> ReduceProd::Capture(ReduceProdInterpState* state, const TensorTuple& inputs,
-                                  const TensorTuple& outputs, const OpBase* ctx) const {
+                                const TensorTuple& outputs, const OpBase* ctx) const {
   auto* op_ctx = dynamic_cast<const ReduceProdOp*>(ctx);
   state->axis = op_ctx->axis();
   state->requires_grad = inputs.at(0)->requires_grad();
@@ -79,7 +79,7 @@ Maybe<void> ReduceProd::Capture(ReduceProdInterpState* state, const TensorTuple&
 }
 
 Maybe<void> ReduceProd::Apply(const ReduceProdInterpState* state, const TensorTuple& out_grads,
-                                TensorTuple* in_grads) const {
+                              TensorTuple* in_grads) const {
   if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
   const auto& input = state->SavedTensors().at(0);

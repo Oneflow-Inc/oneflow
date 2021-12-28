@@ -135,10 +135,7 @@ namespace {
 
 Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
                                                               DeviceType device_type) {
-  return one::OpBuilder("eager_nccl_all_reduce")
-      .Input("in")
-      .Output("out")
-      .Build();
+  return one::OpBuilder("eager_nccl_all_reduce").Input("in").Output("out").Build();
 }
 
 auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
@@ -206,8 +203,7 @@ class ConsistentReduceScatterFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
-    auto ctx =
-        std::make_shared<schema::EagerNcclReduceScatterOp>();
+    auto ctx = std::make_shared<schema::EagerNcclReduceScatterOp>();
     ctx->set_parallel_conf(PbMessage2TxtString(JUST(x->parallel_desc())->parallel_conf()));
     ctx->set_op_type(op_type);
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, ctx));

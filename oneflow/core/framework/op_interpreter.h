@@ -38,7 +38,8 @@ struct OpExprInterpContext {
   OpExprInterpContext(const std::shared_ptr<OpBase>& op_arg) : op_ctx(op_arg) {}
   OpExprInterpContext(const std::shared_ptr<OpBase>& op_arg, Symbol<Device> device_arg)
       : op_ctx(op_arg), device(device_arg) {}
-  OpExprInterpContext(const std::shared_ptr<OpBase>& op_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
+  OpExprInterpContext(const std::shared_ptr<OpBase>& op_arg,
+                      std::shared_ptr<user_op::OpKernelState> state_arg)
       : op_ctx(op_arg), state(state_arg) {}
   OpExprInterpContext(const std::shared_ptr<OpBase>& op_arg, Symbol<Device> device_arg,
                       std::shared_ptr<user_op::OpKernelState> state_arg)
@@ -87,17 +88,15 @@ class OpExprInterpreter {
   _macro(DistributeConcatOp);        \
   _macro(DistributeAddOp);
 
-#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                                     \
-  virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs,       \
-                                TensorTuple* outputs, const OpExprInterpContext& ctx) \
-      const
+#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
+  virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
+                                TensorTuple* outputs, const OpExprInterpContext& ctx) const
 
 #define DECLARE_PURE_VIRTUAL_APPLY_FUNC(op_type) DECLARE_NORMAL_APPLY_FUNC(op_type) = 0;
 
-#define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                           \
-  Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs,       \
-                        TensorTuple* outputs, const OpExprInterpContext& ctx) \
-      const override;
+#define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                     \
+  Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
+                        TensorTuple* outputs, const OpExprInterpContext& ctx) const override;
 
 class LazyInterpreter : public OpExprInterpreter {
  public:

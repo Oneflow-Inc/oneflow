@@ -733,8 +733,7 @@ class DimScatterUpdateScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto ctx =
-        std::make_shared<schema::DimScatterUpdateScalarOp>();
+    auto ctx = std::make_shared<schema::DimScatterUpdateScalarOp>();
     ctx->set_dim(dim);
     ctx->set_src_scalar(JUST(src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
@@ -755,8 +754,7 @@ class DimScatterAddScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto ctx =
-        std::make_shared<schema::DimScatterAddScalarOp>();
+    auto ctx = std::make_shared<schema::DimScatterAddScalarOp>();
     ctx->set_dim(dim);
     ctx->set_src_scalar(JUST(src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
@@ -777,8 +775,7 @@ class DimScatterMulScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto ctx =
-        std::make_shared<schema::DimScatterMulScalarOp>();
+    auto ctx = std::make_shared<schema::DimScatterMulScalarOp>();
     ctx->set_dim(dim);
     ctx->set_src_scalar(JUST(src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, ctx);
@@ -1264,8 +1261,7 @@ class UpsampleLinear1DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleLinear1DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleLinear1DGradOp>();
     ctx->set_scale_factor(scale_factor);
     ctx->set_align_corners(align_corners);
     ctx->set_data_format(data_format);
@@ -1302,8 +1298,7 @@ class UpsampleNearest1DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
                            const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleNearest1DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleNearest1DGradOp>();
     ctx->set_scale_factor(scale_factor);
     ctx->set_data_format(data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, ctx);
@@ -1340,8 +1335,7 @@ class UpsampleNearest2DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleNearest2DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleNearest2DGradOp>();
     ctx->set_height_scale(height_scale);
     ctx->set_width_scale(width_scale);
     ctx->set_data_format(data_format);
@@ -1382,8 +1376,7 @@ class UpsampleBilinear2DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleBilinear2DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleBilinear2DGradOp>();
     ctx->set_height_scale(height_scale);
     ctx->set_width_scale(width_scale);
     ctx->set_align_corners(align_corners);
@@ -1425,8 +1418,7 @@ class UpsampleBicubic2DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
                            const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleBicubic2DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleBicubic2DGradOp>();
     ctx->set_height_scale(height_scale);
     ctx->set_width_scale(width_scale);
     ctx->set_align_corners(align_corners);
@@ -1468,8 +1460,7 @@ class UpsampleNearest3DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleNearest3DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleNearest3DGradOp>();
     ctx->set_depth_scale(depth_scale);
     ctx->set_height_scale(height_scale);
     ctx->set_width_scale(width_scale);
@@ -1489,8 +1480,7 @@ class UpsampleTrilinear3DFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx =
-        std::make_shared<schema::UpsampleTrilinear3DOp>();
+    auto ctx = std::make_shared<schema::UpsampleTrilinear3DOp>();
     ctx->set_depth_scale(depth_scale);
     ctx->set_height_scale(height_scale);
     ctx->set_width_scale(width_scale);
@@ -1513,8 +1503,7 @@ class UpsampleTrilinear3DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
                            const bool& align_corners, const std::string& data_format) const {
-    auto ctx = std::make_shared<
- schema::UpsampleTrilinear3DGradOp>();
+    auto ctx = std::make_shared<schema::UpsampleTrilinear3DGradOp>();
     ctx->set_depth_scale(depth_scale);
     ctx->set_height_scale(height_scale);
     ctx->set_width_scale(width_scale);
@@ -1540,8 +1529,7 @@ class UnsortedSegmentSumLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const std::shared_ptr<one::Tensor>& like, const int64_t& axis) const {
-    auto ctx =
-        std::make_shared<schema::UnsortedSegmentSumLikeOp>();
+    auto ctx = std::make_shared<schema::UnsortedSegmentSumLikeOp>();
     ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids, like}, ctx);
   }
@@ -2140,8 +2128,7 @@ class UnsortedBatchSegmentSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const int64_t& num_segments) const {
-    auto ctx = std::make_shared<
- schema::UnsortedBatchSegmentSumOp>();
+    auto ctx = std::make_shared<schema::UnsortedBatchSegmentSumOp>();
     ctx->set_num_segments(num_segments);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, ctx);
   }

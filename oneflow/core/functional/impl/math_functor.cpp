@@ -197,7 +197,8 @@ class ScalarMul2Functor {
 
 class InplaceScalarMulFunctor : public ScalarMathBaseFunctor<schema::ScalarMulOp> {
  public:
-  InplaceScalarMulFunctor() : ScalarMathBaseFunctor<schema::ScalarMulOp>(/*op_name=*/"scalar_mul") {}
+  InplaceScalarMulFunctor()
+      : ScalarMathBaseFunctor<schema::ScalarMulOp>(/*op_name=*/"scalar_mul") {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     return ScalarMathBaseFunctor<schema::ScalarMulOp>::operator()(x, scalar, true);
   }
@@ -705,7 +706,8 @@ class ConsistentArangeFunctor {
       ctx->set_float_delta(JUST(delta.As<double>()));
     }
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
   }
 
  private:
@@ -1341,7 +1343,8 @@ class ScalarLogicalBaseFunctor {
 
 class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalEqualOp> {
  public:
-  ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalEqualOp>("scalar_logical_equal") {}
+  ScalarLogicalEqualFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalEqualOp>("scalar_logical_equal") {}
 };
 
 // (scalar == x) = (x == scalar)
@@ -1352,9 +1355,11 @@ class ScalarLogicalEqual2Functor {
   }
 };
 
-class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalNotEqualOp> {
+class ScalarLogicalNotEqualFunctor
+    : public ScalarLogicalBaseFunctor<schema::ScalarLogicalNotEqualOp> {
  public:
-  ScalarLogicalNotEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalNotEqualOp>("scalar_logical_not_equal") {}
+  ScalarLogicalNotEqualFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalNotEqualOp>("scalar_logical_not_equal") {}
 };
 
 // (scalar != x) = (x != scalar)
@@ -1365,9 +1370,11 @@ class ScalarLogicalNotEqual2Functor {
   }
 };
 
-class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterOp> {
+class ScalarLogicalGreaterFunctor
+    : public ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterOp> {
  public:
-  ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterOp>("scalar_logical_greater") {}
+  ScalarLogicalGreaterFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterOp>("scalar_logical_greater") {}
 };
 
 // (scalar > x) = (x < scalar)
@@ -1381,7 +1388,9 @@ class ScalarLogicalGreater2Functor {
 class ScalarLogicalGreaterEqualFunctor
     : public ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterEqualOp> {
  public:
-  ScalarLogicalGreaterEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterEqualOp>("scalar_logical_greater_equal") {}
+  ScalarLogicalGreaterEqualFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalGreaterEqualOp>(
+          "scalar_logical_greater_equal") {}
 };
 
 // (scalar >= x) = (x <= scalar)
@@ -1394,7 +1403,8 @@ class ScalarLogicalGreaterEqual2Functor {
 
 class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalLessOp> {
  public:
-  ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalLessOp>("scalar_logical_less") {}
+  ScalarLogicalLessFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalLessOp>("scalar_logical_less") {}
 };
 
 // (scalar < x) = (x > scalar)
@@ -1408,7 +1418,8 @@ class ScalarLogicalLess2Functor {
 class ScalarLogicalLessEqualFunctor
     : public ScalarLogicalBaseFunctor<schema::ScalarLogicalLessEqualOp> {
  public:
-  ScalarLogicalLessEqualFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalLessEqualOp>("scalar_logical_less_equal") {}
+  ScalarLogicalLessEqualFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalLessEqualOp>("scalar_logical_less_equal") {}
 };
 
 // (scalar <= x) = (x >= scalar)
@@ -1421,7 +1432,8 @@ class ScalarLogicalLessEqual2Functor {
 
 class ScalarLogicalAndFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalAndOp> {
  public:
-  ScalarLogicalAndFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalAndOp>("scalar_logical_and") {}
+  ScalarLogicalAndFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalAndOp>("scalar_logical_and") {}
 };
 
 // (scalar && x) = (x && scalar)
@@ -1434,7 +1446,8 @@ class ScalarLogicalAnd2Functor {
 
 class ScalarLogicalOrFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalOrOp> {
  public:
-  ScalarLogicalOrFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalOrOp>("scalar_logical_or") {}
+  ScalarLogicalOrFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalOrOp>("scalar_logical_or") {}
 };
 
 // (scalar || x) = (x || scalar)
@@ -1447,7 +1460,8 @@ class ScalarLogicalOr2Functor {
 
 class ScalarLogicalXorFunctor : public ScalarLogicalBaseFunctor<schema::ScalarLogicalXorOp> {
  public:
-  ScalarLogicalXorFunctor() : ScalarLogicalBaseFunctor<schema::ScalarLogicalXorOp>("scalar_logical_xor") {}
+  ScalarLogicalXorFunctor()
+      : ScalarLogicalBaseFunctor<schema::ScalarLogicalXorOp>("scalar_logical_xor") {}
 };
 
 // (scalar ^ x) = (x ^ scalar)

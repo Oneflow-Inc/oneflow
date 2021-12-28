@@ -49,7 +49,8 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
       JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));
   std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
   if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op, {x}, one::OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {x}, one::OpExprInterpContext(ctx, parallel_desc, nd_sbp)));
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,

@@ -31,7 +31,8 @@ namespace one {
 class OpInterpUtil {
  public:
   template<typename T>
-  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const std::shared_ptr<OpBase>& op_ctx) {
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           const std::shared_ptr<OpBase>& op_ctx) {
     return Dispatch<T>(op_expr, inputs, OpExprInterpContext(op_ctx));
   }
 

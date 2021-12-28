@@ -76,8 +76,7 @@ class MovingAverageMinMaxObserverFunctor {
                                 const int64_t& stop_update_after_iters,
                                 const int32_t& quantization_bit,
                                 const std::string quantization_scheme, const float momentum) const {
-    auto ctx = std::make_shared<
- schema::MovingAverageMinMaxObserverOp>();
+    auto ctx = std::make_shared<schema::MovingAverageMinMaxObserverOp>();
     ctx->set_training(training);
     ctx->set_quantization_formula(quantization_formula);
     ctx->set_stop_update_after_iters(stop_update_after_iters);

@@ -65,8 +65,7 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
   return error_str.str();
 }
 
-Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
-                                          const OpExprInterpContext& ctx,
+Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);

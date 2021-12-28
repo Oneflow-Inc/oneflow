@@ -134,7 +134,8 @@ Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
 }
 
 Maybe<SrcOpConsistentTensorMetaInferArgs> SrcOpConsistentTensorMetaInferArgs::New(
-    const std::shared_ptr<const OpBase>& op_ctx, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::NdSbp> nd_sbp) {
+    const std::shared_ptr<const OpBase>& op_ctx, Symbol<ParallelDesc> parallel_desc,
+    Symbol<cfg::NdSbp> nd_sbp) {
   std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(
       new SrcOpConsistentTensorMetaInferArgs());
   infer_args->op_ctx_ = op_ctx;
@@ -156,8 +157,7 @@ Maybe<void> ConsistentTensorMetaInferArgs::InitInputConsistentTensorMetas(
 
 namespace {
 
-Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr,
-                       const std::shared_ptr<const OpBase>& op_ctx,
+Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const std::shared_ptr<const OpBase>& op_ctx,
                        const std::string& device_tag) {
   OperatorConf op_conf;
   JUST(user_op_expr.BuildOpConf(&op_conf, op_ctx));
@@ -262,8 +262,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
-  const auto& op =
-      JUST(MakeOp(user_op_expr, infer_args.op_ctx(), parallel_desc->device_tag()));
+  const auto& op = JUST(MakeOp(user_op_expr, infer_args.op_ctx(), parallel_desc->device_tag()));
   JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
   {
     // Infer parallel distribution.

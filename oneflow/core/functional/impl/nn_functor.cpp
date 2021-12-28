@@ -599,8 +599,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
-    auto ctx = std::make_shared<
- schema::BinaryCrossEntropyWithLogitsOp>();
+    auto ctx = std::make_shared<schema::BinaryCrossEntropyWithLogitsOp>();
     ctx->set_has_pos_weight(pos_weight.has_value());
     std::shared_ptr<Tensor> out;
     if (weight) {
@@ -788,8 +787,7 @@ class SparseCrossEntropyMsFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    auto ctx =
-        std::make_shared<schema::SparseCrossEntropyMsOp>();
+    auto ctx = std::make_shared<schema::SparseCrossEntropyMsOp>();
     ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, ctx);
   }
@@ -868,8 +866,7 @@ class SparseSoftmaxCrossEntropyFunctor {
   Maybe<Tensor> SparseSoftmaxCrossEntropyOperator(const std::shared_ptr<one::Tensor>& logits,
                                                   const std::shared_ptr<one::Tensor>& label) const {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
-    auto ctx = std::make_shared<
- schema::SparseSoftmaxCrossEntropyOp>();
+    auto ctx = std::make_shared<schema::SparseSoftmaxCrossEntropyOp>();
     ctx->set_depth(depth);
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_,
                                                                   {logits, label}, ctx));
@@ -879,8 +876,7 @@ class SparseSoftmaxCrossEntropyFunctor {
   Maybe<Tensor> LazySparseSoftmaxCrossEntropyMsOperator(
       const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
-    auto ctx = std::make_shared<
- schema::SparseSoftmaxCrossEntropyMsOp>();
+    auto ctx = std::make_shared<schema::SparseSoftmaxCrossEntropyMsOp>();
     ctx->set_depth(depth);
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_sparse_softmax_cross_entropy_ms_, {logits, label}, ctx));
@@ -892,8 +888,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     // op_reduce_max_device_stage_
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     int32_t axis = logits->shape()->NumAxes() - 1;
-    auto reduce_max_device_stage_ctx =
-        std::make_shared<schema::ReduceMaxDeviceStageOp>();
+    auto reduce_max_device_stage_ctx = std::make_shared<schema::ReduceMaxDeviceStageOp>();
     reduce_max_device_stage_ctx->set_axis({axis});
     const auto& max_device_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_reduce_max_device_stage_, {logits}, reduce_max_device_stage_ctx));
@@ -918,8 +913,7 @@ class SparseSoftmaxCrossEntropyFunctor {
           s0b_sbp_parallels, s0s1_sbp_parallels));
     }
     // op_reduce_max_global_stage_
-    auto reduce_max_global_stage_ctx =
-        std::make_shared<schema::ReduceMaxGlobalStageOp>();
+    auto reduce_max_global_stage_ctx = std::make_shared<schema::ReduceMaxGlobalStageOp>();
     reduce_max_global_stage_ctx->set_axis({axis});
     reduce_max_global_stage_ctx->set_keepdims(true);
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
@@ -1381,8 +1375,7 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, ctx);
 
     } else if (mode == "reflect") {
-      auto ctx =
-          std::make_shared<schema::ReflectionPad2DGradOp>();
+      auto ctx = std::make_shared<schema::ReflectionPad2DGradOp>();
       ctx->set_padding(pad);
       const int64_t pad_h = x->shape()->dim_vec().at(2);
       const int64_t pad_w = x->shape()->dim_vec().at(3);
@@ -1390,8 +1383,7 @@ class PadFunctor {
           << "padding size should be less than the corresponding input dimension!";
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, ctx);
     } else if (mode == "replicate") {
-      auto ctx =
-          std::make_shared<schema::ReplicationPad2DGradOp>();
+      auto ctx = std::make_shared<schema::ReplicationPad2DGradOp>();
       ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, ctx);
     } else {
@@ -1429,7 +1421,8 @@ class DropoutFunctor {
       if ((!training) || p == 0.0) {
         return functional::Add(x, JUST(addend), /*alpha=*/1.f, /*inplace=*/false);
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)}, OpExprInterpContext(ctx, dropout_state));
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
+                                              OpExprInterpContext(ctx, dropout_state));
       }
     } else {
       if (!training || p == 0.0) {
@@ -1726,12 +1719,12 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(p);
     mask_ctx->set_seed(gen->current_seed());
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, OpExprInterpContext(mask_ctx, random_mask_like_state)));
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x}, OpExprInterpContext(mask_ctx, random_mask_like_state)));
 
     float mask_scale_value = 1.0;
     if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
-    auto ctx = std::make_shared<
- schema::FusedTrilScaleSoftmaxMaskScaleOp>();
+    auto ctx = std::make_shared<schema::FusedTrilScaleSoftmaxMaskScaleOp>();
     ctx->set_diagonal(diagonal);
     ctx->set_tril_scale_value(tril_scale_value);
     ctx->set_mask_scale_value(mask_scale_value);
@@ -1797,8 +1790,7 @@ class FusedBiasAddGeluGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b,
                            const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
-    auto ctx =
-        std::make_shared<schema::FusedBiasAddGeluGradOp>();
+    auto ctx = std::make_shared<schema::FusedBiasAddGeluGradOp>();
     ctx->set_axis(axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, ctx);
   }
@@ -1835,12 +1827,13 @@ class FusedBiasAddDropoutFunctor {
       auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
       mask_ctx->set_rate(p);
       mask_ctx->set_seed(gen->current_seed());
-      auto ctx =
-          std::make_shared<schema::FusedBiasAddMaskScaleOp>();
+      auto ctx = std::make_shared<schema::FusedBiasAddMaskScaleOp>();
       ctx->set_scale(scale);
       ctx->set_axis(axis_val);
       return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
-               return OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {a}, OpExprInterpContext(mask_ctx, random_mask_like_state));
+               return OpInterpUtil::Dispatch<Tensor>(
+                   *random_mask_like_op_, {a},
+                   OpExprInterpContext(mask_ctx, random_mask_like_state));
              })
           .then([&](const std::shared_ptr<one::Tensor>& x) {
             return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x}, ctx);
@@ -1903,8 +1896,7 @@ class FusedScaleMaskSoftmaxFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
                            const float& scale) const {
-    auto ctx =
-        std::make_shared<schema::FusedScaleMaskSoftmaxOp>();
+    auto ctx = std::make_shared<schema::FusedScaleMaskSoftmaxOp>();
     ctx->set_scale_value(scale);
     ctx->set_mask_fill_value(fill_value);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, ctx);
@@ -1939,13 +1931,12 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     auto mask_ctx = std::make_shared<schema::RandomMaskLikeOp>();
     mask_ctx->set_rate(rate);
     mask_ctx->set_seed(gen->current_seed());
-    const auto& dropout_mask =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*random_mask_like_op_, {x}, OpExprInterpContext(mask_ctx, random_mask_like_state)));
+    const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x}, OpExprInterpContext(mask_ctx, random_mask_like_state)));
 
     float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
-    auto ctx = std::make_shared<
- schema::FusedScaleMaskSoftmaxDropoutOp>();
+    auto ctx = std::make_shared<schema::FusedScaleMaskSoftmaxDropoutOp>();
     ctx->set_scale_value(scale);
     ctx->set_mask_fill_value(fill_value);
     ctx->set_dropout_scale_value(dropout_scale);
@@ -1994,8 +1985,7 @@ class PartialFCSampleFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
                                 const std::shared_ptr<one::Tensor>& label,
                                 const int64_t& num_sample) const {
-    auto ctx = std::make_shared<
- schema::DistributedPartialFcSampleOp>();
+    auto ctx = std::make_shared<schema::DistributedPartialFcSampleOp>();
     ctx->set_num_sample(num_sample);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, ctx);
   }

@@ -398,8 +398,7 @@ class StatefulLocalOpKernel final {
     return op_ctx_for_scheduler_thread_.get();
   }
 
-  void set_op_ctx_for_scheduler_thread(
-      const std::shared_ptr<const OpBase>& op_ctx) {
+  void set_op_ctx_for_scheduler_thread(const std::shared_ptr<const OpBase>& op_ctx) {
     *op_ctx_for_scheduler_thread_.get() = op_ctx;
   }
 

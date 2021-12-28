@@ -56,7 +56,8 @@ struct EagerNcclBroadcastCaptureState : public AutoGradCaptureState {
 class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureState> {
  public:
   Maybe<void> Capture(EagerNcclBroadcastCaptureState* state, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const OpExprInterpContext& interp_ctx) const override {
+                      const TensorTuple& outputs,
+                      const OpExprInterpContext& interp_ctx) const override {
     auto* op_ctx = dynamic_cast<const EagerNcclBroadcastOp*>(interp_ctx.op_ctx.get());
     state->root = op_ctx->root();
     state->parallel_desc = JUST(interp_ctx.parallel_desc);
@@ -70,7 +71,8 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
     op_ctx->set_parallel_conf(PbMessage2TxtString(state->parallel_desc->parallel_conf()));
     op_ctx->set_root(state->root);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}, OpExprInterpContext(op_ctx)));
+    in_grads->at(0) = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}, OpExprInterpContext(op_ctx)));
     return Maybe<void>::Ok();
   }
 };

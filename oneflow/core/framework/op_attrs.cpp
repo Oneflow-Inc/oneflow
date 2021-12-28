@@ -23,7 +23,9 @@ size_t OpAttrs::count(const std::string& attr_name) const {
   return op_ctx_->AttrNames().count(attr_name);
 }
 
-Maybe<AttrVal> OpAttrs::at(const std::string& attr_name) const { return op_ctx_->GetAttr(attr_name); }
+Maybe<AttrVal> OpAttrs::at(const std::string& attr_name) const {
+  return op_ctx_->GetAttr(attr_name);
+}
 Maybe<AttrVal> OpAttrs::operator[](const std::string& attr_name) const {
   return op_ctx_->GetAttr(attr_name);
 }

@@ -38,7 +38,7 @@ Maybe<void> OpBase::SetAttr(const std::string& attr_name, const T& attr_val) {
   return Maybe<void>::Ok();
 }
 
-#define INSTANCE_ATTR_GETTER_AND_SETTER(field, T, attr_type)                         \
+#define INSTANCE_ATTR_GETTER_AND_SETTER(field, T, attr_type)                    \
   template Maybe<const T&> OpBase::GetAttr(const std::string& attr_name) const; \
   template Maybe<void> OpBase::SetAttr(const std::string& attr_name, const T& attr_val);
 

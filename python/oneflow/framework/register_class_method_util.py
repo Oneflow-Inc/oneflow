@@ -22,4 +22,3 @@ import oneflow.framework.tensor as tensor_util
 def RegisterMethod4Class():
     tensor_util.RegisterMethods()
     check_point_v2.RegisterMethods()
-

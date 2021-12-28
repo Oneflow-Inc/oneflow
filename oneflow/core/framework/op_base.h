@@ -37,7 +37,7 @@ class OpBase {
 
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
-  
+
   OpAttrs GetAttrs() const;
 
   template<typename T>

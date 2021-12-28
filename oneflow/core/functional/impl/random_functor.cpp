@@ -124,7 +124,8 @@ class ConsistentRandFunctor {
     ctx->set_seed(gen->current_seed());
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
 
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -192,7 +193,8 @@ class ConsistentRandNFunctor {
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -270,7 +272,8 @@ class ConsistentRandIntFunctor {
     ctx->set_dtype(dtype_val);
     ctx->set_seed(gen->current_seed());
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -334,7 +337,8 @@ class ConsistentRandPermFunctor {
     ctx->set_n(n);
     ctx->set_seed(gen->current_seed());
     ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *randperm_op_, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple)), state)));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }

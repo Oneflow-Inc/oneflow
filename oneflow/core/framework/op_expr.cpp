@@ -150,8 +150,7 @@ namespace {
 class UserOpExprInferContext : public user_op::InferContext {
  public:
   UserOpExprInferContext(const UserOpExpr* user_op_expr,
-                         const std::shared_ptr<const OpBase>& op_ctx,
-                         const std::string& device_tag,
+                         const std::shared_ptr<const OpBase>& op_ctx, const std::string& device_tag,
                          const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
                          const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
       : user_op_expr_(user_op_expr),
@@ -449,9 +448,9 @@ Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
   return Maybe<void>::Ok();
 }
 
-Maybe<Symbol<Device>> UserOpExpr::InferDevices(
-    const std::shared_ptr<const OpBase>& op_ctx, const TensorTuple& input_tensors,
-    TensorTuple* output_tensors) const {
+Maybe<Symbol<Device>> UserOpExpr::InferDevices(const std::shared_ptr<const OpBase>& op_ctx,
+                                               const TensorTuple& input_tensors,
+                                               TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
   UserOpExprDeviceInferContext device_infer_ctx(this, op_ctx, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));

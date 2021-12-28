@@ -91,8 +91,8 @@ class ConsistentTensorMetaInferArgs final {
                                   const std::vector<BlobDesc>& blob_descs,
                                   std::vector<NdSbpInferHint>* hints) const;
 
-  static Maybe<ConsistentTensorMetaInferArgs> New(
-      const std::shared_ptr<const OpBase>& op_ctx, const TensorTuple& input_tensors);
+  static Maybe<ConsistentTensorMetaInferArgs> New(const std::shared_ptr<const OpBase>& op_ctx,
+                                                  const TensorTuple& input_tensors);
 
  private:
   ConsistentTensorMetaInferArgs() = default;
@@ -116,8 +116,7 @@ class SrcOpConsistentTensorMetaInferArgs final {
 
   bool operator==(const SrcOpConsistentTensorMetaInferArgs& other) const;
 
-  static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
-      const std::shared_ptr<const OpBase>& op_ctx,
+  static Maybe<SrcOpConsistentTensorMetaInferArgs> New(const std::shared_ptr<const OpBase>& op_ctx,
                                                        Symbol<ParallelDesc> parallel_desc,
                                                        Symbol<cfg::NdSbp> nd_sbp);
 

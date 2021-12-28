@@ -264,8 +264,7 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(
-    const user_op::UserOpConfWrapper* user_op_conf,
-    const std::shared_ptr<const OpBase>* op_ctx,
+    const user_op::UserOpConfWrapper* user_op_conf, const std::shared_ptr<const OpBase>* op_ctx,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple)
     : user_op_conf_(user_op_conf),
@@ -285,8 +284,7 @@ void LocalUserOpInferContext::Update(
 
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     DeviceCtx* device_ctx, const std::string& device_tag,
-    const user_op::UserOpConfWrapper* user_op_conf,
-    const std::shared_ptr<const OpBase>* op_ctx,
+    const user_op::UserOpConfWrapper* user_op_conf, const std::shared_ptr<const OpBase>* op_ctx,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple, vm::EagerBlobObject* tmp_buffer)
     : user_op_conf_(user_op_conf),
@@ -395,9 +393,9 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, user_op_conf, opkernel->op_ctx_for_scheduler_thread_.get(),
       input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
-  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
-      device_tag, user_op_conf, opkernel->op_ctx_for_main_thread_.get(), input_arg_tuple,
-      output_arg_tuple));
+  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(device_tag, user_op_conf,
+                                                         opkernel->op_ctx_for_main_thread_.get(),
+                                                         input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);

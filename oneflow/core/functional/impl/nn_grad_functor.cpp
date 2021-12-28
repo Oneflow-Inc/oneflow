@@ -177,12 +177,9 @@ class MaxPoolingNdGradFunctor {
   }
 
  protected:
- MaxPoolingNdGradImpl<1, schema::MaxPool1DGradOp>
-      pool1d_func_;
- MaxPoolingNdGradImpl<2, schema::MaxPool2DGradOp>
-      pool2d_func_;
- MaxPoolingNdGradImpl<3, schema::MaxPool3DGradOp>
-      pool3d_func_;
+  MaxPoolingNdGradImpl<1, schema::MaxPool1DGradOp> pool1d_func_;
+  MaxPoolingNdGradImpl<2, schema::MaxPool2DGradOp> pool2d_func_;
+  MaxPoolingNdGradImpl<3, schema::MaxPool3DGradOp> pool3d_func_;
 };
 
 template<int Ndims, typename ContextT>
@@ -245,9 +242,9 @@ class AvgPoolingNdGradFunctor {
   }
 
  protected:
- AvgPoolingNdGradImpl<1, schema::AvgPool1DOp> pool1d_func_;
- AvgPoolingNdGradImpl<2, schema::AvgPool2DOp> pool2d_func_;
- AvgPoolingNdGradImpl<3, schema::AvgPool3DOp> pool3d_func_;
+  AvgPoolingNdGradImpl<1, schema::AvgPool1DOp> pool1d_func_;
+  AvgPoolingNdGradImpl<2, schema::AvgPool2DOp> pool2d_func_;
+  AvgPoolingNdGradImpl<3, schema::AvgPool3DOp> pool3d_func_;
 };
 
 template<int Ndims, typename ContextT>
@@ -268,8 +265,7 @@ class PoolNdGradImpl {
                            const std::string& padding, const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
-                           const std::vector<int32_t>& strides,
-                           const bool& ceil_mode) const {
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
     auto ctx = std::make_shared<ContextT>();
     ctx->set_data_format(data_format);
     ctx->set_padding(padding);
@@ -288,27 +284,30 @@ class PoolNdGradImpl {
 class MaxPoolNdGradFunctor {
  public:
   MaxPoolNdGradFunctor() = default;
-   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy,
-                           const int32_t& ndims, const std::string& data_format,
-                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
+                           const std::string& data_format, const std::string& padding,
+                           const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
-     if (ndims < 1 || ndims > 3) {
+    if (ndims < 1 || ndims > 3) {
       return Error::RuntimeError()
              << ndims << "d is not supported for `MaxPoolingNdGrad`, and 1d, 2d or 3d is expected.";
     }
     if (ndims == 1) {
-      return maxpool_1d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return maxpool_1d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size,
+                         strides, ceil_mode);
     } else if (ndims == 2) {
-      return maxpool_2d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return maxpool_2d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size,
+                         strides, ceil_mode);
     } else {
-      return maxpool_3d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return maxpool_3d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size,
+                         strides, ceil_mode);
     }
   }
- 
+
  private:
   template<int Ndims, typename ContextT>
   class MaxPoolNdGradImpl : public PoolNdGradImpl<Ndims, ContextT> {
@@ -325,22 +324,25 @@ class AvgPoolNdGradFunctor {
   AvgPoolNdGradFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy,
-                           const int32_t& ndims, const std::string& data_format,
-                           const std::string& padding, const std::vector<int32_t>& padding_before,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
+                           const std::string& data_format, const std::string& padding,
+                           const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
-     if (ndims < 1 || ndims > 3) {
+    if (ndims < 1 || ndims > 3) {
       return Error::RuntimeError()
              << ndims << "d is not supported for `AvgPoolingNdGrad`, and 1d, 2d or 3d is expected.";
     }
     if (ndims == 1) {
-      return avgpool_1d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return avgpool_1d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size,
+                         strides, ceil_mode);
     } else if (ndims == 2) {
-      return avgpool_2d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return avgpool_2d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size,
+                         strides, ceil_mode);
     } else {
-      return avgpool_3d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return avgpool_3d_(x, y, dy, data_format, padding, padding_before, padding_after, pool_size,
+                         strides, ceil_mode);
     }
   }
 
@@ -367,9 +369,11 @@ class PoolNdGradFunctor {
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
     if (mode == "max") {
-      return maxpool_func_(x, y, dy, ndims, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return maxpool_func_(x, y, dy, ndims, data_format, padding, padding_before, padding_after,
+                           pool_size, strides, ceil_mode);
     } else if (mode == "avg") {
-      return avgpool_func_(x, y, dy, ndims, data_format, padding, padding_before, padding_after, pool_size, strides, ceil_mode);
+      return avgpool_func_(x, y, dy, ndims, data_format, padding, padding_before, padding_after,
+                           pool_size, strides, ceil_mode);
     }
     return Error::RuntimeError()
            << mode << " mode is not supported for `PoolingNdGrad`, and max or avg is expected.";
@@ -423,12 +427,9 @@ class AdaptivePoolNdGradFunctor {
   }
 
  protected:
- AdaptiveAvgPoolNdGradImpl<1, schema::AdaptiveAvgPool1DOp>
-      pool1d_func_;
- AdaptiveAvgPoolNdGradImpl<2, schema::AdaptiveAvgPool2DOp>
-      pool2d_func_;
- AdaptiveAvgPoolNdGradImpl<3, schema::AdaptiveAvgPool3DOp>
-      pool3d_func_;
+  AdaptiveAvgPoolNdGradImpl<1, schema::AdaptiveAvgPool1DOp> pool1d_func_;
+  AdaptiveAvgPoolNdGradImpl<2, schema::AdaptiveAvgPool2DOp> pool2d_func_;
+  AdaptiveAvgPoolNdGradImpl<3, schema::AdaptiveAvgPool3DOp> pool3d_func_;
 };
 
 class SparseCrossEntropyGradFunctor {
@@ -444,8 +445,7 @@ class SparseCrossEntropyGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
-    auto ctx =
-        std::make_shared<schema::SparseCrossEntropyGradOp>();
+    auto ctx = std::make_shared<schema::SparseCrossEntropyGradOp>();
     ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, ctx);
   }
@@ -467,8 +467,7 @@ class SparseCrossEntropyMsGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
-    auto ctx = std::make_shared<
- schema::SparseCrossEntropyMsGradOp>();
+    auto ctx = std::make_shared<schema::SparseCrossEntropyMsGradOp>();
     ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, ctx);
   }
@@ -491,8 +490,7 @@ class SparseSoftmaxCrossEntropyGrad {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& prob,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    auto ctx = std::make_shared<
- schema::SparseSoftmaxCrossEntropyGradOp>();
+    auto ctx = std::make_shared<schema::SparseSoftmaxCrossEntropyGradOp>();
     ctx->set_depth(depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, ctx);
   }
@@ -607,8 +605,7 @@ class BinaryCrossEntropyLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight) const {
-    auto ctx =
-        std::make_shared<schema::BinaryCrossEntropyGradOp>();
+    auto ctx = std::make_shared<schema::BinaryCrossEntropyGradOp>();
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
                                                  ctx);
@@ -700,8 +697,7 @@ class CombinedMarginLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& theta, const float& m1,
                            const float& m2, const float& m3, const int64_t& depth) const {
-    auto ctx =
-        std::make_shared<schema::CombinedMarginLossGradOp>();
+    auto ctx = std::make_shared<schema::CombinedMarginLossGradOp>();
     ctx->set_m1(m1);
     ctx->set_m2(m2);
     ctx->set_m3(m3);
@@ -828,13 +824,11 @@ class PadGradFunctor {
       }
       return OpInterpUtil::Dispatch<Tensor>(*pad_grad_, {dy}, ctx);
     } else if (mode == "reflect") {
-      auto ctx =
-          std::make_shared<schema::ReflectionPad2DGradOp>();
+      auto ctx = std::make_shared<schema::ReflectionPad2DGradOp>();
       ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, ctx);
     } else if (mode == "replicate") {
-      auto ctx =
-          std::make_shared<schema::ReplicationPad2DGradOp>();
+      auto ctx = std::make_shared<schema::ReplicationPad2DGradOp>();
       ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, ctx);
     } else {
@@ -903,8 +897,7 @@ class NormalizationAddReluGradFunctor {
       const std::shared_ptr<one::Tensor>& gamma, const std::shared_ptr<one::Tensor>& beta,
       const std::shared_ptr<one::Tensor>& reserve_space, const std::shared_ptr<one::Tensor>& y,
       const int32_t& axis, const float& epsilon) const {
-    auto ctx = std::make_shared<
- schema::NormalizationAddReluGradOp>();
+    auto ctx = std::make_shared<schema::NormalizationAddReluGradOp>();
     ctx->set_axis(axis);
     ctx->set_epsilon(epsilon);
     return OpInterpUtil::Dispatch<TensorTuple>(
@@ -992,8 +985,7 @@ class BroadcastMatmulGradBFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, double alpha) const {
-    auto ctx =
-        std::make_shared<schema::BroadcastMatmulGradBOp>();
+    auto ctx = std::make_shared<schema::BroadcastMatmulGradBOp>();
     ctx->set_alpha(alpha);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, ctx);
   }
@@ -1040,8 +1032,7 @@ class FusedScaleMaskSoftmaxGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
-    auto ctx = std::make_shared<
- schema::FusedScaleMaskSoftmaxGradOp>();
+    auto ctx = std::make_shared<schema::FusedScaleMaskSoftmaxGradOp>();
     ctx->set_scale_value(scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, ctx);
   }
