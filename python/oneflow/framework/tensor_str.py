@@ -22,7 +22,7 @@ import numpy as np
 from typing import Optional
 
 import oneflow as flow
-from oneflow.framework.tensor_str_util import slice_util
+from oneflow.framework.tensor_str_util import slice_wrapper
 from oneflow.framework.tensor_str_util import _autoset_linewidth
 from oneflow.framework.tensor_str_util import _try_convert_to_local_tensor
 
@@ -216,10 +216,10 @@ def _vector_str(self, indent, summarize, formatter1):
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         left_values = _try_convert_to_local_tensor(
-            slice_util(self, [0, PRINT_OPTS.edgeitems, 1])
+            slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1])
         ).tolist()
         right_values = _try_convert_to_local_tensor(
-            slice_util(self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
+            slice_wrapper(self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
         ).tolist()
         data = (
             [_val_formatter(val) for val in left_values]
@@ -250,14 +250,14 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
         slices = (
             [
                 _tensor_str_with_formatter(
-                    slice_util(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                    slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
                 )
                 for i in range(0, PRINT_OPTS.edgeitems)
             ]
             + ["..."]
             + [
                 _tensor_str_with_formatter(
-                    slice_util(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                    slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
                 )
                 for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
             ]
@@ -265,7 +265,7 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
     else:
         slices = [
             _tensor_str_with_formatter(
-                slice_util(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
             )
             for i in range(0, self.size(0))
         ]
@@ -311,8 +311,8 @@ def get_summarized_data(self):
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
             return flow.cat(
                 (
-                    slice_util(self, [0, PRINT_OPTS.edgeitems, 1]),
-                    slice_util(
+                    slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1]),
+                    slice_wrapper(
                         self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
                     )
                 )
@@ -321,17 +321,17 @@ def get_summarized_data(self):
             return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
         start = [
-            slice_util(self, [i, i + 1, 1]) for i in range(0, PRINT_OPTS.edgeitems)
+            slice_wrapper(self, [i, i + 1, 1]) for i in range(0, PRINT_OPTS.edgeitems)
         ]
         end = [
-            slice_util(self, [i, i + 1, 1])
+            slice_wrapper(self, [i, i + 1, 1])
             for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
         ]
         return flow.stack([get_summarized_data(x) for x in (start + end)])
     else:
         return flow.stack(
             [
-                get_summarized_data(slice_util(self, [i, i + 1, 1]))
+                get_summarized_data(slice_wrapper(self, [i, i + 1, 1]))
                 for i in range(len(self))
             ]
         )
