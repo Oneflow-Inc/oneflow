@@ -26,7 +26,7 @@ add_tablegen(oneflow_tblgen llvm
   op_schema_emitter.cpp
 )
 
-if(TARGET obj.oneflow_tblgen)
+if(LLVM_ENABLE_OBJLIB)
   set(OF_TBLGEN_TARGET obj.oneflow_tblgen)
 else()
   set(OF_TBLGEN_TARGET oneflow_tblgen)
