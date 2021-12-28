@@ -222,7 +222,7 @@ def item_op(input):
     """
     assert input.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
     if input.device != flow.device("cpu"):
-        return input.cpu().numpy().item()
+        input = input.cpu()
     return input.numpy().item()
 
 
