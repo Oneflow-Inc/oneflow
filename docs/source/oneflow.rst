@@ -154,4 +154,3 @@ oneflow
             from_numpy,
 
 .. autofunction:: oneflow.relu
-.. autofunction:: oneflow.env.get_rank
