@@ -55,7 +55,6 @@ __global__ void SliceBackwardGpu(const int n, SliceParams params,
   }
 }
 
-
 template<typename T, int NDIM>
 void LaunchSliceForward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
   CHECK_EQ(params.ndim, NDIM);
@@ -84,7 +83,6 @@ void LaunchSliceBackward(ep::Stream* stream, const SliceParams& params, const T*
       elem_cnt, params, entire_strided_idx_cvtr, sliced_idx_cvtr, sliced_strided_idx_cvtr, entire,
       sliced);
 }
-
 
 template<typename T>
 struct SliceSwitchUtil final {

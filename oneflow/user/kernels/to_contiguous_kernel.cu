@@ -30,16 +30,16 @@ struct StrideParam {
 
   // NOLINTNEXTLINE
   StrideParam(const int64_t* stride_vec) {
-    for (int i = 0; i < ndims; ++i) { 
-      stride[i] = stride_vec[i]; 
+    for (int i = 0; i < ndims; ++i) {
+      stride[i] = stride_vec[i];
       coordinates[i] = 0;
     }
   }
-
 };
 
 template<size_t ndim>
-__device__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_params, const StrideParam<ndim>& in_params) {
+__device__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_params,
+                                 const StrideParam<ndim>& in_params) {
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
 
@@ -55,7 +55,6 @@ __device__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_param
     in_offset = in_offset + out_params.coordinates[dim] * in_params.stride[dim];
   }
   return in_offset;
-
 }
 
 template<typename T, size_t ndim>

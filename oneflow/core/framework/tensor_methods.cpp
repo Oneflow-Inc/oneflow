@@ -264,6 +264,60 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   return output;
 }
 
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAttrMap& attrs) {
+  const auto& shape = input->shape();
+  const auto& stride = JUST(input->stride());
+  const int64_t ndim = shape->NumAxes();
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+
+  AttrMap attr_map(attrs);
+  const int32_t dimension = JUST(attr_map.GetAttr<int32_t>("dimension"));
+  const int32_t size = JUST(attr_map.GetAttr<int32_t>("size"));
+  const int32_t step = JUST(attr_map.GetAttr<int32_t>("step"));
+  CHECK_GE_OR_RETURN(dimension, 0);
+  CHECK_LE_OR_RETURN(dimension, ndim - 1);
+
+  const int32_t max_size = ndim == 0 ? 1 : shape->At(dimension);
+  CHECK_GT_OR_RETURN(size, 0);
+  CHECK_LE_OR_RETURN(size, max_size);
+  CHECK_GT_OR_RETURN(step, 0);
+
+  DimVector out_shape(ndim + 1);
+  StrideVector out_stride(ndim + 1);
+  out_shape[ndim] = size;
+  out_stride[ndim] = ndim == 0 ? 1 : stride->At(dimension);
+  for (int64_t d = 0; d < ndim; ++d) {
+    const int64_t in_size_at_d = shape->At(d);
+    if (d == dimension) {
+      out_shape.at(d) = (in_size_at_d - size) / step + 1;
+      out_stride.at(d) = step * stride->At(d);
+    } else {
+      out_shape.at(d) = in_size_at_d;
+      out_stride.at(d) = stride->At(d);
+    }
+  }
+  auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
+
+  if (input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
+              in_grads->at(0) =
+                  JUST(functional::UnfoldTensorGrad(out_grads.at(0), input, dimension, size, step));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::unfold_tensor_backward",
+                                                            backward_fn, {input}, &outputs));
+  }
+
+  return output;
+}
+
 }  // namespace view
 }  // namespace one
 }  // namespace oneflow

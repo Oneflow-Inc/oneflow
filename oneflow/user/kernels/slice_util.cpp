@@ -18,7 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCPU, T> {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
@@ -26,8 +25,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
-    SwitchDoBackward(SwitchCase(params.ndim), stream, params, sliced,
-                       entire);
+    SwitchDoBackward(SwitchCase(params.ndim), stream, params, sliced, entire);
   }
 
  private:
@@ -65,7 +63,6 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
       entire[entire_offset] = sliced[sliced_offset];
     }
   }
-
 
 #define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \
   SliceKernelUtil<DeviceType::kCPU, T>::func_name<N>

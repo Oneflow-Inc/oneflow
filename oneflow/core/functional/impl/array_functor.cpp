@@ -913,12 +913,11 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-bool checkViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride, const DimVector& target_shape){
-  if (elem_count == 0) {
-    return false;
-  }
+bool checkViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
+                    const DimVector& target_shape) {
+  if (elem_count == 0) { return false; }
 
-  int64_t view_d = target_shape.size()-1;
+  int64_t view_d = target_shape.size() - 1;
   int64_t chunk_base_stride = stride.back();
   std::vector<int64_t> newstride(target_shape.size());
   // stride for each subspace in the chunk
@@ -928,18 +927,14 @@ bool checkViewValid(const int64_t elem_count, const DimVector& shape, const Stri
   for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
     tensor_numel *= shape[tensor_d];
     // if end of tensor size chunk, check view
-    if ((tensor_d == 0) ||
-        (shape[tensor_d - 1] != 1 &&
-         stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-      while (view_d >= 0 &&
-            (view_numel < tensor_numel || target_shape[view_d] == 1)) {
+    if ((tensor_d == 0)
+        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
+      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
         newstride[view_d] = view_numel * chunk_base_stride;
         view_numel *= target_shape[view_d];
         view_d--;
       }
-      if (view_numel != tensor_numel) {
-        return false;
-      }
+      if (view_numel != tensor_numel) { return false; }
       if (tensor_d > 0) {
         chunk_base_stride = stride[tensor_d - 1];
         tensor_numel = 1;
@@ -947,9 +942,7 @@ bool checkViewValid(const int64_t elem_count, const DimVector& shape, const Stri
       }
     }
   }
-  if (view_d != -1) {
-    return false;
-  }
+  if (view_d != -1) { return false; }
   return true;
 }
 
@@ -993,10 +986,10 @@ class ReshapeFunctor {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid = checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(), JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        if(is_view_valid){
-          return view::Reshape(x->contiguous(), infered_shape);
-        }
+        bool is_view_valid =
+            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        if (is_view_valid) { return view::Reshape(x->contiguous(), infered_shape); }
       }
     }
 
@@ -1009,9 +1002,7 @@ class ReshapeFunctor {
 
 class ViewFunctor {
  public:
-  ViewFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
-  }
+  ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     int need_infer_axis = -1;
     size_t count = 1;
@@ -1046,8 +1037,12 @@ class ViewFunctor {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid = checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(), JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        CHECK_OR_RETURN(is_view_valid) << " >> view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+        bool is_view_valid =
+            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        CHECK_OR_RETURN(is_view_valid)
+            << " >> view size is not compatible with input tensor's size and stride (at least one "
+               "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
         return view::Reshape(x->contiguous(), infered_shape);
       }
     }
@@ -1354,6 +1349,12 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("dimension", dimension));
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
+    // if input tensor is eager local, than try return tensor's view
+    if (x->is_eager() && x->is_local()) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::UnfoldTensor(x->contiguous(), attrs);
+      }
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 

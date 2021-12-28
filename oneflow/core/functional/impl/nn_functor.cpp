@@ -1938,8 +1938,9 @@ class FusedBiasAddDropoutFunctor {
                    OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
              })
           .then([&](const std::shared_ptr<one::Tensor>& x) {
-            return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a->contiguous(), b->contiguous(), x->contiguous()},
-                                                  fused_bias_add_mask_attrs);
+            return OpInterpUtil::Dispatch<Tensor>(
+                *fused_bias_add_mask_scale_op_, {a->contiguous(), b->contiguous(), x->contiguous()},
+                fused_bias_add_mask_attrs);
           })
           .call();
     } else {
