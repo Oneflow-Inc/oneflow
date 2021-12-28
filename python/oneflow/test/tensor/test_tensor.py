@@ -351,20 +351,21 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(x1.dtype, flow.float32)
         test_case.assertEqual(x1.shape, flow.Size((1, 2)))
         x2 = flow.Tensor([[1.0], [2.0]])
-        op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", float(1.0))
-            .Output("out")
-            .Build()
-        )
-        y = op(x1, x2)[0]
+        y = flow.matmul(x1, x2)
         test_case.assertTrue(
             np.allclose(y.numpy(), np.array([[5.0]], dtype=np.float32))
         )
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_matmul_with_random_data(test_case):
+        device = random_device()
+        dim0 = random(low=2, high=10).to(int)
+        dim1 = random(low=3, high=20).to(int)
+        dim2 = random(low=2, high=11).to(int)
+        a = random_pytorch_tensor(ndim=2, dim0=dim0, dim1=dim1)
+        b = random_pytorch_tensor(ndim=2, dim0=dim1, dim1=dim2)
+        return a @ b
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_list(test_case):

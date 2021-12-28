@@ -14,77 +14,112 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/* static */ Maybe<void> DropoutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  *ctx->OutputShape("out", 0) = in_shape;
+  *ctx->OutputShape("mask", 0) = in_shape;
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("dropout")
-    .Input("in")
-    .OptionalInput("_add_to_output")
-    .Output("out")
-    .Output("mask")
-    .Attr<float>("rate")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      *ctx->OutputShape("out", 0) = in_shape;
-      *ctx->OutputShape("mask", 0) = in_shape;
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
-                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      float rate = op_conf.attr<float>("rate");
-      CHECK_GE_OR_RETURN(rate, 0.0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      *ctx->OutputDType("mask", 0) = DataType::kInt8;
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> DropoutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-REGISTER_USER_OP("dropout_grad")
-    .Input("dy")
-    .Input("mask")
-    .Output("dx")
-    .Attr<float>("scale")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      *ctx->OutputShape("dx", 0) = dy_shape;
-      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-      FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("dy", 0), axis)
-            .Split(user_op::OpArg("mask", 0), axis)
-            .Split(user_op::OpArg("dx", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
-                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      float scale = op_conf.attr<float>("scale");
-      CHECK_GT_OR_RETURN(scale, 1);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> DropoutOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DropoutOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                              const user_op::UserOpConfWrapper& conf) {
+  float rate = conf.attr<float>("rate");
+  CHECK_GE_OR_RETURN(rate, 0.0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DropoutOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DropoutGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  *ctx->OutputShape("dx", 0) = dy_shape;
+  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> DropoutGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> DropoutGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+  FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("dy", 0), axis)
+        .Split(user_op::OpArg("mask", 0), axis)
+        .Split(user_op::OpArg("dx", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DropoutGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                                  const user_op::UserOpConfWrapper& conf) {
+  float scale = conf.attr<float>("scale");
+  CHECK_GT_OR_RETURN(scale, 1);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DropoutGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> RandomMaskLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> RandomMaskLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> RandomMaskLikeOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& like_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
+  FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("like", 0), axis)
+        .Split(user_op::OpArg("out", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> RandomMaskLikeOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                                     const user_op::UserOpConfWrapper& conf) {
+  float rate = conf.attr<float>("rate");
+  CHECK_GE_OR_RETURN(rate, 0);
+  CHECK_LT_OR_RETURN(rate, 1);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> RandomMaskLikeOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = DataType::kInt8;
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {
@@ -105,39 +140,5 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
   }
   return Maybe<void>::Ok();
 });
-
-REGISTER_NO_GRAD_USER_OP("random_mask_like")
-    .Input("like")
-    .Output("out")
-    .Attr<float>("rate")
-    .Attr<int64_t>("seed")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& like_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);
-      FOR_RANGE(int64_t, axis, 0, like_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("like", 0), axis)
-            .Split(user_op::OpArg("out", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
-                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      float rate = op_conf.attr<float>("rate");
-      CHECK_GE_OR_RETURN(rate, 0);
-      CHECK_LT_OR_RETURN(rate, 1);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = DataType::kInt8;
-      return Maybe<void>::Ok();
-    });
-
-}  // namespace
 
 }  // namespace oneflow
