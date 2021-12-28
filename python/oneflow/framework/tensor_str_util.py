@@ -13,16 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-"""
-This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
-"""
 import os
 import oneflow as flow
 from typing import Optional, Tuple
 
-def slice_util(tensor, slice_tuple: Tuple[int, int, int]):
+@flow.no_grad()
+def slice_wrapper(tensor, slice_tuple: Tuple[int, int, int]):
     ndim = tensor.ndim
     slice_tuple_list = [slice_tuple] + [[None, None, None]] * (ndim - 1)
+    #TODO(): a kind 'slice op' supports both local and consistent tensor
     if tensor.is_consistent:
         # input is s0, output is p
         # input is b, output is b
@@ -31,7 +30,7 @@ def slice_util(tensor, slice_tuple: Tuple[int, int, int]):
         tensor = flow.logical_slice(tensor, slice_tuple_list)
     else:
         tensor = flow.slice(tensor, slice_tuple_list)
-    # flow.sequeeze will fail in some consistent tensor case
+    # TODO(): flow.sequeeze will fail in some consistent tensor case
     if tensor.shape[0] == 1 and ndim > 1:
         tensor = tensor.reshape(list(tensor.shape[1:]))
     return tensor

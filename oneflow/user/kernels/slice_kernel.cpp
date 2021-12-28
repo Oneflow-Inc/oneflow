@@ -297,7 +297,6 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
   } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   } else {
-    // TODO(jianhao): support partialsum
     UNIMPLEMENTED();
   }
 }
