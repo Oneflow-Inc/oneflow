@@ -42,7 +42,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Generated from oneflow/api/python/functional/dispatch_op_api.yaml. DO NOT EDIT!"""
+// Generated from oneflow/api/python/functional/dispatch_stateful_ops.yaml. DO NOT EDIT!"""
 
 header_fmt = (
     license
@@ -76,7 +76,7 @@ source_fmt = (
     license
     + """
 
-#include "oneflow/api/python/functional/dispatch_op_api.yaml.h"
+#include "oneflow/api/python/functional/dispatch_stateful_ops.yaml.h"
 #include "oneflow/core/functional/function_library.h"
 
 namespace oneflow {{
@@ -117,8 +117,8 @@ pybind_source_fmt = (
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/py_function.h"
-#include "oneflow/api/python/functional/dispatch_op_api.yaml.h"
-#include "oneflow/api/python/functional/dispatch_op_api.yaml.pybind.h"
+#include "oneflow/api/python/functional/dispatch_stateful_ops.yaml.h"
+#include "oneflow/api/python/functional/dispatch_stateful_ops.yaml.pybind.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 
@@ -146,7 +146,7 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {{
 )
 
 yaml_file_path = os.path.join(
-    args.project_source_dir, "oneflow/api/python/functional/dispatch_op_api.yaml"
+    args.project_source_dir, "oneflow/api/python/functional/dispatch_stateful_ops.yaml"
 )
 generated_api_dir = "oneflow/api/python/functional"
 generated_pybind_dir = "oneflow/api/python/functional"
@@ -160,9 +160,11 @@ if __name__ == "__main__":
     assert os.path.isdir(generated_api_dir), (
         "Could not locate the api generate directory which is " + generated_api_dir
     )
-    target_header_file = os.path.join(generated_api_dir, "dispatch_op_api.yaml.h")
+    target_header_file = os.path.join(generated_api_dir, "dispatch_stateful_ops.yaml.h")
     g.generate_cpp_header_file(header_fmt, target_header_file)
-    target_source_file = os.path.join(generated_api_dir, "dispatch_op_api.yaml.cpp")
+    target_source_file = os.path.join(
+        generated_api_dir, "dispatch_stateful_ops.yaml.cpp"
+    )
     g.generate_cpp_source_file(source_fmt, target_source_file)
 
     assert os.path.isdir(generated_pybind_dir), (
@@ -170,10 +172,10 @@ if __name__ == "__main__":
         + generated_pybind_dir
     )
     target_pybind_header_file = os.path.join(
-        generated_pybind_dir, "dispatch_op_api.yaml.pybind.h"
+        generated_pybind_dir, "dispatch_stateful_ops.yaml.pybind.h"
     )
     target_pybind_source_file = os.path.join(
-        generated_pybind_dir, "dispatch_op_api.yaml.pybind.cpp"
+        generated_pybind_dir, "dispatch_stateful_ops.yaml.pybind.cpp"
     )
     g.generate_pybind_for_python(
         pybind_header_fmt,

@@ -16,10 +16,9 @@ limitations under the License.
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.id_util as id_util
-from oneflow.framework.attr_util import convert_to_user_attr_value
 
 
-class BuiltinOp(object):
+class StatefulOp(object):
     def __init__(self, op_type_name, op_name=None):
         if op_name is None:
             op_name = id_util.UniqueStr(op_type_name)

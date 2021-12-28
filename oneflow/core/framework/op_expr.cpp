@@ -527,6 +527,19 @@ Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
     OperatorConf* op_conf, const std::shared_ptr<const OpBase>& ctx) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
+  auto* proto = op_conf->mutable_image_decoder_random_crop_resize_conf();
+  const auto* op_ctx = dynamic_cast<const schema::ImageDecoderRandomCropResizeOp*>(ctx.get());
+  proto->set_target_width(op_ctx->target_width);
+  proto->set_target_height(op_ctx->target_height);
+  proto->set_num_workers(op_ctx->num_workers);
+  proto->set_max_num_pixels(op_ctx->max_num_pixels);
+  proto->set_warmup_size(op_ctx->warmup_size);
+  proto->set_seed(op_ctx->seed);
+  proto->set_num_attempts(op_ctx->num_attempts);
+  proto->set_random_area_min(op_ctx->random_area_min);
+  proto->set_random_area_max(op_ctx->random_area_max);
+  proto->set_random_aspect_ratio_min(op_ctx->random_aspect_ratio_min);
+  proto->set_random_aspect_ratio_max(op_ctx->random_aspect_ratio_max);
   return Maybe<void>::Ok();
 }
 

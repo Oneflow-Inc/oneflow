@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/system_ops.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -46,7 +47,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
                   auto ctx = std::make_shared<FeedVariableOp>();
-                  ctx->_l2 = JUST(l2.As<double>());
+                  ctx->l2 = JUST(l2.As<double>());
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
   m.add_functor(
@@ -65,8 +66,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->set_random_shuffle(random_shuffle);
         ctx->set_shuffle_after_epoch(shuffle_after_epoch);
         ctx->set_seed(seed);
-        ctx->device = device;
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
+        OpExprInterpContext interp_ctx(ctx);
+        interp_ctx.device = device;
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, interp_ctx);
       });
   m.add_functor(
       "DispatchOfrecordReader",
@@ -86,13 +88,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->set_shuffle_after_epoch(shuffle_after_epoch);
         ctx->set_seed(seed);
         ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-        ctx->parallel_desc = placement;
-        ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
       });
   m.add_functor("DispatchOfrecordRawDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-                   const std::string name, const Shape& shape, const Symbol<DType>& data_type,
+                   const std::string& name, const Shape& shape, const Symbol<DType>& data_type,
                    bool dim1_varying_length, bool truncate) -> Maybe<Tensor> {
                   auto ctx = std::make_shared<schema::OfrecordRawDecoderOp>();
                   ctx->set_name(name);
@@ -105,14 +105,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchCoinFlip",
       [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability, int64_t seed,
-         bool has_seed, const Optional<Symbol<Device>> device) -> Maybe<Tensor> {
+         bool has_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
         auto ctx = std::make_shared<schema::CoinFlipOp>();
         ctx->set_probability(JUST(probability.As<float>()));
         ctx->set_batch_size(batch_size);
         ctx->set_seed(seed);
         ctx->set_has_seed(has_seed);
-        ctx->device = device;
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
+        OpExprInterpContext interp_ctx(ctx);
+        interp_ctx.device = device;
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, interp_ctx);
       });
   m.add_functor("DispatchCoinFlip",
                 [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability,
@@ -124,16 +125,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->set_seed(seed);
                   ctx->set_has_seed(has_seed);
                   ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-                  ctx->parallel_desc = placement;
-                  ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
+                  return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
                 });
   m.add_functor(
       "DispatchCropMirrorNormalizeFromUint8",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& input, int64_t crop_h,
          int64_t crop_w, float crop_pos_x, float crop_pos_y, const std::vector<float>& mean,
          const std::vector<float>& std, const Symbol<DType>& output_dtype,
-         const std::string output_layout, const std::string color_space) -> Maybe<Tensor> {
+         const std::string& output_layout, const std::string& color_space) -> Maybe<Tensor> {
         auto ctx = std::make_shared<schema::CropMirrorNormalizeFromUint8Op>();
         ctx->set_color_space(color_space);
         ctx->set_output_layout(output_layout);
@@ -151,7 +150,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& input, int64_t crop_h,
          int64_t crop_w, float crop_pos_x, float crop_pos_y, const std::vector<float>& mean,
          const std::vector<float>& std, const Symbol<DType>& output_dtype,
-         const std::string output_layout, const std::string color_space) -> Maybe<Tensor> {
+         const std::string& output_layout, const std::string& color_space) -> Maybe<Tensor> {
         auto ctx = std::make_shared<schema::CropMirrorNormalizeFromTensorbufferOp>();
         ctx->set_color_space(color_space);
         ctx->set_output_layout(output_layout);
@@ -167,7 +166,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchOfrecordImageDecoderRandomCrop",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-         const std::string name, const std::string color_space,
+         const std::string& name, const std::string& color_space,
          const std::vector<float>& random_area, const std::vector<float>& random_aspect_ratio,
          int32_t num_attempts, int64_t seed, bool has_seed) -> Maybe<Tensor> {
         auto ctx = std::make_shared<schema::OfrecordImageDecoderRandomCropOp>();
@@ -182,14 +181,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor("DispatchOfrecordImageDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-                   const std::string name, const std::string color_space) -> Maybe<Tensor> {
+                   const std::string& name, const std::string& color_space) -> Maybe<Tensor> {
                   auto ctx = std::make_shared<schema::OfrecordImageDecoderOp>();
                   ctx->set_name(name);
                   ctx->set_color_space(color_space);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
   m.add_functor("DispatchImageDecoderRandomCropResize",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    int64_t target_width, int64_t target_height, int64_t seed, int64_t num_workers,
                    int64_t max_num_pixels, float random_area_min, float random_area_max,
                    float random_aspect_ratio_min, float random_aspect_ratio_max,
@@ -210,7 +209,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 });
   m.add_functor(
       "DispatchTensorBufferToListOfTensorsV2",
-      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
          const std::vector<Shape>& out_shapes, const std::vector<Symbol<DType>>& out_dtypes,
          bool dynamic_out) -> Maybe<TensorTuple> {
         auto ctx = std::make_shared<schema::TensorBufferToListOfTensorsV2Op>();
@@ -224,9 +223,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, ctx);
       });
   m.add_functor("DispatchImageResizeKeepAspectRatio",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    int32_t target_size, int32_t min_size, int32_t max_size, bool resize_longer,
-                   const std::string interpolation_type) -> Maybe<TensorTuple> {
+                   const std::string& interpolation_type) -> Maybe<TensorTuple> {
                   auto ctx = std::make_shared<schema::ImageResizeKeepAspectRatioOp>();
                   ctx->set_target_size(target_size);
                   ctx->set_min_size(min_size);
@@ -236,10 +235,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, ctx);
                 });
   m.add_functor("DispatchImageResizeToFixed",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    int64_t target_width, int64_t target_height, int64_t channels,
                    const Symbol<DType>& data_type,
-                   const std::string interpolation_type) -> Maybe<TensorTuple> {
+                   const std::string& interpolation_type) -> Maybe<TensorTuple> {
                   auto ctx = std::make_shared<schema::ImageResizeToFixedOp>();
                   ctx->set_target_width(target_width);
                   ctx->set_target_height(target_height);
@@ -248,8 +247,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->set_interpolation_type(interpolation_type);
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, ctx);
                 });
+  m.add_functor(
+      "DispatchImageDecode",
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
+         const std::string& color_space, const Symbol<DType>& data_type) -> Maybe<Tensor> {
+        auto ctx = std::make_shared<schema::ImageDecodeOp>();
+        ctx->set_color_space(color_space);
+        ctx->set_data_type(data_type->data_type());
+        return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
+      });
   m.add_functor("DispatchImageNormalize",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::vector<float>& mean, const std::vector<float>& std) -> Maybe<Tensor> {
                   auto ctx = std::make_shared<schema::ImageNormalizeOp>();
                   ctx->set_std(std);
@@ -272,8 +280,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->set_group_by_ratio(group_by_ratio);
                   ctx->set_remove_images_without_annotations(remove_images_without_annotations);
                   ctx->set_stride_partition(stride_partition);
-                  ctx->device = device;
-                  return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, ctx);
+OpExprInterpContext interp_ctx(ctx);
+        interp_ctx.device = device;
+                  return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, interp_ctx);
                 });
   m.add_functor("DispatchCOCOReader",
                 [](const std::shared_ptr<OpExpr>& op, const std::string image_dir,
@@ -292,13 +301,54 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   ctx->set_remove_images_without_annotations(remove_images_without_annotations);
                   ctx->set_stride_partition(stride_partition);
                   ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-                  ctx->parallel_desc = placement;
-                  ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-                  return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, ctx);
+                  return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
                 });
   m.add_functor(
+      "DispatchCOCOReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
+         const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
+         int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
+         bool stride_partition, int64_t session_id,
+         const Optional<Symbol<Device>>& device) -> Maybe<TensorTuple> {
+        auto ctx = std::make_shared<schema::COCOReaderOp>();
+        ctx->set_session_id(session_id);
+        ctx->set_annotation_file(annotation_file);
+        ctx->set_image_dir(image_dir);
+        ctx->set_batch_size(batch_size);
+        ctx->set_shuffle_after_epoch(shuffle_after_epoch);
+        ctx->set_random_seed(random_seed);
+        ctx->set_group_by_ratio(group_by_ratio);
+        ctx->set_remove_images_without_annotations(remove_images_without_annotations);
+        ctx->set_stride_partition(stride_partition);
+        OpExprInterpContext interp_ctx(ctx);
+        interp_ctx.device = device;
+        return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, interp_ctx);
+      });
+  m.add_functor(
+      "DispatchCOCOReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
+         const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
+         int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
+         bool stride_partition, int64_t session_id, const Symbol<ParallelDesc>& placement,
+         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
+        auto ctx = std::make_shared<schema::COCOReaderOp>();
+        ctx->set_session_id(session_id);
+        ctx->set_annotation_file(annotation_file);
+        ctx->set_image_dir(image_dir);
+        ctx->set_batch_size(batch_size);
+        ctx->set_shuffle_after_epoch(shuffle_after_epoch);
+        ctx->set_random_seed(random_seed);
+        ctx->set_group_by_ratio(group_by_ratio);
+        ctx->set_remove_images_without_annotations(remove_images_without_annotations);
+        ctx->set_stride_partition(stride_partition);
+        ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
+        auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        return OpInterpUtil::Dispatch<TensorTuple>(*op, {},
+                                                   OpExprInterpContext(attrs, placement, nd_sbp));
+      });
+  m.add_functor(
       "DispatchImageBatchAlign",
-      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input, int32_t alignment,
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input, int32_t alignment,
          const Shape& shape, const Symbol<DType>& data_type, bool dynamic_out) -> Maybe<Tensor> {
         auto ctx = std::make_shared<schema::ImageBatchAlignOp>();
         ctx->set_shape(shape);
@@ -308,15 +358,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
       });
   m.add_functor("DispatchOfrecordBytesDecoder",
-                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor> input,
-                   const std::string name) -> Maybe<Tensor> {
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
+                   const std::string& name) -> Maybe<Tensor> {
                   auto ctx = std::make_shared<schema::OfrecordBytesDecoderOp>();
                   ctx->set_name(name);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
   m.add_functor(
       "DispatchMegatronGptMmapDataLoader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string data_file_prefix, int64_t seq_length,
+      [](const std::shared_ptr<OpExpr>& op, const std::string& data_file_prefix, int64_t seq_length,
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
          const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
          int64_t random_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
@@ -331,12 +381,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->set_split_index(split_index);
         ctx->set_shuffle(shuffle);
         ctx->set_random_seed(random_seed);
-        ctx->device = device;
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
+OpExprInterpContext interp_ctx(ctx);
+        interp_ctx.device = device;
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, interp_ctx);
       });
   m.add_functor(
       "DispatchMegatronGptMmapDataLoader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string data_file_prefix, int64_t seq_length,
+      [](const std::shared_ptr<OpExpr>& op, const std::string& data_file_prefix, int64_t seq_length,
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
          const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
          int64_t random_seed, const Symbol<ParallelDesc>& placement,
@@ -353,10 +404,16 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         ctx->set_shuffle(shuffle);
         ctx->set_random_seed(random_seed);
         ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-        ctx->parallel_desc = placement;
-        ctx->sbp = JUST(GetNdSbp(sbp_tuple));
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, ctx);
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
       });
+  m.add_functor("DispatchEagerNcclAllReduce",
+                [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
+                   const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
+                  auto ctx = std::make_shared<schema::EagerNcclAllReduceOp>();
+                  ctx->set_parallel_conf(parallel_conf);
+                  ctx->set_async_launch(async_launch);
+                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
+                });
 }
 
 }  // namespace impl
