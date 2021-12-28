@@ -8859,7 +8859,8 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
     AnyType:$context,
     AnyType:$unique_embeddings,
     AnyType:$embedding_diff,
-    Optional<AnyType>:$learning_rate
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,

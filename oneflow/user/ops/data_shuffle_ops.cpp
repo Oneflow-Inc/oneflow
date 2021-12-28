@@ -51,7 +51,7 @@ namespace oneflow {
   *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
   *ctx->OutputShape("partition_index", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
 
-  //can't set to dynamic when need boxing
+  // can't set to dynamic when need boxing
   *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = false;
@@ -155,6 +155,7 @@ namespace oneflow {
       .Split(user_op::OpArg("context", 0), 0)
       .Split(user_op::OpArg("unique_embeddings", 0), 0)
       .Broadcast(user_op::OpArg("learning_rate", 0))
+      .Broadcast(user_op::OpArg("skip_if", 0))
       .Split(user_op::OpArg("embedding_diff", 0), 0)
       .Build();
   return Maybe<void>::Ok();

@@ -48,7 +48,9 @@ void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, s
 template<typename T, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
                                 const float* learning_rate, float learning_rate_val,
-                                const T* model_diff, const T* model, T* updated_model) {
+                                const int64_t* skip_if, const T* model_diff, const T* model,
+                                T* updated_model) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   const int64_t n = *num_unique_ids * embedding_size;
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -482,12 +484,19 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     // update kernel
     SGDUpdateKernel<T, IDX>
         <<<BlocksNum4ThreadsNum(embedding_diff->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, learning_rate_val,
-            embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(), update_unique_embeddings);
+            skip_if_ptr, embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(),
+            update_unique_embeddings);
     LOG(INFO) << ctx->parallel_ctx().parallel_id()
               << " update put to cache num ids: " << *host_num_keys;
     cache->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), update_unique_embeddings,
