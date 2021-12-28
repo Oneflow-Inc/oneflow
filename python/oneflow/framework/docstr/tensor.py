@@ -524,6 +524,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.cpu,
+    """
+    Tensor.cpu() → Tensor
+
+    Returns a copy of this object in CPU memory. if this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.pow,
     """
     See :func:`oneflow.pow`
