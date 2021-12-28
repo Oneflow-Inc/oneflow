@@ -26,7 +26,7 @@ namespace oneflow {
   const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
 
   DimVector out_dim_vec = {};
-  FOR_RANGE(int64_t, i, 0, input_num_axes - 2 ) { out_dim_vec.push_back(in_shape.At(i)); }
+  FOR_RANGE(int64_t, i, 0, input_num_axes - 2 ) { out_dim_vec.push_back(in.shape().At(i)); }
   
   const int64_t m = in.shape().At(input_num_axes - 2);
   const int64_t n = in.shape().At(input_num_axes - 1);
