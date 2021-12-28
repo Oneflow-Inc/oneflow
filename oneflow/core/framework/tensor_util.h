@@ -13,18 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <string>
 
-#ifndef ONEFLOW_API_COMMON_DEVICE_H_
-#define ONEFLOW_API_COMMON_DEVICE_H_
-
-#include "oneflow/core/framework/device.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-struct DeviceExportUtil final {
-  static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
+namespace one {
 
-  static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
-};
+class Tensor;
+
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier);
+}  // namespace one
 }  // namespace oneflow
-
-#endif  // !ONEFLOW_API_COMMON_DEVICE_H_

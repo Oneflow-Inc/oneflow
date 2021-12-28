@@ -27,7 +27,7 @@ import oneflow.unittest
 
 
 class TestFlip(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=False, check_allclose=False)
     def test_flow_flip_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(

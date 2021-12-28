@@ -61,6 +61,19 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
                              | JUST(BoxingExpr("identity"))));
 }
 
+Maybe<BoxingExprIf> SymmetricOnedToNdBoxingExpr() {
+  return JUST(
+      BoxingExpr(JUST(UnflattenInHierarchy()), JUST(BoxingExpr("unflatten-hierarchy")),
+                 JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity"))));
+}
+
+Maybe<BoxingExprIf> SymmetricNdToOnedBoxingExpr() {
+  return JUST(
+      BoxingExpr(JUST(UnflattenOutHierarchy()),
+                 JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity")),
+                 JUST(BoxingExpr("flatten-hierarchy"))));
+}
+
 Maybe<BoxingExprIf> GenericBoxingExpr() {
   // in_placement contain out_placement or out_placement contain in_placement
   const auto& boxing_expr_with_inclusive_placement =
@@ -79,20 +92,20 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
-  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
-                     | JUST(BoxingExpr("cuda-copy-h2d")) | JUST(BoxingExpr("cuda-copy-d2h"))
-                     | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
-                     | JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))
-                     | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("ccl-s-to-s"))
-                     | JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s"))
-                     | JUST(BoxingExpr("symmetric-b-to-p")) | JUST(BoxingExpr("symmetric-b-to-s"))
-                     | JUST(BoxingExpr("symmetric-s-to-p"))
+  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("cuda-copy-h2d"))
+                     | JUST(BoxingExpr("cuda-copy-d2h")) | JUST(BoxingExpr("nccl-p-to-b"))
+                     | JUST(BoxingExpr("ccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b"))
+                     | JUST(BoxingExpr("ccl-s-to-b")) | JUST(BoxingExpr("nccl-s-to-s"))
+                     | JUST(BoxingExpr("ccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
+                     | JUST(BoxingExpr("ccl-p-to-s")) | JUST(BoxingExpr("symmetric-b-to-p"))
+                     | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("symmetric-s-to-p"))
                      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
                      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
                      | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
                      | JUST(BoxingExpr("naive-b-to-s")) | JUST(BoxingExpr("naive-p-to-b"))
                      | JUST(BoxingExpr("naive-p-to-s")) | JUST(OneToNBoxingExpr())
-                     | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr());
+                     | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr())
+                     | JUST(SymmetricOnedToNdBoxingExpr()) | JUST(SymmetricNdToOnedBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 
@@ -114,8 +127,8 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"
-                              << ". from_nd_sbp: " << *JUST(NdSbpToString(in_nd_sbp))
-                              << ", to_nd_sbp: " << *JUST(NdSbpToString(out_nd_sbp))
+                              << ". from_nd_sbp: " << NdSbpToString(in_nd_sbp)
+                              << ", to_nd_sbp: " << NdSbpToString(out_nd_sbp)
                               << ", from_placement: " << *JUST(PlacementToString(in_parallel_desc))
                               << ", to_placement: " << *JUST(PlacementToString(out_parallel_desc));
 }

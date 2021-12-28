@@ -21,6 +21,7 @@ import os
 import oneflow
 import oneflow as flow
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal._C as _C
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.unittest
@@ -95,18 +96,13 @@ def _test_user_op_graph(test_case, is_cuda):
             "cc_Output_0", output_conf, ["in_0"], ["out_0"]
         )
 
-        attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-        x0_tensor_in_c = _get_c_tensor(x0)
-        x1_tensor_in_c = _get_c_tensor(x1)
-        weight0_tensor_in_c = _get_c_tensor(weight0)
-
-        x0_lazy_tensor = x0_op.apply([x0_tensor_in_c], attrs)[0]
-        x1_lazy_tensor = x1_op.apply([x1_tensor_in_c], attrs)[0]
-        weight0_lazy_tensor = weight0_op.apply([weight0_tensor_in_c], attrs)[0]
+        x0_lazy_tensor = _C.dispatch_feed_input(x0_op, x0)
+        x1_lazy_tensor = _C.dispatch_feed_input(x1_op, x1)
+        weight0_lazy_tensor = _C.dispatch_feed_input(weight0_op, weight0)
 
         test_case.assertEqual(x0_lazy_tensor.shape, (20, 30))
         test_case.assertTrue(x0_lazy_tensor.is_lazy)
+
         test_case.assertEqual(weight0_lazy_tensor.shape, (30, 50))
         test_case.assertTrue(weight0_lazy_tensor.is_lazy)
         test_case.assertEqual(x1_lazy_tensor.shape, (50, 70))
@@ -128,7 +124,7 @@ def _test_user_op_graph(test_case, is_cuda):
         test_case.assertEqual(y1.shape, (20, 70))
         test_case.assertTrue(y1.is_lazy)
 
-        eager_output = output_op.apply([y1], attrs)[0]
+        eager_output = _C.dispatch_fetch_output(output_op, y1)
         test_case.assertEqual(eager_output.shape, (20, 70))
         test_case.assertTrue(not eager_output.is_lazy)
 
