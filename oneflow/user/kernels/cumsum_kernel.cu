@@ -132,7 +132,7 @@ class GpuCumsumKernel final : public user_op::OpKernel {
     // data partition: cs_up_space|cs_space|cs_down_space
     auto cs_up_space = elem_cnt / in->shape().Count(dim);
     auto cs_space = in->shape().At(dim);
-    auto cs_down_space = in->shape().Count(dim) / cs_space;
+    auto cs_down_space = in->shape().Count(dim + 1);
     auto thread_num = cs_up_space * cs_down_space;
 
     if (cs_up_space == 1) {
@@ -180,7 +180,7 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
     // data partition: cs_up_space|cs_space|cs_down_space
     auto cs_up_space = elem_cnt / in->shape().Count(dim);
     auto cs_space = in->shape().At(dim);
-    auto cs_down_space = in->shape().Count(dim) / cs_space;
+    auto cs_down_space = in->shape().Count(dim + 1);
     auto thread_num = elem_cnt;
 
     if (cs_down_space == 1) {

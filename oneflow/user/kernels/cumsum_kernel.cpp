@@ -75,7 +75,7 @@ class CpuCumsumKernel final : public user_op::OpKernel {
     // data partition: cs_up_space|cs_space|cs_down_space
     auto cs_up_space = elem_cnt / in->shape().Count(dim);
     auto cs_space = in->shape().At(dim);
-    auto cs_down_space = in->shape().Count(dim + 1, in->shape().NumAxes() - 1);
+    auto cs_down_space = in->shape().Count(dim + 1);
 
     cumsum_forward<T>(in_ptr, out_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
   }
@@ -110,7 +110,7 @@ class CpuCumsumGradKernel final : public user_op::OpKernel {
     // data partition: cs_up_space|cs_space|cs_down_space
     auto cs_up_space = elem_cnt / dx->shape().Count(dim);
     auto cs_space = dx->shape().At(dim);
-    auto cs_down_space = dx->shape().Count(dim + 1, dx->shape().NumAxes() - 1);
+    auto cs_down_space = dx->shape().Count(dim + 1);
 
     cumsum_backward(dy_ptr, dx_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
   }
