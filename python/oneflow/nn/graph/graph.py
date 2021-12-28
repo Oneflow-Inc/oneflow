@@ -375,7 +375,7 @@ class Graph(object):
         assert isinstance(msg, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
+                print(msg, flush=True)
 
     @property
     def _config_proto(self):
@@ -494,7 +494,8 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            eager_outputs = self._build_graph(*args)
+            with graph_build_util.GLogScopeContext(self._debug_min_s_level, self._debug_max_v_level - 1):
+                eager_outputs = self._build_graph(*args)
             build_graph_end = time.perf_counter()
             self._print(
                 0,

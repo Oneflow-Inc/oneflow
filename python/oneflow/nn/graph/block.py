@@ -552,7 +552,7 @@ class ModuleBlock(Block):
         assert isinstance(msg, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
+                print(msg, flush=True)
 
 
 class LazyBuilder(object):

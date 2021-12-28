@@ -91,7 +91,7 @@ class PyFunctionDispatcher {
 };
 
 namespace {
-static std::string get_frame_str(PyObject* obj) {
+static std::string get_obj_str(PyObject* obj) {
   PyObject* repr = PyObject_Repr(obj);
   PyObject* str = PyUnicode_AsEncodedString(repr, "utf-8", "~E~");
   const char* bytes = PyBytes_AS_STRING(str);
@@ -110,13 +110,14 @@ PyFrameObject* get_frame_back(PyFrameObject* frame) {
 std::string get_cur_frame_stack_str() {
   PyFrameObject* cur_frame = PyEval_GetFrame();
   if (cur_frame == NULL) return "";
-  std::string cur_f_str = "frame[-1]: " + get_frame_str((PyObject*)cur_frame);
-  PyFrameObject* back_frame = get_frame_back(cur_frame);
+  std::string cur_f_str = "python stack[-1]: " + get_obj_str((PyObject*)cur_frame);
 
+  PyFrameObject* back_frame = get_frame_back(cur_frame);
   if (back_frame == NULL) return cur_f_str;
-  std::string back_f_str = get_frame_str((PyObject*)back_frame);
-  cur_f_str = "frame[-2]: " + back_f_str + "; " + cur_f_str;
+  std::string back_f_str = get_obj_str((PyObject*)back_frame);
+  cur_f_str = "python stack[-2]: " + back_f_str + "; " + cur_f_str;
   Py_XDECREF(back_frame);
+
   return cur_f_str;
 }
 }  // namespace
@@ -128,7 +129,8 @@ inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   if (OF_PREDICT_FALSE(LazyMode::is_enabled())) {
     // Create the last 2 frame stack string in Python Interpreter.
     std::string cur_f_str =
-        get_cur_frame_stack_str() + "; op: <operation " + dispatcher.get_func_name() + ">";
+        get_cur_frame_stack_str() + "; C API: <func " + dispatcher.get_func_name() + ">";
+    std::cout << cur_f_str << std::endl;
     // User DispathFram to pass frame info to OpExpr or Interpreter.
     DispatchFrame::Guard f_guard(cur_f_str);
     return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
