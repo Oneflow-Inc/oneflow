@@ -44,10 +44,9 @@ Maybe<BoxingDividor> RawReplaceOutDeviceType(DeviceType device_type) {
 
 }  // namespace
 
-decltype(ReplaceInDeviceType) ReplaceInDeviceType =
-    DECORATE(&RawReplaceInDeviceType, ThreadLocalCopiable);
+decltype(ReplaceInDeviceType) ReplaceInDeviceType = DECORATE(&RawReplaceInDeviceType, ThreadLocal);
 decltype(ReplaceOutDeviceType) ReplaceOutDeviceType =
-    DECORATE(&RawReplaceOutDeviceType, ThreadLocalCopiable);
+    DECORATE(&RawReplaceOutDeviceType, ThreadLocal);
 
 namespace {
 
@@ -65,7 +64,7 @@ Maybe<Symbol<PlacedNdSbp>> RawFlattenHierarchy(Symbol<PlacedNdSbp> placed_nd_sbp
   return JUST(PlacedNdSbp::New(flattened_nd_sbp, flattened_placement));
 }
 
-static constexpr auto* FlattenHierarchy = DECORATE(&RawFlattenHierarchy, ThreadLocalCopiable);
+static constexpr auto* FlattenHierarchy = DECORATE(&RawFlattenHierarchy, ThreadLocal);
 
 Maybe<BoxingDividor> RawFlattenInHierarchy() {
   return std::make_shared<BoxingDividor>(
@@ -87,7 +86,7 @@ Maybe<Symbol<PlacedNdSbp>> RawUnflattenHierarchy(Symbol<PlacedNdSbp> in_placed_n
   return JUST(PlacedNdSbp::New(SymbolOf(unflattened_nd_sbp), out_placed_nd_sbp->placement()));
 }
 
-static constexpr auto* UnflattenHierarchy = DECORATE(&RawUnflattenHierarchy, ThreadLocalCopiable);
+static constexpr auto* UnflattenHierarchy = DECORATE(&RawUnflattenHierarchy, ThreadLocal);
 
 Maybe<BoxingDividor> RawUnflattenInHierarchy() {
   return std::make_shared<BoxingDividor>(
@@ -107,12 +106,11 @@ Maybe<BoxingDividor> RawUnflattenOutHierarchy() {
 
 }  // namespace
 
-decltype(FlattenInHierarchy) FlattenInHierarchy =
-    DECORATE(&RawFlattenInHierarchy, ThreadLocalCopiable);
+decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarchy, ThreadLocal);
 decltype(UnflattenInHierarchy) UnflattenInHierarchy =
-    DECORATE(&RawUnflattenInHierarchy, ThreadLocalCopiable);
+    DECORATE(&RawUnflattenInHierarchy, ThreadLocal);
 decltype(UnflattenOutHierarchy) UnflattenOutHierarchy =
-    DECORATE(&RawUnflattenOutHierarchy, ThreadLocalCopiable);
+    DECORATE(&RawUnflattenOutHierarchy, ThreadLocal);
 
 namespace {
 
@@ -124,7 +122,7 @@ Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
   return SymbolOf(partial_sum_nd_sbp);
 }
 
-auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocalCopiable);
+auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
   Symbol<cfg::NdSbp> partial_sum_nd_sbp =
@@ -133,7 +131,7 @@ Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> pla
 }
 
 static constexpr auto* ReplaceNdSbpWithPartialSum =
-    DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocalCopiable);
+    DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocal);
 
 Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
   return std::make_shared<BoxingDividor>(
@@ -146,7 +144,7 @@ Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
 }  // namespace
 
 decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
-    DECORATE(&RawOutPlacementAndPartialSum, ThreadLocalCopiable);
+    DECORATE(&RawOutPlacementAndPartialSum, ThreadLocal);
 
 namespace {
 
@@ -158,7 +156,7 @@ Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
   return SymbolOf(broadcast_nd_sbp);
 }
 
-auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocalCopiable);
+auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> placed_nd_sbp) {
   Symbol<cfg::NdSbp> broadcast_nd_sbp =
@@ -167,7 +165,7 @@ Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> plac
 }
 
 static constexpr auto* ReplaceNdSbpWithBroadcast =
-    DECORATE(&RawReplaceNdSbpWithBroadcast, ThreadLocalCopiable);
+    DECORATE(&RawReplaceNdSbpWithBroadcast, ThreadLocal);
 
 Maybe<BoxingDividor> RawInPlacementAndBroadcast() {
   return std::make_shared<BoxingDividor>(
@@ -188,9 +186,9 @@ Maybe<BoxingDividor> RawOutPlacementAndBroadcast() {
 }  // namespace
 
 decltype(InPlacementAndBroadcast) InPlacementAndBroadcast =
-    DECORATE(&RawInPlacementAndBroadcast, ThreadLocalCopiable);
+    DECORATE(&RawInPlacementAndBroadcast, ThreadLocal);
 decltype(OutPlacementAndBroadcast) OutPlacementAndBroadcast =
-    DECORATE(&RawOutPlacementAndBroadcast, ThreadLocalCopiable);
+    DECORATE(&RawOutPlacementAndBroadcast, ThreadLocal);
 
 namespace {
 
@@ -200,7 +198,7 @@ Maybe<Symbol<cfg::NdSbp>> GetSplitNdSbp(int64_t axis) {
   return SymbolOf(split_nd_sbp);
 }
 
-auto* CachedGetSplitNdSbp = DECORATE(&GetSplitNdSbp, ThreadLocalCopiable);
+auto* CachedGetSplitNdSbp = DECORATE(&GetSplitNdSbp, ThreadLocal);
 
 Maybe<BoxingDividor> RawInPlacementAndSplit(int64_t axis) {
   return std::make_shared<BoxingDividor>(
@@ -222,10 +220,9 @@ Maybe<BoxingDividor> RawOutPlacementAndSplit(int64_t axis) {
 
 }  // namespace
 
-decltype(InPlacementAndSplit) InPlacementAndSplit =
-    DECORATE(&RawInPlacementAndSplit, ThreadLocalCopiable);
+decltype(InPlacementAndSplit) InPlacementAndSplit = DECORATE(&RawInPlacementAndSplit, ThreadLocal);
 decltype(OutPlacementAndSplit) OutPlacementAndSplit =
-    DECORATE(&RawOutPlacementAndSplit, ThreadLocalCopiable);
+    DECORATE(&RawOutPlacementAndSplit, ThreadLocal);
 
 namespace {
 
@@ -266,7 +263,7 @@ Maybe<BoxingDividor> RawOutFirstDeviceAndAllBroadcast() {
 }  //  namespace
 
 decltype(InFirstDeviceAndAllBroadcast) InFirstDeviceAndAllBroadcast =
-    DECORATE(&RawInFirstDeviceAndAllBroadcast, ThreadLocalCopiable);
+    DECORATE(&RawInFirstDeviceAndAllBroadcast, ThreadLocal);
 decltype(OutFirstDeviceAndAllBroadcast) OutFirstDeviceAndAllBroadcast =
-    DECORATE(&RawOutFirstDeviceAndAllBroadcast, ThreadLocalCopiable);
+    DECORATE(&RawOutFirstDeviceAndAllBroadcast, ThreadLocal);
 }  // namespace oneflow
