@@ -36,7 +36,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0, value)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_masked_fill_with_0dim_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
