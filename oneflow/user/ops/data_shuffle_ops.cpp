@@ -32,8 +32,8 @@ namespace oneflow {
 
   *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
-  *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = true;
-  *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = true;
+  *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = false;
+  *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = false;
   *ctx->OutputIsDynamic("ids_reverse_idx", 0) = ctx->InputIsDynamic("ids", 0);
   *ctx->OutputIsDynamic("num_unique_ids_matrix", 0) = false;
   return Maybe<void>::Ok();
@@ -51,10 +51,11 @@ namespace oneflow {
   *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
   *ctx->OutputShape("partition_index", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
 
+  //can't set to dynamic when need boxing
   *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
-  *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = true;
-  *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = true;
+  *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = false;
+  *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = false;
   *ctx->OutputIsDynamic("ids_reverse_idx", 0) = ctx->InputIsDynamic("ids", 0);
   *ctx->OutputIsDynamic("num_unique_ids_matrix", 0) = false;
   return Maybe<void>::Ok();
