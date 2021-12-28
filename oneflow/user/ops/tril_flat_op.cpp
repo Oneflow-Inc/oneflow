@@ -33,7 +33,7 @@ namespace oneflow {
   int64_t last_dim = 0;
   FOR_RANGE(int64_t, row, 0, num_rows) {
     FOR_RANGE(int64_t, col, 0, num_cols) {
-      if (col + diagonal < row) { ++last_dim; }
+      if (row + diagonal >= col) { ++last_dim; }
     }
   }
   out_dim_vec.push_back(last_dim);

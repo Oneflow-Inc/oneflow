@@ -41,7 +41,7 @@ class CpuTrilFlatKernel final : public user_op::OpKernel {
       int64_t offset_in_matrix = k % matrix_size;
       int64_t row = offset_in_matrix / num_cols;
       int64_t col = offset_in_matrix - num_cols * row;
-      if (col + diagonal < row) { y_dptr[p++] = x_dptr[k]; }
+      if (row + diagonal >= col) { y_dptr[p++] = x_dptr[k]; }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -70,7 +70,7 @@ class CpuTrilFlatBackwardKernel final : public user_op::OpKernel {
       int64_t offset_in_matrix = k % matrix_size;
       int64_t row = offset_in_matrix / num_cols;
       int64_t col = offset_in_matrix - num_cols * row;
-      dx_dptr[k] = row > col + diagonal ? 0 : dy_dptr[p++];
+      dx_dptr[k] = row + diagonal < col ? 0 : dy_dptr[p++];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
