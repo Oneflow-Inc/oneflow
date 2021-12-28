@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include <memory>
+#include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "sbp_collector.h"
+#include "boxing_collector.h"
 
 namespace oneflow {
 
@@ -78,7 +80,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
       }
     }
     // other parameters
-    Shape hierarchy44({800, 20});
+    Shape hierarchy44({4, 4});
     std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
     double logical_blob_size = 1024.0;
 
@@ -280,6 +282,9 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
 
     std::cout << "================================================" << std::endl;
   }
+  BoxingCollector bc(op_graph);
+  bc.PrintBoxingTables();
+
   JUST(InitCopyCost(op_graph));
   // TODO:  Set all the sbp signatrure id to be 0 for initialization.
   //        Could revert it back to
