@@ -278,16 +278,16 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_keys = *host_num_keys;
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << num_keys;
+    LOG(INFO) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << num_keys;
     cache->Test(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.NumCacheMissingPtr(),
                 buffer_manager.CacheMissingKeysPtr(), buffer_manager.CacheMissingIndicesPtr());
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheMissingPtr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_missing_keys = *host_num_keys;
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " find store num ids: " << num_missing_keys;
-    LOG(ERROR) << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx " << ctx->parallel_ctx().parallel_id()
-               << " hit ratio:  " << (num_keys - num_missing_keys) / static_cast<float>(num_keys);
+    LOG(INFO) << ctx->parallel_ctx().parallel_id() << " find store num ids: " << num_missing_keys;
+    LOG(INFO) << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx " << ctx->parallel_ctx().parallel_id()
+              << " hit ratio:  " << (num_keys - num_missing_keys) / static_cast<float>(num_keys);
     if (num_missing_keys != 0) {
       store->Get(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
@@ -301,6 +301,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
               seed, cuda_gen_state, inc_offset, embedding_size, buffer_manager.NumStoreMissingPtr(),
               buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
               buffer_manager.StoreValuesPtr());
+      LOG(INFO) << ctx->parallel_ctx().parallel_id()
+                << " prefetch put to cache num ids: " << num_missing_keys;
       cache->Put(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumCacheEvictedPtr(),
                  buffer_manager.CacheEvictedKeysPtr(), buffer_manager.CacheEvictedValuesPtr());
@@ -308,8 +310,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
                                 sizeof(uint32_t));
       CHECK_JUST(ctx->stream()->Sync());
       uint32_t num_evicted_keys = *host_num_keys;
-      LOG(ERROR) << ctx->parallel_ctx().parallel_id()
-                 << " put to store num ids: " << num_evicted_keys;
+      LOG(INFO) << ctx->parallel_ctx().parallel_id()
+                << " prefetch put to store num ids: " << num_evicted_keys;
       if (num_evicted_keys != 0) {
         store->Put(ctx->stream(), num_evicted_keys, buffer_manager.CacheEvictedKeysPtr(),
                    buffer_manager.CacheEvictedValuesPtr(),
@@ -378,7 +380,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(),
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << *host_num_keys;
+    LOG(INFO) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << *host_num_keys;
 
     user_op::Tensor* out_context = ctx->Tensor4ArgNameAndIndex("out_context", 0);
     OF_CUDA_CHECK(cudaMemcpyAsync(out_context->mut_dptr(), context->dptr(),
@@ -392,8 +394,8 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_cache_missing = *host_num_keys;
     if (num_cache_missing != 0) {
-      LOG(ERROR) << ctx->parallel_ctx().parallel_id()
-                 << " find store num ids: " << num_cache_missing;
+      LOG(INFO) << ctx->parallel_ctx().parallel_id()
+                << " find store num ids: " << num_cache_missing;
       store->Get(ctx->stream(), num_cache_missing, buffer_manager.CacheMissingKeysPtr(),
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
                  buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
@@ -486,6 +488,8 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, learning_rate_val,
             embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(), update_unique_embeddings);
+    LOG(INFO) << ctx->parallel_ctx().parallel_id()
+              << " update put to cache num ids: " << *host_num_keys;
     cache->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), update_unique_embeddings,
                buffer_manager.NumCacheEvictedPtr(), buffer_manager.CacheEvictedKeysPtr(),
                buffer_manager.CacheEvictedValuesPtr());
@@ -493,7 +497,8 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
                               sizeof(uint32_t));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_evicted_keys = *host_num_keys;
-    LOG(ERROR) << ctx->parallel_ctx().parallel_id() << " num_evicted_keys " << num_evicted_keys;
+    LOG(INFO) << ctx->parallel_ctx().parallel_id()
+              << " update put to store num ids: " << num_evicted_keys;
     if (num_evicted_keys != 0) {
       store->Put(ctx->stream(), num_evicted_keys, buffer_manager.CacheEvictedKeysPtr(),
                  buffer_manager.CacheEvictedValuesPtr(), mut_context);

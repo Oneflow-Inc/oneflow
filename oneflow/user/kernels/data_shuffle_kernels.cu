@@ -309,7 +309,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
                               sizeof(IDX));
     CHECK_JUST(ctx->stream()->Sync());
 
-    LOG(ERROR) << "rank " << parallel_id << " num_unique_ids " << *host_num_unique_ids;
+    LOG(INFO) << "rank " << parallel_id << " num_unique_ids " << *host_num_unique_ids;
     K* partitioned_unique_ids = buffer_manager.PartitionedUniqueIdsPtr();
     IDX* partitioned_num_unique_ids = buffer_manager.PartitionedNumUniqueIdsPtr();
     K* received_unique_ids = buffer_manager.ReceivedUniqueIdsPtr();
@@ -434,8 +434,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       cur_rank_num_ids += host_num_unique_ids_matrix[i * parallel_num + parallel_id];
     }
 
-    LOG(ERROR) << "parallel_id " << parallel_id << " cur_rank_num_ids before second unique "
-               << cur_rank_num_ids;
+    LOG(INFO) << "parallel_id " << parallel_id << " cur_rank_num_ids before second unique "
+              << cur_rank_num_ids;
     size_t reverse_cur_rank_embeddings_size =
         GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(T));
     size_t recv_unique_embeddings_size =
