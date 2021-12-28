@@ -34,8 +34,9 @@ namespace oneflow {
   if (out_parallel_num > 1) {
     CHECK_LT_OR_RETURN(out_split_axis, shape.NumAxes());
     BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
-    const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-    dim_vec[out_split_axis] = bs.At(JUST(*parallel_id)).size();
+    const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+    int64_t parallel_id = opt_parallel_id->value_or(0);
+    dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
   *ctx->OutputShape("out", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
