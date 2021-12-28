@@ -1375,6 +1375,14 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
 
+- name: "tril_flat"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => TrilFlat"
+  bind_python: True
+
+- name: "triu_flat_grad"
+  signature: "Tensor (Tensor x, Tensor dy, Int64 diagonal=0) => TrilFlatGrad"
+  bind_python: False
+
 - name: "clamp"
   signature:
     ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]

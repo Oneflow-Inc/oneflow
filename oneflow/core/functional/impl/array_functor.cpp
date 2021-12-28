@@ -1572,6 +1572,37 @@ class TrilFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TrilFlatFunctor {
+ public:
+  TrilFlatFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tril_flat").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TrilFlatGradFunctor {
+ public:
+  TrilFlatGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tril_flat_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TriuFunctor {
  public:
   TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
@@ -2520,6 +2551,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
+  m.add_functor<impl::TrilFlatFunctor>("TrilFlat");
+  m.add_functor<impl::TrilFlatGradFunctor>("TrilFlatGrad");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::DiagonalFunctor>("Diagonal");
   m.add_functor<impl::DiagonalGradFunctor>("DiagonalGrad");
