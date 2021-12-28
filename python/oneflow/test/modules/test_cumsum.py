@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestCumsum(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_cumsum(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

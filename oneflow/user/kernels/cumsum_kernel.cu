@@ -35,8 +35,7 @@ namespace {
 template<typename T>
 __global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
                                  int64_t cs_down_space) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       i < cs_up_space * cs_down_space; i += step) {
+  CUDA_1D_KERNEL_LOOP(i, cs_up_space * cs_down_space) {
     auto cs_up_space_id = i / cs_down_space;
     auto cs_down_space_id = i - (i / cs_down_space) * cs_down_space;
 
@@ -52,10 +51,9 @@ __global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_spac
   }
 }
 template<typename T>
-__global__ void CumsumForwardGpu_UpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_space,
+__global__ void CumsumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_space,
                                             int64_t cs_down_space) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       i < cs_down_space; i += step) {
+  CUDA_1D_KERNEL_LOOP(i, cs_down_space) {
     auto* in_ptr_base = in_ptr + i;
     auto* out_ptr_base = out_ptr + i;
 
@@ -68,10 +66,9 @@ __global__ void CumsumForwardGpu_UpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t
   }
 }
 template<typename T>
-__global__ void CumsumForwardGpu_DownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
+__global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
                                               int64_t cs_space) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       i < cs_up_space * 1; i += step) {
+  CUDA_1D_KERNEL_LOOP(i, cs_up_space) {
     auto* in_ptr_base = in_ptr + i * cs_space;
     auto* out_ptr_base = out_ptr + i * cs_space;
 
@@ -139,10 +136,10 @@ class GpuCumsumKernel final : public user_op::OpKernel {
     auto thread_num = cs_up_space * cs_down_space;
 
     if (cs_up_space == 1) {
-      RUN_CUDA_KERNEL((CumsumForwardGpu_UpSpaceIs1<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
+      RUN_CUDA_KERNEL((CumsumForwardGpuUpSpaceIs1<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
                       cs_space, cs_down_space);
     } else if (cs_down_space == 1) {
-      RUN_CUDA_KERNEL((CumsumForwardGpu_DownSpaceIs1<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
+      RUN_CUDA_KERNEL((CumsumForwardGpuDownSpaceIs1<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
                       cs_up_space, cs_space);
     } else {
       RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, in_ptr, out_ptr, cs_up_space,
