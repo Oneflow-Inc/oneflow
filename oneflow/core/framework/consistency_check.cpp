@@ -40,7 +40,7 @@ class CheckMetaInfoConsistencyAsyncTransportCtx : public AsyncTransportCtx {
         nd_sbp_(nd_sbp),
         grad_nd_sbp_(grad_nd_sbp) {}
 
-  ~CheckMetaInfoConsistencyAsyncTransportCtx() override;
+  ~CheckMetaInfoConsistencyAsyncTransportCtx() override = default;
 
   Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                            std::function<void()>* Callback) override;
@@ -118,8 +118,6 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, grad_nd_sbp_symbol_id);
 FLAT_MSG_END(FlatMetaInfoConsistency);
 // clang-format off
-
-CheckMetaInfoConsistencyAsyncTransportCtx::~CheckMetaInfoConsistencyAsyncTransportCtx() {}
 
 Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::PrepareSendBufferAndCallback(
     int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
