@@ -26,7 +26,13 @@ add_tablegen(oneflow_tblgen llvm
   op_schema_emitter.cpp
 )
 
-target_link_libraries(obj.oneflow_tblgen PRIVATE
+if(TARGET obj.oneflow_tblgen)
+  set(OF_TBLGEN_TARGET obj.oneflow_tblgen)
+else()
+  set(OF_TBLGEN_TARGET oneflow_tblgen)
+endif()
+
+target_link_libraries(${OF_TBLGEN_TARGET} PRIVATE
   nlohmann_json::nlohmann_json
   pantor::inja
 )
