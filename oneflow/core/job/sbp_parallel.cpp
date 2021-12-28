@@ -260,4 +260,32 @@ Maybe<std::string> SbpSignatureListAsString(const cfg::SbpSignatureList& sbp_sig
   return ss.str();
 }
 
+void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size) {
+  for (auto& pair : *nd_sbp_sig.mutable_bn_in_op2nd_sbp()) {
+    if (pair.second.sbp_parallel_size() > size) { pair.second.clear_sbp_parallel(); }
+    while (pair.second.sbp_parallel_size() < size) { pair.second.add_sbp_parallel(); }
+  }
+}
+
+void SetNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                       const cfg::SbpSignature& sbp_signature, int32_t sbp_axis) {
+  for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
+    *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[pair.first].mutable_sbp_parallel(sbp_axis)) =
+        pair.second;
+  }
+}
+
+void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
+                          const cfg::SbpSignatureList& sbp_sig_list,
+                          std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) {
+  if (depth == dims) {
+    nd_sbp_sig_list->push_back(nd_sbp_sig);
+  } else {
+    for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+      SetNdSbpSignature(&nd_sbp_sig, sbp_signature, depth);
+      DfsGetNdSbpSignature(nd_sbp_sig, depth + 1, dims, sbp_sig_list, nd_sbp_sig_list);
+    }
+  }
+}
+
 }  // namespace oneflow

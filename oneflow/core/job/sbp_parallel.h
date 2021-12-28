@@ -66,6 +66,15 @@ Maybe<std::string> SbpSignatureListAsString(const cfg::SbpSignatureList& sbp_sig
                                             const PbRpf<std::string>& inputs,
                                             const PbRpf<std::string>& outputs);
 
+void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size);
+
+void SetNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                       const cfg::SbpSignature& sbp_signature, int32_t sbp_axis);
+
+void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
+                          const cfg::SbpSignatureList& sbp_sig_list,
+                          std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list);
+
 }  // namespace oneflow
 
 namespace std {
