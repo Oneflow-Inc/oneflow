@@ -27,44 +27,11 @@ import numpy as np
 class TestStatefulLocalKernel(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_dynamic_attrs(test_case):
-        x = (
-            flow.builtin_op("constant")
-            .Output("out")
-            .Attr("is_floating_value", True)
-            .Attr("floating_value", 3.0)
-            .Attr("dtype", flow.float32)
-            .Attr("shape", [2, 3])
-            .Build()()[0]
-        )
-        op = flow.builtin_op("expand_dims").Input("in").Output("out").Build()
-        y = op(x, axis=1)[0]
+        x = flow.full((2, 3), 3.0)
+        y = flow.unsqueeze(x, dim=1)
         test_case.assertEqual(y.shape, flow.Size((2, 1, 3)))
-        y = op(x, axis=2)[0]
+        y = flow.unsqueeze(x, dim=2)
         test_case.assertEqual(y.shape, flow.Size((2, 3, 1)))
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_stateful_local_kernel(test_case):
-        op1 = (
-            flow.builtin_op("constant")
-            .Output("out")
-            .Attr("is_floating_value", True)
-            .Attr("floating_value", 3.0)
-            .Attr("dtype", flow.float32)
-            .Attr("shape", [1, 1])
-            .Build()
-        )
-        op2 = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", float(1.0))
-            .Output("out")
-            .Build()
-        )
-        x = op1()[0]
-        x = op2(x, x)[0]
 
     @flow.unittest.skip_unless_1n2d()
     def test_stateful_local_kernel_in_consistent_mode(test_case):
