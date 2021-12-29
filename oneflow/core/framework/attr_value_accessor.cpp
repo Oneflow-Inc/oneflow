@@ -130,7 +130,7 @@ std::vector<Shape> AttrValueAccessor<std::vector<Shape>>::Attr(const AttrValue& 
 template<>
 void AttrValueAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val,
                                                  AttrValue* attr_val) {
-  if (attr_val->at_list_shape().val_size() > 0) { attr_val->mutable_at_list_shape()->clear_val(); }
+  attr_val->mutable_at_list_shape()->clear_val();
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
   }

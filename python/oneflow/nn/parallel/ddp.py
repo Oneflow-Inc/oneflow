@@ -17,7 +17,6 @@ from collections import OrderedDict
 
 import oneflow as flow
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 
 
 def allreduce_fn(ddp_state_for_reversed_params, param):
