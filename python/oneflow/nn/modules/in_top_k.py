@@ -18,27 +18,6 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class InTopk(Module):
-    def __init__(self, k) -> None:
-        super().__init__()
-        self._in_top_k = (
-            flow.builtin_op("in_top_k")
-            .Input("targets")
-            .Input("predictions")
-            .Output("out")
-            .Attr("k", k)
-            .Build()
-        )
-
-    def forward(self, targets, predictions):
-        assert (
-            targets.shape[0] == predictions.shape[0]
-        ), "The num of targets must equal the num of predictions"
-        assert len(targets.shape) == 1, "The dimension of targets must be 1"
-        assert len(predictions.shape) == 2, "The dimension of predictions must be 2"
-        return self._in_top_k(targets, predictions)
-
-
 def in_top_k_op(targets, predictions, k):
     """Says whether the targets are in the top K predictions.
 
@@ -71,7 +50,7 @@ def in_top_k_op(targets, predictions, k):
         tensor([1, 0], device='cuda:0', dtype=oneflow.int8)
 
     """
-    return InTopk(k=k)(targets, predictions)[0]
+    return flow._C.in_top_k(targets, predictions, k=k)
 
 
 @register_tensor_op("in_top_k")
@@ -83,7 +62,7 @@ def in_top_k_op_tensor(targets, predictions, k):
     See :func:`oneflow.in_top_k`
 
     """
-    return InTopk(k=k)(targets, predictions)[0]
+    return flow._C.in_top_k(targets, predictions, k=k)
 
 
 if __name__ == "__main__":
