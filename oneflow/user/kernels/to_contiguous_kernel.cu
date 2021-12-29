@@ -18,10 +18,21 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
 namespace {
+
+constexpr int kBlockSize = cuda::elementwise::kBlockSize;
+
+int GetMinThreadNum(int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
+
+int GetNumBlocks(int64_t elem_cnt) {
+  int num_blocks = 0;
+  OF_CUDA_CHECK(cuda::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
+  return num_blocks;
+}
 
 template<size_t ndims>
 struct StrideParam {
@@ -46,7 +57,7 @@ __device__ __forceinline__ int compute_index(int out_offset, StrideParam<ndim> o
 #pragma unroll
   // compute coords(output offset to coords)
   for (int i = 0; i < ndim; ++i) {
-    const int idx = remaining / out_params.stride[i];
+    const int idx = static_cast<int>(remaining / out_params.stride[i]);
     out_params.coordinates[i] = idx;
     remaining = remaining - idx * out_params.stride[i];
   }
@@ -59,7 +70,7 @@ __device__ __forceinline__ int compute_index(int out_offset, StrideParam<ndim> o
 
 
 template<typename T, size_t ndim>
-__global__ void to_contiguous(int count, StrideParam<ndim> in_stride,
+__global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
   for (int out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
   {
@@ -76,7 +87,7 @@ void to_contiguous_wrapper(ep::Stream* stream, int64_t count, const std::vector<
   auto out_dptr_typed = reinterpret_cast<T*>(out_dptr);
   auto in_dptr_typed = reinterpret_cast<const T*>(in_dptr);
 
-  to_contiguous<T, ndim><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
+  to_contiguous<T, ndim><<<GetNumBlocks(count), GetMinThreadNum(count), 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
       count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
 }
