@@ -50,6 +50,10 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSbp(OpNode* consumer, const std::string& ibn);
 
+// Compute storage for given NdSbp
+double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+                     const std::shared_ptr<Shape>& parallel_hierarchy);
+
 }  // namespace auto_parallel
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_UTIL_H_

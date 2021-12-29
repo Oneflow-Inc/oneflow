@@ -338,5 +338,20 @@ bool IsSameSbp(OpNode* consumer, const std::string& ibn) {
   return (logical_blob_desc.data_type() == DataType::kOFRecord
           || logical_blob_desc.data_type() == DataType::kTensorBuffer);
 }
+
+// Compute storage per device for given NdSbp
+double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+                     const std::shared_ptr<Shape>& parallel_hierarchy) {
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+    if (sbp_parallel.has_split_parallel()) {
+      // Split axis and store result back to logical shape
+      const int64_t axis = sbp_parallel.split_parallel().axis();
+      if (axis > logical_shape.NumAxes()) { return GetMaxVal<float>(); }
+      logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
+    }
+  }
+  return logical_shape.elem_cnt();
+}
 }  // namespace auto_parallel
 }  // namespace oneflow

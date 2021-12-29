@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "sbp_graph.h"
 #include "sbp_util.h"
@@ -40,7 +41,7 @@ class BoxingCollector {
   // Collect all the possible Sbp Parallel from a SbpGraph
   void CollectUniverse(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
   // Set default Sbp list
-  void CollectUniverse();
+  void CollectUniverse(int32_t max_axis);
   // Collect Sbp Parallel
   void CollectUniverse(const cfg::SbpParallel& sbp);
 
@@ -53,9 +54,16 @@ class BoxingCollector {
   Maybe<void> GenerateCombination();
   // Print the cost and middle nodes
   void PrintBoxingTables();
+  // Ask if the boxing algorithm accepts the current sbp combination
+  // If customized is true and we can not find a middle node list with
+  Maybe<void> AskSbpCombination(const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+                                const BlobDesc& logical_blob_desc,
+                                const ParallelDesc& producer_parallel_desc,
+                                const ParallelDesc& consumer_parallel_desc, bool customized,
+                                std::vector<cfg::NdSbp>& middle_sbps);
 
  private:
-  // Stores all the possible cfg::NdSbp.
+  // Stores all the possible cfg::SbpParallel.
   std::unordered_map<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse;
   // Relationship between id and Sbp Parallel
   std::vector<::oneflow::cfg::SbpParallel> id2SbpParallel;
@@ -67,6 +75,8 @@ class BoxingCollector {
   // middle_nodes[producer][consumer][different choices].size() is the minimum number of middle
   // nodes that needs to be inserted
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes;
+  // Stores all the possible cfg::NdSbp.
+  std::unordered_map<::oneflow::cfg::NdSbp, int32_t> NdSbpUniverse;
   // Relationship between id and Nd Sbp
   std::vector<cfg::NdSbp> nd_sbp_lists;
 };  // class BoxingCollector

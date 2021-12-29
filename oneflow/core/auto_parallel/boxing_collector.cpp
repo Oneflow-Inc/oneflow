@@ -15,21 +15,26 @@ limitations under the License.
 */
 
 #include "boxing_collector.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/maybe.h"
 #include "sbp_node.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "sbp_util.h"
 
 namespace oneflow {
 
 namespace {
 void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32_t depth,
-                 int32_t max_depth, cfg::NdSbp& nd_sbp, std::vector<cfg::NdSbp>& nd_sbp_lists) {
+                 int32_t max_depth, cfg::NdSbp& nd_sbp, std::vector<cfg::NdSbp>& nd_sbp_lists,
+                 std::unordered_map<::oneflow::cfg::NdSbp, int32_t>& NdSbpUniverse) {
   if (depth == max_depth) {
+    NdSbpUniverse[nd_sbp] = nd_sbp_lists.size();
     nd_sbp_lists.push_back(nd_sbp);
   } else {
     for (int32_t i = 0; i < id2SbpParallel.size(); i++) {
       *nd_sbp.mutable_sbp_parallel(depth) = id2SbpParallel[i];
-      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists);
+      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists, NdSbpUniverse);
     }
   }
 }
@@ -42,7 +47,7 @@ void BoxingCollector::Init(const OpGraph& op_graph) {
   nd_sbp_lists.clear();
   SbpParallelUniverse.clear();
   id2SbpParallel.clear();
-
+  // CollectUniverse(2);
   CollectUniverse(op_graph);
   GenerateCombination();
 }
@@ -60,7 +65,6 @@ void BoxingCollector::Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& s
 
 // Collect all the possible Sbp Parallel from an OpGraph
 void BoxingCollector::CollectUniverse(const OpGraph& op_graph) {
-  CollectUniverse();
   op_graph.ForEachNode(
       [&](const OpNode* node) -> void { CollectUniverse(node->nd_sbp_signature()); });
 }
@@ -91,14 +95,14 @@ void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
 }
 
 // Set default Sbp list
-void BoxingCollector::CollectUniverse() {
+void BoxingCollector::CollectUniverse(int32_t max_axis) {
   cfg::SbpParallel sbp;
   sbp.mutable_broadcast_parallel();
   CollectUniverse(sbp);
-  sbp.mutable_split_parallel()->set_axis(0);
-  CollectUniverse(sbp);
-  sbp.mutable_split_parallel()->set_axis(1);
-  CollectUniverse(sbp);
+  for (int32_t axis = 0; axis < max_axis; axis++) {
+    sbp.mutable_split_parallel()->set_axis(axis);
+    CollectUniverse(sbp);
+  }
   sbp.mutable_partial_sum_parallel();
   CollectUniverse(sbp);
 }
@@ -112,7 +116,7 @@ Maybe<void> BoxingCollector::GenerateCombination() {
   // Generate possible nd_sbp lists
   cfg::NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
-  DfsSetNdSbp(id2SbpParallel, 0, hierarchy_num, nd_sbp, nd_sbp_lists);
+  DfsSetNdSbp(id2SbpParallel, 0, hierarchy_num, nd_sbp, nd_sbp_lists, NdSbpUniverse);
   // other parameters
   // To be noted that the performance of this function are all the same with different hierarchy
   Shape hierarchy44({4, 4});
@@ -281,4 +285,87 @@ void BoxingCollector::PrintBoxingTables() {
     std::cout << "================================================" << std::endl;
   }
 }
+
+// Ask if the boxing algorithm accepts the current sbp combination
+Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
+                                               const cfg::NdSbp& sbp_consumer,
+                                               const BlobDesc& logical_blob_desc,
+                                               const ParallelDesc& producer_parallel_desc,
+                                               const ParallelDesc& consumer_parallel_desc,
+                                               bool customized,
+                                               std::vector<cfg::NdSbp>& middle_sbps) {
+  // Check the devices and hierarchy
+  // At this moment, we do not support [2, 3] -> [3, 2]
+  // TODO: support [2, 3] -> [3, 2]
+  CHECK_OR_RETURN(producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc))
+      << "Boxing does not support transfer for different machines or devices or hierarchy";
+  middle_sbps.clear();
+  const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
+  // Dealing with 1D sbp
+  if (parallel_hierarchy->NumAxes() == 1) {
+    CHECK_OR_RETURN(
+        JUST(auto_parallel::ComputCopyCostBetweenTwoSbpParallel(
+            sbp_producer.sbp_parallel(0), sbp_consumer.sbp_parallel(0), logical_blob_desc,
+            producer_parallel_desc, consumer_parallel_desc, false, true))
+        < cut_cost)
+        << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
+        << NdSbpParallelToString(sbp_consumer) << " for 1D sbp";
+    return Maybe<void>::Ok();
+  }
+  // Dealing with nD sbp, n>2
+  CHECK_OR_RETURN(parallel_hierarchy->NumAxes() == 2)
+      << "Boxing does not support a hierarchy with dimension greater than 2";
+  // Dealing with 2D sbp
+  const auto& it_producer = NdSbpUniverse.find(sbp_producer);
+  const auto& it_consumer = NdSbpUniverse.find(sbp_consumer);
+  int32_t i = it_producer->second;
+  int32_t j = it_consumer->second;
+  // Such combination can not be support with limited middle nodes
+  CHECK(minimum_copy_cost[i][j] < cut_cost)
+      << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
+      << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
+  // Current design can deal with such combination. Do not need to insert middle nodes
+  if (minimum_copy_cost[i][j] < cut_cost && middle_nodes[i][j].size() == 0) {
+    return Maybe<void>::Ok();
+  }
+  // Find a list of middle nodes with minimum storage
+  int32_t min_k = -1;
+  if (it_producer != NdSbpUniverse.end() && it_consumer != NdSbpUniverse.end()) {
+    double min_cost = cut_cost;
+    for (int32_t k = 0; k < middle_nodes[i][j].size(); k++) {
+      double curr_cost = 0.0;
+      for (int32_t middle_sbp_id : middle_nodes[i][j][k]) {
+        Shape logical_shape = logical_blob_desc.shape();
+        if (JUST(FilterNdSbpByLogicalShape(nd_sbp_lists[middle_sbp_id], logical_shape,
+                                           parallel_hierarchy))) {
+          // FilterNdSbpByLogicalShape has changed the content in logical shape,
+          // we need to use a new one
+          Shape logical_shape2 = logical_blob_desc.shape();
+          // Storage4NdSbp would modify logical_shape2 as well
+          curr_cost += auto_parallel::Storage4NdSbp(nd_sbp_lists[middle_sbp_id], logical_shape2,
+                                                    parallel_hierarchy);
+        }
+      }
+      // store k if renew minimum cost
+      if (curr_cost < min_cost) { min_k = k; }
+    }
+  }
+  // If we found a list of middle nodes with current boxing collector
+  if (min_k >= 0) {
+    for (int32_t middle_sbp_id : middle_nodes[i][j][min_k]) {
+      middle_sbps.push_back(nd_sbp_lists[middle_sbp_id]);
+    }
+    return Maybe<void>::Ok();
+  }
+
+  // // If we can not found a list of middle nodes even after customized boxing collector
+  CHECK_OR_RETURN(customized) << "Boxing does not support " << NdSbpParallelToString(sbp_producer)
+                              << " -> " << NdSbpParallelToString(sbp_consumer)
+                              << " for Shape: " << logical_blob_desc.shape();
+
+  // Customized boxing collector and try the algorithm again
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

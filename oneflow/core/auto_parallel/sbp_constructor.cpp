@@ -277,8 +277,36 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     BoxingCollector bc;
     bc.Init(sbp_graph_);
     bc.PrintBoxingTables();
+    BlobDesc blob_desc(hierarchy44, kDouble);
+    std::vector<cfg::NdSbp> middle_sbps;
+    for (const auto& sbp_producer : nd_sbp_lists) {
+      for (const auto& sbp_consumer : nd_sbp_lists) {
+        bc.AskSbpCombination(sbp_producer, sbp_consumer, blob_desc,
+                             sbp_graph_.NodeList[0]->op_node->parallel_desc(),
+                             sbp_graph_.NodeList[0]->op_node->parallel_desc(), true, middle_sbps);
+        std::cout << NdSbpParallelToString(sbp_producer) << " to "
+                  << NdSbpParallelToString(sbp_consumer) << " needs middle nodes: ";
+        for (const auto& sbp_middle : middle_sbps) {
+          std::cout << NdSbpParallelToString(sbp_middle) << " -> ";
+        }
+        std::cout << std::endl;
+      }
+    }
     bc.Init(op_graph);
     bc.PrintBoxingTables();
+    for (const auto& sbp_producer : nd_sbp_lists) {
+      for (const auto& sbp_consumer : nd_sbp_lists) {
+        bc.AskSbpCombination(sbp_producer, sbp_consumer, blob_desc,
+                             sbp_graph_.NodeList[0]->op_node->parallel_desc(),
+                             sbp_graph_.NodeList[0]->op_node->parallel_desc(), true, middle_sbps);
+        std::cout << NdSbpParallelToString(sbp_producer) << " to "
+                  << NdSbpParallelToString(sbp_consumer) << " needs middle nodes: ";
+        for (const auto& sbp_middle : middle_sbps) {
+          std::cout << NdSbpParallelToString(sbp_middle) << " -> ";
+        }
+        std::cout << std::endl;
+      }
+    }
   }
 
   if (use_sbp_collector_) {
