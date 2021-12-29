@@ -620,7 +620,7 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
       } else {
         // Checking nd_sbp
         // Check each split sbp whether valid or not
-        for (size_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); ++dim_sbp) {
+        for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); ++dim_sbp) {
           const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
           if (sbp_parallel.has_split_parallel()) {
             const int64_t axis = sbp_parallel.split_parallel().axis();
@@ -795,8 +795,38 @@ Maybe<void> Operator::InferNdSbpSignature(
     }
     CHECK_OR_RETURN(!nd_sbp_list.empty())
         << "Empty sbp signature after filtering for " << op_name();
-    // TODO(wyg): Select the fastest nd_sbp
-    nd_sbp_signature->CopyFrom(nd_sbp_list.at(0));
+    int32_t select_sbp_idx = -1;
+    double min_copy_cost = 0.0;
+    for (int32_t i = 0; i < nd_sbp_list.size(); ++i) {
+      double total_copy_cost = 0.0;
+      for (const auto& ibn : input_bns()) {
+        double copy_cost = JUST(ComputCopyCostBetweenNdSbp(
+            JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_list.at(i).bn_in_op2nd_sbp()[ibn],
+            JUST(LogicalBlobDesc4Ibn(ibn)), JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(),
+            *JUST(GetOpParallelDesc()),
+            /*is_same_sbp=*/false,
+            /*allow_cpu2gpu=*/false));
+        if (copy_cost < 0) {
+          total_copy_cost = -1.0;
+          break;
+        } else {
+          total_copy_cost += copy_cost;
+        }
+      }
+      if (total_copy_cost >= 0) {
+        if (select_sbp_idx == -1) {
+          select_sbp_idx = i;
+          min_copy_cost = total_copy_cost;
+        } else if (min_copy_cost > total_copy_cost) {
+          select_sbp_idx = i;
+          min_copy_cost = total_copy_cost;
+        } else {
+          // Not best nd_sbp. DoNothing.
+        }
+      }
+    }
+    CHECK_OR_RETURN(select_sbp_idx != -1) << "TODO";
+    nd_sbp_signature->CopyFrom(nd_sbp_list.at(select_sbp_idx));
     std::cout << op_name() << " select sbp: " << nd_sbp_signature->DebugString() << std::endl;
     return Maybe<void>::Ok();
   }
