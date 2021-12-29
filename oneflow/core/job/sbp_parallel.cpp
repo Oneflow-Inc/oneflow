@@ -282,6 +282,7 @@ Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_s
     const auto& sbp_parallel = nd_sbp.sbp_parallel(0);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t axis = sbp_parallel.split_parallel().axis();
+      if (axis >= logical_shape.NumAxes()) { return true; }
       if (logical_shape.At(axis) < parallel_hierarchy->At(0)) { return true; }
     }
   } else {
@@ -292,8 +293,7 @@ Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_s
       if (sbp_parallel.has_split_parallel()) {
         // For S(6) in (S(6), B) of {in_0 : (S(6), B)}, axis = 0
         const int64_t axis = sbp_parallel.split_parallel().axis();
-        // No need to CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes()),
-        // since we have already do so in FilterAndCheckValidSbpSignatureListByLogicalShape()
+        if (axis >= logical_shape.NumAxes()) { return true; }
         CHECK_GT_OR_RETURN(logical_shape.At(axis), 0);
         if (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) > 0) { return true; }
         logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));

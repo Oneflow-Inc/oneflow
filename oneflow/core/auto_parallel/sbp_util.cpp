@@ -347,7 +347,7 @@ double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
     if (sbp_parallel.has_split_parallel()) {
       // Split axis and store result back to logical shape
       const int64_t axis = sbp_parallel.split_parallel().axis();
-      if (axis > logical_shape.NumAxes()) { return GetMaxVal<float>(); }
+      if (axis >= logical_shape.NumAxes()) { return GetMaxVal<float>(); }
       logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
     }
   }
