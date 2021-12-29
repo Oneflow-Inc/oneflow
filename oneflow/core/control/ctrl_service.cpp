@@ -31,7 +31,7 @@ std::array<const grpc::internal::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
   return {BuildOneRpcMethod<method_indices>(channel)...};
 }
 
-constexpr int64_t kDefaultGrpcMaxMessageByteSize = 64 * 1024 * 1024;
+constexpr int64_t kDefaultGrpcMaxMessageByteSize = -1;
 
 }  // namespace
 
