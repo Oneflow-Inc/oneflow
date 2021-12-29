@@ -443,11 +443,12 @@ class ParquetReaderKernel final : public user_op::OpKernel {
       if (out_i->data_type() == DataType::kTensorBuffer) {
         TensorBuffer* out_buffer = out_i->mut_dptr<TensorBuffer>();
         size_t batch_size = out_i->shape().At(0);
-        parquet_reader->GetColumnBatch(i, out_buffer, batch_size);
+        CHECK_JUST(parquet_reader->GetColumnBatch(i, out_buffer, batch_size));
         // TODO(zwx): get tensor shape from column schema and resize tensor buffer
         // out_buffer->Resize(shape);
+        UNIMPLEMENTED();
       } else {
-        parquet_reader->GetColumnBatch(i, out_i);
+        CHECK_JUST(parquet_reader->GetColumnBatch(i, out_i));
       }
     }
   }

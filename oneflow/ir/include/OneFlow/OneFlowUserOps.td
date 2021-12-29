@@ -1539,6 +1539,26 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
   let has_nd_sbp_infer_fn = 1;
 }
 
+def OneFlow_ParquetReaderOp : OneFlow_BaseOp<"parquet_reader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let output = (outs
+    Variadic<OneFlow_Tensor>:$out
+  );
+  let attrs = (ins
+    StrAttr:$path,
+    DefaultValuedAttr<SI32Attr, "1">:$batch_size,
+    DefaultValuedAttr<BoolAttr, "false">:$shuffle,
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<SI32Attr, "1024">:$preload_buffer_size,
+    DefaultValuedAttr<BoolAttr, "true">:$use_mmap,
+    StrArrayAttr:$nd_sbp,
+    StrAttr:$column_schema_json
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
+}
+
 def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
