@@ -519,16 +519,8 @@ add_docstr(
     """
     Tensor.numpy() → numpy.ndarray
 
-    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to self tensor will be reflected in the ndarray and vice versa.
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.cpu,
-    """
-    Tensor.cpu() → Tensor
-
-    Returns a copy of this object in CPU memory. if this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to
+     self tensor will be reflected in the ndarray and vice versa.
     """,
 )
 

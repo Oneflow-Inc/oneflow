@@ -722,12 +722,6 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
-def _cpu(self):
-    if self.device == flow.device("cpu"):
-        return self
-    return self.to(device="cpu")
-
-
 def _numpy(self):
     assert self.device == flow.device("cpu")
     assert (
@@ -884,7 +878,6 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
-    Tensor.cpu = _cpu
 
 
 def register_tensor_op(op_name):
