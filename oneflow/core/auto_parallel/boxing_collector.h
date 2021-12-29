@@ -39,6 +39,10 @@ class BoxingCollector {
   void CollectUniverse(const auto_parallel::SbpNode<cfg::NdSbpSignature>* sbp_node);
   // Collect all the possible Sbp Parallel from a SbpGraph
   void CollectUniverse(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
+  // Set default Sbp list
+  void CollectUniverse();
+  // Collect Sbp Parallel
+  void CollectUniverse(const cfg::SbpParallel& sbp);
 
   // Construct a boxing collector with given sbp graph
   void Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
