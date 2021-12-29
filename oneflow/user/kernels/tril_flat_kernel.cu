@@ -127,27 +127,14 @@ class GpuTrilFlatBackwardKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-// #define REGISTER_CUDA_TRIL_FLAT_KERNEL(dtype)                                       \
-//   REGISTER_USER_KERNEL("tril_flat")                                                 \
-//       .SetCreateFn<GpuTrilFlatKernel<dtype>>()                                      \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)              \
-//                        && (user_op::HobDataType("out", 0)                           \
-//                            == GetDataType<dtype>::value)) return Maybe<void>::Ok(); \
-//   });                                                                               \
-//   REGISTER_USER_KERNEL("tril_flat_grad")                                            \
-//       .SetCreateFn<GpuTrilFlatGradKernel<dtype>>()                                  \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)              \
-//                        && (user_op::HobDataType("dy", 0)                            \
-//                            == GetDataType<dtype>::value)) return Maybe<void>::Ok(); \
-// });
-#define REGISTER_CUDA_TRIL_FLAT_KERNEL(dtype)                                              \
+#define REGISTER_CUDA_TRIL_FLAT_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("tril_flat")                                                       \
       .SetCreateFn<GpuTrilFlatKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                    \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("tril_flat_grad")                                                  \
       .SetCreateFn<GpuTrilFlatBackwardKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                    \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_TRIL_FLAT_KERNEL(float)
