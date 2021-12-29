@@ -45,14 +45,6 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
   if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
-  if (use_sbp_collector_) {
-    // Load logical blobs on all sbp edges.
-    LoadLbi2SbpEdge(op_graph);
-    // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
-    SbpCollector sbp_collector;
-    sbp_collector.CollectUniverse(sbp_graph_);
-    sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
-  }
   // A piece of code to generator the current sbp transfer table
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "====================original copy cost====================" << std::endl;
@@ -281,9 +273,22 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     std::cout << "hierarchy: " << *in_hierarchy << std::endl;
 
     std::cout << "================================================" << std::endl;
+
+    BoxingCollector bc;
+    bc.Init(sbp_graph_);
+    bc.PrintBoxingTables();
+    bc.Init(op_graph);
+    bc.PrintBoxingTables();
   }
-  BoxingCollector bc(op_graph);
-  bc.PrintBoxingTables();
+
+  if (use_sbp_collector_) {
+    // Load logical blobs on all sbp edges.
+    LoadLbi2SbpEdge(op_graph);
+    // Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
+    SbpCollector sbp_collector;
+    sbp_collector.CollectUniverse(sbp_graph_);
+    sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
+  }
 
   JUST(InitCopyCost(op_graph));
   // TODO:  Set all the sbp signatrure id to be 0 for initialization.

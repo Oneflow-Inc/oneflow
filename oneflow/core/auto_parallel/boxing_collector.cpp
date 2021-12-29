@@ -36,25 +36,55 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 }  // namespace
 
 // Construct a boxing collector with given operator graph
-BoxingCollector::BoxingCollector(const OpGraph& op_graph) {
+void BoxingCollector::Init(const OpGraph& op_graph) {
+  minimum_copy_cost.clear();
+  middle_nodes.clear();
+  nd_sbp_lists.clear();
+  SbpParallelUniverse.clear();
+  id2SbpParallel.clear();
+
   CollectUniverse(op_graph);
+  GenerateCombination();
+}
+
+// Construct a boxing collector with given sbp graph
+void BoxingCollector::Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
+  minimum_copy_cost.clear();
+  middle_nodes.clear();
+  nd_sbp_lists.clear();
+  SbpParallelUniverse.clear();
+  id2SbpParallel.clear();
+  CollectUniverse(sbp_graph);
   GenerateCombination();
 }
 
 // Collect all the possible Sbp Parallel from an OpGraph
 void BoxingCollector::CollectUniverse(const OpGraph& op_graph) {
-  op_graph.ForEachNode([&](const OpNode* node) -> void {
-    const auto& nd_sbp_sig = node->nd_sbp_signature();
-    for (const auto& pair : nd_sbp_sig.bn_in_op2nd_sbp()) {
-      for (const auto& sbp : pair.second.sbp_parallel()) {
-        if (SbpParallelUniverse.find(sbp) == SbpParallelUniverse.end()) {
-          int32_t curr_size = SbpParallelUniverse.size();
-          SbpParallelUniverse[sbp] = curr_size;
-          id2SbpParallel.push_back(sbp);
-        }
+  op_graph.ForEachNode(
+      [&](const OpNode* node) -> void { CollectUniverse(node->nd_sbp_signature()); });
+}
+
+// Collect all the possible Sbp Parallel from an SbpGraph
+void BoxingCollector::CollectUniverse(
+    const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
+  for (const auto* sbp_node : sbp_graph.NodeList) { CollectUniverse(sbp_node); }
+}
+
+// Collect all the possible Sbp Parallel from a cfg::NdSbpSignature
+void BoxingCollector::CollectUniverse(const cfg::NdSbpSignature& nd_sbp_sig) {
+  for (const auto& pair : nd_sbp_sig.bn_in_op2nd_sbp()) {
+    for (const auto& sbp : pair.second.sbp_parallel()) {
+      if (SbpParallelUniverse.find(sbp) == SbpParallelUniverse.end()) {
+        int32_t curr_size = SbpParallelUniverse.size();
+        SbpParallelUniverse[sbp] = curr_size;
+        id2SbpParallel.push_back(sbp);
       }
     }
-  });
+  }
+}
+// Collect all the possible Sbp Parallel from a SbpNode
+void BoxingCollector::CollectUniverse(const auto_parallel::SbpNode<cfg::NdSbpSignature>* sbp_node) {
+  for (const auto& nd_sbp_sig : sbp_node->SbpSignatureObjList) { CollectUniverse(nd_sbp_sig); }
 }
 
 // Generate the transfer rule for different combinations and hierarchies

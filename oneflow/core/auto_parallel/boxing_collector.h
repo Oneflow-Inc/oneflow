@@ -17,20 +17,34 @@ limitations under the License.
 #ifndef BOXING_COLLECTOR_
 #define BOXING_COLLECTOR_
 
+#include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "sbp_graph.h"
 #include "sbp_util.h"
 
 namespace oneflow {
 
 class BoxingCollector {
  public:
-  explicit BoxingCollector(const OpGraph& op_graph);
+  BoxingCollector(){};
 
   ~BoxingCollector(){};
 
   // Collect all the possible Sbp Parallel from an OpGraph
   void CollectUniverse(const OpGraph& op_graph);
+  // Collect all the possible Sbp Parallel from a cfg::NdSbpSignature
+  void CollectUniverse(const cfg::NdSbpSignature& nd_sbp_sig);
+  // Collect all the possible Sbp Parallel from a SbpNode
+  void CollectUniverse(const auto_parallel::SbpNode<cfg::NdSbpSignature>* sbp_node);
+  // Collect all the possible Sbp Parallel from a SbpGraph
+  void CollectUniverse(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
+
+  // Construct a boxing collector with given sbp graph
+  void Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
+  // Construct a boxing collector with given operator graph
+  void Init(const OpGraph& op_graph);
+
   // Generate the transfer rule for different combinations and hierarchies
   Maybe<void> GenerateCombination();
   // Print the cost and middle nodes
