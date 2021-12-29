@@ -62,6 +62,8 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         )
         graph._compile(image_placeholder)
         saved_path = os.path.join("saved_model", graph.name)
+        if not os.path.exists(saved_path):
+            os.makedirs(saved_path)
         flow.save(graph, saved_path)
 
         saved_ir_path = os.path.join(saved_path, "model.mlir")
