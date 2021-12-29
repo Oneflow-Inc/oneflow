@@ -291,7 +291,7 @@ class MaxPool2d(Module):
             else:
                 return y
         else:
-            return flow._C.max_pool_2d(
+            return flow._C.max_pool2d_nhwc(
                 x,
                 kernel_size=self.kernel_size,
                 stride=self.stride,
@@ -598,7 +598,7 @@ class AvgPool2d(Module):
                 data_format=self.channel_pos,
             )
         else:
-            return flow._C.avg_pool_2d(
+            return flow._C.avg_pool2d_nhwc(
                 x,
                 kernel_size=self.kernel_size,
                 stride=self.stride,
