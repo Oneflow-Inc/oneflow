@@ -1,6 +1,7 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.18.0)
 
+set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
@@ -210,10 +211,8 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 if(BUILD_CPP_API)
-  set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow")
   set(LIBONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/lib")
   set(LIBONEFLOW_SHARE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/share")
-  make_directory(${LIBONEFLOW_INCLUDE_DIR})
   make_directory(${LIBONEFLOW_LIBRARY_DIR})
   make_directory(${LIBONEFLOW_SHARE_DIR})
 

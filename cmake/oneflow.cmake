@@ -401,42 +401,84 @@ add_custom_target(of_include_copy ALL)
 if(BUILD_PYTHON)
 
   add_dependencies(of_include_copy oneflow_internal of_pyscript_copy)
-
-  foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
-    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-  endforeach()
-
-  copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-  copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-
-  set(OF_CORE_HDRS)
-  list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence" "ep/include")
-  foreach(of_core_dir_name ${of_core_dir_name_list})
-    file(GLOB_RECURSE h_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.h")
-    list(APPEND OF_CORE_HDRS ${h_files})
-    file(GLOB_RECURSE hpp_files "${PROJECT_SOURCE_DIR}/oneflow/core/${of_core_dir_name}/*.hpp")
-    list(APPEND OF_CORE_HDRS ${hpp_files})
-  endforeach()
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/new_kernel_util.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_context.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_observer.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/kernel/kernel_util.cuh")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_builder.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/common/symbol.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
-  list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
-  copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/oneflow/core DESTINATION ${ONEFLOW_INCLUDE_DIR}/oneflow
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL
+    FILES_MATCHING
+    PATTERN *.h
+    PATTERN *.hpp
+  )
+  install(DIRECTORY ${CFG_INCLUDE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL
+  )
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/oneflow DESTINATION ${ONEFLOW_INCLUDE_DIR}
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL
+    FILES_MATCHING
+    REGEX "oneflow/core/common/.+(h|hpp)$"
+    REGEX "oneflow/core/device/.+(h|hpp)$"
+    REGEX "oneflow/core/framework/.+(h|hpp)$"
+    REGEX "oneflow/core/kernel/util/.+(h|hpp)$"
+    REGEX "oneflow/core/persistence/.+(h|hpp)$"
+    REGEX "oneflow/core/ep/include/.+(h|hpp)$"
+    PATTERN "oneflow/core/kernel/new_kernel_util.h"
+    PATTERN "oneflow/core/kernel/kernel_context.h"
+    PATTERN "oneflow/core/kernel/kernel_observer.h"
+    PATTERN "oneflow/core/kernel/kernel_util.cuh"
+    PATTERN "oneflow/core/job/sbp_signature_builder.h"
+    PATTERN "oneflow/core/common/symbol.h"
+    PATTERN "oneflow/core/job/parallel_desc.h"
+    PATTERN "oneflow/core/autograd/autograd_meta.h"
+    PATTERN "oneflow/api" EXCLUDE
+    PATTERN "oneflow/xrt" EXCLUDE
+    PATTERN "oneflow/user" EXCLUDE
+    PATTERN "oneflow/extension" EXCLUDE
+    PATTERN "oneflow/maybe" EXCLUDE
+    PATTERN "oneflow/core/lazy" EXCLUDE
+    PATTERN "oneflow/core/graph_impl" EXCLUDE
+    PATTERN "oneflow/core/job_rewriter" EXCLUDE
+    PATTERN "oneflow/core/hardware" EXCLUDE
+    PATTERN "oneflow/core/intrusive" EXCLUDE
+    PATTERN "oneflow/core/stream" EXCLUDE
+    PATTERN "oneflow/core/functional" EXCLUDE
+    PATTERN "oneflow/core/platform" EXCLUDE
+    PATTERN "oneflow/core/boxing" EXCLUDE
+    PATTERN "oneflow/core/rpc" EXCLUDE
+    PATTERN "oneflow/core/profiler" EXCLUDE
+    PATTERN "oneflow/core/transport" EXCLUDE
+    PATTERN "oneflow/core/comm_network" EXCLUDE
+    PATTERN "oneflow/ir" EXCLUDE
+  )
+  add_custom_target(install_oneflow_py_include
+    COMMAND
+        "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_py_include
+        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+    DEPENDS oneflow_internal
+  )
   add_custom_target(oneflow_py ALL)
-  add_dependencies(oneflow_py of_include_copy)
+  add_dependencies(oneflow_py of_include_copy install_oneflow_py_include)
 
 endif(BUILD_PYTHON)
 
+
+set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/api")
+install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
+  COMPONENT oneflow_cpp_include
+  EXCLUDE_FROM_ALL
+  FILES_MATCHING
+  PATTERN "*.h"
+)
+
+add_custom_target(install_oneflow_cpp_include
+  COMMAND
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_include
+      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  DEPENDS oneflow_internal
+)
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy oneflow_cpp)
-
-  file(GLOB_RECURSE api_h_files "${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h")
-  copy_files("${api_h_files}" "${PROJECT_SOURCE_DIR}/oneflow/api/cpp" "${LIBONEFLOW_INCLUDE_DIR}" of_include_copy)
+  add_dependencies(of_include_copy install_oneflow_cpp_include)
   copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
 
   if(WITH_MLIR)
