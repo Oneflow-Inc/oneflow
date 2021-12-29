@@ -42,25 +42,23 @@ Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader) {
   int64_t values_read = 0;
   int16_t def_level = 0;
   int16_t rep_level = 0;
-  auto buffer = std::make_shared<TensorBuffer>();
-  while (typed_col_reader->HasNext()) {
+  auto sample = std::make_shared<TensorBuffer>();
+  bool read_sample_done = false;
+  while (typed_col_reader->HasNext() && !read_sample_done) {
     T value;
     auto levels_read = typed_col_reader->ReadBatch(1, &def_level, &rep_level, &value, &values_read);
     CHECK_EQ_OR_RETURN(levels_read, 1);
     CHECK_EQ_OR_RETURN(values_read, 1);
-    if (rep_level == 0) {
-      buffer->Resize(Shape({static_cast<int64_t>(values.size())}), GetDataType<T>::value);
-      std::copy(values.begin(), values.end(), buffer->mut_data<T>());
+    CHECK_OR_RETURN(rep_level == 0 || rep_level == 1);
+    if (rep_level == 0 && !values.empty()) {
+      sample->Resize(Shape({static_cast<int64_t>(values.size())}), GetDataType<T>::value);
+      std::copy(values.begin(), values.end(), sample->mut_data<T>());
+      read_sample_done = true;
       values.resize(0);
-      values.push_back(std::move(value));
-      break;
-    } else if (rep_level == 1) {
-      values.push_back(std::move(value));
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
     }
+    values.push_back(std::move(value));
   }
-  return buffer;
+  return sample;
 }
 
 Maybe<TensorBuffer> ReadColumnValues(parquet::ColumnReader* col_reader) {
@@ -96,42 +94,44 @@ class RandomShuffleBuffer final {
 
   bool IsClosed() { return is_closed_; }
   bool IsFull() { return queue_.size() >= max_size_; }
-  bool IsEmpty() { return queue_.empty(); }
 
   template<typename U>
   Status Push(U&& item) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return !IsFull() || IsClosed(); });
-    if (is_closed_) { return kClosed; }
-
-    queue_.push_back(std::move(item));
-    if (shuffle_ && queue_.size() > 2) {
-      std::uniform_int_distribution<size_t> dis(0, queue_.size() - 1);
-      size_t offset = dis(rng_);
-      std::swap(queue_[offset], queue_.back());
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cond_.wait(lock, [this]() { return !IsFull() || IsClosed(); });
+      if (is_closed_) { return kClosed; }
+      queue_.push_back(std::move(item));
+      if (shuffle_ && queue_.size() > 2) {
+        std::uniform_int_distribution<size_t> dis(0, queue_.size() - 1);
+        size_t offset = dis(rng_);
+        std::swap(queue_[offset], queue_.back());
+      }
     }
-
     cond_.notify_one();
     return kSuccess;
   }
 
   Status Pull(T* item) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return !IsEmpty() || IsClosed(); });
-    if (IsEmpty()) { return kEmpty; }
-    *item = std::move(queue_.front());
-    queue_.pop_front();
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cond_.wait(lock, [this]() { return !queue_.empty() || IsClosed(); });
+      if (queue_.empty()) { return kEmpty; }
+      *item = std::move(queue_.front());
+      queue_.pop_front();
+    }
     cond_.notify_one();
     return kSuccess;
   }
 
-  Status PullMany(std::vector<T>* item_vec, size_t size) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this, size]() { return queue_.size() >= size || IsClosed(); });
-    if (IsEmpty()) { return kEmpty; }
-    while (!queue_.empty()) {
-      item_vec->push_back(std::move(queue_.front()));
-      queue_.pop_front();
+  Status PullMany(std::vector<T>* item_vec, const size_t size) {
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cond_.wait(lock, [this, size]() { return queue_.size() >= size || IsClosed(); });
+      while (!queue_.empty() && item_vec->size() < size) {
+        item_vec->push_back(std::move(queue_.front()));
+        queue_.pop_front();
+      }
     }
     cond_.notify_one();
     return kSuccess;
@@ -177,7 +177,6 @@ class ParquetReader final : public user_op::OpKernelState {
   Maybe<void> InitWorkers(size_t buffer_size);
 
   bool IsClosed() { return is_closed_.load(); }
-  bool AllColumnsRanOut();
   size_t NumColumns() { return num_columns_; }
 
   Maybe<bool> ReadColumn(int col);
@@ -199,7 +198,6 @@ class ParquetReader final : public user_op::OpKernelState {
   std::unique_ptr<parquet::ParquetFileReader> file_reader_;
   std::shared_ptr<parquet::RowGroupReader> row_group_reader_;
 
-  std::vector<bool> columns_ran_out_;
   std::queue<int> row_group_part_indices_;
   std::queue<int> parquet_file_part_indices_;
 
@@ -208,6 +206,8 @@ class ParquetReader final : public user_op::OpKernelState {
   std::mutex mutex_;
   std::condition_variable cond_;
   std::atomic_bool is_closed_;
+  int read_keys_;
+  bool read_done_;
 };
 
 void ParquetReader::Close() {
@@ -232,6 +232,8 @@ Maybe<void> ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_t 
 
 Maybe<void> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
   CHECK_GT_OR_RETURN(tensor->shape().NumAxes(), 0);
+  CHECK_GE_OR_RETURN(col, 0);
+  CHECK_LT_OR_RETURN(col, NumColumns());
   size_t batch_size = tensor->shape().At(0);
   std::vector<std::shared_ptr<TensorBuffer>> batch;
   batch.reserve(batch_size);
@@ -249,23 +251,17 @@ Maybe<void> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
   return Maybe<void>::Ok();
 }
 
-bool ParquetReader::AllColumnsRanOut() {
-  return std::all_of(columns_ran_out_.begin(), columns_ran_out_.end(),
-                     [](const bool& v) { return v; });
-}
-
 Maybe<bool> ParquetReader::ReadColumn(int col) {
   {
     std::unique_lock<std::mutex> lock(mutex_);
-    columns_ran_out_[col] = true;
-    row_group_reader_.reset();
-    cond_.wait(lock, [this]() { return AllColumnsRanOut() || IsClosed(); });
-    if (!row_group_reader_) {
-      JUST(NextRowGroup());
-      cond_.notify_all();
-    }
-    columns_ran_out_[col] = false;
+    if (--read_keys_ == 0) { read_done_ = true; }
+    if (row_group_reader_) { row_group_reader_.reset(); }
+    cond_.wait(lock, [this]() { return read_done_ || IsClosed(); });
+    if (!row_group_reader_) { JUST(NextRowGroup()); }
+    if (++read_keys_ == workers_.size()) { read_done_ = false; }
   }
+  cond_.notify_all();
+
   auto col_reader = row_group_reader_->Column(col);
   while (col_reader->HasNext()) {
     auto sample = JUST(ReadColumnValues(col_reader.get()));
@@ -335,12 +331,13 @@ Maybe<void> ParquetReader::NextParquetFile() {
 }
 
 Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
+  read_keys_ = NumColumns();
+  read_done_ = false;
   buffers_.reserve(NumColumns());
   workers_.reserve(NumColumns());
   for (int i = 0; i < NumColumns(); ++i) {
     buffers_.emplace_back(std::make_unique<BufferType>(buffer_size, shuffle_, seed_ + i + 1));
   }
-  columns_ran_out_.resize(NumColumns(), false);
   for (int col = 0; col < NumColumns(); ++col) {
     workers_.emplace_back(std::thread([this, col] {
       while (!IsClosed() && CHECK_JUST(ReadColumn(col))) {}
@@ -351,6 +348,7 @@ Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
 
 Maybe<void> ParquetReader::InitParquetFiles(const std::string& path) {
   // Find all parquet files
+  base_path_ = path;
   local_fs_ = std::make_shared<arrow::fs::LocalFileSystem>();
   auto result = local_fs_->GetFileInfo(base_path_);
   CHECK_OR_RETURN(result.ok()) << "ParquetReader can't open " << base_path_;
@@ -409,7 +407,7 @@ Maybe<void> ParquetReader::InitParallelInfo(user_op::KernelInitContext* ctx) {
 
 Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
   shuffle_ = ctx->Attr<bool>("shuffle");
-  seed_ = ctx->Attr<int64_t>("seed");
+  seed_ = ctx->Attr<int64_t>("random_seed");
   rng_ = std::mt19937(seed_);
   use_mmap_ = ctx->Attr<bool>("use_mmap");
   JUST(InitParallelInfo(ctx));
@@ -428,7 +426,7 @@ class ParquetReaderKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     auto parquet_reader = std::make_shared<data::ParquetReader>();
-    parquet_reader->Init(ctx);
+    CHECK_JUST(parquet_reader->Init(ctx));
     return parquet_reader;
   }
 

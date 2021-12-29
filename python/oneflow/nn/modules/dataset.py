@@ -1029,9 +1029,10 @@ class ParquetReader(Module):
     ):
         super().__init__()
 
+        assert isinstance(path, str)
         self.path = path
         self.batch_size = batch_size
-        self.prefetch_buffer_size = prefetch_buffer_size
+        self.prefetch_buffer_size = prefetch_buffer_size or batch_size * 2
         self.use_mmap = use_mmap
 
         _handle_parquet_schema_args(self, schema)
@@ -1116,6 +1117,7 @@ def _handle_parquet_schema_args(module, schema):
     if not isinstance(schema, (list, tuple)):
         raise ValueError("'schema' must be a list or tuple of dict")
 
+    module.num_columns = len(schema)
     for col in schema:
         if not isinstance(col, dict):
             raise ValueError("the element of 'schema' must be a dict")
@@ -1144,6 +1146,7 @@ def _handle_parquet_schema_args(module, schema):
 
     schema_json = json.dumps(schema)
     module.schema_json_str = schema_json
+    # print(schema_json)
 
 
 if __name__ == "__main__":
