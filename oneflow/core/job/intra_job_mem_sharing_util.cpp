@@ -444,7 +444,7 @@ class MemBlockBuffer final {
 };
 
 void MemBlockBuffer::Occupy(int64_t begin, int64_t end) {
-  CHECK(begin < end && end <= buffer_size_);
+  CHECK(begin <= end && end <= buffer_size_);
   for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
     if (it->end <= begin) { continue; }
     if (end <= it->begin) { break; }
