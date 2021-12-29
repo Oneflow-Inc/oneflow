@@ -49,10 +49,10 @@ struct StrideParam {
 };
 
 template<size_t ndim>
-__device__ __forceinline__ int compute_index(int out_offset, StrideParam<ndim> out_params,
+__device__ __forceinline__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_params,
                                  const StrideParam<ndim>& in_params) {
-  int in_offset = 0;
-  int remaining = out_offset;
+  int64_t in_offset = 0;
+  int64_t remaining = out_offset;
 
 #pragma unroll
   // compute coords(output offset to coords)
@@ -72,9 +72,9 @@ __device__ __forceinline__ int compute_index(int out_offset, StrideParam<ndim> o
 template<typename T, size_t ndim>
 __global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
-  for (int out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
+  for (int64_t out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
   {
-    int in_idx = compute_index<ndim>(out_idx, out_stride, in_stride);
+    int64_t in_idx = compute_index<ndim>(out_idx, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
   }
 }
