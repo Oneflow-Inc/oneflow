@@ -24,12 +24,12 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
-      .def(py::init([](const std::string& device_tag) {
+      .def(py::init([](const std::string& device) {
         std::string device_name = "";
         int device_index = -1;
-        ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
+        ParsingDeviceTag(device, &device_name, &device_index).GetOrThrow();
         return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
-      }))
+      }), py::arg("device") = "auto")
       .def("manual_seed", &one::Generator::set_current_seed)
       .def("initial_seed", &one::Generator::current_seed)
       .def("seed", &one::Generator::seed)
@@ -42,12 +42,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       });
 
   m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
-  m.def("create_generator", [](const std::string& device_tag) {
-    std::string device_name = "";
-    int device_index = -1;
-    ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-    return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
-  });
   m.def("default_generator", [](const std::string& device_tag) {
     std::string device_name = "";
     int device_index = -1;

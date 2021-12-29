@@ -16,12 +16,7 @@ limitations under the License.
 import oneflow
 import oneflow._oneflow_internal
 
-
-def create_generator(device=None):
-    if device is None:
-        device = "auto"
-    return oneflow._oneflow_internal.create_generator(device)
-
+Generator = oneflow._oneflow_internal.Generator
 
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
