@@ -102,40 +102,40 @@ function(add_copy_headers_target)
 endfunction()
 
 function(use_mirror)
-  cmake_parse_arguments(
-    PARSED_ARGS
-    ""
-    "VARIABLE;URL"
-    ""
-    ${ARGN}
+  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/" 
+    CACHE STRING "URL prefix of Aliyun OSS mirror"
   )
-  if(NOT PARSED_ARGS_VARIABLE)
-    message(FATAL_ERROR "VARIABLE required")
-  endif(NOT PARSED_ARGS_VARIABLE)
-  if(NOT PARSED_ARGS_URL)
-    message(FATAL_ERROR "url required")
-  endif(NOT PARSED_ARGS_URL)
-  set(UTIL_PYTHON_EXECUTABLE "python3" CACHE STRING "Python executable to run util")
-  if(Python3_EXECUTABLE)
-    set(UTIL_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-  endif(Python3_EXECUTABLE)
+  cmake_parse_arguments(PARSED_ARGS
+    "" "VARIABLE;URL" "" ${ARGN}
+  )
+
+  if((NOT PARSED_ARGS_VARIABLE) OR (NOT PARSED_ARGS_URL))
+    message(FATAL_ERROR "VARIABLE or URL required")
+  endif()
+
   if(DEFINED THIRD_PARTY_MIRROR)
     if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
-      execute_process(
-        COMMAND ${UTIL_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL}
-        OUTPUT_VARIABLE temp_url
-        ERROR_VARIABLE err
-        RESULT_VARIABLE ret_code)
-      if (NOT (ret_code EQUAL "0"))
-        message(FATAL_ERROR "Fail to convert mirror url ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py. URL: ${PARSED_ARGS_URL}. Error: ${err}. Output: ${temp_url}")
-      else()
-        set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
+      if(NOT PARSED_ARGS_URL MATCHES "^https://")
+        message(FATAL_ERROR "URL should start with 'https://'")
       endif()
+      string(REPLACE "https://" ${ALIYUN_URL_PREFIX} MIRRORED_URL ${PARSED_ARGS_URL})
+      set(${PARSED_ARGS_VARIABLE} ${MIRRORED_URL} PARENT_SCOPE)
+      message(NOTICE "-- fetch ${PARSED_ARGS_VARIABLE} using aliyun mirror ${MIRRORED_URL}")
     elseif(NOT THIRD_PARTY_MIRROR STREQUAL "")
-      message(FATAL_ERROR "Invalid key for third party mirror.")
+      message(FATAL_ERROR "invalid key for third party mirror")
     endif()
   endif()
 endfunction()
+
+macro(set_mirror_url variable url)
+  set(${variable} ${url} ${ARGN})
+  use_mirror(VARIABLE ${variable} URL ${url})
+endmacro()
+
+macro(set_mirror_url_with_hash variable url hash)
+  set_mirror_url(${variable} ${url} ${ARGN})
+  set(${variable}_HASH ${hash} ${ARGN})
+endmacro()
 
 function(check_cxx11_abi OUTPUT_VAR)
   execute_process(
