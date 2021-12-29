@@ -723,6 +723,7 @@ def _gather(self, dim, index):
 
 
 def _numpy(self):
+    # reference torch, cuda tensor needs '.cpu()' firstly 
     assert self.device == flow.device("cpu")
     assert (
         not self.is_lazy
