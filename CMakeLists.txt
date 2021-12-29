@@ -232,10 +232,6 @@ use_mirror(VARIABLE JSON_URL URL ${JSON_URL})
 set(JSON_MD5 fb96f95cdf609143e998db401ca4f324 CACHE STRING "")
 include(third_party)
 
-set(ROCKSDB_URL https://github.com/facebook/rocksdb/archive/refs/tags/v6.27.3.tar.gz)
-use_mirror(VARIABLE ROCKSDB_URL URL ${ROCKSDB_URL})
-set(ROCKSDB_MD5 e4a0625f0cec82060e62c81b787a1124)
-
 set(ROBIN_HOOD_HASHING_URL https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.4.tar.gz)
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 2d0c37e2d3abb5690fb5561f3d9421cc)

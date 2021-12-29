@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/embedding_manager.h"
-#include "oneflow/core/embedding/rocks_key_value_store.h"
+#include "oneflow/core/embedding/block_based_key_value_store.h"
 
 namespace oneflow {
 
@@ -59,15 +59,16 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
     options.value_type = DataType::kFloat;
     options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
     store = NewCudaInMemoryKeyValueStore(options);
-  } else if (kv_store == "rocks") {
-    std::string path = GetStringFromEnv("ROCKS_PATH", "");
-    embedding::RocksKeyValueStoreOptions options{};
+  } else if (kv_store == "block_based") {
+    std::string path = GetStringFromEnv("BLOCK_BASED_PATH", "");
+    embedding::BlockBasedKeyValueStoreOptions options{};
     options.path = path + std::to_string(parallel_id);
     options.value_length = 128;
     options.key_type = DataType::kInt64;
     options.value_type = DataType::kFloat;
     options.max_query_length = 65536 * 26;
-    store = NewRocksKeyValueStore(options);
+    options.block_size = ParseIntegerFromEnv("BLOCK_BASED_BLOCK_SIZE", 512);
+    store = NewBlockBasedKeyValueStore(options);
   } else {
     UNIMPLEMENTED();
   }

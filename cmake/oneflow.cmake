@@ -244,11 +244,8 @@ include_directories(${PROJECT_BINARY_DIR})
 # cc obj lib
 oneflow_add_library(oneflow ${of_all_obj_cc})
 
-get_property(ROCKSDB_INCLUDE_DIR GLOBAL PROPERTY ROCKSDB_INCLUDE_DIR)
 get_property(ROBIN_HOOD_HASHING_INCLUDE_DIR GLOBAL PROPERTY ROBIN_HOOD_HASHING_INCLUDE_DIR)
-target_include_directories(oneflow PRIVATE ${ROCKSDB_INCLUDE_DIR})
 target_include_directories(oneflow PRIVATE ${ROBIN_HOOD_HASHING_INCLUDE_DIR})
-target_link_libraries(oneflow rocksdb)
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
