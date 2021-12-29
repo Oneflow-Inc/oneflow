@@ -1944,7 +1944,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   let attrs = (ins
     StrAttr:$parallel_conf,
     DefaultValuedAttr<SI64Attr, "0">:$root,
-    DefaultValuedAttr<BoolAttr, "false">:$async_launch
+    DefaultValuedAttr<BoolAttr, "true">:$async_launch
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
