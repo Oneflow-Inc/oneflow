@@ -114,6 +114,7 @@ oneflow
             selu, 
             silu, 
             slice, 
+            logical_slice,  
             slice_update, 
             softsign, 
             sort, 
