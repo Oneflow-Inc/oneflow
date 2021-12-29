@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
-
+#include <iostream>
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -531,6 +531,7 @@ class ReduceMeanFunctor {
     CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
         << "RuntimeError: Can only calculate the mean of floating types.";
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
+    std::cout<< "sum" << sum << "x->shape()" << x->shape() << std::endl;
     size_t reduce_count = 1;
     if (axis.empty()) {
       reduce_count = x->shape()->Count(0);
@@ -538,7 +539,7 @@ class ReduceMeanFunctor {
       for (const int32_t& i : axis) { reduce_count *= x->shape()->At(i); }
     }
     if (reduce_count == 1) { return sum; }
-    CHECK_GT_OR_RETURN(reduce_count, 0);
+    CHECK_GE_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
 };
