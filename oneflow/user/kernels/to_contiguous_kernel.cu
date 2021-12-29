@@ -123,12 +123,26 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   static to_contiguous_fn_map_t<T> to_contiguous_fn_map;
   void operator()() {
     if (contiguous_dim == -1) {
+      // 0-dim tensor
       OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, block_size * dsize, cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
-      const int ndim = in_shape.NumAxes();
-      to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr,
+      bool is_same = true;
+      for (int64_t i = contiguous_dim; i != -1; --i) {
+        if (out_stride[i] != in_stride[i]) {
+          is_same = false;
+          break;
+        }
+      }
+      if (is_same) {
+        // if input tensor's strides equals to output's, than just copy one memory-contiguous tensor
+        OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize, cudaMemcpyDeviceToDevice,
+                                    stream->As<ep::CudaStream>()->cuda_stream()));
+      } else{
+        const int ndim = contiguous_dim + 1;
+        to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr,
                                       out_dptr);
+      }
     }
   }
 };

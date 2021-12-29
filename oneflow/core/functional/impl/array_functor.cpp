@@ -2553,7 +2553,7 @@ class TopKFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("k", k));
     JUST(attrs.SetAttr<bool>("sorted", sorted));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
  private:
@@ -2574,7 +2574,7 @@ class InTopKFunctor {
     CHECK_EQ_OR_RETURN(predictions->ndim(), 2) << "The dimension of predictions must be 2";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("k", k));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets, predictions}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets->contiguous(), predictions->contiguous()}, attrs);
   }
 
  private:
