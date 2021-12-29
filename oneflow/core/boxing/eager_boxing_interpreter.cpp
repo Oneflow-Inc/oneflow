@@ -112,12 +112,13 @@ void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT
   });
 }
 
-Maybe<void> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const {
+Maybe<BoxingInterpreterStatus> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in,
+                                                       Symbol<PlacedNdSbp> out) const {
   const auto& Checker =
       JUST_MSG(MapAt(*MutName2BoxingChecker(), boxing_name_),
                std::stringstream() << "boxing checker not found. checker_name: " << boxing_name_);
   JUST(Checker(in, out));
-  return Maybe<void>::Ok();
+  return MakeBoxingInterpreterStatus(boxing_name_);
 }
 
 Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
@@ -125,12 +126,12 @@ Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> i
   return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(boxing_name_, in, out);
 }
 
-Maybe<void> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in,
-                                              Symbol<PlacedNdSbp> out) const {
+Maybe<BoxingInterpreterStatus> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in,
+                                                                 Symbol<PlacedNdSbp> out) const {
   const auto& middle = JUST((*boxing_dividor_)(in, out));
-  JUST(lhs_conquer_->Check(in, middle));
-  JUST(rhs_conquer_->Check(middle, out));
-  return Maybe<void>::Ok();
+  const auto& lhs_status = JUST(lhs_conquer_->Check(in, middle));
+  const auto& rhs_status = JUST(rhs_conquer_->Check(middle, out));
+  return MakeComposedBoxingInterpreterStatus(*lhs_status, *rhs_status);
 }
 
 Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
@@ -150,8 +151,10 @@ Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
   return boxing_function;
 }
 
-Maybe<void> OrBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const {
-  if (lhs_boxing_->Check(in, out).IsOk()) { return Maybe<void>::Ok(); }
+Maybe<BoxingInterpreterStatus> OrBoxingExpr::Check(Symbol<PlacedNdSbp> in,
+                                                   Symbol<PlacedNdSbp> out) const {
+  const auto& lhs_status = TRY(lhs_boxing_->Check(in, out));
+  if (lhs_status.IsOk()) { return lhs_status; }
   return rhs_boxing_->Check(in, out);
 }
 

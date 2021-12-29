@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/boxing/boxing_interpreter_status.h"
 
 namespace oneflow {
 
@@ -102,7 +103,8 @@ class BoxingExprIf {
   BoxingExprIf(BoxingExprIf&&) = default;
   virtual ~BoxingExprIf() = default;
 
-  virtual Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const = 0;
+  virtual Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in,
+                                               Symbol<PlacedNdSbp> out) const = 0;
   virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
                                                    Symbol<PlacedNdSbp> out) const = 0;
 
@@ -119,7 +121,8 @@ class AtomicBoxingExpr final : public BoxingExprIf {
   explicit AtomicBoxingExpr(const std::string& boxing_name)
       : BoxingExprIf(), boxing_name_(boxing_name) {}
 
-  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in,
+                                       Symbol<PlacedNdSbp> out) const override;
   Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
                                            Symbol<PlacedNdSbp> out) const override;
 
@@ -141,7 +144,8 @@ class DivideAndConquerBoxingExpr final : public BoxingExprIf {
         lhs_conquer_(lhs_conquer),
         rhs_conquer_(rhs_conquer) {}
 
-  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in,
+                                       Symbol<PlacedNdSbp> out) const override;
   Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
                                            Symbol<PlacedNdSbp> out) const override;
 
@@ -161,7 +165,8 @@ class OrBoxingExpr final : public BoxingExprIf {
                         const std::shared_ptr<BoxingExprIf>& rhs_boxing)
       : BoxingExprIf(), lhs_boxing_(lhs_boxing), rhs_boxing_(rhs_boxing) {}
 
-  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in,
+                                       Symbol<PlacedNdSbp> out) const override;
   Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
                                            Symbol<PlacedNdSbp> out) const override;
 
