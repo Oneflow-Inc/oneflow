@@ -105,7 +105,8 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
 #else
       std::cerr << "The index element " << idx_elem << " is out of bounds for dimension " << dim
                 << " with size " << upper_bound << std::endl;
-      throw Error::CheckFailedError();  // TODO: Remove throw Error.
+      UNIMPLEMENTED();
+      // throw Error::CheckFailedError();  // TODO: Remove throw Error.
 #endif
     }
     IDX_T src_offset = src_nd_helper.NdIndexToOffset(coordinate, ndim);
