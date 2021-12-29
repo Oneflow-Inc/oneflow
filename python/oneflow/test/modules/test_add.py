@@ -170,7 +170,7 @@ class TestAddModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_0shape_add(test_case):
         device = random_device()
         x = random_pytorch_tensor(2, 0, 3).to(device)
