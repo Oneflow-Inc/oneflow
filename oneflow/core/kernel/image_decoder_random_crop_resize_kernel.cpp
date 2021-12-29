@@ -160,7 +160,6 @@ JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
   struct jpeg_decompress_struct cinfo = {};
   struct jpeg_error_mgr jerr = {};
   int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
-  unsigned char* crop_buf = nullptr;
   cinfo.err = jpeg_std_error(&jerr);
 
   jpeg_create_decompress(&cinfo);
@@ -183,8 +182,10 @@ JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
   int height = cinfo.output_height;
   int pixel_size = cinfo.output_components;
 
+  unsigned char* crop_buf = nullptr;
+  std::vector<unsigned char> tmp_buf;
   if (width * height * pixel_size > workspace_size) {
-    std::vector<unsigned char> tmp_buf(width * height * pixel_size);
+    tmp_buf.resize(width * height * pixel_size);
     crop_buf = tmp_buf.data();
   } else {
     crop_buf = workspace;
