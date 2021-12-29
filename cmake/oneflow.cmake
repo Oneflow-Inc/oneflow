@@ -210,6 +210,7 @@ include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+target_link_libraries(of_functional_obj PUBLIC ${oneflow_exe_third_party_libs})
 add_dependencies(of_functional_obj of_cfgobj)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
@@ -226,6 +227,7 @@ if(BUILD_PYTHON)
   oneflow_add_library(of_functional_tensor_obj STATIC
       ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS}
       ${FUNCTIONAL_OPS_GENERATED_SRCS} ${FUNCTIONAL_OPS_GENERATED_HRCS})
+  target_link_libraries(of_functional_tensor_obj PUBLIC ${oneflow_exe_third_party_libs})
   add_dependencies(of_functional_tensor_obj of_cfgobj)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
@@ -272,17 +274,20 @@ endif()
 
 include(op_schema)
 
+set(oneflow_dep_targets of_protoobj of_cfgobj of_functional_obj)
+set(oneflow_lib_targets oneflow ${oneflow_dep_targets} of_op_schema)
+
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs})
+  set(of_libs -Wl,-force_load ${oneflow_lib_targets})
+  target_link_libraries(oneflow ${oneflow_dep_targets} ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj glog_imported gflags_imported ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive ${oneflow_lib_targets} -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow ${oneflow_dep_targets} ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
 elseif(WIN32)
-  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
+  set(of_libs ${oneflow_lib_targets})
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
