@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -107,6 +108,25 @@ bool PyDTypeCheck(PyObject* obj) {
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<Symbol<DType>*>(handle);
+}
+
+// DType list
+bool PyDTypeSequenceCheck(PyObject* obj) {
+  return PySequenceCheck(obj, [](PyObject* item) { return PyDTypeCheck(item); });
+}
+Maybe<std::vector<Symbol<DType>>> PyUnpackDTypeSequence(PyObject* obj) {
+  return PyUnpackSequence<Symbol<DType>>(obj, [](PyObject* item) { return PyUnpackDType(item); });
+}
+
+// Shape list
+bool PyShapeSequenceCheck(PyObject* obj) {
+  return PySequenceCheck(obj, [](PyObject* item) { return PyLongSequenceCheck(item); });
+}
+Maybe<std::vector<Shape>> PyUnpackShapeSequence(PyObject* obj) {
+  return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Maybe<Shape> {
+    const auto& shape = JUST(PyUnpackLongSequence<int64_t>(item));
+    return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
+  });
 }
 
 // Generator
@@ -248,6 +268,17 @@ Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj) {
   }
   Py_DECREF(tup);
   return tensor_index;
+}
+
+// OpExpr
+bool PyOpExprCheck(PyObject* obj) {
+  auto handle = py::reinterpret_borrow<py::object>(obj);
+  return py::isinstance<OpExpr>(handle);
+}
+
+Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj) {
+  auto handle = py::reinterpret_borrow<py::object>(obj);
+  return py::cast<std::shared_ptr<OpExpr>>(handle);
 }
 
 }  // namespace functional
