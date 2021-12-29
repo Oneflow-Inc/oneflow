@@ -112,6 +112,13 @@
   ]
   bind_python: True
 
+- name: "dispatch_parquet_reader"
+  signature: [
+    "TensorTuple (OpExpr op, String path, String schema_json_str, Int64 batch_size, Bool shuffle, Int64 random_seed, Int64 prefetch_buffer_size, Bool use_mmap, Device device=None) => DispatchParquetReader",
+    "TensorTuple (OpExpr op, String path, String schema_json_str, Int64 batch_size, Bool shuffle, Int64 random_seed, Int64 prefetch_buffer_size, Bool use_mmap, Placement placement, SbpList sbp) => DispatchParquetReader"
+  ]
+  bind_python: True
+
 - name: "dispatch_rmsprop_update"
   signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Bool centered=False, Float epsilon=1e-8, Float decay_rate=0.99, Float weight_decay=0.0) => DispatchRmspropUpdate"
   bind_python: True

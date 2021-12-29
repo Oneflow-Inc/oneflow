@@ -16,7 +16,8 @@ limitations under the License.
 import random
 import sys
 import traceback
-from typing import List, Optional, Sequence, Tuple, Union
+import json
+from typing import List, Dict, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
 import oneflow._oneflow_internal._C as _C
@@ -796,37 +797,12 @@ class COCOReader(Module):
         self.annotation_file = annotation_file
         self.image_dir = image_dir
         self.batch_size = batch_size
-        self.shuffle = shuffle
         self.group_by_aspect_ratio = group_by_aspect_ratio
         self.remove_images_without_annotations = remove_images_without_annotations
         self.stride_partition = stride_partition
-        if random_seed is None:
-            random_seed = random.randrange(sys.maxsize)
-        self.random_seed = random_seed
 
-        self.placement = placement
-        if placement is None:
-            self.device = device or flow.device("cpu")
-        else:
-            if device is not None:
-                raise ValueError(
-                    "when param sbp is specified, param device should not be specified"
-                )
-
-            if isinstance(sbp, (tuple, list)):
-                for sbp_item in sbp:
-                    if not isinstance(sbp_item, flow.sbp.sbp):
-                        raise ValueError(f"invalid sbp item: {sbp_item}")
-            elif isinstance(sbp, flow.sbp.sbp):
-                sbp = (sbp,)
-            else:
-                raise ValueError(f"invalid param sbp: {sbp}")
-
-            if len(sbp) != len(placement.hierarchy):
-                raise ValueError(
-                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
-                )
-        self.sbp = sbp
+        _handle_shuffle_args(self, shuffle, random_seed)
+        _handle_parallel_args(self, device, placement, sbp)
 
         self._op = (
             flow.stateful_op("COCOReader")
@@ -979,34 +955,6 @@ class GPTIndexedBinDataReader(Module):
         self.num_samples = num_samples
         self.batch_size = batch_size
         self.dtype = dtype
-        self.shuffle = shuffle
-        self.placement = placement
-        if placement is None:
-            self.device = device or flow.device("cpu")
-        else:
-            if device is not None:
-                raise ValueError(
-                    "when param sbp is specified, param device should not be specified"
-                )
-
-            if isinstance(sbp, (tuple, list)):
-                for sbp_item in sbp:
-                    if not isinstance(sbp_item, flow.sbp.sbp):
-                        raise ValueError(f"invalid sbp item: {sbp_item}")
-            elif isinstance(sbp, flow.sbp.sbp):
-                sbp = (sbp,)
-            else:
-                raise ValueError(f"invalid param sbp: {sbp}")
-
-            if len(sbp) != len(placement.hierarchy):
-                raise ValueError(
-                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
-                )
-        self.sbp = sbp
-
-        if random_seed is None:
-            random_seed = random.randrange(sys.maxsize)
-        self.random_seed = random_seed
 
         if split_index is None:
             split_index = 0
@@ -1022,6 +970,9 @@ class GPTIndexedBinDataReader(Module):
                     split_index, split_sizes
                 )
             )
+
+        _handle_shuffle_args(self, shuffle, random_seed)
+        _handle_parallel_args(self, device, placement, sbp)
 
         self.op_ = (
             flow.stateful_op("megatron_gpt_mmap_data_loader").Output("out").Build()
@@ -1060,6 +1011,139 @@ class GPTIndexedBinDataReader(Module):
                 sbp=self.sbp,
             )
         return output
+
+
+class ParquetReader(Module):
+    def __init__(
+        self,
+        path: str,
+        schema: List[Dict],
+        batch_size: int,
+        shuffle: bool = True,
+        random_seed: Optional[int] = None,
+        prefetch_buffer_size: Optional[int] = None,
+        use_mmap: bool = True,
+        device: Union[flow.device, str, None] = None,
+        placement: Optional[flow.placement] = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp], None] = None,
+    ):
+        super().__init__()
+
+        self.path = path
+        self.batch_size = batch_size
+        self.prefetch_buffer_size = prefetch_buffer_size
+        self.use_mmap = use_mmap
+
+        _handle_parquet_schema_args(self, schema)
+        _handle_shuffle_args(self, shuffle, random_seed)
+        _handle_parallel_args(self, device, placement, sbp)
+
+        self.op = (
+            flow.stateful_op("parquet_reader").Output("out", self.num_columns).Build()
+        )
+
+    def forward(self):
+        if self.placement is None:
+            outputs = _C.dispatch_parquet_reader(
+                self.op,
+                path=self.path,
+                schema_json_str=self.schema_json_str,
+                batch_size=self.batch_size,
+                shuffle=self.shuffle,
+                random_seed=self.random_seed,
+                prefetch_buffer_size=self.prefetch_buffer_size,
+                use_mmap=self.use_mmap,
+                device=self.device,
+            )
+        else:
+            outputs = _C.dispatch_parquet_reader(
+                self.op,
+                path=self.path,
+                schema_json_str=self.schema_json_str,
+                batch_size=self.batch_size,
+                shuffle=self.shuffle,
+                random_seed=self.random_seed,
+                prefetch_buffer_size=self.prefetch_buffer_size,
+                use_mmap=self.use_mmap,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
+
+        return outputs
+
+
+def _handle_parallel_args(module, device, placement, sbp):
+    module.placement = placement
+    if placement is None:
+        module.device = device or flow.device("cpu")
+    else:
+        if device is not None:
+            raise ValueError(
+                "The 'device' and 'placement' arguments can't be specified at the same time."
+            )
+
+        if isinstance(sbp, (tuple, list)):
+            for sbp_item in sbp:
+                if not isinstance(sbp_item, flow.sbp.sbp):
+                    raise ValueError(f"invalid sbp item: {sbp_item}")
+        elif isinstance(sbp, flow.sbp.sbp):
+            sbp = (sbp,)
+        else:
+            raise ValueError(f"invalid 'sbp' argument: {sbp}")
+
+        if len(sbp) != len(placement.hierarchy):
+            raise ValueError(
+                "Number of SBP's dimensions of sbp and number of placement hierarchy'dimensions must equal."
+                f" {len(sbp)} vs. {len(placement.hierarchy)}"
+            )
+
+    module.sbp = sbp
+
+
+def _handle_shuffle_args(module, shuffle, random_seed):
+    module.shuffle = shuffle
+    if random_seed is None:
+        if shuffle:
+            module.random_seed = random.randrange(sys.maxsize)
+        else:
+            module.random_seed = -1
+    else:
+        assert isinstance(random_seed, int)
+        module.random_seed = random_seed
+
+
+def _handle_parquet_schema_args(module, schema):
+    if not isinstance(schema, (list, tuple)):
+        raise ValueError("'schema' must be a list or tuple of dict")
+
+    for col in schema:
+        if not isinstance(col, dict):
+            raise ValueError("the element of 'schema' must be a dict")
+
+        is_variadic = ("is_variadic" in col) and col["is_variadic"]
+
+        if not is_variadic and "shape" not in col:
+            raise ValueError("'shape' is absent in the element of 'schema'")
+
+        if not is_variadic and "dtype" not in col:
+            raise ValueError("'dtype' is absent in the element of 'schema'")
+
+        if "shape" in col:
+            if not isinstance(col["shape"], (list, tuple)):
+                raise ValueError(
+                    "the 'shape' field in the element of 'schema' must be a list or tuple"
+                )
+
+        if "dtype" in col:
+            if not isinstance(col["dtype"], flow.dtype):
+                raise ValueError(
+                    "the 'dtype' field in the element of 'schema' must be a oneflow.dtype"
+                )
+
+            col["dtype"] = col["dtype"].__getstate__()
+
+    schema_json = json.dumps(schema)
+    module.schema_json_str = schema_json
 
 
 if __name__ == "__main__":

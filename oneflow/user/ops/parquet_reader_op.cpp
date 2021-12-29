@@ -22,7 +22,7 @@ namespace oneflow {
 Maybe<void> ParquetReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   using namespace data;
   ParquetColumnSchema schema;
-  ParseParquetColumnSchemaFromJson(&schema, ctx->Attr<std::string>("column_schema_json"));
+  ParseParquetColumnSchemaFromJson(&schema, ctx->Attr<std::string>("schema_json_str"));
   int output_order = 0;
   for (const auto& col_desc : schema.col_descs) {
     user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", output_order);
@@ -39,7 +39,7 @@ Maybe<void> ParquetReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) 
 Maybe<void> ParquetReaderOp::InferDataType(user_op::InferContext* ctx) {
   using namespace data;
   ParquetColumnSchema schema;
-  ParseParquetColumnSchemaFromJson(&schema, ctx->Attr<std::string>("column_schema_json"));
+  ParseParquetColumnSchemaFromJson(&schema, ctx->Attr<std::string>("schema_json_str"));
   int output_order = 0;
   for (const auto& col_desc : schema.col_descs) {
     auto* dtype = ctx->OutputTensorDesc("out", output_order)->mut_data_type();

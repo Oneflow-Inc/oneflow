@@ -414,7 +414,7 @@ Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
   use_mmap_ = ctx->Attr<bool>("use_mmap");
   JUST(InitParallelInfo(ctx));
   JUST(InitParquetFiles(ctx->Attr<std::string>("path")));
-  JUST(InitWorkers(ctx->Attr<int64_t>("preload_buffer_size")));
+  JUST(InitWorkers(ctx->Attr<int64_t>("prefetch_buffer_size")));
   return Maybe<void>::Ok();
 }
 

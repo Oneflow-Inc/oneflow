@@ -1545,13 +1545,13 @@ def OneFlow_ParquetReaderOp : OneFlow_BaseOp<"parquet_reader", [NoSideEffect, No
   );
   let attrs = (ins
     StrAttr:$path,
+    StrAttr:$schema_json_str,
     DefaultValuedAttr<SI32Attr, "1">:$batch_size,
     DefaultValuedAttr<BoolAttr, "false">:$shuffle,
     DefaultValuedAttr<SI64Attr, "-1">:$seed,
-    DefaultValuedAttr<SI32Attr, "1024">:$preload_buffer_size,
+    DefaultValuedAttr<SI32Attr, "1024">:$prefetch_buffer_size,
     DefaultValuedAttr<BoolAttr, "true">:$use_mmap,
-    StrArrayAttr:$nd_sbp,
-    StrAttr:$column_schema_json
+    StrArrayAttr:$nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_data_type_infer_fn = 1;
