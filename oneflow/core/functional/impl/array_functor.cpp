@@ -41,7 +41,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-
+#include <iostream>
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -911,7 +911,8 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     // if input tensor is eager local, than return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) { return view::Reshape(x, shape); }
+    std::cout<<"(LazyMode::is_enabled())"<<LazyMode::is_enabled()<<"x->is_lazy():"<<x->is_lazy()<<"x->is_eager():"<<x->is_eager()<<"x->is_local():"<<x->is_local()<<std::endl;
+    if (x->is_local()) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
