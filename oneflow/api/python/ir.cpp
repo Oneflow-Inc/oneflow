@@ -15,9 +15,11 @@ limitations under the License.
 */
 
 #ifdef WITH_MLIR
+
+#include "oneflow/ir/include/OneFlow/Extension.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/ir/include/OneFlow/Extension.h"
 
 namespace oneflow {
 
@@ -27,4 +29,5 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 }
 
 }  // namespace oneflow
+
 #endif  // WITH_MLIR

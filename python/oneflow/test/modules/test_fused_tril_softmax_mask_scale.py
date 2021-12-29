@@ -26,11 +26,8 @@ import oneflow.unittest
 
 
 def _test_fused_tril_softmax_mask_scale(
-    test_case, seq_length, channel, seed, p, diagonal, tril_scale_value
+    test_case, seq_length, channel, p, diagonal, tril_scale_value
 ):
-    generator = flow.Generator()
-    generator.manual_seed(seed)
-
     x = np.random.randn(4, seq_length, channel)
     # fused version only support in GPU
     fused_x_tensor = flow.Tensor(x).to("cuda")
@@ -41,13 +38,12 @@ def _test_fused_tril_softmax_mask_scale(
         0
     ]  # The second output is softmax_y
 
-    generator.manual_seed(seed)  # reset seed
     origin_x_tensor = flow.Tensor(x).to("cuda")
     origin_x_tensor.requires_grad = True
     origin_out = flow.tril(origin_x_tensor, diagonal)
     origin_out = origin_out * tril_scale_value
     origin_out = flow.softmax(origin_out, dim=-1)
-    origin_out = flow._C.dropout(origin_out, p=p, generator=generator)
+    origin_out = flow._C.dropout(origin_out, p=p)
 
     total_out = fused_out.sum() + origin_out.sum()
     total_out.backward()
@@ -68,13 +64,12 @@ def _test_fused_tril_softmax_mask_scale(
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedTrilSoftmaxMaskScale(flow.unittest.TestCase):
-    def test_gather(test_case):
+    def test_fused_tril_softmax_dropout(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_tril_softmax_mask_scale]
         arg_dict["seq_length"] = [10, 20]
         arg_dict["channel"] = [20, 30]
-        arg_dict["seed"] = [0]
-        arg_dict["p"] = [0.0]
+        arg_dict["p"] = [0.0, 1.0]
         arg_dict["diagonal"] = [0, 1, 2]
         arg_dict["tril_scale_value"] = [2, 4, 10]
 
