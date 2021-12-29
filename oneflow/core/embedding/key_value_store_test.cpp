@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
 #include "oneflow/core/embedding/rocks_key_value_store.h"
+#include "oneflow/core/embedding/block_based_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -152,6 +153,19 @@ TEST(RocksKeyValueStore, RocksKeyValueStore) {
   options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewRocksKeyValueStore(options);
 
+  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, options.value_length, 4);
+}
+
+TEST(BlockBasedKeyValueStore, BlockBasedKeyValueStore) {
+  if (!HasCudaDevice()) { return; }
+  BlockBasedKeyValueStoreOptions options{};
+  options.path = "/tmp/test_db";
+  options.value_length = 128;
+  options.key_type = DataType::kUInt64;
+  options.value_type = DataType::kFloat;
+  options.max_query_length = 128;
+  options.block_size = 512;
+  std::unique_ptr<KeyValueStore> store = NewBlockBasedKeyValueStore(options);
   TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, options.value_length, 4);
 }
 
