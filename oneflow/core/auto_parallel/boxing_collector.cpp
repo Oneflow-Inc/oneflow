@@ -49,7 +49,7 @@ void BoxingCollector::Init(const OpGraph& op_graph) {
   id2SbpParallel.clear();
   // CollectUniverse(2);
   CollectUniverse(op_graph);
-  GenerateCombination();
+  GenerateCombination(2);
 }
 
 // Construct a boxing collector with given sbp graph
@@ -60,7 +60,7 @@ void BoxingCollector::Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& s
   SbpParallelUniverse.clear();
   id2SbpParallel.clear();
   CollectUniverse(sbp_graph);
-  GenerateCombination();
+  GenerateCombination(2);
 }
 
 // Collect all the possible Sbp Parallel from an OpGraph
@@ -108,7 +108,7 @@ void BoxingCollector::CollectUniverse(int32_t max_axis) {
 }
 
 // Generate the transfer rule for different combinations and hierarchies
-Maybe<void> BoxingCollector::GenerateCombination() {
+Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   // 1D sbp does not support S->P. But it seems that we do not need to deal with it for now.
   // And we do not have 3D sbp or higher dimension.
   int32_t hierarchy_num = 2;
@@ -159,7 +159,7 @@ Maybe<void> BoxingCollector::GenerateCombination() {
     std::cout << "hierarchy: " << *in_hierarchy << std::endl;
   }
 
-  for (int32_t middle_node_num = 1; middle_node_num <= hierarchy_num; middle_node_num++) {
+  for (int32_t middle_node_num = 1; middle_node_num <= max_middle_node_num; middle_node_num++) {
     int32_t middle_node_num_ik = middle_node_num - 1;
 
     for (int32_t i = 0; i < n; i++) {
@@ -364,7 +364,32 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
                               << " for Shape: " << logical_blob_desc.shape();
 
   // Customized boxing collector and try the algorithm again
+  BoxingCollector customized_boxing_collector;
+  customized_boxing_collector.CollectUniverse(logical_blob_desc.shape().NumAxes());
+  customized_boxing_collector.GenerateCombination(5);
+  // test debug
+  customized_boxing_collector.PrintBoxingTables();
+  customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
+                                                producer_parallel_desc, consumer_parallel_desc,
+                                                false, middle_sbps);
+  return Maybe<void>::Ok();
+}
 
+// Filter nd sbp from nd_sbp_lists with given logical shape
+Maybe<void> BoxingCollector::FilterNdSbpList4LogicalShape(
+    const BlobDesc& logical_blob_desc, const std::shared_ptr<Shape>& parallel_hierarchy) {
+  for (int32_t middle_sbp_id = nd_sbp_lists.size() - 1; middle_sbp_id >= 0; middle_sbp_id--) {
+    Shape logical_shape = logical_blob_desc.shape();
+    if (JUST(FilterNdSbpByLogicalShape(nd_sbp_lists[middle_sbp_id], logical_shape,
+                                       parallel_hierarchy))) {
+      // Change the value before erasing
+      // This might be true: nd_sbp_lists.size() - 1 == middle_sbp_id
+      NdSbpUniverse[nd_sbp_lists[nd_sbp_lists.size() - 1]] = middle_sbp_id;
+      NdSbpUniverse.erase(nd_sbp_lists[middle_sbp_id]);
+      nd_sbp_lists[middle_sbp_id] = nd_sbp_lists[nd_sbp_lists.size() - 1];
+      nd_sbp_lists.pop_back();
+    }
+  }
   return Maybe<void>::Ok();
 }
 

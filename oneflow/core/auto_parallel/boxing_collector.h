@@ -51,7 +51,7 @@ class BoxingCollector {
   void Init(const OpGraph& op_graph);
 
   // Generate the transfer rule for different combinations and hierarchies
-  Maybe<void> GenerateCombination();
+  Maybe<void> GenerateCombination(int32_t max_middle_node_num);
   // Print the cost and middle nodes
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
@@ -61,6 +61,9 @@ class BoxingCollector {
                                 const ParallelDesc& producer_parallel_desc,
                                 const ParallelDesc& consumer_parallel_desc, bool customized,
                                 std::vector<cfg::NdSbp>& middle_sbps);
+  // Filter nd sbp from nd_sbp_lists with given logical shape
+  Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
+                                           const std::shared_ptr<Shape>& parallel_hierarchy);
 
  private:
   // Stores all the possible cfg::SbpParallel.
