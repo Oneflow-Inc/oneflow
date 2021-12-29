@@ -911,7 +911,7 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     // if input tensor is eager local, than return tensor's view
-    if (x->is_eager() && x->is_local()) { return view::Reshape(x, shape); }
+    if (x->is_local() && !(LazyMode::is_enabled())) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
