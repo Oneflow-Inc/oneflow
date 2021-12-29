@@ -47,7 +47,6 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     } else {
       std::cerr << "Unimplemented Error" << std::endl;
       UNIMPLEMENTED();
-      // throw Error::UnimplementedError();  // TODO: Remove throw Error.
     }
 
     const int ndim = out_tensor->shape().NumAxes();
