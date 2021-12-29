@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
@@ -2200,21 +2201,9 @@ class MaskedFillFunctor {
 
 class MeshgridFunctor {
  public:
-  Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+  Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
     CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
-    DimVector shape_vec(size);
-    for (int i = 0; i < size; ++i) {
-      CHECK_LE_OR_RETURN(tensors[i]->shape()->NumAxes(), 1)
-          << "Expected scalar or 1D tensor in the tensor list but got: "
-          << tensors[i]->shape()->NumAxes();
-      if (tensors[i]->shape()->NumAxes() == 0) {
-        shape_vec[i] = 1;
-      } else {
-        shape_vec[i] = tensors[i]->shape()->At(0);
-      }
-    }
-    Shape shape(shape_vec);
 
     for (int i = 0; i < size - 1; ++i) {
       CHECK_OR_RETURN(
@@ -2222,16 +2211,46 @@ class MeshgridFunctor {
           && (JUST(tensors[i]->device())->type() == JUST(tensors[i + 1]->device())->type()))
           << "meshgrid expects all tensors to have the same dtype and device";
     }
-    TensorTuple outputs(size);
-    for (int i = 0; i < size; ++i) {
-      DimVector view_shape_vec(size, 1);
-      view_shape_vec[i] = -1;
-      Shape view_shape(view_shape_vec);
-      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensors.at(i), view_shape));
-      outputs[i] = JUST(Expand(reshaped, shape));
+
+    std::vector<std::shared_ptr<Tensor>> tensor_consts(tensors.begin(), tensors.end());
+
+    bool swap_first_and_second_tensors = false;
+    if (indexing == "xy") {
+      swap_first_and_second_tensors = (size >= 2);
+      if (swap_first_and_second_tensors) { std::swap(tensor_consts[0], tensor_consts[1]); }
+    } else {
+      CHECK_EQ_OR_RETURN(indexing, "ij")
+          << "flow.meshgrid: indexing must be one of \"xy\" or \"ij\", "
+             "but received: ,"
+          << indexing;
     }
 
-    return outputs;
+    TensorTuple grids(size);
+    DimVector grids_vec(size);
+    for (int i = 0; i < size; ++i) {
+      CHECK_LE_OR_RETURN(tensor_consts[i]->shape()->NumAxes(), 1)
+          << "Expected scalar or 1D tensor in the tensor list but got: "
+          << tensor_consts[i]->shape()->NumAxes();
+      if (tensor_consts[i]->shape()->NumAxes() == 0) {
+        grids_vec[i] = 1;
+      } else {
+        grids_vec[i] = tensor_consts[i]->shape()->At(0);
+      }
+    }
+    Shape grids_shape(grids_vec);
+
+    DimVector view_shape_vec(size, 1);
+    Shape view_shape(view_shape_vec);
+    for (int i = 0; i < size; ++i) {
+      view_shape.Set(i, -1);
+      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensor_consts.at(i), view_shape));
+      grids[i] = JUST(Expand(reshaped, grids_shape));
+      view_shape.Set(i, 1);
+    }
+
+    if (swap_first_and_second_tensors) { std::swap(grids[0], grids[1]); }
+
+    return grids;
   }
 };
 
