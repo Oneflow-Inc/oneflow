@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var.h"
 
 namespace oneflow {
 
@@ -34,7 +35,9 @@ class SpinCounter final {
   ~SpinCounter() = default;
 
   explicit SpinCounter(int64_t cnt_val)
-      : cnt_val_(cnt_val), timeout_seconds_(5 * 60), heartbeat_interval_seconds_(3) {}
+      : cnt_val_(cnt_val),
+        timeout_seconds_(ThreadLocalEnvInteger<ONEFLOW_TIMEOUT_SECONDS>()),
+        heartbeat_interval_seconds_(3) {}
   SpinCounter(int64_t cnt_val, int64_t timeout_seconds, int64_t heartbeat_interval_seconds)
       : cnt_val_(cnt_val),
         timeout_seconds_(timeout_seconds),

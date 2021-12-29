@@ -19,6 +19,7 @@ limitations under the License.
 #include <atomic>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/env_var.h"
 #include "oneflow/core/framework/transport_token.h"
 
 namespace oneflow {
@@ -107,7 +108,7 @@ class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
 class RankGroup;
 
 struct TransportUtil final {
-  static int64_t TimeoutSeconds() { return 60 * 5; }
+  static int64_t TimeoutSeconds() { return ThreadLocalEnvInteger<ONEFLOW_TIMEOUT_SECONDS>(); }
   static int64_t BlockingWarningIntervalSeconds() { return 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);

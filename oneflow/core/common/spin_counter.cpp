@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <chrono>
+#include <thread>
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
@@ -34,6 +35,26 @@ Maybe<void> SpinCounter::SpinWait(
   return SpinWait(cnt, Callback, [] {});
 }
 
+namespace {
+
+Maybe<void> CheckTimeout(int64_t elapsed, int64_t seconds) {
+  CHECK_LT_OR_RETURN(elapsed, seconds)
+      << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckTimeoutAndSleep(int64_t elapsed, int64_t seconds) {
+  const auto& maybe = TRY(CheckTimeout(elapsed, seconds));
+  if (!maybe.IsOk()) {
+    // Wait for other ranks checking timeout.
+    std::this_thread::sleep_for(
+        std::chrono::seconds(ThreadLocalEnvInteger<ONEFLOW_CHECK_TIMEOUT_SLEEP_SECONDS>()));
+  }
+  return maybe;
+}
+
+}  // namespace
+
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
                                  const std::function<void()>& HeartbeatCallback,
                                  int64_t heartbeat_interval_seconds) {
@@ -48,8 +69,7 @@ Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t 
         time_last_heartbeat = end;
       }
       std::chrono::duration<double> elapsed_seconds = end - start;
-      CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-          << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
+      JUST(CheckTimeoutAndSleep(elapsed_seconds.count(), seconds));
     }
     return Maybe<void>::Ok();
   });
