@@ -90,11 +90,6 @@ class GraphSaveTestCase(flow.unittest.TestCase):
 
         for (op, op_) in zip(op_list, op_list_):
             self.assertTrue(op == op_)
-            # if op != op_:
-            #     print(op)
-            #     print("-" * 20)
-            #     print(op_)
-            #     self.assertTrue(False)
 
 
 if __name__ == "__main__":
