@@ -14,92 +14,91 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/*static*/ auto FusedScaleMaskSoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
+  CHECK_OR_RETURN(x_desc.shape() == mask_desc.shape());
+  *ctx->OutputShape("y", 0) = x_desc.shape();
+  *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
+  return Maybe<void>::Ok();
+}
+/*static*/ auto FusedScaleMaskSoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return FusedScaleMaskSoftmaxOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ auto FusedScaleMaskSoftmaxOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
+  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
+  *ctx->OutputDType("y", 0) = x_desc.data_type();
+  return Maybe<void>::Ok();
+}
+/*static*/ auto FusedScaleMaskSoftmaxOp::ModifyInputArg(
+    const user_op::GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&)
+    -> Maybe<void> {
+  user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
+  CHECK_OR_RETURN(mask_modifier != nullptr);
+  mask_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+/*static*/ auto FusedScaleMaskSoftmaxOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
+  FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), axis)
+        .Split(user_op::OpArg("mask", 0), axis)
+        .Split(user_op::OpArg("y", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("fused_scale_mask_softmax")
-    .Input("x")
-    .Input("mask")
-    .Output("y")
-    .Attr<float>("scale_value", 1.0)
-    .Attr<float>("mask_fill_value", 0.)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-      CHECK_OR_RETURN(x_desc.shape() == mask_desc.shape());
-      *ctx->OutputShape("y", 0) = x_desc.shape();
-      *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-      CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
-      *ctx->OutputDType("y", 0) = x_desc.data_type();
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
-      CHECK_OR_RETURN(mask_modifier != nullptr);
-      mask_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
-      FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("x", 0), axis)
-            .Split(user_op::OpArg("mask", 0), axis)
-            .Split(user_op::OpArg("y", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP("fused_scale_mask_softmax_grad")
-    .Input("y")
-    .Input("dy")
-    .Input("mask")
-    .Output("dx")
-    .Attr<float>("scale_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      const user_op::TensorDesc& y_desc = ctx->InputTensorDesc("y", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-      CHECK_EQ_OR_RETURN(dy_desc.shape(), y_desc.shape());
-      CHECK_OR_RETURN(y_desc.shape() == mask_desc.shape());
-      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      *dx_desc->mut_shape() = dy_desc.shape();
-      *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      const user_op::TensorDesc& y_desc = ctx->InputTensorDesc("y", 0);
-      const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-      CHECK_OR_RETURN(dy_desc.data_type() == y_desc.data_type());
-      CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
-      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      *dx_desc->mut_data_type() = dy_desc.data_type();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-      CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2);
-      FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("y", 0), axis)
-            .Split(user_op::OpArg("dy", 0), axis)
-            .Split(user_op::OpArg("mask", 0), axis)
-            .Split(user_op::OpArg("dx", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    });
+/*static*/ auto FusedScaleMaskSoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& y_desc = ctx->InputTensorDesc("y", 0);
+  const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), y_desc.shape());
+  CHECK_OR_RETURN(y_desc.shape() == mask_desc.shape());
+  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  *dx_desc->mut_shape() = dy_desc.shape();
+  *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
+  return Maybe<void>::Ok();
+}
+/*static*/ auto FusedScaleMaskSoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return FusedScaleMaskSoftmaxGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ auto FusedScaleMaskSoftmaxGradOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& y_desc = ctx->InputTensorDesc("y", 0);
+  const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
+  CHECK_OR_RETURN(dy_desc.data_type() == y_desc.data_type());
+  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
+  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  *dx_desc->mut_data_type() = dy_desc.data_type();
+  return Maybe<void>::Ok();
+}
+/*static*/ auto FusedScaleMaskSoftmaxGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+  CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2);
+  FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("y", 0), axis)
+        .Split(user_op::OpArg("dy", 0), axis)
+        .Split(user_op::OpArg("mask", 0), axis)
+        .Split(user_op::OpArg("dx", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("fused_scale_mask_softmax")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -118,7 +117,5 @@ REGISTER_USER_OP_GRAD("fused_scale_mask_softmax")
       }
       return Maybe<void>::Ok();
     });
-
-}  // namespace
 
 }  // namespace oneflow

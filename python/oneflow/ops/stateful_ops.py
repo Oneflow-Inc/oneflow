@@ -16,10 +16,9 @@ limitations under the License.
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.id_util as id_util
-from oneflow.framework.attr_util import convert_to_user_attr_value
 
 
-class BuiltinOp(object):
+class StatefulOp(object):
     def __init__(self, op_type_name, op_name=None):
         if op_name is None:
             op_name = id_util.UniqueStr(op_type_name)
@@ -64,31 +63,6 @@ class BuiltinOp(object):
         """
         assert isinstance(num, int) and num >= 1
         self._builder.output(output_name, num)
-        return self
-
-    def Attr(self, attr_name, attr_value, attr_type_name=None):
-        """Set value of op's attribute.
-
-        Args:
-            attr_name (str): attribute name of op
-            attr_value (Any): attribute value of op
-
-        Raises:
-            ValueError: raised when value is not idential to op's attribute type.
-
-        Returns:
-            [type]: [description]
-        """
-        if attr_type_name is not None:
-            print(
-                'WARNING: Argument \'attr_type_name\' of UserOpConfBuilder.Attr has been deprecated. Please remove it.\n\n            For instance:\n                -     .Attr("out_num", out_num, "AttrTypeInt64")\n                +     .Attr("out_num", out_num)\n                        '
-            )
-            print(traceback.format_stack()[-2])
-        assert self._op_type_name is not None
-        self._builder.attr(
-            attr_name,
-            convert_to_user_attr_value(self._op_type_name, attr_name, attr_value),
-        )
         return self
 
     def Build(self):
