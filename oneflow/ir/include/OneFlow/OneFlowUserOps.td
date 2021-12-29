@@ -3014,7 +3014,6 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceM
 def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy
-    // OneFlow_Tensor:$like
   );
   let output = (outs
     OneFlow_Tensor:$dx
