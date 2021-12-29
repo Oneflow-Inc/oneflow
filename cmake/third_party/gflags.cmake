@@ -1,8 +1,9 @@
 include (ExternalProject)
 
-set(gflags_URL https://github.com/gflags/gflags/archive/refs/tags/v2.2.2.tar.gz)
-use_mirror(VARIABLE gflags_URL URL ${gflags_URL})
-set(gflags_URL_HASH 1a865b93bacfa963201af3f75b7bd64c)
+set_mirror_url_with_hash(gflags_URL 
+    https://github.com/gflags/gflags/archive/refs/tags/v2.2.2.tar.gz
+    1a865b93bacfa963201af3f75b7bd64c
+)
 
 include(FetchContent)
 

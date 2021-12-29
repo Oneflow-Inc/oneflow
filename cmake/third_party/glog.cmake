@@ -1,8 +1,9 @@
 include (ExternalProject)
 
-set(glog_URL https://github.com/google/glog/archive/refs/tags/v0.5.0.tar.gz)
-use_mirror(VARIABLE glog_URL URL ${glog_URL})
-set(glog_URL_HASH 2368e3e0a95cce8b5b35a133271b480f)
+set_mirror_url_with_hash(glog_URL 
+  https://github.com/google/glog/archive/refs/tags/v0.5.0.tar.gz
+  2368e3e0a95cce8b5b35a133271b480f
+)
 
 include(FetchContent)
 
