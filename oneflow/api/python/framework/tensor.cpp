@@ -18,7 +18,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
@@ -201,7 +201,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
-          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
+          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
       .def("_get_copy_mirrored_tensor_to_numpy_func_name", &ApiGetCopyMirroredTensorToNumpyFuncName)
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",

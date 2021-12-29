@@ -19,7 +19,8 @@ import traceback
 from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
-from oneflow.framework.tensor import Tensor, TensorTuple
+import oneflow._oneflow_internal._C as _C
+from oneflow.framework.tensor import Tensor
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
@@ -56,8 +57,14 @@ class OFRecordReader(Module):
 
         if name is not None:
             print("WARNING: name has been deprecated and has NO effect.\n")
-
-        nd_sbp = []
+        self.ofrecord_dir = ofrecord_dir
+        self.batch_size = batch_size
+        self.data_part_num = data_part_num
+        self.part_name_prefix = part_name_prefix
+        self.part_name_suffix_length = part_name_suffix_length
+        self.random_shuffle = random_shuffle
+        self.shuffle_buffer_size = shuffle_buffer_size
+        self.shuffle_after_epoch = shuffle_after_epoch
 
         self.placement = placement
         if placement is None:
@@ -68,41 +75,49 @@ class OFRecordReader(Module):
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
-                nd_sbp.append(sbp._ToAttrStr())
                 sbp = (sbp,)
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    nd_sbp.append(elem._ToAttrStr())
-            assert len(nd_sbp) == len(placement.hierarchy)
+            assert len(sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
         self.sbp = sbp
 
-        (seed, has_seed) = mirrored_gen_random_seed(random_seed)
-        self._op = (
-            flow.builtin_op("OFRecordReader")
-            .Output("out")
-            .Attr("data_dir", ofrecord_dir)
-            .Attr("data_part_num", data_part_num)
-            .Attr("batch_size", batch_size)
-            .Attr("part_name_prefix", part_name_prefix)
-            .Attr("random_shuffle", random_shuffle)
-            .Attr("shuffle_buffer_size", shuffle_buffer_size)
-            .Attr("shuffle_after_epoch", shuffle_after_epoch)
-            .Attr("part_name_suffix_length", part_name_suffix_length)
-            .Attr("seed", seed)
-            .Attr("nd_sbp", nd_sbp)
-            .Build()
-        )
-        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
+        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        self._op = flow.stateful_op("OFRecordReader").Output("out").Build()
 
     def forward(self):
         if self.placement is not None:
-            res = self._op.apply(self.placement, self.sbp, self.attrs)[0]
+            res = _C.dispatch_ofrecord_reader(
+                self._op,
+                data_dir=self.ofrecord_dir,
+                data_part_num=self.data_part_num,
+                part_name_prefix=self.part_name_prefix,
+                part_name_suffix_length=self.part_name_suffix_length,
+                batch_size=self.batch_size,
+                shuffle_buffer_size=self.shuffle_buffer_size,
+                random_shuffle=self.random_shuffle,
+                shuffle_after_epoch=self.shuffle_after_epoch,
+                seed=self.seed,
+                sbp=self.sbp,
+                placement=self.placement,
+            )
         else:
-            res = self._op.apply(self.device, self.attrs)[0]
+            res = _C.dispatch_ofrecord_reader(
+                self._op,
+                data_dir=self.ofrecord_dir,
+                data_part_num=self.data_part_num,
+                part_name_prefix=self.part_name_prefix,
+                part_name_suffix_length=self.part_name_suffix_length,
+                batch_size=self.batch_size,
+                shuffle_buffer_size=self.shuffle_buffer_size,
+                random_shuffle=self.random_shuffle,
+                shuffle_after_epoch=self.shuffle_after_epoch,
+                seed=self.seed,
+                device=self.device,
+            )
         return res
 
 
@@ -124,20 +139,26 @@ class OFRecordRawDecoder(Module):
             )
         if name is not None:
             print("WARNING: name has been deprecated and has NO effect.\n")
+        self.blob_name = blob_name
+        self.shape = shape
+        self.dtype = dtype
+        self.dim1_varying_length = dim1_varying_length
+        self.truncate = truncate
+        self.auto_zero_padding = auto_zero_padding
         self._op = (
-            flow.builtin_op("ofrecord_raw_decoder")
-            .Input("in")
-            .Output("out")
-            .Attr("name", blob_name)
-            .Attr("shape", shape)
-            .Attr("data_type", dtype)
-            .Attr("dim1_varying_length", dim1_varying_length)
-            .Attr("truncate", truncate or auto_zero_padding)
-            .Build()
+            flow.stateful_op("ofrecord_raw_decoder").Input("in").Output("out").Build()
         )
 
     def forward(self, input):
-        res = self._op(input)[0]
+        res = _C.dispatch_ofrecord_raw_decoder(
+            self._op,
+            input,
+            name=self.blob_name,
+            shape=self.shape,
+            data_type=self.dtype,
+            dim1_varying_length=self.dim1_varying_length,
+            truncate=self.truncate or self.auto_zero_padding,
+        )
         return res
 
 
@@ -152,7 +173,8 @@ class CoinFlip(Module):
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
-        nd_sbp = []
+        self.batch_size = batch_size
+        self.probability = probability
 
         self.placement = placement
         if placement is None:
@@ -164,37 +186,40 @@ class CoinFlip(Module):
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
-                nd_sbp.append(sbp._ToAttrStr())
                 sbp = (sbp,)
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    nd_sbp.append(elem._ToAttrStr())
-            assert len(nd_sbp) == len(placement.hierarchy)
+            assert len(sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
         self.sbp = sbp
 
-        (seed, has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
 
-        self._op = (
-            flow.builtin_op("coin_flip")
-            .Output("out")
-            .Attr("batch_size", batch_size)
-            .Attr("probability", probability)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .Attr("nd_sbp", nd_sbp)
-            .Build()
-        )
-        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
+        self._op = flow.stateful_op("coin_flip").Output("out").Build()
 
     def forward(self):
         if self.placement is not None:
-            res = self._op.apply(self.placement, self.sbp, self.attrs)[0]
+            res = _C.dispatch_coin_flip(
+                self._op,
+                batch_size=self.batch_size,
+                probability=self.probability,
+                has_seed=self.has_seed,
+                seed=self.seed,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
         else:
-            res = self._op.apply(self.device, self.attrs)[0]
+            res = _C.dispatch_coin_flip(
+                self._op,
+                batch_size=self.batch_size,
+                probability=self.probability,
+                has_seed=self.has_seed,
+                seed=self.seed,
+                device=self.device,
+            )
         return res
 
 
@@ -212,93 +237,109 @@ class CropMirrorNormalize(Module):
         output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
+        self.color_space = color_space
+        self.output_layout = output_layout
+        self.mean = mean
+        self.std = std
+        self.crop_h = crop_h
+        self.crop_w = crop_w
+        self.crop_pos_y = crop_pos_y
+        self.crop_pos_x = crop_pos_x
+        self.output_dtype = output_dtype
+
         self._op_uint8_with_mirror = (
-            flow.builtin_op("crop_mirror_normalize_from_uint8")
+            flow.stateful_op("crop_mirror_normalize_from_uint8")
             .Input("in")
             .Input("mirror")
             .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("output_layout", output_layout)
-            .Attr("mean", mean)
-            .Attr("std", std)
-            .Attr("crop_h", crop_h)
-            .Attr("crop_w", crop_w)
-            .Attr("crop_pos_y", crop_pos_y)
-            .Attr("crop_pos_x", crop_pos_x)
-            .Attr("output_dtype", output_dtype)
             .Build()
         )
         self._op_uint8_no_mirror = (
-            flow.builtin_op("crop_mirror_normalize_from_uint8")
+            flow.stateful_op("crop_mirror_normalize_from_uint8")
             .Input("in")
             .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("output_layout", output_layout)
-            .Attr("mean", mean)
-            .Attr("std", std)
-            .Attr("crop_h", crop_h)
-            .Attr("crop_w", crop_w)
-            .Attr("crop_pos_y", crop_pos_y)
-            .Attr("crop_pos_x", crop_pos_x)
-            .Attr("output_dtype", output_dtype)
             .Build()
         )
         self._op_buffer_with_mirror = (
-            flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
+            flow.stateful_op("crop_mirror_normalize_from_tensorbuffer")
             .Input("in")
             .Input("mirror")
             .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("output_layout", output_layout)
-            .Attr("mean", mean)
-            .Attr("std", std)
-            .Attr("crop_h", crop_h)
-            .Attr("crop_w", crop_w)
-            .Attr("crop_pos_y", crop_pos_y)
-            .Attr("crop_pos_x", crop_pos_x)
-            .Attr("output_dtype", output_dtype)
             .Build()
         )
 
         self._op_buffer_no_mirror = (
-            flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
+            flow.stateful_op("crop_mirror_normalize_from_tensorbuffer")
             .Input("in")
             .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("output_layout", output_layout)
-            .Attr("mean", mean)
-            .Attr("std", std)
-            .Attr("crop_h", crop_h)
-            .Attr("crop_w", crop_w)
-            .Attr("crop_pos_y", crop_pos_y)
-            .Attr("crop_pos_x", crop_pos_x)
-            .Attr("output_dtype", output_dtype)
             .Build()
         )
 
     def forward(self, input, mirror=None):
-        if mirror is not None:
-            if input.dtype is flow.uint8:
-                res = self._op_uint8_with_mirror(input, mirror)[0]
-            elif input.dtype is flow.tensor_buffer:
-                res = self._op_buffer_with_mirror(input, mirror)[0]
-            else:
-                print(
-                    "ERROR! oneflow.nn.CropMirrorNormalize module NOT support input dtype = ",
-                    input.dtype,
+        if input.dtype is flow.uint8:
+            if mirror is not None:
+                res = _C.dispatch_crop_mirror_normalize_from_uint8(
+                    self._op_uint8_with_mirror,
+                    (input, mirror),
+                    color_space=self.color_space,
+                    output_layout=self.output_layout,
+                    mean=self.mean,
+                    std=self.std,
+                    crop_h=self.crop_h,
+                    crop_w=self.crop_w,
+                    crop_pos_x=self.crop_pos_x,
+                    crop_pos_y=self.crop_pos_y,
+                    output_dtype=self.output_dtype,
                 )
-                raise NotImplementedError
+            else:
+                res = _C.dispatch_crop_mirror_normalize_from_uint8(
+                    self._op_uint8_no_mirror,
+                    (input,),
+                    color_space=self.color_space,
+                    output_layout=self.output_layout,
+                    mean=self.mean,
+                    std=self.std,
+                    crop_h=self.crop_h,
+                    crop_w=self.crop_w,
+                    crop_pos_x=self.crop_pos_x,
+                    crop_pos_y=self.crop_pos_y,
+                    output_dtype=self.output_dtype,
+                )
+        elif input.dtype is flow.tensor_buffer:
+            if mirror is not None:
+                res = _C.dispatch_crop_mirror_normalize_from_tensorbuffer(
+                    self._op_buffer_with_mirror,
+                    (input, mirror),
+                    color_space=self.color_space,
+                    output_layout=self.output_layout,
+                    mean=self.mean,
+                    std=self.std,
+                    crop_h=self.crop_h,
+                    crop_w=self.crop_w,
+                    crop_pos_x=self.crop_pos_x,
+                    crop_pos_y=self.crop_pos_y,
+                    output_dtype=self.output_dtype,
+                )
+            else:
+                res = _C.dispatch_crop_mirror_normalize_from_tensorbuffer(
+                    self._op_buffer_no_mirror,
+                    (input,),
+                    color_space=self.color_space,
+                    output_layout=self.output_layout,
+                    mean=self.mean,
+                    std=self.std,
+                    crop_h=self.crop_h,
+                    crop_w=self.crop_w,
+                    crop_pos_x=self.crop_pos_x,
+                    crop_pos_y=self.crop_pos_y,
+                    output_dtype=self.output_dtype,
+                )
         else:
-            if input.dtype is flow.uint8:
-                res = self._op_uint8_no_mirror(input)[0]
-            elif input.dtype is flow.tensor_buffer:
-                res = self._op_buffer_no_mirror(input)[0]
-            else:
-                print(
-                    "ERROR! oneflow.nn.CropMirrorNormalize module NOT support input dtype = ",
-                    input.dtype,
-                )
-                raise NotImplementedError
+            print(
+                "ERROR! oneflow.nn.CropMirrorNormalize module NOT support input dtype = ",
+                input.dtype,
+            )
+            raise NotImplementedError
         return res
 
 
@@ -313,23 +354,31 @@ class OFRecordImageDecoderRandomCrop(Module):
         random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
     ):
         super().__init__()
-        (seed, has_seed) = mirrored_gen_random_seed(random_seed)
+        self.blob_name = blob_name
+        self.color_space = color_space
+        self.num_attempts = num_attempts
+        self.random_area = random_area
+        self.random_aspect_ratio = random_aspect_ratio
+        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
         self._op = (
-            flow.builtin_op("ofrecord_image_decoder_random_crop")
+            flow.stateful_op("ofrecord_image_decoder_random_crop")
             .Input("in")
             .Output("out")
-            .Attr("name", blob_name)
-            .Attr("color_space", color_space)
-            .Attr("num_attempts", num_attempts)
-            .Attr("random_area", random_area)
-            .Attr("random_aspect_ratio", random_aspect_ratio)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
             .Build()
         )
 
     def forward(self, input):
-        res = self._op(input)[0]
+        res = _C.dispatch_ofrecord_image_decoder_random_crop(
+            self._op,
+            input,
+            name=self.blob_name,
+            color_space=self.color_space,
+            num_attempts=self.num_attempts,
+            random_area=self.random_area,
+            random_aspect_ratio=self.random_aspect_ratio,
+            has_seed=self.has_seed,
+            seed=self.seed,
+        )
         return res
 
 
@@ -337,16 +386,15 @@ class OFRecordImageDecoder(Module):
     def __init__(self, blob_name: str, color_space: str = "BGR"):
         super().__init__()
         self._op = (
-            flow.builtin_op("ofrecord_image_decoder")
-            .Input("in")
-            .Output("out")
-            .Attr("name", blob_name)
-            .Attr("color_space", color_space)
-            .Build()
+            flow.stateful_op("ofrecord_image_decoder").Input("in").Output("out").Build()
         )
+        self.blob_name = blob_name
+        self.color_space = color_space
 
     def forward(self, input):
-        res = self._op(input)[0]
+        res = _C.dispatch_ofrecord_image_decoder(
+            self._op, input, name=self.blob_name, color_space=self.color_space
+        )
         return res
 
 
@@ -355,45 +403,34 @@ class OFRecordImageGpuDecoderRandomCropResize(Module):
         self,
         target_width: int,
         target_height: int,
-        num_attempts: Optional[int] = None,
-        seed: Optional[int] = None,
-        random_area: Optional[Sequence[float]] = None,
-        random_aspect_ratio: Optional[Sequence[float]] = None,
-        num_workers: Optional[int] = None,
-        warmup_size: Optional[int] = None,
-        max_num_pixels: Optional[int] = None,
+        num_attempts: Optional[int] = 10,
+        seed: Optional[int] = 0,
+        random_area: Optional[Sequence[float]] = [0.08, 1.0],
+        random_aspect_ratio: Optional[Sequence[float]] = [0.75, 1.333333],
+        num_workers: Optional[int] = 3,
+        warmup_size: Optional[int] = 6400,
+        max_num_pixels: Optional[int] = 67108864,
     ):
         super().__init__()
+        self.target_width = target_width
+        self.target_height = target_height
+        self.num_attempts = num_attempts
+        self.seed = seed
+        assert len(random_area) == 2
+        self.random_area = random_area
+        assert len(random_aspect_ratio) == 2
+        self.random_aspect_ratio = random_aspect_ratio
+        self.num_workers = num_workers
+        self.warmup_size = warmup_size
+        self.max_num_pixels = max_num_pixels
         gpu_decoder_conf = (
             flow._oneflow_internal.oneflow.core.operator.op_conf.ImageDecoderRandomCropResizeOpConf()
         )
         gpu_decoder_conf.set_in("error_input_need_to_be_replaced")
         gpu_decoder_conf.set_out("out")
-        gpu_decoder_conf.set_target_width(target_width)
-        gpu_decoder_conf.set_target_height(target_height)
-        if num_attempts is not None:
-            gpu_decoder_conf.set_num_attempts(num_attempts)
-        if seed is not None:
-            gpu_decoder_conf.set_seed(seed)
-        if random_area is not None:
-            assert len(random_area) == 2
-            gpu_decoder_conf.set_random_area_min(random_area[0])
-            gpu_decoder_conf.set_random_area_max(random_area[1])
-        if random_aspect_ratio is not None:
-            assert len(random_aspect_ratio) == 2
-            gpu_decoder_conf.set_random_aspect_ratio_min(random_aspect_ratio[0])
-            gpu_decoder_conf.set_random_aspect_ratio_max(random_aspect_ratio[1])
-        if num_workers is not None:
-            gpu_decoder_conf.set_num_workers(num_workers)
-        if warmup_size is not None:
-            gpu_decoder_conf.set_warmup_size(warmup_size)
-        if max_num_pixels is not None:
-            gpu_decoder_conf.set_max_num_pixels(max_num_pixels)
-
         self._op = flow._oneflow_internal.one.ImageDecoderRandomCropResizeOpExpr(
             id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf, ["in"], ["out"]
         )
-        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self, input):
         if not input.is_lazy:
@@ -402,7 +439,21 @@ class OFRecordImageGpuDecoderRandomCropResize(Module):
                 "NOT support run as eager module, please use it in nn.Graph.",
             )
             raise NotImplementedError
-        res = self._op.apply([input], self.attrs)[0]
+        res = _C.dispatch_image_decoder_random_crop_resize(
+            self._op,
+            input,
+            target_width=self.target_width,
+            target_height=self.target_height,
+            num_attempts=self.num_attempts,
+            seed=self.seed,
+            random_area_min=self.random_area[0],
+            random_area_max=self.random_area[1],
+            random_aspect_ratio_min=self.random_aspect_ratio[0],
+            random_aspect_ratio_max=self.random_aspect_ratio[1],
+            num_workers=self.num_workers,
+            warmup_size=self.warmup_size,
+            max_num_pixels=self.max_num_pixels,
+        )
         if not res.is_cuda:
             print(
                 "WARNING! oneflow.nn.OFRecordImageGpuDecoderRandomCropResize ONLY support ",
@@ -417,17 +468,23 @@ class TensorBufferToListOfTensors(Module):
     ):
         super().__init__()
         self._op = (
-            flow.builtin_op("tensor_buffer_to_list_of_tensors_v2")
+            flow.stateful_op("tensor_buffer_to_list_of_tensors_v2")
             .Input("in")
             .Output("out", out_num)
-            .Attr("out_shapes", out_shapes)
-            .Attr("out_dtypes", out_dtypes)
-            .Attr("dynamic_out", dynamic_out)
             .Build()
         )
+        self.out_shapes = out_shapes
+        self.out_dtypes = out_dtypes
+        self.dynamic_out = dynamic_out
 
     def forward(self, input):
-        return self._op(input)
+        return _C.dispatch_tensor_buffer_to_list_of_tensors_v2(
+            self._op,
+            input,
+            out_shapes=self.out_shapes,
+            out_dtypes=self.out_dtypes,
+            dynamic_out=self.dynamic_out,
+        )
 
 
 def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
@@ -471,6 +528,7 @@ class ImageResize(Module):
                 channels = 1
             else:
                 raise ValueError("invalid color_space")
+        self.channels = channels
         if interp_type is not None:
             print(
                 "WARNING: interp_type has been deprecated. Please use interpolation_type instead."
@@ -486,6 +544,8 @@ class ImageResize(Module):
                 interpolation_type = "bicubic"
             else:
                 raise ValueError("invalid interp_type")
+        self.interpolation_type = interpolation_type
+
         if resize_x > 0 and resize_y > 0:
             print(
                 "WARNING: resize_x and resize_y has been deprecated. Please use target_size instead."
@@ -503,7 +563,8 @@ class ImageResize(Module):
             target_size = resize_shorter
             keep_aspect_ratio = True
             resize_side = "shorter"
-        if keep_aspect_ratio:
+        self.keep_aspect_ratio = keep_aspect_ratio
+        if self.keep_aspect_ratio:
             if not isinstance(target_size, int):
                 raise ValueError(
                     "target_size must be an int when keep_aspect_ratio is True"
@@ -518,17 +579,16 @@ class ImageResize(Module):
                 resize_longer = True
             else:
                 raise ValueError('resize_side must be "shorter" or "longer"')
+            self.target_size = target_size
+            self.min_size = min_size
+            self.max_size = max_size
+            self.resize_longer = resize_longer
             self._op = (
-                flow.builtin_op("image_resize_keep_aspect_ratio")
+                flow.stateful_op("image_resize_keep_aspect_ratio")
                 .Input("in")
                 .Output("out")
                 .Output("size")
                 .Output("scale")
-                .Attr("target_size", target_size)
-                .Attr("min_size", min_size)
-                .Attr("max_size", max_size)
-                .Attr("resize_longer", resize_longer)
-                .Attr("interpolation_type", interpolation_type)
                 .Build()
             )
         else:
@@ -542,24 +602,27 @@ class ImageResize(Module):
                 )
             if dtype is None:
                 dtype = flow.uint8
-            (target_w, target_h) = target_size
+            self.dtype = dtype
+            (self.target_w, self.target_h) = target_size
             self._op = (
-                flow.builtin_op("image_resize_to_fixed")
+                flow.stateful_op("image_resize_to_fixed")
                 .Input("in")
                 .Output("out")
                 .Output("scale")
-                .Attr("target_width", target_w)
-                .Attr("target_height", target_h)
-                .Attr("channels", channels)
-                .Attr("data_type", dtype)
-                .Attr("interpolation_type", interpolation_type)
                 .Build()
             )
 
     def forward(self, input):
-        res = self._op(input)
-        res_image = res[0]
-        if len(res) == 3:
+        if self.keep_aspect_ratio:
+            res = _C.dispatch_image_resize_keep_aspect_ratio(
+                self._op,
+                input,
+                target_size=self.target_size,
+                min_size=self.min_size,
+                max_size=self.max_size,
+                resize_longer=self.resize_longer,
+                interpolation_type=self.interpolation_type,
+            )
             new_size = flow.tensor_buffer_to_tensor(
                 res[1], dtype=flow.int32, instance_shape=(2,)
             )
@@ -567,8 +630,18 @@ class ImageResize(Module):
                 res[2], dtype=flow.float32, instance_shape=(2,)
             )
         else:
+            res = _C.dispatch_image_resize_to_fixed(
+                self._op,
+                input,
+                target_width=self.target_w,
+                target_height=self.target_h,
+                channels=self.channels,
+                data_type=self.dtype,
+                interpolation_type=self.interpolation_type,
+            )
             new_size = None
             scale = res[1]
+        res_image = res[0]
         return (res_image, scale, new_size)
 
 
@@ -681,33 +754,27 @@ class ImageFlip(Module):
 class ImageDecode(Module):
     def __init__(self, dtype: flow.dtype = flow.uint8, color_space: str = "BGR"):
         super().__init__()
-        self._op = (
-            flow.builtin_op("image_decode")
-            .Input("in")
-            .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("data_type", dtype)
-            .Build()
-        )
+        self.color_space = color_space
+        self.dtype = dtype
+        self._op = flow.stateful_op("image_decode").Input("in").Output("out").Build()
 
     def forward(self, input):
-        return self._op(input)[0]
+        return _C.dispatch_image_decode(
+            self._op, input, color_space=self.color_space, data_type=self.dtype
+        )
 
 
 class ImageNormalize(Module):
     def __init__(self, std: Sequence[float], mean: Sequence[float]):
         super().__init__()
-        self._op = (
-            flow.builtin_op("image_normalize")
-            .Input("in")
-            .Output("out")
-            .Attr("std", std)
-            .Attr("mean", mean)
-            .Build()
-        )
+        self.std = std
+        self.mean = mean
+        self._op = flow.stateful_op("image_normalize").Input("in").Output("out").Build()
 
     def forward(self, input):
-        return self._op(input)[0]
+        return _C.dispatch_image_normalize(
+            self._op, input, mean=self.mean, std=self.std
+        )
 
 
 class COCOReader(Module):
@@ -726,10 +793,17 @@ class COCOReader(Module):
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
+        self.annotation_file = annotation_file
+        self.image_dir = image_dir
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.group_by_aspect_ratio = group_by_aspect_ratio
+        self.remove_images_without_annotations = remove_images_without_annotations
+        self.stride_partition = stride_partition
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
+        self.random_seed = random_seed
 
-        nd_sbp = []
         self.placement = placement
         if placement is None:
             self.device = device or flow.device("cpu")
@@ -743,21 +817,19 @@ class COCOReader(Module):
                 for sbp_item in sbp:
                     if not isinstance(sbp_item, flow.sbp.sbp):
                         raise ValueError(f"invalid sbp item: {sbp_item}")
-                    nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
-                nd_sbp.append(sbp._ToAttrStr())
                 sbp = (sbp,)
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
-            if len(nd_sbp) != len(placement.hierarchy):
+            if len(sbp) != len(placement.hierarchy):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
         self.sbp = sbp
 
         self._op = (
-            flow.builtin_op("COCOReader")
+            flow.stateful_op("COCOReader")
             .Output("image")
             .Output("image_id")
             .Output("image_size")
@@ -765,53 +837,63 @@ class COCOReader(Module):
             .Output("gt_label")
             .Output("gt_segm")
             .Output("gt_segm_index")
-            .Attr("session_id", flow.current_scope().session_id)
-            .Attr("annotation_file", annotation_file)
-            .Attr("image_dir", image_dir)
-            .Attr("batch_size", batch_size)
-            .Attr("shuffle_after_epoch", shuffle)
-            .Attr("random_seed", random_seed)
-            .Attr("group_by_ratio", group_by_aspect_ratio)
-            .Attr(
-                "remove_images_without_annotations", remove_images_without_annotations
-            )
-            .Attr("stride_partition", stride_partition)
-            .Attr("nd_sbp", nd_sbp)
             .Build()
         )
-        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
         if self.placement is None:
             # local apply
-            outputs = self._op.apply(self.device, self.attrs)
+            outputs = _C.dispatch_coco_reader(
+                self._op,
+                session_id=flow.current_scope().session_id,
+                annotation_file=self.annotation_file,
+                image_dir=self.image_dir,
+                batch_size=self.batch_size,
+                shuffle_after_epoch=self.shuffle,
+                random_seed=self.random_seed,
+                group_by_ratio=self.group_by_aspect_ratio,
+                remove_images_without_annotations=self.remove_images_without_annotations,
+                stride_partition=self.stride_partition,
+                device=self.device,
+            )
         else:
             # consistent apply
-            outputs = self._op.apply(self.placement, self.sbp, self.attrs)
-
-        # COCOReader has multiple output, so it return a TensorTuple
-        # convert TensorTuple to tuple of Tensor
-        assert isinstance(outputs, TensorTuple)
-        ret = tuple(out for out in outputs)
-        return ret
+            outputs = _C.dispatch_coco_reader(
+                self._op,
+                session_id=flow.current_scope().session_id,
+                annotation_file=self.annotation_file,
+                image_dir=self.image_dir,
+                batch_size=self.batch_size,
+                shuffle_after_epoch=self.shuffle,
+                random_seed=self.random_seed,
+                group_by_ratio=self.group_by_aspect_ratio,
+                remove_images_without_annotations=self.remove_images_without_annotations,
+                stride_partition=self.stride_partition,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
+        return outputs
 
 
 class ImageBatchAlign(Module):
     def __init__(self, shape: Sequence[int], dtype: flow.dtype, alignment: int):
         super().__init__()
         self._op = (
-            flow.builtin_op("image_batch_align")
-            .Input("in")
-            .Output("out")
-            .Attr("shape", shape)
-            .Attr("data_type", dtype)
-            .Attr("alignment", alignment)
-            .Attr("dynamic_out", False)
-            .Build()
+            flow.stateful_op("image_batch_align").Input("in").Output("out").Build()
         )
+        self.shape = shape
+        self.dtype = dtype
+        self.alignment = alignment
 
     def forward(self, input):
-        return self._op(input)[0]
+        return _C.dispatch_image_batch_align(
+            self._op,
+            input,
+            shape=self.shape,
+            data_type=self.dtype,
+            alignment=self.alignment,
+            dynamic_out=False,
+        )
 
 
 class OFRecordBytesDecoder(Module):
@@ -866,15 +948,12 @@ class OFRecordBytesDecoder(Module):
         if name is not None:
             print("WARNING: name has been deprecated and has NO effect.\n")
         self._op = (
-            flow.builtin_op("ofrecord_bytes_decoder")
-            .Input("in")
-            .Output("out")
-            .Attr("name", blob_name)
-            .Build()
+            flow.stateful_op("ofrecord_bytes_decoder").Input("in").Output("out").Build()
         )
+        self.blob_name = blob_name
 
     def forward(self, input):
-        return self._op(input)[0]
+        return _C.dispatch_ofrecord_bytes_decoder(self._op, input, name=self.blob_name)
 
 
 class GPTIndexedBinDataReader(Module):
@@ -895,7 +974,12 @@ class GPTIndexedBinDataReader(Module):
     ):
         super().__init__()
 
-        nd_sbp = []
+        self.data_file_prefix = data_file_prefix
+        self.seq_length = seq_length
+        self.num_samples = num_samples
+        self.batch_size = batch_size
+        self.dtype = dtype
+        self.shuffle = shuffle
         self.placement = placement
         if placement is None:
             self.device = device or flow.device("cpu")
@@ -909,14 +993,12 @@ class GPTIndexedBinDataReader(Module):
                 for sbp_item in sbp:
                     if not isinstance(sbp_item, flow.sbp.sbp):
                         raise ValueError(f"invalid sbp item: {sbp_item}")
-                    nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
-                nd_sbp.append(sbp._ToAttrStr())
                 sbp = (sbp,)
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
-            if len(nd_sbp) != len(placement.hierarchy):
+            if len(sbp) != len(placement.hierarchy):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
@@ -924,12 +1006,15 @@ class GPTIndexedBinDataReader(Module):
 
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
+        self.random_seed = random_seed
 
         if split_index is None:
             split_index = 0
+        self.split_index = split_index
 
         if split_sizes is None:
             split_sizes = (1,)
+        self.split_sizes = split_sizes
 
         if split_index >= len(split_sizes):
             raise ValueError(
@@ -938,29 +1023,42 @@ class GPTIndexedBinDataReader(Module):
                 )
             )
 
-        op_builder = (
-            flow.builtin_op("megatron_gpt_mmap_data_loader")
-            .Output("out")
-            .Attr("data_file_prefix", data_file_prefix)
-            .Attr("seq_length", seq_length)
-            .Attr("label_length", 1)
-            .Attr("num_samples", num_samples)
-            .Attr("batch_size", batch_size)
-            .Attr("dtype", dtype)
-            .Attr("shuffle", shuffle)
-            .Attr("random_seed", random_seed)
-            .Attr("split_sizes", split_sizes)
-            .Attr("split_index", split_index)
-            .Attr("nd_sbp", nd_sbp)
+        self.op_ = (
+            flow.stateful_op("megatron_gpt_mmap_data_loader").Output("out").Build()
         )
-        self.op_ = op_builder.Build()
-        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
         if self.placement is None:
-            output = self.op_.apply(self.device, self.attrs)[0]
+            output = _C.dispatch_megatron_gpt_mmap_data_loader(
+                self.op_,
+                data_file_prefix=self.data_file_prefix,
+                seq_length=self.seq_length,
+                label_length=1,
+                num_samples=self.num_samples,
+                batch_size=self.batch_size,
+                dtype=self.dtype,
+                shuffle=self.shuffle,
+                random_seed=self.random_seed,
+                split_sizes=self.split_sizes,
+                split_index=self.split_index,
+                device=self.device,
+            )
         else:
-            output = self.op_.apply(self.placement, self.sbp, self.attrs)[0]
+            output = _C.dispatch_megatron_gpt_mmap_data_loader(
+                self.op_,
+                data_file_prefix=self.data_file_prefix,
+                seq_length=self.seq_length,
+                label_length=1,
+                num_samples=self.num_samples,
+                batch_size=self.batch_size,
+                dtype=self.dtype,
+                shuffle=self.shuffle,
+                random_seed=self.random_seed,
+                split_sizes=self.split_sizes,
+                split_index=self.split_index,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
         return output
 
 

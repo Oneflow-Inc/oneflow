@@ -29,10 +29,15 @@ struct XpuNdarrayAssign<
     device_type, T,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  template<int NDIMS>
+  template<int NDIMS, typename X>
   static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
-                     const XpuReducedNdarray<T, NDIMS>& reduced) {
-    NdarrayAssignCoreWrapper<device_type, T, NDIMS>::Assign(stream, y, reduced);
+                     const XpuReducedNdarray<X, NDIMS>& reduced) {
+    NdarrayAssignCoreWrapper<device_type, T, X, NDIMS>::Assign(stream, y, reduced);
+  }
+  template<int NDIMS, typename X>
+  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                     const XpuVarNdarray<const X>& x) {
+    NdarrayAssignCoreWrapper<device_type, T, X, NDIMS>::Assign(stream, y, x);
   }
   static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
                      const XpuVarNdarray<const T>& x) {

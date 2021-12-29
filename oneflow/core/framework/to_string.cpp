@@ -16,26 +16,26 @@ limitations under the License.
 #include <map>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/framework/device_registry_manager.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type) {
-  auto device_type_to_tag = DeviceRegistryMgr::Get().DeviceType4Tag();
-  auto it = device_type_to_tag.find(device_type);
-  if (it == device_type_to_tag.end()) {
+  auto device_tag = ep::DeviceManagerRegistry::GetDeviceTypeNameByDeviceType(device_type);
+  if (device_tag.empty()) {
     return Error::DeviceTagNotFoundError() << "invalid_device";
   } else {
-    return it->second;
+    return device_tag;
   }
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  auto device_tag_to_type = DeviceRegistryMgr::Get().DeviceTag4Type();
-  if (device_tag_to_type.find(device_tag) == device_tag_to_type.end()) {
+  auto device_type = ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_tag);
+  if (device_type == DeviceType::kInvalidDevice) {
     return Error::DeviceTagNotFoundError() << "device tag `" << device_tag << "' not found";
+  } else {
+    return device_type;
   }
-  return device_tag_to_type[device_tag];
 }
 
 }  // namespace oneflow

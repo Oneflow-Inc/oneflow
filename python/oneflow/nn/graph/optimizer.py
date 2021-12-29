@@ -14,29 +14,56 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 
 class OptDict(object):
-    def __init__(
-        self, opt_dict,
-    ):
-        assert isinstance(opt_dict, dict), "opt dict must be a dict"
-        assert "optim" in opt_dict, "opt dict must has an optimizer"
-        self._optimizer = opt_dict["optim"]
-        assert isinstance(opt_dict["optim"], Optimizer)
+    def __init__(self, opt_dict):
+        if not isinstance(opt_dict, dict):
+            raise ValueError("opt_dict is not a dict")
+
+        if "optim" in opt_dict:
+            if isinstance(opt_dict["optim"], Optimizer):
+                self._optimizer = opt_dict["optim"]
+                self._is_sparse = False
+            elif isinstance(opt_dict["optim"], SparseOptimizer):
+                self._optimizer = opt_dict["optim"]._nested_optim
+                self._is_sparse = True
+            else:
+                raise ValueError(
+                    'opt_dict["optim"] is not an instance of Optimizer or SparseOptimizer.'
+                )
+        else:
+            raise ValueError("Key 'optim' doesn't exist in opt_dict.")
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
-            assert isinstance(opt_dict["lr_sch"], LrScheduler)
-            self._lr_scheduler = opt_dict["lr_sch"]
-            assert (
-                self._lr_scheduler._optimizer is self._optimizer
-            ), "lr_scheduler's optimizer must be the same optimizer in the opt dict."
+            if not isinstance(opt_dict["lr_sch"], LrScheduler):
+                raise ValueError(
+                    'opt_dict["lr_sch"] is not an instance of LrScheduler.'
+                )
 
-    def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
+            if opt_dict["lr_sch"]._optimizer is not self._optimizer:
+                raise ValueError("lr_scheduler doesn't match optimizer.")
+
+            self._lr_scheduler = opt_dict["lr_sch"]
+
+    def generate_optimizer_and_variable_configs(self, job_conf, vars_conf):
+        train_conf = job_conf.mutable_train_conf()
+
         if self._optimizer is not None:
+            # Check first
+            self._optimizer._check_variables_in_graph(vars_conf)
+            self._optimizer._check_variables_optimizer_bound(vars_conf)
+
             opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
+
+            if self._is_sparse:
+                self._optimizer._generate_indexed_slices_optimizer_conf(
+                    job_conf, vars_conf
+                )
+
         if self._lr_scheduler is not None:
             self._lr_scheduler._generate_conf_for_graph(opt_confs)
 
@@ -46,6 +73,7 @@ class VariableConfig(object):
         assert name != ""
         self._name = name
         self._l2 = 0.0
+        self._bound_opt = None
 
     @property
     def name(self):
@@ -58,6 +86,14 @@ class VariableConfig(object):
     @l2.setter
     def l2(self, l2: float = 0.0):
         self._l2 = l2
+
+    @property
+    def bound_optimizer(self):
+        return self._bound_opt
+
+    @bound_optimizer.setter
+    def bound_optimizer(self, opt):
+        self._bound_opt = opt
 
     def __repr__(self):
         return "(variable name: " + self._name + "):(l2: " + str(self._l2) + ".)"

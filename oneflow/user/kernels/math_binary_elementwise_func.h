@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/user/ops/math_binary_elementwise_seq.h"
+#include "oneflow/core/device/cuda_pseudo_half.h"
 
 #if defined(__CUDACC__)
 

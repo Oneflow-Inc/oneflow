@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -30,17 +31,6 @@ namespace functional {
 
 namespace {
 
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
-
 int64_t CountSpecifiedDims(const TensorIndex& index) {
   int64_t specified_ndims = 0;
   for (int i = 0; i < index.size(); ++i) {
@@ -50,7 +40,7 @@ int64_t CountSpecifiedDims(const TensorIndex& index) {
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
       if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
-        specified_ndims += tensor->shape()->NumAxes();
+        specified_ndims += tensor->ndim();
       } else {
         specified_ndims++;
       }
@@ -81,7 +71,7 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   });
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
-  for (int i = 0; i < index->shape()->NumAxes(); ++i) {
+  for (int i = 0; i < index->ndim(); ++i) {
     auto item = JUST(functional::Slice(res->at(0), {0, i}, {size, i + 1}, {1, 1}));
     item = JUST(functional::Reshape(item, {size}));
     indices->emplace_back(item);
@@ -132,14 +122,14 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
   return expanded_indices;
 }
 
-Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
+Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
   int token = 0;
   for (int i = 0; i < indices.size(); ++i) {
     if (indices.at(i) && !token) {
       token = 1;
     } else if (indices.at(i) && token) {
       if (token != 1) { return false; }
-    } else if (!token) {
+    } else if (token) {
       token += 1;
     }
   }
@@ -149,14 +139,14 @@ Maybe<bool> IsContinuosSubspace(const TensorTuple& indices) {
 Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
                            std::shared_ptr<Tensor>* output, TensorTuple* valid_indices) {
   std::vector<int> permute;
-  permute.reserve(input->shape()->NumAxes());
-  for (int i = 0; i < input->shape()->NumAxes(); ++i) {
+  permute.reserve(input->ndim());
+  for (int i = 0; i < input->ndim(); ++i) {
     if (i < indices.size() && indices.at(i)) {
       permute.emplace_back(i);
       valid_indices->emplace_back(indices.at(i));
     }
   }
-  for (int i = 0; i < input->shape()->NumAxes(); ++i) {
+  for (int i = 0; i < input->ndim(); ++i) {
     if (i >= indices.size() || !indices.at(i)) { permute.emplace_back(i); }
   }
   bool need_transpose = [&]() {
@@ -183,7 +173,7 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
     }
   }
   if (index_subspace_pos <= 0) { return input; }
-  int ndim = input->shape()->NumAxes();
+  int ndim = input->ndim();
   CHECK_LE_OR_RETURN(index_subspace_pos + index_ndim, ndim)
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
@@ -271,7 +261,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       const auto& tensor = index_item.tensor();
       auto indices = std::make_shared<TensorTuple>();
       if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
-        for (int j = 0; j < tensor->shape()->NumAxes(); ++j) {
+        for (int j = 0; j < tensor->ndim(); ++j) {
           if (tensor->shape()->At(j) != shape.At(dim + j)) {
             return Error::IndexError()
                    << "The shape of the mask " << tensor->shape()->ToString() << " at index " << j
@@ -318,10 +308,10 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
-  CHECK_GE_OR_RETURN(input->shape()->NumAxes(), indices.size())
-      << "Too many indices for tensor of dimension " << input->shape()->NumAxes();
+  CHECK_GE_OR_RETURN(input->ndim(), indices.size())
+      << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
-  bool is_continuos_subspace = JUST(IsContinuosSubspace(indices));
+  bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
   // Since the start dimension cannot be specified for `gather_nd`, so we should
   // transpose the input as long as the first indice is null.
@@ -329,14 +319,9 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   TensorTuple valid_indices;
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
   if (valid_indices.empty()) { return input; }
-  int index_ndim = valid_indices.at(0)->shape()->NumAxes();
-  std::shared_ptr<Tensor> packed_indices;
-  if (valid_indices.size() > 1) {
-    packed_indices = JUST(Stack(valid_indices, 0));
-  } else {
-    packed_indices = JUST(ExpandDims(valid_indices.at(0), 0));
-  }
-  int packed_ndim = packed_indices->shape()->NumAxes();
+  int index_ndim = valid_indices.at(0)->ndim();
+  auto packed_indices = JUST(Stack(valid_indices, 0));
+  int packed_ndim = packed_indices->ndim();
   CHECK_GT_OR_RETURN(packed_ndim, 0) << "Index array dimension should be greater than 0.";
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
@@ -348,18 +333,19 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
     std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
     packed_indices = JUST(ToConsistent(packed_indices, placement, {broadcast_sbp}, grad_sbp_tuple));
-  }
-  Symbol<Device> device = JUST(transposed_input->device());
-  if (JUST(packed_indices->device()) != device) {
-    packed_indices = JUST(Copy(packed_indices, device->type(), device->device_id()));
+  } else {
+    Symbol<Device> device = JUST(transposed_input->device());
+    if (JUST(packed_indices->device()) != device) {
+      packed_indices = JUST(Copy(packed_indices, device->type(), device->device_id()));
+    }
   }
   auto result = JUST(GatherNd(transposed_input, packed_indices));
 
-  int required_ndim = input->shape()->NumAxes() - valid_indices.size() + index_ndim;
-  CHECK_EQ_OR_RETURN(result->shape()->NumAxes(), required_ndim)
-      << "The indexing result dimension is " << result->shape()->NumAxes() << ", but shoule be "
+  int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
+  CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
+      << "The indexing result dimension is " << result->ndim() << ", but shoule be "
       << required_ndim;
-  if (is_continuos_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
+  if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
 }
 

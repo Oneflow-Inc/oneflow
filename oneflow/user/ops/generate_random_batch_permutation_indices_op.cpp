@@ -15,34 +15,32 @@ limitations under the License.
 */
 #include <cstdint>
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("generate_random_batch_permutation_indices")
-    .Input("x")
-    .Output("y")
-    .Attr<int64_t>("seed")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .Broadcast(user_op::OpArg("y", 0))
-          .Build();
-      const auto& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("x", 0), i)
-            .Broadcast(user_op::OpArg("y", 0))
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = DataType::kInt32;
-      return Maybe<void>::Ok();
-    });
+/*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
+  *ctx->OutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
+  return Maybe<void>::Ok();
+}
+/*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
+  return GenerateRandomBatchPermutationIndicesOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ auto GenerateRandomBatchPermutationIndicesOp::GetSbp(user_op::SbpContext* ctx)
+    -> Maybe<void> {
+  ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).Broadcast(user_op::OpArg("y", 0)).Build();
+  const auto& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Broadcast(user_op::OpArg("y", 0)).Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  *ctx->OutputDType("y", 0) = DataType::kInt32;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
