@@ -668,28 +668,8 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
       // Treat 1D sbp and nD sbp differently. Please refer to
       // JobBuildAndInferCtx::CheckOpBlobSplitability
       // for more details.
-      if (nd_sbp.sbp_parallel_size() == 1) {
-        // Checking 1D sbp
-        const auto& sbp_parallel = nd_sbp.sbp_parallel(0);
-        if (sbp_parallel.has_split_parallel()) {
-          const int64_t axis = sbp_parallel.split_parallel().axis();
-          if (logical_shape.At(axis) < parallel_hierarchy->At(0)) { return true; }
-        }
-      } else {
-        // Checking nD sbp
-        // For in_0, look through S(6) and B
-        for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
-          const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
-          if (sbp_parallel.has_split_parallel()) {
-            // For S(6) in (S(6), B) of {in_0 : (S(6), B)}, axis = 0
-            const int64_t axis = sbp_parallel.split_parallel().axis();
-            // No need to CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes()),
-            // since we have already do so in FilterAndCheckValidSbpSignatureListByLogicalShape()
-            CHECK_GT_OR_RETURN(logical_shape.At(axis), 0);
-            if (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) > 0) { return true; }
-            logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
-          }
-        }
+      if (JUST(FilterNdSbpByLogicalShape(nd_sbp, logical_shape, parallel_hierarchy))) {
+        return true;
       }
     }
     return false;
