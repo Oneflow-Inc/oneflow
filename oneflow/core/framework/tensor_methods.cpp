@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include <iostream>
 
 namespace oneflow {
 namespace one {
@@ -82,8 +81,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
-  std::cout<<"in  Reshape "<<"input->is_lazy():"<<input->is_lazy()<<"input->is_eager():"<<input->is_eager()<<"input->is_local():"<<input->is_local()<<std::endl;
-  std::cout<<std::endl;
+  std::cout << std::endl;
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy" : "consistent");

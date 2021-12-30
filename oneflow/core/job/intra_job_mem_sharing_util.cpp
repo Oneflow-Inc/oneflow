@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/plan_util.h"
-#include <iostream>
+
 namespace oneflow {
 
 enum MemAllocAlgoType {
