@@ -45,6 +45,10 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
+if (WITH_ONETBB)
+  include(oneTBB)
+endif()
+
 set_mirror_url_with_hash(INJA_URL 
   https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
   611e6b7206d0fb89728a3879f78b4775
@@ -163,6 +167,10 @@ if (WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
 
+if (WITH_ONETBB)
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONETBB_STATIC_LIBRARIES})
+endif()
+
 if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
 endif()
@@ -194,6 +202,9 @@ set(oneflow_third_party_dependencies
 )
 if (WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
+endif()
+if (WITH_ONETBB)
+  list(APPEND oneflow_third_party_dependencies onetbb)
 endif()
 if (WITH_ZLIB)
   list(APPEND oneflow_third_party_dependencies zlib)
@@ -231,6 +242,9 @@ if (WITH_ONEDNN)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
 
+if (WITH_ONETBB)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONETBB_INCLUDE_DIR})
+endif()
 
 if (NOT WITH_XLA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
