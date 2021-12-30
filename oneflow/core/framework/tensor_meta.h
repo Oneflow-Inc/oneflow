@@ -70,15 +70,20 @@ class MirroredTensorMeta : public TensorMeta {
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      Symbol<Device> device, const std::shared_ptr<const Stride>& stride,
                      int64_t storage_offset);
+  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                     Symbol<Device> device, const std::shared_ptr<const Stride>& stride,
+                     bool is_contiguous, int64_t storage_offset);
   virtual ~MirroredTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
   const Stride& stride() const { return *stride_; }
+  bool is_contiguous() const { return is_contiguous_; }
   const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
   int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
   void set_stride(const std::shared_ptr<const Stride>& stride) { stride_ = stride; }
+  void set_is_contiguous(bool is_contiguous) { is_contiguous_ = is_contiguous; }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MirroredTensorMeta& other) const;
@@ -87,6 +92,7 @@ class MirroredTensorMeta : public TensorMeta {
  private:
   Symbol<Device> device_;
   std::shared_ptr<const Stride> stride_;
+  bool is_contiguous_;
   int64_t storage_offset_;
 };
 

@@ -86,6 +86,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
+  virtual bool is_contiguous() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual Maybe<Tensor> acc_grad() const = 0;
   virtual Maybe<TensorArg> current_grad() const = 0;
@@ -183,6 +184,10 @@ class StaticZerosTensor final : public Tensor {
   bool retain_grad() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
+  }
+  bool is_contiguous() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return true;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -334,6 +339,7 @@ class Parameter final : public TensorIf<Parameter> {
   bool requires_grad() const override { return tensor_->requires_grad(); }
   bool is_leaf() const override { return true; }
   bool retain_grad() const override { return tensor_->retain_grad(); }
+  bool is_contiguous() const override { return tensor_->is_contiguous(); }
   Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
@@ -446,6 +452,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool is_contiguous() const override { return impl_->tensor_meta()->is_contiguous(); }
   bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
@@ -557,6 +564,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool is_contiguous() const override { return true; }
   bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd

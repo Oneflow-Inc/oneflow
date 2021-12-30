@@ -98,7 +98,7 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
 }
 
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
+  return tensor->is_contiguous();
 }
 
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {

@@ -27,12 +27,10 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+namespace view {
 
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  if (tensor->is_lazy() || tensor->is_consistent()) { return true; }
-  const Shape& shape = *tensor->shape();
+bool IsContiguous(const Shape& shape, const Stride& stride) {
   if (!shape.is_initialized() || shape.NumAxes() < 1 || shape.elem_cnt() <= 1) { return true; }
-  const Stride& stride = *JUST(tensor->stride());
   int64_t dim = shape.NumAxes();
   int64_t expected_stride = 1;
   bool contig_if_nonempty = true;
@@ -48,7 +46,12 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return contig_if_nonempty;
 }
 
-namespace view {
+Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_lazy() || tensor->is_consistent()) { return true; }
+  const Shape& shape = *tensor->shape();
+  const Stride& stride = *JUST(tensor->stride());
+  return view::IsContiguous(shape, stride);
+}
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset) {
@@ -67,9 +70,10 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
                         const Stride& target_stride, int64_t storage_offset) {
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
+  bool is_contiguous = IsContiguous(target_shape, target_stride);
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
-      std::make_shared<Stride>(target_stride), storage_offset);
+      std::make_shared<Stride>(target_stride), is_contiguous, storage_offset);
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor

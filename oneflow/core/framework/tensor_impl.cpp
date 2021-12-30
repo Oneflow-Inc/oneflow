@@ -171,6 +171,7 @@ MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       stride_(std::make_shared<const Stride>()),
+      is_contiguous_(true),
       storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -178,6 +179,7 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
     : TensorMeta(shape, dtype),
       device_(device),
       stride_(std::make_shared<const Stride>(*shape)),
+      is_contiguous_(true),
       storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -185,6 +187,13 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
                                        const std::shared_ptr<const Stride>& stride,
                                        int64_t storage_offset)
     : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
+
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                       Symbol<Device> device,
+                                       const std::shared_ptr<const Stride>& stride,
+                                       bool is_contiguous,
+                                       int64_t storage_offset)
+    : TensorMeta(shape, dtype), device_(device), stride_(stride), is_contiguous_(is_contiguous), storage_offset_(storage_offset) {}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
