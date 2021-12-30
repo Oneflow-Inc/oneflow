@@ -21,10 +21,11 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-__global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, const VarParam var_param) {
+__global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr,
+                                              const VarParam var_param) {
   CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
-    const size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis, var_param.stride_in_caxis,
-                                          var_param.caxis_size);
+    const size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis,
+                                                   var_param.stride_in_caxis, var_param.caxis_size);
     ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
   }
 }
@@ -32,7 +33,8 @@ __global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, const
 namespace {
 template<typename T>
 inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
-                                     const size_t total_elem_cnt, const size_t start, const size_t step) {
+                                     const size_t total_elem_cnt, const size_t start,
+                                     const size_t step) {
   T old_mean = 0.0;
   for (size_t i = start; i < total_elem_cnt; i += step) {
     ++(*count);
@@ -43,8 +45,9 @@ inline __device__ void WelfordReduce(const T* in_ptr, T* mean, T* m2, T* count,
 }
 
 template<typename T>
-inline __device__ void WelfordCombine(const T* b_mean, const T* b_m2, const T* b_count, T* mean, T* m2, T* count,
-                                      const size_t total_elem_cnt, const size_t start, const size_t step) {
+inline __device__ void WelfordCombine(const T* b_mean, const T* b_m2, const T* b_count, T* mean,
+                                      T* m2, T* count, const size_t total_elem_cnt,
+                                      const size_t start, const size_t step) {
   for (size_t i = start; i < total_elem_cnt; i += step) {
     cuda::layer_norm::WelfordCombine(b_mean[i], b_m2[i], b_count[i], mean, m2, count);
   }
@@ -85,9 +88,9 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
   T block_count = 0;
   cuda::layer_norm::WelfordBlockAllReduce<T>(thread_mean, thread_m2, thread_count, &block_mean,
                                              &block_m2, &block_count);
-  
+
   if (gridDim.x == 1) {
-    if (threadIdx.x == 0) { 
+    if (threadIdx.x == 0) {
       *out_ptr =
           cuda::layer_norm::Div(block_m2, (var_param.unbiased ? block_count - 1 : block_count));
     }
@@ -146,9 +149,10 @@ struct VarFunctor<DeviceType::kCUDA, T> final {
     int block_dim = 0;
     SetGridDimAndBlockDim(var_param.elem_cnt, &grid_dim, &block_dim);
     if (var_param.parallel_num == 1) {
-        const size_t shm_size = grid_dim * sizeof(T) * 3;
-        ComputeVarScalarOut<T><<<grid_dim, block_dim, shm_size, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            in_ptr, out_ptr, tmp_buffer_ptr, var_param);
+      const size_t shm_size = grid_dim * sizeof(T) * 3;
+      ComputeVarScalarOut<T>
+          <<<grid_dim, block_dim, shm_size, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              in_ptr, out_ptr, tmp_buffer_ptr, var_param);
     } else {
       RUN_CUDA_KERNEL(ComputeVarUsingWelfordWrapper<T>, stream, var_param.parallel_num, in_ptr,
                       out_ptr, var_param);

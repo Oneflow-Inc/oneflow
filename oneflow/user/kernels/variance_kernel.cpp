@@ -55,8 +55,9 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& input_shape = input.shape();
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
   if (axis.size() == input_shape.NumAxes()) {
-    return  static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
-         * GetSizeOfDataType(input.data_type()) * 3; }
+    return static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
+           * GetSizeOfDataType(input.data_type()) * 3;
+  }
   return 0;
 }
 

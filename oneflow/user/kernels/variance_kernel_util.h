@@ -32,16 +32,18 @@ void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* bloc
     *block_dim = kCudaThreadsNumPerBlock;
   } else {
     *grid_dim = 1;
-    int32_t aligned_block_dim = (total_elem_cnt >= kCudaThreadsNumPerBlock)
-                      ? kCudaThreadsNumPerBlock
-                      : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
+    int32_t aligned_block_dim =
+        (total_elem_cnt >= kCudaThreadsNumPerBlock)
+            ? kCudaThreadsNumPerBlock
+            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
     *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
   }
 }
 }  // namespace
 
-OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index, const int32_t* dim_size_in_axis_ptr,
-                                      const int32_t* stride_vec_ptr, const int32_t size) {
+OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index,
+                                         const int32_t* dim_size_in_axis_ptr,
+                                         const int32_t* stride_vec_ptr, const int32_t size) {
   // low dim at begin
   size_t offset = 0;
   size_t num_dim = 0;
@@ -72,7 +74,8 @@ struct VarParam {
 class VarParamHelper final {
  public:
   VarParamHelper() = delete;
-  explicit VarParamHelper(const ShapeView& input_shape, const std::vector<int32_t> axis, const bool unbiased)
+  explicit VarParamHelper(const ShapeView& input_shape, const std::vector<int32_t> axis,
+                          const bool unbiased)
       : axis_(axis), input_shape_(input_shape) {
     param.unbiased = unbiased;
     ComputeStrideVec(axis_, param.stride_in_axis);
@@ -139,8 +142,8 @@ OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const Va
   double old_mean = 0.0;
   double m2 = 0.0;
   for (size_t i = 0; i < var_param.elem_cnt; i++) {
-    const size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
-                                    var_param.axis_size);
+    const size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis,
+                                             var_param.stride_in_axis, var_param.axis_size);
     count++;
     old_mean = mean;
     mean += (in_ptr[offset] - mean) / count;

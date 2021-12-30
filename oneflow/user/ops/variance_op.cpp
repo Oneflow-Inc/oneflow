@@ -41,7 +41,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) { 
+Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   const Shape& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
   const int64_t ndim = input_shape.NumAxes();
@@ -51,7 +51,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
     }
   }
-  return Maybe<void>::Ok(); }
+  return Maybe<void>::Ok();
+}
 }  // namespace
 
 REGISTER_USER_OP("var")
