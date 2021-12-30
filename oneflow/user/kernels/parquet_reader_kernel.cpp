@@ -447,6 +447,7 @@ Maybe<void> ParquetReader::InitParallelInfo(user_op::KernelInitContext* ctx) {
 Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
   ParseParquetColumnSchemaFromJson(&schema_, schema_json_str);
   int output_index = 0;
+  HashSet<int> spec_cols;
   const size_t num_cols = file_meta_->schema()->num_columns();
   for (auto& out_desc : schema_.col_descs) {
     // Find column descriptor by col_id or col_name
@@ -475,6 +476,9 @@ Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
       CHECK_OR_RETURN(col_name_found)
           << "col_name " << out_desc.col_name << " is not found in parquet file schema";
     }
+    CHECK_OR_RETURN((spec_cols.insert(out_desc.col_id)).second)
+        << "Duplicated column with col_id: " << out_desc.col_id
+        << ", col_name: " << out_desc.col_name;
     const auto* col_desc = file_meta_->schema()->Column(out_desc.col_id);
     CHECK_NOTNULL_OR_RETURN(col_desc);
     // check def and rep level
