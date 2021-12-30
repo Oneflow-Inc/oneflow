@@ -140,7 +140,7 @@ class TestModule(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return torch.cat((x, x, x), random(0, 2).to(int))
 
-    @autotest(n=10, auto_backward=False, check_graph=False)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_concat_with_input_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 2, 4).to(device)

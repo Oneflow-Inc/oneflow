@@ -23,7 +23,6 @@ from oneflow.test_utils.automated_test_util import *
 
 
 class TestVar(flow.unittest.TestCase):
-    @autotest(check_graph=True)
     def test_flow_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
