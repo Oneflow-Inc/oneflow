@@ -68,9 +68,9 @@ function(add_docker_container)
   add_test(NAME Stop${fixtureName}
     COMMAND docker rm -f ${TEST_CONTAINER_NAME}
   )
-  set_tests_properties(Clear${fixtureName}               PROPERTIES FIXTURES_SETUP  ${fixtureName} SKIP_RETURN_CODE 1)
-  set_tests_properties(Start${fixtureName}               PROPERTIES FIXTURES_SETUP  ${fixtureName} DEPENDS Clear${fixtureName})
-  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES FIXTURES_SETUP  ${fixtureName} DEPENDS Start${fixtureName})
+  set_tests_properties(Clear${fixtureName}               PROPERTIES  FIXTURES_SETUP  ${fixtureName} SKIP_RETURN_CODE 1)
+  set_tests_properties(Start${fixtureName}               PROPERTIES  FIXTURES_SETUP  ${fixtureName} DEPENDS Clear${fixtureName})
+  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES  FIXTURES_SETUP  ${fixtureName} DEPENDS Start${fixtureName})
   set_tests_properties(Stop${fixtureName}                PROPERTIES FIXTURES_CLEANUP ${fixtureName} SKIP_RETURN_CODE 1)
   set_tests_properties(Start${fixtureName} Start${fixtureName} InstallOneFlowPipOn${fixtureName} Stop${fixtureName} Stop${fixtureName}
                      PROPERTIES RESOURCE_LOCK ${fixtureName}DockerAccess)
