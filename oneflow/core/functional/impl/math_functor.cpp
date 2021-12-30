@@ -538,7 +538,7 @@ class ReduceMeanFunctor {
       for (const int32_t& i : axis) { reduce_count *= x->shape()->At(i); }
     }
     if (reduce_count == 1) { return sum; }
-    CHECK_GE_OR_RETURN(reduce_count, 0);
+    CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
 };
