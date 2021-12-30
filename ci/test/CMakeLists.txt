@@ -14,6 +14,7 @@ set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
 set(SINGLE_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_client/test CACHE STRING "test script dir for single client")
 set(MULTI_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test CACHE STRING "test script dir for multi client")
+set(ONEFLOW_WHEEL_PATH /home/caishenghang/550ed7f9122589ab0f1ae89a50e0bf4702974895ddafdc9a10a77628d5387138/cu102/whl CACHE STRING "URL or local path for wheels")
 enable_testing()
 add_custom_target(ensure_docker_imgs)
 function(add_docker_img)
@@ -35,24 +36,34 @@ function(add_docker_container)
     "${noValues}" "${singleValues}" "${multiValues}"
   )
   set(fixtureName "${${prefix}_FIXTURE_NAME}")
-  set(DOCKER_CONTAINER_NAME CI-$ENV{USER}-${fixtureName})
+  set(TEST_CONTAINER_NAME CI-$ENV{USER}-${fixtureName})
   set(DOCKER_IMG_NAME "${${prefix}_IMG}")
   add_test(NAME Clear${fixtureName}
-    COMMAND docker rm -f ${DOCKER_CONTAINER_NAME}
+    COMMAND docker rm -f ${TEST_CONTAINER_NAME}
   )
+  # start container and set as container fixture
   add_test(NAME Start${fixtureName}
-    COMMAND docker run --name ${DOCKER_CONTAINER_NAME} --rm -d
+    COMMAND docker run --name ${TEST_CONTAINER_NAME} --rm -d
       --privileged --shm-size=8g
       --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
       --runtime=nvidia
       -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro
+      -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro
+      -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH}
       ${DOCKER_IMG_NAME}
       sleep 3600
   )
   set_tests_properties(Start${fixtureName} PROPERTIES DEPENDS Clear${fixtureName})
   set_tests_properties(Start${fixtureName} PROPERTIES FIXTURES_SETUP ${fixtureName})
+  # install pip and set as pip fixture
+  add_test(NAME InstallOneFlowPipOn${fixtureName}
+    COMMAND docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+  )
+  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES DEPENDS Start${fixtureName})
+  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES FIXTURES_SETUP OneFlowPipOn${fixtureName})
+  # stop container and set as container fixture cleanup
   add_test(NAME Stop${fixtureName}
-    COMMAND docker rm -f ${DOCKER_CONTAINER_NAME} || true
+    COMMAND docker rm -f ${TEST_CONTAINER_NAME} || true
   )
   set_tests_properties(Stop${fixtureName}
     PROPERTIES FIXTURES_CLEANUP ${fixtureName})
@@ -107,10 +118,10 @@ function(add_oneflow_python_test)
     )
     if (RUN_IN_DOCKER)
       if (${prefix}_SINGLE_CLIENT)
-        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED ${TF_CONTAINER_FIXTURE})
+        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED "${TF_CONTAINER_FIXTURE};OneFlowPipOn${TF_CONTAINER_FIXTURE}")
       endif()
       if (${prefix}_MULTI_CLIENT)
-        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED ${TORCH_CONTAINER_FIXTURE})
+        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED "${TORCH_CONTAINER_FIXTURE};OneFlowPipOn${TORCH_CONTAINER_FIXTURE}")
       endif()
     endif()
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
