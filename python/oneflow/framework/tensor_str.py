@@ -250,14 +250,20 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
         slices = (
             [
                 _tensor_str_with_formatter(
-                    slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                    slice_wrapper(self, [i, i + 1, 1]),
+                    indent + 1,
+                    summarize,
+                    formatter1,
                 )
                 for i in range(0, PRINT_OPTS.edgeitems)
             ]
             + ["..."]
             + [
                 _tensor_str_with_formatter(
-                    slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+                    slice_wrapper(self, [i, i + 1, 1]),
+                    indent + 1,
+                    summarize,
+                    formatter1,
                 )
                 for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
             ]
@@ -316,7 +322,7 @@ def get_summarized_data(self):
                     slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1]),
                     slice_wrapper(
                         self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
-                    )
+                    ),
                 )
             )
         else:

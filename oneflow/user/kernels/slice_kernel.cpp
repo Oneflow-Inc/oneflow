@@ -318,7 +318,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
         CHECK(y_sbp.has_broadcast_parallel());
       } else {
         CHECK(x_sbp.has_partial_sum_parallel());
-        CHECK(y_sbp.has_partial_sum_parallel()); 
+        CHECK(y_sbp.has_partial_sum_parallel());
       }
     }
     return CreateSliceCache(ctx, "x");

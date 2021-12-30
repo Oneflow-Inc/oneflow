@@ -123,7 +123,7 @@ def logical_slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """
 
     (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
-    return flow._C.logical_slice(input, start, stop, step)    
+    return flow._C.logical_slice(input, start, stop, step)
 
 
 if __name__ == "__main__":
