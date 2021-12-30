@@ -39,7 +39,7 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
 }
 
 std::shared_ptr<Tensor> Parameter::contiguous() const {
-  if (tensor_->is_contiguous()) { std::const_pointer_cast<Tensor>(shared_from_this()); }
+  if (tensor_->is_contiguous()) { return std::const_pointer_cast<Tensor>(shared_from_this()); }
   return std::make_shared<Parameter>(tensor_->contiguous(), this->requires_grad());
 }
 
