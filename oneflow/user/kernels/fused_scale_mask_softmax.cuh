@@ -1,34 +1,90 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
-namespace oneflow{
+namespace oneflow {
 
-namespace fused_scale_mask_softmax{
+namespace fused_scale_mask_softmax {
+
+namespace {
+
+void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims,
+                           const int64_t* b_dims, size_t* simplified_num_dims,
+                           int64_t* simplified_a_dims, int64_t* simplified_b_dims) {
+  const size_t num_max_dims = std::max(num_a_dims, num_b_dims);
+  auto MakeGetDim = [num_max_dims](size_t num_dims, const int64_t* dims) {
+    const int64_t num_padding_dims = num_max_dims - num_dims;
+    return [num_padding_dims, dims](size_t index) {
+      return index < num_padding_dims ? 1 : dims[index - num_padding_dims];
+    };
+  };
+  auto GetADim = MakeGetDim(num_a_dims, a_dims);
+  auto GetBDim = MakeGetDim(num_b_dims, b_dims);
+  *simplified_num_dims = 0;
+  bool prev_broadcast_a = false;
+  bool prev_broadcast_b = false;
+  for (int64_t i = 0; i < num_max_dims; ++i) {
+    const int64_t a_dim = GetADim(i);
+    const int64_t b_dim = GetBDim(i);
+    const int64_t broadcast_dim = std::max(a_dim, b_dim);
+    CHECK_GT(broadcast_dim, 0);
+    const bool broadcast_a = (a_dim == 1);
+    const bool broadcast_b = (b_dim == 1);
+    CHECK((a_dim == broadcast_dim) || broadcast_a);
+    CHECK((b_dim == broadcast_dim) || broadcast_b);
+    if (broadcast_dim == 1) {
+      continue;
+    } else if (*simplified_num_dims != 0
+               && (prev_broadcast_a == broadcast_a && prev_broadcast_b == broadcast_b)) {
+      simplified_a_dims[*simplified_num_dims - 1] *= a_dim;
+      simplified_b_dims[*simplified_num_dims - 1] *= b_dim;
+    } else {
+      simplified_a_dims[*simplified_num_dims] = a_dim;
+      simplified_b_dims[*simplified_num_dims] = b_dim;
+      *simplified_num_dims += 1;
+      prev_broadcast_a = broadcast_a;
+      prev_broadcast_b = broadcast_b;
+    }
+  }
+}
 
 template<size_t num_dims, typename IndexType>
 struct BroadcastMaskSoftmaxParams {
-    NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
-    NdIndexOffsetHelper<IndexType, num_dims> mask_index_helper;
-    const int64_t* mask_dims{};
-    int64_t row_size;
-    float fill;
-    float scale;
+  NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
+  NdIndexOffsetHelper<IndexType, num_dims> mask_index_helper;
+  const int64_t* mask_dims{};
+  int64_t row_size;
+  float fill;
+  float scale;
 };
 
-
 struct ElementwiseMaskSoftmaxParams {
-    int64_t row_size;
-    float fill;
-    float scale;
+  int64_t row_size;
+  float fill;
+  float scale;
 };
 
 template<typename SRC, typename DST, typename MASK, size_t num_dims, typename IndexType>
 struct BroadcastScaleMaskLoad {
   BroadcastScaleMaskLoad(const SRC* src, const MASK* mask,
-                BroadcastMaskSoftmaxParams<num_dims, IndexType> params)
+                         BroadcastMaskSoftmaxParams<num_dims, IndexType> params)
       : src(src), mask(mask), params(params) {
     for (int i = 0; i < num_dims; i++) { mask_dims[i] = params.mask_dims[i]; }
   }
-  template<int N> 
+  template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) {
     cuda::softmax::Pack<SRC, N> pack;
     cuda::softmax::Pack<MASK, N> mask_pack;
@@ -72,8 +128,7 @@ struct ElementwiseScaleMaskLoad {
     const int64_t offset = (row * param.row_size + col) / N;
     pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-      *(reinterpret_cast<const cuda::softmax::PackType<MASK, N>*>(mask) + offset);
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<MASK, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -85,13 +140,13 @@ struct ElementwiseScaleMaskLoad {
   }
   const SRC* src;
   const MASK* mask;
-  ElementwiseMaskSoftmaxParams param; 
+  ElementwiseMaskSoftmaxParams param;
 };
-
 
 template<typename SRC, typename DST, typename MASK, size_t num_dims, typename IndexType>
 struct BroadcastScaleMaskStore {
-  BroadcastScaleMaskStore(DST* dst, const MASK* mask, BroadcastMaskSoftmaxParams<num_dims, IndexType> params)
+  BroadcastScaleMaskStore(DST* dst, const MASK* mask,
+                          BroadcastMaskSoftmaxParams<num_dims, IndexType> params)
       : dst(dst), mask(mask), params(params) {
     for (int i = 0; i < num_dims; ++i) { mask_dims[i] = params.mask_dims[i]; }
   }
@@ -138,8 +193,7 @@ struct ElementwiseScaleMaskStore {
     cuda::softmax::Pack<DST, N> pack;
     const int64_t offset = (row * params.row_size + col) / N;
     cuda::softmax::Pack<MASK, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<MASK, N>*>(mask) + offset);
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<MASK, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -152,10 +206,11 @@ struct ElementwiseScaleMaskStore {
   }
   DST* dst;
   const MASK* mask;
-  ElementwiseMaskSoftmaxParams params; 
+  ElementwiseMaskSoftmaxParams params;
 };
 
+}  // namespace
 
-}
+}  // namespace fused_scale_mask_softmax
 
-}
+}  // namespace oneflow
