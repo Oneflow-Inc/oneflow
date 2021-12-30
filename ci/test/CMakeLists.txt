@@ -37,7 +37,7 @@ function(add_docker_container)
   )
   set(fixtureName "${${prefix}_FIXTURE_NAME}")
   set(TEST_CONTAINER_NAME CI-$ENV{USER}-${fixtureName})
-  set(${fixtureName}Name ${TEST_CONTAINER_NAME})
+  set(${fixtureName}Name ${TEST_CONTAINER_NAME} PARENT_SCOPE)
   set(DOCKER_IMG_NAME "${${prefix}_IMG}")
   add_test(NAME Clear${fixtureName}
     COMMAND docker rm -f ${TEST_CONTAINER_NAME}
@@ -110,15 +110,16 @@ function(add_oneflow_python_test)
     set(TEST_NAME "[${testNamePrefix}] ${PYTHON_TEST_FILE}")
     if (RUN_IN_DOCKER)
       if (${prefix}_SINGLE_CLIENT)
-        set(TEST_CONTAINER_NAME ${${TF_CONTAINER_FIXTURE}Name})
+        set(TEST_CONTAINER_NAME "${${TF_CONTAINER_FIXTURE}Name}")
       endif()
       if (${prefix}_MULTI_CLIENT)
-        set(TEST_CONTAINER_NAME ${${TORCH_CONTAINER_FIXTURE}Name})
+        set(TEST_CONTAINER_NAME "${${TORCH_CONTAINER_FIXTURE}Name}")
       endif()
       set(DOCKER_EXEC_PREFIX "docker exec ${TEST_CONTAINER_NAME}")
     endif()
+    # use sh -c to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
-      COMMAND ${DOCKER_EXEC_PREFIX} ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose
+      COMMAND sh -c "${DOCKER_EXEC_PREFIX} ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose"
     )
     set_tests_properties(${TEST_NAME} PROPERTIES LABELS ${testLabels})
     set_tests_properties(${TEST_NAME}
