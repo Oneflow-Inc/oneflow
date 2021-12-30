@@ -44,6 +44,7 @@ function(add_docker_container)
     COMMAND docker run --name ${DOCKER_CONTAINER_NAME} --rm -d --rm --privileged --shm-size=8g
       --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
       --runtime=nvidia
+      -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro
       ${DOCKER_IMG_NAME}
       sleep 3600
   )
