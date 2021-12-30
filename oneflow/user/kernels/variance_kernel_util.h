@@ -25,27 +25,29 @@ namespace oneflow {
 namespace user_op {
 namespace {
 void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
+  // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
   if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
     *grid_dim =
         std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
     *block_dim = kCudaThreadsNumPerBlock;
   } else {
     *grid_dim = 1;
-    int32_t tmp = (total_elem_cnt >= kCudaThreadsNumPerBlock)
+    int32_t aligned_block_dim = (total_elem_cnt >= kCudaThreadsNumPerBlock)
                       ? kCudaThreadsNumPerBlock
                       : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
-    *block_dim = std::min(tmp, kCudaThreadsNumPerBlock);
+    *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
   }
 }
 }  // namespace
 
 OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index, const int32_t* dim_size_in_axis_ptr,
                                       const int32_t* stride_vec_ptr, const int32_t size) {
+  // low dim at begin
   size_t offset = 0;
-  size_t tmp = 0;
+  size_t num_dim = 0;
   for (int j = 0; j < size; j++) {
-    tmp = (j == 0 ? linear_index : (tmp / dim_size_in_axis_ptr[j - 1]));
-    offset += tmp % dim_size_in_axis_ptr[j] * stride_vec_ptr[j];
+    num_dim = (j == 0 ? linear_index : (num_dim / dim_size_in_axis_ptr[j - 1]));
+    offset += num_dim % dim_size_in_axis_ptr[j] * stride_vec_ptr[j];
   }
   return offset;
 }
@@ -132,6 +134,7 @@ class VarParamHelper final {
 template<typename T>
 OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const VarParam& var_param) {
   size_t count = 0;
+  // torch use double even for float data, so here float will result in accuracy error.
   double mean = 0.0;
   double old_mean = 0.0;
   double m2 = 0.0;
