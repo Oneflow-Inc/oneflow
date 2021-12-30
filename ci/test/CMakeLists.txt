@@ -115,11 +115,11 @@ function(add_oneflow_python_test)
       if (${prefix}_MULTI_CLIENT)
         set(TEST_CONTAINER_NAME "${${TORCH_CONTAINER_FIXTURE}Name}")
       endif()
-      set(DOCKER_EXEC_PREFIX "docker exec ${TEST_CONTAINER_NAME}")
+      set(DOCKER_EXEC_PREFIX "docker;exec;${TEST_CONTAINER_NAME}")
     endif()
     # use sh -c to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
-      COMMAND sh -c "${DOCKER_EXEC_PREFIX} ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose"
+      COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${PYTHON_TEST_FILE};--failfast;--verbose
     )
     set_tests_properties(${TEST_NAME} PROPERTIES LABELS ${testLabels})
     set_tests_properties(${TEST_NAME}
