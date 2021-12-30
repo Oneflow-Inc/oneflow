@@ -1047,7 +1047,7 @@
   bind_python: True
 
 - name: "slice_grad"
-  signature: "Tensor (Tensor dy, Tensor like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  signature: "Tensor (Tensor dy, Shape like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
   bind_python: False
 
 - name: "narrow"
