@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/env_var.h"
 
 namespace oneflow {
 namespace vm {
@@ -554,7 +555,7 @@ void VirtualMachineEngine::GetInstrTypeIdAndSoleStream(const std::string& instr_
   *stream = stream_rt_desc->GetSoleStream();
 }
 
-int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
+int64_t InstructionMaxRunningSeconds() { return ThreadLocalEnvInteger<ONEFLOW_TIMEOUT_SECONDS>(); }
 
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
