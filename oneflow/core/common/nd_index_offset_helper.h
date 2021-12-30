@@ -47,6 +47,15 @@ class NdIndexOffsetHelper {
     InitFastIntegerMath(dims, n);
   }
 
+  template<typename U>
+  OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const U* dims, int n) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { dims_arr[i] = dims[i]; }
+    }
+    InitStrides(dims_arr, n);
+  }
+
   ~NdIndexOffsetHelper() = default;
 
   OF_DEVICE_FUNC T NdIndexToOffset(const T* index) const {

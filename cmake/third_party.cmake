@@ -45,6 +45,10 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
+set_mirror_url_with_hash(INJA_URL 
+  https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
+  611e6b7206d0fb89728a3879f78b4775
+)
 
 option(CUDA_STATIC "" ON)
 
@@ -132,6 +136,12 @@ set(oneflow_exe_third_party_libs
     gflags_imported
 )
 
+set(oneflow_test_libs
+    ${GOOGLETEST_STATIC_LIBRARIES}
+    ${GOOGLEMOCK_STATIC_LIBRARIES}
+)
+
+
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
@@ -147,6 +157,7 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    nlohmann_json::nlohmann_json
 )
 if (WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
@@ -177,7 +188,6 @@ set(oneflow_third_party_dependencies
   eigen
   half_copy_headers_to_destination
   re2
-  json_copy_headers_to_destination
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
@@ -212,7 +222,6 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
@@ -242,9 +251,9 @@ if (BUILD_CUDA)
   endif()
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies nccl)
 
@@ -314,11 +323,9 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  if(BUILD_PYTHON)
-    foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-      copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
-    endforeach()
-  endif(BUILD_PYTHON)
+  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
+  endforeach()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()

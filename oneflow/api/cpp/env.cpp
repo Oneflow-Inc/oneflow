@@ -24,14 +24,17 @@ limitations under the License.
 #include <random>
 #include <type_traits>
 #include "oneflow/api/cpp/env.h"
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
+#include "oneflow/core/job/session.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
@@ -114,6 +117,12 @@ of::Maybe<void> initEnv() {
   CompleteEnvProto(env_proto);
   of::Global<of::EnvGlobalObjectsScope>::SetAllocated(new of::EnvGlobalObjectsScope());
   JUST(of::Global<of::EnvGlobalObjectsScope>::Get()->Init(env_proto));
+
+  of::ConfigProto config_proto;
+  config_proto.mutable_resource()->set_cpu_device_num(1);  // useless, will be set in TryInit
+  config_proto.set_session_id(of::NewSessionId());
+  of::Global<of::MultiClientSessionContext>::New();
+  of::Global<of::MultiClientSessionContext>::Get()->TryInit(config_proto).GetOrThrow();
   return of::Maybe<void>::Ok();
 }
 
@@ -129,6 +138,8 @@ void release() {
   if (IsEnvInited()) {
     // sync multi_client
     of::vm::ClusterSync().GetOrThrow();
+    of::Global<of::MultiClientSessionContext>::Get()->TryClose().GetOrThrow();
+    of::Global<of::MultiClientSessionContext>::Delete();
     // destory env
     if (of::IsMultiClient().GetOrThrow()) {
       OF_ENV_BARRIER();
@@ -137,7 +148,6 @@ void release() {
     }
     of::Global<of::EnvGlobalObjectsScope>::Delete();
   }
-  // TODO close session
   of::SetShuttingDown();
   of::ResetThisThreadUniqueConsistentId().GetOrThrow();
 }
