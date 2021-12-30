@@ -277,7 +277,10 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     BoxingCollector bc;
     bc.Init(sbp_graph_);
     bc.PrintBoxingTables();
-    BlobDesc blob_desc(hierarchy44, kDouble);
+    Shape blob222({2, 2, 2});
+    BlobDesc blob_desc(blob222, kDouble);
+    std::cout << "hierarchy: " << *sbp_graph_.NodeList[0]->op_node->parallel_desc().hierarchy()
+              << std::endl;
     std::vector<cfg::NdSbp> middle_sbps;
     for (const auto& sbp_producer : nd_sbp_lists) {
       for (const auto& sbp_consumer : nd_sbp_lists) {

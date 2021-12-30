@@ -159,6 +159,25 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
     std::cout << "hierarchy: " << *in_hierarchy << std::endl;
   }
 
+  auto NotMiddleNode = [&](int32_t i, int32_t j, int32_t k, int32_t middle_node_num_ik) -> bool {
+    // Not allow i -> i -> j or i -> j -> j.
+    if (k == j || k == i) { return true; }
+    // We add middle nodes one by one
+    // Thus, we allow multiple nodes from i to k but we only accept 1 step from k to j.
+    // i -> ? -> k -> j
+    if (middle_nodes[k][j].size() > 0) { return true; }
+    // To avoid multiple counting and bugs, the number of middle nodes between i and k
+    // must be exactly middle_node_num_ik, which is (middle_node_num - 1)
+    if (middle_node_num_ik) {
+      if (middle_nodes[i][k].size() == 0 || middle_nodes[i][k][0].size() != middle_node_num_ik) {
+        return true;
+      }
+    } else {
+      if (middle_nodes[i][k].size() > 0) { return true; }
+    }
+    return false;
+  };
+
   for (int32_t middle_node_num = 1; middle_node_num <= max_middle_node_num; middle_node_num++) {
     int32_t middle_node_num_ik = middle_node_num - 1;
 
@@ -168,8 +187,7 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
         // Compute the smallest transfer cost
         // k is the middle node, i -> k -> j
         for (int32_t k = 0; k < n; k++) {
-          if (k == j || k == i) { continue; }
-          if (middle_nodes[k][j].size() > 0) { continue; }
+          if (NotMiddleNode(i, j, k, middle_node_num_ik)) { continue; }
           double curr_copy_cost = minimum_copy_cost[i][k] + minimum_copy_cost[k][j];
           if (curr_copy_cost < minimum_copy_cost[i][j]) {
             minimum_copy_cost[i][j] = curr_copy_cost;
@@ -179,36 +197,20 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
         if (minimum_copy_cost[i][j] > cut_cost) { continue; }
         // Find those middle nodes
         for (int32_t k = 0; k < n; k++) {
-          // Not allow i -> i -> j or i -> j -> j.
-          if (k == j || k == i) { continue; }
-          // We add middle nodes one by one
-          // Thus, we allow multiple nodes from i to k but we only accept 1 step from k to j.
-          // i -> ? -> k -> j
-          if (middle_nodes[k][j].size() == 0) {
-            // To avoid multiple counting and bugs, the number of middle nodes between i and k
-            // must be exactly middle_node_num_ik, which is (middle_node_num - 1)
-            if (middle_node_num_ik) {
-              if (middle_nodes[i][k].size() == 0
-                  || middle_nodes[i][k][0].size() != middle_node_num_ik) {
-                continue;
+          if (NotMiddleNode(i, j, k, middle_node_num_ik)) { continue; }
+          // Now we start to judge if the edge have a minimum cost
+          if (minimum_copy_cost[i][k] + minimum_copy_cost[k][j]
+              < minimum_copy_cost[i][j] * 1.0000001) {
+            // i -> ? -> k
+            if (middle_nodes[i][k].size() > 0) {
+              // We have multiple choices going from i to k
+              for (const auto& middle_node_ik : middle_nodes[i][k]) {
+                middle_nodes[i][j].push_back(middle_node_ik);
+                middle_nodes[i][j][middle_nodes[i][j].size() - 1].push_back(k);
               }
             } else {
-              if (middle_nodes[i][k].size() > 0) { continue; }
-            }
-            // Now we start to judge if the edge have a minimum cost
-            double curr_copy_cost = minimum_copy_cost[i][k] + minimum_copy_cost[k][j];
-            if (curr_copy_cost < cut_cost && curr_copy_cost < minimum_copy_cost[i][j] * 1.0000001) {
-              // i -> ? -> k
-              if (middle_nodes[i][k].size() > 0) {
-                // We have multiple choices going from i to k
-                for (const auto& middle_node_ik : middle_nodes[i][k]) {
-                  middle_nodes[i][j].push_back(middle_node_ik);
-                  middle_nodes[i][j][middle_nodes[i][j].size() - 1].push_back(k);
-                }
-              } else {
-                // We only need one middle node k to reach j from i
-                middle_nodes[i][j].push_back({k});
-              }
+              // We only need one middle node k to reach j from i
+              middle_nodes[i][j].push_back({k});
             }
           }
         }
@@ -369,9 +371,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   customized_boxing_collector.GenerateCombination(5);
   // test debug
   customized_boxing_collector.PrintBoxingTables();
-  customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
-                                                producer_parallel_desc, consumer_parallel_desc,
-                                                false, middle_sbps);
+  JUST(customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
+                                                     producer_parallel_desc, consumer_parallel_desc,
+                                                     false, middle_sbps));
   return Maybe<void>::Ok();
 }
 
