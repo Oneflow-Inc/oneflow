@@ -29,29 +29,6 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-bool IsContiguous(const Shape& shape, const Stride& stride) {
-  if (!shape.is_initialized() || shape.NumAxes() < 1 || shape.elem_cnt() <= 1) { return true; }
-  int64_t dim = shape.NumAxes();
-  int64_t expected_stride = 1;
-  bool contig_if_nonempty = true;
-  for (int64_t i = dim - 1; i >= 0; --i) {
-    // Contiguous by default when any dim is equal to zero
-    // https://stackoverflow.com/questions/31681324/identify-contiguous-segments-of-a-non-contiguous-numpy-array
-    if (shape.At(i) == 0) { return true; }
-    if (contig_if_nonempty && shape.At(i) != 1) {
-      if (stride.At(i) != expected_stride) { contig_if_nonempty = false; }
-      expected_stride *= shape.At(i);
-    }
-  }
-  return contig_if_nonempty;
-}
-
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  if (tensor->is_lazy() || tensor->is_consistent()) { return true; }
-  const Shape& shape = *tensor->shape();
-  const Stride& stride = *JUST(tensor->stride());
-  return view::IsContiguous(shape, stride);
-}
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset) {
@@ -70,10 +47,9 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
                         const Stride& target_stride, int64_t storage_offset) {
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
-  bool is_contiguous = IsContiguous(target_shape, target_stride);
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
-      std::make_shared<Stride>(target_stride), is_contiguous, storage_offset);
+      std::make_shared<Stride>(target_stride), storage_offset);
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor

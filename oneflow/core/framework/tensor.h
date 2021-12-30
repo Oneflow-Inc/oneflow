@@ -62,6 +62,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
+  virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
@@ -86,7 +87,6 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
-  virtual bool is_contiguous() const = 0;
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual Maybe<Tensor> acc_grad() const = 0;
   virtual Maybe<TensorArg> current_grad() const = 0;
@@ -452,7 +452,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool is_contiguous() const override { return impl_->tensor_meta()->is_contiguous(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
   bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
@@ -564,7 +564,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool is_contiguous() const override { return true; }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
   bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd

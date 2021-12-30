@@ -27,9 +27,6 @@ class Tensor;
 
 namespace view {
 
-bool IsContiguous(const Shape& shape, const Stride& stride);
-
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset);
