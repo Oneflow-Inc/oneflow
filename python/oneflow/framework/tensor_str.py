@@ -290,8 +290,10 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # TODO: not support nd sbp tensor for now
-    if self.is_consistent and len(self.placement.hierarchy) > 1:
+    # TODO: not support nd sbp tensor and s0 tensor for now
+    if self.is_consistent and (
+        len(self.placement.hierarchy) > 1 or self.sbp == (flow.sbp.split(0),)
+    ):
         return "[...]"
 
     with flow.no_grad():
