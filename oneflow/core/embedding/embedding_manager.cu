@@ -26,7 +26,7 @@ embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parall
   auto it = cache_map_.find(map_key);
   if (it != cache_map_.end()) { return it->second.get(); }
   embedding::CudaLruCacheOptions options{};
-  const uint32_t line_size = 128;
+  const uint32_t line_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
   options.line_size = line_size;
   options.memory_budget_mb = ParseIntegerFromEnv("CACHE_MEMORY_BUDGET_MB", 0);
   CHECK_GT(options.memory_budget_mb, 0);
@@ -51,7 +51,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   if (kv_store == "cuda_in_memory") {
     embedding::CudaInMemoryKeyValueStoreOptions options{};
     options.num_shards = 4;
-    options.value_length = 128;
+    options.value_length = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
     options.num_keys = ParseIntegerFromEnv("NUM_KEYS", 0);
     CHECK_GT(options.num_keys, 0);
     options.num_device_keys = ParseIntegerFromEnv("NUM_DEVICE_KEYS", 0);
@@ -63,7 +63,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
     std::string path = GetStringFromEnv("BLOCK_BASED_PATH", "");
     embedding::BlockBasedKeyValueStoreOptions options{};
     options.path = path + std::to_string(parallel_id);
-    options.value_length = 128;
+    options.value_length = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
     options.key_type = DataType::kInt64;
     options.value_type = DataType::kFloat;
     options.max_query_length = 65536 * 26;

@@ -418,6 +418,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t num_ids = ids_reverse_idx->shape().elem_cnt();
     const int64_t embedding_size = embeddings->shape().elem_cnt() / num_ids;
+    CHECK_EQ(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
 
     IDX* host_num_unique_ids_matrix = reinterpret_cast<IDX*>(nccl_comm->HostNumUniqueIdsMatrix());

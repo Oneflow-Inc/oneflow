@@ -22,6 +22,7 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   DimVector out_dim_vec = ctx->InputShape("ids", 0).dim_vec();
   const int64_t embedding_vec_size = ctx->Attr<int64_t>("embedding_size");
+  CHECK_EQ_OR_RETURN(embedding_vec_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_vec_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();

@@ -224,7 +224,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 template<typename T, typename K>
 void DebugEmbeddingPrefetch(user_op::KernelComputeContext* ctx, uint32_t num_keys,
                             const PrefetchTmpBufferManager<T, K>& buffer_manager) {
-  const int64_t embedding_size = 128;
+  const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
   DumpToFile(ctx->stream(), "NumStoreMissingPtr", ctx->parallel_ctx().parallel_id(),
              1 * sizeof(uint32_t), buffer_manager.NumStoreMissingPtr());
   DumpToFile(ctx->stream(), "StoreMissingKeysPtr", ctx->parallel_ctx().parallel_id(),
@@ -269,7 +269,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t embedding_size = 128;
+    const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
@@ -334,7 +334,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                  \
-        const int64_t embedding_size = 128;                                                \
+        const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);         \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);     \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                         \
             nullptr, unique_ids.shape().elem_cnt(), embedding_size);                       \
@@ -371,7 +371,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
 
     // just for debug, lookup not need so much tmp_buffer like prefetch kernel
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t embedding_size = 128;
+    const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
@@ -425,7 +425,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("unique_ids", 0) == GetDataType<k_dtype>::value)       \
           && (user_op::HobDataType("embeddings", 0) == GetDataType<t_dtype>::value))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                 \
-        const int64_t embedding_size = 128;                                               \
+        const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);        \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);    \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                        \
             nullptr, unique_ids.shape().elem_cnt(), embedding_size);                      \
@@ -525,7 +525,7 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("unique_ids", 0) == GetDataType<k_dtype>::value)         \
           && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
-        const int64_t embedding_size = 128;                                                 \
+        const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);          \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);      \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                          \
             nullptr, unique_ids.shape().elem_cnt(), embedding_size);                        \

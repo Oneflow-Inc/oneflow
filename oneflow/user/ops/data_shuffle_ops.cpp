@@ -113,6 +113,7 @@ namespace oneflow {
   const Shape& ids_shape = ctx->InputShape("unique_ids", 0);
   DimVector out_dim_vec = ids_shape.dim_vec();
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   *ctx->OutputShape("out_context", 0) = ctx->InputShape("context", 0);
@@ -169,6 +170,7 @@ namespace oneflow {
   const Shape& ids_shape = ctx->InputShape("ids_reverse_idx", 0);
   DimVector out_dim_vec = ids_shape.dim_vec();
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   *ctx->OutputIsDynamic("embeddings", 0) = false;
