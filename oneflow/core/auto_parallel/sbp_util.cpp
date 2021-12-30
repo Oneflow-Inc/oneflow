@@ -216,7 +216,6 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
-
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   cfg::NdSbp reduced_in_nd_sbp;
@@ -342,16 +341,34 @@ bool IsSameSbp(OpNode* consumer, const std::string& ibn) {
 // Compute storage per device for given NdSbp
 double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
                      const std::shared_ptr<Shape>& parallel_hierarchy) {
-  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
-    const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+  if (nd_sbp.sbp_parallel_size() == 1) {
+    double logical_blob_size = logical_shape.elem_cnt();
+    // Checking 1D sbp
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(0);
     if (sbp_parallel.has_split_parallel()) {
-      // Split axis and store result back to logical shape
       const int64_t axis = sbp_parallel.split_parallel().axis();
       if (axis >= logical_shape.NumAxes()) { return GetMaxVal<float>(); }
-      logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
+      if (logical_shape.At(axis) < parallel_hierarchy->At(0)) { return GetMaxVal<float>(); }
+      logical_blob_size /= parallel_hierarchy->At(0);
     }
+    return logical_blob_size;
+  } else {
+    for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+      const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+      if (sbp_parallel.has_split_parallel()) {
+        // Split axis and store result back to logical shape
+        const int64_t axis = sbp_parallel.split_parallel().axis();
+        if (axis >= logical_shape.NumAxes()) { return GetMaxVal<float>(); }
+        // Use completely average split to count the storage
+        if (logical_shape.At(axis) <= 0
+            || (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) > 0)) {
+          return GetMaxVal<float>();
+        }
+        logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
+      }
+    }
+    return logical_shape.elem_cnt();
   }
-  return logical_shape.elem_cnt();
 }
 }  // namespace auto_parallel
 }  // namespace oneflow

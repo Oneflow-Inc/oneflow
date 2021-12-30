@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/auto_parallel/sbp_node.h"
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
@@ -277,30 +279,7 @@ void DfsSetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_
 // True means this NdSbp is not valid.
 Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
                                       const std::shared_ptr<Shape>& parallel_hierarchy) {
-  if (nd_sbp.sbp_parallel_size() == 1) {
-    // Checking 1D sbp
-    const auto& sbp_parallel = nd_sbp.sbp_parallel(0);
-    if (sbp_parallel.has_split_parallel()) {
-      const int64_t axis = sbp_parallel.split_parallel().axis();
-      if (axis >= logical_shape.NumAxes()) { return true; }
-      if (logical_shape.At(axis) < parallel_hierarchy->At(0)) { return true; }
-    }
-  } else {
-    // Checking nD sbp
-    // For in_0, look through S(6) and B
-    for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
-      const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
-      if (sbp_parallel.has_split_parallel()) {
-        // For S(6) in (S(6), B) of {in_0 : (S(6), B)}, axis = 0
-        const int64_t axis = sbp_parallel.split_parallel().axis();
-        if (axis >= logical_shape.NumAxes()) { return true; }
-        CHECK_GT_OR_RETURN(logical_shape.At(axis), 0);
-        if (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) > 0) { return true; }
-        logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
-      }
-    }
-  }
-  return false;
+  return auto_parallel::Storage4NdSbp(nd_sbp, logical_shape, parallel_hierarchy) > cut_cost;
 }
 
 }  // namespace oneflow
