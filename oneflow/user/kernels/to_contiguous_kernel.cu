@@ -137,6 +137,7 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
         OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize, cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
       } else{
+        // printf("\n >>> block_size:%ld; in stride:(%ld, %ld, %ld, %ld); out stride:(%ld, %ld, %ld, %ld)", block_size, in_stride[0], in_stride[1], in_stride[2], in_stride[3], out_stride[0], out_stride[1], out_stride[2], out_stride[3]);
         constexpr int pack_size = cuda::elementwise::PackSize<T>();
         if (element_count < GetMaxVal<int32_t>()) {
           if (ndims==1){
