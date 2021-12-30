@@ -1,4 +1,5 @@
-# CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=20 ninja testcmake_minimum_required(VERSION 3.19.0)
+# CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=20 ninja test
+cmake_minimum_required(VERSION 3.19.0)
 
 project(oneflow-ci-test)
 include(CMakeDependentOption)
@@ -13,7 +14,7 @@ set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
 set(SINGLE_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_client/test CACHE STRING "test script dir for single client")
 set(MULTI_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test CACHE STRING "test script dir for multi client")
-
+enable_testing()
 add_custom_target(ensure_docker_imgs)
 function(add_docker_img)
   set(target_name "pull_docker_img_${ARGV0}")
@@ -31,32 +32,49 @@ if(RUN_IN_DOCKER)
 endif()
 
 # TODO: ensure datasets (ExternalData)
+# TODO: (if it is .whl URL) download pip package
 # TODO: start docker, mount test dirs (writable), datasets (read-only)
+# TODO: install pip package
 function(add_oneflow_python_test)
-set(prefix ARG)
-set(singleValues "TEST_DIR")
-cmake_parse_arguments(
-  PARSE_ARGV 0
-  ${prefix}
-  "${noValues}" "${singleValues}" "${multiValues}"
-)
-file(GLOB_RECURSE PYTHON_TEST_FILES LIST_DIRECTORIES false "${ARG_TEST_DIR}/test_*.py")
-foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
-  set(TEST_NAME ${PYTHON_TEST_FILE})
-  add_test(NAME ${TEST_NAME}
-    COMMAND ${PYTHON_EXECUTABLE} ${ONEFLOW_SRC_DIR}/${PYTHON_TEST_FILE} --failfast --verbose
+  set(prefix ARG)
+  set(testTypes "SINGLE_CLIENT;MULTI_CLIENT")
+  list(APPEND noValues ${testTypes})
+  set(singleValues "TEST_DIR")
+  cmake_parse_arguments(
+    PARSE_ARGV 0
+    ${prefix}
+    "${noValues}" "${singleValues}" "${multiValues}"
   )
-  set_tests_properties(${TEST_NAME}
-    PROPERTIES
-      ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>"
-      RESOURCE_GROUPS
-        "vram:2000"
-  )
-endforeach()
+  message(STATUS "Test dir: ${${prefix}_TEST_DIR}. Left-over args: ${ARG_UNPARSED_ARGUMENTS}. Keywords missing values: ${ARG_KEYWORDS_MISSING_VALUES}.")
+  if ((NOT ${prefix}_SINGLE_CLIENT) AND (NOT ${prefix}_MULTI_CLIENT))
+    message(FATAL_ERROR "must set one test type in ${testTypes}")
+  endif()
+  foreach(testType IN LISTS testTypes)
+    if(${prefix}_${testType})
+      list(APPEND testLabels ${testType})
+      list(APPEND testNamePrefix ${testType})
+    endif()
+  endforeach()
+  file(GLOB_RECURSE PYTHON_TEST_FILES LIST_DIRECTORIES false "${${prefix}_TEST_DIR}/test_*.py")
+  foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
+    set(TEST_NAME "[${testNamePrefix}] ${PYTHON_TEST_FILE}")
+    add_test(NAME ${TEST_NAME}
+      COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose
+    )
+    set_tests_properties(${TEST_NAME} PROPERTIES LABELS ${testLabels})
+    set_tests_properties(${TEST_NAME}
+      PROPERTIES
+        ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>"
+        RESOURCE_GROUPS
+          "vram:2000"
+    )
+    if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
+      set_tests_properties(${TEST_NAME}
+          PROPERTIES
+            RESOURCE_GROUPS
+              "vram:4000"
+      )
+    endif()
+  endforeach()
 endfunction()
-
-set_tests_properties(python/oneflow/test/modules/test_rnn.py
-  PROPERTIES
-    RESOURCE_GROUPS
-      "vram:4000"
-)
+add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/modules MULTI_CLIENT)
