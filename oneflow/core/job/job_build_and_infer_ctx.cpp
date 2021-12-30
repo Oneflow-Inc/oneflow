@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
