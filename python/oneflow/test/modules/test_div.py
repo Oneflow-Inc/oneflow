@@ -126,7 +126,7 @@ class TestDiv(flow.unittest.TestCase):
             )
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_0shape_div(test_case):
+    def test_0_size_div(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)

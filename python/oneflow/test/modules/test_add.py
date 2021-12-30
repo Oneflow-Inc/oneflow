@@ -171,7 +171,7 @@ class TestAddModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(check_graph=False)
-    def test_0shape_add(test_case):
+    def test_0_size_add(test_case):
         device = random_device()
         x = random_pytorch_tensor(2, 0, 3).to(device)
         y = random_pytorch_tensor(2, 1, 3).to(device)
@@ -183,7 +183,7 @@ class TestAddModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(2, 2, 3, requires_grad=False).to(device)
         y = random_pytorch_tensor(1, 10).to(device)
-        x = x + y.mean()
+        x += y.mean()
         return x
 
     @autotest(check_graph=False)
@@ -191,7 +191,7 @@ class TestAddModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(2, 2, 3).to(device).mean()
         y = random_pytorch_tensor(2, 2, 3).to(device)
-        x = x + y.mean()
+        x += y.mean()
         return x
 
     @autotest(check_graph=True)
