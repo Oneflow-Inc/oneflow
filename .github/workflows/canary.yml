@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - add-support-clang-12
+      - debug-auto-canary--wenxiao
   workflow_dispatch:
     inputs:
       oneflow-ref:
@@ -20,10 +21,10 @@ jobs:
     if: github.repository == 'Oneflow-Inc/oneflow'
     env:
       ONEFLOW_SRC: .
-      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
+      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu102
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      COMPUTE_PLATFORM: cu112
-      CUDA_VERSION: "11.2"
+      COMPUTE_PLATFORM: cu102
+      CUDA_VERSION: "10.2"
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
