@@ -30,6 +30,13 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
   }
 };
 
+// template<typename Dst, typename Src>
+// struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
+//   OF_DEVICE_FUNC Dst operator()(Src src) const {
+//     return src * normcdff(src); 
+//   }
+// };
+
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, half, half> {
   UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, float, float> float_functor;

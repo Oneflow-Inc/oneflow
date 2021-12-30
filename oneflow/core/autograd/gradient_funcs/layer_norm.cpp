@@ -108,19 +108,21 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
   if (begin_norm_axis < 0) { begin_norm_axis += dy->shape()->NumAxes(); }
 
   std::shared_ptr<Tensor> gamma = saved_tensors.at(ctx->gamma_index);
-  if (!ctx->has_affine) {
-    // Use LayerNormParamGrad(Tensor dy, Tensor gamma, Int64 begin_params_axis, Double epsilon).
-    dy = JUST(functional::LayerNormParamGrad(dy, begin_params_axis, ctx->epsilon));
-  } else {
-    // Use LayerNormAffineParamGrad(Tensor dy, Tensor gamma, Tensor normalized, Int64
-    // begin_params_axis, Double epsilon).
-    std::shared_ptr<Tensor> normalized = saved_tensors.at(ctx->normalized_index);
-    const auto& results = JUST(functional::LayerNormAffineParamGrad(
-        dy, gamma, normalized, begin_params_axis, ctx->epsilon));
-    in_grads->at(1) = results->at(0);  // For gamma.
-    in_grads->at(2) = results->at(1);  // For beta.
-    dy = results->at(2);
-  }
+  
+  // TODO:
+  // if (!ctx->has_affine) {
+  //   // Use LayerNormParamGrad(Tensor dy, Tensor gamma, Int64 begin_params_axis, Double epsilon).
+  //   dy = JUST(functional::LayerNormParamGrad(dy, begin_params_axis, ctx->epsilon));
+  // } else {
+  //   // Use LayerNormAffineParamGrad(Tensor dy, Tensor gamma, Tensor normalized, Int64
+  //   // begin_params_axis, Double epsilon).
+  //   std::shared_ptr<Tensor> normalized = saved_tensors.at(ctx->normalized_index);
+  //   const auto& results = JUST(functional::LayerNormAffineParamGrad(
+  //       dy, gamma, normalized, begin_params_axis, ctx->epsilon));
+  //   in_grads->at(1) = results->at(0);  // For gamma.
+  //   in_grads->at(2) = results->at(1);  // For beta.
+  //   dy = results->at(2);
+  // }
 
   if (ctx->x_requires_grad) {
     const auto& x = saved_tensors.at(ctx->x_index);

@@ -20,8 +20,6 @@ from typing import Callable, Dict, Iterator, List, Tuple, Union
 import oneflow as flow
 from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
-
-import numpy as np 
 class Adam(Optimizer):
     """Implements Adam algorithm.
 
@@ -170,12 +168,6 @@ class Adam(Optimizer):
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
-                    # one = np.ones((1, ), dtype=np.float32)
-                    # beta1 = np.array(param_group["betas"][0], dtype=np.float32)
-                    # beta2 = np.array(param_group["betas"][1], dtype=np.float32)
-                    
-                    # param_group["bias_correction1"] = float((one - np.power(beta1, self._state["step"] + 1))[0])
-                    # param_group["bias_correction2"] = float((one - np.power(beta2, self._state["step"] + 1))[0])
 
                     param_group["bias_correction1"] = 1.0 - math.pow(
                         param_group["betas"][0], self._state["step"] + 1
@@ -183,6 +175,8 @@ class Adam(Optimizer):
                     param_group["bias_correction2"] = 1.0 - math.pow(
                         param_group["betas"][1], self._state["step"] + 1
                     )
+                    # print("Bias corr1 val: ", param_group["bias_correction1"])
+                    # print("Bias corr2 val: ", param_group["bias_correction2"])
 
                 kwargs = {
                     "learning_rate_val": param_group["lr"],

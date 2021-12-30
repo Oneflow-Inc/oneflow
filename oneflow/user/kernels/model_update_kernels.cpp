@@ -397,11 +397,15 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto l2 = ctx->Attr<float>("l2");
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
-    const auto epsilon = ctx->Attr<float>("epsilon");
+    // const auto epsilon = ctx->Attr<float>("epsilon");
+    const auto epsilon = ctx->Attr<double>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     const int64_t step = ctx->Attr<int64_t>("step");
+
+    // printf("L2 is: %f \n", l2); 
+    // printf("weight decay is: %f \n", weight_decay); 
 
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
@@ -410,7 +414,8 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       learning_rate_ptr = learning_rate->dptr<float>();
     }
 
-    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
+    // const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
+    const float bias_correction1_val = ctx->Attr<double>("bias_correction1_val");
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
@@ -418,7 +423,8 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
-    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
+    // const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
+    const float bias_correction2_val = ctx->Attr<double>("bias_correction2_val");
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
@@ -441,22 +447,25 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
-    const float bias_corr1 = 1 - std::pow(beta1, step+1); 
-    const float bias_corr2 = 1 - std::pow(beta2, step+1); 
+    // const float bias_corr1 = 1 - std::pow(beta1, step+1); 
+    // const float bias_corr2 = 1 - std::pow(beta2, step+1); 
 
-    // AdamUpdateKernelUtil<device_type, T, G>::Update(
-    //     ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-    //     epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
-    //     bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
-    //     bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
-    //     v->mut_dptr<T>(), max_v->mut_dptr<T>());
-
+    // /*
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_corr1,
-        bias_corr2, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
+        bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
         bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
         v->mut_dptr<T>(), max_v->mut_dptr<T>());
+    // */
+
+  //   AdamUpdateKernelUtil<device_type, T, G>::Update(
+  //       ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
+  //       epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_corr1,
+  //       bias_corr2, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
+  //       bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+  //       v->mut_dptr<T>(), max_v->mut_dptr<T>());
+  
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

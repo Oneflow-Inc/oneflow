@@ -197,6 +197,8 @@ def cuda(input, device: Union[int, str, flow.device] = None):
     if device is None:
         device = "cuda"
     elif device is isinstance(int):
+    # elif isinstance(type(device), int):
+    # elif type(device) is int:
         device = "cuda:" + str(device)
     return input.to(device=device)
 

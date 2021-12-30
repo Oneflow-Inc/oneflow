@@ -170,12 +170,15 @@ class AdamW(Optimizer):
                 loss = closure()
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
-                    param_group["bias_correction1"] = 1.0 - math.pow(
-                        param_group["betas"][0], self._state["step"] + 1
-                    )
-                    param_group["bias_correction2"] = 1.0 - math.pow(
-                        param_group["betas"][1], self._state["step"] + 1
-                    )
+                    # param_group["bias_correction1"] = 1.0 - math.pow(
+                    #     param_group["betas"][0], self._state["step"] + 1
+                    # )
+                    # param_group["bias_correction2"] = 1.0 - math.pow(
+                    #     param_group["betas"][1], self._state["step"] + 1
+                    # )
+
+                    param_group["bias_correction1"] = 1 - param_group["betas"][0]**(self._state["step"] + 1)
+                    param_group["bias_correction2"] = 1 - param_group["betas"][1]**(self._state["step"] + 1)
 
                 kwargs = {
                     "learning_rate_val": param_group["lr"],

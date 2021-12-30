@@ -77,31 +77,33 @@ template<typename T, typename G>
 struct AdamUpdateFunctor {
   OF_DEVICE_FUNC
   void operator()(const G* model_diff, T* model, T* m, T* v, T* max_v, T scale, float l1, float l2,
-                  float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
-                  float bias_correction1, float bias_correction2, float learning_rate) const {
+                  float beta1, float beta2, double epsilon, float weight_decay, bool amsgrad,
+                  double bias_correction1, double bias_correction2, float learning_rate) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
 
     const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
+
     *m = next_m;
 
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
     *v = next_v;
 
-    T denom = 0;
+    // T denom = 0;
+    double denom = 0;
     if (amsgrad) {
       const T next_max_v =
           *max_v > next_v ? *max_v : next_v;  // use std::max has bug in GPU kernel.
       *max_v = next_max_v;
-      // denom = (sqrt(next_max_v) / sqrt(bias_correction2)) + epsilon;
-      // denom = (sqrt(next_max_v) / (sqrt(bias_correction2) + epsilon)) ;
-      // denom = sqrt(next_max_v / bias_correction2) + epsilon;
-      denom = sqrtf(next_max_v / bias_correction2) + epsilon;
+      // denom = (sqrtf(next_max_v) / sqrtf(bias_correction2)) + epsilon;
+      denom = (sqrtf(next_max_v) / sqrt(bias_correction2)) + epsilon;
+
     } else {
-      // denom = (sqrt(next_v) / (sqrt(bias_correction2) + epsilon));
-      // denom = sqrt(next_v /bias_correction2) + epsilon;
-      denom = sqrtf(next_v /bias_correction2) + epsilon;
+      // denom = (sqrtf(next_v) / sqrtf(bias_correction2)) + epsilon;
+      // denom = (sqrtf(next_v) / sqrt(bias_correction2)) + epsilon;
+      denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
+      // denom = (sqrtf(next_v / bias_correction2)) + epsilon;
     }
     const T step_size = learning_rate / bias_correction1;
     *model = model_val - step_size * (next_m / denom) - learning_rate * weight_decay * model_val;

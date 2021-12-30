@@ -34,6 +34,16 @@ struct GeluGradFunctor {
   }
 };
 
+// template<typename T>
+// struct GeluGradFunctor {
+//   OF_DEVICE_FUNC T operator()(T x, T dy) const {
+//     constexpr T kBeta = M_2_SQRTPI * M_SQRT1_2 * static_cast<T>(0.5);
+//     const T cdf = normcdff(x);
+//     const T pdf = exp( static_cast<T>(-0.5) * x * x) * kBeta;
+//     return dy * (cdf + x * pdf);
+//   }
+// };
+
 template<>
 struct GeluGradFunctor<half> {
   GeluGradFunctor<float> float_functor;

@@ -63,11 +63,12 @@ __inline__ __device__ T Div(T a, T b);
 
 template<>
 __inline__ __device__ float Div<float>(float a, float b) {
-#ifdef OF_LAYER_NORM_USE_FAST_MATH
-  return __fdividef(a, b);
-#else
-  return a / b;
-#endif
+// #ifdef OF_LAYER_NORM_USE_FAST_MATH
+  // return __fdividef(a, b);
+// #else
+  // return a / b;
+  return fdividef(a, b);
+// #endif
 }
 
 template<>
@@ -80,11 +81,12 @@ __inline__ __device__ T Rsqrt(T x);
 
 template<>
 __inline__ __device__ float Rsqrt<float>(float x) {
-#ifdef OF_LAYER_NORM_USE_FAST_MATH
-  return __frsqrt_rn(x);
-#else
-  return rsqrt(x);
-#endif
+// #ifdef OF_LAYER_NORM_USE_FAST_MATH
+  // return __frsqrt_rn(x);
+// #else
+  // return rsqrt(x);
+  return rsqrtf(x);
+// #endif
 }
 
 template<>
@@ -283,6 +285,7 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
   static_assert(cols_per_thread % pack_size == 0, "");
   static_assert(thread_group_width <= kWarpSize, "");
   static_assert(kWarpSize % thread_group_width == 0, "");
+  const float eps = epsilon; 
   constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * thread_group_width);
   ComputeType buf[rows_per_access][cols_per_thread];
@@ -328,9 +331,12 @@ __global__ void LayerNormWarpImpl(LOAD load, STORE store, const int64_t rows, co
           thread_mean[row_id], thread_m2[row_id], thread_count[row_id], warp_mean + row_id,
           warp_m2 + row_id, warp_count + row_id);
       ComputeType row_mean = warp_mean[row_id];
-      ComputeType row_variance =
-          max(Div(warp_m2[row_id], warp_count[row_id]), static_cast<ComputeType>(0.0));
-      ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+      // ComputeType row_variance =
+          // max(Div(warp_m2[row_id], warp_count[row_id]), static_cast<ComputeType>(0.0));
+      ComputeType row_variance = Div(warp_m2[row_id], warp_count[row_id]);
+      // ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+      ComputeType row_inv_var = Rsqrt(row_variance + eps);
+      
       if (lane_id == 0) {
         mean[global_row_id] = row_mean;
         inv_variance[global_row_id] = row_inv_var;
@@ -832,23 +838,36 @@ inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaEr
 DispatchLayerNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                   const int64_t cols, const double epsilon, ComputeType* mean,
                   ComputeType* inv_variance) {
-  if (cols <= 1024) {
-    return DispatchLayerNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols,
-                                                               epsilon, mean, inv_variance);
-  } else {
-    bool dispatch_smem_impl_success;
-    {
-      cudaError_t err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance,
-          &dispatch_smem_impl_success);
-      if (err != cudaSuccess) { return err; }
-    }
-    if (!dispatch_smem_impl_success) {
-      return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    }
-    return cudaSuccess;
+  // if (cols <= 1024) {
+  //   return DispatchLayerNormWarpImpl<LOAD, STORE, ComputeType>(stream, load, store, rows, cols,
+  //                                                              epsilon, mean, inv_variance);
+  // } else {
+  //   bool dispatch_smem_impl_success;
+  //   {
+  //     cudaError_t err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
+  //         stream, load, store, rows, cols, epsilon, mean, inv_variance,
+  //         &dispatch_smem_impl_success);
+  //     if (err != cudaSuccess) { return err; }
+  //   }
+  //   if (!dispatch_smem_impl_success) {
+  //     return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
+  //         stream, load, store, rows, cols, epsilon, mean, inv_variance);
+  //   }
+  //   return cudaSuccess;
+  // }
+
+  bool dispatch_smem_impl_success;
+  {
+    cudaError_t err = TryDispatchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType>(
+        stream, load, store, rows, cols, epsilon, mean, inv_variance,
+        &dispatch_smem_impl_success);
+    if (err != cudaSuccess) { return err; }
   }
+  if (!dispatch_smem_impl_success) {
+    return DispatchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
+        stream, load, store, rows, cols, epsilon, mean, inv_variance);
+  }
+  return cudaSuccess;
 }
 
 template<typename LOAD, typename STORE, typename ComputeType>

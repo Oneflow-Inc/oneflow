@@ -81,11 +81,11 @@ __inline__ __device__ T Exp(T x);
 
 template<>
 __inline__ __device__ float Exp<float>(float x) {
-#ifdef OF_SOFTMAX_USE_FAST_MATH
-  return __expf(x);
-#else
-  return exp(x);
-#endif
+// #ifdef OF_SOFTMAX_USE_FAST_MATH
+  // return __expf(x);
+// #else
+  return expf(x);
+// #endif
 }
 
 template<>
@@ -98,16 +98,18 @@ __inline__ __device__ T Div(T a, T b);
 
 template<>
 __inline__ __device__ float Div<float>(float a, float b) {
-#ifdef OF_SOFTMAX_USE_FAST_MATH
-  return __fdividef(a, b);
-#else
-  return a / b;
-#endif
+// #ifdef OF_SOFTMAX_USE_FAST_MATH
+  // return __fdividef(a, b);
+// #else
+  // return a / b;
+  return fdividef(a, b);
+// #endif
 }
 
 template<>
 __inline__ __device__ double Div<double>(double a, double b) {
-  return a / b;
+  // return a / b;
+  return a *(1.f/ b);
 }
 
 template<typename T>
@@ -115,11 +117,12 @@ __inline__ __device__ T Log(T x);
 
 template<>
 __inline__ __device__ float Log<float>(float x) {
-#ifdef OF_SOFTMAX_USE_FAST_MATH
-  return __logf(x);
-#else
-  return log(x);
-#endif
+// #ifdef OF_SOFTMAX_USE_FAST_MATH
+  // return __logf(x);
+// #else
+  // return log(x);
+  return logf(x);
+// #endif
 }
 template<>
 __inline__ __device__ double Log<double>(double x) {

@@ -388,6 +388,66 @@ class Module(object):
                     ):
                         unexpected_keys.append(key)
 
+    def get_parameter(self, target: str) -> "Parameter":
+        """
+        Returns the parameter given by ``target`` if it exists,
+        otherwise throws an error.
+
+        See the docstring for ``get_submodule`` for a more detailed
+        explanation of this method's functionality as well as how to
+        correctly specify ``target``.
+
+        Args:
+            target: The fully-qualified string name of the Parameter
+                to look for. (See ``get_submodule`` for how to specify a
+                fully-qualified string.)
+
+        Returns:
+            torch.nn.Parameter: The Parameter referenced by ``target``
+
+        Raises:
+            AttributeError: If the target string references an invalid
+                path or resolves to something that is not an
+                ``nn.Parameter``
+        """
+        module_path, _, param_name = target.rpartition(".")
+
+        mod: flow.nn.Module = self.get_submodule(module_path)
+
+        if not hasattr(mod, param_name):
+            raise AttributeError(mod._get_name() + " has no attribute `"
+                                 + param_name + "`")
+
+        param: flow.nn.Parameter = getattr(mod, param_name)
+
+        if not isinstance(param, flow.nn.Parameter):
+            raise AttributeError("`" + param_name + "` is not an "
+                                 "nn.Parameter")
+
+        return param
+
+    def get_submodule(self, target: str) -> "Module":
+        if target == "":
+            return self
+
+        atoms: List[str] = target.split(".")
+        mod: flow.nn.Module = self
+
+        for item in atoms:
+
+            if not hasattr(mod, item):
+                raise AttributeError(mod._get_name() + " has no "
+                                     "attribute `" + item + "`")
+
+            mod = getattr(mod, item)
+
+            if not isinstance(mod, flow.nn.Module):
+                raise AttributeError("`" + item + "` is not "
+                                     "an nn.Module")
+
+        return mod
+
+
     def load_state_dict(
         self,
         state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
