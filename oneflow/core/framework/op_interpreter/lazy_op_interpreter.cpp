@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -418,12 +420,15 @@ namespace {
 Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_expr,
                                                         TensorTuple* outputs,
                                                         const OpExprInterpContext& ctx) {
+  NonRecursiveMetaInfoConsistencyCheckScope non_scope;
   bool is_local;
   std::shared_ptr<const ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc).shared_from_symbol();
+    const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
+    parallel_desc = parallel_desc_sym.shared_from_symbol();
+    JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp));
     is_local = false;
   } else {
     // NOTE(chengcheng): local

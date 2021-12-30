@@ -22,7 +22,7 @@ def slice_wrapper(tensor, slice_tuple: Tuple[int, int, int]):
     with flow.no_grad():
         ndim = tensor.ndim
         slice_tuple_list = [slice_tuple] + [[None, None, None]] * (ndim - 1)
-        #TODO(): a kind 'slice op' supports both local and consistent tensor
+        # TODO(): a kind 'slice op' supports both local and consistent tensor
         if tensor.is_consistent:
             # input is s0, output is p
             # input is b, output is b
