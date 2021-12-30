@@ -50,10 +50,10 @@ namespace oneflow {
 /*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                   const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* roi_modifier = GetInputArgModifierFn("rois", 0);
-  CHECK(roi_modifier != nullptr);
+  CHECK_OR_RETURN(roi_modifier != nullptr);
   roi_modifier->set_requires_grad(false);
   user_op::InputArgModifier* feat_modifier = GetInputArgModifierFn("x", 0);
-  CHECK(feat_modifier != nullptr);
+  CHECK_OR_RETURN(feat_modifier != nullptr);
   feat_modifier->set_requires_grad(true);
   return Maybe<void>::Ok();
 }

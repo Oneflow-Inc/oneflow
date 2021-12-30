@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -52,7 +53,7 @@ namespace oneflow {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   Shape* dx_shape = ctx->OutputShape("dx", 0);
-  CHECK(dy_shape == x_shape);
+  CHECK_OR_RETURN(dy_shape == x_shape);
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
 }
