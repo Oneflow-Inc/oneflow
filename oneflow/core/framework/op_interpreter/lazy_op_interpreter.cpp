@@ -659,7 +659,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       CHECK_OR_RETURN(!lbn.empty()) << "The output which index is " << i
                                     << " has no tensor name, please check whether the inplaced "
                                        "output is also an input of the operation "
-                                    << op_expr.op_name();
+                                    << new_op_name;
       JUST(infer_ctx->DisableBoxing(lbn));
     }
   }
