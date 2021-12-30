@@ -1283,7 +1283,7 @@ add_docstr(
     The equation is:
     
 	$$		
-	​   \\sum_{i=1}^{n}(x[i] * y[i])
+        \\sum_{i=1}^{n}(x[i] * y[i])
 	$$
     
     Args:
@@ -1335,5 +1335,42 @@ add_docstr(
         >>> output = flow.movedim(input, (1, 2), (0, 1))
         >>> output.shape
         oneflow.Size([3, 4, 2, 5])
+    """,
+)
+
+add_docstr(
+    oneflow.eye,
+    """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
+    
+    This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
+
+    Args:
+        n (int): the number of rows.
+        m (int, optional): the number of colums with default being n. Defaults to None.
+    
+    Keyword args:
+        device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
+        placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
+        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
+    
+    Returns:
+        oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> out = flow.eye(3, 3)
+        >>> out
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], dtype=oneflow.float32)
+        >>> out = flow.eye(3, 3, device="cuda")
+        >>> out
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
     """,
 )

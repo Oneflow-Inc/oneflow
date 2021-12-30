@@ -48,7 +48,7 @@ vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
-flow_res_id_eager2_graph = dict()
+eager_tensor_2_graph_tensor = dict()
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -211,6 +211,7 @@ def GetDualObject(name, pytorch, oneflow):
         "__str__",
         "__repr__",
     ]
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
     pytorch_methods = dir(pytorch)
     if hasattr(pytorch, "__call__") and "__call__" not in pytorch_methods:
         pytorch_methods.append("__call__")
@@ -277,6 +278,9 @@ def GetDualObject(name, pytorch, oneflow):
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
+                                find_check_module_func = True
+                                ignore_apis_list = ["to", "tensor", "_to", "train"]
+                                test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
 
                                     class TestGraphOfModule(flow.nn.Graph):
@@ -288,15 +292,48 @@ def GetDualObject(name, pytorch, oneflow):
                                             return self.test_module(*args)
 
                                     test_g = TestGraphOfModule()
+                                    if verbose:
+                                        print("Run graph of module: ", repr(oneflow))
+                                        test_g.debug(2)
                                     test_g_res = test_g(*oneflow_args)
+                                elif oneflow.__name__ in ignore_apis_list:
+                                    find_check_module_func = False
+                                # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
+                                # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
+                                # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
+                                elif (
+                                    "oneflow.nn.modules" not in oneflow.__module__
+                                    or inspect.isfunction(oneflow)
+                                    or (
+                                        inspect.ismethod(oneflow)
+                                        and "oneflow.nn.modules" in oneflow.__module__
+                                    )
+                                ):
+
+                                    class TestGraphOfFunctional(flow.nn.Graph):
+                                        def __init__(self):
+                                            super().__init__()
+                                            self.test_module_func = oneflow
+
+                                        def build(self):
+                                            return self.test_module_func(
+                                                *oneflow_args, **oneflow_kwargs
+                                            )
+
+                                    test_g = TestGraphOfFunctional()
+                                    if verbose:
+                                        print("Run graph of function: ", oneflow)
+                                        test_g.debug(2)
+                                    test_g_res = test_g()
+                                if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
                                         for idx, g_res in enumerate(test_g_res):
-                                            flow_res_id_eager2_graph[
-                                                id(oneflow_res[idx])
+                                            eager_tensor_2_graph_tensor[
+                                                oneflow_res[idx]
                                             ] = g_res
                                     else:
-                                        flow_res_id_eager2_graph[
-                                            id(oneflow_res)
+                                        eager_tensor_2_graph_tensor[
+                                            oneflow_res
                                         ] = test_g_res
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -331,6 +368,30 @@ def GetDualObject(name, pytorch, oneflow):
                                 )
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
+                        if testing_graph:
+
+                            class TestGraphOfTensorMethod(flow.nn.Graph):
+                                def __init__(self):
+                                    super().__init__()
+
+                                def build(self):
+                                    return oneflow_method(
+                                        *oneflow_args, **oneflow_kwargs
+                                    )
+
+                            test_g = TestGraphOfTensorMethod()
+                            if verbose:
+                                print("Run graph of method: ", oneflow_method)
+                                test_g.debug(2)
+                            test_g_res = test_g()
+                            if isinstance(test_g_res, tuple):
+                                for idx, g_res in enumerate(test_g_res):
+                                    eager_tensor_2_graph_tensor[
+                                        oneflow_res[idx]
+                                    ] = g_res
+                            else:
+                                eager_tensor_2_graph_tensor[oneflow_res] = test_g_res
+
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
@@ -436,7 +497,7 @@ def clear_note_fake_program():
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
     vis_tensor.clear()
-    flow_res_id_eager2_graph.clear()
+    eager_tensor_2_graph_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
 
@@ -636,13 +697,13 @@ def autotest(
                     flow_tensor = output.oneflow
                     if isinstance(flow_tensor, flow.Tensor):
                         if (
-                            id(flow_tensor) in flow_res_id_eager2_graph
+                            flow_tensor in eager_tensor_2_graph_tensor
                             and check_allclose
                         ):
                             test_case.assertTrue(
                                 np.allclose(
                                     flow_tensor.numpy(),
-                                    flow_res_id_eager2_graph[id(flow_tensor)].numpy(),
+                                    eager_tensor_2_graph_tensor[flow_tensor].numpy(),
                                     rtol=rtol,
                                     atol=atol,
                                     equal_nan=True,

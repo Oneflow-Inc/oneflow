@@ -256,7 +256,7 @@ from oneflow.compatible.single_client.ops.array_ops import (
     zeros,
 )
 from oneflow.compatible.single_client.ops.assign_op import assign
-from oneflow.compatible.single_client.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.compatible.single_client.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.compatible.single_client.ops.categorical_ordinal_encode_op import (
     categorical_ordinal_encode,
 )
