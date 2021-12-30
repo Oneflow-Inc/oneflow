@@ -28,8 +28,9 @@ import oneflow.unittest
 def _test_fused_scale_mask_softmax(
     test_case, batch_size, num_heads, seq_length, fill_value, scale_value, broadcast_dim
 ):
-
-    x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
+    x = np.random.randn(batch_size, num_heads, seq_length, seq_length).astype(
+        np.float32
+    )
     mask_size = [batch_size, num_heads, seq_length, seq_length]
     if broadcast_dim == 3:
         mask_size[0] = 1
@@ -37,8 +38,7 @@ def _test_fused_scale_mask_softmax(
     elif broadcast_dim != -1:
         mask_size[broadcast_dim] = 1
     mask = np.random.randint(0, 2, size=mask_size, dtype=np.uint8)
-
-    fused_x_tensor = flow.tensor(x).to("cuda")
+    fused_x_tensor = flow.tensor(x, dtype=flow.float32).to("cuda")
     fused_mask_tensor = flow.tensor(mask, dtype=flow.int8).to("cuda")
     fused_x_tensor.requires_grad = True
 
