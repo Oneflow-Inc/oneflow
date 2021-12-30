@@ -62,27 +62,6 @@ void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
 void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
                                      const cfg::NdSbpSignature& nd_sbp_sig);
 
-Maybe<std::string> NdSbpSignatureListAsString(
-    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list, const PbRpf<std::string>& inputs,
-    const PbRpf<std::string>& outputs);
-
-void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size);
-
-void SetNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                       const cfg::SbpSignature& sbp_signature, int32_t sbp_axis);
-
-void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
-                          const cfg::SbpSignatureList& sbp_sig_list,
-                          std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list);
-
-// compute copy cost
-Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                         const cfg::NdSbp& consumer_sbp_parallel,
-                                         const BlobDesc& logical_blob_desc,
-                                         const ParallelDesc& producer_parallel_desc,
-                                         const ParallelDesc& consumer_parallel_desc,
-                                         bool is_same_sbp, bool allow_cpu2gpu);
-
 }  // namespace oneflow
 
 namespace std {

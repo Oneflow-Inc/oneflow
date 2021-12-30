@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
 
@@ -801,20 +802,14 @@ Maybe<void> Operator::InferNdSbpSignature(
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
       for (const auto& ibn : input_bns()) {
-        double copy_cost = JUST(ComputCopyCostBetweenNdSbp(
+        double copy_cost = JUST(ComputEagerCopyCostBetweenNdSbp(
             JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
             JUST(LogicalBlobDesc4Ibn(ibn)), JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(),
             *JUST(GetOpParallelDesc()),
-            /*is_same_sbp=*/false,
-            /*allow_cpu2gpu=*/false));
-        if (copy_cost < 0) {
-          total_copy_cost = -1.0;
-          break;
-        } else {
-          total_copy_cost += copy_cost;
-        }
+            /*is_same_sbp=*/false));
+        total_copy_cost += copy_cost;
       }
-      if (total_copy_cost >= 0) {
+      if (total_copy_cost <= GetValidMaxCopyCost()) {
         if (select_sbp_idx == -1) {
           select_sbp_idx = i;
           min_copy_cost = total_copy_cost;
@@ -822,7 +817,7 @@ Maybe<void> Operator::InferNdSbpSignature(
           select_sbp_idx = i;
           min_copy_cost = total_copy_cost;
         } else {
-          // Not best nd_sbp. DoNothing.
+          // Not best nd_sbp. Do Nothing.
         }
       }
     }
