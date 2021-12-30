@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import random
 import sys
 import traceback
@@ -237,6 +238,15 @@ class CropMirrorNormalize(Module):
         output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
+        if output_layout != "NCHW":
+            print(
+                "WARNING: output_layout has been deprecated. Please use Environment Variable ONEFLOW_ENABLE_NHWC, and make it equals 1."
+            )
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            output_layout = "NHWC"
+        else:
+            output_layout = "NCHW"
+
         self.color_space = color_space
         self.output_layout = output_layout
         self.mean = mean
