@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -61,20 +62,82 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 
 }  // namespace
 
-REGISTER_USER_OP("scalar_add_by_tensor")
-    .Input("x")
-    .Input("scalar")
-    .Output("y")
-    .SetTensorDescInferFn(TensorDescInferFn)
-    .SetDataTypeInferFn(DataTypeInferFn)
-    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .PartialSum(user_op::OpArg("scalar", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    }));
+/*static*/ Maybe<void> ScalarAddByTensorOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("scalar", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ScalarAddByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return TensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> ScalarAddByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ScalarAddByTensorOp::InferDataType(user_op::InferContext* ctx) {
+  return DataTypeInferFn(ctx);
+}
+
+/*static*/ Maybe<void> ScalarSubByTensorOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("scalar", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ScalarSubByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return TensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> ScalarSubByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ScalarSubByTensorOp::InferDataType(user_op::InferContext* ctx) {
+  return DataTypeInferFn(ctx);
+}
+
+/*static*/ Maybe<void> ScalarMulByTensorOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("scalar", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("scalar", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ScalarMulByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return TensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> ScalarMulByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ScalarMulByTensorOp::InferDataType(user_op::InferContext* ctx) {
+  return DataTypeInferFn(ctx);
+}
+
+/*static*/ Maybe<void> ScalarDivByTensorOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("scalar", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ScalarDivByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return TensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> ScalarDivByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ScalarDivByTensorOp::InferDataType(user_op::InferContext* ctx) {
+  return DataTypeInferFn(ctx);
+}
 
 REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -98,21 +161,6 @@ REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
       }
       return Maybe<void>::Ok();
     });
-
-REGISTER_USER_OP("scalar_sub_by_tensor")
-    .Input("x")
-    .Input("scalar")
-    .Output("y")
-    .SetTensorDescInferFn(TensorDescInferFn)
-    .SetDataTypeInferFn(DataTypeInferFn)
-    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .PartialSum(user_op::OpArg("scalar", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    }));
 
 REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -147,26 +195,6 @@ REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
       }
       return Maybe<void>::Ok();
     });
-
-REGISTER_USER_OP("scalar_mul_by_tensor")
-    .Input("x")
-    .Input("scalar")
-    .Output("y")
-    .SetTensorDescInferFn(TensorDescInferFn)
-    .SetDataTypeInferFn(DataTypeInferFn)
-    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .Broadcast(user_op::OpArg("scalar", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("x", 0))
-          .PartialSum(user_op::OpArg("scalar", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    }));
 
 REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -207,21 +235,6 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
       }
       return Maybe<void>::Ok();
     });
-
-REGISTER_USER_OP("scalar_div_by_tensor")
-    .Input("x")
-    .Input("scalar")
-    .Output("y")
-    .SetTensorDescInferFn(TensorDescInferFn)
-    .SetDataTypeInferFn(DataTypeInferFn)
-    .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .Broadcast(user_op::OpArg("scalar", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    }));
 
 REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

@@ -15,9 +15,9 @@ limitations under the License.
 */
 
 #include "oneflow/api/cpp/framework/device.h"
-#include "oneflow/api/common/device.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow_api {
 
@@ -25,11 +25,11 @@ namespace of = oneflow;
 
 Device::Device(const std::string& type_or_type_with_device_id)
     : device_(std::make_shared<of::Symbol<of::Device>>(
-        of::DeviceExportUtil::ParseAndNew(type_or_type_with_device_id).GetOrThrow())) {}
+        of::Device::ParseAndNew(type_or_type_with_device_id).GetOrThrow())) {}
 
 Device::Device(const std::string& type, int64_t device_id)
-    : device_(std::make_shared<of::Symbol<of::Device>>(
-        of::DeviceExportUtil::New(type, device_id).GetOrThrow())) {}
+    : device_(
+        std::make_shared<of::Symbol<of::Device>>(of::Device::New(type, device_id).GetOrThrow())) {}
 
 const std::string& Device::type() const { return (*device_)->type(); }
 

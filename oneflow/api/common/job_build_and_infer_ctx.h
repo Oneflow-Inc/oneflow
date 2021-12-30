@@ -13,18 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
-#define ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/job/parallel_desc.h"
+#ifndef ONEFLOW_API_COMMON_JOB_BUILD_AND_INFER_CTX_H_
+#define ONEFLOW_API_COMMON_JOB_BUILD_AND_INFER_CTX_H_
+
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
-Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
-                                 Symbol<ParallelDesc> placement);
+inline Maybe<Job> GetCurrentJob() {
+  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  auto* job_ctx =
+      JUST(job_ctx_mgr->FindJobBuildAndInferCtx(*JUST(job_ctx_mgr->GetCurrentJobName())));
+  CHECK_NOTNULL_OR_RETURN(job_ctx);
+  return job_ctx->job();
+}
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
+#endif  // ONEFLOW_API_COMMON_JOB_BUILD_AND_INFER_CTX_H_

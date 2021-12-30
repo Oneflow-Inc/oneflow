@@ -23,10 +23,10 @@
 - name: "add"
   signature:
     [
-      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
       "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Add",
       "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarAdd",
       "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) => ScalarAdd",
+      "Tensor (TensorTuple inputs, *, Bool inplace=False) => Add",
     ]
   bind_python: true
 
@@ -1716,8 +1716,12 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
 
+- name: "normalize"
+  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12) => Normalize"
+  bind_python: True
+
 - name: "l2_normalize"
-  signature: "TensorTuple (Tensor input, Int32 axis, Float epsilon) => L2Normalize"
+  signature: "Tensor (Tensor input, Int32 axis=0, Float epsilon=1e-12) => L2Normalize"
   bind_python: True
 
 - name: "l2_normalize_grad"
@@ -1823,7 +1827,7 @@
   bind_python: False
 
 - name: "meshgrid"
-  signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
+  signature: 'TensorTuple (TensorTuple tensors, String indexing="ij") => Meshgrid'
   bind_python: True
 
 - name: "decode_onerec"
@@ -1836,4 +1840,24 @@
 
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
+  bind_python: True
+
+- name: "tensor_buffer_to_tensor"
+  signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"
+  bind_python: True
+
+- name: "tensor_to_tensor_buffer"
+  signature: "Tensor (Tensor input, Int32 instance_dims) => TensorToTensorBuffer"
+  bind_python: True
+
+- name: "gen_tensor_buffer"
+  signature: "Tensor (Shape shape, ShapeList shape_list, FloatList value_list, DataType data_type, Bool dynamic_out) => GenTensorBuffer"
+  bind_python: True
+
+- name: "top_k"
+  signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
+  bind_python: True
+
+- name: "in_top_k"
+  signature: "Tensor (Tensor targets, Tensor predictions, Int32 k) => InTopK"
   bind_python: True

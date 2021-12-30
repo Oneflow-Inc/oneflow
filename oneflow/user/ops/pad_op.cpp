@@ -15,86 +15,73 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("pad")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int64_t>>("padding_before")
-    .Attr<std::vector<int64_t>>("padding_after")
-    .Attr<double>("floating_constant_value")
-    .Attr<int64_t>("integral_constant_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      CHECK_EQ_OR_RETURN(padding_before.size(), x_shape.NumAxes());
-      CHECK_EQ_OR_RETURN(padding_after.size(), x_shape.NumAxes());
-      DimVector y_dim_vec(x_shape.NumAxes());
-      FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
-        y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
-      }
-      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-        if (padding_before[i] == 0 && padding_after[i] == 0) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("y", 0), i)
-              .Build();
-        }
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> PadOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+    if (padding_before[i] == 0 && padding_after[i] == 0) {
+      ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> PadOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+  CHECK_EQ_OR_RETURN(padding_before.size(), x_shape.NumAxes());
+  CHECK_EQ_OR_RETURN(padding_after.size(), x_shape.NumAxes());
+  DimVector y_dim_vec(x_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
+    y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
+  }
+  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> PadOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return PadOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> PadOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("pad_grad")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int64_t>>("padding_before")
-    .Attr<std::vector<int64_t>>("padding_after")
-    .Attr<double>("floating_constant_value")
-    .Attr<int64_t>("integral_constant_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      CHECK_EQ_OR_RETURN(padding_before.size(), dy_shape.NumAxes());
-      CHECK_EQ_OR_RETURN(padding_after.size(), dy_shape.NumAxes());
-      DimVector dx_dim_vec(dy_shape.NumAxes());
-      FOR_RANGE(int64_t, i, 0, dy_shape.NumAxes()) {
-        dx_dim_vec[i] = dy_shape.At(i) - padding_before[i] - padding_after[i];
-      }
-      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-      const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-      const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
-        if (padding_before[i] == 0 && padding_after[i] == 0) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("dx", 0), i)
-              .Split(user_op::OpArg("dy", 0), i)
-              .Build();
-        }
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> PadGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+  const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+  FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
+    if (padding_before[i] == 0 && padding_after[i] == 0) {
+      ctx->NewBuilder().Split(user_op::OpArg("dx", 0), i).Split(user_op::OpArg("dy", 0), i).Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> PadGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+  CHECK_EQ_OR_RETURN(padding_before.size(), dy_shape.NumAxes());
+  CHECK_EQ_OR_RETURN(padding_after.size(), dy_shape.NumAxes());
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, dy_shape.NumAxes()) {
+    dx_dim_vec[i] = dy_shape.At(i) - padding_before[i] - padding_after[i];
+  }
+  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> PadGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return PadGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> PadGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
