@@ -550,7 +550,7 @@ jobs:
         timeout-minutes: 10
         run: |
           chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
+          docker exec -e ONEFLOW_DEBUG_MODE ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
           chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
           docker exec -e LD_LIBRARY_PATH=${{ steps.download-digest.outputs.entry-dir }}/liboneflow_cpp/lib ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
       - name: Build documentation
