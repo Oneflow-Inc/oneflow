@@ -41,7 +41,6 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inpu
 
   auto* op_ctx = JUST(ctx->dyn_cast<DropoutOp>());
   state->rate = op_ctx->rate();
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
   if (inputs.size() == 1) {
     state->has_addend = false;
   } else if (inputs.size() == 2) {

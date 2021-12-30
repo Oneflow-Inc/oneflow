@@ -35,6 +35,7 @@ struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   int32_t groups;
 };
 
+template <typename T>
 class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
  public:
   Maybe<void> Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
@@ -43,7 +44,8 @@ class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
+template <typename T>
+Maybe<void> DeConvolutionNd<T>::Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const OpBase* ctx) const {
   state->activation_requires_grad = inputs.at(0)->requires_grad();
   state->weight_requires_grad = inputs.at(1)->requires_grad();
@@ -53,7 +55,7 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const T
   if (state->weight_requires_grad) {
     state->SaveTensorForBackward(inputs.at(0));  // x
   }
-  auto* op_ctx = JUST(ctx->dyn_cast<Deconv3DOp>());
+  auto* op_ctx = JUST(ctx->dyn_cast<T>());
   state->data_format = op_ctx->data_format();
   state->padding_before = op_ctx->padding_before();
   state->kernel_size = op_ctx->kernel_size();
@@ -64,7 +66,8 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* state, const T
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* state,
+template <typename T>
+Maybe<void> DeConvolutionNd<T>::Apply(const DeConvolutionNdCaptureState* state,
                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (state->activation_requires_grad) {
@@ -77,21 +80,21 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* state,
     }
     const auto& weight = state->SavedTensors().at(0);
     if (state->ndims == 1) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), state->strides,
-                                  state->padding_before, state->dilation_rate, state->groups));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv1d(
+          out_grads.at(0), weight, Optional<Tensor>(), state->strides, state->padding_before,
+          state->dilation_rate, state->groups, state->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (state->ndims == 2) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), state->strides,
-                                  state->padding_before, state->dilation_rate, state->groups));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv2d(
+          out_grads.at(0), weight, Optional<Tensor>(), state->strides, state->padding_before,
+          state->dilation_rate, state->groups, state->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (state->ndims == 3) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), state->strides,
-                                  state->padding_before, state->dilation_rate, state->groups));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv3d(
+          out_grads.at(0), weight, Optional<Tensor>(), state->strides, state->padding_before,
+          state->dilation_rate, state->groups, state->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else {
@@ -108,9 +111,9 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* state,
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("deconv1d", DeConvolutionNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("deconv2d", DeConvolutionNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("deconv3d", DeConvolutionNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("deconv1d", DeConvolutionNd<Deconv1DOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("deconv2d", DeConvolutionNd<Deconv2DOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("deconv3d", DeConvolutionNd<Deconv3DOp>);
 
 }  // namespace one
 }  // namespace oneflow

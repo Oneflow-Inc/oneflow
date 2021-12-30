@@ -90,9 +90,9 @@ Maybe<void> AvgPoolingNdGrad<T>::Apply(const AvgPoolingCaptureState* state,
 
 }  // namespace
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_1d", AvgPoolingNdGrad<AvgPool1DGradOp>);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_2d", AvgPoolingNdGrad<AvgPool2DGradOp>);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_3d", AvgPoolingNdGrad<AvgPool3DGradOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_1d", AvgPoolingNdGrad<AvgPool1DOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_2d", AvgPoolingNdGrad<AvgPool2DOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_3d", AvgPoolingNdGrad<AvgPool3DOp>);
 
 }  // namespace one
 }  // namespace oneflow

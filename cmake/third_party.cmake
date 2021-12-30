@@ -45,6 +45,10 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
+set_mirror_url_with_hash(INJA_URL 
+  https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
+  611e6b7206d0fb89728a3879f78b4775
+)
 
 option(CUDA_STATIC "" ON)
 
@@ -153,6 +157,7 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    nlohmann_json::nlohmann_json
 )
 if (WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
@@ -183,7 +188,6 @@ set(oneflow_third_party_dependencies
   eigen
   half_copy_headers_to_destination
   re2
-  json_copy_headers_to_destination
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
@@ -218,8 +222,6 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
-    ${INJA_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}

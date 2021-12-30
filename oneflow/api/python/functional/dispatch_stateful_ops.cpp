@@ -345,27 +345,85 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         interp_ctx.device = device;
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, interp_ctx);
       });
+  m.add_functor("DispatchRmspropUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, double scale, float l1, float l2, bool centered,
+                   float epsilon, float decay_rate, float weight_decay) -> Maybe<void> {
+                  auto ctx = std::make_shared<schema::RmspropUpdateOp>();
+                  ctx->set_learning_rate_val(learning_rate);
+                  ctx->set_scale(scale);
+                  ctx->set_l1(l1);
+                  ctx->set_l2(l2);
+                  ctx->set_centered(centered);
+                  ctx->set_epsilon(epsilon);
+                  ctx->set_decay_rate(decay_rate);
+                  ctx->set_weight_decay(weight_decay);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, ctx));
+                  return Maybe<void>::Ok();
+                });
+  m.add_functor("DispatchAdamUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, float bias_correction1, float bias_correction2,
+                   double scale, float l1, float l2, float beta1, float beta2, float epsilon,
+                   float weight_decay, bool amsgrad, bool do_bias_correction) -> Maybe<void> {
+                  auto ctx = std::make_shared<schema::AdamUpdateOp>();
+                  ctx->set_learning_rate_val(learning_rate);
+                  ctx->set_bias_correction1_val(bias_correction1);
+                  ctx->set_bias_correction2_val(bias_correction2);
+                  ctx->set_scale(scale);
+                  ctx->set_l1(l1);
+                  ctx->set_l2(l2);
+                  ctx->set_beta1(beta1);
+                  ctx->set_beta2(beta2);
+                  ctx->set_epsilon(epsilon);
+                  ctx->set_weight_decay(weight_decay);
+                  ctx->set_amsgrad(amsgrad);
+                  ctx->set_do_bias_correction(do_bias_correction);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, ctx));
+                  return Maybe<void>::Ok();
+                });
+  m.add_functor("DispatchAdagradUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, double scale, float l1, float l2, float lr_decay,
+                   float weight_decay, float epsilon, int32_t train_step) -> Maybe<void> {
+                  auto ctx = std::make_shared<schema::AdagradUpdateOp>();
+                  ctx->set_learning_rate_val(learning_rate);
+                  ctx->set_scale(scale);
+                  ctx->set_l1(l1);
+                  ctx->set_l2(l2);
+                  ctx->set_lr_decay(lr_decay);
+                  ctx->set_weight_decay(weight_decay);
+                  ctx->set_epsilon(epsilon);
+                  ctx->set_train_step_val(train_step);
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, ctx));
+                  return Maybe<void>::Ok();
+                });
   m.add_functor(
-      "DispatchMegatronGptMmapDataLoader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string& data_file_prefix, int64_t seq_length,
-         int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
-         const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
-         int64_t random_seed, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
-        auto ctx = std::make_shared<schema::MegatronGptMmapDataLoaderOp>();
-        ctx->set_data_file_prefix(data_file_prefix);
-        ctx->set_seq_length(seq_length);
-        ctx->set_label_length(label_length);
-        ctx->set_num_samples(num_samples);
-        ctx->set_batch_size(batch_size);
-        ctx->set_dtype(dtype->data_type());
-        ctx->set_split_sizes(split_sizes);
-        ctx->set_split_index(split_index);
-        ctx->set_shuffle(shuffle);
-        ctx->set_random_seed(random_seed);
-        ctx->set_nd_sbp(*JUST(GetNdSbpStrList(sbp_tuple)));
-        return OpInterpUtil::Dispatch<Tensor>(
-            *op, {}, OpExprInterpContext(ctx, placement, JUST(GetNdSbp(sbp_tuple))));
+      "DispatchMomentumUpdate",
+      [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
+         double scale, float l1, float l2, float beta, float weight_decay) -> Maybe<void> {
+        auto ctx = std::make_shared<schema::MomentumUpdateOp>();
+        ctx->set_learning_rate_val(learning_rate);
+        ctx->set_scale(scale);
+        ctx->set_l1(l1);
+        ctx->set_l2(l2);
+        ctx->set_beta(beta);
+        ctx->set_weight_decay(weight_decay);
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, ctx));
+        return Maybe<void>::Ok();
+      });
+  m.add_functor(
+      "DispatchSgdUpdate",
+      [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
+         double scale, float l1, float l2, float weight_decay) -> Maybe<void> {
+        auto ctx = std::make_shared<schema::SgdUpdateOp>();
+        ctx->set_learning_rate_val(learning_rate);
+        ctx->set_scale(scale);
+        ctx->set_l1(l1);
+        ctx->set_l2(l2);
+        ctx->set_weight_decay(weight_decay);
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, ctx));
+        return Maybe<void>::Ok();
       });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,

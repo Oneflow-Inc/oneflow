@@ -87,7 +87,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
 
     state->gamma_requires_grad = gamma->requires_grad();
     state->beta_requires_grad = beta->requires_grad();
-    auto* op_ctx = JUST(ctx->dyn_cast<NormalizationAddReluGradOp>());
+    auto* op_ctx = JUST(ctx->dyn_cast<NormalizationAddReluOp>());
 
     state->axis = op_ctx->axis();
     state->epsilon = op_ctx->epsilon();

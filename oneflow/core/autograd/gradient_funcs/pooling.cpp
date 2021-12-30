@@ -101,19 +101,19 @@ Maybe<void> PoolingNdGrad<T>::Apply(const PoolingCaptureState* state, const Tens
 
 class Maxpool1DGrad final : public PoolingNdGrad<Maxpool1DGrad> {
  public:
-  using OpT = MaxPool1DGradOp;
+  using OpT = MaxPool1DOp;
   Maxpool1DGrad() : PoolingNdGrad<Maxpool1DGrad>("max") {}
 };
 
 class Maxpool2DGrad final : public PoolingNdGrad<Maxpool2DGrad> {
  public:
-  using OpT = MaxPool2DGradOp;
+  using OpT = MaxPool2DOp;
   Maxpool2DGrad() : PoolingNdGrad<Maxpool2DGrad>("max") {}
 };
 
 class Maxpool3DGrad final : public PoolingNdGrad<Maxpool3DGrad> {
  public:
-  using OpT = MaxPool3DGradOp;
+  using OpT = MaxPool3DOp;
   Maxpool3DGrad() : PoolingNdGrad<Maxpool3DGrad>("max") {}
 };
 

@@ -344,8 +344,8 @@ class WhereScalarXYFunctor {
       ctx->set_has_x_int_operand(false);
       ctx->set_has_y_int_operand(false);
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
-      ctx->set_x_float_operand(JUST(x_scalar.As<int64_t>()));
-      ctx->set_y_float_operand(JUST(y_scalar.As<int64_t>()));
+      ctx->set_x_int_operand(JUST(x_scalar.As<int64_t>()));
+      ctx->set_y_int_operand(JUST(y_scalar.As<int64_t>()));
       ctx->set_has_x_float_operand(false);
       ctx->set_has_y_float_operand(false);
       ctx->set_has_x_int_operand(true);
