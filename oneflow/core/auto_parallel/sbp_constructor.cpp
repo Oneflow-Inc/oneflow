@@ -277,7 +277,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     BoxingCollector bc;
     bc.Init(sbp_graph_);
     bc.PrintBoxingTables();
-    Shape blob222({2, 2, 2});
+    Shape blob222({2, 2});
     BlobDesc blob_desc(blob222, kDouble);
     std::cout << "hierarchy: " << *sbp_graph_.NodeList[0]->op_node->parallel_desc().hierarchy()
               << std::endl;
@@ -295,13 +295,14 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
         std::cout << std::endl;
       }
     }
-    bc.Init(op_graph);
-    bc.PrintBoxingTables();
+    BoxingCollector bc2;
+    bc2.Init(op_graph);
+    bc2.PrintBoxingTables();
     for (const auto& sbp_producer : nd_sbp_lists) {
       for (const auto& sbp_consumer : nd_sbp_lists) {
-        bc.AskSbpCombination(sbp_producer, sbp_consumer, blob_desc,
-                             sbp_graph_.NodeList[0]->op_node->parallel_desc(),
-                             sbp_graph_.NodeList[0]->op_node->parallel_desc(), true, middle_sbps);
+        bc2.AskSbpCombination(sbp_producer, sbp_consumer, blob_desc,
+                              sbp_graph_.NodeList[0]->op_node->parallel_desc(),
+                              sbp_graph_.NodeList[0]->op_node->parallel_desc(), true, middle_sbps);
         std::cout << NdSbpParallelToString(sbp_producer) << " to "
                   << NdSbpParallelToString(sbp_consumer) << " needs middle nodes: ";
         for (const auto& sbp_middle : middle_sbps) {

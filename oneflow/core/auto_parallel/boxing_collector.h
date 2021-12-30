@@ -50,6 +50,8 @@ class BoxingCollector {
   // Construct a boxing collector with given operator graph
   void Init(const OpGraph& op_graph);
 
+  // Generate nd sbp list
+  void GenerateNdSbpList();
   // Generate the transfer rule for different combinations and hierarchies
   Maybe<void> GenerateCombination(int32_t max_middle_node_num);
   // Print the cost and middle nodes

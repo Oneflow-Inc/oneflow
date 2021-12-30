@@ -42,24 +42,18 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 
 // Construct a boxing collector with given operator graph
 void BoxingCollector::Init(const OpGraph& op_graph) {
-  minimum_copy_cost.clear();
-  middle_nodes.clear();
-  nd_sbp_lists.clear();
-  SbpParallelUniverse.clear();
-  id2SbpParallel.clear();
-  // CollectUniverse(2);
+  // Set up at least two split for op graph.
+  // For a negative example: Resnet50 only have B, P, S(0)
+  CollectUniverse(2);
   CollectUniverse(op_graph);
+  GenerateNdSbpList();
   GenerateCombination(2);
 }
 
 // Construct a boxing collector with given sbp graph
 void BoxingCollector::Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
-  minimum_copy_cost.clear();
-  middle_nodes.clear();
-  nd_sbp_lists.clear();
-  SbpParallelUniverse.clear();
-  id2SbpParallel.clear();
   CollectUniverse(sbp_graph);
+  GenerateNdSbpList();
   GenerateCombination(2);
 }
 
@@ -107,8 +101,8 @@ void BoxingCollector::CollectUniverse(int32_t max_axis) {
   CollectUniverse(sbp);
 }
 
-// Generate the transfer rule for different combinations and hierarchies
-Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
+// Generate nd sbp list
+void BoxingCollector::GenerateNdSbpList() {
   // 1D sbp does not support S->P. But it seems that we do not need to deal with it for now.
   // And we do not have 3D sbp or higher dimension.
   int32_t hierarchy_num = 2;
@@ -117,6 +111,10 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   cfg::NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
   DfsSetNdSbp(id2SbpParallel, 0, hierarchy_num, nd_sbp, nd_sbp_lists, NdSbpUniverse);
+}
+
+// Generate the transfer rule for different combinations and hierarchies
+Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   // other parameters
   // To be noted that the performance of this function are all the same with different hierarchy
   Shape hierarchy44({4, 4});
@@ -370,6 +368,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   // Customized boxing collector and try the algorithm again
   BoxingCollector customized_boxing_collector;
   customized_boxing_collector.CollectUniverse(logical_blob_desc.shape().NumAxes());
+  customized_boxing_collector.GenerateNdSbpList();
+  // Filter out unsuitable middle nodes before computing minimum cost.
+  customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc, parallel_hierarchy);
   customized_boxing_collector.GenerateCombination(5);
   // test debug
   customized_boxing_collector.PrintBoxingTables();
