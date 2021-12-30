@@ -138,7 +138,8 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   const auto& status = TRY(main_boxing_expr->Check(in, out));
   if (status.IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
-    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
+    return std::shared_ptr<EagerBoxingInterpreter>(
+        new NaiveEagerBoxingInterpreter(boxing_func, JUST(status)));
   }
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()

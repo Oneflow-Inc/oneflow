@@ -37,6 +37,7 @@ class EagerBoxingInterpreter {
                                Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> in_parallel_desc,
                                Symbol<ParallelDesc> out_parallel_desc) const;
+  virtual Maybe<BoxingInterpreterStatus> boxing_interpreter_status() const = 0;
 
  protected:
   virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -64,11 +65,17 @@ inline void RegisterBoxingFunction(
 
 class NaiveEagerBoxingInterpreter : public EagerBoxingInterpreter {
  public:
-  explicit NaiveEagerBoxingInterpreter(const std::shared_ptr<BoxingFunctionT>& boxing_function)
-      : boxing_function_(boxing_function) {}
+  explicit NaiveEagerBoxingInterpreter(
+      const std::shared_ptr<BoxingFunctionT>& boxing_function,
+      const std::shared_ptr<BoxingInterpreterStatus>& boxing_interpreter_status)
+      : boxing_function_(boxing_function), boxing_interpreter_status_(boxing_interpreter_status) {}
   NaiveEagerBoxingInterpreter(const NaiveEagerBoxingInterpreter&) = delete;
   NaiveEagerBoxingInterpreter(NaiveEagerBoxingInterpreter&&) = delete;
   ~NaiveEagerBoxingInterpreter() override = default;
+
+  Maybe<BoxingInterpreterStatus> boxing_interpreter_status() const override {
+    return boxing_interpreter_status_;
+  }
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -81,6 +88,7 @@ class NaiveEagerBoxingInterpreter : public EagerBoxingInterpreter {
   }
 
   const std::shared_ptr<BoxingFunctionT> boxing_function_;
+  const std::shared_ptr<BoxingInterpreterStatus> boxing_interpreter_status_;
 };
 
 class BoxingExprIf {

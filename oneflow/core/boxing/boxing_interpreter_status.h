@@ -32,30 +32,33 @@ Maybe<BoxingInterpreterStatus> MakeComposedBoxingInterpreterStatus(
 
 class BoxingInterpreterStatus final {
  public:
-  BoxingInterpreterStatus(const std::string& boxing_name) : boxing_name_(boxing_name) {}
-  BoxingInterpreterStatus(const std::string& boxing_name, Symbol<PlacedNdSbp> src_placed_nd_sbp,
+  BoxingInterpreterStatus(Symbol<std::vector<std::string>> sorted_boxing_names,
+                          Symbol<PlacedNdSbp> src_placed_nd_sbp,
                           Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp,
                           Symbol<PlacedNdSbp> dst_placed_nd_sbp)
-      : boxing_name_(boxing_name),
+      : sorted_boxing_names_(sorted_boxing_names),
         src_placed_nd_sbp_(src_placed_nd_sbp),
         mid_placed_nd_sbp_(mid_placed_nd_sbp),
         dst_placed_nd_sbp_(dst_placed_nd_sbp) {}
-  BoxingInterpreterStatus(const std::string& boxing_name, Symbol<PlacedNdSbp> src_placed_nd_sbp,
+  BoxingInterpreterStatus(Symbol<std::vector<std::string>> sorted_boxing_names,
+                          Symbol<PlacedNdSbp> src_placed_nd_sbp,
                           Symbol<PlacedNdSbp> dst_placed_nd_sbp)
-      : BoxingInterpreterStatus(boxing_name, src_placed_nd_sbp,
+      : BoxingInterpreterStatus(sorted_boxing_names, src_placed_nd_sbp,
                                 SymbolOf(std::vector<Symbol<PlacedNdSbp>>()), dst_placed_nd_sbp) {}
   ~BoxingInterpreterStatus() = default;
 
   // Getters
-  const std::string& boxing_name() const { return boxing_name_; }
+  Symbol<std::vector<std::string>> sorted_boxing_names() const { return sorted_boxing_names_; }
   Symbol<PlacedNdSbp> src_placed_nd_sbp() const { return src_placed_nd_sbp_; }
   Symbol<PlacedNdSbp> dst_placed_nd_sbp() const { return dst_placed_nd_sbp_; }
   Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp() const { return mid_placed_nd_sbp_; }
+
+  const std::string& boxing_desc() const;
   const std::string& nd_sbp_routing() const;
   const std::string& placement_routing() const;
 
  private:
-  std::string boxing_name_;
+  Symbol<std::vector<std::string>> sorted_boxing_names_;
   Symbol<PlacedNdSbp> src_placed_nd_sbp_;
   Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp_;
   Symbol<PlacedNdSbp> dst_placed_nd_sbp_;
