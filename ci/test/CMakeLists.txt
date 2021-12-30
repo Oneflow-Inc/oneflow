@@ -37,6 +37,7 @@ function(add_docker_container)
   )
   set(fixtureName "${${prefix}_FIXTURE_NAME}")
   set(TEST_CONTAINER_NAME CI-$ENV{USER}-${fixtureName})
+  set(${fixtureName}Name ${TEST_CONTAINER_NAME})
   set(DOCKER_IMG_NAME "${${prefix}_IMG}")
   add_test(NAME Clear${fixtureName}
     COMMAND docker rm -f ${TEST_CONTAINER_NAME}
@@ -49,6 +50,7 @@ function(add_docker_container)
       --runtime=nvidia
       -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro
       -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro
+      -v ${ONEFLOW_SRC_DIR}:${ONEFLOW_SRC_DIR}:ro
       -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH}
       ${DOCKER_IMG_NAME}
       sleep 3600
@@ -106,8 +108,17 @@ function(add_oneflow_python_test)
   file(GLOB_RECURSE PYTHON_TEST_FILES LIST_DIRECTORIES false "${${prefix}_TEST_DIR}/test_*.py")
   foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
     set(TEST_NAME "[${testNamePrefix}] ${PYTHON_TEST_FILE}")
+    if (RUN_IN_DOCKER)
+      if (${prefix}_SINGLE_CLIENT)
+        set(TEST_CONTAINER_NAME ${${TF_CONTAINER_FIXTURE}Name})
+      endif()
+      if (${prefix}_MULTI_CLIENT)
+        set(TEST_CONTAINER_NAME ${${TORCH_CONTAINER_FIXTURE}Name})
+      endif()
+      set(DOCKER_EXEC_PREFIX "docker exec ${TEST_CONTAINER_NAME}")
+    endif()
     add_test(NAME ${TEST_NAME}
-      COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose
+      COMMAND ${DOCKER_EXEC_PREFIX} ${PYTHON_EXECUTABLE} ${PYTHON_TEST_FILE} --failfast --verbose
     )
     set_tests_properties(${TEST_NAME} PROPERTIES LABELS ${testLabels})
     set_tests_properties(${TEST_NAME}
