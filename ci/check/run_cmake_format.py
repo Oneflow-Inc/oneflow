@@ -32,20 +32,20 @@ if __name__ == "__main__":
     files = []
     for pattern in patterns:
         files.extend(glob(str(Path(args.source_dir) / pattern), recursive=True))
-    
+
     count = 0
     for file in files:
         cmd = [args.bin, file]
         if args.fix:
-            cmd.append('-i')
+            cmd.append("-i")
         else:
-            cmd.append('--check')
+            cmd.append("--check")
         count += 0 if call(cmd) == 0 else 1
-    
+
     total = len(files)
     if args.fix:
-        print(f'cmake-format -i done. {total} total')
+        print(f"cmake-format -i done. {total} total")
     else:
-        print(f'cmake-format --check done. {count} failed / {total} total')
-    
+        print(f"cmake-format --check done. {count} failed / {total} total")
+
     exit(0 if count == 0 else 1)
