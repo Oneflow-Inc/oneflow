@@ -37,6 +37,7 @@ enum TaskType {
   kCollectiveBoxingUnpack = 62;
   kSspVariableProxy = 63;
   kBoxingZeros = 64;
+  kCriticalSectionWaitTick = 65;
 };
 
 message RegstDescIdSet {

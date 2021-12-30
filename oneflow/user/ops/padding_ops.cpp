@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -46,89 +47,82 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("reflection_pad2d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int64_t>>("padding")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t h_idx = 2;
-      const int64_t w_idx = 3;
+/*static*/ Maybe<void> ReflectionPad2DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ReflectionPad2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t h_idx = 2;
+  const int64_t w_idx = 3;
 
-      // Ensure the padding size is less than the input dimension.
-      CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));
-      CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));
-      CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));
-      CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));
+  // Ensure the padding size is less than the input dimension.
+  CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));
+  CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));
+  CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));
+  CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));
 
-      DimVector y_dim_vec(x_shape.NumAxes());
-      const int64_t h_x = x_shape.At(h_idx);
-      const int64_t w_x = x_shape.At(w_idx);
+  DimVector y_dim_vec(x_shape.NumAxes());
+  const int64_t h_x = x_shape.At(h_idx);
+  const int64_t w_x = x_shape.At(w_idx);
 
-      y_dim_vec[n_idx] = x_shape.At(n_idx);
-      y_dim_vec[c_idx] = x_shape.At(c_idx);
-      y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
-      y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  y_dim_vec[n_idx] = x_shape.At(n_idx);
+  y_dim_vec[c_idx] = x_shape.At(c_idx);
+  y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
+  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpSbpSignature)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL_OR_RETURN(x_modifier);
-      x_modifier->set_requires_grad(true);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReflectionPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ReflectionPad2DOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReflectionPad2DOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReflectionPad2DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  x_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("reflection_pad2d_grad")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int64_t>>("padding")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t h_idx = 2;
-      const int64_t w_idx = 3;
+/*static*/ Maybe<void> ReflectionPad2DGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpGradSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ReflectionPad2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t h_idx = 2;
+  const int64_t w_idx = 3;
 
-      DimVector dx_dim_vec(dy_shape.NumAxes());
-      int64_t h_dy, w_dy;
-      h_dy = dy_shape.At(h_idx);
-      w_dy = dy_shape.At(w_idx);
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
-      dx_dim_vec[n_idx] = dy_shape.At(0);
-      dx_dim_vec[c_idx] = dy_shape.At(1);
-      dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
-      dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  dx_dim_vec[n_idx] = dy_shape.At(0);
+  dx_dim_vec[c_idx] = dy_shape.At(1);
+  dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
+  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpGradSbpSignature)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReflectionPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ReflectionPad2DGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReflectionPad2DGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("reflection_pad2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -147,83 +141,76 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("replication_pad2d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int64_t>>("padding")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t h_idx = 2;
-      const int64_t w_idx = 3;
+/*static*/ Maybe<void> ReplicationPad2DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t h_idx = 2;
+  const int64_t w_idx = 3;
 
-      DimVector y_dim_vec(x_shape.NumAxes());
-      const int64_t h_x = x_shape.At(h_idx);
-      const int64_t w_x = x_shape.At(w_idx);
+  DimVector y_dim_vec(x_shape.NumAxes());
+  const int64_t h_x = x_shape.At(h_idx);
+  const int64_t w_x = x_shape.At(w_idx);
 
-      y_dim_vec[n_idx] = x_shape.At(n_idx);
-      y_dim_vec[c_idx] = x_shape.At(c_idx);
-      y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
-      y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  y_dim_vec[n_idx] = x_shape.At(n_idx);
+  y_dim_vec[c_idx] = x_shape.At(c_idx);
+  y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
+  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpSbpSignature)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL_OR_RETURN(x_modifier);
-      x_modifier->set_requires_grad(true);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReplicationPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ReplicationPad2DOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad2DOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReplicationPad2DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  x_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("replication_pad2d_grad")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int64_t>>("padding")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t h_idx = 2;
-      const int64_t w_idx = 3;
+/*static*/ Maybe<void> ReplicationPad2DGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpGradSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t h_idx = 2;
+  const int64_t w_idx = 3;
 
-      DimVector dx_dim_vec(dy_shape.NumAxes());
-      int64_t h_dy, w_dy;
-      h_dy = dy_shape.At(h_idx);
-      w_dy = dy_shape.At(w_idx);
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
-      dx_dim_vec[n_idx] = dy_shape.At(0);
-      dx_dim_vec[c_idx] = dy_shape.At(1);
-      dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
-      dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  dx_dim_vec[n_idx] = dy_shape.At(0);
+  dx_dim_vec[c_idx] = dy_shape.At(1);
+  dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
+  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpGradSbpSignature)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReplicationPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad2DGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("replication_pad2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -242,83 +229,72 @@ REGISTER_USER_OP_GRAD("replication_pad2d")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("constant_pad1d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int64_t>>("padding")
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integral_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 3);
-      CHECK_EQ_OR_RETURN(padding.size(), 2);
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t w_idx = 2;
+/*static*/ Maybe<void> ConstantPad1DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ConstantPad1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 3);
+  CHECK_EQ_OR_RETURN(padding.size(), 2);
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t w_idx = 2;
 
-      DimVector y_dim_vec(x_shape.NumAxes());
-      const int64_t w_x = x_shape.At(w_idx);
+  DimVector y_dim_vec(x_shape.NumAxes());
+  const int64_t w_x = x_shape.At(w_idx);
 
-      y_dim_vec[n_idx] = x_shape.At(n_idx);
-      y_dim_vec[c_idx] = x_shape.At(c_idx);
-      y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  y_dim_vec[n_idx] = x_shape.At(n_idx);
+  y_dim_vec[c_idx] = x_shape.At(c_idx);
+  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpSbpSignature)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL_OR_RETURN(x_modifier);
-      x_modifier->set_requires_grad(true);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ConstantPad1DOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ConstantPad1DOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad1DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  x_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("constant_pad1d_grad")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int64_t>>("padding")
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integral_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 3);
-      CHECK_EQ_OR_RETURN(padding.size(), 2);
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t w_idx = 2;
+/*static*/ Maybe<void> ConstantPad1DGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpGradSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ConstantPad1DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 3);
+  CHECK_EQ_OR_RETURN(padding.size(), 2);
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t w_idx = 2;
 
-      DimVector dx_dim_vec(dy_shape.NumAxes());
-      int64_t w_dy;
-      w_dy = dy_shape.At(w_idx);
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  int64_t w_dy = dy_shape.At(w_idx);
 
-      dx_dim_vec[n_idx] = dy_shape.At(0);
-      dx_dim_vec[c_idx] = dy_shape.At(1);
-      dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  dx_dim_vec[n_idx] = dy_shape.At(0);
+  dx_dim_vec[c_idx] = dy_shape.At(1);
+  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpGradSbpSignature)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ConstantPad1DGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ConstantPad1DGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("constant_pad1d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -339,87 +315,76 @@ REGISTER_USER_OP_GRAD("constant_pad1d")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("constant_pad2d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int64_t>>("padding")
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integral_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t h_idx = 2;
-      const int64_t w_idx = 3;
+/*static*/ Maybe<void> ConstantPad2DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ConstantPad2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t h_idx = 2;
+  const int64_t w_idx = 3;
 
-      DimVector y_dim_vec(x_shape.NumAxes());
-      const int64_t h_x = x_shape.At(h_idx);
-      const int64_t w_x = x_shape.At(w_idx);
+  DimVector y_dim_vec(x_shape.NumAxes());
+  const int64_t h_x = x_shape.At(h_idx);
+  const int64_t w_x = x_shape.At(w_idx);
 
-      y_dim_vec[n_idx] = x_shape.At(n_idx);
-      y_dim_vec[c_idx] = x_shape.At(c_idx);
-      y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
-      y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  y_dim_vec[n_idx] = x_shape.At(n_idx);
+  y_dim_vec[c_idx] = x_shape.At(c_idx);
+  y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
+  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpSbpSignature)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL_OR_RETURN(x_modifier);
-      x_modifier->set_requires_grad(true);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ConstantPad2DOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ConstantPad2DOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad2DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  x_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("constant_pad2d_grad")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int64_t>>("padding")
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integral_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t h_idx = 2;
-      const int64_t w_idx = 3;
+/*static*/ Maybe<void> ConstantPad2DGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpGradSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ConstantPad2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t h_idx = 2;
+  const int64_t w_idx = 3;
 
-      DimVector dx_dim_vec(dy_shape.NumAxes());
-      int64_t h_dy, w_dy;
-      h_dy = dy_shape.At(h_idx);
-      w_dy = dy_shape.At(w_idx);
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
-      dx_dim_vec[n_idx] = dy_shape.At(0);
-      dx_dim_vec[c_idx] = dy_shape.At(1);
-      dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
-      dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  dx_dim_vec[n_idx] = dy_shape.At(0);
+  dx_dim_vec[c_idx] = dy_shape.At(1);
+  dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
+  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpGradSbpSignature)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ConstantPad2DGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ConstantPad2DGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("constant_pad2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -440,95 +405,84 @@ REGISTER_USER_OP_GRAD("constant_pad2d")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("constant_pad3d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int64_t>>("padding")
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integral_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 5);
-      // only support NCDHW format input tensor for now !
-      // for NCDHW format, index of num,channel,depth,height,width is 0,1,2,3,4
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t d_idx = 2;
-      const int64_t h_idx = 3;
-      const int64_t w_idx = 4;
+/*static*/ Maybe<void> ConstantPad3DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ConstantPad3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 5);
+  // only support NCDHW format input tensor for now !
+  // for NCDHW format, index of num,channel,depth,height,width is 0,1,2,3,4
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t d_idx = 2;
+  const int64_t h_idx = 3;
+  const int64_t w_idx = 4;
 
-      DimVector y_dim_vec(x_shape.NumAxes());
-      const int64_t d_x = x_shape.At(d_idx);
-      const int64_t h_x = x_shape.At(h_idx);
-      const int64_t w_x = x_shape.At(w_idx);
+  DimVector y_dim_vec(x_shape.NumAxes());
+  const int64_t d_x = x_shape.At(d_idx);
+  const int64_t h_x = x_shape.At(h_idx);
+  const int64_t w_x = x_shape.At(w_idx);
 
-      y_dim_vec[n_idx] = x_shape.At(n_idx);
-      y_dim_vec[c_idx] = x_shape.At(c_idx);
-      y_dim_vec[d_idx] = d_x + padding[4] + padding[5];
-      y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
-      y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  y_dim_vec[n_idx] = x_shape.At(n_idx);
+  y_dim_vec[c_idx] = x_shape.At(c_idx);
+  y_dim_vec[d_idx] = d_x + padding[4] + padding[5];
+  y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
+  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpSbpSignature)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-      CHECK_NOTNULL_OR_RETURN(x_modifier);
-      x_modifier->set_requires_grad(true);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ConstantPad3DOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ConstantPad3DOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad3DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  x_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("constant_pad3d_grad")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::vector<int64_t>>("padding")
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integral_value")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-      CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 5);
-      const int64_t n_idx = 0;
-      const int64_t c_idx = 1;
-      const int64_t d_idx = 2;
-      const int64_t h_idx = 3;
-      const int64_t w_idx = 4;
+/*static*/ Maybe<void> ConstantPad3DGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpGradSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ConstantPad3DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 5);
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t d_idx = 2;
+  const int64_t h_idx = 3;
+  const int64_t w_idx = 4;
 
-      DimVector dx_dim_vec(dy_shape.NumAxes());
-      int64_t d_dy, h_dy, w_dy;
-      d_dy = dy_shape.At(d_idx);
-      h_dy = dy_shape.At(h_idx);
-      w_dy = dy_shape.At(w_idx);
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  int64_t d_dy = dy_shape.At(d_idx);
+  int64_t h_dy = dy_shape.At(h_idx);
+  int64_t w_dy = dy_shape.At(w_idx);
 
-      dx_dim_vec[n_idx] = dy_shape.At(0);
-      dx_dim_vec[c_idx] = dy_shape.At(1);
-      dx_dim_vec[d_idx] = d_dy - padding[4] - padding[5];
-      dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
-      dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  dx_dim_vec[n_idx] = dy_shape.At(0);
+  dx_dim_vec[c_idx] = dy_shape.At(1);
+  dx_dim_vec[d_idx] = d_dy - padding[4] - padding[5];
+  dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
+  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetOpGradSbpSignature)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ConstantPad3DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ConstantPad3DGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ConstantPad3DGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("constant_pad3d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
