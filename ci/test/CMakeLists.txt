@@ -25,10 +25,32 @@ function(add_docker_img)
   add_dependencies(ensure_docker_imgs ${target_name})
 endfunction()
 
+add_custom_target(start_docker_containers)
+function(add_docker_container)
+  set(prefix ARG)
+  set(singleValues "TARGET;IMG")
+  cmake_parse_arguments(
+    PARSE_ARGV 0
+    ${prefix}
+    "${noValues}" "${singleValues}" "${multiValues}"
+  )
+  set(targetName "${${prefix}_TARGET}")
+  add_custom_target(${targetName})
+  add_custom_command(TARGET ${targetName}
+    COMMAND docker rm -f ${targetName}
+    COMMAND docker run -n ${targetName} --rm sleep 3600
+  )
+  add_dependencies(start_docker_containers ${targetName})
+endfunction()
+
+set(TF_CONTAINER_TARGET "$ENV{USER}-ci-tf")
+set(TORCH_CONTAINER_TARGET "$ENV{USER}-ci-torch")
 if(RUN_IN_DOCKER)
   set(DOCKER_EXE docker)
   add_docker_img(test_with_tf "${TEST_WITH_TF_IMG_TAG}")
   add_docker_img(test_with_torch "${TEST_WITH_TORCH_IMG_TAG}")
+  add_docker_container(TARGET ${TF_CONTAINER_TARGET} IMG "${TEST_WITH_TF_IMG_TAG}")
+  add_docker_container(TARGET ${TORCH_CONTAINER_TARGET} IMG "${TEST_WITH_TORCH_IMG_TAG}")
 endif()
 
 # TODO: ensure datasets (ExternalData)
