@@ -257,7 +257,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   } else if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  LOG(ERROR) << " iter: " << train_step << " learning_rate: " << learning_rate;
+  LOG(INFO) << " iter: " << train_step << " learning_rate: " << learning_rate;
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
