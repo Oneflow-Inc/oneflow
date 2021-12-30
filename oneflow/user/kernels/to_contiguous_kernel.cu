@@ -70,7 +70,7 @@ __device__ __forceinline__ IndexType compute_index(IndexType out_offset, StrideP
 
 
 template<typename T, typename IndexType, size_t ndim>
-__global__ void to_contiguous(IndexType count, StrideParam<ndim> in_stride,
+__global__ void ToContiguousForwardGpu(IndexType count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
   for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
   {
@@ -79,18 +79,32 @@ __global__ void to_contiguous(IndexType count, StrideParam<ndim> in_stride,
   }
 }
 
-template<typename T, typename IndexType, size_t ndim>
-void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const std::vector<int64_t>& in_stride,
+template<typename T, typename IndexType, size_t ndim, int32_t pack_size>
+void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, IndexType block_size, const std::vector<int64_t>& in_stride,
                            const StrideVector& out_stride, const char* in_dptr, char* out_dptr){
 
   StrideParam<ndim> param_in_stride(in_stride.data()), param_out_stride(out_stride.data());
 
-  auto out_dptr_typed = reinterpret_cast<T*>(out_dptr);
-  auto in_dptr_typed = reinterpret_cast<const T*>(in_dptr);
+  const IndexType num_blocks = GetNumBlocks(count);
+  const IndexType num_threads = GetMinThreadNum(count);
 
-  to_contiguous<T, IndexType, ndim><<<GetNumBlocks(count), GetMinThreadNum(count), 0,
+  if (pack_size >= 8 && block_size % 8 == 0) {
+    ToContiguousForwardGpu<uint64_t, IndexType, ndim><<<num_blocks, num_threads, 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
+      count, param_in_stride, param_out_stride, reinterpret_cast<const uint64_t*>(in_dptr), reinterpret_cast<uint64_t*>(out_dptr));
+  } else if(pack_size >= 4 && block_size % 4 == 0 ){
+    ToContiguousForwardGpu<uint32_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, param_in_stride, param_out_stride, reinterpret_cast<const uint32_t*>(in_dptr), reinterpret_cast<uint32_t*>(out_dptr));
+  } else if(pack_size >= 2 && block_size % 2 == 0 ){
+    ToContiguousForwardGpu<uint16_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, param_in_stride, param_out_stride, reinterpret_cast<const uint16_t*>(in_dptr), reinterpret_cast<uint16_t*>(out_dptr));
+  } else {
+    ToContiguousForwardGpu<T, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+  }
 }
 
 
@@ -123,41 +137,42 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
         OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize, cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
       } else{
+        constexpr int pack_size = cuda::elementwise::PackSize<T>();
         if (element_count < GetMaxVal<int32_t>()) {
           if (ndims==1){
-            LaunchToContiguousKernel<T, int32_t, 1>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 1, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==2){
-            LaunchToContiguousKernel<T, int32_t, 2>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 2, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==3){
-            LaunchToContiguousKernel<T, int32_t, 3>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 3, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==4){
-            LaunchToContiguousKernel<T, int32_t, 4>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 4, pack_size>(stream, element_count, block_size,in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==5){
-            LaunchToContiguousKernel<T, int32_t, 5>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 5, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==6){
-            LaunchToContiguousKernel<T, int32_t, 6>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 6, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==7){
-            LaunchToContiguousKernel<T, int32_t, 7>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 7, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else {
-            LaunchToContiguousKernel<T, int32_t, 8>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int32_t, 8, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           }    
         } else {
           if (ndims==1){
-            LaunchToContiguousKernel<T, int64_t, 1>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 1, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==2){
-            LaunchToContiguousKernel<T, int64_t, 2>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 2, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==3){
-            LaunchToContiguousKernel<T, int64_t, 3>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 3, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==4){
-            LaunchToContiguousKernel<T, int64_t, 4>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 4, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==5){
-            LaunchToContiguousKernel<T, int64_t, 5>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 5, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==6){
-            LaunchToContiguousKernel<T, int64_t, 6>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 6, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else if (ndims==7){
-            LaunchToContiguousKernel<T, int64_t, 7>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 7, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           } else {
-            LaunchToContiguousKernel<T, int64_t, 8>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+            LaunchToContiguousKernel<T, int64_t, 8, pack_size>(stream, element_count, block_size, in_stride, out_stride, in_dptr, out_dptr);
           }
         }
       }
