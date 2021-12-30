@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
@@ -257,6 +258,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
+  Global<TaskStreamIndexManager>::Get()->Clear();
 
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
