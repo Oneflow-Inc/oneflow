@@ -35,7 +35,7 @@ struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   int32_t groups;
 };
 
-template <typename T>
+template<typename T>
 class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
  public:
   Maybe<void> Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
@@ -44,9 +44,10 @@ class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
-template <typename T>
-Maybe<void> DeConvolutionNd<T>::Capture(DeConvolutionNdCaptureState* state, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const OpBase* ctx) const {
+template<typename T>
+Maybe<void> DeConvolutionNd<T>::Capture(DeConvolutionNdCaptureState* state,
+                                        const TensorTuple& inputs, const TensorTuple& outputs,
+                                        const OpBase* ctx) const {
   state->activation_requires_grad = inputs.at(0)->requires_grad();
   state->weight_requires_grad = inputs.at(1)->requires_grad();
   if (state->activation_requires_grad) {
@@ -66,9 +67,9 @@ Maybe<void> DeConvolutionNd<T>::Capture(DeConvolutionNdCaptureState* state, cons
   return Maybe<void>::Ok();
 }
 
-template <typename T>
+template<typename T>
 Maybe<void> DeConvolutionNd<T>::Apply(const DeConvolutionNdCaptureState* state,
-                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
+                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (state->activation_requires_grad) {
     const auto& x = state->SavedTensors().at(1);

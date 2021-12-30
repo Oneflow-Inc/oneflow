@@ -395,7 +395,7 @@ class Maxpool1DFunctor : public PoolingNDFunctor<Maxpool1DFunctor> {
 
 class Maxpool2DFunctor : public PoolingNDFunctor<Maxpool2DFunctor> {
  public:
-  using ContextT = schema::MaxPool3DOp;
+  using ContextT = schema::MaxPool2DOp;
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
   }
@@ -1380,7 +1380,7 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, ctx);
 
     } else if (mode == "reflect") {
-      auto ctx = std::make_shared<schema::ReflectionPad2DGradOp>();
+      auto ctx = std::make_shared<schema::ReflectionPad2DOp>();
       ctx->set_padding(pad);
       const int64_t pad_h = x->shape()->dim_vec().at(2);
       const int64_t pad_w = x->shape()->dim_vec().at(3);
@@ -1388,7 +1388,7 @@ class PadFunctor {
           << "padding size should be less than the corresponding input dimension!";
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, ctx);
     } else if (mode == "replicate") {
-      auto ctx = std::make_shared<schema::ReplicationPad2DGradOp>();
+      auto ctx = std::make_shared<schema::ReplicationPad2DOp>();
       ctx->set_padding(pad);
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, ctx);
     } else {

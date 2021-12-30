@@ -102,6 +102,7 @@ struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
   bool keepdims;
 };
 
+template<typename T>
 class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
  public:
   Maybe<void> Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
@@ -110,9 +111,10 @@ class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
                     TensorTuple* in_grads) const override;
 };
 
-Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
-                                    const TensorTuple& outputs, const OpBase* ctx) const {
-  auto* op_ctx = JUST(ctx->dyn_cast<ReduceMaxOp>());
+template<typename T>
+Maybe<void> ReduceMaxOrMin<T>::Capture(ReduceMaxOrMinCaptureState* state, const TensorTuple& inputs,
+                                       const TensorTuple& outputs, const OpBase* ctx) const {
+  auto* op_ctx = JUST(ctx->dyn_cast<T>());
   state->axis = op_ctx->axis();
   state->keepdims = op_ctx->keepdims();
   state->SaveTensorForBackward(inputs.at(0));
@@ -120,8 +122,9 @@ Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* state, const Ten
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* state,
-                                  const TensorTuple& out_grads, TensorTuple* in_grads) const {
+template<typename T>
+Maybe<void> ReduceMaxOrMin<T>::Apply(const ReduceMaxOrMinCaptureState* state,
+                                     const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const auto& input = state->SavedTensors().at(0);
   const auto& output = state->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
@@ -146,8 +149,8 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* state,
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_min", ReduceMaxOrMin);
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_max", ReduceMaxOrMin);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_min", ReduceMaxOrMin<ReduceMinOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_max", ReduceMaxOrMin<ReduceMaxOp>);
 
 }  // namespace one
 }  // namespace oneflow

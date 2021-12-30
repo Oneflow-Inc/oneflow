@@ -25,6 +25,7 @@ struct Pad2dCaptureState : public AutoGradCaptureState {
   std::vector<int64_t> paddings;
 };
 
+template<typename T>
 class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
  public:
   Maybe<void> Capture(Pad2dCaptureState* state, const TensorTuple& inputs,
@@ -34,13 +35,13 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
     state->requires_grad = inputs.at(0)->requires_grad();
     if (!state->requires_grad) { return Maybe<void>::Ok(); }
 
-    auto* op_ctx = JUST(ctx->dyn_cast<ReflectionPad2DOp>());
+    auto* op_ctx = JUST(ctx->dyn_cast<T>());
     state->paddings = op_ctx->padding();
     return Maybe<void>::Ok();
   }
 };
 
-class ReflectionPad2d : public Pad2d {
+class ReflectionPad2d : public Pad2d<ReflectionPad2DOp> {
  public:
   Maybe<void> Apply(const Pad2dCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
@@ -53,7 +54,7 @@ class ReflectionPad2d : public Pad2d {
   }
 };
 
-class ReplicationPad2d : public Pad2d {
+class ReplicationPad2d : public Pad2d<ReplicationPad2DOp> {
  public:
   Maybe<void> Apply(const Pad2dCaptureState* state, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
