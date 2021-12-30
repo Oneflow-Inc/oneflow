@@ -26,7 +26,7 @@ namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
 
-int GetMinThreadNum(int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
+int GetMinThreadNum(int64_t elem_cnt) { return std::min<int64_t>(elem_cnt, kBlockSize); }
 
 int GetNumBlocks(int64_t elem_cnt) {
   int num_blocks = 0;
@@ -34,30 +34,30 @@ int GetNumBlocks(int64_t elem_cnt) {
   return num_blocks;
 }
 
-template<size_t ndims>
+template<size_t ndim>
 struct StrideParam {
   int stride[SHAPE_MAX_AXIS_SIZE];
   int coordinates[SHAPE_MAX_AXIS_SIZE];
 
   // NOLINTNEXTLINE
   StrideParam(const int64_t* stride_vec) {
-    for (int i = 0; i < ndims; ++i) {
+    for (size_t i = 0; i < ndim; ++i) {
       stride[i] = stride_vec[i];
       coordinates[i] = 0;
     }
   }
 };
 
-template<size_t ndim>
-__device__ __forceinline__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_params,
+template<typename IndexType, size_t ndim>
+__device__ __forceinline__ IndexType compute_index(IndexType out_offset, StrideParam<ndim>& out_params,
                                  const StrideParam<ndim>& in_params) {
-  int64_t in_offset = 0;
-  int64_t remaining = out_offset;
+  IndexType in_offset = 0;
+  IndexType remaining = out_offset;
 
 #pragma unroll
   // compute coords(output offset to coords)
   for (int i = 0; i < ndim; ++i) {
-    const int idx = static_cast<int>(remaining / out_params.stride[i]);
+    const IndexType idx = static_cast<IndexType>(remaining / out_params.stride[i]);
     out_params.coordinates[i] = idx;
     remaining = remaining - idx * out_params.stride[i];
   }
@@ -69,64 +69,48 @@ __device__ __forceinline__ int64_t compute_index(int64_t out_offset, StrideParam
 }
 
 
-template<typename T, size_t ndim>
-__global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
+template<typename T, typename IndexType, size_t ndim>
+__global__ void to_contiguous(IndexType count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
-  for (int64_t out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
+  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
   {
-    int64_t in_idx = compute_index<ndim>(out_idx, out_stride, in_stride);
+    IndexType in_idx = compute_index<IndexType, ndim>(out_idx, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
   }
 }
 
-template<typename T, size_t ndim>
-void to_contiguous_wrapper(ep::Stream* stream, int64_t count, const std::vector<int64_t>& in_stride,
-                           const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
+template<typename T, typename IndexType, size_t ndim>
+void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const std::vector<int64_t>& in_stride,
+                           const StrideVector& out_stride, const char* in_dptr, char* out_dptr){
+
   StrideParam<ndim> param_in_stride(in_stride.data()), param_out_stride(out_stride.data());
 
   auto out_dptr_typed = reinterpret_cast<T*>(out_dptr);
   auto in_dptr_typed = reinterpret_cast<const T*>(in_dptr);
 
-  to_contiguous<T, ndim><<<GetNumBlocks(count), GetMinThreadNum(count), 0,
+  to_contiguous<T, IndexType, ndim><<<GetNumBlocks(count), GetMinThreadNum(count), 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
       count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
 }
-template<typename T>
-using to_contiguous_type =
-    typename std::remove_reference<decltype(to_contiguous_wrapper<T, 1>)>::type*;
-template<typename T, size_t... n>
-struct to_contiguous_fn_map_type : std::unordered_map<size_t, to_contiguous_type<T>> {
-  using base_type = std::unordered_map<size_t, to_contiguous_type<T>>;
-  to_contiguous_fn_map_type() : base_type{{n + 1, to_contiguous_wrapper<T, n + 1>}...} {}
-  to_contiguous_type<T> call(size_t ndim) {
-    auto iter = base_type::find(ndim);
-    if (iter != base_type::end()) {
-      return iter->second;
-    } else {
-      UNIMPLEMENTED();
-      return nullptr;
-    }
-  }
-};
-template<typename T, size_t... I>
-to_contiguous_fn_map_type<T, I...> create_to_contiguous_fn_map(std::index_sequence<I...>) {
-  return {};
-}
-template<typename T>
-using to_contiguous_fn_map_t =
-    decltype(create_to_contiguous_fn_map<T>(std::make_index_sequence<SHAPE_MAX_AXIS_SIZE>{}));
-}  // namespace
+
+
+} // namespace
+
+
 template<typename T>
 struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   using ToContiguousUtilBase::ToContiguousUtilBase;
   static constexpr size_t dsize = sizeof(T);
-  static to_contiguous_fn_map_t<T> to_contiguous_fn_map;
   void operator()() {
-    if (contiguous_dim == -1) {
+    const size_t ndims = contiguous_dim + 1;
+    if (ndims == 0) {
       // 0-dim tensor
       OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, block_size * dsize, cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
     } else {
+      if(ndims > 8){
+        UNIMPLEMENTED() << "It is not supported that the dimension of the input tensor is greater than 8 for now!";
+      }
       bool is_same = true;
       for (int64_t i = contiguous_dim; i != -1; --i) {
         if (out_stride[i] != in_stride[i]) {
@@ -139,17 +123,80 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
         OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize, cudaMemcpyDeviceToDevice,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
       } else{
-        const int ndim = contiguous_dim + 1;
-        to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr,
-                                      out_dptr);
+        if (element_count < GetMaxVal<int32_t>()) {
+          if (ndims==1){
+            LaunchToContiguousKernel<T, int32_t, 1>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==2){
+            LaunchToContiguousKernel<T, int32_t, 2>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==3){
+            LaunchToContiguousKernel<T, int32_t, 3>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==4){
+            LaunchToContiguousKernel<T, int32_t, 4>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==5){
+            LaunchToContiguousKernel<T, int32_t, 5>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==6){
+            LaunchToContiguousKernel<T, int32_t, 6>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==7){
+            LaunchToContiguousKernel<T, int32_t, 7>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else {
+            LaunchToContiguousKernel<T, int32_t, 8>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          }    
+        } else {
+          if (ndims==1){
+            LaunchToContiguousKernel<T, int64_t, 1>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==2){
+            LaunchToContiguousKernel<T, int64_t, 2>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==3){
+            LaunchToContiguousKernel<T, int64_t, 3>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==4){
+            LaunchToContiguousKernel<T, int64_t, 4>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==5){
+            LaunchToContiguousKernel<T, int64_t, 5>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==6){
+            LaunchToContiguousKernel<T, int64_t, 6>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else if (ndims==7){
+            LaunchToContiguousKernel<T, int64_t, 7>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          } else {
+            LaunchToContiguousKernel<T, int64_t, 8>(stream, element_count, in_stride, out_stride, in_dptr, out_dptr);
+          }
+        }
       }
     }
   }
 };
-template<typename T>
-to_contiguous_fn_map_t<T> ToContiguousUtil<DeviceType::kCUDA, T>::to_contiguous_fn_map;
+
+
+template<DeviceType device_type, typename T>
+class ToContiguousKernel final : public user_op::OpKernel {
+ public:
+  ToContiguousKernel() = default;
+  ~ToContiguousKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    const ShapeView& in_shape = in->shape();
+    CHECK_EQ(out->shape(), in_shape);
+    const DataType in_data_type = in->data_type();
+    CHECK_EQ(out->data_type(), in_data_type);
+
+    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
+
+    const char* in_dptr = static_cast<const char*>(in->raw_dptr());
+    char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
+
+    ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+
 #define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(T) \
   template struct ToContiguousUtil<DeviceType::kCUDA, T>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA,
                      TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_CUDA_SPECIAL_TYPE)
+
 }  // namespace oneflow
