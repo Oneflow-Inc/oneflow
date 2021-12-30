@@ -55,20 +55,23 @@ function(add_docker_container)
       ${DOCKER_IMG_NAME}
       sleep 3600
   )
-  set_tests_properties(Start${fixtureName} PROPERTIES DEPENDS Clear${fixtureName})
-  set_tests_properties(Start${fixtureName} PROPERTIES FIXTURES_SETUP ${fixtureName})
+  set_tests_properties(Start${fixtureName} PROPERTIES
+    DEPENDS Clear${fixtureName}
+    FIXTURES_SETUP ${fixtureName}
+    TIMEOUT 6000000000
+  )
   # install pip and set as pip fixture
   add_test(NAME InstallOneFlowPipOn${fixtureName}
     COMMAND docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
   )
-  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES DEPENDS Start${fixtureName})
-  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES FIXTURES_SETUP OneFlowPipOn${fixtureName})
   # stop container and set as container fixture cleanup
   add_test(NAME Stop${fixtureName}
-    COMMAND docker rm -f ${TEST_CONTAINER_NAME} || true
+    COMMAND docker rm -f ${TEST_CONTAINER_NAME}
   )
-  set_tests_properties(Stop${fixtureName}
-    PROPERTIES FIXTURES_CLEANUP ${fixtureName})
+  set_tests_properties(Clear${fixtureName}               PROPERTIES FIXTURES_SETUP  ${fixtureName}  SKIP_RETURN_CODE TRUE)
+  set_tests_properties(Start${fixtureName}               PROPERTIES FIXTURES_SETUP  ${fixtureName})
+  set_tests_properties(InstallOneFlowPipOn${fixtureName} PROPERTIES FIXTURES_SETUP  ${fixtureName})
+  set_tests_properties(Stop${fixtureName}                PROPERTIES FIXTURES_CLEANUP ${fixtureName} SKIP_RETURN_CODE TRUE)
 endfunction()
 
 set(TF_CONTAINER_FIXTURE "TFContainer")
