@@ -211,6 +211,7 @@ def GetDualObject(name, pytorch, oneflow):
         "__str__",
         "__repr__",
     ]
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
     pytorch_methods = dir(pytorch)
     if hasattr(pytorch, "__call__") and "__call__" not in pytorch_methods:
         pytorch_methods.append("__call__")
@@ -291,6 +292,9 @@ def GetDualObject(name, pytorch, oneflow):
                                             return self.test_module(*args)
 
                                     test_g = TestGraphOfModule()
+                                    if verbose:
+                                        print("Run graph of module: ", repr(oneflow))
+                                        test_g.debug(2)
                                     test_g_res = test_g(*oneflow_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
@@ -317,6 +321,9 @@ def GetDualObject(name, pytorch, oneflow):
                                             )
 
                                     test_g = TestGraphOfFunctional()
+                                    if verbose:
+                                        print("Run graph of function: ", oneflow)
+                                        test_g.debug(2)
                                     test_g_res = test_g()
                                 if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
@@ -373,6 +380,9 @@ def GetDualObject(name, pytorch, oneflow):
                                     )
 
                             test_g = TestGraphOfTensorMethod()
+                            if verbose:
+                                print("Run graph of method: ", oneflow_method)
+                                test_g.debug(2)
                             test_g_res = test_g()
                             if isinstance(test_g_res, tuple):
                                 for idx, g_res in enumerate(test_g_res):

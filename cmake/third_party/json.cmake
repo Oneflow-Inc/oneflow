@@ -1,38 +1,17 @@
-include(ExternalProject)
+include(FetchContent)
 
-SET(JSON_URL https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip)
-use_mirror(VARIABLE JSON_URL URL ${JSON_URL})
-SET(JSON_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/json/src/json)
-SET(JSON_INSTALL_DIR ${THIRD_PARTY_DIR}/json)
-SET(JSON_INCLUDE_DIR ${JSON_INSTALL_DIR}/include CACHE PATH "" FORCE)
-SET(JSON_URL_HASH fb96f95cdf609143e998db401ca4f324)
-SET(JSON_HEADERS
-    "${JSON_BASE_DIR}/single_include/nlohmann/json.hpp"
+set_mirror_url_with_hash(JSON_URL 
+  https://github.com/nlohmann/json/archive/refs/tags/v3.10.4.zip
+  59c2a25e17b94d612fdb32a1a37378cf
+)
+set(JSON_Install ON CACHE STRING "" FORCE)
+
+FetchContent_Declare(
+    json
+    URL ${JSON_URL}
+    URL_HASH MD5=${JSON_URL_HASH}
 )
 
 if(THIRD_PARTY)
-    ExternalProject_Add(json
-        PREFIX json
-        URL ${JSON_URL}
-        URL_HASH MD5=${JSON_URL_HASH}
-        UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        BUILD_IN_SOURCE 1
-        INSTALL_COMMAND ""
-    )
-    add_custom_target(json_create_header_dir
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${JSON_INCLUDE_DIR}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${JSON_INCLUDE_DIR}/nlohmann
-        DEPENDS json
-    )
-    add_custom_target(json_copy_headers_to_destination
-        DEPENDS json_create_header_dir
-    )
-    foreach(header_file ${JSON_HEADERS})
-        add_custom_command(TARGET json_copy_headers_to_destination PRE_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${JSON_INCLUDE_DIR}
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${JSON_INCLUDE_DIR}/nlohmann
-        )
-    endforeach()
-endif(THIRD_PARTY)
+    FetchContent_MakeAvailable(json)
+endif()
