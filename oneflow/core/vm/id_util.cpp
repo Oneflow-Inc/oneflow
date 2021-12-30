@@ -23,7 +23,7 @@ namespace vm {
 namespace {
 
 static const int64_t kObjectIdMaximumValue = LLONG_MAX / 2;
-static const int64_t kMachineNumberLimit = (1 << 12);
+static const int64_t kMachineNumberLimit = (1 << 20);
 static const int64_t kErrorCodeLimit = 4096;
 
 static_assert(kMachineNumberLimit >= kErrorCodeLimit, "");
