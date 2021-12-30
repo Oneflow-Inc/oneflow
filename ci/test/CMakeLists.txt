@@ -28,29 +28,42 @@ endfunction()
 add_custom_target(start_docker_containers)
 function(add_docker_container)
   set(prefix ARG)
-  set(singleValues "TARGET;IMG")
+  set(singleValues "FIXTURE_NAME;IMG")
   cmake_parse_arguments(
     PARSE_ARGV 0
     ${prefix}
     "${noValues}" "${singleValues}" "${multiValues}"
   )
-  set(targetName "${${prefix}_TARGET}")
-  add_custom_target(${targetName})
-  add_custom_command(TARGET ${targetName}
-    COMMAND docker rm -f ${targetName}
-    COMMAND docker run -n ${targetName} --rm sleep 3600
+  set(fixtureName "${${prefix}_FIXTURE_NAME}")
+  set(DOCKER_CONTAINER_NAME CI-$ENV{USER}-${fixtureName})
+  set(DOCKER_IMG_NAME "${${prefix}_IMG}")
+  add_test(NAME Clear${fixtureName}
+    COMMAND docker rm -f ${DOCKER_CONTAINER_NAME}
   )
-  add_dependencies(start_docker_containers ${targetName})
+  add_test(NAME Start${fixtureName}
+    COMMAND docker run --name ${DOCKER_CONTAINER_NAME} --rm -d --rm --privileged --shm-size=8g
+      --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
+      --runtime=nvidia
+      ${DOCKER_IMG_NAME}
+      sleep 3600
+  )
+  set_tests_properties(Start${fixtureName} PROPERTIES DEPENDS Clear${fixtureName})
+  set_tests_properties(Start${fixtureName} PROPERTIES FIXTURES_SETUP ${fixtureName})
+  add_test(NAME Stop${fixtureName}
+    COMMAND docker rm -f ${DOCKER_CONTAINER_NAME} || true
+  )
+  set_tests_properties(Stop${fixtureName}
+    PROPERTIES FIXTURES_CLEANUP ${fixtureName})
 endfunction()
 
-set(TF_CONTAINER_TARGET "$ENV{USER}-ci-tf")
-set(TORCH_CONTAINER_TARGET "$ENV{USER}-ci-torch")
+set(TF_CONTAINER_FIXTURE "TFContainer")
+set(TORCH_CONTAINER_FIXTURE "TorchContainer")
 if(RUN_IN_DOCKER)
   set(DOCKER_EXE docker)
   add_docker_img(test_with_tf "${TEST_WITH_TF_IMG_TAG}")
   add_docker_img(test_with_torch "${TEST_WITH_TORCH_IMG_TAG}")
-  add_docker_container(TARGET ${TF_CONTAINER_TARGET} IMG "${TEST_WITH_TF_IMG_TAG}")
-  add_docker_container(TARGET ${TORCH_CONTAINER_TARGET} IMG "${TEST_WITH_TORCH_IMG_TAG}")
+  add_docker_container(FIXTURE_NAME ${TF_CONTAINER_FIXTURE} IMG "${TEST_WITH_TF_IMG_TAG}")
+  add_docker_container(FIXTURE_NAME ${TORCH_CONTAINER_FIXTURE} IMG "${TEST_WITH_TORCH_IMG_TAG}")
 endif()
 
 # TODO: ensure datasets (ExternalData)
@@ -90,6 +103,14 @@ function(add_oneflow_python_test)
         RESOURCE_GROUPS
           "vram:2000"
     )
+    if (RUN_IN_DOCKER)
+      if (${prefix}_SINGLE_CLIENT)
+        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED ${TF_CONTAINER_FIXTURE})
+      endif()
+      if (${prefix}_MULTI_CLIENT)
+        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED ${TORCH_CONTAINER_FIXTURE})
+      endif()
+    endif()
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
       set_tests_properties(${TEST_NAME}
           PROPERTIES
