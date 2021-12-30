@@ -27,7 +27,7 @@ import oneflow.unittest
 
 
 class TestFlip(flow.unittest.TestCase):
-    # TODO(lixiang): Fix CI bug 
+    # TODO(lixiang): Fix CI bug
     # @autotest(check_graph=True)
     # def test_flow_flip_list_with_random_data(test_case):
     #     device = random_device()
