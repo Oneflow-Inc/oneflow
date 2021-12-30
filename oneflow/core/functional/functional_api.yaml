@@ -1827,7 +1827,7 @@
   bind_python: False
 
 - name: "meshgrid"
-  signature: "TensorTuple (TensorTuple tensors) => Meshgrid"
+  signature: 'TensorTuple (TensorTuple tensors, String indexing="ij") => Meshgrid'
   bind_python: True
 
 - name: "decode_onerec"
@@ -1840,4 +1840,24 @@
 
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
+  bind_python: True
+
+- name: "tensor_buffer_to_tensor"
+  signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"
+  bind_python: True
+
+- name: "tensor_to_tensor_buffer"
+  signature: "Tensor (Tensor input, Int32 instance_dims) => TensorToTensorBuffer"
+  bind_python: True
+
+- name: "gen_tensor_buffer"
+  signature: "Tensor (Shape shape, ShapeList shape_list, FloatList value_list, DataType data_type, Bool dynamic_out) => GenTensorBuffer"
+  bind_python: True
+
+- name: "top_k"
+  signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
+  bind_python: True
+
+- name: "in_top_k"
+  signature: "Tensor (Tensor targets, Tensor predictions, Int32 k) => InTopK"
   bind_python: True
