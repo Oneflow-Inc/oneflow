@@ -969,15 +969,15 @@ class SliceGradBaseFunctor {
  public:
   SliceGradBaseFunctor() = default;
   virtual ~SliceGradBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& like,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const Shape& like,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("like_shape", like));
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  protected:
@@ -992,7 +992,7 @@ class SliceFunctor : public SliceBaseFunctor {
 class SliceGradFunctor : public SliceGradBaseFunctor {
  public:
   SliceGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Input("like").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Output("dx").Build());
   }
 };
 
