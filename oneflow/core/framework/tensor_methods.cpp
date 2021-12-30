@@ -81,7 +81,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
-  std::cout << std::endl;
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy" : "consistent");
