@@ -199,8 +199,10 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
         for (int32_t k = 0; k < n; k++) {
           if (NotMiddleNode(i, j, k, middle_node_num_ik)) { continue; }
           // Now we start to judge if the edge have a minimum cost
+          // It needs to be "<=" since we have 0 cost.
+          // Using "<" would give no middle nodes from (B, B) to any other nd sbp.
           if (minimum_copy_cost[i][k] + minimum_copy_cost[k][j]
-              < minimum_copy_cost[i][j] * 1.0000001) {
+              <= minimum_copy_cost[i][j] * 1.0000001) {
             // i -> ? -> k
             if (middle_nodes[i][k].size() > 0) {
               // We have multiple choices going from i to k
@@ -214,6 +216,9 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
             }
           }
         }
+        CHECK_OR_RETURN(middle_nodes[i][j].size() > 0)
+            << "No middle nodes given from " << NdSbpParallelToString(nd_sbp_lists[i]) << " to "
+            << NdSbpParallelToString(nd_sbp_lists[j]) << " in boxing collector";
       }
     }
   }
