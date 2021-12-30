@@ -655,7 +655,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const auto& output = outputs->at(i);
     if (output) {
-      std::string lbn = TensorNameScope::Global()->Lookup(output);
+      const std::string& lbn = TensorNameScope::Global()->Lookup(output);
+      CHECK_OR_RETURN(!lbn.empty()) << "The output which index is " << i
+                                    << " has no tensor name, please check whether the inplaced "
+                                       "output is also an input of the operation "
+                                    << op_expr.op_name();
       JUST(infer_ctx->DisableBoxing(lbn));
     }
   }

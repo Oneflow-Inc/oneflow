@@ -152,6 +152,24 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
   return Maybe<void>::Ok();
 }
 
+Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
+    const Operator& op, cfg::SbpSignature* sbp_sig_conf) const {
+  auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
+  for (const std::string& ibn : op.input_bns()) {
+    std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.op_conf(), ibn);
+    cfg::SbpParallel sbp_parallel;
+    bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
+    if (has_sbp_hint) {
+      (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
+      std::string lbn = GenLogicalBlobName(lbi);
+      CHECK_EQ_OR_RETURN(lbn_may_with_hint, ReplaceInputLbnInOpCustomizedConf(
+                                                op_conf_without_split_hint.get(), ibn, lbn));
+    }
+  }
+  return op_conf_without_split_hint;
+}
+
 void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
     const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
     const cfg::NdSbpSignature& nd_sbp_signature, bool is_mirrored_parallel_view) const {
@@ -361,7 +379,8 @@ Maybe<cfg::NdSbpSignature> JobBuildAndInferCtx::InitConstraitNdSbpSignature(
       const auto& nd_sbp_iter = lbi2nd_sbp_from_producer_view_.find(lbi);
       if (nd_sbp_iter == lbi2nd_sbp_from_producer_view_.end()) {
         return Error::RuntimeError()
-               << "The nd_sbp of " << ibn << " is not found for op " << op.op_name()
+               << "The nd_sbp of input " << ibn << " (tensor name is " << GenLogicalBlobName(lbi)
+               << ") is not found for operation " << op.op_name()
                << ". It maybe caused by an invalid inplace operation.";
       }
       (*(nd_sbp_sig->mutable_bn_in_op2nd_sbp()))[ibn] = lbi2nd_sbp_from_producer_view_.at(lbi);
@@ -553,9 +572,10 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   op_name2op_.emplace(op_name, JUST(ConstructOp(op_conf)));
   Operator* op = op_name2op_.at(op_name).get();
 
-  // cfg::SbpSignature sbp_sig_conf;
+  cfg::SbpSignature sbp_sig_conf;
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
+  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf));
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
   ParallelDesc parallel_desc(*parallel_conf);
   JUST(op->FillOpParallelDesc(parallel_desc));
@@ -574,10 +594,14 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
   // infer nd_sbp signature
-  cfg::NdSbpSignature nd_sbp_sig = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
-  AddOpAndUpdateJobParallelViewConf(op->op_conf(), parallel_desc, nd_sbp_sig,
+  cfg::NdSbpSignature nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  // Override constrait nd_sbp if sbp hint is given
+  if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  }
+  AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, nd_sbp_sig_conf,
                                     is_mirrored_parallel_view);
-  JUST(InferOpOutNdSbp(op, nd_sbp_sig, parallel_desc));
+  JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));

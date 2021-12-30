@@ -110,6 +110,8 @@ class JobBuildAndInferCtx {
   void InitIbn2DisableBoxing(const Operator& op, HashMap<std::string, bool>* ibn2disable_boxing);
   Maybe<cfg::NdSbpSignature> InitConstraitNdSbpSignature(
       const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) const;
+  Maybe<OperatorConf> DecodeLbiHintAndReturnNewOpConf(const Operator& op,
+                                                      cfg::SbpSignature* sbp_sig_conf) const;
   Maybe<void> AddLbiParallelConf2BlobPlacement(
       const Operator* op, std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn);
   void AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
