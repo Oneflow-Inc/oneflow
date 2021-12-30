@@ -107,7 +107,7 @@ class MirroredTensorImpl : public TensorImpl {
   DataType dtype() const override { return tensor_meta_->dtype(); }
   const Symbol<Device>& device() const { return tensor_meta_->device(); }
   const std::shared_ptr<const MirroredTensorMeta>& tensor_meta() const { return tensor_meta_; }
-  bool is_contiguous() const override{ return tensor_meta_->is_contiguous(); }
+  bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
 
   // Setters
   MirroredTensorMeta* mut_tensor_meta() {
@@ -191,10 +191,10 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta()->shape_ptr(); }
   bool is_lazy() const override { return true; }
-  bool is_contiguous() const override { 
-    // TODO:(zhaoluyang) default return true for now, 
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in lazy-mirrored mode
-    return true; 
+    return true;
   }
 
   // Getters valid only for EagerMirroredTensorImpl
@@ -262,10 +262,10 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return true; }
-  bool is_contiguous() const override { 
-    // TODO:(zhaoluyang) default return true for now, 
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in lazy-consistent mode
-    return true; 
+    return true;
   }
 };
 
@@ -276,10 +276,10 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return false; }
-  bool is_contiguous() const override { 
-    // TODO:(zhaoluyang) default return true for now, 
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in eager-consistent mode
-    return true; 
+    return true;
   }
 
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }

@@ -2404,7 +2404,8 @@ class MeshgridFunctor {
     Shape view_shape(view_shape_vec);
     for (int i = 0; i < size; ++i) {
       view_shape.Set(i, -1);
-      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensor_consts.at(i), view_shape))->contiguous();
+      std::shared_ptr<one::Tensor> reshaped =
+          JUST(Reshape(tensor_consts.at(i), view_shape))->contiguous();
       grids[i] = JUST(Expand(reshaped, grids_shape));
       view_shape.Set(i, 1);
     }
@@ -2574,7 +2575,8 @@ class InTopKFunctor {
     CHECK_EQ_OR_RETURN(predictions->ndim(), 2) << "The dimension of predictions must be 2";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("k", k));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets->contiguous(), predictions->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets->contiguous(), predictions->contiguous()},
+                                          attrs);
   }
 
  private:

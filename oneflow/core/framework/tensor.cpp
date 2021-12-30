@@ -39,9 +39,7 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
 }
 
 std::shared_ptr<Tensor> Parameter::contiguous() const {
-  if(tensor_->is_contiguous()){
-    std::const_pointer_cast<Tensor>(shared_from_this());
-  }
+  if (tensor_->is_contiguous()) { std::const_pointer_cast<Tensor>(shared_from_this()); }
   return std::make_shared<Parameter>(tensor_->contiguous(), this->requires_grad());
 }
 
@@ -68,12 +66,9 @@ Maybe<Tensor> MirroredTensor::detach() const {
   return tensor;
 }
 
-
 std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
-  if(tensor->is_contiguous()){
-    return tensor;
-  }
+  if (tensor->is_contiguous()) { return tensor; }
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
@@ -86,9 +81,7 @@ Maybe<Tensor> MirroredTensor::clone() const {
 
 std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
-  if(tensor->is_contiguous()){
-    return tensor;
-  }
+  if (tensor->is_contiguous()) { return tensor; }
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 

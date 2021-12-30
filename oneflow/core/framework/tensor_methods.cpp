@@ -29,7 +29,6 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset) {
   /**
