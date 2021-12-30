@@ -53,7 +53,7 @@ class NdIndexOffsetHelper {
     for (int i = 0; i < N; ++i) {
       if (i < n) { dims_arr[i] = dims[i]; }
     }
-    InitStrides(dims_arr, n);
+    InitFastIntegerMath(dims_arr, n);
   }
 
   ~NdIndexOffsetHelper() = default;
