@@ -17,25 +17,48 @@ limitations under the License.
 #define ONEFLOW_CORE_BOXING_BOXING_INTERPRETER_STATUS_H_
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
 class BoxingInterpreterStatus;
+class PlacedNdSbp;
 
-Maybe<BoxingInterpreterStatus> MakeBoxingInterpreterStatus(const std::string& boxing_name);
+Maybe<BoxingInterpreterStatus> MakeBoxingInterpreterStatus(const std::string& boxing_name,
+                                                           Symbol<PlacedNdSbp> in,
+                                                           Symbol<PlacedNdSbp> out);
 Maybe<BoxingInterpreterStatus> MakeComposedBoxingInterpreterStatus(
     const BoxingInterpreterStatus& lhs_status, const BoxingInterpreterStatus& rhs_status);
 
 class BoxingInterpreterStatus final {
  public:
-  BoxingInterpreterStatus(const std::string& boxing_name) : boxing_name_(boxing_name){};
+  BoxingInterpreterStatus(const std::string& boxing_name) : boxing_name_(boxing_name) {}
+  BoxingInterpreterStatus(const std::string& boxing_name, Symbol<PlacedNdSbp> src_placed_nd_sbp,
+                          Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp,
+                          Symbol<PlacedNdSbp> dst_placed_nd_sbp)
+      : boxing_name_(boxing_name),
+        src_placed_nd_sbp_(src_placed_nd_sbp),
+        mid_placed_nd_sbp_(mid_placed_nd_sbp),
+        dst_placed_nd_sbp_(dst_placed_nd_sbp) {}
+  BoxingInterpreterStatus(const std::string& boxing_name, Symbol<PlacedNdSbp> src_placed_nd_sbp,
+                          Symbol<PlacedNdSbp> dst_placed_nd_sbp)
+      : BoxingInterpreterStatus(boxing_name, src_placed_nd_sbp,
+                                SymbolOf(std::vector<Symbol<PlacedNdSbp>>()), dst_placed_nd_sbp) {}
   ~BoxingInterpreterStatus() = default;
 
   // Getters
   const std::string& boxing_name() const { return boxing_name_; }
+  Symbol<PlacedNdSbp> src_placed_nd_sbp() const { return src_placed_nd_sbp_; }
+  Symbol<PlacedNdSbp> dst_placed_nd_sbp() const { return dst_placed_nd_sbp_; }
+  Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp() const { return mid_placed_nd_sbp_; }
+  const std::string& nd_sbp_routing() const;
+  const std::string& placement_routing() const;
 
  private:
   std::string boxing_name_;
+  Symbol<PlacedNdSbp> src_placed_nd_sbp_;
+  Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp_;
+  Symbol<PlacedNdSbp> dst_placed_nd_sbp_;
 };
 
 }  // namespace oneflow

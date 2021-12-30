@@ -13,19 +13,71 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/placed_nd_sbp.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/boxing/boxing_interpreter_status.h"
 
 namespace oneflow {
 
-Maybe<BoxingInterpreterStatus> MakeBoxingInterpreterStatus(const std::string& boxing_name) {
-  BoxingInterpreterStatus status(boxing_name);
+Maybe<BoxingInterpreterStatus> MakeBoxingInterpreterStatus(const std::string& boxing_name,
+                                                           Symbol<PlacedNdSbp> in,
+                                                           Symbol<PlacedNdSbp> out) {
+  BoxingInterpreterStatus status(boxing_name, in, out);
   return status;
 }
 
 Maybe<BoxingInterpreterStatus> MakeComposedBoxingInterpreterStatus(
     const BoxingInterpreterStatus& lhs_status, const BoxingInterpreterStatus& rhs_status) {
-  BoxingInterpreterStatus status(lhs_status.boxing_name() + " -> " + rhs_status.boxing_name());
+  std::vector<Symbol<PlacedNdSbp>> mid_placed_nd_sbp(*lhs_status.mid_placed_nd_sbp());
+  mid_placed_nd_sbp.emplace_back(lhs_status.dst_placed_nd_sbp());
+  mid_placed_nd_sbp.insert(mid_placed_nd_sbp.end(), rhs_status.mid_placed_nd_sbp()->begin(),
+                           rhs_status.mid_placed_nd_sbp()->end());
+  BoxingInterpreterStatus status(lhs_status.boxing_name() + " -> " + rhs_status.boxing_name(),
+                                 lhs_status.src_placed_nd_sbp(), mid_placed_nd_sbp,
+                                 rhs_status.dst_placed_nd_sbp());
   return status;
+}
+
+namespace {
+
+Maybe<std::string> RawGetNdSbpRouting(Symbol<PlacedNdSbp> src_placed_nd_sbp,
+                                      Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp,
+                                      Symbol<PlacedNdSbp> dst_placed_nd_sbp) {
+  std::ostringstream ss;
+  ss << NdSbpToString(src_placed_nd_sbp->nd_sbp());
+  for (const auto& placed_nd_sbp : *mid_placed_nd_sbp) {
+    ss << " -> " << NdSbpToString(placed_nd_sbp->nd_sbp());
+  }
+  ss << " -> " << NdSbpToString(dst_placed_nd_sbp->nd_sbp());
+  return ss.str();
+}
+
+Maybe<std::string> RawGetPlacementRouting(
+    Symbol<PlacedNdSbp> src_placed_nd_sbp,
+    Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp,
+    Symbol<PlacedNdSbp> dst_placed_nd_sbp) {
+  std::ostringstream ss;
+  ss << *JUST(PlacementToString(src_placed_nd_sbp->placement()));
+  for (const auto& placed_nd_sbp : *mid_placed_nd_sbp) {
+    ss << " -> " << *JUST(PlacementToString(placed_nd_sbp->placement()));
+  }
+  ss << " -> " << *JUST(PlacementToString(dst_placed_nd_sbp->placement()));
+  return ss.str();
+}
+
+static constexpr auto* GetNdSbpRouting = DECORATE(&RawGetNdSbpRouting, ThreadLocal);
+static constexpr auto* GetPlacementRouting = DECORATE(&RawGetPlacementRouting, ThreadLocal);
+
+}  // namespace
+
+const std::string& BoxingInterpreterStatus::nd_sbp_routing() const {
+  return *CHECK_JUST(GetNdSbpRouting(src_placed_nd_sbp_, mid_placed_nd_sbp_, dst_placed_nd_sbp_));
+}
+
+const std::string& BoxingInterpreterStatus::placement_routing() const {
+  return *CHECK_JUST(
+      GetPlacementRouting(src_placed_nd_sbp_, mid_placed_nd_sbp_, dst_placed_nd_sbp_));
 }
 
 }  // namespace oneflow
