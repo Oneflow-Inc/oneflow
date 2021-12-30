@@ -776,32 +776,33 @@ Maybe<void> Operator::InferNdSbpSignature(
     const auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       return JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc();
     };
-    std::vector<cfg::NdSbpSignature> nd_sbp_list;
-    JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_list));
-    JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_list));
+    std::vector<cfg::NdSbpSignature> nd_sbp_sig_list;
+    JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list));
+    JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc,
+                                                nd_sbp_sig_list));
     // Filter nd_sbp according to `nd_sbp_constraints`
-    for (int32_t i = nd_sbp_list.size() - 1; i >= 0; --i) {
+    for (int32_t i = nd_sbp_sig_list.size() - 1; i >= 0; --i) {
       // If any blob do not match nd_sbp_constraints, the candidate nd_sbp will be deleted.
       if (/*not_match=*/std::any_of(input_bns().begin(), input_bns().end(), [&](const auto& ibn) {
         const auto nd_sbp_constraints_it = nd_sbp_constraints.bn_in_op2nd_sbp().find(ibn);
         if (nd_sbp_constraints_it != nd_sbp_constraints.bn_in_op2nd_sbp().end()) {
-          return nd_sbp_list.at(i).bn_in_op2nd_sbp()[ibn] != nd_sbp_constraints_it->second;
+          return nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn] != nd_sbp_constraints_it->second;
         }
         return false;
       })) {
-        nd_sbp_list.at(i) = nd_sbp_list.back();
-        nd_sbp_list.pop_back();
+        nd_sbp_sig_list.at(i) = nd_sbp_sig_list.back();
+        nd_sbp_sig_list.pop_back();
       }
     }
-    CHECK_OR_RETURN(!nd_sbp_list.empty())
+    CHECK_OR_RETURN(!nd_sbp_sig_list.empty())
         << "Empty sbp signature after filtering for " << op_name();
     int32_t select_sbp_idx = -1;
     double min_copy_cost = 0.0;
-    for (int32_t i = 0; i < nd_sbp_list.size(); ++i) {
+    for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
       for (const auto& ibn : input_bns()) {
         double copy_cost = JUST(ComputCopyCostBetweenNdSbp(
-            JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_list.at(i).bn_in_op2nd_sbp()[ibn],
+            JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
             JUST(LogicalBlobDesc4Ibn(ibn)), JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(),
             *JUST(GetOpParallelDesc()),
             /*is_same_sbp=*/false,
@@ -825,9 +826,24 @@ Maybe<void> Operator::InferNdSbpSignature(
         }
       }
     }
-    CHECK_OR_RETURN(select_sbp_idx != -1) << "TODO";
-    nd_sbp_signature->CopyFrom(nd_sbp_list.at(select_sbp_idx));
-    std::cout << op_name() << " select sbp: " << nd_sbp_signature->DebugString() << std::endl;
+    // Can't find any available sbp
+    if (select_sbp_idx == -1) {
+      std::ostringstream err;
+      err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
+      err << "Condidate nd sbp signature are: "
+          << JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+      err << ", but inputs sbp are:";
+      {
+        std::ostringstream input_sbp_str;
+        for (const auto& ibn : input_bns()) {
+          const cfg::NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+          input_sbp_str << " " << ibn << ": " << NdSbpToString(nd_sbp) << ";";
+        }
+        err << input_sbp_str.str() << std::endl;
+      }
+      return Error::RuntimeError() << err.str();
+    }
+    nd_sbp_signature->CopyFrom(nd_sbp_sig_list.at(select_sbp_idx));
     return Maybe<void>::Ok();
   }
 }
