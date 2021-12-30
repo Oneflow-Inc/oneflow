@@ -254,7 +254,7 @@ Maybe<size_t> ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_
   CHECK_LT_OR_RETURN(col, NumColumns());
   std::vector<std::shared_ptr<TensorBuffer>> batch;
   batch.reserve(batch_size);
-  buffers_[col]->PullMany(&batch, batch_size);
+  buffers_.at(col)->PullMany(&batch, batch_size);
   for (auto& sample : batch) {
     buffer->Swap(sample.get());
     buffer++;
@@ -269,7 +269,7 @@ Maybe<size_t> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
   size_t batch_size = tensor->shape().At(0);
   std::vector<std::shared_ptr<TensorBuffer>> batch;
   batch.reserve(batch_size);
-  buffers_[col]->PullMany(&batch, batch_size);
+  buffers_.at(col)->PullMany(&batch, batch_size);
   char* dptr = static_cast<char*>(tensor->mut_dptr());
   DataType dtype = tensor->data_type();
   int64_t sample_size = tensor->shape().Count(1);
@@ -297,10 +297,13 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
   }
   cond_.notify_all();
 
-  auto col_reader = row_group_reader_->Column(col);
+  int col_id = schema_.col_descs[col].col_id;
+  CHECK_GE_OR_RETURN(col_id, 0);
+  CHECK_LT_OR_RETURN(col_id, row_group_reader_->metadata()->num_columns());
+  auto col_reader = row_group_reader_->Column(col_id);
   while (col_reader->HasNext()) {
     auto sample = JUST(ReadColumnValues(col_reader.get()));
-    if (buffers_[col]->Push(std::move(sample)) != BufferType::kSuccess) { return false; }
+    if (buffers_.at(col)->Push(std::move(sample)) != BufferType::kSuccess) { return false; }
   }
   return true;
 }
@@ -375,11 +378,8 @@ Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
     buffers_.emplace_back(std::make_unique<BufferType>(buffer_size, shuffle_, seed_ + i + 1));
   }
   for (int col = 0; col < num_cols; ++col) {
-    int col_id = schema_.col_descs[col].col_id;
-    CHECK_GE_OR_RETURN(col_id, 0);
-    CHECK_LT_OR_RETURN(col_id, file_meta_->schema()->num_columns());
-    workers_.emplace_back(std::thread([this, col_id] {
-      while (!IsClosed() && CHECK_JUST(ReadColumn(col_id))) {}
+    workers_.emplace_back(std::thread([this, col] {
+      while (!IsClosed() && CHECK_JUST(ReadColumn(col))) {}
     }));
   }
   return Maybe<void>::Ok();
