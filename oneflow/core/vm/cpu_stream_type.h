@@ -43,7 +43,7 @@ class CpuStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;
-  bool OnSchedulerThread() const override { return false; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };
 
