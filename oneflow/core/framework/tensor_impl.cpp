@@ -186,7 +186,7 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
                                        Symbol<Device> device,
                                        const std::shared_ptr<const Stride>& stride,
                                        int64_t storage_offset)
-    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
+    : TensorMeta(shape, dtype), device_(device), storage_offset_(storage_offset) { set_stride(stride); }
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
