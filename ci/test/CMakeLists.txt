@@ -41,7 +41,8 @@ function(add_docker_container)
     COMMAND docker rm -f ${DOCKER_CONTAINER_NAME}
   )
   add_test(NAME Start${fixtureName}
-    COMMAND docker run --name ${DOCKER_CONTAINER_NAME} --rm -d --rm --privileged --shm-size=8g
+    COMMAND docker run --name ${DOCKER_CONTAINER_NAME} --rm -d
+      --privileged --shm-size=8g
       --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
       --runtime=nvidia
       -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro
