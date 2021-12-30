@@ -24,9 +24,9 @@ Maybe<void> ParquetReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) 
   ParquetColumnSchema schema;
   ParseParquetColumnSchemaFromJson(&schema, ctx->Attr<std::string>("schema_json_str"));
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  int output_order = 0;
+  int output_index = 0;
   for (const auto& col_desc : schema.col_descs) {
-    user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", output_order);
+    user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", output_index);
     if (col_desc.is_variadic) {
       *out_desc->mut_shape() = Shape({batch_size});
     } else {
@@ -34,7 +34,7 @@ Maybe<void> ParquetReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) 
       for (auto dim : col_desc.shape.dim_vec()) { dim_vec.push_back(dim); }
       *out_desc->mut_shape() = Shape(dim_vec);
     }
-    output_order++;
+    output_index++;
   }
   return Maybe<void>::Ok();
 }
@@ -43,15 +43,15 @@ Maybe<void> ParquetReaderOp::InferDataType(user_op::InferContext* ctx) {
   using namespace data;
   ParquetColumnSchema schema;
   ParseParquetColumnSchemaFromJson(&schema, ctx->Attr<std::string>("schema_json_str"));
-  int output_order = 0;
+  int output_index = 0;
   for (const auto& col_desc : schema.col_descs) {
-    auto* dtype = ctx->OutputTensorDesc("out", output_order)->mut_data_type();
+    auto* dtype = ctx->OutputTensorDesc("out", output_index)->mut_data_type();
     if (col_desc.is_variadic) {
       *dtype = DataType::kTensorBuffer;
     } else {
       *dtype = col_desc.dtype;
     }
-    output_order++;
+    output_index++;
   }
   return Maybe<void>::Ok();
 }

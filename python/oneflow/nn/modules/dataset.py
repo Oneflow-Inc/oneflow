@@ -1122,6 +1122,12 @@ def _handle_parquet_schema_args(module, schema):
         if not isinstance(col, dict):
             raise ValueError("the element of 'schema' must be a dict")
 
+        if "col_id" not in col and "col_name" not in col:
+            raise ValueError("Either 'col_id' or 'col_name' should be set")
+
+        if "col_id" in col and "col_name" in col:
+            raise ValueError("'col_id' and 'col_name' can't be set both")
+
         is_variadic = ("is_variadic" in col) and col["is_variadic"]
 
         if not is_variadic and "shape" not in col:

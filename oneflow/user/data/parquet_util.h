@@ -26,6 +26,15 @@ namespace oneflow {
 namespace data {
 
 struct ParquetColumnDesc {
+  ParquetColumnDesc()
+      : col_id(-1),
+        col_name(""),
+        shape(Shape()),
+        dtype(DataType::kInvalidDataType),
+        is_variadic(false) {}
+
+  int col_id;
+  std::string col_name;
   Shape shape;
   DataType dtype;
   bool is_variadic;
@@ -48,8 +57,8 @@ struct ParquetColumnSchema {
 //   },
 //   ...
 // ]
-Maybe<void> ParseParquetColumnSchemaFromJson(ParquetColumnSchema* schema,
-                                             const std::string& json_str) {
+inline Maybe<void> ParseParquetColumnSchemaFromJson(ParquetColumnSchema* schema,
+                                                    const std::string& json_str) {
   nlohmann::json json;
   std::istringstream json_ss(json_str);
   json_ss >> json;
@@ -57,6 +66,16 @@ Maybe<void> ParseParquetColumnSchemaFromJson(ParquetColumnSchema* schema,
   for (auto& col : json) {
     schema->col_descs.emplace_back();
     auto& col_desc = schema->col_descs.back();
+    if (col.contains("col_id")) {
+      CHECK_OR_RETURN(col["col_id"].is_number_integer());
+      col_desc.col_id = col["col_id"].get<int>();
+    }
+
+    if (col.contains("col_name")) {
+      CHECK_OR_RETURN(col["col_name"].is_string());
+      col_desc.col_name = col["col_name"].get<std::string>();
+    }
+
     if (col.contains("is_variadic") && col["is_variadic"].get<bool>()) {
       col_desc.is_variadic = true;
     } else {

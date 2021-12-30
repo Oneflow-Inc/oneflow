@@ -23,10 +23,12 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/user/data/parquet_util.h"
 
 #include "parquet/api/reader.h"
 #include "parquet/column_reader.h"
 #include "parquet/file_reader.h"
+#include "parquet/schema.h"
 #include "parquet/types.h"
 #include "arrow/filesystem/localfs.h"
 
@@ -78,6 +80,32 @@ Maybe<TensorBuffer> ReadColumnValues(parquet::ColumnReader* col_reader) {
 #undef CASE_ENTRY
     default: {
       UNIMPLEMENTED_THEN_RETURN();
+    }
+  }
+}
+
+DataType ParquetPhysicalTypeToDataType(parquet::Type::type type) {
+  switch (type) {
+    case parquet::Type::INT32: {
+      return DataType::kInt32;
+    }
+    case parquet::Type::INT64: {
+      return DataType::kInt64;
+    }
+    case parquet::Type::FLOAT: {
+      return DataType::kFloat;
+    }
+    case parquet::Type::DOUBLE: {
+      return DataType::kDouble;
+    }
+    default: {
+      // BOOLEAN
+      // INT96
+      // FLOAT
+      // DOUBLE
+      // BYTE_ARRAY
+      // FIXED_LEN_BYTE_ARRAY
+      return DataType::kInvalidDataType;
     }
   }
 }
@@ -168,16 +196,17 @@ class ParquetReader final : public user_op::OpKernelState {
   Maybe<void> Init(user_op::KernelInitContext* ctx);
   void Close();
 
-  Maybe<void> GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size);
-  Maybe<void> GetColumnBatch(int col, user_op::Tensor* tensor);
+  Maybe<size_t> GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size);
+  Maybe<size_t> GetColumnBatch(int col, user_op::Tensor* tensor);
 
  private:
   Maybe<void> InitParallelInfo(user_op::KernelInitContext* ctx);
   Maybe<void> InitParquetFiles(const std::string& path);
+  Maybe<void> InitSchema(const std::string& schema_json_str);
   Maybe<void> InitWorkers(size_t buffer_size);
 
   bool IsClosed() { return is_closed_.load(); }
-  size_t NumColumns() { return num_columns_; }
+  size_t NumColumns() { return schema_.col_descs.size(); }
 
   Maybe<bool> ReadColumn(int col);
   Maybe<void> NextRowGroup();
@@ -189,11 +218,13 @@ class ParquetReader final : public user_op::OpKernelState {
   int64_t seed_;
   std::mt19937 rng_;
   bool use_mmap_;
-  size_t num_columns_;
+
+  ParquetColumnSchema schema_;
 
   std::string base_path_;
   std::shared_ptr<arrow::fs::LocalFileSystem> local_fs_;
   std::vector<std::string> parquet_files_;
+  std::shared_ptr<parquet::FileMetaData> file_meta_;
 
   std::unique_ptr<parquet::ParquetFileReader> file_reader_;
   std::shared_ptr<parquet::RowGroupReader> row_group_reader_;
@@ -218,37 +249,41 @@ void ParquetReader::Close() {
   }
 }
 
-Maybe<void> ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size) {
+Maybe<size_t> ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_t batch_size) {
+  CHECK_GE_OR_RETURN(col, 0);
+  CHECK_LT_OR_RETURN(col, NumColumns());
   std::vector<std::shared_ptr<TensorBuffer>> batch;
   batch.reserve(batch_size);
   buffers_[col]->PullMany(&batch, batch_size);
-  CHECK_EQ(batch.size(), batch_size);
   for (auto& sample : batch) {
     buffer->Swap(sample.get());
     buffer++;
   }
-  return Maybe<void>::Ok();
+  return batch.size();
 }
 
-Maybe<void> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
-  CHECK_GT_OR_RETURN(tensor->shape().NumAxes(), 0);
+Maybe<size_t> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
   CHECK_GE_OR_RETURN(col, 0);
   CHECK_LT_OR_RETURN(col, NumColumns());
+  CHECK_GT_OR_RETURN(tensor->shape().NumAxes(), 0);
   size_t batch_size = tensor->shape().At(0);
   std::vector<std::shared_ptr<TensorBuffer>> batch;
   batch.reserve(batch_size);
   buffers_[col]->PullMany(&batch, batch_size);
-  CHECK_EQ_OR_RETURN(batch.size(), batch_size);
   char* dptr = static_cast<char*>(tensor->mut_dptr());
   DataType dtype = tensor->data_type();
   int64_t sample_size = tensor->shape().Count(1);
   for (auto& sample : batch) {
-    CHECK_EQ_OR_RETURN(sample->data_type(), dtype);
-    CHECK_EQ_OR_RETURN(sample->elem_cnt(), sample_size);
+    CHECK_EQ_OR_RETURN(sample->data_type(), dtype)
+        << "The data type of sample read from parquet dismatch the data type of tensor";
+    CHECK_EQ_OR_RETURN(sample->elem_cnt(), sample_size)
+        << "The shape of sample read from parquet dismatch the shape of tensor: "
+        << sample->shape().ToString() << " vs. " << tensor->shape().ToString()
+        << " (tensor shape include batch dimension)";
     memcpy(dptr, sample->mut_data(), sample->nbytes());
     dptr += sample->nbytes();
   }
-  return Maybe<void>::Ok();
+  return batch.size();
 }
 
 Maybe<bool> ParquetReader::ReadColumn(int col) {
@@ -325,22 +360,26 @@ Maybe<void> ParquetReader::NextParquetFile() {
   int file_index = parquet_file_part_indices_.front();
   parquet_file_part_indices_.pop();
   file_reader_ = parquet::ParquetFileReader::OpenFile(parquet_files_[file_index], use_mmap_);
-  CHECK_EQ_OR_RETURN(file_reader_->metadata()->num_columns(), NumColumns())
-      << parquet_files_[file_index] << " has different number of columns.";
+  CHECK_OR_RETURN(file_reader_->metadata()->schema()->Equals(*file_meta_->schema()))
+      << "The schema of " << parquet_files_[file_index] << " dismatch";
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
-  read_keys_ = NumColumns();
+  size_t num_cols = NumColumns();
+  read_keys_ = num_cols;
   read_done_ = false;
-  buffers_.reserve(NumColumns());
-  workers_.reserve(NumColumns());
-  for (int i = 0; i < NumColumns(); ++i) {
+  buffers_.reserve(num_cols);
+  workers_.reserve(num_cols);
+  for (int i = 0; i < num_cols; ++i) {
     buffers_.emplace_back(std::make_unique<BufferType>(buffer_size, shuffle_, seed_ + i + 1));
   }
-  for (int col = 0; col < NumColumns(); ++col) {
-    workers_.emplace_back(std::thread([this, col] {
-      while (!IsClosed() && CHECK_JUST(ReadColumn(col))) {}
+  for (int col = 0; col < num_cols; ++col) {
+    int col_id = schema_.col_descs[col].col_id;
+    CHECK_GE_OR_RETURN(col_id, 0);
+    CHECK_LT_OR_RETURN(col_id, file_meta_->schema()->num_columns());
+    workers_.emplace_back(std::thread([this, col_id] {
+      while (!IsClosed() && CHECK_JUST(ReadColumn(col_id))) {}
     }));
   }
   return Maybe<void>::Ok();
@@ -373,7 +412,7 @@ Maybe<void> ParquetReader::InitParquetFiles(const std::string& path) {
   auto first_parquet_file_reader =
       parquet::ParquetFileReader::OpenFile(parquet_files_[0], use_mmap_);
   CHECK_OR_RETURN(first_parquet_file_reader) << "Can't open parquet file " << parquet_files_[0];
-  num_columns_ = first_parquet_file_reader->metadata()->num_columns();
+  file_meta_ = first_parquet_file_reader->metadata();
   return Maybe<void>::Ok();
 }
 
@@ -405,6 +444,57 @@ Maybe<void> ParquetReader::InitParallelInfo(user_op::KernelInitContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
+  ParseParquetColumnSchemaFromJson(&schema_, schema_json_str);
+  int output_index = 0;
+  const size_t num_cols = file_meta_->schema()->num_columns();
+  for (auto& out_desc : schema_.col_descs) {
+    // Find column descriptor by col_id or col_name
+    if (out_desc.col_name.empty()) {
+      if (out_desc.col_id < 0 || out_desc.col_id >= num_cols) {
+        return Error::RuntimeError() << "The schema of output " << output_index
+                                     << " has invalid col_id: " << out_desc.col_id
+                                     << ", that must be set in range [0, " << num_cols << ").";
+      }
+    } else {
+      bool col_name_found = false;
+      for (int col = 0; col < num_cols; ++col) {
+        auto* col_desc = file_meta_->schema()->Column(col);
+        CHECK_NOTNULL_OR_RETURN(col_desc);
+        const auto& col_path = col_desc->path()->ToDotString();
+        auto first_name = col_path.substr(0, col_path.find('.'));
+        if (out_desc.col_name == first_name) {
+          if (out_desc.col_id != -1 && out_desc.col_id != col) {
+            LOG(WARNING) << "col_id " << out_desc.col_id << " doesn't match col_name "
+                         << out_desc.col_name << " which is corresponds to col_id " << col;
+          }
+          out_desc.col_id = col;
+          col_name_found = true;
+        }
+      }
+      CHECK_OR_RETURN(col_name_found)
+          << "col_name " << out_desc.col_name << " is not found in parquet file schema";
+    }
+    const auto* col_desc = file_meta_->schema()->Column(out_desc.col_id);
+    CHECK_NOTNULL_OR_RETURN(col_desc);
+    // check def and rep level
+    if (!((col_desc->max_definition_level() == 1 && col_desc->max_repetition_level() == 0)
+          || (col_desc->max_definition_level() == 3 && col_desc->max_repetition_level() == 1))) {
+      return Error::RuntimeError() << "It's only supported for now that read values with primitive "
+                                      "type or LIST type from column";
+    }
+    // check data type
+    DataType data_type = ParquetPhysicalTypeToDataType(col_desc->physical_type());
+    CHECK_NE_OR_RETURN(data_type, DataType::kInvalidDataType)
+        << "Unsupported parquet physical type " << col_desc->physical_type() << " for column "
+        << out_desc.col_id;
+    CHECK_EQ_OR_RETURN(data_type, out_desc.dtype)
+        << "The configured column dtype dismatch the type of column in schema";
+    output_index++;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
   shuffle_ = ctx->Attr<bool>("shuffle");
   seed_ = ctx->Attr<int64_t>("random_seed");
@@ -412,6 +502,7 @@ Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
   use_mmap_ = ctx->Attr<bool>("use_mmap");
   JUST(InitParallelInfo(ctx));
   JUST(InitParquetFiles(ctx->Attr<std::string>("path")));
+  JUST(InitSchema(ctx->Attr<std::string>("schema_json_str")));
   JUST(InitWorkers(ctx->Attr<int64_t>("prefetch_buffer_size")));
   return Maybe<void>::Ok();
 }
@@ -441,12 +532,14 @@ class ParquetReaderKernel final : public user_op::OpKernel {
       if (out_i->data_type() == DataType::kTensorBuffer) {
         TensorBuffer* out_buffer = out_i->mut_dptr<TensorBuffer>();
         size_t batch_size = out_i->shape().At(0);
-        CHECK_JUST(parquet_reader->GetColumnBatch(i, out_buffer, batch_size));
+        size_t nsamples = CHECK_JUST(parquet_reader->GetColumnBatch(i, out_buffer, batch_size));
+        CHECK_EQ(batch_size, nsamples);
         // TODO(zwx): get tensor shape from column schema and resize tensor buffer
         // out_buffer->Resize(shape);
         UNIMPLEMENTED();
       } else {
-        CHECK_JUST(parquet_reader->GetColumnBatch(i, out_i));
+        size_t nsamples = CHECK_JUST(parquet_reader->GetColumnBatch(i, out_i));
+        CHECK_EQ(nsamples, out_i->shape().At(0));
       }
     }
   }

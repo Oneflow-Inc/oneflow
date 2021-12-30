@@ -52,10 +52,10 @@ def get_wdl_path():
 
 def get_wdl_schema():
     return [
-        {"shape": (26,), "dtype": flow.int32},
-        {"shape": (13,), "dtype": flow.float32},
-        {"shape": (1,), "dtype": flow.int32},
-        {"shape": (2,), "dtype": flow.int32},
+        # {"col_id": 0, "shape": (26,), "dtype": flow.int32},
+        {"col_id": 1, "shape": (13,), "dtype": flow.float32},
+        {"col_id": 2, "shape": (), "dtype": flow.int32},
+        # {"col_id": 3, "shape": (2,), "dtype": flow.int32},
     ]
 
 
