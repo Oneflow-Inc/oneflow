@@ -320,44 +320,41 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   // Dealing with 2D sbp
   const auto& it_producer = NdSbpUniverse.find(sbp_producer);
   const auto& it_consumer = NdSbpUniverse.find(sbp_consumer);
-  int32_t i = it_producer->second;
-  int32_t j = it_consumer->second;
-  // Such combination can not be support with limited middle nodes
-  CHECK(minimum_copy_cost[i][j] < cut_cost)
-      << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
-      << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
-  // Current design can deal with such combination. Do not need to insert middle nodes
-  if (minimum_copy_cost[i][j] < cut_cost && middle_nodes[i][j].size() == 0) {
-    return Maybe<void>::Ok();
-  }
-  // Find a list of middle nodes with minimum storage
-  int32_t min_k = -1;
   if (it_producer != NdSbpUniverse.end() && it_consumer != NdSbpUniverse.end()) {
+    int32_t i = it_producer->second;
+    int32_t j = it_consumer->second;
+    // Such combination can not be support with limited middle nodes
+    CHECK(minimum_copy_cost[i][j] < cut_cost)
+        << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
+        << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
+    // Current design can deal with such combination. Do not need to insert middle nodes
+    if (middle_nodes[i][j].size() == 0) { return Maybe<void>::Ok(); }
+    // Find a list of middle nodes with minimum storage
+    int32_t min_k = -1;
     double min_cost = cut_cost;
     for (int32_t k = 0; k < middle_nodes[i][j].size(); k++) {
       double curr_cost = 0.0;
       for (int32_t middle_sbp_id : middle_nodes[i][j][k]) {
         Shape logical_shape = logical_blob_desc.shape();
-        if (JUST(FilterNdSbpByLogicalShape(nd_sbp_lists[middle_sbp_id], logical_shape,
-                                           parallel_hierarchy))) {
-          // FilterNdSbpByLogicalShape has changed the content in logical shape,
-          // we need to use a new one
-          Shape logical_shape2 = logical_blob_desc.shape();
-          // Storage4NdSbp would modify logical_shape2 as well
-          curr_cost += auto_parallel::Storage4NdSbp(nd_sbp_lists[middle_sbp_id], logical_shape2,
-                                                    parallel_hierarchy);
-        }
+        // Storage4NdSbp would modify logical_shape2 as well
+        curr_cost += auto_parallel::Storage4NdSbp(nd_sbp_lists[middle_sbp_id], logical_shape,
+                                                  parallel_hierarchy);
+        if (curr_cost > cut_cost) { break; }
       }
       // store k if renew minimum cost
-      if (curr_cost < min_cost) { min_k = k; }
+      if (curr_cost < min_cost) {
+        min_k = k;
+        min_cost = curr_cost;
+      }
     }
-  }
-  // If we found a list of middle nodes with current boxing collector
-  if (min_k >= 0) {
-    for (int32_t middle_sbp_id : middle_nodes[i][j][min_k]) {
-      middle_sbps.push_back(nd_sbp_lists[middle_sbp_id]);
+
+    // If we found a list of middle nodes with current boxing collector
+    if (min_k >= 0) {
+      for (int32_t middle_sbp_id : middle_nodes[i][j][min_k]) {
+        middle_sbps.push_back(nd_sbp_lists[middle_sbp_id]);
+      }
+      return Maybe<void>::Ok();
     }
-    return Maybe<void>::Ok();
   }
 
   // // If we can not found a list of middle nodes even after customized boxing collector
