@@ -10,14 +10,14 @@ set(TEST_WITH_TF_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-
 set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae" CACHE STRING "")
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
 
-add_custom_target(pull_all_docker_img)
+add_custom_target(ensure_docker_imgs)
 function(add_docker_img)
   set(target_name "pull_docker_img_${ARGV0}")
   add_custom_target(${target_name})
   add_custom_command(TARGET ${target_name}
     COMMAND ${DOCKER_EXE} pull ${ARGV1}
   )
-  add_dependencies(pull_all_docker_img ${target_name})
+  add_dependencies(ensure_docker_imgs ${target_name})
 endfunction()
 
 if(RUN_IN_DOCKER)
