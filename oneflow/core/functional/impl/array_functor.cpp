@@ -492,22 +492,10 @@ class StackFunctor {
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     const int64_t ninput = inputs.size();
     int64_t axis = dim;
-    int64_t ndim = inputs[0]->ndim();
+    int64_t ndims = inputs[0]->ndim();
     int64_t max_dim_size = 0;
-    // for (int i = 1; i < inputs.size(); ++i) {
-    //   CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
-    //       << "The input dimensions are not equal.";
-    // }
-    // CHECK_OR_RETURN(dim >= -(ndims + 1) && dim <= ndims)
-    //     << "( Dimension out of range, expected to be in range of [" << -(ndims + 1) << ", " << ndims
-    //     << "], but got " << dim << " )";
-    // if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
-    // TensorTuple expand_inputs(inputs.size());
-    // if (inputs.size() == 1) { return ExpandDims(inputs.at(0), stack_dim); }
-    // for (int i = 0; i < inputs.size(); ++i) {
-    //   expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
-    // }
-    // return Concat(expand_inputs, stack_dim);
+    int64_t stack_dim = dim; 
+    if (dim < 0) { stack_dim = stack_dim + ndims; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));

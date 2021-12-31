@@ -32,24 +32,6 @@ class StackKernel final : public user_op::OpKernel {
 
  private:
   void InferShape(user_op::KernelInferContext* ctx) const override {
-    // const int64_t axis = ctx->Attr<int64_t>("axis");
-    // DimVector dim_vec;
-    // for (const auto& in_arg_pair : ctx->inputs()) {
-    //   const ShapeView& input_shape_view =
-    //       ctx->ShapeView4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    //   if (dim_vec.size() == 0) {
-    //     input_shape_view.ToDimVector(&dim_vec);
-    //   } else {
-    //     CHECK_EQ(input_shape_view.NumAxes(), dim_vec.size());
-    //     FOR_RANGE(int64_t, i, 0, input_shape_view.NumAxes()) {
-    //       if (i == axis) {
-    //         dim_vec.at(i) += input_shape_view.At(i);
-    //       } else {
-    //         CHECK_EQ(input_shape_view.At(i), dim_vec.at(i));
-    //       }
-    //     }
-    //   }
-
     const ShapeView& first_input_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");
     const int64_t in_num_axes = first_input_shape_view.NumAxes(); 
@@ -82,12 +64,9 @@ class StackKernel final : public user_op::OpKernel {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     if (out_tensor->shape().elem_cnt() == 0) { return; }
     const int64_t axis = ctx->Attr<int64_t>("axis");
-    printf("Axis is: %ld \n", axis); 
     const int64_t out_cols = out_tensor->shape().Count(axis);
-    // const int64_t rows = out_tensor->shape().elem_cnt() / out_cols;
     const int64_t rows = out_tensor->shape().elem_cnt() / out_tensor->shape().Count(axis);
     CHECK_GT(rows, 0);
-    printf("Out cols is: %ld \n", out_cols); 
     auto primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive);
     int64_t out_col_offset = 0;
@@ -96,7 +75,6 @@ class StackKernel final : public user_op::OpKernel {
           ctx->Tensor4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
       if (in_tensor->shape().elem_cnt() == 0) { continue; }
       const int64_t in_cols = in_tensor->shape().Count(axis);
-      printf("In cols is: %ld \n", in_cols); 
       CHECK_EQ(in_tensor->shape().elem_cnt(), rows * in_cols);
       if (in_cols > 0) {
         DimVector dst_shape = {rows, out_cols};
@@ -128,11 +106,6 @@ auto CopyNdPrimitiveExists() {
 REGISTER_USER_KERNEL("stack").SetCreateFn<StackKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
                                                                            == true);
 
-// template<typename Context>
-// std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
-//   return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), 2);
-// }
-
 class StackBackwardKernel final : public user_op::OpKernel {
  public:
   StackBackwardKernel() = default;
@@ -150,14 +123,6 @@ class StackBackwardKernel final : public user_op::OpKernel {
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
       const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
       CHECK_EQ(like_shape_view.NumAxes(), like_num_axes);
-      // FOR_RANGE(int64_t, j, 0, like_num_axes) {
-      //   if (j == axis) {
-      //     total_dim_size += like_shape_view.At(j);
-      //   } else {
-      //     CHECK_EQ(like_shape_view.At(j), in_shape_view.At(j));
-      //   }
-      // }
-
       FOR_RANGE(int64_t, j, 0, like_num_axes+1) {
       if (j == axis) {
           total_dim_size += like_shape_view.Count(j);
@@ -173,10 +138,6 @@ class StackBackwardKernel final : public user_op::OpKernel {
         CHECK_NOTNULL(mut_shape_view);
         DimVector out_i_dim_vec;
         like_shape_view.ToDimVector(&out_i_dim_vec);
-        // no need ？
-        // FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-        //   out_i_dim_vec.emplace_back(in_shape_view.At(j));
-        // }
         mut_shape_view->set_shape(Shape(out_i_dim_vec));
       }
     }
@@ -215,12 +176,6 @@ class StackBackwardKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-// auto CopyNdPrimitiveExists() {
-//   return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-//     return NewCopyNdPrimitive(&ctx).operator bool();
-//   });
-// }
 
 REGISTER_USER_KERNEL("stack_backward")
     .SetCreateFn<StackBackwardKernel>()
