@@ -171,20 +171,23 @@ MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       stride_(std::make_shared<const Stride>()),
-      storage_offset_(0) {}
+      storage_offset_(0) {
+  set_stride(std::make_shared<const Stride>());
+}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
-    : TensorMeta(shape, dtype),
-      device_(device),
-      stride_(std::make_shared<const Stride>(*shape)),
-      storage_offset_(0) {}
+    : TensorMeta(shape, dtype), device_(device), storage_offset_(0) {
+  set_stride(std::make_shared<const Stride>(*shape));
+}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device,
                                        const std::shared_ptr<const Stride>& stride,
                                        int64_t storage_offset)
-    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
+    : TensorMeta(shape, dtype), device_(device), storage_offset_(storage_offset) {
+  set_stride(stride);
+}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.

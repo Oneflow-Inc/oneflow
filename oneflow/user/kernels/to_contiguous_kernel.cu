@@ -50,7 +50,7 @@ struct StrideParam {
 
 template<size_t ndim>
 __device__ __forceinline__ int64_t compute_index(int64_t out_offset, StrideParam<ndim> out_params,
-                                 const StrideParam<ndim>& in_params) {
+                                                 const StrideParam<ndim>& in_params) {
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
 
@@ -68,12 +68,11 @@ __device__ __forceinline__ int64_t compute_index(int64_t out_offset, StrideParam
   return in_offset;
 }
 
-
 template<typename T, size_t ndim>
 __global__ void to_contiguous(int64_t count, StrideParam<ndim> in_stride,
                               StrideParam<ndim> out_stride, const T* in_dptr, T* out_dptr) {
-  for (int64_t out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
-  {
+  for (int64_t out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
+       out_idx < count; out_idx += step) {
     int64_t in_idx = compute_index<ndim>(out_idx, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
   }
@@ -136,12 +135,13 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
       }
       if (is_same) {
         // if input tensor's strides equals to output's, than just copy one memory-contiguous tensor
-        OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize, cudaMemcpyDeviceToDevice,
-                                    stream->As<ep::CudaStream>()->cuda_stream()));
-      } else{
+        OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+                                      element_count * dsize, cudaMemcpyDeviceToDevice,
+                                      stream->As<ep::CudaStream>()->cuda_stream()));
+      } else {
         const int ndim = contiguous_dim + 1;
         to_contiguous_fn_map.call(ndim)(stream, element_count, in_stride, out_stride, in_dptr,
-                                      out_dptr);
+                                        out_dptr);
       }
     }
   }

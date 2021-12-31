@@ -97,10 +97,6 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
-}
-
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
@@ -163,7 +159,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
-      .def("is_contiguous", &ApiIsContiguous)
+      .def("is_contiguous", &Tensor::is_contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)

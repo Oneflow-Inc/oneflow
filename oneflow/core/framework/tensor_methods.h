@@ -25,8 +25,6 @@ namespace one {
 
 class Tensor;
 
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
-
 namespace view {
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
