@@ -20,6 +20,15 @@ limitations under the License.
 import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
+import os
+
+os.environ["DEBUG_SHUFFLE"] = "1"
+os.environ["CACHE_MEMORY_BUDGET_MB"] = "4096"
+# os.environ['KEY_VALUE_STORE'] = 'cuda_in_memory'
+os.environ["NUM_KEYS"] = "100000"
+os.environ["NUM_DEVICE_KEYS"] = "0"
+os.environ["KEY_VALUE_STORE"] = "block_based"
+os.environ["BLOCK_BASED_PATH"] = "/NVME0/guoran/unittest/test"
 
 placement = flow.placement("cuda", {0: [0, 1]})
 

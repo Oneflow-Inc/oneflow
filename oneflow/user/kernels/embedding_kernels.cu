@@ -60,7 +60,7 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
 }
 
 template<typename T, typename K>
-__global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+__global__ void InitValueKernel(bool debug, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int64_t embedding_size,
                                 const uint32_t* num_missing_keys, const K* missing_keys,
                                 const uint32_t* missing_indices, T* values) {
@@ -72,8 +72,11 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     for (int col = threadIdx.x; col < embedding_size; col += blockDim.x) {
       const int64_t offset = index * embedding_size + col;
       const T value = (curand_uniform(&state) - 0.5) * 0.1;  // [-0.05, 0.05]
-      values[offset] = value;
-      // values[offset] = missing_keys[row];  // for debug
+      if (debug) {
+        values[offset] = missing_keys[row];  // for debug
+      } else {
+        values[offset] = value;
+      }
     }
   }
   __syncthreads();
@@ -300,7 +303,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
       uint64_t inc_offset = num_missing_keys / grid_size + 1;
       InitValueKernel<T, K>
           <<<grid_size, embedding_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              seed, cuda_gen_state, inc_offset, embedding_size, buffer_manager.NumStoreMissingPtr(),
+              ParseBooleanFromEnv("DEBUG_SHUFFLE", false), seed, cuda_gen_state, inc_offset,
+              embedding_size, buffer_manager.NumStoreMissingPtr(),
               buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
               buffer_manager.StoreValuesPtr());
       LOG(INFO) << ctx->parallel_ctx().parallel_id()
