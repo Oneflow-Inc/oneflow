@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,15 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
-#define ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
+"""
+import oneflow as flow
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/job/parallel_desc.h"
 
-namespace oneflow {
+def meshgrid_op(*tensors, indexing="ij"):
+    return flow._C.meshgrid(tensors, indexing)
 
-Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
-                                 Symbol<ParallelDesc> placement);
 
-}  // namespace oneflow
+if __name__ == "__main__":
+    import doctest
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
+    doctest.testmod(raise_on_error=True)

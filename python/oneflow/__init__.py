@@ -156,7 +156,6 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import meshgrid
 from oneflow._C import stack
 from oneflow._C import squeeze
 from oneflow._C import narrow
@@ -326,6 +325,7 @@ from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
+from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -355,7 +355,7 @@ from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
