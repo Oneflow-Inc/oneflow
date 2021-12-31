@@ -16,17 +16,7 @@ set(SINGLE_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_c
 set(MULTI_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test CACHE STRING "test script dir for multi client")
 set(ONEFLOW_WHEEL_PATH /home/caishenghang/550ed7f9122589ab0f1ae89a50e0bf4702974895ddafdc9a10a77628d5387138/cu102/whl CACHE STRING "URL or local path for wheels")
 enable_testing()
-add_custom_target(ensure_docker_imgs)
-function(add_docker_img)
-  set(target_name "pull_docker_img_${ARGV0}")
-  add_custom_target(${target_name})
-  add_custom_command(TARGET ${target_name}
-    COMMAND ${DOCKER_EXE} pull ${ARGV1}
-  )
-  add_dependencies(ensure_docker_imgs ${target_name})
-endfunction()
 
-add_custom_target(start_docker_containers)
 function(add_docker_container)
   set(prefix ARG)
   set(singleValues "FIXTURE_NAME;IMG")
