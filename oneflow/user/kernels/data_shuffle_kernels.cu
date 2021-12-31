@@ -301,12 +301,8 @@ class IdShuffleKernel final : public user_op::OpKernel {
         buffer_manager.UniqueIdsPtr(), ids_reverse_idx->mut_dptr<IDX>(), workspace_ptr,
         workspace_size);
     // partition
-    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoH);
-    CHECK(copyd2h_primitive);
-    copyd2h_primitive->Launch(ctx->stream(), host_num_unique_ids, num_unique_ids->mut_dptr(),
-                              sizeof(IDX));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_ids, num_unique_ids->mut_dptr(), sizeof(IDX),
+                                  cudaMemcpyDefault, cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
 
     LOG(INFO) << "rank " << parallel_id << " num_unique_ids " << *host_num_unique_ids;
@@ -330,9 +326,9 @@ class IdShuffleKernel final : public user_op::OpKernel {
                                 parallel_num, GetNcclDataType(cur_rank_num_unique_ids->data_type()),
                                 comm, cuda_stream));
     IDX* host_num_unique_ids_matrix = host_num_unique_ids;
-    copyd2h_primitive->Launch(ctx->stream(), host_num_unique_ids_matrix,
-                              received_num_unique_ids_matrix,
-                              parallel_num * parallel_num * sizeof(IDX));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_ids_matrix, received_num_unique_ids_matrix,
+                                  parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
+                                  cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
     // send recv
     int64_t recv_offset = 0;
@@ -422,13 +418,9 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
 
     IDX* host_num_unique_ids_matrix = reinterpret_cast<IDX*>(nccl_comm->HostNumUniqueIdsMatrix());
-    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoH);
-    CHECK(copyd2h_primitive);
-    copyd2h_primitive->Launch(ctx->stream(), host_num_unique_ids_matrix,
-                              num_unique_ids_matrix->dptr(),
-                              parallel_num * parallel_num * sizeof(IDX));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_ids_matrix, num_unique_ids_matrix->dptr(),
+                                  parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
+                                  cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
     int64_t cur_rank_num_ids = 0;
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -478,8 +470,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       int64_t elem_cnt =
           host_num_unique_ids_matrix[parallel_id * parallel_num + i] * embedding_size;
       ReversePartitionEmbeddingKernel<T, IDX>
-          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
               elem_cnt, embedding_size, partition_index->dptr<IDX>() + i * num_ids,
               recv_unique_embeddings + offset, reverse_partition_embeddings);
       offset += elem_cnt;
@@ -555,13 +546,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     const int64_t embedding_size = embedding_diff->shape().elem_cnt() / num_ids;
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     IDX* host_num_unique_ids_matrix = reinterpret_cast<IDX*>(nccl_comm->HostNumUniqueIdsMatrix());
-    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoH);
-    CHECK(copyd2h_primitive);
-    copyd2h_primitive->Launch(ctx->stream(), host_num_unique_ids_matrix,
-                              num_unique_ids_matrix->dptr(),
-                              parallel_num * parallel_num * sizeof(IDX));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_ids_matrix, num_unique_ids_matrix->dptr(),
+                                  parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
+                                  cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
     int64_t cur_rank_num_ids = 0;
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -586,10 +573,10 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < parallel_num; ++i) {
       int64_t elem_cnt =
           host_num_unique_ids_matrix[parallel_id * parallel_num + i] * embedding_size;
-      PartitionEmbeddingKernel<T, IDX><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, embedding_size, partition_index->dptr<IDX>() + i * num_ids, unique_diff_ptr,
-          partitioned_embedding + offset);
+      PartitionEmbeddingKernel<T, IDX>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+              elem_cnt, embedding_size, partition_index->dptr<IDX>() + i * num_ids, unique_diff_ptr,
+              partitioned_embedding + offset);
       offset += elem_cnt;
     }
 

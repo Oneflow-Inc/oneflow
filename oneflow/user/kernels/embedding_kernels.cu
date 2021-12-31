@@ -276,18 +276,17 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
-    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoH);
-    CHECK(copyd2h_primitive);
-    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(IDX),
+                                  cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_keys = *host_num_keys;
     LOG(INFO) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << num_keys;
     cache->Test(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.NumCacheMissingPtr(),
                 buffer_manager.CacheMissingKeysPtr(), buffer_manager.CacheMissingIndicesPtr());
-    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheMissingPtr(),
-                              sizeof(uint32_t));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumCacheMissingPtr(),
+                                  sizeof(uint32_t), cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_missing_keys = *host_num_keys;
     LOG(INFO) << ctx->parallel_ctx().parallel_id() << " find store num ids: " << num_missing_keys;
@@ -312,8 +311,9 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
       cache->Put(ctx->stream(), num_missing_keys, buffer_manager.CacheMissingKeysPtr(),
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumCacheEvictedPtr(),
                  buffer_manager.CacheEvictedKeysPtr(), buffer_manager.CacheEvictedValuesPtr());
-      copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheEvictedPtr(),
-                                sizeof(uint32_t));
+      OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumCacheEvictedPtr(),
+                                    sizeof(uint32_t), cudaMemcpyDefault,
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       CHECK_JUST(ctx->stream()->Sync());
       uint32_t num_evicted_keys = *host_num_keys;
       LOG(INFO) << ctx->parallel_ctx().parallel_id()
@@ -379,12 +379,10 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
-    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoH);
-    CHECK(copyd2h_primitive);
-    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(),
-                              sizeof(uint32_t));
+
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(uint32_t),
+                                  cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     LOG(INFO) << ctx->parallel_ctx().parallel_id() << " find cache num ids: " << *host_num_keys;
 
@@ -395,8 +393,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     cache->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), embeddings->mut_dptr(),
                buffer_manager.NumCacheMissingPtr(), buffer_manager.CacheMissingKeysPtr(),
                buffer_manager.CacheMissingIndicesPtr());
-    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheMissingPtr(),
-                              sizeof(uint32_t));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumCacheMissingPtr(),
+                                  sizeof(uint32_t), cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_cache_missing = *host_num_keys;
     if (num_cache_missing != 0) {
@@ -406,8 +405,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
                  buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
                  reinterpret_cast<uint64_t*>(out_context->mut_dptr()));
-      copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumStoreMissingPtr(),
-                                sizeof(uint32_t));
+      OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumCacheMissingPtr(),
+                                    sizeof(uint32_t), cudaMemcpyDefault,
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       CHECK_JUST(ctx->stream()->Sync());
       CHECK_EQ(*host_num_keys, 0);  // we think keys must be in cache or kv_store.
       ScatterKernel<T, K><<<BlocksNum4ThreadsNum(num_cache_missing), embedding_size, 0,
@@ -475,11 +475,9 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
     uint64_t* mut_context = reinterpret_cast<uint64_t*>(buffer_manager.CacheMissingKeysPtr());
 
     IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
-    std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                  ep::primitive::MemcpyKind::kDtoH);
-    CHECK(copyd2h_primitive);
-    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, num_unique_ids->dptr(), sizeof(IDX));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(IDX),
+                                  cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
 
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
@@ -506,8 +504,9 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
     cache->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), update_unique_embeddings,
                buffer_manager.NumCacheEvictedPtr(), buffer_manager.CacheEvictedKeysPtr(),
                buffer_manager.CacheEvictedValuesPtr());
-    copyd2h_primitive->Launch(ctx->stream(), host_num_keys, buffer_manager.NumCacheEvictedPtr(),
-                              sizeof(uint32_t));
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumCacheEvictedPtr(),
+                                  sizeof(uint32_t), cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_evicted_keys = *host_num_keys;
     LOG(INFO) << ctx->parallel_ctx().parallel_id()
