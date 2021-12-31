@@ -44,7 +44,8 @@ class JobBuildAndInferCtx {
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
   Maybe<DataType> GetDataType(const std::string& lbn) const;
   Maybe<bool> IsDynamic(const std::string& lbn) const;
-  Maybe<bool> DisableBoxing(const std::string& lbn) const;
+  Maybe<bool> IsDisableBoxing(const std::string& lbn) const;
+  Maybe<void> DisableBoxing(const std::string& lbn);
   Maybe<OptInt64> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<const ParallelDesc*> GetParallelDescFromProducerView(const std::string& lbn) const;
 
@@ -107,13 +108,12 @@ class JobBuildAndInferCtx {
   Maybe<void> AddOpNameParallelConf2Placement(const std::string& op_name,
                                               const ParallelConf& parallel_conf);
   void InitIbn2DisableBoxing(const Operator& op, HashMap<std::string, bool>* ibn2disable_boxing);
-  void UpdateLbi2DisableBoxing(const Operator& op,
-                               const HashMap<std::string, bool>& ibn2disable_boxing);
+  Maybe<cfg::NdSbpSignature> InitConstraitNdSbpSignature(
+      const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) const;
+  Maybe<OperatorConf> DecodeLbiHintAndReturnNewOpConf(const Operator& op,
+                                                      cfg::SbpSignature* sbp_sig_conf) const;
   Maybe<void> AddLbiParallelConf2BlobPlacement(
       const Operator* op, std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn);
-  Maybe<OperatorConf> DecodeLbiHintAndReturnNewOpConf(
-      const Operator& op, cfg::SbpSignature* sbp_sig_conf,
-      HashMap<std::string, bool>* ibn2disable_boxing) const;
   void AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
                                          const ParallelDesc& parallel_desc,
                                          const cfg::NdSbpSignature& nd_sbp_signature,
