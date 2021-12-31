@@ -130,7 +130,7 @@ function(add_oneflow_python_test)
       set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC};${TEST_CONTAINER_NAME}")
     endif()
     if (${prefix}_SINGLE_CLIENT)
-      set(DISTRIBUTED_LAUNCH_PREFIX "oneflow.distributed.launch;--nproc_per_node;${ONEFLOW_TEST_DEVICE_NUM}")
+      set(DISTRIBUTED_LAUNCH_PREFIX "-m;oneflow.distributed.launch;--nproc_per_node;${ONEFLOW_TEST_DEVICE_NUM}")
     endif()
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
