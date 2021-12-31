@@ -8,6 +8,6 @@ CUDA_VISIBLE_DEVICES=${group_id_0}
 [[ ! -z "$group_id_2" ]] && CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES},$group_id_2"
 [[ ! -z "$group_id_3" ]] && CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES},$group_id_3"
 [ -z "$CUDA_VISIBLE_DEVICES" ] && echo "CUDA_VISIBLE_DEVICES empty" && exit 1
-
+set -x
 docker exec \
     -e CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} "$@"
