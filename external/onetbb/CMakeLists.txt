@@ -21,6 +21,6 @@ set(TBB_EXAMPLES OFF)
 set(TBB_TEST OFF)
 set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
-add_subdirectory(${onetbb_external_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/onettb-build)
+add_subdirectory(${onetbb_external_SOURCE_DIR} ${onetbb_external_BINARY_DIR})
 # set_property(GLOBAL PROPERTY ONETBB_SRC_DIR "${onetbb_SOURCE_DIR};${onetbb_BINARY_DIR}")
 # add_custom_target(external_onetbb)
