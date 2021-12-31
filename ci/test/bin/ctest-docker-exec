@@ -1,4 +1,4 @@
-set -ex
+set -e
 group_id_0=$(echo ${CTEST_RESOURCE_GROUP_0_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
 group_id_1=$(echo ${CTEST_RESOURCE_GROUP_1_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
 group_id_2=$(echo ${CTEST_RESOURCE_GROUP_2_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
