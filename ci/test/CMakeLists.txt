@@ -7,9 +7,10 @@ execute_process(
   COMMAND_ERROR_IS_FATAL ANY
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+string(REGEX MATCH "([0-9].+[0-9])" CTEST_VERSION ${CTEST_VERSION})
 set(MINIMUM_CTEST_VERSION 3.16.0)
 if (CTEST_VERSION VERSION_LESS ${MINIMUM_CTEST_VERSION})
-  message(FATAL_ERROR "OneFlow CI test uses RESOURCE_GROUPS which requires ctest >= ${MINIMUM_CTEST_VERSION}, found ctest: ${CTEST_EXECUTABLE}, version info: ${CTEST_VERSION}")
+  message(FATAL_ERROR "OneFlow CI test uses RESOURCE_GROUPS which requires ctest >= ${MINIMUM_CTEST_VERSION}, found ctest: ${CTEST_EXECUTABLE}, version: ${CTEST_VERSION}")
 endif()
 project(oneflow-ci-test)
 include(CMakeDependentOption)
