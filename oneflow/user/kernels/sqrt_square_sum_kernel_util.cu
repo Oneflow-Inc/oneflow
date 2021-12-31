@@ -35,7 +35,6 @@ __global__ void SqrtSquareSumGpu(int64_t n, const T* x, T* y) {
     } else {
       cuda::atomic::Add(y, b_sum);
     }
-    *y = sqrt(*y);
   }
 }
 
@@ -57,6 +56,9 @@ struct SqrtSquareSumKernelUtil<DeviceType::kCUDA, T> {
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               n, x, y);
     }
+
+    // todo(launch sqrt kernel)
+    
   }
 };
 
