@@ -1,0 +1,84 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/auto_parallel/boxing_collector.h"
+
+namespace oneflow {
+
+Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder) {
+  // Initialize boxing collector
+  BoxingCollector boxing_collector;
+  boxing_collector.Init(op_graph);
+  std::vector<cfg::NdSbp> middle_sbps;
+  // Fill other unsupported combinations
+  op_graph.ForEachNode([&](const OpNode* node) -> Maybe<void> {
+    OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
+    if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) {
+      return Maybe<void>::Ok();
+    }
+    for (const std::string& ibn : node->op().input_bns()) {
+      const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
+      const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
+      const cfg::NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
+      const cfg::NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+
+      // Needs more effort if dealing with different placement
+      if (producer.parallel_desc() == node->parallel_desc()
+          && (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp)) {
+        const auto& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
+        // Ask for middle nodes
+        boxing_collector.AskSbpCombination(producer_nd_sbp, consumer_nd_sbp, logical_blob_desc,
+                                           producer.parallel_desc(), node->parallel_desc(), true,
+                                           middle_sbps);
+        const auto* lbi_ptr = &lbi;
+        LogicalBlobId middle_node_lbi;
+        for (int32_t middle_node_id = 0; middle_node_id < middle_sbps.size(); middle_node_id++) {
+          // Create the middle operators
+          OperatorConf identity_op_conf{};
+          identity_op_conf.set_name("System-Boxing-Middle-Identity-" + NewUniqueId());
+          IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
+          identity_conf->set_in(GenLogicalBlobName(*lbi_ptr));
+          identity_conf->set_out("out");
+          job_builder->AddOps(node->parallel_desc().parallel_conf(), {identity_op_conf});
+          cfg::NdSbpSignature identity_nd_sbp_signature;
+          (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] =
+              middle_sbps[middle_node_id];
+          (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["out"] =
+              middle_sbps[middle_node_id];
+          job_builder->AddNdSbpSignature4OpName(identity_op_conf.name(), identity_nd_sbp_signature);
+          // Connection for the next middle node
+          middle_node_lbi.set_op_name(identity_op_conf.name());
+          middle_node_lbi.set_blob_name(identity_conf->out());
+          lbi_ptr = &middle_node_lbi;
+          // Replace input blob with configuration from middle nodes
+          if (middle_node_id == middle_sbps.size() - 1) {
+            OperatorConf consumer_op_conf = node->op().op_conf();
+            const auto& old_val = ReplaceInputLbnInOpCustomizedConf(
+                &consumer_op_conf, ibn, GenLogicalBlobName(middle_node_lbi));
+            CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
+          }
+        }
+      }
+    }
+
+    return Maybe<void>::Ok();
+  });
+  return Maybe<void>::Ok();
+}
+
+}  // namespace oneflow
