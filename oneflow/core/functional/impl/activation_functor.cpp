@@ -60,16 +60,6 @@ class ReluGradFunctor : public BinaryFunctor {
   }
 };
 
-namespace {
-Maybe<void> CheckPReLUParametersValid(const std::shared_ptr<Tensor>& x,
-                                      const std::shared_ptr<Tensor>& alpha) {
-  int num_params = alpha->dim(0);
-  CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
-      << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
-  return Maybe<void>::Ok();
-}
-}  // namespace
-
 class PReluFunctor {
  public:
   PReluFunctor() {
@@ -78,7 +68,9 @@ class PReluFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& alpha) const {
-    JUST(CheckPReLUParametersValid(x, alpha));
+    int num_params = alpha->dim(0);
+    CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
+        << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
 
