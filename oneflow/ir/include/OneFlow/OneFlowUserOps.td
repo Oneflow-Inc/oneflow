@@ -7947,6 +7947,7 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMet
     OneFlow_Tensor:$y
   );
   let attrs = (ins
+    StrAttr:$data_format,
     SI32ArrayAttr:$output_size,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$strides,
