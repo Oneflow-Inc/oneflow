@@ -28,9 +28,7 @@ struct DimScatterCaptureState : public AutoGradCaptureState {
   bool src_requires_grad;
 };
 
-enum SCATTER_TYPE { SCATTER_UPDATE, SCATTER_ADD };
-
-template<SCATTER_TYPE T>
+template<typename T>
 class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
  public:
   Maybe<void> Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
@@ -41,7 +39,7 @@ class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
                           TensorTuple* in_grads) const;
 };
 
-template<SCATTER_TYPE T>
+template<typename T>
 Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* state, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const OpBase* ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 3);
@@ -53,12 +51,12 @@ Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* state, const TensorTu
 
   state->SaveTensorForBackward(inputs.at(1));  // index saved
 
-  auto* op_ctx = JUST(ctx->dyn_cast<DimScatterAddOp>());
+  auto* op_ctx = JUST(ctx->dyn_cast<T>());
   state->dim = op_ctx->dim();
   return Maybe<void>::Ok();
 }
 
-template<SCATTER_TYPE T>
+template<typename T>
 Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* state,
                                        const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const std::shared_ptr<oneflow::one::Tensor>& index = state->SavedTensors().at(0);
@@ -70,9 +68,9 @@ Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* state,
 }
 
 template<>
-Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterCaptureState* state,
-                                                            const TensorTuple& out_grads,
-                                                            TensorTuple* in_grads) const {
+Maybe<void> DimScatter<DimScatterUpdateOp>::Apply(const DimScatterCaptureState* state,
+                                                  const TensorTuple& out_grads,
+                                                  TensorTuple* in_grads) const {
   if ((!state->input_requires_grad) && (!state->src_requires_grad)) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   JUST(ApplyCommon(state, out_grads, in_grads));
@@ -86,9 +84,9 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterCapt
 }
 
 template<>
-Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterCaptureState* state,
-                                                         const TensorTuple& out_grads,
-                                                         TensorTuple* in_grads) const {
+Maybe<void> DimScatter<DimScatterAddOp>::Apply(const DimScatterCaptureState* state,
+                                               const TensorTuple& out_grads,
+                                               TensorTuple* in_grads) const {
   if ((!state->input_requires_grad) && (!state->src_requires_grad)) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
@@ -138,8 +136,8 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* state,
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update", DimScatter<SCATTER_TYPE::SCATTER_UPDATE>);
-REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_add", DimScatter<SCATTER_TYPE::SCATTER_ADD>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update", DimScatter<DimScatterUpdateOp>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_add", DimScatter<DimScatterAddOp>);
 REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update_scalar", DimScatterUpdateScalar);
 
 }  // namespace one

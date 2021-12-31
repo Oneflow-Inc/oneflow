@@ -132,7 +132,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
                                const std::vector<std::string>& indexed_ibns,
                                const std::vector<std::string>& indexed_obns);
 
-  Maybe<StatefulLocalOpKernel> MutKernel4Device(Symbol<Device> device) const;
+  Maybe<StatefulLocalOpKernel> MutKernel4Device(Symbol<Device> device, const std::shared_ptr<const OpBase>& op_ctx) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
   const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }

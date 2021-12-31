@@ -244,8 +244,6 @@ class BatchMatMulFunctor {
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
     CHECK_GE_OR_RETURN(a_shape->At(0), b_shape->At(0))
         << "batch dim not match, please check input!";
-    CHECK_GE_OR_RETURN(a_shape->At(2), b_shape->At(1))
-        << "matmul dim not match, please check input!";
 
     auto ctx = std::make_shared<schema::BatchMatmulOp>();
     ctx->set_transpose_a(transpose_a);
@@ -1433,7 +1431,8 @@ class DropoutFunctor {
       if (!training || p == 0.0) {
         return x;
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x}, ctx);
+        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
+                                              OpExprInterpContext(ctx, dropout_state));
       }
     }
   }

@@ -48,7 +48,7 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* state, const TensorTuple& inpu
   } else {
     UNIMPLEMENTED();
   }
-  state->SaveTensorForBackward(inputs.at(1));  // mask
+  state->SaveTensorForBackward(outputs.at(1));  // mask
   return Maybe<void>::Ok();
 }
 
