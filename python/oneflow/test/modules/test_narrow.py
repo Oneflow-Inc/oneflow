@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 class TestNarrow(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_narrow_start_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
