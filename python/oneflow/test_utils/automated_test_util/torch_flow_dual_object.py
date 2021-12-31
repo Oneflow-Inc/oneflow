@@ -725,8 +725,11 @@ def autotest(
                                     print(
                                         eager_tensor_2_graph_tensor[flow_tensor].shape
                                     )
-                                # TODO(lixiang): For CI test
-                                # test_case.assertTrue(equality_res)
+                                test_case.assertTrue(
+                                    equality_res,
+                                    f"Check graph failed: graph result {eager_tensor_2_graph_tensor[flow_tensor].numpy()} not equals to eager result {flow_tensor.numpy()}.",
+                                )
+
                             if verbose:
                                 print(f"{f.__name__} test graph passed.")
                         else:

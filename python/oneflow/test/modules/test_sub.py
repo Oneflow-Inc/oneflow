@@ -128,7 +128,7 @@ class TestSubModule(flow.unittest.TestCase):
             )
 
     @autotest(auto_backward=False, check_graph=False)
-    def test_sub_with_0shape_data(test_case):
+    def test_sub_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(2, 0, 3).to(device)
         y = random_pytorch_tensor(2, 1, 3).to(device)
