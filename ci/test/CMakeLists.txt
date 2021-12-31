@@ -66,11 +66,8 @@ function(add_docker_container)
     TIMEOUT 6000000000
   )
   # install pip and set as pip fixture
-  # add_test(NAME InstallOneFlowPipOn${fixtureName}
-  #   COMMAND docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
-  # )
   add_test(NAME InstallOneFlowPipOn${fixtureName}
-    COMMAND docker exec ${TEST_CONTAINER_NAME} ls
+    COMMAND docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
   )
   # stop container and set as container fixture cleanup
   add_test(NAME Stop${fixtureName}
@@ -138,7 +135,6 @@ function(add_oneflow_python_test)
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
       COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${PYTHON_TEST_FILE};--failfast;--verbose
-      # COMMAND ${DOCKER_EXEC_PREFIX};echo;\$\{CTEST_RESOURCE_GROUP_0_VRAM\}
     )
     set(vramRequired 2000)
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
