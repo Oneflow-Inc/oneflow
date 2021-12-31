@@ -43,21 +43,21 @@ struct Buffer {
 class FileGuard final {
  public:
   OF_DISALLOW_COPY(FileGuard);
-  FileGuard() : fd_(-1) {}
-  FileGuard(const std::string& filename, int flag, size_t trunc) : fd_(-1) {
+  FileGuard() : fd_(-1), size_(0) {}
+  FileGuard(const std::string& filename, int flag) : fd_(-1) {
     fd_ = open(filename.c_str(), flag, 0644);
     PCHECK(fd_ != -1);
-    if (trunc != 0) {
-      const size_t size = Size();
-      if (size != trunc) {
-        CHECK_EQ(size, 0);
-        PCHECK(ftruncate(fd_, trunc) == 0);
-      }
-    }
+    struct stat sb {};
+    PCHECK(fstat(fd_, &sb) == 0);
+    size_ = sb.st_size;
   }
+  FileGuard(FileGuard&& other) noexcept { *this = std::move(other); }
   FileGuard& operator=(FileGuard&& other) noexcept {
+    this->Close();
     fd_ = other.fd_;
     other.fd_ = -1;
+    size_ = other.size_;
+    other.size_ = 0;
     return *this;
   }
   ~FileGuard() { Close(); }
@@ -71,39 +71,20 @@ class FileGuard final {
     }
   }
 
-  size_t Size() {
-    if (fd_ == -1) { return 0; }
-    struct stat sb {};
-    PCHECK(fstat(fd_, &sb) == 0);
-    return sb.st_size;
+  size_t Size() { return size_; }
+
+  void ExtendTo(size_t new_size) {
+    CHECK_NE(fd_, -1);
+    CHECK_GE(new_size, size_);
+    if (new_size == size_) { return; }
+    PCHECK(ftruncate(fd_, new_size) == 0);
+    size_ = new_size;
   }
 
  private:
+  size_t size_;
   int fd_;
 };
-
-struct Chunk {
-  Chunk() {}
-  Chunk(Chunk&& other) noexcept { *this = std::move(other); }
-  Chunk& operator=(Chunk&& other) noexcept {
-    file = std::move(other.file);
-    size = other.size;
-    other.size = 0;
-    return *this;
-  }
-  size_t size = 0;
-  FileGuard file;
-};
-
-Chunk OpenFileChunk(const std::string& filename, size_t size) {
-  Chunk chunk;
-  FileGuard file(filename, O_CREAT | O_RDWR | O_DIRECT, size);
-  chunk.file = std::move(file);
-  chunk.size = file.Size();
-  return chunk;
-}
-
-void CloseFileChunk(Chunk* chunk) { chunk->file.Close(); }
 
 template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
@@ -151,7 +132,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   }
   ~KeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    for (auto& chunk : chunks_) { CloseFileChunk(&chunk); }
+    for (auto& file : value_files_) { file.Close(); }
     OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
     OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
     free(host_query_blocks_);
@@ -184,7 +165,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint64_t block_size_;
   uint64_t values_per_block_;
   robin_hood::unordered_flat_map<Key, uint64_t> key2id_;
-  std::vector<Chunk> chunks_;
+  std::vector<FileGuard> value_files_;
   std::string path_;
   uint8_t* host_query_blocks_;
   std::vector<io_uring> io_rings_;
@@ -252,11 +233,11 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
         const uint64_t block_in_chunk = block_id - chunk_id * NUM_BLOCKS_PER_CHUNK;
         const uint64_t block_offset = block_in_chunk * block_size_;
         const uint64_t offset_in_chunk = block_offset + id_in_block * value_size_;
-        Chunk& chunk = chunks_.at(chunk_id);
+        FileGuard& file = value_files_.at(chunk_id);
         buffer->index = i;
         buffer->offset_in_block = id_in_block * value_size_;
         io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring));
-        io_uring_prep_readv(sqe, chunk.file.fd(), &buffer->io_vec, 1, block_offset);
+        io_uring_prep_readv(sqe, file.fd(), &buffer->io_vec, 1, block_offset);
         io_uring_sqe_set_data(sqe, buffer);
         io_uring_submit(&ring);
       }
@@ -311,10 +292,9 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
   const uint64_t end_block_id = start_block_id + num_blocks - 1;
   const uint64_t start_chunk_id = start_block_id / NUM_BLOCKS_PER_CHUNK;
   const uint64_t end_chunk_id = end_block_id / NUM_BLOCKS_PER_CHUNK;
-  chunks_.reserve(end_chunk_id + 1);
-  for (uint64_t new_chunk_id = chunks_.size(); new_chunk_id <= end_chunk_id; ++new_chunk_id) {
-    chunks_.emplace_back(
-        OpenFileChunk(ChunkName(new_chunk_id), NUM_BLOCKS_PER_CHUNK * block_size_));
+  value_files_.reserve(end_chunk_id + 1);
+  for (uint64_t new_chunk_id = value_files_.size(); new_chunk_id <= end_chunk_id; ++new_chunk_id) {
+    value_files_.emplace_back(ChunkName(new_chunk_id), O_CREAT | O_RDWR | O_DIRECT);
   }
   uint64_t write_blocks = 0;
   while (write_blocks < num_blocks) {
@@ -325,9 +305,12 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
         std::min(num_blocks - write_blocks,
                  (batch_chunk_id + 1) * NUM_BLOCKS_PER_CHUNK - batch_start_block_id);
     const uint64_t bytes_to_write = blocks_to_write * block_size_;
-    Chunk& chunk = chunks_.at(batch_chunk_id);
-    PCHECK(pwrite(chunk.file.fd(), host_query_blocks_ + write_blocks * block_size_, bytes_to_write,
-                  block_in_chunk * block_size_)
+    const uint64_t offset_in_chunk = block_in_chunk * block_size_;
+    FileGuard& file = value_files_.at(batch_chunk_id);
+    CHECK_LE(file.Size(), offset_in_chunk);
+    file.ExtendTo(offset_in_chunk + bytes_to_write);
+    PCHECK(pwrite(file.fd(), host_query_blocks_ + write_blocks * block_size_, bytes_to_write,
+                  offset_in_chunk)
            == bytes_to_write);
     write_blocks += blocks_to_write;
   }
