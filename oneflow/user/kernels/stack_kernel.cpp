@@ -34,28 +34,29 @@ class StackKernel final : public user_op::OpKernel {
   void InferShape(user_op::KernelInferContext* ctx) const override {
     const ShapeView& first_input_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");
-    const int64_t in_num_axes = first_input_shape_view.NumAxes(); 
-    DimVector out_dim_vec(in_num_axes+1); 
-    for(int i = 0; i < in_num_axes+1; i++){
-        if(i == axis){
-            continue; 
-        }else{
-            out_dim_vec.at(i) = first_input_shape_view.At(i);
-        }
-    }
-  for (const auto& in_arg_pair : ctx->inputs()) {
-    const ShapeView& input_shape_view = ctx->ShapeView4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ(input_shape_view.NumAxes(), first_input_shape_view.NumAxes());
-    FOR_RANGE(int64_t, i, 0, in_num_axes+1) {
+    const int64_t in_num_axes = first_input_shape_view.NumAxes();
+    DimVector out_dim_vec(in_num_axes + 1);
+    for (int i = 0; i < in_num_axes + 1; i++) {
       if (i == axis) {
-        out_dim_vec.at(axis) += 1; 
-      } else if(i < axis) {
-        CHECK_EQ(input_shape_view.At(i), out_dim_vec.at(i));
-      }else{
-        CHECK_EQ(input_shape_view.At(i-1), out_dim_vec.at(i));
+        continue;
+      } else {
+        out_dim_vec.at(i) = first_input_shape_view.At(i);
       }
     }
-  }
+    for (const auto& in_arg_pair : ctx->inputs()) {
+      const ShapeView& input_shape_view =
+          ctx->ShapeView4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
+      CHECK_EQ(input_shape_view.NumAxes(), first_input_shape_view.NumAxes());
+      FOR_RANGE(int64_t, i, 0, in_num_axes + 1) {
+        if (i == axis) {
+          out_dim_vec.at(axis) += 1;
+        } else if (i < axis) {
+          CHECK_EQ(input_shape_view.At(i), out_dim_vec.at(i));
+        } else {
+          CHECK_EQ(input_shape_view.At(i - 1), out_dim_vec.at(i));
+        }
+      }
+    }
 
     ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(out_dim_vec));
   }
@@ -104,7 +105,7 @@ auto CopyNdPrimitiveExists() {
 }  // namespace
 
 REGISTER_USER_KERNEL("stack").SetCreateFn<StackKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
-                                                                           == true);
+                                                                         == true);
 
 class StackBackwardKernel final : public user_op::OpKernel {
  public:
@@ -123,15 +124,15 @@ class StackBackwardKernel final : public user_op::OpKernel {
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
       const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
       CHECK_EQ(like_shape_view.NumAxes(), like_num_axes);
-      FOR_RANGE(int64_t, j, 0, like_num_axes+1) {
-      if (j == axis) {
+      FOR_RANGE(int64_t, j, 0, like_num_axes + 1) {
+        if (j == axis) {
           total_dim_size += like_shape_view.Count(j);
-      } else if (j < axis){
-        CHECK_EQ(in_shape_view.At(j), like_shape_view.At(j));
-      } else {
-        CHECK_EQ(in_shape_view.At(j), like_shape_view.At(j-1));
+        } else if (j < axis) {
+          CHECK_EQ(in_shape_view.At(j), like_shape_view.At(j));
+        } else {
+          CHECK_EQ(in_shape_view.At(j), like_shape_view.At(j - 1));
+        }
       }
-    }
 
       if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
         auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);

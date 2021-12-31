@@ -31,8 +31,8 @@ struct StackCaptureState : public AutoGradCaptureState {
 class Stack : public OpExprGradFunction<StackCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(StackCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Capture(StackCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override;
   Maybe<void> Apply(const StackCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -48,7 +48,7 @@ Maybe<void> Stack::Init(const OpExpr& op) {
 }
 
 Maybe<void> Stack::Capture(StackCaptureState* ctx, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const AttrMap& attrs) const {
+                           const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad.resize(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { ctx->requires_grad[i] = inputs.at(i)->requires_grad(); }
 
@@ -60,7 +60,7 @@ Maybe<void> Stack::Capture(StackCaptureState* ctx, const TensorTuple& inputs,
 }
 
 Maybe<void> Stack::Apply(const StackCaptureState* ctx, const TensorTuple& out_grads,
-                          TensorTuple* in_grads) const {
+                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(ctx->input_num);
   TensorTuple like(ctx->input_num);

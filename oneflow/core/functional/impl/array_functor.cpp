@@ -483,7 +483,7 @@ class ConcatFunctor {
 
 class StackFunctor {
  public:
-  StackFunctor(){
+  StackFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 0; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("stack").Input("in", n + 1).Output("out").Build());
@@ -494,8 +494,18 @@ class StackFunctor {
     int64_t axis = dim;
     int64_t ndims = inputs[0]->ndim();
     int64_t max_dim_size = 0;
-    int64_t stack_dim = dim; 
+    int64_t stack_dim = dim;
     if (dim < 0) { stack_dim = stack_dim + ndims; }
+    const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
+    for (const auto& input : inputs) {
+      for (int i = 0; i < ndims; ++i) {
+        if (axis == i) { max_dim_size += 1; }
+        CHECK_OR_RETURN(input->shape()->At(i) == first_in_shape->At(i))
+            << " Sizes of tensors must match except in dimension " << axis << ". Got "
+            << input->shape()->At(i) << " and " << first_in_shape->At(i)
+            << " is expected in dimension 1.";
+      }
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
@@ -510,10 +520,10 @@ class StackFunctor {
     if (outputs.size() == 1) { return outputs.at(0); }
     return this->operator()(outputs, axis);
   }
-  private: 
-    std::vector<std::shared_ptr<OpExpr>> ops_;
-};
 
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
 
 class StackBackwardFunctor {
  public:

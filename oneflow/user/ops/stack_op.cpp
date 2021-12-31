@@ -20,30 +20,30 @@ namespace oneflow {
 
 namespace {
 
-// Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
-//   bool need_grad = false;
-//   const int32_t in_size = op.input_size("in");
-//   FOR_RANGE(int32_t, i, 0, in_size) {
-//     if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
-//   }
-//   if (need_grad) {
-//     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-//     builder = builder.Op("split_like");
-//     FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
-//     user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
-//                                              .Output("out", in_size)
-//                                              .Attr("axis", op.attr<int64_t>("axis"))
-//                                              .Build();
+Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
+  bool need_grad = false;
+  const int32_t in_size = op.input_size("in");
+  FOR_RANGE(int32_t, i, 0, in_size) {
+    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
+  }
+  if (need_grad) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    builder = builder.Op("stack_backward");
+    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
+    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                                             .Output("out", in_size)
+                                             .Attr("axis", op.attr<int64_t>("axis"))
+                                             .Build();
 
-//     FOR_RANGE(int32_t, i, 0, in_size) {
-//       if (op.NeedGenGradTensor4OpInput("in", i)) {
-//         op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
-//       }
-//     }
-//     AddOp(grad_op);
-//   }
-//   return Maybe<void>::Ok();
-// }
+    FOR_RANGE(int32_t, i, 0, in_size) {
+      if (op.NeedGenGradTensor4OpInput("in", i)) {
+        op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
+      }
+    }
+    AddOp(grad_op);
+  }
+  return Maybe<void>::Ok();
+}
 
 }  // namespace
 
@@ -51,43 +51,40 @@ namespace {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
-  const int64_t in_num_axes = first_in_desc.shape().NumAxes(); 
+  const int64_t in_num_axes = first_in_desc.shape().NumAxes();
   CHECK_LE_OR_RETURN(axis, in_num_axes);
-  DimVector out_dim_vec(in_num_axes+1); 
-  for(int i = 0; i < in_num_axes+1; i++){
-      if(i == axis){
-        continue; 
-      }else if(i < axis){
-        out_dim_vec.at(i) = first_in_desc.shape().At(i);
-      }else{
-        out_dim_vec.at(i) = first_in_desc.shape().At(i-1);
-      }
+  DimVector out_dim_vec(in_num_axes + 1);
+  for (int i = 0; i < in_num_axes + 1; i++) {
+    if (i == axis) {
+      continue;
+    } else if (i < axis) {
+      out_dim_vec.at(i) = first_in_desc.shape().At(i);
+    } else {
+      out_dim_vec.at(i) = first_in_desc.shape().At(i - 1);
+    }
   }
-  printf("log here \n"); 
-//   out_dim_vec.at(axis) = 0;
   int64_t dynamic_dim_size = 0;
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(in_desc.shape().NumAxes(), first_in_desc.shape().NumAxes());
-    FOR_RANGE(int64_t, i, 0, in_num_axes+1) {
+    FOR_RANGE(int64_t, i, 0, in_num_axes + 1) {
       if (i == axis) {
         if (in_desc.is_dynamic()) {
-          dynamic_dim_size += in_desc.shape().At(i); // I dont know!
+          dynamic_dim_size += 1;
         } else {
-          out_dim_vec.at(axis) += 1; 
+          out_dim_vec.at(axis) += 1;
         }
-      } else if(i < axis) {
+      } else if (i < axis) {
         CHECK_EQ_OR_RETURN(in_desc.shape().At(i), out_dim_vec.at(i));
-      }else{
-        CHECK_EQ_OR_RETURN(in_desc.shape().At(i-1), out_dim_vec.at(i));
+      } else {
+        CHECK_EQ_OR_RETURN(in_desc.shape().At(i - 1), out_dim_vec.at(i));
       }
     }
   }
-  printf("HERE \n"); 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
-//   CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size); // i dont know
+  CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);  // i dont know
   if (dynamic_dim_size == 0) {
     out_desc->set_is_dynamic(false);
   } else {
@@ -102,13 +99,11 @@ namespace {
   return InferLogicalTensorDesc(ctx);
 }
 
-
-// todo!
 /* static */ Maybe<void> StackOp::GetSbp(user_op::SbpContext* ctx) {
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
-    if (i == axis) { continue; }
+    if (i >= axis) { continue; }
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
@@ -128,14 +123,12 @@ namespace {
 }
 
 /*static*/ Maybe<void> StackOp::CheckAttr(const user_op::UserOpDefWrapper&,
-                                           const user_op::UserOpConfWrapper& op_conf) {
+                                          const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.input_size("in") >= 2);
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> StackBackwardOp::GetSbp(user_op::SbpContext* ctx) {
-  // todo FIX!
-
   const auto axis = ctx->Attr<int64_t>("axis");
   const int64_t in_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
@@ -191,24 +184,20 @@ namespace {
     const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
     user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes);
-    FOR_RANGE(int64_t, j, 0, like_num_axes+1) {
+    FOR_RANGE(int64_t, j, 0, like_num_axes + 1) {
       if (j == axis) {
         if (like_i_desc.is_dynamic()) {
           dynamic_dim_size += like_i_desc.shape().Count(j);
         } else {
           static_dim_size += like_i_desc.shape().Count(j);
         }
-      } else if (j < axis){
+      } else if (j < axis) {
         CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j));
       } else {
-        CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j-1));
+        CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j - 1));
       }
     }
     DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
-    // No need ?
-    // FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-    //   out_i_dim_vec.emplace_back(in_desc.shape().At(j));
-    // }
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
   }
@@ -230,8 +219,9 @@ namespace {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> StackBackwardOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
-                                                   const user_op::UserOpConfWrapper& user_op_conf) {
+/*static*/ Maybe<void> StackBackwardOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn,
+    const user_op::UserOpConfWrapper& user_op_conf) {
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
     CHECK_NOTNULL_OR_RETURN(like_modifier);
@@ -241,12 +231,12 @@ namespace {
 }
 
 /*static*/ Maybe<void> StackBackwardOp::CheckAttr(const user_op::UserOpDefWrapper&,
-                                              const user_op::UserOpConfWrapper& op_conf) {
+                                                  const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.input_size("like") >= 2);
   CHECK_OR_RETURN(op_conf.output_size("out") >= 2);
   return Maybe<void>::Ok();
 }
 
-// REGISTER_USER_OP_GRAD("Stack").SetGenBackwardOpConfFn(GenGrapOp);
+REGISTER_USER_OP_GRAD("Stack").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow
