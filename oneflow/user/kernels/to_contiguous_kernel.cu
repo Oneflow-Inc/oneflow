@@ -85,19 +85,25 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, IndexType blo
 
   StrideParam<ndim> param_in_stride(in_stride.data()), param_out_stride(out_stride.data());
 
-  const IndexType num_blocks = GetNumBlocks(count);
-  const IndexType num_threads = GetMinThreadNum(count);
+  const int num_blocks = GetNumBlocks(count);
+  const int num_threads = GetMinThreadNum(count);
+  const int pack_num_blocks = num_blocks / pack_size;
+  const int pack_num_threads = num_threads / pack_size;
 
-  if (pack_size >= 8 && block_size % 8 == 0) {
-    ToContiguousForwardGpu<uint64_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+  if (pack_size == 16 && block_size % 16 == 0) {
+    ToContiguousForwardGpu<ulonglong2, IndexType, ndim><<<pack_num_blocks, pack_num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, param_in_stride, param_out_stride, reinterpret_cast<const ulonglong2*>(in_dptr), reinterpret_cast<ulonglong2*>(out_dptr));
+  } else if (pack_size == 8 && block_size % 8 == 0) {
+    ToContiguousForwardGpu<uint64_t, IndexType, ndim><<<pack_num_blocks, pack_num_threads, 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
       count, param_in_stride, param_out_stride, reinterpret_cast<const uint64_t*>(in_dptr), reinterpret_cast<uint64_t*>(out_dptr));
-  } else if(pack_size >= 4 && block_size % 4 == 0 ){
-    ToContiguousForwardGpu<uint32_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+  } else if(pack_size == 4 && block_size % 4 == 0 ){
+    ToContiguousForwardGpu<uint32_t, IndexType, ndim><<<pack_num_blocks, pack_num_threads, 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
       count, param_in_stride, param_out_stride, reinterpret_cast<const uint32_t*>(in_dptr), reinterpret_cast<uint32_t*>(out_dptr));
-  } else if(pack_size >= 2 && block_size % 2 == 0 ){
-    ToContiguousForwardGpu<uint16_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+  } else if(pack_size == 2 && block_size % 2 == 0 ){
+    ToContiguousForwardGpu<uint16_t, IndexType, ndim><<<pack_num_blocks, pack_num_threads, 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
       count, param_in_stride, param_out_stride, reinterpret_cast<const uint16_t*>(in_dptr), reinterpret_cast<uint16_t*>(out_dptr));
   } else {
