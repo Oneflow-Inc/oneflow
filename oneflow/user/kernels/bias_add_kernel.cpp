@@ -21,11 +21,11 @@ namespace oneflow {
 
 template<typename T, typename Index>
 struct BiasAddCalculation<DeviceType::kCPU, T, Index> {
-  static void Invoke(DeviceCtx* ctx, int64_t outer_size, int64_t bias_size, int64_t inner_size,
+  static void Invoke(ep::Stream* stream, int64_t outer_size, int64_t bias_size, int64_t inner_size,
                      const T* x, const T* bias, T* y) {
     const Shape in_out_shape({outer_size, bias_size, inner_size});
     const Shape bias_shape({1, bias_size, 1});
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(ctx, XpuVarNdarray<T>(in_out_shape, y),
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(stream, XpuVarNdarray<T>(in_out_shape, y),
                                                    XpuVarNdarray<const T>(in_out_shape, x),
                                                    XpuVarNdarray<const T>(bias_shape, bias));
   }

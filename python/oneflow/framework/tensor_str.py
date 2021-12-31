@@ -16,8 +16,9 @@ limitations under the License.
 """
 This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
-import numpy as np
+import os
 import math
+import numpy as np
 from typing import Optional
 
 import oneflow as flow
@@ -27,11 +28,92 @@ class __PrinterOptions(object):
     precision: int = 4
     threshold: float = 1000
     edgeitems: int = 3
-    linewidth: int = 80
+    userset_linewidth: int = None
     sci_mode: Optional[bool] = None
+
+    autoset_linewidth: bool = True
+
+    @property
+    def linewidth(self):
+        return (
+            _autoset_linewidth() if self.autoset_linewidth else self.userset_linewidth
+        )
+
+    @linewidth.setter
+    def linewidth(self, value):
+        self.userset_linewidth = value
 
 
 PRINT_OPTS = __PrinterOptions()
+
+
+def set_printoptions(
+    precision=None,
+    threshold=None,
+    edgeitems=None,
+    linewidth=None,
+    profile=None,
+    sci_mode=None,
+):
+    r"""Set options for printing. Items shamelessly taken from NumPy
+
+    Args:
+        precision: Number of digits of precision for floating point output
+            (default = 4).
+        threshold: Total number of array elements which trigger summarization
+            rather than full `repr` (default = 1000).
+        edgeitems: Number of array items in summary at beginning and end of
+            each dimension (default = 3).
+        linewidth: The number of characters per line for the purpose of
+            inserting line breaks (default = terminal_columns).
+        profile: Sane defaults for pretty printing. Can override with any of
+            the above options. (any one of `default`, `short`, `full`)
+        sci_mode: Enable (True) or disable (False) scientific notation. If
+            None (default) is specified, the value is defined by
+            `oneflow._tensor_str._Formatter`. This value is automatically chosen
+            by the framework.
+    .. note::
+        linewidth equals to terminal columns, manual setting will invalidate the default automatic setting.
+    """
+    if profile is not None:
+        if profile == "default":
+            PRINT_OPTS.precision = 4
+            PRINT_OPTS.threshold = 1000
+            PRINT_OPTS.edgeitems = 3
+            PRINT_OPTS.linewidth = 80
+        elif profile == "short":
+            PRINT_OPTS.precision = 2
+            PRINT_OPTS.threshold = 1000
+            PRINT_OPTS.edgeitems = 2
+            PRINT_OPTS.linewidth = 80
+        elif profile == "full":
+            PRINT_OPTS.precision = 4
+            PRINT_OPTS.threshold = inf
+            PRINT_OPTS.edgeitems = 3
+            PRINT_OPTS.linewidth = 80
+
+    if precision is not None:
+        PRINT_OPTS.precision = precision
+    if threshold is not None:
+        PRINT_OPTS.threshold = threshold
+    if edgeitems is not None:
+        PRINT_OPTS.edgeitems = edgeitems
+    if linewidth is not None:
+        PRINT_OPTS.linewidth = linewidth
+    PRINT_OPTS.sci_mode = sci_mode
+    if profile is not None or linewidth is not None:
+        PRINT_OPTS.autoset_linewidth = False
+
+
+def _autoset_linewidth():
+    # os.terminal_size(columns, lines),
+    # columns represents width of the terminal window in characters
+    # and lines represents height of the terminal window in characters.
+    try:
+        linewidth = os.get_terminal_size()[0]
+    except OSError:
+        linewidth = 80
+    return linewidth
 
 
 def _try_convert_to_local_tensor(tensor):
@@ -145,7 +227,6 @@ def _vector_str(self, indent, summarize, formatter1):
     elements_per_line = max(
         1, int(math.floor((PRINT_OPTS.linewidth - indent) / (element_length)))
     )
-    char_per_line = element_length * elements_per_line
 
     def _val_formatter(val, formatter1=formatter1):
         return formatter1.format(val)
@@ -209,8 +290,10 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # TODO: not support nd sbp tensor for now
-    if self.is_consistent and len(self.placement.hierarchy) > 1:
+    # TODO: not support nd sbp tensor and s0 tensor for now
+    if self.is_consistent and (
+        len(self.placement.hierarchy) > 1 or self.sbp == (flow.sbp.split(0),)
+    ):
         return "[...]"
 
     with flow.no_grad():

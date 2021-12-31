@@ -17,12 +17,14 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/multi_client.h"
-#include "oneflow/core/device/node_device_descriptor_manager.h"
-#include "oneflow/core/device/cuda_device_descriptor.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
+#include "oneflow/core/hardware/cuda_device_descriptor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #ifdef WITH_CUDA
 
@@ -94,44 +96,21 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error) {
 
 #endif
 
-void InitGlobalCudaDeviceProp() {
-  CHECK(Global<cudaDeviceProp>::Get() == nullptr) << "initialized Global<cudaDeviceProp> twice";
-  Global<cudaDeviceProp>::New();
-  cudaGetDeviceProperties(Global<cudaDeviceProp>::Get(), 0);
-  if (IsCuda9OnTuringDevice()) {
-    LOG(WARNING)
-        << "CUDA 9 running on Turing device has known issues, consider upgrading to CUDA 10";
-  }
-}
-
-int32_t GetSMCudaMaxBlocksNum() {
-  const auto& global_device_prop = *Global<cudaDeviceProp>::Get();
-  int32_t n =
-      global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor;
-  return (n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock;
-}
-
-bool IsCuda9OnTuringDevice() {
-  const auto& global_device_prop = *Global<cudaDeviceProp>::Get();
-  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && global_device_prop.major == 7
-         && global_device_prop.minor == 5;
-}
-
 size_t GetAvailableGpuMemSize(int dev_id) {
-  cudaDeviceProp prop;
+  cudaDeviceProp prop{};
   cudaGetDeviceProperties(&prop, dev_id);
   return prop.totalGlobalMem;
 }
 
 namespace {
 
-std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
-  auto default_fn = [](void** ptr, size_t size) { cudaMallocHost(ptr, size); };
-  auto manager = Global<device::NodeDeviceDescriptorManager>::Get();
+std::function<cudaError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
+  auto default_fn = [](void** ptr, size_t size) { return cudaMallocHost(ptr, size); };
+  auto manager = Global<hardware::NodeDeviceDescriptorManager>::Get();
   if (manager == nullptr) { return default_fn; }
   auto node_desc = manager->GetLocalNodeDeviceDescriptor();
-  auto cuda_device = std::dynamic_pointer_cast<const device::CudaDeviceDescriptor>(
-      node_desc->GetDevice(device::kCudaDeviceDescriptorClassName, dev));
+  auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
+      node_desc->GetDevice(hardware::kCudaDeviceDescriptorClassName, dev));
   if (!cuda_device) { return default_fn; }
   auto saved_affinity = node_desc->Topology()->GetMemoryAffinity();
   if (!saved_affinity) { return default_fn; }
@@ -140,16 +119,17 @@ std::function<void(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
   if (!device_affinity) { return default_fn; }
   return [device_affinity, saved_affinity, node_desc, default_fn](void** ptr, size_t size) {
     node_desc->Topology()->SetMemoryAffinity(device_affinity);
-    default_fn(ptr, size);
+    cudaError_t err = default_fn(ptr, size);
     node_desc->Topology()->SetMemoryAffinity(saved_affinity);
+    return err;
   };
 }
 
 }  // namespace
 
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   auto fn = GetCudaMallocHostFn(dev);
-  fn(ptr, size);
+  return fn(ptr, size);
 }
 
 CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {

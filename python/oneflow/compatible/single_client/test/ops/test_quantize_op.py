@@ -49,7 +49,7 @@ def gen_quant_scale_for_min_max_cambricon(weight, quantization_bit):
 
 
 def product(tu):
-    return np.prod(tu).astype(np.int).item()
+    return np.prod(tu).astype(np.int32).item()
 
 
 def _check_min_max_observer(
@@ -91,7 +91,7 @@ def _check_min_max_observer(
     test_case.assertTrue(np.allclose(scale_of, scale_np, rtol=0.001))
     test_case.assertTrue(
         np.allclose(
-            zero_point_of.astype(np.int), zero_point_np.astype(np.int), rtol=0.001
+            zero_point_of.astype(np.int32), zero_point_np.astype(np.int32), rtol=0.001
         )
     )
 

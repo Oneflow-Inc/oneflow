@@ -14,6 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+
+if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
+    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
+    gpu_id = vram_str.split(",")[0].split(":")[-1]
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+
 import sys
 import collections
 
@@ -25,6 +32,7 @@ Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
@@ -64,10 +72,15 @@ def is_deprecated(func_or_class):
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
+from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
+from oneflow._C import batch_matmul as bmm
+from oneflow._C import broadcast_like
+from oneflow._C import chunk
+from oneflow._C import split
 from oneflow._C import sign
 from oneflow._C import sinh
 from oneflow._C import tan
@@ -93,9 +106,12 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
+from oneflow._C import floor
 from oneflow._C import floor_divide
 from oneflow._C import mul
-from oneflow._C import reciprocal as reciprocal
+from oneflow._C import negative
+from oneflow._C import negative as neg
+from oneflow._C import reciprocal
 from oneflow._C import sub
 from oneflow._C import sin, sin_
 from oneflow._C import asin
@@ -110,11 +126,14 @@ from oneflow._C import clamp
 from oneflow._C import clamp as clip
 from oneflow._C import cos
 from oneflow._C import cosh
+from oneflow._C import diagonal
 from oneflow._C import erf
 from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
+from oneflow._C import flatten
 from oneflow._C import log
+from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import pow
@@ -144,6 +163,14 @@ from oneflow._C import unsqueeze
 from oneflow._C import permute
 from oneflow._C import concat
 from oneflow._C import concat as cat
+from oneflow._C import to
+from oneflow._C import dim_gather as gather
+from oneflow._C import gather_nd
+from oneflow._C import roi_align
+from oneflow._C import read_onerec
+from oneflow._C import decode_onerec
+from oneflow._C import dot
+from oneflow._C import eye
 
 
 from . import sbp
@@ -160,6 +187,7 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
+from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
@@ -233,6 +261,7 @@ del oneflow
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
+from oneflow._C import from_numpy
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
@@ -246,7 +275,12 @@ from oneflow.framework.env_util import (
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
-from oneflow.framework.generator import default_generator, manual_seed
+from oneflow.framework.generator import (
+    default_generator,
+    manual_seed,
+    get_rng_state,
+    set_rng_state,
+)
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
@@ -260,23 +294,18 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool3d,
 )
 from oneflow.nn.modules.arange import arange_op as arange
+from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
-from oneflow.nn.modules.bmm import bmm_op as bmm
-from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
-from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
+from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.floor import floor_op as floor
-from oneflow.nn.modules.gather import gather_op as gather
-from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
@@ -287,17 +316,16 @@ from oneflow.nn.modules.comparison import less_equal_op as le
 from oneflow.nn.modules.comparison import ne_op as ne
 from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.tensor_ops import negative_op as neg
-from oneflow.nn.modules.tensor_ops import negative_op as negative
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
-from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
+from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -307,6 +335,8 @@ from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
+from oneflow.nn.modules.reduce_ops import all_op as all
+from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -314,8 +344,6 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.sort import sort_op as sort
-from oneflow.nn.modules.split import split_op as split
-from oneflow.nn.modules.eye import eye_op as eye
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
@@ -323,12 +351,11 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
-from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
-from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
@@ -368,5 +395,6 @@ import oneflow.multiprocessing
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    print("MLIR JIT engine will load:", oneflow_internal_path)
-    oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+        print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
+        oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

@@ -122,11 +122,11 @@ class CpuQuantizationKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_QUANTIZATION_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("quantization")                               \
-      .SetCreateFn<CpuQuantizationKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+#define REGISTER_QUANTIZATION_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("quantization")                                \
+      .SetCreateFn<CpuQuantizationKernel<dtype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_QUANTIZATION_KERNEL(float);
 REGISTER_QUANTIZATION_KERNEL(double);

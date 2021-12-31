@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 
 namespace py = pybind11;
 

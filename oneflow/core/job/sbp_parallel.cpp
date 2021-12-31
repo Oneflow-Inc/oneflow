@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -132,7 +133,7 @@ void SortSbpSignatureListByCopyCost(
   auto OrderValue4SbpSig = MakeGetterOrderValue4SbpSig(sbp_sig_list, CalcOrderValue4SbpSig);
   auto IbnCopyCost4SbpSig = MakeGetterIbnCopyCost4SbpSig(ibns, SbpInferHint4Ibn, sbp_sig_list);
   for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
-    sorted_sbp_signatures->push_back(&sbp_signature);
+    sorted_sbp_signatures->emplace_back(&sbp_signature);
   }
   std::sort(sorted_sbp_signatures->begin(), sorted_sbp_signatures->end(),
             [&](const cfg::SbpSignature* lhs, const cfg::SbpSignature* rhs) {
@@ -179,13 +180,19 @@ bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sb
 }
 
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
+  return SbpToString(sbp_parallel);
+}
+
+std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel) {
   std::string sbp_str = "";
-  if (sbp_parallel.has_broadcast_parallel()) {
-    sbp_str = "B";
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    sbp_str = "P";
-  } else if (sbp_parallel.has_split_parallel()) {
-    sbp_str = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+  if (nd_sbp_parallel.sbp_parallel_size() == 1) {
+    return SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
+  } else if (nd_sbp_parallel.sbp_parallel_size() > 1) {
+    std::string sbp_str = "(" + SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
+    for (int32_t k = 1; k < nd_sbp_parallel.sbp_parallel_size(); k++) {
+      sbp_str += ", " + SbpParallelToString(nd_sbp_parallel.sbp_parallel(k));
+    }
+    sbp_str += ")";
   } else {
     UNIMPLEMENTED();
   }
@@ -225,6 +232,48 @@ void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
     CHECK_EQ(pair.second.sbp_parallel_size(), 1);
     CHECK(pair.second.sbp_parallel(0) == it->second);
   }
+}
+
+Maybe<std::string> SbpSignatureListAsString(const cfg::SbpSignatureList& sbp_signatures,
+                                            const PbRpf<std::string>& inputs,
+                                            const PbRpf<std::string>& outputs) {
+  std::ostringstream ss;
+  if (sbp_signatures.sbp_signature_size() == 0) { return ss.str(); }
+
+  auto WalkIO =
+      [&](const std::function<Maybe<std::string>(const std::string&)>& bn_handler) -> Maybe<void> {
+    ss << "(";
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      ss << *JUST(bn_handler(inputs[i]));
+      if (i != inputs.size() - 1) { ss << ", "; }
+    }
+    ss << ") -> (";
+    for (size_t i = 0; i < outputs.size(); ++i) {
+      ss << *JUST(bn_handler(outputs[i]));
+      if (i != outputs.size() - 1) { ss << ", "; }
+    }
+    ss << ")";
+    return Maybe<void>::Ok();
+  };
+
+  JUST(WalkIO([](const std::string& bn) -> Maybe<std::string> { return bn; }));
+  ss << ": ";
+
+  ss << "[\n";
+  for (const auto& sbp_signature : sbp_signatures.sbp_signature()) {
+    ss << "\t";
+    JUST(WalkIO([&](const std::string& bn) -> Maybe<std::string> {
+      auto it = sbp_signature.bn_in_op2sbp_parallel().find(bn);
+      if (it == sbp_signature.bn_in_op2sbp_parallel().end()) {
+        return Error::RuntimeError()
+               << "can't find " << bn << "in SbpSignature: " << sbp_signature.DebugString();
+      }
+      return SbpParallelToString(it->second);
+    }));
+    ss << ",\n";
+  }
+  ss << "]";
+  return ss.str();
 }
 
 }  // namespace oneflow

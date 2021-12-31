@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -40,10 +40,11 @@ class ConstantLikeKernel final : public Kernel {
     } else {
       UNIMPLEMENTED();
     }
-    std::unique_ptr<primitive::Fill> primitive = primitive::NewPrimitive<primitive::FillFactory>(
-        this->op_conf().device_tag(), out_blob->data_type());
+    std::unique_ptr<ep::primitive::Fill> primitive =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(this->op_conf().device_tag(),
+                                                                out_blob->data_type());
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), out_blob->mut_dptr(), value,
+    primitive->Launch(ctx->stream(), out_blob->mut_dptr(), value,
                       out_blob->static_shape().elem_cnt());
     is_init_ = true;
   }

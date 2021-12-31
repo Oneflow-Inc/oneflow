@@ -282,6 +282,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 
   // create produced blob
   std::vector<std::string> produced_bns;
+  produced_bns.reserve(op->output_bns().size() + op->tmp_bns().size());
   produced_bns.insert(produced_bns.end(), op->output_bns().begin(), op->output_bns().end());
   produced_bns.insert(produced_bns.end(), op->tmp_bns().begin(), op->tmp_bns().end());
   for (const std::string& produced_bn : produced_bns) {
@@ -875,7 +876,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     LogicalBlobId sub_lbi;
     sub_lbi.set_op_name(op_name);
     sub_lbi.set_blob_name(blob_name);
-    lbi_vec->push_back(sub_lbi);
+    lbi_vec->emplace_back(sub_lbi);
   };
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(scope_symbol_id);
@@ -943,7 +944,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   mirrored_lbi.set_op_name(op_conf.name());
   mirrored_lbi.set_blob_name("out");
   (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
-  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].push_back(mirrored_lbi);
+  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
   {
@@ -964,8 +965,36 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
+  const auto& job_name = job().job_conf().job_name();
+  auto LogJob = [&](const std::string& name_suffix) -> void {
+    std::string full_log_name =
+        job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
+    TeePersistentLogStream::Create(full_log_name)->Write(job());
+    Global<OpGraph>::New(job());
+    Global<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
+    Global<OpGraph>::Delete();
+  };
+  std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
+  auto NeedLogJob = [&](const std::string& pass_name) -> bool {
+    if ("ALL" == debug_pass_name) {
+      return true;
+    } else if (pass_name == debug_pass_name) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob(pass_name + cnt_str + "-before");
+    }
+    JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob(pass_name + cnt_str + "-after");
+    }
+    return Maybe<void>::Ok();
   };
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
@@ -992,6 +1021,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("QuantAwareTraining"));
+#ifdef WITH_MLIR
+    JUST(DoPass("IRRoundTripBeforeAD"));
+#endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
@@ -1003,7 +1035,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
-    JUST(DoPass("FuseAddToOutputPass"));
+    JUST(DoPass("FuseAddToOutputPass", 1));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
@@ -1193,9 +1225,10 @@ void FormateVariableConf(nlohmann::json& json_conf) {
 
 std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     const std::string& job_name) const {
-  HashSet<std::string> input_op_names;
-  HashSet<std::string> output_op_names;
+  HashSet<std::string> inputs_op_names;
+  HashSet<std::string> outputs_op_names;
   std::vector<nlohmann::json> layers_vec;
+  layers_vec.reserve(op_name2op_.size());
   for (const auto& pair : op_name2op_) {
     nlohmann::json json_layers_pair;
 
@@ -1210,10 +1243,10 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     }
 
     if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
-      input_op_names.insert(op_name);
+      inputs_op_names.insert(op_name);
     }
     if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
-      output_op_names.insert(op_name);
+      outputs_op_names.insert(op_name);
     }
     json_layers_pair["name"] = op_name;
 
@@ -1227,6 +1260,7 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     json_layers_pair["config"] = json_conf;
 
     std::vector<std::string> inbound_nodes_vec;
+    inbound_nodes_vec.reserve(inbound_nodes.size());
     for (const auto& in_node_name : inbound_nodes) { inbound_nodes_vec.emplace_back(in_node_name); }
     json_layers_pair["inbound_nodes"] = inbound_nodes_vec;
 
@@ -1236,8 +1270,8 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
   nlohmann::json json_pair;
   json_pair["name"] = job_name;
   json_pair["layers"] = layers_vec;
-  json_pair["input_layers"] = input_op_names;
-  json_pair["output_layers"] = output_op_names;
+  json_pair["input_layers"] = inputs_op_names;
+  json_pair["output_layers"] = outputs_op_names;
 
   return json_pair.dump();
 }

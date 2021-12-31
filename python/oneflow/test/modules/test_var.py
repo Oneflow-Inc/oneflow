@@ -23,14 +23,14 @@ from oneflow.test_utils.automated_test_util import *
 
 
 class TestVar(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.var(x)
         return y
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_var_one_dim_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
@@ -43,7 +43,7 @@ class TestVar(flow.unittest.TestCase):
         return y
 
     @unittest.skip("var not support 0-shape tensor currently")
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_var_0d_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)

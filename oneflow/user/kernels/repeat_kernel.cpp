@@ -32,7 +32,7 @@ class RepeatKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                         in->shape().elem_cnt() * GetSizeOfDataType(in->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -40,7 +40,7 @@ class RepeatKernel final : public user_op::OpKernel {
 
 #define REGISTER_REPEAT_KERNEL(device)                                                \
   REGISTER_USER_KERNEL("repeat").SetCreateFn<RepeatKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device));
+      (user_op::HobDeviceType() == device));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_REPEAT_KERNEL, DEVICE_TYPE_SEQ)
 

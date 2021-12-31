@@ -22,12 +22,12 @@ namespace oneflow {
 
 template<typename IN_T, typename OUT_T, int NDIM>
 struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
-  static void ArgWhere(DeviceCtx* ctx, const ShapeView& input_shape, const IN_T* input_ptr,
+  static void ArgWhere(ep::Stream* stream, const ShapeView& input_shape, const IN_T* input_ptr,
                        void* temp_storage, size_t temp_storage_bytes, OUT_T* output_ptr,
                        OUT_T* output_size_ptr) {
     // deal with empty blob
     if (input_shape.elem_cnt() == 0) {
-      Memset<DeviceType::kCPU>(ctx, output_size_ptr, 0, sizeof(OUT_T));
+      Memset<DeviceType::kCPU>(stream, output_size_ptr, 0, sizeof(OUT_T));
       return;
     }
 
@@ -47,7 +47,7 @@ struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
     *output_size_ptr = true_cnt;
   }
 
-  static size_t GetWorkspaceBytesSize(DeviceCtx* ctx, int64_t elem_cnt) { return 0; }
+  static size_t GetWorkspaceBytesSize(ep::Stream* stream, int64_t elem_cnt) { return 0; }
 };
 
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCPU)

@@ -22,12 +22,22 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/stream/cuda/cuda_graph_context.h"
+
+#ifdef WITH_CUDA
+
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
 class UserKernelComputeContext;
 class UserKernelInferContext;
+class UserKernelInitAndCacheContext;
+
+namespace user_op {
+class OpKernelCache;
+}
 
 class UserKernel final : public Kernel {
  public:
@@ -35,7 +45,7 @@ class UserKernel final : public Kernel {
   UserKernel() = default;
   ~UserKernel() override;
 
-  void InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx);
+  void InitUserKernel(ep::Stream* stream);
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(KernelContext* ctx);
   const std::shared_ptr<user_op::OpKernelState>& GetOpKernelState() const;
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
@@ -50,14 +60,15 @@ class UserKernel final : public Kernel {
 
   bool IsStateless() const override;
 
+  mutable std::shared_ptr<user_op::OpKernelCache> opkernel_cache_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
+  std::unique_ptr<UserKernelInitAndCacheContext> cache_ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
 #ifdef WITH_CUDA_GRAPHS
-  std::unique_ptr<CudaGraphExecutable> cuda_graph_exec_;
-  CudaGraphContext* cuda_graph_ctx_{};
+  std::unique_ptr<ep::CudaGraphExecutable> cuda_graph_exec_;
 #endif  // WITH_CUDA_GRAPHS
 };
 

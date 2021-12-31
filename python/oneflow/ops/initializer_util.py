@@ -22,6 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.framework.dtype as dtype_util
 
 
 def constant_initializer(
@@ -1160,12 +1161,12 @@ def TruncatedNormalInitializerImpl(
 def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
-    fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
+    fan_in = np.prod(var_blob_shape[1:]).astype(np.int32).item()
     fan_out = var_blob_shape[0]
     if data_format == "channel_first":
-        fan_out *= np.prod(var_blob_shape[2:]).astype(np.int).item()
+        fan_out *= np.prod(var_blob_shape[2:]).astype(np.int32).item()
     else:
-        fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int).item()
+        fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int32).item()
     if variance_norm == initializer_conf_util.kAverage:
         fan = (fan_in + fan_out) / 2
     elif variance_norm == initializer_conf_util.kFanIn:
@@ -1206,3 +1207,13 @@ def EmptyInitializerImpl(
     var_blob_shape: Sequence[int],
 ):
     return None
+
+
+def _elem_cnt(shape):
+    return np.prod(shape).astype(int).item()
+
+
+def generate_values_by_initializer(initializer, shape, dtype):
+    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    length = _elem_cnt(shape)
+    return np.array(initializer(length)).astype(np_dtype).reshape(shape)

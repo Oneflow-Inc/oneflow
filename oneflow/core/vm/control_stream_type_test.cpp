@@ -47,7 +47,6 @@ TEST(ControlStreamType, new_symbol_symbol) {
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
   vm->Schedule();
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  ASSERT_TRUE(vm->waiting_instruction_list().empty());
   ASSERT_TRUE(vm->active_stream_list().empty());
   ASSERT_EQ(vm->thread_ctx_list().size(), 1 * 2);
   ASSERT_EQ(vm->stream_type_id2stream_rt_desc().size(), 1 * 2);
