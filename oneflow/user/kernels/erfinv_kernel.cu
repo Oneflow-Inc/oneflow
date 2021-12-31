@@ -15,20 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/framework/framework.h"
-// #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
-
 template<typename T>
 struct ErfInvFunctor {
-  OF_DEVICE_FUNC ErfInvFunctor(){}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return erfinv(x); 
-  }
+  OF_DEVICE_FUNC ErfInvFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const { return erfinv(x); }
 };
-
 
 template<typename T>
 class GpuErfinvKernel final : public user_op::OpKernel {
@@ -43,16 +38,16 @@ class GpuErfinvKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     OF_CUDA_CHECK(cuda::elementwise::Unary(ErfInvFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
-                             x->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+                                           x->dptr<T>(),
+                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_ERFINV_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("erfinv")                                   \
-      .SetCreateFn<GpuErfinvKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_ERFINV_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("erfinv").SetCreateFn<GpuErfinvKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_ERFINV_KERNEL(float)
 REGISTER_CUDA_ERFINV_KERNEL(double)
