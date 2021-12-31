@@ -8714,4 +8714,23 @@ def OneFlow_StackOp : OneFlow_BaseOp<"stack", [NoSideEffect, DeclareOpInterfaceM
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_StackBackwardOp : OneFlow_BaseOp<"stack_backward", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    Variadic<OneFlow_Tensor>:$like
+  );
+  let output = (outs
+    Variadic<OneFlow_Tensor>:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$axis
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS

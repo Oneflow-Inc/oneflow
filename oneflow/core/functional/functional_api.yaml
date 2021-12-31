@@ -1553,6 +1553,10 @@
   signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Stack"
   bind_python: True
 
+- name: "stack_backward"
+  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackBackward"
+  bind_python: False
+
 - name: "local_to_consistent"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
   bind_python: False

@@ -483,26 +483,76 @@ class ConcatFunctor {
 
 class StackFunctor {
  public:
-  StackFunctor() = default;
-  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
-    CHECK_GE_OR_RETURN(inputs.size(), 1) << "Needs one input at least.";
-    int64_t ndims = inputs.at(0)->shape()->NumAxes();
-    int64_t stack_dim = dim;
-    for (int i = 1; i < inputs.size(); ++i) {
-      CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
-          << "The input dimensions are not equal.";
+  StackFunctor(){
+    ops_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("stack").Input("in", n + 1).Output("out").Build());
     }
-    CHECK_OR_RETURN(dim >= -(ndims + 1) && dim <= ndims)
-        << "( Dimension out of range, expected to be in range of [" << -(ndims + 1) << ", " << ndims
-        << "], but got " << dim << " )";
-    if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
-    TensorTuple expand_inputs(inputs.size());
-    if (inputs.size() == 1) { return ExpandDims(inputs.at(0), stack_dim); }
-    for (int i = 0; i < inputs.size(); ++i) {
-      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
-    }
-    return Concat(expand_inputs, stack_dim);
   }
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+    const int64_t ninput = inputs.size();
+    int64_t axis = dim;
+    int64_t ndim = inputs[0]->ndim();
+    int64_t max_dim_size = 0;
+    // for (int i = 1; i < inputs.size(); ++i) {
+    //   CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
+    //       << "The input dimensions are not equal.";
+    // }
+    // CHECK_OR_RETURN(dim >= -(ndims + 1) && dim <= ndims)
+    //     << "( Dimension out of range, expected to be in range of [" << -(ndims + 1) << ", " << ndims
+    //     << "], but got " << dim << " )";
+    // if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
+    // TensorTuple expand_inputs(inputs.size());
+    // if (inputs.size() == 1) { return ExpandDims(inputs.at(0), stack_dim); }
+    // for (int i = 0; i < inputs.size(); ++i) {
+    //   expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
+    // }
+    // return Concat(expand_inputs, stack_dim);
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
+    TensorTuple outputs;
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      outputs.emplace_back(
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+    }
+    if (outputs.size() == 1) { return outputs.at(0); }
+    return this->operator()(outputs, axis);
+  }
+  private: 
+    std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
+
+class StackBackwardFunctor {
+ public:
+  StackBackwardFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("stack_backward")
+                               .Input("in")
+                               .Input("like", n + 1)
+                               .Output("out", n + 1)
+                               .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
+                                const int64_t& axis) const {
+    CHECK_GE_OR_RETURN(like.size(), 2);
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    TensorTuple inputs(like.size() + 1);
+    inputs[0] = x;
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
 class ExpandFunctor {
@@ -2493,6 +2543,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
+  m.add_functor<impl::StackBackwardFunctor>("StackBackward");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
