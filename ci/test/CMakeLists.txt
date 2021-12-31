@@ -116,7 +116,7 @@ function(add_oneflow_python_test)
       endif()
       set(DOCKER_EXEC_PREFIX "docker;exec;${TEST_CONTAINER_NAME}")
     endif()
-    # use sh -c to prevent DOCKER_EXEC_PREFIX is treated as one command
+    # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
       COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${PYTHON_TEST_FILE};--failfast;--verbose
     )
