@@ -68,6 +68,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
 
     state->axis = op_ctx->axis();
     state->epsilon = op_ctx->epsilon();
+    state->is_training = op_ctx->training();
     state->SaveTensorForBackward(inputs.at(0));  // x
     state->SaveTensorForBackward(gamma);         // gamma
     if (state->is_training || !state->track_running_stats) {

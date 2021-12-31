@@ -267,8 +267,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, ctx);
                 });
   m.add_functor("DispatchCOCOReader",
-                [](const std::shared_ptr<OpExpr>& op, const std::string image_dir,
-                   const std::string annotation_file, int64_t batch_size, bool shuffle_after_epoch,
+                [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
+                   const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
                    int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
                    bool stride_partition, int64_t session_id,
                    const Optional<Symbol<Device>>& device) -> Maybe<TensorTuple> {
@@ -287,8 +287,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {}, interp_ctx);
                 });
   m.add_functor("DispatchCOCOReader",
-                [](const std::shared_ptr<OpExpr>& op, const std::string image_dir,
-                   const std::string annotation_file, int64_t batch_size, bool shuffle_after_epoch,
+                [](const std::shared_ptr<OpExpr>& op, const std::string& image_dir,
+                   const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
                    int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
                    bool stride_partition, int64_t session_id, const Symbol<ParallelDesc>& placement,
                    const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {

@@ -57,7 +57,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSum);
 
 struct ReduceProdInterpState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class ReduceProd : public OpExprGradFunction<ReduceProdInterpState> {

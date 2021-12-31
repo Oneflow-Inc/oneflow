@@ -347,7 +347,7 @@ class ReduceAllFunctor {
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      ctx->set_axis(std::move(reduce_axis));
+      ctx->set_axis(reduce_axis);
     } else {
       ctx->set_axis(axis);
     }
@@ -371,7 +371,7 @@ class ReduceAnyFunctor {
     if (axis.empty()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      ctx->set_axis(std::move(reduce_axis));
+      ctx->set_axis(reduce_axis);
     } else {
       ctx->set_axis(axis);
     }
@@ -647,7 +647,7 @@ class ArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     auto ctx = std::make_shared<schema::ArangeOp>();
-    DataType range_dtype;
+    DataType range_dtype = DataType::kFloat;
     if (dtype.has_value()) {
       range_dtype = JUST(dtype)->data_type();
     } else {
@@ -689,7 +689,7 @@ class ConsistentArangeFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     auto ctx = std::make_shared<schema::ArangeOp>();
-    DataType range_dtype;
+    DataType range_dtype = DataType::kFloat;
     if (dtype.has_value()) {
       range_dtype = JUST(dtype)->data_type();
     } else {

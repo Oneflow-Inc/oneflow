@@ -113,13 +113,14 @@ template<int Ndims, typename ContextT>
 class MaxPoolingNdGradImpl {
  public:
   explicit MaxPoolingNdGradImpl() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_" + std::to_string(Ndims) + "d_grad")
-                         .Input("x")
-                         .Input("y")
-                         .Input("indice")
-                         .Input("dy")
-                         .Output("dx")
-                         .Build());
+    op_ = CHECK_JUST(  // NOLINT (cppcoreguidelines-prefer-member-initializer)
+        one::OpBuilder("maxpool_" + std::to_string(Ndims) + "d_grad")
+            .Input("x")
+            .Input("y")
+            .Input("indice")
+            .Input("dy")
+            .Output("dx")
+            .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -186,12 +187,13 @@ template<int Ndims, typename ContextT>
 class AvgPoolingNdGradImpl {
  public:
   AvgPoolingNdGradImpl() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_" + std::to_string(Ndims) + "d_grad")
-                         .Input("x")
-                         .Input("y")
-                         .Input("dy")
-                         .Output("dx")
-                         .Build());
+    op_ = CHECK_JUST(  // NOLINT (cppcoreguidelines-prefer-member-initializer)
+        one::OpBuilder("avgpool_" + std::to_string(Ndims) + "d_grad")
+            .Input("x")
+            .Input("y")
+            .Input("dy")
+            .Output("dx")
+            .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -250,13 +252,14 @@ class AvgPoolingNdGradFunctor {
 template<int Ndims, typename ContextT>
 class PoolNdGradImpl {
  public:
-  PoolNdGradImpl(const std::string& mode) {
-    op_ = CHECK_JUST(one::OpBuilder(mode + "_pool_" + std::to_string(Ndims) + "d_grad")
-                         .Input("x")
-                         .Input("y")
-                         .Input("dy")
-                         .Output("dx")
-                         .Build());
+  explicit PoolNdGradImpl(const std::string& mode) {
+    op_ = CHECK_JUST(  // NOLINT (cppcoreguidelines-prefer-member-initializer)
+        one::OpBuilder(mode + "_pool_" + std::to_string(Ndims) + "d_grad")
+            .Input("x")
+            .Input("y")
+            .Input("dy")
+            .Output("dx")
+            .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -388,11 +391,12 @@ template<int Ndims, typename ContextT>
 class AdaptiveAvgPoolNdGradImpl {
  public:
   AdaptiveAvgPoolNdGradImpl() {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool" + std::to_string(Ndims) + "d_grad")
-                         .Input("x")
-                         .Input("dy")
-                         .Output("dx")
-                         .Build());
+    op_ = CHECK_JUST(  // NOLINT (cppcoreguidelines-prefer-member-initializer)
+        one::OpBuilder("adaptive_avg_pool" + std::to_string(Ndims) + "d_grad")
+            .Input("x")
+            .Input("dy")
+            .Output("dx")
+            .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy) const {

@@ -950,15 +950,15 @@ class SliceGradBaseFunctor {
  public:
   SliceGradBaseFunctor() = default;
   virtual ~SliceGradBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& like,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const Shape& like,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
     auto ctx = std::make_shared<schema::SliceGradOp>();
     ctx->set_start(start);
     ctx->set_stop(stop);
     ctx->set_step(step);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, ctx);
+    ctx->set_like_shape(like);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, ctx);
   }
 
  protected:
@@ -973,7 +973,7 @@ class SliceFunctor : public SliceBaseFunctor {
 class SliceGradFunctor : public SliceGradBaseFunctor {
  public:
   SliceGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Input("like").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Output("dx").Build());
   }
 };
 

@@ -112,7 +112,8 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device, const std::shared_ptr<const OpBase>& ctx) const {
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(
+    Symbol<Device> device, const std::shared_ptr<const OpBase>& ctx) const {
   const auto& it = device2kernel_.find(device);
   if (it != device2kernel_.end()) { return it->second; }
 
