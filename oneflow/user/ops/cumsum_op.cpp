@@ -66,21 +66,21 @@ REGISTER_USER_OP("cumsum_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          const user_op::AddOpFn& AddOp)
-                                                           -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op("cumsum_grad")
-                                             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("dx")
-                                             .Attr("dim", op.attr<int64_t>("dim"))
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
+REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn(
+    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("cumsum_grad")
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("dx")
+                .Attr("dim", op.attr<int64_t>("dim"))
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace
 
