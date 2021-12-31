@@ -214,9 +214,7 @@ class TestLayerNorm(flow.unittest.TestCase):
             begin_axis = random(1, 3).to(int).value()
             return tuple((channel.value(), height.value(), width.value())[begin_axis:])
 
-        m = torch.nn.LayerNorm(
-            normalized_shape=get_random_norm_shape()
-        ).to(device)
+        m = torch.nn.LayerNorm(normalized_shape=get_random_norm_shape()).to(device)
         x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
             device
         )
