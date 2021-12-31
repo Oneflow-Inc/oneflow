@@ -535,6 +535,14 @@ class ExpandFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
+
+    // if input tensor is eager local, than try return tensor's view first
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::Expand(x->contiguous(), in_shape, expand_shape);
+      }
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
@@ -574,6 +582,15 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+
+    auto& x = input;
+    // if input tensor is eager local, than try return tensor's view first
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::ExpandDims(x->contiguous(), expand_dim);
+      }
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
   }
 
@@ -1262,6 +1279,14 @@ class SqueezeFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
+
+    // if input tensor is eager local, than try return tensor's view first
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::Squeeze(x->contiguous(), squeeze_dims);
+      }
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
