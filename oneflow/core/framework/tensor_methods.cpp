@@ -138,7 +138,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
               in_grads->at(0) =
-                  JUST(functional::SliceGrad(out_grads.at(0), input, starts, ends, steps));
+                  JUST(functional::SliceGrad(out_grads.at(0), Shape(input->shape()->dim_vec()), starts, ends, steps));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
