@@ -42,7 +42,7 @@ function(add_docker_container)
   )
   set(fixtureName "${${prefix}_FIXTURE_NAME}")
   set(TEST_CONTAINER_NAME CI-$ENV{USER}-${fixtureName})
-  set(${fixtureName}Name ${TEST_CONTAINER_NAME} PARENT_SCOPE)
+  set(${fixtureName}ContainerName ${TEST_CONTAINER_NAME} PARENT_SCOPE)
   set(DOCKER_IMG_NAME "${${prefix}_IMG}")
   add_test(NAME Clear${fixtureName}
     COMMAND docker rm -f ${TEST_CONTAINER_NAME}
@@ -87,6 +87,12 @@ if(RUN_IN_DOCKER)
   set(CTEST_DOCKER_EXEC ${PROJECT_SOURCE_DIR}/bin/ctest-docker-exec)
 endif()
 
+# Start docker
+if (RUN_IN_DOCKER)
+  add_docker_container(FIXTURE_NAME ${TF_CONTAINER_FIXTURE} IMG "${TEST_WITH_TF_IMG_TAG}")
+  add_docker_container(FIXTURE_NAME ${TORCH_CONTAINER_FIXTURE} IMG "${TEST_WITH_TORCH_IMG_TAG}")
+endif()
+
 # TODO: ensure datasets (ExternalData)
 # TODO: (if it is .whl URL) download pip package
 function(add_oneflow_python_test)
@@ -109,28 +115,22 @@ function(add_oneflow_python_test)
       list(APPEND testNamePrefix ${testType})
     endif()
   endforeach()
-  # Start docker
-  if (RUN_IN_DOCKER)
-      if (${prefix}_SINGLE_CLIENT)
-        add_docker_container(FIXTURE_NAME ${TF_CONTAINER_FIXTURE} IMG "${TEST_WITH_TF_IMG_TAG}")
-      endif()
-      if (${prefix}_MULTI_CLIENT)
-        add_docker_container(FIXTURE_NAME ${TORCH_CONTAINER_FIXTURE} IMG "${TEST_WITH_TORCH_IMG_TAG}")
-      endif()
-    endif()
   # Glob Python scripts
   file(GLOB_RECURSE PYTHON_TEST_FILES LIST_DIRECTORIES false "${${prefix}_TEST_DIR}/test_*.py")
   foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
-    set(TEST_NAME "[${testNamePrefix}] ${PYTHON_TEST_FILE}")
+  foreach(ONEFLOW_TEST_DEVICE_NUM 1;2;4)
+    set(TEST_NAME "[${testNamePrefix}][GPUx${ONEFLOW_TEST_DEVICE_NUM}]${PYTHON_TEST_FILE}")
     if (RUN_IN_DOCKER)
       if (${prefix}_SINGLE_CLIENT)
-        set(TEST_CONTAINER_NAME "${${TF_CONTAINER_FIXTURE}Name}")
+        set(TEST_CONTAINER_NAME "${${TF_CONTAINER_FIXTURE}ContainerName}")
       endif()
       if (${prefix}_MULTI_CLIENT)
-        set(TEST_CONTAINER_NAME "${${TORCH_CONTAINER_FIXTURE}Name}")
+        set(TEST_CONTAINER_NAME "${${TORCH_CONTAINER_FIXTURE}ContainerName}")
+      endif()
+      if (NOT TEST_CONTAINER_NAME)
+        message(FATAL_ERROR "found empty TEST_CONTAINER_NAME: ${TEST_CONTAINER_NAME}")
       endif()
       set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC};${TEST_CONTAINER_NAME}")
-      # set(DOCKER_EXEC_PREFIX "docker;exec;${TEST_CONTAINER_NAME}")
     endif()
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
@@ -142,17 +142,17 @@ function(add_oneflow_python_test)
     endif()
     set_tests_properties(${TEST_NAME}
       PROPERTIES
-        ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>"
-        RESOURCE_GROUPS "vram:${vramRequired};"
+        ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
+        RESOURCE_GROUPS "${ONEFLOW_TEST_DEVICE_NUM},vram:${vramRequired};"
         LABELS "${testLabels};"
         FIXTURES_REQUIRED "$<$<BOOL:${${prefix}_SINGLE_CLIENT}>:${TF_CONTAINER_FIXTURE}>;$<$<BOOL:${${prefix}_MULTI_CLIENT}>:${TORCH_CONTAINER_FIXTURE}>"
     )
+  endforeach()
   endforeach()
 endfunction()
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/modules MULTI_CLIENT)
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/dataloader MULTI_CLIENT)
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/graph MULTI_CLIENT)
-add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/modules MULTI_CLIENT)
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/tensor MULTI_CLIENT)
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/xrt MULTI_CLIENT)
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_client/test/ops SINGLE_CLIENT)
