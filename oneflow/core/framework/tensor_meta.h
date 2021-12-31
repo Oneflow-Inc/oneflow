@@ -32,6 +32,8 @@ class ParallelDesc;
 
 namespace one {
 
+bool IsContiguous(const Shape& shape, const Stride& stride);
+
 class TensorMeta : public user_op::TensorDesc {
  public:
   TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
@@ -74,11 +76,15 @@ class MirroredTensorMeta : public TensorMeta {
 
   const Symbol<Device>& device() const { return device_; }
   const Stride& stride() const { return *stride_; }
+  bool is_contiguous() const { return is_contiguous_; }
   const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
   int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
-  void set_stride(const std::shared_ptr<const Stride>& stride) { stride_ = stride; }
+  void set_stride(const std::shared_ptr<const Stride>& stride) {
+    stride_ = stride;
+    is_contiguous_ = IsContiguous(shape(), *stride_);
+  }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MirroredTensorMeta& other) const;
@@ -87,6 +93,7 @@ class MirroredTensorMeta : public TensorMeta {
  private:
   Symbol<Device> device_;
   std::shared_ptr<const Stride> stride_;
+  bool is_contiguous_;
   int64_t storage_offset_;
 };
 

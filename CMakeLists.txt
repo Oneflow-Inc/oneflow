@@ -226,12 +226,6 @@ if(BUILD_CPP_API)
   endif(BUILD_SHARED_LIBS)
 endif(BUILD_CPP_API)
 
-set(INJA_URL https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip CACHE STRING "")
-use_mirror(VARIABLE INJA_URL URL ${INJA_URL})
-set(INJA_MD5 611e6b7206d0fb89728a3879f78b4775 CACHE STRING "")
-set(JSON_URL https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip CACHE STRING "")
-use_mirror(VARIABLE JSON_URL URL ${JSON_URL})
-set(JSON_MD5 fb96f95cdf609143e998db401ca4f324 CACHE STRING "")
 include(third_party)
 
 if (BUILD_CUDA)
