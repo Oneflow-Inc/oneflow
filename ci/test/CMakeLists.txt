@@ -63,7 +63,6 @@ function(add_docker_container)
   set_tests_properties(Start${fixtureName} PROPERTIES
     DEPENDS Clear${fixtureName}
     FIXTURES_SETUP ${fixtureName}
-    TIMEOUT 6000000000
   )
   # install pip and set as pip fixture
   add_test(NAME InstallOneFlowPipOn${fixtureName}
