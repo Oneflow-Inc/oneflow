@@ -37,7 +37,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
 
-Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& target_shape);
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+                     const std::vector<int32_t>& expand_shape);
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);

@@ -206,56 +206,48 @@ Maybe<Tensor> ExpandDims(const std::shared_ptr<Tensor>& input, const int32_t& ex
   return output;
 }
 
-Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+                     const std::vector<int32_t>& expand_shape) {
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError() << "view::Expand(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy" : "consistent");
   }
 
-  // TODO (bowen): need refine
-  std::vector<int32_t> in_shape(input->shape()->NumAxes());
-  for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = input->shape()->At(i); }
-
-  std::vector<int32_t> expand_shape(target_shape.NumAxes());
-  for (int i = 0; i < target_shape.NumAxes(); ++i) {
-    expand_shape[i] = target_shape.dim_vec().at(i);
-  }
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
-  const int64_t ndim = shape->NumAxes();
+  const int64_t ndim = in_shape.size();
 
-  const int64_t target_ndim = target_shape.NumAxes();
+  const int64_t target_ndim = expand_shape.size();
   DimVector target_dim_vec(target_ndim);
   StrideVector target_stride_vec(target_ndim);
 
   for (int i = 0; i < target_ndim; i++) {
     if (i < ndim) {
-      if (target_shape.At(target_ndim - 1 - i) == -1) {
-        target_dim_vec[target_ndim - 1 - i] = shape->At(ndim - 1 - i);
+      if (expand_shape[target_ndim - 1 - i] == -1) {
+        target_dim_vec[target_ndim - 1 - i] = in_shape[ndim - 1 - i];
         target_stride_vec[target_ndim - 1 - i] = strides->At(ndim - 1 - i);
-      } else if (shape->At(ndim - 1 - i)
+      } else if (in_shape[ndim - 1 - i]
                  == 1) {  // TODO (bowen): what if dim is 1, should stride be set to 0?
-        target_dim_vec[target_ndim - 1 - i] = target_shape.At(target_ndim - 1 - i);
+        target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
         target_stride_vec[target_ndim - 1 - i] = 0;
       } else {
-        if (target_shape.At(target_ndim - 1 - i) != shape->At(ndim - 1 - i)) {
+        if (expand_shape[target_ndim - 1 - i] != in_shape[ndim - 1 - i]) {
           return Error::RuntimeError()
                  << "view::Expand(): The expanded size of the tensor ("
-                 << target_shape.At(target_ndim - 1 - i) << ")"
-                 << "must match the existing size (" << shape->At(ndim - 1 - i)
+                 << expand_shape[target_ndim - 1 - i] << ")"
+                 << "must match the existing size (" << in_shape[ndim - 1 - i]
                  << ") at non-singleton dimension " << ndim - i << ".  Target sizes: "
                  << ".  Tensor sizes: " << shape->ToString();
         }
-        target_dim_vec[target_ndim - 1 - i] = shape->At(ndim - 1 - i);
+        target_dim_vec[target_ndim - 1 - i] = in_shape[ndim - 1 - i];
         target_stride_vec[target_ndim - 1 - i] = strides->At(ndim - 1 - i);
       }
     } else {
-      if (target_shape.At(target_ndim - 1 - i) == -1) {
+      if (expand_shape[target_ndim - 1 - i] == -1) {
         return Error::RuntimeError() << "view::Expand(): The expanded size of the tensor (-1) "
                                      << "isn't allowed in a leading, non-existing dimension 0";
       }
-      target_dim_vec[target_ndim - 1 - i] = target_shape.At(target_ndim - 1 - i);
+      target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
       target_stride_vec[target_ndim - 1 - i] = 0;
     }
   }
