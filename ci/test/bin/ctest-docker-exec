@@ -1,5 +1,13 @@
 set -ex
+group_id_0=$(echo ${CTEST_RESOURCE_GROUP_0_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
+group_id_1=$(echo ${CTEST_RESOURCE_GROUP_1_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
+group_id_2=$(echo ${CTEST_RESOURCE_GROUP_2_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
+group_id_3=$(echo ${CTEST_RESOURCE_GROUP_3_VRAM} | grep -oh "id:." | grep -oh "[0-9]" | head -n 1)
+CUDA_VISIBLE_DEVICES=${group_id_0}
+[[ ! -z "$group_id_1" ]] && CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES},$group_id_1"
+[[ ! -z "$group_id_2" ]] && CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES},$group_id_2"
+[[ ! -z "$group_id_3" ]] && CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES},$group_id_3"
+[ -z "$CUDA_VISIBLE_DEVICES" ] && echo "CUDA_VISIBLE_DEVICES empty" && exit 1
+
 docker exec \
-    -e CTEST_RESOURCE_GROUP_COUNT=${CTEST_RESOURCE_GROUP_COUNT} \
-    -e CTEST_RESOURCE_GROUP_0_VRAM=${CTEST_RESOURCE_GROUP_0_VRAM} \
-    -e ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM} "$@"
+    -e CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} "$@"

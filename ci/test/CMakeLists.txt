@@ -117,7 +117,7 @@ function(add_oneflow_python_test)
   file(GLOB_RECURSE PYTHON_TEST_FILES LIST_DIRECTORIES false "${${prefix}_TEST_DIR}/test_*.py")
   foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
   foreach(ONEFLOW_TEST_DEVICE_NUM 1;2;4)
-    set(TEST_NAME "[${testNamePrefix}][GPUx${ONEFLOW_TEST_DEVICE_NUM}]${PYTHON_TEST_FILE}")
+    set(TEST_NAME "[GPUx${ONEFLOW_TEST_DEVICE_NUM}][${testNamePrefix}]${PYTHON_TEST_FILE}")
     if (RUN_IN_DOCKER)
       if (${prefix}_SINGLE_CLIENT)
         set(TEST_CONTAINER_NAME "${${TF_CONTAINER_FIXTURE}ContainerName}")
@@ -130,9 +130,12 @@ function(add_oneflow_python_test)
       endif()
       set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC};${TEST_CONTAINER_NAME}")
     endif()
+    if (${prefix}_SINGLE_CLIENT)
+      set(DISTRIBUTED_LAUNCH_PREFIX "oneflow.distributed.launch;--nproc_per_node;${ONEFLOW_TEST_DEVICE_NUM}")
+    endif()
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
-      COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${PYTHON_TEST_FILE};--failfast;--verbose
+      COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${DISTRIBUTED_LAUNCH_PREFIX};${PYTHON_TEST_FILE};--failfast;--verbose
     )
     set(vramRequired 2000)
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
