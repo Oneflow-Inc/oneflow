@@ -537,6 +537,10 @@
     ]
   bind_python: True
 
+- name: "erfinv"
+  signature: "Tensor (Tensor x) => Erfinv"
+  bind_python: True
+
 - name: "arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
