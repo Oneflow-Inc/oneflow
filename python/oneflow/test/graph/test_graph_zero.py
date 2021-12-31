@@ -9,31 +9,16 @@ import oneflow.unittest
 def _test_linear_train_graph_with_zero(test_case, zero_stage = 1):
     P = flow.placement("cuda", {0: [0, 1]})
     B = flow.sbp.broadcast
-    S = flow.sbp.split(0)
+    S0 = flow.sbp.split(0)
     def train_with_graph(iter_num=3):
-        linear = flow.nn.Linear(3, 8)
+        linear = flow.nn.Linear(8, 4)
         linear = linear.to_consistent(placement=P, sbp=B)
         flow.nn.init.constant_(linear.weight, 2.068758)
         flow.nn.init.constant_(linear.bias, 0.23)
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
         grad_scaler = flow.amp.StaticGradScaler(200)
 
-        x = flow.tensor(
-            [
-                [-0.94630778, -0.83378579, -0.87060891],
-                [2.0289922, -0.28708987, -2.18369248],
-                [0.35217619, -0.67095644, -1.58943879],
-                [0.08086036, -1.81075924, 1.20752494],
-                [0.8901075, -0.49976737, -1.07153746],
-                [-0.44872912, -1.07275683, 0.06256855],
-                [-0.22556897, 0.74798368, 0.90416439],
-                [0.48339456, -2.32742195, -0.59321527],
-            ],
-            dtype=flow.float32,
-            placement=P,
-            sbp=S,
-            requires_grad=False,
-        )
+        x = flow.randint(1, 100, (4, 8), dtype=flow.float32, placement=P, sbp=S0)
 
         class LinearTrainGraphWithZeRO(flow.nn.Graph):
             def __init__(self):
@@ -58,8 +43,8 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage = 1):
 
             def build(self, x):
                 out = self.linear(x)
-                out = out.sum()
-                out.backward()
+                loss = out.sum()
+                loss.backward()
                 return out
 
         linear_t_g = LinearTrainGraphWithZeRO()
