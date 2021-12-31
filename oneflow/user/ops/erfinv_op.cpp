@@ -18,18 +18,18 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> ErfinvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> ErfInvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   Shape* y_shape = ctx->OutputShape("y", 0);
   *y_shape = x_shape;
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ErfinvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ErfInvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> ErfinvOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> ErfInvOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
@@ -37,7 +37,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> ErfinvOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> ErfInvOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }

@@ -13,21 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/device/cuda_util.h"
+// #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
-namespace {
 
 template<typename T>
-__global__ void ErfinvForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { 
-    // TODO
-   }
-}
+struct ErfInvFunctor {
+  OF_DEVICE_FUNC ErfInvFunctor(){}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return erfinv(x); 
+  }
+};
 
-}  // namespace
 
 template<typename T>
 class GpuErfinvKernel final : public user_op::OpKernel {
@@ -41,8 +42,8 @@ class GpuErfinvKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
-    RUN_CUDA_KERNEL((ErfinvForwardGpu<T>), ctx->stream(), elem_cnt, elem_cnt,
-                    x->dptr<T>(), y->mut_dptr<T>());
+    OF_CUDA_CHECK(cuda::elementwise::Unary(ErfInvFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
+                             x->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
