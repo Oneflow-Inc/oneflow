@@ -27,7 +27,9 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=True)
     def test_stack_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5, requires_grad=False).to(device)
+        x = random_pytorch_tensor(
+            ndim=4, dim1=3, dim2=4, dim3=5, requires_grad=False
+        ).to(device)
         y = torch.linalg.norm(x)
         return y
 
