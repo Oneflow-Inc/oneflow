@@ -3013,13 +3013,13 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$like
+    OneFlow_Tensor:$dy
   );
   let output = (outs
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
+    ShapeAttr:$like_shape,
     SI64ArrayAttr:$start,
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
@@ -7947,6 +7947,7 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMet
     OneFlow_Tensor:$y
   );
   let attrs = (ins
+    StrAttr:$data_format,
     SI32ArrayAttr:$output_size,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$strides,
