@@ -29,9 +29,7 @@ __global__ void SqrtSquareSumForOneBlock(int64_t n, const T* x, T* y) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if(threadIdx.x == 0) {
-    *y = sqrt(b_sum);
-  }
+  if (threadIdx.x == 0) { *y = sqrt(b_sum); }
 }
 
 template<typename T>
@@ -41,9 +39,7 @@ __global__ void SqrtSumForMultiBlock(int64_t n, const T* x, T* y) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if(threadIdx.x == 0) {
-    *y = sqrt(b_sum);
-  }
+  if (threadIdx.x == 0) { *y = sqrt(b_sum); }
 }
 
 template<typename T>
@@ -53,9 +49,7 @@ __global__ void SquareSumForMulBlock(int64_t n, const T* x, T* tmp) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if(threadIdx.x == 0) {
-    tmp[blockIdx.x] = b_sum;
-  }
+  if (threadIdx.x == 0) { tmp[blockIdx.x] = b_sum; }
 }
 
 }  // namespace
@@ -73,7 +67,8 @@ struct SqrtSquareSumKernelUtil<DeviceType::kCUDA, T> {
       SquareSumForMulBlock<T>
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               n, x, tmp);
-      SqrtSumForMultiBlock<T><<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      SqrtSumForMultiBlock<T>
+          <<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               num_blocks, tmp, y);
     }
   }

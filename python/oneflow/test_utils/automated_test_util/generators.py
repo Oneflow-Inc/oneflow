@@ -359,7 +359,7 @@ class random_device(generator):
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             return "cpu"
         else:
-            return random_util.choice(["cpu", "cuda"])
+            return random_util.choice(["cuda", "cpu"])
 
 
 class cpu_device(generator):
@@ -369,12 +369,14 @@ class cpu_device(generator):
     def _calc_value(self):
         return random_util.choice(["cpu"])
 
+
 class gpu_device(generator):
     def __init__(self):
         super().__init__([])
 
     def _calc_value(self):
         return random_util.choice(["cuda"])
+
 
 def test_against_pytorch(
     test_case,
