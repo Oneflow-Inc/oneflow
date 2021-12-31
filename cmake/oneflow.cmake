@@ -244,6 +244,10 @@ include_directories(${PROJECT_BINARY_DIR})
 # cc obj lib
 oneflow_add_library(oneflow ${of_all_obj_cc})
 
+get_property(ONETBB_SRC_DIR GLOBAL PROPERTY ONETBB_SRC_DIR)
+target_include_directories(oneflow PRIVATE ${ONETBB_SRC_DIR})
+target_link_libraries(oneflow onetbb::onetbb)
+
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
