@@ -47,7 +47,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_GetDataType", &JobBuildAndInferCtx_GetDataType);
   m.def("JobBuildAndInferCtx_IsDynamic", &JobBuildAndInferCtx_IsDynamic);
 
-  m.def("JobBuildAndInferCtx_DisableBoxing", &JobBuildAndInferCtx_DisableBoxing);
+  m.def("JobBuildAndInferCtx_IsDisableBoxing", &JobBuildAndInferCtx_IsDisableBoxing);
 
   m.def("JobBuildAndInferCtx_GetSplitAxisFromProducerView",
         &JobBuildAndInferCtx_GetSplitAxisFromProducerView);

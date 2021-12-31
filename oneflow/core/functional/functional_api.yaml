@@ -629,13 +629,22 @@
 - name: "conv1d"
   signature:
     "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1) => Conv1d"
+    Int32List padding, Int32List dilation, Int32 groups=1,
+    String channel_pos) => Conv1d"
   bind_python: True
 
 - name: "conv2d"
   signature:
     "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1) => Conv2d"
+    Int32List padding, Int32List dilation, Int32 groups=1,
+    String channel_pos) => Conv2d"
+  bind_python: True
+
+- name: "conv3d"
+  signature:
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
+    Int32List padding, Int32List dilation, Int32 groups=1,
+    String channel_pos) => Conv3d"
   bind_python: True
 
 - name: "fake_quantization"
@@ -661,12 +670,6 @@
     "TensorTuple (Tensor in, Tensor current_train_step, Tensor moving_max, Tensor moving_min,
     Bool training, String quantization_formula, Int64 stop_update_after_iters,
     Int32 quantization_bit, String quantization_scheme, Float momentum) => MovingAverageMinMaxObserver"
-  bind_python: True
-
-- name: "conv3d"
-  signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1) => Conv3d"
   bind_python: True
 
 - name: "conv_data_grad"
@@ -954,14 +957,14 @@
   signature: "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
   bind_python: False
 
-- name: "avg_pool_2d"
+- name: "avg_pool2d_nhwc"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
     String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
   bind_python: True
 
-- name: "max_pool_2d"
+- name: "max_pool2d_nhwc"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
@@ -1044,7 +1047,7 @@
   bind_python: True
 
 - name: "slice_grad"
-  signature: "Tensor (Tensor dy, Tensor like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  signature: "Tensor (Tensor dy, Shape like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
   bind_python: False
 
 - name: "narrow"
