@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<typename T>
 struct SqrtSquareSumKernelUtil<DeviceType::kCPU, T> {
-  static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y) {
+  static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y, T* tmp) {
     T sum = 0;
     FOR_RANGE(int64_t, i, 0, n) { sum += x[i] * x[i]; }
     *y = std::sqrt(sum);

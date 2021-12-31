@@ -32,18 +32,25 @@ class SqrtSquareSumKernel final : public user_op::OpKernel, public user_op::Cuda
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    SqrtSquareSumKernelUtil<device_type, T>::SqrtSquareSum(ctx->stream(), x->shape().elem_cnt(),
-                                                           x->dptr<T>(), y->mut_dptr<T>());
+    SqrtSquareSumKernelUtil<device_type, T>::SqrtSquareSum(
+        ctx->stream(), x->shape().elem_cnt(), x->dptr<T>(), y->mut_dptr<T>(), tmp->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                          \
-  REGISTER_USER_KERNEL("sqrt_square_sum")                                  \
-      .SetCreateFn<SqrtSquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                \
-                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
+#define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                                     \
+  REGISTER_USER_KERNEL("sqrt_square_sum")                                             \
+      .SetCreateFn<SqrtSquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>()            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype))) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                   \
+        const auto& x_shape = ctx->InputTensorDesc("x", 0).shape();                   \
+        const int32_t num_blocks = BlocksNum4ThreadsNum(x_shape.Count(0));            \
+        int64_t tmp_buffer_size = num_blocks;                                         \
+        return tmp_buffer_size * sizeof(OF_PP_PAIR_FIRST(dtype));                     \
+      });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)

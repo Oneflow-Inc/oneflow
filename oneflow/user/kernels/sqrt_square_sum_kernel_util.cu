@@ -22,19 +22,39 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, bool ONE_BLOCK>
-__global__ void SqrtSquareSumGpu(int64_t n, const T* x, T* y) {
+template<typename T>
+__global__ void SqrtSquareSumForOneBlock(int64_t n, const T* x, T* y) {
   T t_sum = 0;
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) {
-    if (ONE_BLOCK) {
-      *y = b_sum;
-    } else {
-      cuda::atomic::Add(y, b_sum);
-    }
+  if(threadIdx.x == 0) {
+    *y = sqrt(b_sum);
+  }
+}
+
+template<typename T>
+__global__ void SqrtSumForMultiBlock(int64_t n, const T* x, T* y) {
+  T t_sum = 0;
+  CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i]; }
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  T b_sum = BlockReduce(temp_storage).Sum(t_sum);
+  if(threadIdx.x == 0) {
+    *y = sqrt(b_sum);
+  }
+}
+
+template<typename T>
+__global__ void SquareSumForMulBlock(int64_t n, const T* x, T* tmp) {
+  T t_sum = 0;
+  CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  T b_sum = BlockReduce(temp_storage).Sum(t_sum);
+  if(threadIdx.x == 0) {
+    tmp[blockIdx.x] = b_sum;
   }
 }
 
@@ -42,23 +62,20 @@ __global__ void SqrtSquareSumGpu(int64_t n, const T* x, T* y) {
 
 template<typename T>
 struct SqrtSquareSumKernelUtil<DeviceType::kCUDA, T> {
-  static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y) {
+  static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y, T* tmp) {
     const int32_t num_blocks = BlocksNum4ThreadsNum(n);
     CHECK_GE(num_blocks, 0);
-    if (num_blocks == 0) {
-      Memset<DeviceType::kCUDA>(stream, y, 0, sizeof(T));
-    } else if (num_blocks == 1) {
-      SqrtSquareSumGpu<T, true>
+    if (num_blocks == 1) {
+      SqrtSquareSumForOneBlock<T>
           <<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
     } else {
       Memset<DeviceType::kCUDA>(stream, y, 0, sizeof(T));
-      SqrtSquareSumGpu<T, false>
+      SquareSumForMulBlock<T>
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              n, x, y);
+              n, x, tmp);
+      SqrtSumForMultiBlock<T><<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              num_blocks, tmp, y);
     }
-
-    // todo(launch sqrt kernel)
-    
   }
 };
 

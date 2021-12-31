@@ -28,7 +28,7 @@ struct SqrtSquareSumParam {
 
 template<DeviceType device_type, typename T>
 struct SqrtSquareSumKernelUtil {
-  static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y);
+  static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y, T* tmp);
 };
 
 }  // namespace oneflow

@@ -24,15 +24,23 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinalgVectorNorm2D(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=True)
-    def test_stack_with_random_data(test_case):
-        device = random_device()
+    @autotest(n=30, auto_backward=False, check_graph=True, rtol=0.5, atol=0.5)
+    def test_sqrt_sum_with_random_data(test_case):
+        device = cpu_device()
         x = random_pytorch_tensor(
-            ndim=4, dim1=3, dim2=4, dim3=5, requires_grad=False
+            ndim=4, dim1=30, dim2=40, dim3=50, requires_grad=False
         ).to(device)
         y = torch.linalg.norm(x)
         return y
 
+    @autotest(n=30, auto_backward=False, check_graph=True)
+    def test_sqrt_sum_with_random_data(test_case):
+        device = gpu_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=100, dim2=100, dim3=100, requires_grad=False
+        ).to(device)
+        y = torch.linalg.norm(x)
+        return y
 
 if __name__ == "__main__":
     unittest.main()
