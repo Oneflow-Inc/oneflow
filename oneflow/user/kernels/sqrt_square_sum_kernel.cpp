@@ -13,15 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/sqrt_square_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
 namespace user_op {
+
+int64_t getThreadNumBlocks(int64_t n) {
+  int64_t num_blocks = 0;
+#ifdef WITH_CUDA
+  num_blocks = BlocksNum4ThreadsNum(n);
+#endif
+  return num_blocks;
+}
 
 template<DeviceType device_type, typename T>
 class SqrtSquareSumKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -48,7 +56,7 @@ class SqrtSquareSumKernel final : public user_op::OpKernel, public user_op::Cuda
                        && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                   \
         const auto& x_shape = ctx->InputTensorDesc("x", 0).shape();                   \
-        const int32_t num_blocks = BlocksNum4ThreadsNum(x_shape.Count(0));            \
+        const int32_t num_blocks = getThreadNumBlocks(x_shape.Count(0));              \
         int64_t tmp_buffer_size = num_blocks;                                         \
         return tmp_buffer_size * sizeof(OF_PP_PAIR_FIRST(dtype));                     \
       });
