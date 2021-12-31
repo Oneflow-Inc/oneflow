@@ -27,23 +27,23 @@ import oneflow.unittest
 
 # TODO(lixiang): For CI
 # class TestFlip(flow.unittest.TestCase):
-    # @autotest(check_graph=True)
-    # def test_flow_flip_list_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(
-    #         ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
-    #     ).to(device)
-    #     y = torch.flip(x, constant([0, 1, 2]))
-    #     return y
+# @autotest(check_graph=True)
+# def test_flow_flip_list_with_random_data(test_case):
+#     device = random_device()
+#     x = random_pytorch_tensor(
+#         ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+#     ).to(device)
+#     y = torch.flip(x, constant([0, 1, 2]))
+#     return y
 
-    # @autotest(check_graph=True)
-    # def test_flow_flip_tuple_with_random_data(test_case):
-    #     device = random_device()
-    #     x = random_pytorch_tensor(
-    #         ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
-    #     ).to(device)
-    #     y = torch.flip(x, constant((0, 1, 2)))
-    #     return y
+# @autotest(check_graph=True)
+# def test_flow_flip_tuple_with_random_data(test_case):
+#     device = random_device()
+#     x = random_pytorch_tensor(
+#         ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+#     ).to(device)
+#     y = torch.flip(x, constant((0, 1, 2)))
+#     return y
 
 
 if __name__ == "__main__":
