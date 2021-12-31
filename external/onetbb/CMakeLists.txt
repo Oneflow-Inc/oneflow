@@ -6,7 +6,7 @@ FetchContent_Declare(
   URL_HASH MD5=${ONETBB_MD5}
 )
 FetchContent_GetProperties(onetbb_external)
-FetchContent_MakeAvailable(onetbb_external)
+
 
 set(CMAKE_CXX_FLAGS "" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_DEBUG "" CACHE STRING "" FORCE)
@@ -21,6 +21,7 @@ set(TBB_EXAMPLES OFF)
 set(TBB_TEST OFF)
 set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
-add_subdirectory(${onetbb_external_SOURCE_DIR} ${onetbb_external_BINARY_DIR})
+# add_subdirectory(${onetbb_external_SOURCE_DIR} ${onetbb_external_BINARY_DIR})
+FetchContent_MakeAvailable(onetbb_external)
 # set_property(GLOBAL PROPERTY ONETBB_SRC_DIR "${onetbb_SOURCE_DIR};${onetbb_BINARY_DIR}")
 # add_custom_target(external_onetbb)
