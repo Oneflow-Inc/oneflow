@@ -51,7 +51,7 @@ class FileGuard final {
     PCHECK(fstat(fd_, &sb) == 0);
     size_ = sb.st_size;
   }
-  FileGuard(FileGuard&& other) noexcept { *this = std::move(other); }
+  FileGuard(FileGuard&& other) noexcept : fd_(-1), size_(0) { *this = std::move(other); }
   FileGuard& operator=(FileGuard&& other) noexcept {
     this->Close();
     fd_ = other.fd_;
