@@ -30,7 +30,7 @@ class TestVar(flow.unittest.TestCase):
         y = torch.var(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_var_one_dim_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
