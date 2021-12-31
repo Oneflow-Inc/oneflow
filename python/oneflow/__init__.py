@@ -18,6 +18,8 @@ import os
 
 if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
     vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
+    print("py", os.getenv("CTEST_RESOURCE_GROUP_COUNT"))
+    print("py", os.getenv("CTEST_RESOURCE_GROUP_0_VRAM"))
     gpu_id = vram_str.split(",")[0].split(":")[-1]
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 

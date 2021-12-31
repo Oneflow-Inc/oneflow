@@ -1,6 +1,16 @@
 # CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=20 ninja test
 cmake_minimum_required(VERSION 3.19.0)
-
+find_program(CTEST_EXECUTABLE NAMES ctest REQUIRED)
+execute_process(
+  COMMAND ${CTEST_EXECUTABLE} --version
+  OUTPUT_VARIABLE CTEST_VERSION
+  COMMAND_ERROR_IS_FATAL ANY
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+set(MINIMUM_CTEST_VERSION 3.16.0)
+if (CTEST_VERSION VERSION_LESS ${MINIMUM_CTEST_VERSION})
+  message(FATAL_ERROR "OneFlow CI test uses RESOURCE_GROUPS which requires ctest >= ${MINIMUM_CTEST_VERSION}, found ctest: ${CTEST_EXECUTABLE}, version info: ${CTEST_VERSION}")
+endif()
 project(oneflow-ci-test)
 include(CMakeDependentOption)
 set(PYTHON_EXECUTABLE python3 CACHE STRING "python3 exe to run test, usually is the python3 installation oneflow is linked to")
@@ -11,12 +21,16 @@ set(RUN_IN_DOCKER ON CACHE BOOL "")
 set(PULL_DOCKER_IMG ON CACHE BOOL "")
 set(TEST_WITH_TF_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f" CACHE STRING "")
 set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae" CACHE STRING "")
-set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
+set(CTEST_RESOURCE_SPEC_FILE "${PROJECT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
 set(SINGLE_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_client/test CACHE STRING "test script dir for single client")
 set(MULTI_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test CACHE STRING "test script dir for multi client")
 set(ONEFLOW_WHEEL_PATH /home/caishenghang/550ed7f9122589ab0f1ae89a50e0bf4702974895ddafdc9a10a77628d5387138/cu102/whl CACHE STRING "URL or local path for wheels")
 enable_testing()
-
+if(EXISTS ${CTEST_RESOURCE_SPEC_FILE})
+  message(STATUS "using CTEST_RESOURCE_SPEC_FILE: ${CTEST_RESOURCE_SPEC_FILE}")
+else()
+  message(FATAL_ERROR "CTEST_RESOURCE_SPEC_FILE not found: ${CTEST_RESOURCE_SPEC_FILE}")
+endif()
 function(add_docker_container)
   set(prefix ARG)
   set(singleValues "FIXTURE_NAME;IMG")
@@ -51,8 +65,11 @@ function(add_docker_container)
     TIMEOUT 6000000000
   )
   # install pip and set as pip fixture
+  # add_test(NAME InstallOneFlowPipOn${fixtureName}
+  #   COMMAND docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+  # )
   add_test(NAME InstallOneFlowPipOn${fixtureName}
-    COMMAND docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+    COMMAND docker exec ${TEST_CONTAINER_NAME} ls
   )
   # stop container and set as container fixture cleanup
   add_test(NAME Stop${fixtureName}
@@ -69,7 +86,7 @@ endfunction()
 set(TF_CONTAINER_FIXTURE "TFContainer")
 set(TORCH_CONTAINER_FIXTURE "TorchContainer")
 if(RUN_IN_DOCKER)
-  set(DOCKER_EXE docker)
+  set(CTEST_DOCKER_EXEC ${PROJECT_SOURCE_DIR}/bin/ctest-docker-exec)
 endif()
 
 # TODO: ensure datasets (ExternalData)
@@ -114,34 +131,25 @@ function(add_oneflow_python_test)
       if (${prefix}_MULTI_CLIENT)
         set(TEST_CONTAINER_NAME "${${TORCH_CONTAINER_FIXTURE}Name}")
       endif()
-      set(DOCKER_EXEC_PREFIX "docker;exec;${TEST_CONTAINER_NAME}")
+      set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC};${TEST_CONTAINER_NAME}")
+      # set(DOCKER_EXEC_PREFIX "docker;exec;${TEST_CONTAINER_NAME}")
     endif()
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
       COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${PYTHON_TEST_FILE};--failfast;--verbose
+      # COMMAND ${DOCKER_EXEC_PREFIX};echo;\$\{CTEST_RESOURCE_GROUP_0_VRAM\}
     )
-    set_tests_properties(${TEST_NAME} PROPERTIES LABELS ${testLabels})
+    set(vramRequired 2000)
+    if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
+      set(vramRequired 4000)
+    endif()
     set_tests_properties(${TEST_NAME}
       PROPERTIES
         ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>"
-        RESOURCE_GROUPS
-          "vram:2000"
+        RESOURCE_GROUPS "vram:${vramRequired};"
+        LABELS "${testLabels};"
+        FIXTURES_REQUIRED "$<$<BOOL:${${prefix}_SINGLE_CLIENT}>:${TF_CONTAINER_FIXTURE}>;$<$<BOOL:${${prefix}_MULTI_CLIENT}>:${TORCH_CONTAINER_FIXTURE}>"
     )
-    if (RUN_IN_DOCKER)
-      if (${prefix}_SINGLE_CLIENT)
-        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED ${TF_CONTAINER_FIXTURE})
-      endif()
-      if (${prefix}_MULTI_CLIENT)
-        set_tests_properties(${TEST_NAME} PROPERTIES FIXTURES_REQUIRED ${TORCH_CONTAINER_FIXTURE})
-      endif()
-    endif()
-    if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
-      set_tests_properties(${TEST_NAME}
-          PROPERTIES
-            RESOURCE_GROUPS
-              "vram:4000"
-      )
-    endif()
   endforeach()
 endfunction()
 add_oneflow_python_test(TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test/modules MULTI_CLIENT)
