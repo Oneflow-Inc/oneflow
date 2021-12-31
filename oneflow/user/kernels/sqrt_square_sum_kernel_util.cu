@@ -23,7 +23,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void SqrtSquareSumForOneBlock(int64_t n, const T* x, T* y) {
+__global__ void SqrtSquareSumForOneThreadBlock(int64_t n, const T* x, T* y) {
   T t_sum = 0;
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
@@ -33,7 +33,7 @@ __global__ void SqrtSquareSumForOneBlock(int64_t n, const T* x, T* y) {
 }
 
 template<typename T>
-__global__ void SqrtSumForMultiBlock(int64_t n, const T* x, T* y) {
+__global__ void SqrtSumForMultiThreadBlock(int64_t n, const T* x, T* y) {
   T t_sum = 0;
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i]; }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
@@ -43,7 +43,7 @@ __global__ void SqrtSumForMultiBlock(int64_t n, const T* x, T* y) {
 }
 
 template<typename T>
-__global__ void SquareSumForMulBlock(int64_t n, const T* x, T* tmp) {
+__global__ void SquareSumForMultiThreadBlock(int64_t n, const T* x, T* tmp) {
   T t_sum = 0;
   CUDA_1D_KERNEL_LOOP(i, n) { t_sum += x[i] * x[i]; }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
@@ -60,14 +60,14 @@ struct SqrtSquareSumKernelUtil<DeviceType::kCUDA, T> {
     const int32_t num_blocks = BlocksNum4ThreadsNum(n);
     CHECK_GE(num_blocks, 0);
     if (num_blocks == 1) {
-      SqrtSquareSumForOneBlock<T>
+      SqrtSquareSumForOneThreadBlock<T>
           <<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
     } else {
       Memset<DeviceType::kCUDA>(stream, y, 0, sizeof(T));
-      SquareSumForMulBlock<T>
+      SquareSumForMultiThreadBlock<T>
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               n, x, tmp);
-      SqrtSumForMultiBlock<T>
+      SqrtSumForMultiThreadBlock<T>
           <<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               num_blocks, tmp, y);
     }
