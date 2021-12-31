@@ -76,10 +76,6 @@ __global__ void ToContiguousForwardGpu(IndexType count, IndexType block_size, St
   {
     IndexType in_idx = compute_index<IndexType, ndim>(out_idx, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
-
-    // for (IndexType i = 0; i < block_size; ++i) {
-    //   out_dptr[out_idx+i] = in_dptr[in_idx+i];
-    // }
   }
 }
 
@@ -91,31 +87,28 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, IndexType blo
 
   const size_t num_blocks = GetNumBlocks(count);
   const size_t num_threads = GetMinThreadNum(count);
-  ToContiguousForwardGpu<T, IndexType, ndim><<<num_blocks, num_threads, 0,
+
+  if (pack_size == 16 && block_size % 16 == 0) {
+    ToContiguousForwardGpu<ulonglong2, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const ulonglong2*>(in_dptr), reinterpret_cast<ulonglong2*>(out_dptr));
+  } else if (pack_size == 8 && block_size % 8 == 0) {
+    ToContiguousForwardGpu<uint64_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const uint64_t*>(in_dptr), reinterpret_cast<uint64_t*>(out_dptr));
+  } else if(pack_size == 4 && block_size % 4 == 0 ){
+    ToContiguousForwardGpu<uint32_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const uint32_t*>(in_dptr), reinterpret_cast<uint32_t*>(out_dptr));
+  } else if(pack_size == 2 && block_size % 2 == 0 ){
+    ToContiguousForwardGpu<uint16_t, IndexType, ndim><<<num_blocks, num_threads, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const uint16_t*>(in_dptr), reinterpret_cast<uint16_t*>(out_dptr));
+  } else {
+    ToContiguousForwardGpu<T, IndexType, ndim><<<num_blocks, num_threads, 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
       count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-
-  // if (pack_size == 16 && block_size % 16 == 0) {
-  //   ToContiguousForwardGpu<ulonglong2, IndexType, ndim><<<num_blocks, num_threads, 0,
-  //                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-  //     count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const ulonglong2*>(in_dptr), reinterpret_cast<ulonglong2*>(out_dptr));
-  // } else if (pack_size == 8 && block_size % 8 == 0) {
-  //   ToContiguousForwardGpu<uint64_t, IndexType, ndim><<<num_blocks, num_threads, 0,
-  //                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-  //     count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const uint64_t*>(in_dptr), reinterpret_cast<uint64_t*>(out_dptr));
-  // } else if(pack_size == 4 && block_size % 4 == 0 ){
-  //   ToContiguousForwardGpu<uint32_t, IndexType, ndim><<<num_blocks, num_threads, 0,
-  //                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-  //     count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const uint32_t*>(in_dptr), reinterpret_cast<uint32_t*>(out_dptr));
-  // } else if(pack_size == 2 && block_size % 2 == 0 ){
-  //   ToContiguousForwardGpu<uint16_t, IndexType, ndim><<<num_blocks, num_threads, 0,
-  //                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-  //     count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const uint16_t*>(in_dptr), reinterpret_cast<uint16_t*>(out_dptr));
-  // } else {
-  //   ToContiguousForwardGpu<T, IndexType, ndim><<<num_blocks, num_threads, 0,
-  //                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-  //     count, block_size, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  // }
+  }
 }
 
 
