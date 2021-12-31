@@ -110,6 +110,15 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(input.numpy(), gpu_output.numpy(), rtol=0.0001, atol=0.0001)
         )
+    def test_tensor_to_h2d1(test_case):
+        input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.int64)
+        output = input.to(device=flow.device("cuda:1"), dtype=flow.int32)
+        test_case.assertEqual(output.device, flow.device("cuda:1"))
+        test_case.assertEqual(output.dtype, flow.int32)
+        test_case.assertTrue(
+            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+        )
+
 
     def test_tensor_to_d2h(test_case):
         input = flow.tensor(
