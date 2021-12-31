@@ -16,10 +16,16 @@ limitations under the License.
 
 import os
 
-if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
-    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
-    gpu_id = vram_str.split(",")[0].split(":")[-1]
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+CTEST_RESOURCE_GROUP_COUNT = os.getenv("CTEST_RESOURCE_GROUP_COUNT")
+if CTEST_RESOURCE_GROUP_COUNT:
+    group_count = int(CTEST_RESOURCE_GROUP_COUNT)
+    cuda_visible_devices = []
+    for i in range(group_count):
+        vram_str = os.getenv(f"CTEST_RESOURCE_GROUP_{i}_VRAM")
+        gpu_id = vram_str.split(",")[0].split(":")[-1]
+        cuda_visible_devices.append(gpu_id)
+    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(cuda_visible_devices)
+    print("CUDA_VISIBLE_DEVICES", os.getenv("CUDA_VISIBLE_DEVICES"))
 
 import sys
 import collections
