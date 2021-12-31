@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/sqrt_square_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
