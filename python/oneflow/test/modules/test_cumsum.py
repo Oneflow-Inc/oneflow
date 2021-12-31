@@ -21,6 +21,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCumsum(flow.unittest.TestCase):
     @autotest(n=30, check_graph=True)

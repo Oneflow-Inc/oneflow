@@ -52,7 +52,7 @@ __global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_spac
 }
 template<typename T>
 __global__ void CumsumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_space,
-                                            int64_t cs_down_space) {
+                                           int64_t cs_down_space) {
   CUDA_1D_KERNEL_LOOP(i, cs_down_space) {
     auto* in_ptr_base = in_ptr + i;
     auto* out_ptr_base = out_ptr + i;
@@ -67,7 +67,7 @@ __global__ void CumsumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t 
 }
 template<typename T>
 __global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
-                                              int64_t cs_space) {
+                                             int64_t cs_space) {
   CUDA_1D_KERNEL_LOOP(i, cs_up_space) {
     auto* in_ptr_base = in_ptr + i * cs_space;
     auto* out_ptr_base = out_ptr + i * cs_space;
@@ -89,17 +89,18 @@ __global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_
 // ...       ...  ...
 // dmn, ..., d1n, d0n
 template<typename T>
-__global__ void CumsumBackwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_space, int64_t cs_down_space, int64_t elem_cnt) {
+__global__ void CumsumBackwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_space,
+                                  int64_t cs_down_space, int64_t elem_cnt) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
        i += step) {
-    auto tmp = cs_space * cs_down_space; 
+    auto tmp = cs_space * cs_down_space;
     auto cs_space_id = (i - (i / tmp) * tmp) / cs_down_space;
     out_ptr[i] = (cs_space - cs_space_id) * in_ptr[i];
   }
 }
 template<typename T>
-__global__ void CumsumBackwardGpu_DownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
-                                  int64_t elem_cnt) {
+__global__ void CumsumBackwardGpu_DownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
+                                               int64_t cs_space, int64_t elem_cnt) {
   for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
        i += step) {
     auto cs_space_id = i - (i / cs_space) * cs_space;
@@ -142,8 +143,8 @@ class GpuCumsumKernel final : public user_op::OpKernel {
       RUN_CUDA_KERNEL((CumsumForwardGpuDownSpaceIs1<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
                       cs_up_space, cs_space);
     } else {
-      RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, in_ptr, out_ptr, cs_up_space,
-                      cs_space, cs_down_space);
+      RUN_CUDA_KERNEL((CumsumForwardGpu<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
+                      cs_up_space, cs_space, cs_down_space);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -184,10 +185,10 @@ class GpuCumsumGradKernel final : public user_op::OpKernel {
     auto thread_num = elem_cnt;
 
     if (cs_down_space == 1) {
-      RUN_CUDA_KERNEL((CumsumBackwardGpu_DownSpaceIs1<T>), ctx->stream(), thread_num, in_ptr, out_ptr,
-                      cs_up_space, cs_space, elem_cnt);
+      RUN_CUDA_KERNEL((CumsumBackwardGpu_DownSpaceIs1<T>), ctx->stream(), thread_num, in_ptr,
+                      out_ptr, cs_up_space, cs_space, elem_cnt);
     } else {
-      RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, in_ptr, out_ptr, cs_space, 
+      RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, in_ptr, out_ptr, cs_space,
                       cs_down_space, elem_cnt);
     }
   }
