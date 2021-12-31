@@ -140,10 +140,19 @@ function(add_oneflow_python_test)
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
       set(vramRequired 4000)
     endif()
+    if(ONEFLOW_TEST_DEVICE_NUM EQUAL 1)
+      set(resourceGroups "vram:${vramRequired}")
+    elseif(ONEFLOW_TEST_DEVICE_NUM EQUAL 2)
+      set(resourceGroups "vram:${vramRequired},vram:${vramRequired}")
+    elseif(ONEFLOW_TEST_DEVICE_NUM EQUAL 4)
+      set(resourceGroups "vram:${vramRequired},vram:${vramRequired},vram:${vramRequired},vram:${vramRequired}")
+    else()
+      message(FATAL_ERROR "unsupprted ONEFLOW_TEST_DEVICE_NUM: ${ONEFLOW_TEST_DEVICE_NUM}")
+    endif()
     set_tests_properties(${TEST_NAME}
       PROPERTIES
         ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
-        RESOURCE_GROUPS "${ONEFLOW_TEST_DEVICE_NUM},vram:${vramRequired};"
+        RESOURCE_GROUPS "${resourceGroups}"
         LABELS "${testLabels};"
         FIXTURES_REQUIRED "$<$<BOOL:${${prefix}_SINGLE_CLIENT}>:${TF_CONTAINER_FIXTURE}>;$<$<BOOL:${${prefix}_MULTI_CLIENT}>:${TORCH_CONTAINER_FIXTURE}>"
     )
