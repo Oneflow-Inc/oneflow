@@ -33,6 +33,7 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
         y = torch.linalg.norm(x)
         return y
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=30, auto_backward=False, check_graph=True)
     def test_sqrt_sum_with_cuda_random_data(test_case):
         device = gpu_device()
