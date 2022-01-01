@@ -707,7 +707,8 @@ def autotest(
                                     rtol=rtol,
                                     atol=atol,
                                     equal_nan=True,
-                                )
+                                ),
+                                f"Check graph failed: graph result {eager_tensor_2_graph_tensor[flow_tensor].numpy()} not equals to eager result {flow_tensor.numpy()}.",
                             )
                             if verbose:
                                 print(f"{f.__name__} test graph passed.")

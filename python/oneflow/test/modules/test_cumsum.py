@@ -13,22 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
+from collections import OrderedDict
 
 import oneflow as flow
-from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAbsModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
-    def test_abs_with_0_size_data(test_case):
+class TestCumsum(flow.unittest.TestCase):
+    @autotest(n=30, check_graph=True)
+    def test_cumsum(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = torch.abs(x)
-        return y
+        dim = random(0, x.ndim.pytorch).to(int)
+        z = torch.cumsum(x, dim)
+        return z
 
 
 if __name__ == "__main__":
