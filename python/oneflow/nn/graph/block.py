@@ -204,7 +204,7 @@ class ModuleBlock(Block):
         # to use hooks of nn.Module in nn.Graph for the moment.
         # result = self._origin.__class__.__call__(self, *args)
         with graph_build_util.GLogScopeContext(
-            self._debug_min_s_level, self._debug_max_v_level - 1
+            self._debug_min_s_level, self._debug_max_v_level
         ):
             result = self.__block_forward(*args)
 
