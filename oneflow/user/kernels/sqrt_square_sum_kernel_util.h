@@ -20,12 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
-struct SqrtSquareSumParam {
-  const T* ptr;
-  int64_t count;
-};
-
 template<DeviceType device_type, typename T>
 struct SqrtSquareSumKernelUtil {
   static void SqrtSquareSum(ep::Stream* stream, int64_t n, const T* x, T* y, T* tmp);
