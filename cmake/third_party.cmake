@@ -323,8 +323,19 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
+  if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
+    message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
+  endif()
+  get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
   foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
+    set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR})
+    if(of_include_src_dir MATCHES "/include$")
+      set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR_PARENT})
+    endif()
+    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR_DST}
+      COMPONENT oneflow_py_include
+      EXCLUDE_FROM_ALL
+    )
   endforeach()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
