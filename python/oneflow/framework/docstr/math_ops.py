@@ -1401,7 +1401,7 @@ add_docstr(
         >>> dim=1
         >>> flow.cumsum(input,dim)
         tensor([[1., 2., 3.],
-            [1., 2., 3.],
-            [1., 2., 3.]], dtype=oneflow.float32)
+                [1., 2., 3.],
+                [1., 2., 3.]], dtype=oneflow.float32)
     """,
 )
