@@ -2376,7 +2376,7 @@ class MaskedFillFunctor {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
       return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+          *op_, {JUST(Expand(x, max_shape))->contiguous(), JUST(Expand(mask, max_shape))->contiguous()}, attrs);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), mask->contiguous()}, attrs);
   }
