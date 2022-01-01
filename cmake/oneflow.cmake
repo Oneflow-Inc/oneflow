@@ -303,7 +303,7 @@ if(BUILD_PYTHON)
   # py ext lib
   oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-  target_link_libraries(of_pyext_obj oneflow)
+  target_link_libraries(of_pyext_obj oneflow pybind11::headers)
   if(BUILD_SHARED_LIBS AND APPLE)
     target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
   endif()
