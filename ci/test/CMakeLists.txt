@@ -111,6 +111,21 @@ function(get_combinations_of_two)
   set(${${prefix}_RESULT} ${result} PARENT_SCOPE)
 endfunction()
 
+function(get_random_port)
+  set(prefix ARG)
+  set(singleValues "RESULT")
+  cmake_parse_arguments(
+    PARSE_ARGV 0
+    ${prefix}
+    "${noValues}" "${singleValues}" "${multiValues}"
+  )
+  # max port number 65,535
+  string(RANDOM LENGTH 1 ALPHABET "123456" firstNumber)
+  string(RANDOM LENGTH 1 ALPHABET "01234" secondNumber) # max is 4 to avoid overflow
+  string(RANDOM LENGTH 3 ALPHABET "0123456789" leftNumbers)
+  set(${${prefix}_RESULT} ${firstNumber}${secondNumber}${leftNumbers} PARENT_SCOPE)
+endfunction()
+
 # TODO: ensure datasets (ExternalData)
 # TODO: (if it is .whl URL) download pip package
 function(add_oneflow_python_test)
@@ -151,7 +166,8 @@ function(add_oneflow_python_test)
       set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC};${TEST_CONTAINER_NAME}")
     endif()
     if (${prefix}_SINGLE_CLIENT)
-      set(DISTRIBUTED_LAUNCH_PREFIX "-m;oneflow.distributed.launch;--nproc_per_node;${ONEFLOW_TEST_DEVICE_NUM}")
+      get_random_port(RESULT portNumber)
+      set(DISTRIBUTED_LAUNCH_PREFIX "-m;oneflow.distributed.launch;--nproc_per_node;${ONEFLOW_TEST_DEVICE_NUM};--master_port;${portNumber}")
     endif()
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
