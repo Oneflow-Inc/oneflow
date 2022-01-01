@@ -22,6 +22,7 @@ set(RUN_IN_DOCKER ON CACHE BOOL "")
 set(PULL_DOCKER_IMG ON CACHE BOOL "")
 set(TEST_WITH_TF_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f" CACHE STRING "")
 set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae" CACHE STRING "")
+# TODO: generate resource spec by running nvidia-smi
 set(CTEST_RESOURCE_SPEC_FILE "${PROJECT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
 set(SINGLE_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_client/test CACHE STRING "test script dir for single client")
 set(MULTI_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test CACHE STRING "test script dir for multi client")
