@@ -1864,3 +1864,11 @@
 - name: "in_top_k"
   signature: "Tensor (Tensor targets, Tensor predictions, Int32 k) => InTopK"
   bind_python: True
+
+- name: "cumsum"
+  signature: "Tensor (Tensor input, Int64 dim) => Cumsum"
+  bind_python: True
+
+- name: "cumsum_grad"
+  signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
+  bind_python: False 
