@@ -153,16 +153,13 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
 }
 
 Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
-    const Operator& op, cfg::SbpSignature* sbp_sig_conf,
-    HashMap<std::string, bool>* ibn2disable_boxing) const {
+    const Operator& op, cfg::SbpSignature* sbp_sig_conf) const {
   auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
   for (const std::string& ibn : op.input_bns()) {
     std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.op_conf(), ibn);
     cfg::SbpParallel sbp_parallel;
     bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
-    bool has_disable_boxing_hint =
-        JUST(ParseDisableBoxingFlag(lbn_may_with_hint, &(*ibn2disable_boxing)[ibn]));
-    if (has_sbp_hint || has_disable_boxing_hint) {
+    if (has_sbp_hint) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
@@ -372,18 +369,24 @@ void JobBuildAndInferCtx::InitIbn2DisableBoxing(const Operator& op,
   }
 }
 
-void JobBuildAndInferCtx::UpdateLbi2DisableBoxing(
-    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) {
-  bool disable_boxing = false;
-  for (const auto& ibn : op.input_bns()) {
-    if (ibn2disable_boxing.at(ibn)) {
-      disable_boxing = true;
-      break;
+Maybe<cfg::NdSbpSignature> JobBuildAndInferCtx::InitConstraitNdSbpSignature(
+    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) const {
+  auto nd_sbp_sig = std::make_shared<cfg::NdSbpSignature>();
+  for (const auto& it : ibn2disable_boxing) {
+    if (it.second) {
+      const auto& ibn = it.first;
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
+      const auto& nd_sbp_iter = lbi2nd_sbp_from_producer_view_.find(lbi);
+      if (nd_sbp_iter == lbi2nd_sbp_from_producer_view_.end()) {
+        return Error::RuntimeError()
+               << "The nd_sbp of input " << ibn << " (tensor name is " << GenLogicalBlobName(lbi)
+               << ") is not found for operation " << op.op_name()
+               << ". It maybe caused by an invalid inplace operation.";
+      }
+      (*(nd_sbp_sig->mutable_bn_in_op2nd_sbp()))[ibn] = lbi2nd_sbp_from_producer_view_.at(lbi);
     }
   }
-  for (const auto& obn : op.output_bns()) {
-    lbi2disable_boxing_[op.BnInOp2Lbi(obn)] = disable_boxing;
-  }
+  return nd_sbp_sig;
 }
 
 bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
@@ -572,12 +575,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   cfg::SbpSignature sbp_sig_conf;
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
-  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
+  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf));
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
   ParallelDesc parallel_desc(*parallel_conf);
   JUST(op->FillOpParallelDesc(parallel_desc));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
-  UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
 
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
@@ -592,8 +594,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
   // infer nd_sbp signature
-  cfg::NdSbpSignature nd_sbp_sig_conf;
-  SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  cfg::NdSbpSignature nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  // Override constrait nd_sbp if sbp hint is given
+  if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  }
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, nd_sbp_sig_conf,
                                     is_mirrored_parallel_view);
   JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
@@ -663,12 +668,19 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
-Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
+Maybe<bool> JobBuildAndInferCtx::IsDisableBoxing(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
   const auto& iter = lbi2disable_boxing_.find(lbi);
   CHECK_OR_RETURN(iter != lbi2disable_boxing_.end());
   return iter->second;
+}
+
+Maybe<void> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) {
+  JUST(CheckLbnValidAndExist(lbn));
+  LogicalBlobId lbi(GenLogicalBlobId(lbn));
+  lbi2disable_boxing_[lbi] = true;
+  return Maybe<void>::Ok();
 }
 
 Maybe<Operator*> JobBuildAndInferCtx::Op4OpName(const std::string& op_name) const {
