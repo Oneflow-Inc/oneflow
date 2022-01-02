@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_TESTS_API_TEST_H_
-#define ONEFLOW_API_CPP_TESTS_API_TEST_H_
+#ifndef ONEFLOW_API_CPP_TEST_API_TEST_H_
+#define ONEFLOW_API_CPP_TEST_API_TEST_H_
 
 #include "oneflow/api/cpp/api.h"
 
@@ -36,4 +36,4 @@ std::string GetExeDir();
 
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_TESTS_API_TEST_H_
+#endif  // ONEFLOW_API_CPP_TEST_API_TEST_H_

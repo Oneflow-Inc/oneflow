@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_API_CPP_GRAPH_H_
-#define ONEFLOW_API_CPP_GRAPH_H_
+#ifndef ONEFLOW_API_CPP_INCLUDE_FRAMEWORK_GRAPH_H_
+#define ONEFLOW_API_CPP_INCLUDE_FRAMEWORK_GRAPH_H_
 
 #include "device.h"
 #include "ivalue.h"
@@ -53,4 +53,4 @@ class Graph {
 
 }  // namespace oneflow_api
 
-#endif  // ONEFLOW_API_CPP_GRAPH_H_
+#endif  // ONEFLOW_API_CPP_INCLUDE_FRAMEWORK_GRAPH_H_
