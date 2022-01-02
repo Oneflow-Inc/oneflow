@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/cpp/nn/functional/activation.h"
+#include "oneflow/api/cpp/include/nn/functional/activation.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow_api {

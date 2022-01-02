@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/cpp/framework/tensor.h"
-#include "oneflow/api/cpp/framework/device.h"
-#include "oneflow/api/cpp/framework/dtype.h"
-#include "oneflow/api/cpp/framework/shape.h"
+#include "oneflow/api/cpp/include/framework/tensor.h"
+#include "oneflow/api/cpp/include/framework/device.h"
+#include "oneflow/api/cpp/include/framework/dtype.h"
+#include "oneflow/api/cpp/include/framework/shape.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"

@@ -23,8 +23,8 @@ limitations under the License.
 #include <iostream>
 #include <thread>
 #include <vector>
-#include "oneflow/api/cpp/framework.h"
-#include "oneflow/api/cpp/tests/api_test.h"
+#include "oneflow/api/cpp/include/framework.h"
+#include "oneflow/api/cpp/test/api_test.h"
 
 namespace oneflow_api {
 

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/cpp/framework/ivalue.h"
+#include "oneflow/api/cpp/include/framework/ivalue.h"
 #include <glog/logging.h>
 
 namespace oneflow_api {

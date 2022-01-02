@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include <gtest/gtest.h>
-#include "oneflow/api/cpp/tests/api_test.h"
+#include "oneflow/api/cpp/test/api_test.h"
 
 namespace oneflow_api {
 

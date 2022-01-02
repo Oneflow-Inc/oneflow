@@ -16,9 +16,9 @@ limitations under the License.
 
 #include <random>
 #include <gtest/gtest.h>
-#include "oneflow/api/cpp/framework/dtype.h"
-#include "oneflow/api/cpp/framework/ivalue.h"
-#include "oneflow/api/cpp/tests/api_test.h"
+#include "oneflow/api/cpp/include/framework/dtype.h"
+#include "oneflow/api/cpp/include/framework/ivalue.h"
+#include "oneflow/api/cpp/test/api_test.h"
 
 namespace oneflow_api {
 

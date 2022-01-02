@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/api/cpp/tests/api_test.h"
+#include "oneflow/api/cpp/test/api_test.h"
 #include <cstddef>
 #include <random>
 #include <string>

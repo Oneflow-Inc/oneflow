@@ -23,7 +23,7 @@ limitations under the License.
 #include <cstdlib>
 #include <random>
 #include <type_traits>
-#include "oneflow/api/cpp/env.h"
+#include "oneflow/api/cpp/include/env.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/multi_client.h"

@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_TEST_API_TEST_H_
 #define ONEFLOW_API_CPP_TEST_API_TEST_H_
 
-#include "oneflow/api/cpp/api.h"
+#include "oneflow/api/cpp/include/api.h"
 
 namespace oneflow_api {
 
