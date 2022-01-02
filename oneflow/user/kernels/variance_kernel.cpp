@@ -31,18 +31,18 @@ class VarKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const bool unbiased = ctx->Attr<bool>("unbiased");
     const T* in_ptr = input->dptr<T>();
     T* out_ptr = output->mut_dptr<T>();
-    T* tmp_buffer_ptr = tmp_buffer->mut_dptr<T>();
     const int64_t elem_cnt = input->shape().elem_cnt();
     if (elem_cnt == 0 || (elem_cnt == 1 && unbiased == true)) {
       *out_ptr = std::numeric_limits<double>::quiet_NaN();
       return;
     }
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
-
+    T* tmp_buffer_ptr = axis.size() != input->shape().NumAxes()
+                            ? nullptr
+                            : ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>();
     VarParamHelper param_helper(input->shape(), axis, unbiased);
     VarFunctor<device_type, T>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
                                  param_helper.param);
