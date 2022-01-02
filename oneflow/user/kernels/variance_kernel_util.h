@@ -24,21 +24,23 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 namespace {
+#ifdef WITH_CUDA
 void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
   // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
-  if (total_elem_cnt > (oneflow::kCudaThreadsNumPerBlock << 1)) {
-    *grid_dim = std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))),
-                         oneflow::kCudaMaxBlocksNum);
-    *block_dim = oneflow::kCudaThreadsNumPerBlock;
+  if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
+    *grid_dim =
+        std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
+    *block_dim = kCudaThreadsNumPerBlock;
   } else {
     *grid_dim = 1;
-    int32_t aligned_block_dim = (total_elem_cnt >= oneflow::kCudaThreadsNumPerBlock)
-                                    ? oneflow::kCudaThreadsNumPerBlock
-                                    : (total_elem_cnt + oneflow::kCudaWarpSize - 1)
-                                          / oneflow::kCudaWarpSize * oneflow::kCudaWarpSize;
-    *block_dim = std::min(aligned_block_dim, oneflow::kCudaThreadsNumPerBlock);
+    int32_t aligned_block_dim =
+        (total_elem_cnt >= kCudaThreadsNumPerBlock)
+            ? kCudaThreadsNumPerBlock
+            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
+    *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
   }
 }
+#endif  // WITH_CUDA
 }  // namespace
 
 OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index,
