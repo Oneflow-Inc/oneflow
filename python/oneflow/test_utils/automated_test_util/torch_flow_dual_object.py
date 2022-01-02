@@ -21,10 +21,12 @@ import warnings
 
 import numpy as np
 import oneflow as flow
+
 flow.backends.cudnn.deterministic = True
 
 try:
     import torch as torch_original
+
     torch_original.backends.cudnn.deterministic = True
     torch_original.set_printoptions(profile="full")
 except ImportError:
