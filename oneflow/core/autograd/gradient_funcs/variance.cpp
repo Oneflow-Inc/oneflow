@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct VarianceState : public AutoGradCaptureState {
-  VarianceState() : requires_grad(false), unbiased(true), keepdim(false), axis({}) {};
+  VarianceState() : requires_grad(false), unbiased(true), keepdim(false), axis({}){};
   bool requires_grad;
   bool unbiased;
   bool keepdim;

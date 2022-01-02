@@ -27,15 +27,15 @@ namespace {
 void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
   // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
   if (total_elem_cnt > (oneflow::kCudaThreadsNumPerBlock << 1)) {
-    *grid_dim =
-        std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), oneflow::kCudaMaxBlocksNum);
+    *grid_dim = std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))),
+                         oneflow::kCudaMaxBlocksNum);
     *block_dim = oneflow::kCudaThreadsNumPerBlock;
   } else {
     *grid_dim = 1;
-    int32_t aligned_block_dim =
-        (total_elem_cnt >= oneflow::kCudaThreadsNumPerBlock)
-            ? oneflow::kCudaThreadsNumPerBlock
-            : (total_elem_cnt + oneflow::kCudaWarpSize - 1) / oneflow::kCudaWarpSize * oneflow::kCudaWarpSize;
+    int32_t aligned_block_dim = (total_elem_cnt >= oneflow::kCudaThreadsNumPerBlock)
+                                    ? oneflow::kCudaThreadsNumPerBlock
+                                    : (total_elem_cnt + oneflow::kCudaWarpSize - 1)
+                                          / oneflow::kCudaWarpSize * oneflow::kCudaWarpSize;
     *block_dim = std::min(aligned_block_dim, oneflow::kCudaThreadsNumPerBlock);
   }
 }
