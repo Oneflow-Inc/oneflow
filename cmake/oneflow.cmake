@@ -352,8 +352,8 @@ endif(BUILD_PYTHON)
 
 if (BUILD_CPP_API)
   file(GLOB_RECURSE of_cpp_api_files
-    ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
-    ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
+    ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/lib/*.cpp
+    ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/include/*.h)
   if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
     oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
   else()
@@ -388,7 +388,9 @@ if(BUILD_TESTING)
   endif()
 
   if (BUILD_CPP_API)
-    file(GLOB_RECURSE cpp_api_test_files ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/tests/*.cpp)
+    file(GLOB_RECURSE cpp_api_test_files 
+      ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/test/*.cpp
+      ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/test/*.h)
     oneflow_add_test(oneflow_cpp_api_testexe SRCS ${cpp_api_test_files} TEST_NAME oneflow_cpp_api_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
     target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs})
   endif()
@@ -462,8 +464,8 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 
-set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/api")
-install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
+set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/")
+install(DIRECTORY oneflow/api/cpp/include/ DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
   COMPONENT oneflow_cpp_include
   EXCLUDE_FROM_ALL
   FILES_MATCHING
