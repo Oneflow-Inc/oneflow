@@ -601,7 +601,7 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    equality_res = np.allclose(
+    equality_res = np.allclose( 
         torch_tensor.detach().cpu().numpy(),
         flow_tensor.numpy(),
         rtol=rtol,
@@ -651,9 +651,12 @@ def autotest(
                 dual_objects_to_test.clear()
                 try:
                     global testing_graph
+                    global testing
+                    testing = True
                     if check_graph:
                         testing_graph = True
                     res = f(test_case)
+                    testing = False
                     testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
@@ -700,6 +703,7 @@ def autotest(
                         and id(x.pytorch) not in call_tensor_id
                     ):
                         vis_tensor.append(x.pytorch)
+
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
