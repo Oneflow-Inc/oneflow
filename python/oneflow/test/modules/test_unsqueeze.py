@@ -77,15 +77,15 @@ class TestUnsqueeze(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(check_graph=True)
     def test_flow_unsqueeze_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.unsqueeze(x, random(1, 3).to(int))
         return y
 
-    @autotest(auto_backward=False)
-    def test_unsqueeze_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_unsqueeze_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(3, 2, 1, 0).to(device)
         y = torch.unsqueeze(x, random(0, 2).to(int))

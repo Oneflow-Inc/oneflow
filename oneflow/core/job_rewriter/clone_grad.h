@@ -20,10 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
-                               const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
-                               HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
-                               HashMap<OpBlobArg, LogicalBlobId>* out_oba2clone_bw_add_out_lbi);
+Maybe<void> GenerateCloneGradOpIfNeed(
+    const OpNode& op_node, JobBuilder* job_builder,
+    const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
+    HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
+    HashMap<OpBlobArg, LogicalBlobId>* out_oba2clone_bw_add_out_lbi);
 }
 
 #endif  // ONEFLOW_CORE_JOB_REWRITER_CLONE_GRAD_H_

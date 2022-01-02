@@ -1,4 +1,4 @@
-add_llvm_library(MLIROneFlowTranslation
+oneflow_add_mlir_library(MLIROneFlowTranslation
   MLIROneFlowTranslation.cpp
   Importer.cpp
   ADDITIONAL_HEADER_DIRS
@@ -7,12 +7,6 @@ add_llvm_library(MLIROneFlowTranslation
   oneflow_deps
 	LINK_LIBS PUBLIC
 	MLIRIR
-  BUILDTREE_ONLY
-)
-llvm_update_compile_flags(MLIROneFlowTranslation)
-
-target_link_libraries(MLIROneFlowTranslation
-  PRIVATE
   ${dialect_libs}
   ${translation_libs}
   MLIRIR
@@ -22,7 +16,7 @@ target_link_libraries(MLIROneFlowTranslation
   MLIRTranslation
   MLIRSupport
   MLIROneFlow
-  of_protoobj
+  oneflow
 )
 
 if (BUILD_SHARED_LIBS)

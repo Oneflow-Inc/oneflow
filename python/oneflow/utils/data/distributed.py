@@ -124,7 +124,7 @@ class DistributedSampler(Sampler[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         if self.shuffle:
             # deterministically shuffle based on epoch and seed
-            g = flow.Generator()
+            g = flow.Generator("cpu")
             g.manual_seed(self.seed + self.epoch)
             indices = flow._C.randperm(len(self.dataset), generator=g).tolist()
         else:

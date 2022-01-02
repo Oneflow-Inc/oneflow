@@ -32,13 +32,25 @@ namespace hob {
 
 template<typename Context, typename ValueT>
 struct BaseExpr {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+  // NOTE: Performance will be degraded if the destructor is virtual.
+  //       So please do NOT implement custom destructor in any child classes of BaseExpr,
+  //       and every fields of child classes should be of POD type.
+  ~BaseExpr() = default;
+#pragma GCC diagnostic pop
   ALWAYS_INLINE virtual scalar_or_const_ref_t<ValueT> get(const Context&) const = 0;
   virtual std::string DebugStr(const Context&, bool display_result = true) const = 0;  // NOLINT
   operator bool() = delete;
 };
 
 template<typename Context, typename ValueT, typename E>
-struct Expr : public BaseExpr<Context, ValueT> {};
+struct Expr : public BaseExpr<Context, ValueT> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+  ~Expr() = default;
+#pragma GCC diagnostic pop
+};
 
 template<typename Context, typename ValueT>
 struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {

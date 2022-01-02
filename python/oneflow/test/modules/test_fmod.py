@@ -28,7 +28,7 @@ import oneflow.unittest
 
 
 class TestFmodModule(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_flow_fmod_element_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
@@ -37,7 +37,7 @@ class TestFmodModule(flow.unittest.TestCase):
         other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_flow_fmod_broadcast_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
@@ -46,7 +46,7 @@ class TestFmodModule(flow.unittest.TestCase):
         other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=constant(1)).to(device)
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=True)
+    @autotest(auto_backward=True, check_graph=False)
     def test_flow_fmod_scalar_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
@@ -55,8 +55,8 @@ class TestFmodModule(flow.unittest.TestCase):
         other = 3
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False)
-    def test_fmod_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_fmod_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.fmod(x, 2)

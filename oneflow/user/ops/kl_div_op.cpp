@@ -16,22 +16,24 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/loss_op_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 namespace {
-Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
+Maybe<void> KlInferTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
 
-  JUST(CheckLossReductionAndInferOutputTenserDesc(ctx, "out", input_desc.is_dynamic(),
-                                                  input_desc.shape()));
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
+  *out_desc->mut_shape() = input_desc.shape();
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> KlInferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
@@ -44,9 +46,10 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
+  const auto& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
-  JUST(CheckLossReductionAndCheckInputTenserDesc(ctx, "dy", target_desc.shape()));
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
 
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
@@ -67,62 +70,58 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("kl_div_loss")
-    .Input("input")
-    .Input("target")
-    .Output("out")
-    .Attr<std::string>("reduction")
-    .Attr<bool>("log_target")
-    .SetTensorDescInferFn(InferTensorDescFn)
-    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
-      CHECK_OR_RETURN(target_modifier != nullptr);
-      target_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
-      const auto reduction = ctx->Attr<std::string>("reduction");
-      FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
-        auto builder = ctx->NewBuilder().Split(ctx->inputs(), i);
-        if (reduction != "none") {
-          builder.Broadcast(user_op::OpArg("out", 0));
-        } else {
-          builder.Split(user_op::OpArg("out", 0), i);
-        }
-        builder.Build();
-      }
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> KlDivLossOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return KlInferTensorDescFn(ctx);
+}
 
-REGISTER_USER_OP("kl_div_loss_grad")
-    .Input("input")
-    .Input("target")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("reduction")
-    .Attr<bool>("log_target")
-    .SetTensorDescInferFn(InferGradTensorDescFn)
-    .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
-      const auto& dy_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0).shape();
-      FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
-        auto builder = ctx->NewBuilder()
-                           .Split(user_op::OpArg("input", 0), i)
-                           .Split(user_op::OpArg("target", 0), i)
-                           .Split(user_op::OpArg("dx", 0), i);
-        if (dy_shape.NumAxes() == 0) {
-          builder.Broadcast(user_op::OpArg("dy", 0));
-        } else {
-          builder.Split(user_op::OpArg("dy", 0), i);
-        }
-        builder.Build();
-      }
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> KlDivLossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> KlDivLossOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+  FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> KlDivLossOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+  CHECK_OR_RETURN(target_modifier != nullptr);
+  target_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> KlDivLossOp::InferDataType(user_op::InferContext* ctx) {
+  return KlInferDataType(ctx);
+}
+
+/* static */ Maybe<void> KlDivLossGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> KlDivLossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> KlDivLossGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+  FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("input", 0), i)
+        .Split(user_op::OpArg("target", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> KlDivLossGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferGradDataType(ctx);
+}
 
 REGISTER_USER_OP_GRAD("kl_div_loss")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -135,7 +134,6 @@ REGISTER_USER_OP_GRAD("kl_div_loss")
                 .Input("target", op.input("target", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("dx")
-                .Attr("reduction", op.attr<std::string>("reduction"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
         AddOp(grad_op);

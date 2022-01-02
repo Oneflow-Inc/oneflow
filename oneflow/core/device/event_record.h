@@ -28,20 +28,11 @@ class EventRecord {
   EventRecord(EventRecord&&) = delete;
   EventRecord& operator=(const EventRecord&) = delete;
   EventRecord& operator=(EventRecord&&) = delete;
-  ~EventRecord() = default;
+  virtual ~EventRecord() = default;
 
   virtual bool QueryDone() const = 0;
 
   EventRecord() = default;
-};
-
-class EventRecordProvider {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EventRecordProvider);
-  EventRecordProvider() = default;
-  virtual ~EventRecordProvider() = default;
-
-  virtual std::shared_ptr<EventRecord> MakeEventRecord() = 0;
 };
 
 class NaiveEventRecord final : public EventRecord {
@@ -52,9 +43,9 @@ class NaiveEventRecord final : public EventRecord {
   NaiveEventRecord& operator=(NaiveEventRecord&&) = delete;
 
   NaiveEventRecord() = default;
-  ~NaiveEventRecord() = default;
+  ~NaiveEventRecord() override = default;
 
-  bool QueryDone() const { return true; }
+  bool QueryDone() const override { return true; }
 };
 
 class SharedEventRecord final : public EventRecord {
@@ -65,7 +56,7 @@ class SharedEventRecord final : public EventRecord {
   SharedEventRecord& operator=(SharedEventRecord&&) = delete;
 
   SharedEventRecord() : EventRecord(), inited_(false) {}
-  ~SharedEventRecord() = default;
+  ~SharedEventRecord() override = default;
 
   bool QueryDone() const override { return inited_ && event_record_->QueryDone(); }
 

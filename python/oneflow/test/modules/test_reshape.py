@@ -95,15 +95,15 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_reshape_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @autotest(auto_backward=False)
-    def test_reshape_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_reshape_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 0, 3).to(device)
         y = torch.reshape(

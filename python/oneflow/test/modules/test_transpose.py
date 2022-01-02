@@ -96,15 +96,15 @@ class TestTranspose(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_transpose_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
 
-    @autotest(auto_backward=False)
-    def test_transpose_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_transpose_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))

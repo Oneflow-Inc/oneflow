@@ -25,15 +25,15 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestCeilModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_ceil_flow_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
         y = torch.ceil(input)
         return y
 
-    @autotest(auto_backward=False)
-    def test_ceil_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_ceil_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.ceil(x)

@@ -4,21 +4,35 @@ if(WITH_MLIR_CUDA_CODEGEN)
 set(MLIR_GPU_LIBS MLIRSCFToGPU MLIRGPUToNVVMTransforms MLIRNVVMToLLVMIRTranslation)
 endif(WITH_MLIR_CUDA_CODEGEN)
 
-add_mlir_dialect_library(MLIROneFlow
+set(ONEFLOW_OP_GROUPS "ASSIGN;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE")
+
+
+foreach (OP_GROUP_NAME IN LISTS ONEFLOW_OP_GROUPS)
+    string(TOLOWER "${OP_GROUP_NAME}" OP_GROUP_NAME_LOWER)
+    set(CPP_FILE "OneFlow.${OP_GROUP_NAME_LOWER}_ops.cpp")
+    LIST(APPEND GROUPED_OP_CPP_FILES "${CPP_FILE}")
+    configure_file(OneFlowOpGetGen.cpp.in ${CPP_FILE} @ONLY)
+endforeach()
+
+oneflow_add_mlir_dialect_library(MLIROneFlow
   OneFlowDialect.cpp
   OneFlowOps.cpp
+  OneFlowOpTraits.cpp
+  OneFlowSupport.cpp
   Conversion/OneFlowToTosa.cpp
   Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
   Passes.cpp
+  ${GROUPED_OP_CPP_FILES}
 
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/OneFlow
 
   DEPENDS
   MLIROneFlowOpsIncGen
+  prepare_oneflow_third_party
 
   LINK_LIBS PUBLIC
   ${dialect_libs}
@@ -29,6 +43,8 @@ add_mlir_dialect_library(MLIROneFlow
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
+  ${oneflow_third_party_libs}
+  oneflow
 )
 
 if(WITH_MLIR_CUDA_CODEGEN)
