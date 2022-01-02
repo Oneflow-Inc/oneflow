@@ -42,7 +42,12 @@ class Variance : public OpExprGradFunction<VarianceState> {
   AttrMap base_attrs_;
 };
 
-Maybe<void> Variance::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
+Maybe<void> Variance::Init(const OpExpr& op) {
+  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> Variance::Capture(VarianceState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs, const AttrMap& attrs) const {
@@ -53,24 +58,35 @@ Maybe<void> Variance::Capture(VarianceState* ctx, const TensorTuple& inputs,
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->keepdim = JUST(composed_attrs.GetAttr<bool>("keepdim"));
   ctx->unbiased = JUST(composed_attrs.GetAttr<bool>("unbiased"));
-  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dim"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
+  // TODO(liufengwei): replace it using kernel
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-  size_t correction = ctx->unbiased ? 1 : 0;
-  for (auto elem : ctx->axis) { std::cout << elem << " "; }
-  std::cout << std::endl;
-  std::shared_ptr<Tensor> x_mean = JUST(functional::ReduceMean(x, ctx->axis, ctx->keepdim));
-  LOG(ERROR) << "x_mean shape = " << x_mean->shape()->DebugStr();
+  std::shared_ptr<Tensor> x_mean = JUST(functional::ReduceMean(x, ctx->axis, /*keepdim=*/true));
   std::shared_ptr<Tensor> x_sub = JUST(functional::Sub(x, x_mean));
+
+  size_t correction = ctx->unbiased ? 1 : 0;
+  size_t elem_cnt = 1;
+  CHECK_OR_RETURN(ctx->axis.size() > 0);
+  for (const auto& item : ctx->axis) { elem_cnt *= x->shape()->At(item); }
+  DimVector unsqueeze_vector(out_grads.at(0)->shape()->dim_vec());
+  if (ctx->keepdim == false) {
+    for (int i = 0; i < ctx->axis.size(); i++) {
+      unsqueeze_vector.insert(unsqueeze_vector.begin() + i + ctx->axis.at(i), 1);
+    }
+  }
+  const std::shared_ptr<Tensor> ext_dim_out_grad =
+      JUST(functional::Reshape(out_grads.at(0), Shape(unsqueeze_vector)));
+
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::Mul(
-      out_grads.at(0),
-      JUST(functional::ScalarMul(Scalar(2.0 / (x->shape()->elem_cnt() - correction)), x_sub))));
+      ext_dim_out_grad, JUST(functional::ScalarMul(Scalar(2.0 / (elem_cnt - correction)), x_sub))));
+
   return Maybe<void>::Ok();
 }
 

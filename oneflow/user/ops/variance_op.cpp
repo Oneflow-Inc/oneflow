@@ -22,7 +22,7 @@ namespace oneflow {
 namespace {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input", 0);
-  const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
+  const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("dim");
   CHECK_OR_RETURN(!reduce_axes.empty());
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
   const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
@@ -41,13 +41,24 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
+Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const Shape& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+  const int64_t ndim = input_shape.NumAxes();
+  const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
+  for (int i = 0; i < ndim; i++) {
+    if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
 }  // namespace
 
 REGISTER_USER_OP("var")
     .Input("input")
     .Output("output")
-    .Attr<std::vector<int32_t>>("axis")
+    .Attr<std::vector<int32_t>>("dim")
     .Attr<bool>("unbiased", true)
     .Attr<bool>("keepdim", false)
     .SetTensorDescInferFn(InferTensorDescFn)

@@ -24,30 +24,32 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 namespace {
-void SetGridDimAndBlockDim(const int64_t total_elem_cnt, int* grid_dim, int* block_dim) {
+void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
+  // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
   if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
     *grid_dim =
         std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
     *block_dim = kCudaThreadsNumPerBlock;
   } else {
     *grid_dim = 1;
-    int32_t tmp = (total_elem_cnt >= kCudaThreadsNumPerBlock)
-                      ? kCudaThreadsNumPerBlock
-                      : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
-    *block_dim = std::min(tmp, kCudaThreadsNumPerBlock);
+    int32_t aligned_block_dim =
+        (total_elem_cnt >= kCudaThreadsNumPerBlock)
+            ? kCudaThreadsNumPerBlock
+            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
+    *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
   }
 }
-
-void SetBlockDim(const int64_t total_elem_cnt, int* block_dim) {}
 }  // namespace
 
-OF_DEVICE_FUNC int LinearIndex2Offset(int32_t linear_index, const int32_t* dim_size_in_axis_ptr,
-                                      const int32_t* stride_vec_ptr, const int32_t size) {
-  int offset = 0;
-  int tmp = 0;
+OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index,
+                                         const int32_t* dim_size_in_axis_ptr,
+                                         const int32_t* stride_vec_ptr, const int32_t size) {
+  // low dim at begin
+  size_t offset = 0;
+  size_t num_dim = 0;
   for (int j = 0; j < size; j++) {
-    tmp = (j == 0 ? linear_index : (tmp / dim_size_in_axis_ptr[j - 1]));
-    offset += tmp % dim_size_in_axis_ptr[j] * stride_vec_ptr[j];
+    num_dim = (j == 0 ? linear_index : (num_dim / dim_size_in_axis_ptr[j - 1]));
+    offset += num_dim % dim_size_in_axis_ptr[j] * stride_vec_ptr[j];
   }
   return offset;
 }
@@ -59,8 +61,8 @@ constexpr size_t MaxDims = 8;
 struct VarParam {
   VarParam() : unbiased(true), parallel_num(1), elem_cnt(1), axis_size(1), caxis_size(1) {}
   bool unbiased;
-  int32_t parallel_num;
-  int32_t elem_cnt;
+  size_t parallel_num;
+  size_t elem_cnt;
   int32_t axis_size;
   int32_t caxis_size;
   int32_t stride_in_axis[MaxDims];
@@ -72,7 +74,8 @@ struct VarParam {
 class VarParamHelper final {
  public:
   VarParamHelper() = delete;
-  explicit VarParamHelper(const ShapeView& input_shape, std::vector<int32_t> axis, bool unbiased)
+  explicit VarParamHelper(const ShapeView& input_shape, const std::vector<int32_t> axis,
+                          const bool unbiased)
       : axis_(axis), input_shape_(input_shape) {
     param.unbiased = unbiased;
     ComputeStrideVec(axis_, param.stride_in_axis);
@@ -94,7 +97,7 @@ class VarParamHelper final {
     param.parallel_num = input_shape_.elem_cnt() / param.elem_cnt;
   }
 
-  void ComputeStrideVec(std::vector<int32_t> axis, int32_t* stride_vec) {
+  void ComputeStrideVec(const std::vector<int32_t> axis, int32_t* stride_vec) {
     // low dim at begin
     const int axis_size = axis.size();
     for (int i = 0; i < axis_size; i++) {
@@ -118,7 +121,7 @@ class VarParamHelper final {
     return caxis;
   }
 
-  void GetDimSizeInAxis(std::vector<int32_t> axis, int32_t* dim_size_in_axis) {
+  void GetDimSizeInAxis(const std::vector<int32_t> axis, int32_t* dim_size_in_axis) {
     // low dim at begin
     const int axis_size = axis.size();
     for (int i = 0; i < axis_size; i++) {
@@ -133,29 +136,26 @@ class VarParamHelper final {
 
 template<typename T>
 OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const VarParam& var_param) {
-  int64_t count = 0;
+  size_t count = 0;
+  // torch use double even for float data, so here float will result in accuracy error.
   double mean = 0.0;
   double old_mean = 0.0;
-  double d = 0.0;
-  double population_variance = 0.0;
-  double sample_variance = 0.0;
-  for (int i = 0; i < var_param.elem_cnt; i++) {
-    int offset = LinearIndex2Offset(i, var_param.dim_size_in_axis, var_param.stride_in_axis,
-                                    var_param.axis_size);
+  double m2 = 0.0;
+  for (size_t i = 0; i < var_param.elem_cnt; i++) {
+    const size_t offset = LinearIndex2Offset(i, var_param.dim_size_in_axis,
+                                             var_param.stride_in_axis, var_param.axis_size);
     count++;
     old_mean = mean;
     mean += (in_ptr[offset] - mean) / count;
-    d += (in_ptr[offset] - mean) * (in_ptr[offset] - old_mean);
-    population_variance = d / count;
-    if (count > 1) { sample_variance = d / (count - 1); }
+    m2 += (in_ptr[offset] - mean) * (in_ptr[offset] - old_mean);
   }
-  *out_ptr = var_param.unbiased ? sample_variance : population_variance;
+  *out_ptr = m2 / (var_param.unbiased ? count - 1 : count);
 }
 
 template<DeviceType device_type, typename T>
 struct VarFunctor final {
   void operator()(ep::Stream* stream, const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
-                  VarParam var_param);
+                  const VarParam var_param);
 };
 
 }  // namespace user_op
