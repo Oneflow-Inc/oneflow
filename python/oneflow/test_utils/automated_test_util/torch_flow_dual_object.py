@@ -603,7 +603,7 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    equality_res = np.allclose( 
+    equality_res = np.allclose(
         torch_tensor.detach().cpu().numpy(),
         flow_tensor.numpy(),
         rtol=rtol,
