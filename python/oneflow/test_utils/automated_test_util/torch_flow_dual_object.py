@@ -653,6 +653,7 @@ def autotest(
                 dual_objects_to_test.clear()
                 try:
                     global testing_graph
+                    # for generate fake program input tensor
                     global testing
                     testing = True
                     if check_graph:
