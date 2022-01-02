@@ -25,6 +25,8 @@ namespace oneflow {
 namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
+__constant__ int64_t in_stride_[SHAPE_MAX_AXIS_SIZE] = {1};
+__constant__ int64_t out_stride_[SHAPE_MAX_AXIS_SIZE] = {1};
 
 int GetMinThreadNum(int64_t elem_cnt) { return std::min<int64_t>(elem_cnt, kBlockSize); }
 
@@ -34,104 +36,57 @@ int GetNumBlocks(int64_t elem_cnt) {
   return num_blocks;
 }
 
-
-struct StrideParam {
-  int stride[SHAPE_MAX_AXIS_SIZE];
-  int coordinates[SHAPE_MAX_AXIS_SIZE];
-
-  // NOLINTNEXTLINE
-  StrideParam(const int64_t* stride_vec, const size_t ndim) {
-    for (size_t i = 0; i < ndim; ++i) {
-      stride[i] = stride_vec[i];
-      coordinates[i] = 0;
-    }
-  }
-};
-
-
 template<typename IndexType>
-__device__ __forceinline__ IndexType compute_index(IndexType out_offset, const size_t ndim, StrideParam& out_params,
-                                 const StrideParam& in_params) {
+__device__ IndexType compute_index(IndexType out_offset, const size_t ndim) {
   IndexType in_offset = 0;
   IndexType remaining = out_offset;
 
 #pragma unroll
-  // compute coords(output offset to coords)
   for (size_t i = 0; i < ndim; ++i) {
-    const IndexType idx = static_cast<IndexType>(remaining / out_params.stride[i]);
-    out_params.coordinates[i] = idx;
-    remaining = remaining - idx * out_params.stride[i];
+    const IndexType idx = remaining / out_stride_[i];
+    remaining = remaining - idx * out_stride_[i];
+    in_offset = in_offset + idx * in_stride_[i];
   }
-  // compute input offset
-  for (size_t dim = 0; dim < ndim; ++dim) {
-    in_offset = in_offset + out_params.coordinates[dim] * in_params.stride[dim];
-  }
+
   return in_offset;
 }
 
-
-template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpu(IndexType count, IndexType block_size, const size_t ndim, StrideParam in_stride,
-                              StrideParam out_stride, const T* in_dptr, T* out_dptr) {
-  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step *block_size)
-  {
-    IndexType in_idx = compute_index<IndexType>(out_idx, ndim, out_stride, in_stride);
+template<typename T, typename IndexType, size_t pack_size>
+__global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in_dptr,
+                                       T* out_dptr) {
+  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
+       out_idx < count; out_idx += step) {
+    IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
     out_dptr[out_idx] = in_dptr[in_idx];
   }
 }
 
-template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpu(IndexType count, const size_t ndim, StrideParam in_stride,
-                              StrideParam out_stride, const T* in_dptr, T* out_dptr) {
-  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step)
-  {
-    IndexType in_idx = compute_index<IndexType>(out_idx, ndim, out_stride, in_stride);
-    out_dptr[out_idx] = in_dptr[in_idx];
-  }
-}
-
-template<typename T, typename IndexType, int32_t pack_size>
-void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t ndim, IndexType block_size, const std::vector<int64_t>& in_stride,
-                           const StrideVector& out_stride, const char* in_dptr, char* out_dptr){
-
-  StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
-  
+template<typename T, typename IndexType, size_t pack_size>
+void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t ndim,
+                              IndexType block_size, const std::vector<int64_t>& in_stride,
+                              const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int num_blocks = GetNumBlocks(count);
   const int num_threads = GetMinThreadNum(count);
+  OF_CUDA_CHECK(
+      cudaMemcpyToSymbol(in_stride_, in_stride.data(), in_stride.size() * sizeof(int64_t)));
+  OF_CUDA_CHECK(
+      cudaMemcpyToSymbol(out_stride_, out_stride.data(), out_stride.size() * sizeof(int64_t)));
 
-  if (pack_size == 16 && block_size % 16 == 0) {
-    ToContiguousForwardGpu<ulonglong2, IndexType><<<num_blocks, num_threads, 0,
-                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, ndim, param_in_stride, param_out_stride, reinterpret_cast<const ulonglong2*>(in_dptr), reinterpret_cast<ulonglong2*>(out_dptr));
-  } else if (pack_size == 8 && block_size % 8 == 0) {
-    ToContiguousForwardGpu<uint64_t, IndexType><<<num_blocks, num_threads, 0,
-                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, ndim, param_in_stride, param_out_stride, reinterpret_cast<const uint64_t*>(in_dptr), reinterpret_cast<uint64_t*>(out_dptr));
-  } else if(pack_size == 4 && block_size % 4 == 0 ){
-    ToContiguousForwardGpu<uint32_t, IndexType><<<num_blocks, num_threads, 0,
-                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, ndim, param_in_stride, param_out_stride, reinterpret_cast<const uint32_t*>(in_dptr), reinterpret_cast<uint32_t*>(out_dptr));
-  } else if(pack_size == 2 && block_size % 2 == 0 ){
-    ToContiguousForwardGpu<uint16_t, IndexType><<<num_blocks, num_threads, 0,
-                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, ndim, param_in_stride, param_out_stride, reinterpret_cast<const uint16_t*>(in_dptr), reinterpret_cast<uint16_t*>(out_dptr));
-  } else {
-    ToContiguousForwardGpu<T, IndexType><<<num_blocks, num_threads, 0,
-                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, block_size, ndim, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  }
-
+  ToContiguousForwardGpu<T, IndexType, pack_size>
+      <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
 }
 
-
-} // namespace
-
+}  // namespace
 
 template<typename T>
 struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   using ToContiguousUtilBase::ToContiguousUtilBase;
   static constexpr size_t dsize = sizeof(T);
   void operator()() {
+    int constant_memory_size = 0;
+    // get device constant memory capacity, for RTX 2080, constant_memory_size is 65536(64kb)
+    cudaDeviceGetAttribute(&constant_memory_size, cudaDevAttrTotalConstantMemory, 0);
     const size_t ndims = contiguous_dim + 1;
     if (ndims == 0) {
       // 0-dim tensor
@@ -147,49 +102,22 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
       }
       if (is_same) {
         // if input tensor's strides equals to output's, than just copy one memory-contiguous tensor
-        OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize, element_count * dsize, cudaMemcpyDeviceToDevice,
-                                    stream->As<ep::CudaStream>()->cuda_stream()));
-      } else{
-        constexpr int pack_size = cuda::elementwise::PackSize<T>();
+        OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+                                      element_count * dsize, cudaMemcpyDeviceToDevice,
+                                      stream->As<ep::CudaStream>()->cuda_stream()));
+      } else {
+        constexpr size_t pack_size = cuda::elementwise::PackSize<T>();
         if (element_count < GetMaxVal<int32_t>()) {
-          LaunchToContiguousKernel<T, int32_t, pack_size>(stream, element_count, ndims, block_size, in_stride, out_stride, in_dptr, out_dptr);  
+          LaunchToContiguousKernel<T, int32_t, pack_size>(stream, element_count, ndims, block_size,
+                                                          in_stride, out_stride, in_dptr, out_dptr);
         } else {
-          LaunchToContiguousKernel<T, int64_t, pack_size>(stream, element_count, ndims, block_size, in_stride, out_stride, in_dptr, out_dptr);
+          LaunchToContiguousKernel<T, int64_t, pack_size>(stream, element_count, ndims, block_size,
+                                                          in_stride, out_stride, in_dptr, out_dptr);
         }
       }
     }
   }
 };
-
-
-template<DeviceType device_type, typename T>
-class ToContiguousKernel final : public user_op::OpKernel {
- public:
-  ToContiguousKernel() = default;
-  ~ToContiguousKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
-    const DataType in_data_type = in->data_type();
-    CHECK_EQ(out->data_type(), in_data_type);
-
-    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
-
-    const char* in_dptr = static_cast<const char*>(in->raw_dptr());
-    char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
-    printf("\n >>> in shape:%s; ", in_shape.ToString().c_str());
-
-    ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();
-  }
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 
 #define INSTANTIATE_TO_CONTIGUOUS_UTILS_FOR_CUDA(T) \
   template struct ToContiguousUtil<DeviceType::kCUDA, T>;
