@@ -40,9 +40,9 @@ class VarKernel final : public user_op::OpKernel {
       return;
     }
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
-    T* tmp_buffer_ptr = axis.size() != input->shape().NumAxes()
-                            ? nullptr
-                            : ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>();
+    T* tmp_buffer_ptr = axis.size() == input->shape().NumAxes()
+                            ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
+                            : nullptr;
     VarParamHelper param_helper(input->shape(), axis, unbiased);
     VarFunctor<device_type, T>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
                                  param_helper.param);
