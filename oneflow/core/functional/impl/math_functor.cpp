@@ -1578,8 +1578,8 @@ class VarianceFunctor {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
     MutableAttrMap attrs;
-    if (unbiased) { attrs.SetAttr<bool>("unbiased", JUST(unbiased)); }
-    if (keepdim) { attrs.SetAttr<bool>("keepdim", JUST(keepdim)); }
+    if (unbiased) { JUST(attrs.SetAttr<bool>("unbiased", JUST(unbiased))); }
+    if (keepdim) { JUST(attrs.SetAttr<bool>("keepdim", JUST(keepdim))); }
     std::vector<int32_t> axis;
     const int ndim = input->shape()->NumAxes();
     axis.reserve(ndim);
@@ -1592,8 +1592,8 @@ class VarianceFunctor {
           << "], but got " << dims.size();
       axis.assign(dims.begin(), dims.end());
     }
-    attrs.SetAttr<std::vector<int32_t>>("dim", axis);
-    attrs.SetAttr<DataType>("dtype", input->dtype()->data_type());
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dim", axis));
+    JUST(attrs.SetAttr<DataType>("dtype", input->dtype()->data_type()));
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
