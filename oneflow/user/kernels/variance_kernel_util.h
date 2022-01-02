@@ -129,8 +129,8 @@ class VarParamHelper final {
     }
   }
 
-  const std::vector<int32_t>& axis_;
-  const ShapeView& input_shape_;
+  const std::vector<int32_t> axis_;
+  const ShapeView input_shape_;
   std::vector<int32_t> caxis_;
 };
 
