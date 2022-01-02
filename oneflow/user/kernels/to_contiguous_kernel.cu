@@ -73,7 +73,7 @@ __device__ __forceinline__ IndexType compute_index(IndexType out_offset, const s
 template<typename T, typename IndexType>
 __global__ void ToContiguousForwardGpu(IndexType count, IndexType block_size, const size_t ndim, StrideParam in_stride,
                               StrideParam out_stride, const T* in_dptr, T* out_dptr) {
-  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step * block_size)
+  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; out_idx < count; out_idx += step *block_size)
   {
     IndexType in_idx = compute_index<IndexType>(out_idx, ndim, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
@@ -118,7 +118,7 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
   } else {
     ToContiguousForwardGpu<T, IndexType><<<num_blocks, num_threads, 0,
                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      count, ndim, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+      count, block_size, ndim, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
   }
 
 }
