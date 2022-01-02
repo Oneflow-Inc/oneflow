@@ -22,9 +22,12 @@ import warnings
 import numpy as np
 import oneflow as flow
 
+flow.backends.cudnn.deterministic = True
+
 try:
     import torch as torch_original
 
+    torch_original.backends.cudnn.deterministic = True
     torch_original.set_printoptions(profile="full")
 except ImportError:
     print(
@@ -650,9 +653,13 @@ def autotest(
                 dual_objects_to_test.clear()
                 try:
                     global testing_graph
+                    # for generate fake program input tensor
+                    global testing
+                    testing = True
                     if check_graph:
                         testing_graph = True
                     res = f(test_case)
+                    testing = False
                     testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
@@ -699,6 +706,7 @@ def autotest(
                         and id(x.pytorch) not in call_tensor_id
                     ):
                         vis_tensor.append(x.pytorch)
+
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
