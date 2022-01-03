@@ -109,6 +109,9 @@ class GraphConfig(object):
         """
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
+    
+    def _set_zero_redundancy_optimizer_split_min_size(self, value):
+        self.proto.set_optimizer_placement_optimization_threshold(value)
 
     def enable_xla_jit(self, value=True):
         """Whether use xla_jit in xrt or not. When this option enable, oneflow will check all operators is supported by 
