@@ -29,12 +29,13 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestErfinvModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, auto_backward=False)
     def test_flow_erfinv_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=6).to(device)
+        x = random_pytorch_tensor(requires_grad=False).to(device)
         y = torch.erfinv(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()

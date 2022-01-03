@@ -1685,7 +1685,6 @@ class MovedimIntFunctor {
   }
 };
 
-
 class ErfinvFunctor {
  public:
   ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }

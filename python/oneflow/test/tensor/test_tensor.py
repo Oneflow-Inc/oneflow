@@ -1457,6 +1457,13 @@ class TestTensor(flow.unittest.TestCase):
         return x.erfc()
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False, auto_backward=False)
+    def test_erfinv_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device).requires_grad_(False)
+        return x.erfinv()
+
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
     def test_exp_tensor_with_random_data(test_case):
         device = random_device()
