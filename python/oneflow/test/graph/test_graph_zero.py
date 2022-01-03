@@ -31,6 +31,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage = 1):
                 if zero_stage == 1:
                     print("zero stage 1 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
+                    self.config._set_zero_redundancy_optimizer_split_min_size(1)
                 if zero_stage == 2:
                     print("zero stage 2 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
