@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import unittest
 import os
 import numpy as np
@@ -6,10 +21,11 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_linear_train_graph_with_zero(test_case, zero_stage = 1):
+def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
     P = flow.placement("cuda", {0: [0, 1]})
     B = flow.sbp.broadcast
     S0 = flow.sbp.split(0)
+
     def train_with_graph(iter_num=3):
         linear = flow.nn.Linear(8, 4)
         linear = linear.to_consistent(placement=P, sbp=B)
@@ -65,11 +81,18 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage = 1):
     iter_num = 1
     graph_check_list = train_with_graph(iter_num)
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
     def test_linear_train_graph_with_zero_1(test_case):
         _test_linear_train_graph_with_zero(test_case, 1)
+
+    def test_linear_train_graph_with_zero_2(test_case):
+        _test_linear_train_graph_with_zero(test_case, 2)
+
+    def test_linear_train_graph_with_zero_3(test_case):
+        _test_linear_train_graph_with_zero(test_case, 3)
 
 
 if __name__ == "__main__":

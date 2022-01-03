@@ -113,10 +113,12 @@ void SetBroadcastParallel4OpNodeIbn(JobBuilder* builder, const OpNode* node,
 
 void SetBroadcastParallel4Consumers(JobBuilder* builder, const SequencePtr& sequence) {
   const OpNode* node = sequence->GetLastNode();
-  const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleIbn());
+  const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
   node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
     for (const std::string& ibn : out_node->op().input_bns()) {
-      if (out_node->op().BnInOp2Lbi(ibn) == lbi) { SetBroadcastParallel4OpNodeIbn(builder, out_node, ibn); }
+      if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+        SetBroadcastParallel4OpNodeIbn(builder, out_node, ibn);
+      }
     }
   });
 }
@@ -167,7 +169,7 @@ void ForEachParallelSortedNodeSequence(
     const std::function<bool(const SequencePtr&, const SequencePtr&)>& Comp,
     const std::function<void(const ParallelDesc&, std::vector<SequencePtr>&&)>& Handler) {
   HashMap<ParallelDesc, std::vector<SequencePtr>> parallel_desc2sequences;
-  // Find sequence like: vairable -> cast_fp32_to_fp16 
+  // Find sequence like: vairable -> cast_fp32_to_fp16
   ForEachDataParallelNodeSequence(op_graph, IsAllowed, [&](SequencePtr&& sequence) {
     parallel_desc2sequences[sequence->parallel_desc()].emplace_back(std::move(sequence));
   });
@@ -235,7 +237,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
   const auto PlacementSequencesAsSplitParallel = [&](const ParallelDesc& pd,
                                                      std::vector<SequencePtr>&& sorted_sequences) {
     // For all sorted sequnence, set the variable op in the sequence to S(0)
-    // and add ctrl edge to control the exectuion order between variable ops. 
+    // and add ctrl edge to control the exectuion order between variable ops.
     // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
     // consume the fp16 variable and the optimizer consume the fp32 variable.
     for (int64_t i = 0; i < sorted_sequences.size(); ++i) {

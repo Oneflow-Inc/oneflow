@@ -432,10 +432,11 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     if (!IsEnabled(*jobs.at(job_id))) { continue; }
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
-      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (op_conf.op_type_case() != OperatorConf::kVariableConf) { continue; }
       if (var_names.find(op_conf.name()) == var_names.end()) {
         var_names.emplace(op_conf.name());
       } else {
+        // optimizer_placement_optimization jobs has a same variable in between them.
         LOG(FATAL)
             << "Only support optimizer_placement_optimization when jobs not sharing same variable";
       }
@@ -444,8 +445,9 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     if (IsEnabled(*jobs.at(job_id))) { continue; }
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
-      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (op_conf.op_type_case() != OperatorConf::kVariableConf) { continue; }
       if (var_names.find(op_conf.name()) != var_names.end()) {
+        // Other jobs has a same variable in optimizer_placement_optimization jobs.
         LOG(FATAL)
             << "Only support optimizer_placement_optimization when jobs not sharing same variable";
       }
