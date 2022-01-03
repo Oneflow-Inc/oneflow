@@ -94,13 +94,13 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* state, const TensorTup
   int64_t begin_norm_axis = state->begin_norm_axis;
   if (begin_norm_axis < 0) { begin_norm_axis += dy->shape()->NumAxes(); }
 
-  std::shared_ptr<Tensor> gamma = saved_tensors.at(state->gamma_index);
   if (!state->has_affine) {
     // Use LayerNormParamGrad(Tensor dy, Tensor gamma, Int64 begin_params_axis, Double epsilon).
     dy = JUST(functional::LayerNormParamGrad(dy, begin_params_axis, state->epsilon));
   } else {
     // Use LayerNormAffineParamGrad(Tensor dy, Tensor gamma, Tensor normalized, Int64
     // begin_params_axis, Double epsilon).
+    std::shared_ptr<Tensor> gamma = saved_tensors.at(state->gamma_index);
     std::shared_ptr<Tensor> normalized = saved_tensors.at(state->normalized_index);
     const auto& results = JUST(functional::LayerNormAffineParamGrad(
         dy, gamma, normalized, begin_params_axis, state->epsilon));

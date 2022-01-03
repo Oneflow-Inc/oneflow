@@ -15,7 +15,6 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
 
 import oneflow as flow
 import oneflow.unittest
@@ -24,19 +23,24 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestCeilModule(flow.unittest.TestCase):
-    @autotest(check_graph=False)
-    def test_ceil_flow_with_random_data(test_case):
-        device = random_device()
-        input = random_pytorch_tensor().to(device)
-        y = torch.ceil(input)
+class TestLinalgVectorNorm2D(flow.unittest.TestCase):
+    @autotest(n=30, auto_backward=False, check_graph=True, rtol=0.5, atol=0.5)
+    def test_sqrt_sum_with_cpu_random_data(test_case):
+        device = cpu_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=30, dim2=40, dim3=50, requires_grad=False
+        ).to(device)
+        y = torch.linalg.norm(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
-    def test_ceil_with_0_size_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
-        y = torch.ceil(x)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(n=30, auto_backward=False, check_graph=True)
+    def test_sqrt_sum_with_cuda_random_data(test_case):
+        device = gpu_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=100, dim2=100, dim3=100, requires_grad=False
+        ).to(device)
+        y = torch.linalg.norm(x)
         return y
 
 

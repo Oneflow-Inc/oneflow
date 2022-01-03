@@ -203,6 +203,24 @@ class TestLayerNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    def test_layernorm_without_affine(test_case):
+        device = random_device()
+        channel = random(1, 200).to(int)
+        height = random(1, 2).to(int)
+        width = random(8192, 32768).to(int)
+
+        def get_random_norm_shape():
+            begin_axis = random(1, 3).to(int).value()
+            return tuple((channel.value(), height.value(), width.value())[begin_axis:])
+
+        m = torch.nn.LayerNorm(normalized_shape=get_random_norm_shape()).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+            device
+        )
+        y = m(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
