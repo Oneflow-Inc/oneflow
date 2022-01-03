@@ -18,8 +18,17 @@ import oneflow._oneflow_internal
 
 Generator = oneflow._oneflow_internal.Generator
 
+
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
+
+
+def _manual_seed(self, seed):
+    self.set_current_seed(seed)
+    return self
+
+
+Generator.manual_seed = _manual_seed
 
 
 def _getstate(self):

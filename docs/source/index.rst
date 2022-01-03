@@ -27,6 +27,7 @@ OneFlow API Reference
     comm
     placement
     sbp
+    generator
 
 
 
