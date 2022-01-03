@@ -31,6 +31,8 @@ std::array<const grpc::internal::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
   return {BuildOneRpcMethod<method_indices>(channel)...};
 }
 
+constexpr int64_t kDefaultGrpcMaxMessageByteSize = -1;
+
 }  // namespace
 
 CtrlService::Stub::Stub(std::shared_ptr<grpc::ChannelInterface> channel)
@@ -39,7 +41,9 @@ CtrlService::Stub::Stub(std::shared_ptr<grpc::ChannelInterface> channel)
 
 std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(const std::string& addr) {
   grpc::ChannelArguments ch_args;
-  ch_args.SetInt(GRPC_ARG_MAX_MESSAGE_LENGTH, 64 * 1024 * 1024);
+  int64_t max_msg_byte_size =
+      ParseIntegerFromEnv("ONEFLOW_GRPC_MAX_MESSAGE_BYTE_SIZE", kDefaultGrpcMaxMessageByteSize);
+  ch_args.SetInt(GRPC_ARG_MAX_MESSAGE_LENGTH, max_msg_byte_size);
   return std::make_unique<Stub>(
       grpc::CreateCustomChannel(addr, grpc::InsecureChannelCredentials(), ch_args));
 }

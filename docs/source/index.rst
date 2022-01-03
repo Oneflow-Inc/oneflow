@@ -23,6 +23,7 @@ OneFlow API Reference
     optim
     utils
     cuda
+    env
     distributed
     comm
     placement

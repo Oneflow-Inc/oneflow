@@ -351,17 +351,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(x1.dtype, flow.float32)
         test_case.assertEqual(x1.shape, flow.Size((1, 2)))
         x2 = flow.Tensor([[1.0], [2.0]])
-        op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", float(1.0))
-            .Output("out")
-            .Build()
-        )
-        y = op(x1, x2)[0]
+        y = flow.matmul(x1, x2)
         test_case.assertTrue(
             np.allclose(y.numpy(), np.array([[5.0]], dtype=np.float32))
         )
@@ -727,8 +717,8 @@ class TestTensor(flow.unittest.TestCase):
         other = 3
         return input.fmod(other)
 
-    @autotest(auto_backward=False, check_graph=False)
-    def test_fmod_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_fmod_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = x.fmod(2)
