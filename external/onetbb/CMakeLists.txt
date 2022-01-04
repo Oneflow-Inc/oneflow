@@ -1,11 +1,11 @@
 find_package(Threads REQUIRED)
 include(FetchContent)
 FetchContent_Declare(
-  onetbb_external
+  tbb
   URL ${ONETBB_URL}
   URL_HASH MD5=${ONETBB_MD5}
 )
-FetchContent_GetProperties(onetbb_external)
+FetchContent_GetProperties(tbb)
 
 
 set(CMAKE_CXX_FLAGS "" CACHE STRING "" FORCE)
@@ -17,8 +17,8 @@ set(CMAKE_C_FLAGS_DEBUG "" CACHE STRING "" FORCE)
 set(CMAKE_C_FLAGS_RELEASE "" CACHE STRING "" FORCE)
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "" CACHE STRING "" FORCE)
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-set(TBB_EXAMPLES OFF)
-set(TBB_TEST OFF)
+set(TBB_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(TBB_TEST OFF CACHE BOOL "" FORCE)
 set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
-
-FetchContent_MakeAvailable(onetbb_external)
+FetchContent_MakeAvailable(tbb)
+set_property(GLOBAL PROPERTY TBB_SRC_DIR "${tbb_SOURCE_DIR}/cpp/src;${tbb_BINARY_DIR}/src")
