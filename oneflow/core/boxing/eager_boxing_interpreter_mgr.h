@@ -20,15 +20,20 @@ limitations under the License.
 
 namespace oneflow {
 
+class EagerBoxingLogger;
+
 class EagerBoxingInterpreterManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerBoxingInterpreterManager);
-  EagerBoxingInterpreterManager() = default;
-  virtual ~EagerBoxingInterpreterManager() = default;
+  EagerBoxingInterpreterManager();
+  ~EagerBoxingInterpreterManager() = default;
 
   Maybe<EagerBoxingInterpreter> GetEagerBoxingInterpreter(
       Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
       Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const;
+
+ private:
+  std::unique_ptr<EagerBoxingLogger> eager_boxing_logger_;
 };
 
 template<typename RetT, typename... Args>

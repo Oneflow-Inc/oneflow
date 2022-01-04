@@ -29,7 +29,8 @@ extern Maybe<BoxingInterpreterStatus> (*MakeBoxingInterpreterStatus)(const std::
                                                                      Symbol<PlacedNdSbp> out);
 
 extern Maybe<BoxingInterpreterStatus> (*MakeComposedBoxingInterpreterStatus)(
-    const BoxingInterpreterStatus& lhs_status, const BoxingInterpreterStatus& rhs_status);
+    const std::shared_ptr<BoxingInterpreterStatus>& lhs_status,
+    const std::shared_ptr<BoxingInterpreterStatus>& rhs_status);
 
 class BoxingInterpreterStatus final {
  public:

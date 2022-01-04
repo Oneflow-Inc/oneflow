@@ -32,24 +32,25 @@ Maybe<BoxingInterpreterStatus> RawMakeBoxingInterpreterStatus(const std::string&
 }
 
 Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
-    const BoxingInterpreterStatus& lhs_status, const BoxingInterpreterStatus& rhs_status) {
-  CHECK_OR_RETURN(lhs_status.dst_placed_nd_sbp() == rhs_status.src_placed_nd_sbp())
+    const std::shared_ptr<BoxingInterpreterStatus>& lhs_status,
+    const std::shared_ptr<BoxingInterpreterStatus>& rhs_status) {
+  CHECK_OR_RETURN(lhs_status->dst_placed_nd_sbp() == rhs_status->src_placed_nd_sbp())
       << "Intermediate placed_nd_sbp must be equal when compose boxing interpreter status"
-      << ". lhs_status.dst_nd_sbp: " << NdSbpToString(lhs_status.dst_placed_nd_sbp()->nd_sbp())
-      << ", rhs_status.dst_nd_sbp: " << NdSbpToString(rhs_status.src_placed_nd_sbp()->nd_sbp())
+      << ". lhs_status.dst_nd_sbp: " << NdSbpToString(lhs_status->dst_placed_nd_sbp()->nd_sbp())
+      << ", rhs_status.dst_nd_sbp: " << NdSbpToString(rhs_status->src_placed_nd_sbp()->nd_sbp())
       << ", lhs_status.dst_placement: "
-      << *JUST(PlacementToString(lhs_status.dst_placed_nd_sbp()->placement()))
+      << *JUST(PlacementToString(lhs_status->dst_placed_nd_sbp()->placement()))
       << ", rhs_status.dst_placement: "
-      << *JUST(PlacementToString(rhs_status.src_placed_nd_sbp()->placement()));
-  std::vector<std::string> sorted_boxing_names(*lhs_status.sorted_boxing_names());
-  sorted_boxing_names.insert(sorted_boxing_names.end(), rhs_status.sorted_boxing_names()->begin(),
-                             rhs_status.sorted_boxing_names()->end());
-  std::vector<Symbol<PlacedNdSbp>> mid_placed_nd_sbp(*lhs_status.mid_placed_nd_sbp());
-  mid_placed_nd_sbp.emplace_back(lhs_status.dst_placed_nd_sbp());
-  mid_placed_nd_sbp.insert(mid_placed_nd_sbp.end(), rhs_status.mid_placed_nd_sbp()->begin(),
-                           rhs_status.mid_placed_nd_sbp()->end());
-  BoxingInterpreterStatus status(sorted_boxing_names, lhs_status.src_placed_nd_sbp(),
-                                 SymbolOf(mid_placed_nd_sbp), rhs_status.dst_placed_nd_sbp());
+      << *JUST(PlacementToString(rhs_status->src_placed_nd_sbp()->placement()));
+  std::vector<std::string> sorted_boxing_names(*lhs_status->sorted_boxing_names());
+  sorted_boxing_names.insert(sorted_boxing_names.end(), rhs_status->sorted_boxing_names()->begin(),
+                             rhs_status->sorted_boxing_names()->end());
+  std::vector<Symbol<PlacedNdSbp>> mid_placed_nd_sbp(*lhs_status->mid_placed_nd_sbp());
+  mid_placed_nd_sbp.emplace_back(lhs_status->dst_placed_nd_sbp());
+  mid_placed_nd_sbp.insert(mid_placed_nd_sbp.end(), rhs_status->mid_placed_nd_sbp()->begin(),
+                           rhs_status->mid_placed_nd_sbp()->end());
+  BoxingInterpreterStatus status(sorted_boxing_names, lhs_status->src_placed_nd_sbp(),
+                                 SymbolOf(mid_placed_nd_sbp), rhs_status->dst_placed_nd_sbp());
   return status;
 }
 

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/boxing/boxing_dividor_util.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
 
 namespace oneflow {
 
@@ -152,12 +153,27 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
 
 static constexpr auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
 
+std::unique_ptr<EagerBoxingLogger> CreateEagerBoxingLogger() {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || std::getenv("ONEFLOW_DEBUG") != nullptr
+      || true) {
+    return std::unique_ptr<EagerBoxingLogger>(new NaiveEagerBoxingLogger());
+  } else {
+    return std::unique_ptr<EagerBoxingLogger>(new NullEagerBoxingLogger());
+  }
+}
+
 }  // namespace
+
+EagerBoxingInterpreterManager::EagerBoxingInterpreterManager()
+    : eager_boxing_logger_(CreateEagerBoxingLogger()) {}
 
 Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInterpreter(
     Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  return CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc);
+  const auto& boxing_interpreter =
+      JUST(CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+  eager_boxing_logger_->Log(*JUST(boxing_interpreter->boxing_interpreter_status()));
+  return boxing_interpreter;
 }
 
 COMMAND(Global<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));

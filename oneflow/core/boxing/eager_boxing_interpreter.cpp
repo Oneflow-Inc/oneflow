@@ -106,7 +106,7 @@ Maybe<BoxingInterpreterStatus> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNd
   const auto& middle = JUST((*boxing_dividor_)(in, out));
   const auto& lhs_status = JUST(lhs_conquer_->Check(in, middle));
   const auto& rhs_status = JUST(rhs_conquer_->Check(middle, out));
-  return MakeComposedBoxingInterpreterStatus(*lhs_status, *rhs_status);
+  return MakeComposedBoxingInterpreterStatus(lhs_status, rhs_status);
 }
 
 Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
