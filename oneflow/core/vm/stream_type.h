@@ -44,7 +44,7 @@ class StreamType {
   void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const;
   void Run(VirtualMachineEngine* vm, Instruction* instruction) const;
 
-  virtual const char* device_tag() const = 0;
+  virtual const char* stream_tag() const = 0;
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 
@@ -61,6 +61,7 @@ class StreamType {
                                                            int64_t this_machine_id) const = 0;
 
   virtual bool OnSchedulerThread() const = 0;
+  virtual bool EnableInstructionFuse() const { return false; }
   virtual bool SupportingTransportInstructions() const = 0;
   virtual bool IsControlStreamType() const { return false; }
   virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const {

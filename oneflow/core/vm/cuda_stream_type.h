@@ -32,7 +32,7 @@ class CudaStreamType final : public StreamType {
   CudaStreamType() = default;
   ~CudaStreamType() override = default;
 
-  const char* device_tag() const override { return "gpu"; }
+  const char* stream_tag() const override { return "cuda"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 

@@ -31,7 +31,7 @@ class LazyJobStreamType final : public StreamType {
   LazyJobStreamType() = default;
   virtual ~LazyJobStreamType() = default;
 
-  const char* device_tag() const override { return "lazy_job"; }
+  const char* stream_tag() const override { return "lazy_job"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 

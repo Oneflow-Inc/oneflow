@@ -34,9 +34,6 @@ class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstru
   ~CpuLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuLocalCallOpKernelInstructionType>("cpu.LocalCallOpKernel"));
 
@@ -46,9 +43,6 @@ class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType 
   ~CpuCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuCallOpKernelInstructionType>("cpu.CallOpKernel"));
 
@@ -59,9 +53,6 @@ class CpuUserStatelessCallOpKernelInstructionType final
   ~CpuUserStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuUserStatelessCallOpKernelInstructionType>(
     "cpu.compute.UserStatelessCallOpKernel"));
@@ -73,9 +64,6 @@ class CpuSystemStatelessCallOpKernelInstructionType final
   ~CpuSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuSystemStatelessCallOpKernelInstructionType>(
     "cpu.compute.SystemStatelessCallOpKernel"));
@@ -86,9 +74,6 @@ class CpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructio
   ~CpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuFetchBlobHeaderInstructionType>("cpu.FetchBlobHeader"));
 
@@ -98,9 +83,6 @@ class CpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionTyp
   ~CpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuFetchBlobBodyInstructionType>("cpu.FetchBlobBody"));
 
@@ -110,9 +92,6 @@ class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
   ~CpuFeedBlobInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuFeedBlobInstructionType>("cpu.FeedBlob"));
 

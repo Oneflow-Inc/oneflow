@@ -39,9 +39,6 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
   ~CudaLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
@@ -51,9 +48,6 @@ class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernel
   ~AsyncCudaLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<AsyncCudaLocalCallOpKernelInstructionType>(
     "async.gpu.LocalCallOpKernel"));
@@ -64,9 +58,6 @@ class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelIn
   ~CudaH2DLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaH2DLocalCallOpKernelInstructionType>(
     "cuda_h2d.LocalCallOpKernel"));
@@ -77,9 +68,6 @@ class CudaD2HLocalCallOpKernelInstructionType final : public LocalCallOpKernelIn
   ~CudaD2HLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyD2HStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaD2HLocalCallOpKernelInstructionType>(
     "cuda_d2h.LocalCallOpKernel"));
@@ -90,9 +78,6 @@ class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType
   ~CudaCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("gpu.CallOpKernel"));
 
@@ -103,9 +88,6 @@ class CudaUserStatelessCallOpKernelInstructionType final
   ~CudaUserStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaUserStatelessCallOpKernelInstructionType>(
     "gpu.compute.UserStatelessCallOpKernel"));
@@ -117,9 +99,6 @@ class CudaSystemStatelessCallOpKernelInstructionType final
   ~CudaSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaSystemStatelessCallOpKernelInstructionType>(
     "gpu.compute.SystemStatelessCallOpKernel"));
@@ -131,9 +110,6 @@ class CudaCopyH2DSystemStatelessCallOpKernelInstructionType final
   ~CudaCopyH2DSystemStatelessCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaCopyH2DSystemStatelessCallOpKernelInstructionType>(
     "gpu.copy_h2d.SystemStatelessCallOpKernel"));
@@ -152,9 +128,6 @@ class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
     return mem_case;
   }
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CudaCopyD2HSystemStatelessCallOpKernelInstructionType>(
     "gpu.copy_d2h.SystemStatelessCallOpKernel"));
@@ -165,9 +138,6 @@ class GpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructio
   ~GpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<GpuFetchBlobHeaderInstructionType>("gpu.FetchBlobHeader"));
 
@@ -177,9 +147,6 @@ class GpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionTyp
   ~GpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<GpuFetchBlobBodyInstructionType>("gpu.FetchBlobBody"));
 
@@ -189,9 +156,6 @@ class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
   ~GpuFeedBlobInstructionType() override = default;
 
   using stream_type = vm::AsyncCudaStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"));
 

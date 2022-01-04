@@ -556,7 +556,7 @@ std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
                                                     const CallOpKernelInstrOperand& args) const {
   auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = instruction->parallel_desc()->device_type();
   int64_t device_id = instruction->stream().device_id();
   const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
@@ -566,7 +566,8 @@ Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction
 void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   CHECK_OK(MaybeInfer(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_tag: " << instruction->parallel_desc()->device_tag()
+      << "\nmachine_id: " << instruction->stream().machine_id()
       << "\ndevice_id: " << instruction->stream().device_id()
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
@@ -582,7 +583,8 @@ Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instructi
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   CHECK_OK(MaybeCompute(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_tag: " << instruction->parallel_desc()->device_tag()
+      << "\nmachine_id: " << instruction->stream().machine_id()
       << "\ndevice_id: " << instruction->stream().device_id()
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
@@ -597,7 +599,7 @@ Maybe<const OperatorConf&> GetOpConf(vm::Instruction* instruction,
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
     vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = instruction->parallel_desc()->device_type();
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
   const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
@@ -642,7 +644,7 @@ std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBl
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
     vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = instruction->parallel_desc()->device_type();
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args));
   const auto& mem_case = GetOutBlobMemCase(device_type, device_id);
