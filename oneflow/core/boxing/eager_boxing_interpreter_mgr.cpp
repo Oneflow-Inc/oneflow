@@ -154,8 +154,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
 static constexpr auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
 
 std::unique_ptr<EagerBoxingLogger> CreateEagerBoxingLogger() {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || std::getenv("ONEFLOW_DEBUG") != nullptr
-      || true) {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || std::getenv("ONEFLOW_DEBUG") != nullptr) {
     return std::unique_ptr<EagerBoxingLogger>(new NaiveEagerBoxingLogger());
   } else {
     return std::unique_ptr<EagerBoxingLogger>(new NullEagerBoxingLogger());

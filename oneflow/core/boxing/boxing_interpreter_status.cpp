@@ -104,7 +104,7 @@ static constexpr auto* GetBoxingDesc = DECORATE(&RawGetBoxingDesc, ThreadLocal);
 
 }  // namespace
 
-const std::string& BoxingInterpreterStatus::boxing_desc() const {
+const std::string& BoxingInterpreterStatus::boxing_interpreter_routing() const {
   return *CHECK_JUST(GetBoxingDesc(sorted_boxing_names_));
 }
 
