@@ -33,7 +33,6 @@ class TestSplit(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, 2, dim=rand_dim)
         return torch.cat(res, rand_dim)
-        # return res[rand_dim]
 
     @autotest(check_graph=False)
     def test_flow_split_sizes_with_random_data(test_case):
@@ -44,7 +43,6 @@ class TestSplit(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, [1, 2, 3, 1], dim=1)
         return torch.cat(res, dim=1)
-        # return res[2]
 
     @autotest(check_graph=False)
     def test_flow_split_sizes_neg_dim_with_random_data(test_case):
@@ -55,7 +53,6 @@ class TestSplit(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, [1, 2, 3, 1], dim=-2)
         return torch.cat(res, dim=1)
-        # return res[0]
 
 
 if __name__ == "__main__":
