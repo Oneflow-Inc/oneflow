@@ -23,7 +23,14 @@ set(PULL_DOCKER_IMG ON CACHE BOOL "")
 set(TEST_WITH_TF_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f" CACHE STRING "")
 set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae" CACHE STRING "")
 # TODO: generate resource spec by running nvidia-smi
-set(CTEST_RESOURCE_SPEC_FILE "${PROJECT_SOURCE_DIR}/resource-spec/2x-rtx-2080.json" CACHE STRING "")
+set(CODEGEN_PYTHON_EXECUTABLE python3 CACHE STRING "Python executable to generate spec .json files")
+set(CTEST_RESOURCE_SPEC_FILE "${PROJECT_BINARY_DIR}/gen-resource-spec.json" CACHE STRING "" FORCE)
+execute_process(
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/gen-resource-spec.py
+  OUTPUT_FILE ${CTEST_RESOURCE_SPEC_FILE}
+  COMMAND_ERROR_IS_FATAL ANY
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 set(SINGLE_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/compatible/single_client/test CACHE STRING "test script dir for single client")
 set(MULTI_CLIENT_TEST_DIR ${ONEFLOW_SRC_DIR}/python/oneflow/test CACHE STRING "test script dir for multi client")
 set(ONEFLOW_WHEEL_PATH /home/caishenghang/550ed7f9122589ab0f1ae89a50e0bf4702974895ddafdc9a10a77628d5387138/cu102/whl CACHE STRING "URL or local path for wheels")
@@ -167,7 +174,7 @@ function(add_oneflow_python_test)
     add_test(NAME ${TEST_NAME}
       COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${DISTRIBUTED_LAUNCH_PREFIX};${PYTHON_TEST_FILE};--failfast;--verbose
     )
-    set(vramRequired 2000)
+    set(vramRequired 600)
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
       set(vramRequired 4000)
     endif()
@@ -184,12 +191,14 @@ function(add_oneflow_python_test)
     else()
       message(FATAL_ERROR "unsupprted ONEFLOW_TEST_DEVICE_NUM: ${ONEFLOW_TEST_DEVICE_NUM}")
     endif()
+    set(resourceGroups "${resourceGroups},cpu:${ONEFLOW_TEST_DEVICE_NUM}")
     set_tests_properties(${TEST_NAME}
       PROPERTIES
         ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
         RESOURCE_GROUPS "${resourceGroups}"
         LABELS "${testLabels};"
         FIXTURES_REQUIRED ${CONTAINER_FIXTURE}
+        TIMEOUT 10
     )
   endforeach()
   endforeach()
