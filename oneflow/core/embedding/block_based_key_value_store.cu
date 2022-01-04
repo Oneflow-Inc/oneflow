@@ -22,6 +22,7 @@ limitations under the License.
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <liburing.h>
 
 namespace oneflow {
@@ -33,6 +34,7 @@ namespace {
 constexpr uint64_t NUM_BLOCKS_PER_CHUNK = 4 * 1024 * 1024;
 constexpr uint32_t NUM_IO_THREADS = 4;
 constexpr uint32_t IO_QD = 128;
+constexpr uint32_t kChunkNameSuffixLength = 8;
 
 struct Buffer {
   uint32_t index = 0;
@@ -40,6 +42,34 @@ struct Buffer {
   uint32_t buffer_id = 0;
   struct iovec io_vec {};
 };
+
+template<typename Key>
+struct alignas(2 * std::max(sizeof(Key), sizeof(uint64_t))) IndexEntry {
+  Key key;
+  uint64_t index;
+};
+
+std::string GetChunkName(uint64_t chunk_id) {
+  const std::string chunk_name_wo_leading_zero = std::to_string(chunk_id);
+  CHECK_LE(chunk_name_wo_leading_zero.size(), kChunkNameSuffixLength);
+  return std::string(kChunkNameSuffixLength - chunk_name_wo_leading_zero.size(), '0')
+         + chunk_name_wo_leading_zero;
+}
+
+void ListChunkFiles(const std::string& base, const std::string& prefix,
+                    std::unordered_map<uint64_t, std::string>* chunks) {
+  DIR* dir = opendir(base.c_str());
+  PCHECK(dir != nullptr);
+  struct dirent* ent = nullptr;
+  while ((ent = readdir(dir)) != nullptr) {
+    if (strlen(ent->d_name) != prefix.size() + kChunkNameSuffixLength) { continue; }
+    if (strncmp(ent->d_name, prefix.c_str(), prefix.size()) != 0) { continue; }
+    size_t pos = 0;
+    const uint64_t chunk_id = std::stoull(ent->d_name + prefix.size(), &pos, 10);
+    CHECK_EQ(pos, kChunkNameSuffixLength);
+    CHECK(chunks->emplace(chunk_id, base + "/" + std::string(ent->d_name)).second);
+  }
+}
 
 template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
@@ -84,10 +114,24 @@ class KeyValueStoreImpl : public KeyValueStore {
         buffers.at(i).io_vec.iov_base = aligned_alloc(block_size_, block_size_);
       }
     }
+    std::unordered_map<uint64_t, std::string> chunks;
+    ListChunkFiles(path_, "value-", &chunks);
+    for (auto& chunk : chunks) {
+      if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
+      CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
+      value_files_.at(chunk.first) = FileHandle(chunk.second.c_str(), O_RDWR | O_DIRECT, 0644);
+    }
+    if (!value_files_.empty()) {
+      counter_ = ((value_files_.size() - 1) * NUM_BLOCKS_PER_CHUNK
+                  + value_files_.back().Size() / block_size_)
+                 * values_per_block_;
+      LoadIndexFile();
+    }
   }
   ~KeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
     for (auto& file : value_files_) { file.Close(); }
+    SaveIndexFile();
     OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
     OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
     free(host_query_blocks_);
@@ -104,7 +148,10 @@ class KeyValueStoreImpl : public KeyValueStore {
            uint64_t* context) override;
 
  private:
-  std::string ChunkName(uint64_t chunk_id);
+  std::string ValueFileName(uint64_t chunk_id) const;
+  std::string IndexFileName() const;
+  void SaveIndexFile();
+  void LoadIndexFile();
 
   int device_index_;
   uint32_t value_length_;
@@ -249,7 +296,8 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
   const uint64_t end_chunk_id = end_block_id / NUM_BLOCKS_PER_CHUNK;
   value_files_.reserve(end_chunk_id + 1);
   for (uint64_t new_chunk_id = value_files_.size(); new_chunk_id <= end_chunk_id; ++new_chunk_id) {
-    value_files_.emplace_back(ChunkName(new_chunk_id).c_str(), O_CREAT | O_RDWR | O_DIRECT, 0644);
+    value_files_.emplace_back(ValueFileName(new_chunk_id).c_str(), O_CREAT | O_RDWR | O_DIRECT,
+                              0644);
   }
   uint64_t write_blocks = 0;
   while (write_blocks < num_blocks) {
@@ -272,8 +320,37 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
 }
 
 template<typename Key>
-std::string KeyValueStoreImpl<Key>::ChunkName(uint64_t chunk_id) {
-  return path_ + "/" + std::to_string(chunk_id);
+std::string KeyValueStoreImpl<Key>::ValueFileName(uint64_t chunk_id) const {
+  return path_ + "/value-" + GetChunkName(chunk_id);
+}
+
+template<typename Key>
+std::string KeyValueStoreImpl<Key>::IndexFileName() const {
+  return path_ + "/index";
+}
+
+template<typename Key>
+void KeyValueStoreImpl<Key>::SaveIndexFile() {
+  FileHandle index_file(IndexFileName().c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
+  IndexEntry<Key> entry{};
+  for (const auto& pair : key2id_) {
+    entry.key = pair.first;
+    entry.index = pair.second;
+    PCHECK(write(index_file.fd(), &entry, sizeof(IndexEntry<Key>)) == sizeof(IndexEntry<Key>));
+  }
+}
+
+template<typename Key>
+void KeyValueStoreImpl<Key>::LoadIndexFile() {
+  FileHandle index_file(IndexFileName().c_str(), O_RDONLY, 0644);
+  IndexEntry<Key> entry{};
+  const size_t size = index_file.Size();
+  CHECK_EQ(size % sizeof(IndexEntry<Key>), 0);
+  key2id_.reserve(size / sizeof(IndexEntry<Key>));
+  for (size_t i = 0; i < size / sizeof(IndexEntry<Key>); ++i) {
+    PCHECK(read(index_file.fd(), &entry, sizeof(IndexEntry<Key>)) == sizeof(IndexEntry<Key>));
+    CHECK(key2id_.emplace(entry.key, entry.index).second);
+  }
 }
 
 }  // namespace

@@ -367,6 +367,41 @@ __global__ void EvictKernel(CudaLruCacheContext<Key, Elem> cache_ctx, const Key*
 }
 
 template<typename Key, typename Elem>
+__global__ void DumpKernel(CudaLruCacheContext<Key, Elem> cache_ctx, size_t start_key_index,
+                           size_t end_key_index, uint32_t* n_dumped, Key* keys, Elem* values) {
+  ThreadContext thread_ctx{};
+  __shared__ Key warp_keys[kNumWarpPerBlock][kWarpSize];
+  for (uint32_t warp_start_key_index = start_key_index + thread_ctx.global_warp_id * kWarpSize;
+       warp_start_key_index < end_key_index;
+       warp_start_key_index += thread_ctx.num_warps * kWarpSize) {
+    Key lane_key = 0;
+    if (warp_start_key_index + thread_ctx.lane_id < end_key_index) {
+      lane_key = cache_ctx.keys[warp_start_key_index + thread_ctx.lane_id];
+    }
+    __syncwarp();
+    warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
+    const int key_count = __popc(__ballot_sync(kFullMask, lane_key != 0));
+    if (key_count == 0) { continue; }
+    uint32_t offset = 0;
+    if (thread_ctx.lane_id == 0) { offset = atomicAdd(n_dumped, key_count); }
+    offset = __shfl_sync(kFullMask, offset, 0);
+    __syncwarp();
+    for (uint32_t i = 0; i < kWarpSize; ++i) {
+      const Key key = warp_keys[thread_ctx.warp_id_in_block][i];
+      if (key == 0) { continue; }
+      if (thread_ctx.lane_id == 0) { keys[offset] = key; }
+      __syncwarp();
+      for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
+        values[offset * cache_ctx.line_size + j] =
+            cache_ctx.lines[(warp_start_key_index + i) * cache_ctx.line_size + j];
+      }
+      __syncwarp();
+      offset += 1;
+    }
+  }
+}
+
+template<typename Key, typename Elem>
 class CudaLruCache : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaLruCache);
@@ -378,6 +413,8 @@ class CudaLruCache : public Cache {
     CudaCurrentDeviceGuard guard(device_index_);
     DestroyCudaLruCacheContext(&ctx_);
   }
+
+  uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
 
   void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
             void* missing_keys, uint32_t* missing_indices) override {
@@ -412,6 +449,19 @@ class CudaLruCache : public Cache {
                               ctx_.query_keys_buffer, ctx_.query_indices_buffer,
                               static_cast<const Elem*>(values), n_evicted,
                               static_cast<Key*>(evicted_keys), static_cast<Elem*>(evicted_values));
+  }
+
+  void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
+            uint32_t* n_dumped, void* keys, void* values) override {
+    auto cuda_stream = stream->As<ep::CudaStream>();
+    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+    const uint64_t max_dump_keys = end_key_index - start_key_index;
+    cuda_stream->LaunchKernel(
+        DumpKernel<Key, Elem>,
+        ep::CudaLaunchConfig((max_dump_keys + kNumWarpPerBlock - 1) / kNumWarpPerBlock, kBlockSize,
+                             0),
+        ctx_, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
+        static_cast<Elem*>(values));
   }
 
  private:

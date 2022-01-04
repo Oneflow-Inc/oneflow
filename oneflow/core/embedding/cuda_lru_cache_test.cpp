@@ -149,7 +149,7 @@ TEST(CudaLruCache, CudaLruCache) {
     for (size_t i = 0; i < n_keys; ++i) {
       if (get_missing_keys_set.count(keys[i]) == 0) {
         for (size_t j = 0; j < line_size; ++j) {
-          ASSERT_EQ(values[i * line_size + j], static_cast<float>(keys[i]))
+          ASSERT_EQ(values[i * line_size + j], static_cast<float>(keys[i] * line_size + j))
               << "iter " << iter << " i " << i << " j " << j;
         }
       }
@@ -158,7 +158,7 @@ TEST(CudaLruCache, CudaLruCache) {
     // put
     for (size_t i = 0; i < n_keys; ++i) {
       for (size_t j = 0; j < line_size; ++j) {
-        values[i * line_size + j] = static_cast<float>(keys[i]);
+        values[i * line_size + j] = static_cast<float>(keys[i] * line_size + j);
       }
     }
     OF_CUDA_CHECK(cudaMemcpy(d_values, values, values_size, cudaMemcpyDefault));
@@ -172,12 +172,30 @@ TEST(CudaLruCache, CudaLruCache) {
     for (size_t i = 0; i < *n_evicted; ++i) {
       ASSERT_TRUE(in_cache.count(evicted_keys[i]) > 0 || keys_set.count(evicted_keys[i]) > 0);
       for (size_t j = 0; j < line_size; ++j) {
-        ASSERT_EQ(evicted_values[i * line_size + j], static_cast<float>(evicted_keys[i]));
+        ASSERT_EQ(evicted_values[i * line_size + j],
+                  static_cast<float>(evicted_keys[i] * line_size + j));
       }
     }
     for (size_t i = 0; i < n_keys; ++i) { in_cache.emplace(keys[i]); }
     for (size_t i = 0; i < *n_evicted; ++i) { in_cache.erase(evicted_keys[i]); }
   }
+  for (size_t start_key_index = 0; start_key_index < cache->Capacity(); start_key_index += n_keys) {
+    cache->Dump(stream, start_key_index, std::min(start_key_index + n_keys, cache->Capacity()),
+                d_n_evicted, d_evicted_keys, d_evicted_values);
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    OF_CUDA_CHECK(cudaMemcpy(n_evicted, d_n_evicted, sizeof(uint32_t), cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaMemcpy(evicted_keys, d_evicted_keys, keys_size, cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaMemcpy(evicted_values, d_evicted_values, values_size, cudaMemcpyDefault));
+    for (size_t i = 0; i < *n_evicted; ++i) {
+      ASSERT_TRUE(in_cache.count(evicted_keys[i]) > 0);
+      in_cache.erase(evicted_keys[i]);
+      for (size_t j = 0; j < line_size; ++j) {
+        ASSERT_EQ(evicted_values[i * line_size + j],
+                  static_cast<float>(evicted_keys[i] * line_size + j));
+      }
+    }
+  }
+  CHECK_EQ(in_cache.size(), 0);
   OF_CUDA_CHECK(cudaFree(d_keys));
   OF_CUDA_CHECK(cudaFreeHost(keys));
   OF_CUDA_CHECK(cudaFree(d_n_missing));
