@@ -1,4 +1,4 @@
-# CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=20 ninja test
+# CTEST_OUTPUT_ON_FAILURE=1 CTEST_PARALLEL_LEVEL=$(nproc) ninja test
 cmake_minimum_required(VERSION 3.19.0)
 find_program(CTEST_EXECUTABLE NAMES ctest REQUIRED)
 execute_process(
