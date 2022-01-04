@@ -24,8 +24,7 @@ Maybe<void> CumsumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> CumsumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
-  return Maybe<void>::Ok();
+  return InferLogicalTensorDesc(ctx);
 }
 
 Maybe<void> CumsumOp::GetSbp(user_op::SbpContext* ctx) {
@@ -48,8 +47,7 @@ Maybe<void> CumsumGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> CumsumGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
-  return Maybe<void>::Ok();
+  return InferLogicalTensorDesc(ctx);
 }
 
 Maybe<void> CumsumGradOp::GetSbp(user_op::SbpContext* ctx) {
