@@ -37,7 +37,10 @@ target_link_libraries(${OF_TBLGEN_TARGET} PRIVATE
   pantor::inja
 )
 
-install(TARGETS oneflow_tblgen LLVMTableGen LLVMDemangle LLVMSupport COMPONENT OneFlowTableGen)
+install(TARGETS oneflow_tblgen LLVMTableGen LLVMDemangle LLVMSupport
+  COMPONENT OneFlowTableGen
+  LIBRARY DESTINATION lib
+)
 add_custom_target(install-oneflow-tblgen
   DEPENDS oneflow_tblgen
   COMMAND
