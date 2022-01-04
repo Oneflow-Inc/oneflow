@@ -360,6 +360,11 @@ void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_o
                                                   Instruction* instruction) {
   const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
   if (likely(phy_instr_operand)) {
+    auto* stream_sequential_dep = phy_instr_operand->stream_sequential_dependence();
+    if (likely(stream_sequential_dep != nullptr)) {
+      ConnectInstructionsByWrite(
+          AccessMirroredObject(kMutableOperandAccess, stream_sequential_dep, instruction));
+    }
     // Connect instructions by write before connecting by read.
     for (auto* mirrored_object : phy_instr_operand->output_dependences()) {
       ConnectInstructionsByWrite(
