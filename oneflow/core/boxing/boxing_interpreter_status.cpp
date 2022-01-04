@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -20,15 +21,17 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<BoxingInterpreterStatus> MakeBoxingInterpreterStatus(const std::string& boxing_name,
-                                                           Symbol<PlacedNdSbp> in,
-                                                           Symbol<PlacedNdSbp> out) {
+namespace {
+
+Maybe<BoxingInterpreterStatus> RawMakeBoxingInterpreterStatus(const std::string& boxing_name,
+                                                              Symbol<PlacedNdSbp> in,
+                                                              Symbol<PlacedNdSbp> out) {
   std::vector<std::string> sorted_boxing_names{boxing_name};
   BoxingInterpreterStatus status(SymbolOf(sorted_boxing_names), in, out);
   return status;
 }
 
-Maybe<BoxingInterpreterStatus> MakeComposedBoxingInterpreterStatus(
+Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
     const BoxingInterpreterStatus& lhs_status, const BoxingInterpreterStatus& rhs_status) {
   CHECK_OR_RETURN(lhs_status.dst_placed_nd_sbp() == rhs_status.src_placed_nd_sbp())
       << "Intermediate placed_nd_sbp must be equal when compose boxing interpreter status"
@@ -49,6 +52,13 @@ Maybe<BoxingInterpreterStatus> MakeComposedBoxingInterpreterStatus(
                                  SymbolOf(mid_placed_nd_sbp), rhs_status.dst_placed_nd_sbp());
   return status;
 }
+
+}  // namespace
+
+decltype(MakeBoxingInterpreterStatus) MakeBoxingInterpreterStatus =
+    DECORATE(&RawMakeBoxingInterpreterStatus, ThreadLocalCopiable);
+decltype(MakeComposedBoxingInterpreterStatus) MakeComposedBoxingInterpreterStatus =
+    DECORATE(&RawMakeComposedBoxingInterpreterStatus, ThreadLocalCopiable);
 
 namespace {
 

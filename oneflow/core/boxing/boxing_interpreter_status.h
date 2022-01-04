@@ -18,16 +18,17 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/placed_nd_sbp.h"
 
 namespace oneflow {
 
 class BoxingInterpreterStatus;
-class PlacedNdSbp;
 
-Maybe<BoxingInterpreterStatus> MakeBoxingInterpreterStatus(const std::string& boxing_name,
-                                                           Symbol<PlacedNdSbp> in,
-                                                           Symbol<PlacedNdSbp> out);
-Maybe<BoxingInterpreterStatus> MakeComposedBoxingInterpreterStatus(
+extern Maybe<BoxingInterpreterStatus> (*MakeBoxingInterpreterStatus)(const std::string& boxing_name,
+                                                                     Symbol<PlacedNdSbp> in,
+                                                                     Symbol<PlacedNdSbp> out);
+
+extern Maybe<BoxingInterpreterStatus> (*MakeComposedBoxingInterpreterStatus)(
     const BoxingInterpreterStatus& lhs_status, const BoxingInterpreterStatus& rhs_status);
 
 class BoxingInterpreterStatus final {
@@ -47,6 +48,13 @@ class BoxingInterpreterStatus final {
                                 SymbolOf(std::vector<Symbol<PlacedNdSbp>>()), dst_placed_nd_sbp) {}
   ~BoxingInterpreterStatus() = default;
 
+  bool operator==(const BoxingInterpreterStatus& other) const {
+    return this->sorted_boxing_names_ == other.sorted_boxing_names_
+           && this->src_placed_nd_sbp_ == other.src_placed_nd_sbp_
+           && this->mid_placed_nd_sbp_ == other.mid_placed_nd_sbp_
+           && this->dst_placed_nd_sbp_ == other.dst_placed_nd_sbp_;
+  }
+
   // Getters
   Symbol<std::vector<std::string>> sorted_boxing_names() const { return sorted_boxing_names_; }
   Symbol<PlacedNdSbp> src_placed_nd_sbp() const { return src_placed_nd_sbp_; }
@@ -65,5 +73,26 @@ class BoxingInterpreterStatus final {
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::BoxingInterpreterStatus> {
+  size_t operator()(const oneflow::BoxingInterpreterStatus& status) const {
+    size_t ret = 0;
+    for (const auto& boxing_name : *status.sorted_boxing_names()) {
+      ret ^= std::hash<string>()(boxing_name);
+    }
+    const auto& placed_nd_sbp_hash = std::hash<oneflow::PlacedNdSbp>();
+    ret ^= placed_nd_sbp_hash(*status.src_placed_nd_sbp());
+    for (const auto& mid_placed_nd_sbp : *status.mid_placed_nd_sbp()) {
+      ret ^= placed_nd_sbp_hash(*mid_placed_nd_sbp);
+    }
+    ret ^= placed_nd_sbp_hash(*status.dst_placed_nd_sbp());
+    return hash<size_t>()(ret);
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_BOXING_BOXING_INTERPRETER_STATUS_H_
