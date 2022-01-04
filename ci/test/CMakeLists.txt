@@ -198,7 +198,6 @@ function(add_oneflow_python_test)
         RESOURCE_GROUPS "${resourceGroups}"
         LABELS "${testLabels};"
         FIXTURES_REQUIRED ${CONTAINER_FIXTURE}
-        TIMEOUT 10
     )
   endforeach()
   endforeach()
