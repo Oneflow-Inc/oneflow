@@ -37,26 +37,27 @@ class CpuErfinvKernel final : public user_op::OpKernel {
     T d[2] = {T(3.543889200), T(1.637067800)};
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       T z, num, dem;
-      T x_abs = std::abs(x_ptr[i]);
+      T x = x_ptr[i];  // Promise the correctness of inplace version.
+      T x_abs = std::abs(x);
       if (x_abs > 1.0) y_ptr[i] = std::numeric_limits<T>::quiet_NaN();
-      if (x_abs == 1.0) y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x_ptr[i]);
+      if (x_abs == 1.0) y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x);
       if (x_abs <= static_cast<T>(central_range)) {
-        z = x_ptr[i] * x_ptr[i];
+        z = x * x;
         num = (((a[3] * z + a[2]) * z + a[1]) * z + a[0]);
         dem = ((((b[3] * z + b[2]) * z + b[1]) * z + b[0]) * z + static_cast<T>(1.0));
-        y_ptr[i] = x_ptr[i] * num / dem;
+        y_ptr[i] = x * num / dem;
       } else {
         z = std::sqrt(-std::log((static_cast<T>(1.0) - x_abs) / static_cast<T>(2.0)));
         num = ((c[3] * z + c[2]) * z + c[1]) * z + c[0];
         dem = (d[1] * z + d[0]) * z + static_cast<T>(1.0);
-        y_ptr[i] = std::copysign(num, x_ptr[i]) / dem;
+        y_ptr[i] = std::copysign(num, x) / dem;
       }
       y_ptr[i] = y_ptr[i]
-                 - (std::erf(y_ptr[i]) - x_ptr[i])
+                 - (std::erf(y_ptr[i]) - x)
                        / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI)))
                           * std::exp(-y_ptr[i] * y_ptr[i]));
       y_ptr[i] = y_ptr[i]
-                 - (std::erf(y_ptr[i]) - x_ptr[i])
+                 - (std::erf(y_ptr[i]) - x)
                        / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI)))
                           * std::exp(-y_ptr[i] * y_ptr[i]));
     }
