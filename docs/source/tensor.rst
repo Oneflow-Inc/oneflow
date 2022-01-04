@@ -52,6 +52,7 @@ OneFlow Tensor Class
             erf, 
             erfc, 
             erfinv, 
+            erfinv_, 
             exp, 
             expand, 
             expand_as, 
