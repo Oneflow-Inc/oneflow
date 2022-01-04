@@ -45,7 +45,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   } else if (like) {
     output_num_axes = like->shape().NumAxes();
   } else {
-    OF_UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously." << std::endl;
+    OF_UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously."
+                       << std::endl;
   }
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
 

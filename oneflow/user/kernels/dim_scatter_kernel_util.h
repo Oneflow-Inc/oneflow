@@ -103,7 +103,7 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
 #if __CUDA_ARCH__
       __trap();
 #else
-      UNIMPLEMENTED() << "The index element " << idx_elem << " is out of bounds for dimension " 
+      UNIMPLEMENTED() << "The index element " << idx_elem << " is out of bounds for dimension "
                       << dim << " with size " << upper_bound << std::endl;
 #endif
     }
