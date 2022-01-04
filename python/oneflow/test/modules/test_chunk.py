@@ -38,7 +38,8 @@ class TestChunk(flow.unittest.TestCase):
             dim2=random(low=4, high=8).to(int),
             dim3=random(low=4, high=8).to(int),
         ).to(device)
-        y = torch.chunk(x, chunks=random(low=1, high=5).to(int), dim=dim)
+        chunks = random(low=1, high=5).to(int)
+        y = torch.chunk(x, chunks=chunks.to(int), dim=dim)
         z = torch.cat(y, dim=dim)
         return z
 

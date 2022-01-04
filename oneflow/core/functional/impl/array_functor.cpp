@@ -471,7 +471,8 @@ class ConcatFunctor {
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]->contiguous(); }
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs))
+      );
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -1159,7 +1160,7 @@ class NarrowFunctor {
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_local() && !(LazyMode::is_enabled())) {
       if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
-        return JUST(view::Narrow(input, narrow_dim, start, length));
+        return JUST(view::Narrow(input->contiguous(), narrow_dim, start, length));
       }
     }
     MutableAttrMap attrs;
@@ -2199,7 +2200,7 @@ class SplitFunctor {
     int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
     for (int i = 0; i < num_splits; ++i) {
       int64_t length = i < num_splits - 1 ? split_size : last_split_size;
-      splits[i] = JUST(Narrow(x->contiguous(), axis, i * split_size, length))->contiguous();
+      splits[i] = JUST(Narrow(x, axis, i * split_size, length));
     }
     return splits;
   }
