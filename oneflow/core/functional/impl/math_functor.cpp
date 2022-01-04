@@ -1781,8 +1781,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+<<<<<<< HEAD
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
+=======
+  m.add_functor<InplaceClampFunctor>("InplaceClamp");
+>>>>>>> 488ae542d566036912adc0da507349d538fa8a4a
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
