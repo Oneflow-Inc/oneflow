@@ -1466,20 +1466,15 @@ class TestTensor(flow.unittest.TestCase):
         return x.erfinv()
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(
+        check_graph=False, auto_backward=False
+    )  # Todo: After add gradient func, you should set `auto_backward` as True
     def test_erfinv_inplace_tensor_with_random_data(test_case):
-        device_list = ["cuda", "cpu"]
-        for device in device_list:
-            np_x = np.random.uniform(low=-1, high=1, size=(3, 3)).astype(np.float32)
-            flow_tensor1 = flow.tensor(np_x, device=device)
-            flow_tensor2 = flow.tensor(np_x, device=device)
-            flow_erfinv1 = flow.erfinv(flow_tensor1)
-            # Inplace
-            flow_tensor2.erfinv_()
-            test_case.assertTrue(
-                np.allclose(
-                    flow_erfinv1.numpy(), flow_tensor2.numpy(), atol=1e-4, rtol=1e-4
-                )
-            )
+        device = random_device()
+        x = random_pytorch_tensor(low=-1, high=1).to(device).requires_grad_(False)
+        y = x + 1
+        y.erfinv_()
+        return y
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
