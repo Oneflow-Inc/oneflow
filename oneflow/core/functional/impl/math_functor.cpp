@@ -646,9 +646,11 @@ class SwapaxesFunctor {
     if (dim1 < 0) { dim_1 += ndim; }
 
     CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 

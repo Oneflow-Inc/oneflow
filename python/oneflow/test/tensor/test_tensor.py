@@ -1648,7 +1648,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return torch.cat(res, dim=1)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_tensor_swapaxes(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=3).to(device)
