@@ -107,9 +107,11 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     ForEachConstMirroredObject(SetInserter(&input_dependences_));
     ForEachMutMirroredObject(SetInserter(&output_dependences_));
     ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    InitStreamSequentialDependence();
   }
 
   Maybe<void> Init();
+  void InitStreamSequentialDependence();
 
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;

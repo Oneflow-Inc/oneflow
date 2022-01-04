@@ -25,7 +25,9 @@ namespace vm {
 // no arg callback physical instruction operand
 class NoArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
-  NoArgCbPhyInstrOperand(const std::function<void()>& callback) : callback_(callback) {}
+  NoArgCbPhyInstrOperand(const std::function<void()>& callback) : callback_(callback) {
+    stream_sequential_dependence_ = nullptr;
+  }
   ~NoArgCbPhyInstrOperand() = default;
 
   const std::function<void()>& callback() const { return callback_; }
