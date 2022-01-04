@@ -725,7 +725,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
       } else {
-        // Not best nd_sbp. Do Nothing.
+        // Not best nd_sbp. Do nothing.
       }
     }
   }
