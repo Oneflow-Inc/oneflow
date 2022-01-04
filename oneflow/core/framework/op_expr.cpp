@@ -500,7 +500,6 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradCl
 template<>
 Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                                const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -528,9 +527,20 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGrad
 template<>
 Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
     OperatorConf* op_conf, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
+  auto* proto = op_conf->mutable_image_decoder_random_crop_resize_conf();
+  proto->set_target_width(JUST(attrs.GetAttr<int64_t>("target_width")));
+  proto->set_target_height(JUST(attrs.GetAttr<int64_t>("target_height")));
+  proto->set_num_workers(JUST(attrs.GetAttr<int64_t>("num_workers")));
+  proto->set_max_num_pixels(JUST(attrs.GetAttr<int64_t>("max_num_pixels")));
+  proto->set_warmup_size(JUST(attrs.GetAttr<int64_t>("warmup_size")));
+  proto->set_seed(JUST(attrs.GetAttr<int64_t>("seed")));
+  proto->set_num_attempts(JUST(attrs.GetAttr<int64_t>("num_attempts")));
+  proto->set_random_area_min(JUST(attrs.GetAttr<float>("random_area_min")));
+  proto->set_random_area_max(JUST(attrs.GetAttr<float>("random_area_max")));
+  proto->set_random_aspect_ratio_min(JUST(attrs.GetAttr<float>("random_aspect_ratio_min")));
+  proto->set_random_aspect_ratio_max(JUST(attrs.GetAttr<float>("random_aspect_ratio_max")));
   return Maybe<void>::Ok();
 }
 
