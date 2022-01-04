@@ -133,7 +133,7 @@ class StackGradKernel final : public user_op::OpKernel {
         << "The num axes of `like` tensor should be less equal to num axes of `in` tensor. ";
     CHECK_LE(axis, like_num_axes)
         << "The axis should be less equal than num axes of `like` tensor. ";
-    FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    FOR_RANGE(size_t, i, 0, ctx->outputs().size()) {
       const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
       CHECK_EQ(like_shape_view.NumAxes(), like_num_axes)
           << "The num axes of `like` tensor at index " << i
@@ -179,7 +179,6 @@ class StackGradKernel final : public user_op::OpKernel {
                       << " should be greater than 0. ";
     auto primitive = NewCopyNdPrimitive(ctx);
     CHECK(primitive) << "Error in Stack Grad kernel NewCopyNdPrimitive. ";
-    ;
     int64_t in_col_offset = 0;
     for (const auto& out_arg_pair : ctx->outputs()) {
       user_op::Tensor* out_tensor =
