@@ -14,111 +14,106 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("tf_prelu")
-    .Input("x")
-    .Input("alpha")
-    .Output("y")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
-      const Shape& alpha_shape = ctx->InputShape("alpha", 0);
-      CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_shape.NumAxes() + 1);
-      FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
-        CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc.shape().At(i))
-                        || (alpha_shape.At(i - 1) == 1));
-      }
-      *y_desc->mut_shape() = x_desc.shape();
-      *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const user_op::TensorDesc& alpha_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+/*static*/ Maybe<void> TfPreluOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& alpha_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x", 0), 0)
+      .Broadcast(user_op::OpArg("alpha", 0))
+      .Split(user_op::OpArg("y", 0), 0)
+      .Build();
+  FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
+    if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
       ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), 0)
-          .Broadcast(user_op::OpArg("alpha", 0))
-          .Split(user_op::OpArg("y", 0), 0)
+          .Split(user_op::OpArg("x", 0), i)
+          .Split(user_op::OpArg("alpha", 0), i - 1)
+          .Split(user_op::OpArg("y", 0), i)
           .Build();
-      FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
-        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("alpha", 0), i - 1)
-              .Split(user_op::OpArg("y", 0), i)
-              .Build();
-        }
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+    }
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> TfPreluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
+  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  const Shape& alpha_shape = ctx->InputShape("alpha", 0);
+  CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_shape.NumAxes() + 1);
+  FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
+    CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc.shape().At(i))
+                    || (alpha_shape.At(i - 1) == 1));
+  }
+  *y_desc->mut_shape() = x_desc.shape();
+  *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> TfPreluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> TfPreluOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("tf_prelu_grad")
-    .Input("dy")
-    .Input("x")
-    .Input("alpha")
-    .Output("dx")
-    .Output("alpha_diff")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      const user_op::TensorDesc& alpha_desc = ctx->InputTensorDesc("alpha", 0);
-      CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_desc.shape().NumAxes() + 1);
-      FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
-        CHECK_OR_RETURN((alpha_desc.shape().At(i - 1) == x_desc.shape().At(i))
-                        || (alpha_desc.shape().At(i - 1) == 1));
-      }
-      CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
-      CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
-      *dx_desc->mut_shape() = x_desc.shape();
-      *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
-      *ctx->OutputShape("alpha_diff", 0) = alpha_desc.shape();
-      *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      const user_op::TensorDesc& alpha_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+/*static*/ Maybe<void> TfPreluGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& alpha_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("x", 0), 0)
+      .Broadcast(user_op::OpArg("alpha", 0))
+      .Split(user_op::OpArg("dx", 0), 0)
+      .PartialSum(user_op::OpArg("alpha_diff", 0))
+      .Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("dy", 0))
+      .Broadcast(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("alpha", 0))
+      .PartialSum(user_op::OpArg("dx", 0))
+      .PartialSum(user_op::OpArg("alpha_diff", 0))
+      .Build();
+  FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
+    if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
       ctx->NewBuilder()
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Split(user_op::OpArg("x", 0), 0)
-          .Broadcast(user_op::OpArg("alpha", 0))
-          .Split(user_op::OpArg("dx", 0), 0)
-          .PartialSum(user_op::OpArg("alpha_diff", 0))
+          .Split(user_op::OpArg("dy", 0), i)
+          .Split(user_op::OpArg("x", 0), i)
+          .Split(user_op::OpArg("alpha", 0), i - 1)
+          .Split(user_op::OpArg("dx", 0), i)
+          .Split(user_op::OpArg("alpha_diff", 0), i - 1)
           .Build();
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("dy", 0))
-          .Broadcast(user_op::OpArg("x", 0))
-          .Broadcast(user_op::OpArg("alpha", 0))
-          .PartialSum(user_op::OpArg("dx", 0))
-          .PartialSum(user_op::OpArg("alpha_diff", 0))
-          .Build();
-      FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
-        if (x_tensor.shape().At(i) == alpha_tensor.shape().At(i - 1)) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("dy", 0), i)
-              .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("alpha", 0), i - 1)
-              .Split(user_op::OpArg("dx", 0), i)
-              .Split(user_op::OpArg("alpha_diff", 0), i - 1)
-              .Build();
-        }
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-      *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
-      return Maybe<void>::Ok();
-    });
+    }
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> TfPreluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  const user_op::TensorDesc& alpha_desc = ctx->InputTensorDesc("alpha", 0);
+  CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_desc.shape().NumAxes() + 1);
+  FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
+    CHECK_OR_RETURN((alpha_desc.shape().At(i - 1) == x_desc.shape().At(i))
+                    || (alpha_desc.shape().At(i - 1) == 1));
+  }
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
+  *dx_desc->mut_shape() = x_desc.shape();
+  *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
+  *ctx->OutputShape("alpha_diff", 0) = alpha_desc.shape();
+  *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> TfPreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> TfPreluGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("tf_prelu")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

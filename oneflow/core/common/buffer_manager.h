@@ -50,6 +50,26 @@ inline std::string GetCallbackNotifierBufferName(const std::string& job_name) {
   return prefix + job_name;
 }
 
+inline std::string GetInputCriticalSectionWaitBufferName(const std::string& job_name) {
+  static const std::string prefix = "InputCriticalSectionWait-";
+  return prefix + job_name;
+}
+
+inline std::string GetInputCriticalSectionCallbackBufferName(const std::string& job_name) {
+  static const std::string prefix = "InputCriticalSectionCallback-";
+  return prefix + job_name;
+}
+
+inline std::string GetOutputCriticalSectionWaitBufferName(const std::string& job_name) {
+  static const std::string prefix = "OutputCriticalSectionWait-";
+  return prefix + job_name;
+}
+
+inline std::string GetOutputCriticalSectionCallbackBufferName(const std::string& job_name) {
+  static const std::string prefix = "OutputCriticalSectionCallback-";
+  return prefix + job_name;
+}
+
 inline std::string GetForeignInputBufferName(const std::string& job_name) {
   static const std::string prefix = "ForeignInput-";
   return prefix + job_name;

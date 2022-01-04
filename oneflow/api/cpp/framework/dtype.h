@@ -36,8 +36,8 @@ enum class DType {
   kMaxDataType = 12
 };
 
-int32_t GetDTypeSize(DType dtype);
+[[nodiscard]] int32_t GetDTypeSize(DType dtype);
 
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_FRAMEWORK_DTYPE_H_
+#endif  // ONEFLOW_API_CPP_FRAMEWORK_DTYPE_H_

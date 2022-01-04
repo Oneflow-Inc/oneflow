@@ -15,8 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow._oneflow_internal.exception import IndexException
-import oneflow.framework.check_point_v2 as check_point_v2
-import oneflow.framework.tensor_str as tensor_str_util
+import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
@@ -143,11 +142,11 @@ def _str(self):
 
 
 def _repr(self):
-    return tensor_str_util._gen_tensor_str(self)
+    return tensor_str._gen_tensor_str(self)
 
 
 def _meta_repr(self):
-    return tensor_str_util._gen_tensor_meta_str(self)
+    return tensor_str._gen_tensor_meta_str(self)
 
 
 def _eq(self, other):
@@ -390,6 +389,10 @@ def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
 
 
+def _diagonal(self, offset=0, dim1=0, dim2=1):
+    return flow._C.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
+
+
 def _log1p(self):
     return flow.log1p(self)
 
@@ -580,6 +583,14 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
+def _chunk(self, chunks=None, dim=None):
+    return flow._C.chunk(self, chunks, dim)
+
+
+def _split(self, split_size_or_sections=None, dim=None):
+    return flow._C.split(self, split_size_or_sections, dim)
+
+
 def _all(self, dim=None, keepdim=False):
     return flow.all(self, dim, keepdim)
 
@@ -682,7 +693,7 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
-    np_arr = check_point_v2.generate_values_by_initializer(
+    np_arr = initializer_util.generate_values_by_initializer(
         initializer, shape, tensor.dtype
     )
     if tensor.is_consistent:
@@ -738,6 +749,7 @@ def RegisterMethods():
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
+    Tensor.__matmul__ = lambda self, other: self.matmul(other)
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
@@ -749,8 +761,6 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.__setstate__ = check_point_v2.tensor_setstate
-    Tensor.__getstate__ = check_point_v2.tensor_getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
@@ -819,6 +829,7 @@ def RegisterMethods():
     Tensor.softsign = _softsign
     Tensor.cast = _cast
     Tensor.diag = _diag
+    Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
     Tensor.add = _add
     Tensor.add_ = _add_inplace
@@ -869,6 +880,8 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.bmm = _bmm
+    Tensor.chunk = _chunk
+    Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow

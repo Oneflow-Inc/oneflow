@@ -42,6 +42,10 @@ void SetAffinityByDevice(int dev_id) {
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
 }
 
+bool IsCuda9OnTuringDevice(const cudaDeviceProp& prop) {
+  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && prop.major == 7 && prop.minor == 5;
+}
+
 }  // namespace
 
 #ifdef WITH_CUDA_GRAPHS
@@ -89,7 +93,7 @@ CudaStream::CudaStream(CudaDevice* device)
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
 #if CUBLAS_VERSION >= 11000
-  if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
+  if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION", true)) {
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
@@ -99,12 +103,12 @@ CudaStream::CudaStream(CudaDevice* device)
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
   // cudnn_handle
-  if (IsCuda9OnTuringDevice()) {
+  if (IsCuda9OnTuringDevice(device_properties())) {
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaGetLastError());
   }
   OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
-  if (IsCuda9OnTuringDevice()) {
+  if (IsCuda9OnTuringDevice(device_properties())) {
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     cudaGetLastError();
   }

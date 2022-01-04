@@ -3,7 +3,9 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-include(zlib)
+if (WITH_ZLIB)
+  include(zlib)
+endif()
 include(protobuf)
 include(googletest)
 include(gflags)
@@ -43,6 +45,10 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
+set_mirror_url_with_hash(INJA_URL 
+  https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
+  611e6b7206d0fb89728a3879f78b4775
+)
 
 option(CUDA_STATIC "" ON)
 
@@ -130,6 +136,12 @@ set(oneflow_exe_third_party_libs
     gflags_imported
 )
 
+set(oneflow_test_libs
+    ${GOOGLETEST_STATIC_LIBRARIES}
+    ${GOOGLEMOCK_STATIC_LIBRARIES}
+)
+
+
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
@@ -140,12 +152,12 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    zlib_imported
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    nlohmann_json::nlohmann_json
 )
 if (WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
@@ -155,6 +167,10 @@ if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
 endif()
 
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_libs zlib_imported)
+endif()
+
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
@@ -162,7 +178,6 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib
   protobuf
   gflags
   glog
@@ -173,7 +188,6 @@ set(oneflow_third_party_dependencies
   eigen
   half_copy_headers_to_destination
   re2
-  json_copy_headers_to_destination
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
@@ -181,7 +195,9 @@ set(oneflow_third_party_dependencies
 if (WITH_ONEDNN)
   list(APPEND oneflow_third_party_dependencies onednn)
 endif()
-
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_dependencies zlib)
+endif()
 
 if (WITH_COCOAPI)
   list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
@@ -206,7 +222,6 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
@@ -236,9 +251,9 @@ if (BUILD_CUDA)
   endif()
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies nccl)
 
@@ -308,11 +323,20 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  if(BUILD_PYTHON)
-    foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-      copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
-    endforeach()
-  endif(BUILD_PYTHON)
+  if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
+    message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
+  endif()
+  get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
+  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+    set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR})
+    if(of_include_src_dir MATCHES "/include$")
+      set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR_PARENT})
+    endif()
+    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR_DST}
+      COMPONENT oneflow_py_include
+      EXCLUDE_FROM_ALL
+    )
+  endforeach()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
