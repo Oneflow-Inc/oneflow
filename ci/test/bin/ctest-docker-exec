@@ -1,8 +1,6 @@
 set -e
-env | grep CTEST
-CUDA_VISIBLE_DEVICES=$(echo ${CTEST_RESOURCE_GROUP_0} | sed "s/cuda//g")
+CUDA_VISIBLE_DEVICES=$(echo ${CTEST_RESOURCE_GROUP_0} | sed "s/cuda//g" | sed "s/cpu,//g")
 [ -z "$CUDA_VISIBLE_DEVICES" ] && echo "CUDA_VISIBLE_DEVICES empty" && exit 1
-set -x
 docker exec \
     -e ONEFLOW_TEST_CPU_ONLY=${ONEFLOW_TEST_CPU_ONLY} \
     -e ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM} \
