@@ -76,7 +76,7 @@ def clip_grad_norm_(
         >>> out2.backward()
         >>> norm2 = flow.nn.utils.clip_grad_norm_(x2, 0.5)
         >>> norm2
-        tensor([1.0394], dtype=oneflow.float32)
+        tensor(1.0394, dtype=oneflow.float32)
         >>> x2.grad
         tensor([[0.0962, 0.0481, 0.0283],
                 [0.0663, 0.4810, 0.0428]], dtype=oneflow.float32)
