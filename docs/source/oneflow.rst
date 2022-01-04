@@ -114,6 +114,7 @@ oneflow
             selu, 
             silu, 
             slice, 
+            logical_slice,  
             slice_update, 
             softsign, 
             sort, 
@@ -152,5 +153,6 @@ oneflow
             decode_onerec,
             read_onerec,
             from_numpy,
+            cumsum,
 
 .. autofunction:: oneflow.relu
