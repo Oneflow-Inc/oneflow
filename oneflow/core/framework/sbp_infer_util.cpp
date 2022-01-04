@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 
 namespace oneflow {
 
@@ -235,6 +236,14 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
 
+  // TODO: get copy cost from each EagerBoxingInterpreter
+  if (!TRY(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+               producer_sbp_parallel, consumer_sbp_parallel, producer_parallel_desc,
+               consumer_parallel_desc))
+           .IsOk()) {
+    return kUnsupportedBoxing;
+  }
+
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   cfg::NdSbp reduced_in_nd_sbp;
@@ -250,11 +259,6 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
   // Same sbp is always supported.
   if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
 
-  int32_t in_dim = in_hierarchy->NumAxes();
-  int32_t out_dim = out_hierarchy->NumAxes();
-  // TODO: Not supporting nd_sbp with n >= 3 now
-  if (in_dim <= 0 || in_dim >= 3 || out_dim <= 0 || out_dim >= 3) { return kUnsupportedBoxing; }
-
   // Will directly modify output blob of source op. Requiring data having same sbp_parallel.
   if (is_same_sbp
       && !(reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
@@ -262,15 +266,14 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
     return kUnsupportedBoxing;
   }
 
+  int32_t in_dim = in_hierarchy->NumAxes();
+  int32_t out_dim = out_hierarchy->NumAxes();
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
     return ComputCopyCostBetweenTwoSbpParallel(
         reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0), logical_blob_desc,
         reduced_in_parallel_desc, reduced_out_parallel_desc);
   }
-
-  // Not supporting different hierarchy numbers
-  if (in_hierarchy->elem_cnt() != out_hierarchy->elem_cnt()) { return kUnsupportedBoxing; }
 
   double logical_blob_size =
       logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
@@ -279,9 +282,6 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
 
   if (in_dim == 2 && out_dim == 2) {
     // 2d to 2d
-    // Not supporting different hierarchy
-    // TODO: Support it in the future
-    if (*in_hierarchy != *out_hierarchy) { return kUnsupportedBoxing; }
     return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
                                          in_hierarchy, on_same_devices);
   } else if (in_dim == 2 && out_dim == 1) {
@@ -293,8 +293,7 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
     return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
                                          out_hierarchy, on_same_devices);
   } else {
-    return Error::RuntimeError()
-           << "Should not reach here. Something went wrong in ComputCopyCostBetweenNdSbp()";
+    return kUnsupportedBoxing;
   }
 }
 
