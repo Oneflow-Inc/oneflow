@@ -47,8 +47,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     } else if (like_tensor) {
       Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
-      std::cerr << "Unimplemented Error" << std::endl;
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << "Unimplemented Error" << std::endl;
     }
 
     const int ndim = src_tensor->shape().NumAxes();
