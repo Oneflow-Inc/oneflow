@@ -30,12 +30,10 @@ namespace {
 Maybe<OpBase> BuildOp(const UserOpConf& user_conf) {
   const std::string op_name = "user." + user_conf.op_type_name();
   auto op_ctx = JUST(OpBase::New(op_name));
-  for (const auto& attr_name : op_ctx->AttrNames()) {
-    const auto& it = user_conf.attr().find(attr_name);
-    CHECK_OR_RETURN(it != user_conf.attr().end())
-        << "Attribute " << attr_name << " has not been found in op conf.";
-    const auto& cpp_attr_value = JUST(user_op::AttrValueUtil::ToCppAttrValue(it->second));
-    JUST(op_ctx->SetAttr(attr_name, *cpp_attr_value));
+  for (const auto& kv : user_conf.attr()) {
+    if (!op_ctx->HasAttr(kv.first)) { continue; }
+    const auto& cpp_attr_value = JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second));
+    JUST(op_ctx->SetAttr(kv.first, *cpp_attr_value));
   }
   return op_ctx;
 }
