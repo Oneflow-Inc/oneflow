@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.test_utils.oneflow_pytorch_compatiblity import *
+from pathlib import Path
+
+parent_dir = Path(__file__).parent.absolute()
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -21,12 +24,12 @@ from oneflow.test_utils.oneflow_pytorch_compatiblity import *
 class TestApiCompatiblity(flow.unittest.TestCase):
     def test_alexnet_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_alexnet.py", "alexnet", "cuda"
+            test_case, parent_dir / "pytorch_alexnet.py", "alexnet", "cuda"
         )
 
     def test_resnet50_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_resnet.py", "resnet50", "cuda"
+            test_case, parent_dir / "pytorch_resnet.py", "resnet50", "cuda"
         )
 
 
