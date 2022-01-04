@@ -31,6 +31,7 @@ OneFlow Tensor Class
             ceil, 
             chunk,  
             clamp, 
+            clamp_,
             clip, 
             clone, 
             copy_, 

@@ -1387,6 +1387,11 @@
     ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
   bind_python: true
 
+- name: "clamp_"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  bind_python: true
+
 - name: "clamp_grad"
   signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClampGrad"
   bind_python: False
