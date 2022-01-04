@@ -13,9 +13,7 @@ FetchContent_Declare(
   URL_HASH MD5=${glog_URL_HASH}
 )
 
-if(THIRD_PARTY)
-  FetchContent_MakeAvailable(glog)
-endif(THIRD_PARTY)
+FetchContent_MakeAvailable(glog)
 
 # just for tensorflow, DO NOT USE IN OTHER PLACE
 FetchContent_GetProperties(glog)

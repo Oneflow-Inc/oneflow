@@ -20,6 +20,4 @@ FetchContent_Declare(
     PATCH_COMMAND git apply "${CMAKE_CURRENT_LIST_DIR}/patches/gflags-v2.2.2.patch"
 )
 
-if (THIRD_PARTY)
-    FetchContent_MakeAvailable(gflags)
-endif(THIRD_PARTY)
+FetchContent_MakeAvailable(gflags)
