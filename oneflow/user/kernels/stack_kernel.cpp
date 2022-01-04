@@ -132,7 +132,7 @@ class StackGradKernel final : public user_op::OpKernel {
     CHECK_LE(like_num_axes, in_num_axes)
         << "The num axes of `like` tensor should be less equal to num axes of `in` tensor. ";
     CHECK_LE(axis, like_num_axes)
-        << "The axis should be less equal than num axes of `like` tensor. ";
+        << "The axis should be less than or equal to num axes of `like` tensor. ";
     FOR_RANGE(size_t, i, 0, ctx->outputs().size()) {
       const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
       CHECK_EQ(like_shape_view.NumAxes(), like_num_axes)

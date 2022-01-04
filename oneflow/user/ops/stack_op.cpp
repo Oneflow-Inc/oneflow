@@ -50,9 +50,9 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 /* static */ Maybe<void> StackOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
-  CHECK_GE_OR_RETURN(axis, 0) << "The axis should be greater equal than 0.";
+  CHECK_GE_OR_RETURN(axis, 0) << "The axis should be greater than or equal to 0.";
   const int64_t in_num_axes = first_in_desc.shape().NumAxes();
-  CHECK_LE_OR_RETURN(axis, in_num_axes) "The axis should be greater equal than input num axes.";
+  CHECK_LE_OR_RETURN(axis, in_num_axes) "The axis should be greater than or equal to input num axes.";
   DimVector out_dim_vec(in_num_axes + 1);
   for (int i = 0; i < in_num_axes + 1; i++) {
     if (i == axis) {
@@ -130,7 +130,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 /*static*/ Maybe<void> StackOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                           const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.input_size("in") >= 1)
-      << "The size of input should be greater equal than 1. ";
+      << "The size of input should be greater than or equal to 1. ";
   return Maybe<void>::Ok();
 }
 
@@ -254,9 +254,9 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 /*static*/ Maybe<void> StackGradOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                               const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.input_size("like") >= 1)
-      << "The count of like tensor should be greater equal than 1. ";
+      << "The count of like tensor should be greater than or equal to 1. ";
   CHECK_OR_RETURN(op_conf.output_size("out") >= 1)
-      << "The count of out tensor should be greater equal than 1. ";
+      << "The count of out tensor should be greater than or equal to 1. ";
   return Maybe<void>::Ok();
 }
 
