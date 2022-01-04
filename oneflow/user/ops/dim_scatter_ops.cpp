@@ -96,7 +96,6 @@ Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgMo
                                const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK_OR_RETURN(indices_modifier != nullptr);
-  // CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 
   return Maybe<void>::Ok();
@@ -105,7 +104,6 @@ Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgMo
 Maybe<void> InputScalarArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                      const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-  // CHECK(indices_modifier != nullptr);
   CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 
