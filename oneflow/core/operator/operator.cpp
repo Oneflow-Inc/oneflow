@@ -750,7 +750,7 @@ Maybe<void> Operator::InferNdSbpSignature(
         for (size_t j = 0; j < input_bns().size(); ++j) {
           // NOTE: i is hierarchy dim and j is input_order
           const auto& ibn = input_bns()[j];
-          cfg::NdSbp nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+          const cfg::NdSbp& nd_sbp = ibn2nd_sbp.at(ibn);
           if (j > 0) {
             got_input_sbp_ss << ", ";
             all_input_sbp_ss << ", ";

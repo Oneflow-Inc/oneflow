@@ -1,6 +1,7 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.18.0)
 
+set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
 if (NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type selected, default to Release")
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
@@ -208,10 +209,8 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 if(BUILD_CPP_API)
-  set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow")
   set(LIBONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/lib")
   set(LIBONEFLOW_SHARE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/share")
-  make_directory(${LIBONEFLOW_INCLUDE_DIR})
   make_directory(${LIBONEFLOW_LIBRARY_DIR})
   make_directory(${LIBONEFLOW_SHARE_DIR})
 
@@ -224,12 +223,6 @@ if(BUILD_CPP_API)
   endif(BUILD_SHARED_LIBS)
 endif(BUILD_CPP_API)
 
-set(INJA_URL https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip CACHE STRING "")
-use_mirror(VARIABLE INJA_URL URL ${INJA_URL})
-set(INJA_MD5 611e6b7206d0fb89728a3879f78b4775 CACHE STRING "")
-set(JSON_URL https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip CACHE STRING "")
-use_mirror(VARIABLE JSON_URL URL ${JSON_URL})
-set(JSON_MD5 fb96f95cdf609143e998db401ca4f324 CACHE STRING "")
 include(third_party)
 
 set(ROBIN_HOOD_HASHING_URL https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.4.tar.gz)

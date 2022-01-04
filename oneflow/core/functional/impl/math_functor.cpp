@@ -810,6 +810,19 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class SqrtSquareSumFunctor {
+ public:
+  SqrtSquareSumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sqrt_square_sum").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
@@ -834,6 +847,7 @@ class VectorNormFunctor {
       }
       dtype_val = x->dtype();
     }
+    bool full_dim_flag = true;
     std::vector<int32_t> dim;
     if (!input_dim.has_value()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -848,7 +862,9 @@ class VectorNormFunctor {
         } else {
           dim.emplace_back(dim_check[i] + x->shape()->NumAxes());
         }
+        if (dim[i] != i) { full_dim_flag = false; }
       }
+      if ((int)dim.size() < x->shape()->NumAxes()) { full_dim_flag = false; }
     }
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
@@ -859,6 +875,9 @@ class VectorNormFunctor {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
         res = JUST(ReduceMin(JUST(Abs(x)), dim, keepdim));
+      } else if (ord_val == 2.0 && keepdim == false && full_dim_flag
+                 && x->requires_grad() == false) {
+        res = JUST(SqrtSquareSum(x));
       } else {
         res =
             JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
@@ -1666,6 +1685,43 @@ class MovedimIntFunctor {
   }
 };
 
+class CumsumFunctor {
+ public:
+  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    auto ndim = input->ndim();
+    if (dim < 0) { dim += ndim; }
+    CHECK_OR_RETURN(dim >= 0 && dim < ndim)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+        << ndim << " ) but got " << dim;
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CumsumGradFunctor {
+ public:
+  CumsumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    // No need to check dim validation here, while CumsumFunctor handled already
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 }  // namespace impl
 
 using namespace impl;
@@ -1701,6 +1757,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
@@ -1728,6 +1785,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
+  m.add_functor<CumsumFunctor>("Cumsum");
+  m.add_functor<CumsumGradFunctor>("CumsumGrad");
 };
 
 }  // namespace functional
