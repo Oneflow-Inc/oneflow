@@ -1158,7 +1158,7 @@ def _test_conv2d(
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
     conv.to(to_device)
     of_out = conv(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=1e-4, atol=1e-8))
+    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=1e-3, atol=1e-5))
 
 
 def _test_conv2d_backward(
