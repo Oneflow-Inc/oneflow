@@ -21,17 +21,17 @@ namespace py = pybind11;
 
 namespace oneflow {
 Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level, int memory_policy,
-                              bool use_disjoint_set) {
+                              const std::string &heuristic) {
   CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
   *Global<DTRConfig>::Get() =
-      DTRConfig(enable_dtr, thres, debug_level, memory_policy, use_disjoint_set);
+      DTRConfig(enable_dtr, thres, debug_level, memory_policy, heuristic);
   return Maybe<void>::Ok();
 }
 }  // namespace oneflow
 
 void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level, int memory_policy,
-                          bool use_disjoint_set) {
-  oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, memory_policy, use_disjoint_set)
+                          const std::string &heuristic) {
+  oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, memory_policy, heuristic)
       .GetOrThrow();
 }
 

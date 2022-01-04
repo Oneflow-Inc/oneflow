@@ -97,9 +97,7 @@ DTREagerBlobObject::~DTREagerBlobObject() {
 Maybe<void> DTREagerBlobObject::evict() {
   evict_flag_ = true;
   JUST(DeallocateBlobDataPtr());
-  if (blob_) {
-    blob_->reset_dptr(nullptr);
-  }
+  if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_NE_OR_RETURN(is_in_memory(), true);
   return Maybe<void>::Ok();
 }
@@ -150,7 +148,7 @@ bool DTREagerBlobObject::is_in_memory() const {
 }
 
 int DTREagerBlobObject::parent_depth() const {
-  int max = 0;
+  int max = -1;
   auto* ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
   CHECK_NOTNULL(ptr);
   for (const auto& input : ptr->inputs()) {
@@ -176,9 +174,7 @@ Maybe<double> DTREagerBlobObject::parent_cost(bool is_bp_required) const {
       const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       bool add_flag = (!dtr_blob_object->is_in_memory());
-      if (is_bp_required) {
-        add_flag = add_flag && dtr_blob_object->is_bp_required();
-      }
+      if (is_bp_required) { add_flag = add_flag && dtr_blob_object->is_bp_required(); }
       if (add_flag) {
         auto com_time = dtr_blob_object->compute_time();
         auto p_cost = JUST(dtr_blob_object->parent_cost(is_bp_required));
@@ -205,7 +201,7 @@ Maybe<double> DTREagerBlobObject::parent_cost(bool is_bp_required) const {
 }
 
 int DTREagerBlobObject::child_depth() const {
-  int max = 0;
+  int max = -1;
   for (int i = 0; i < user_ops_.size(); ++i) {
     const auto* ptr = dynamic_cast<DTRInstrOperand*>(CHECK_JUST(user_op(i)));
     CHECK_NOTNULL(ptr);
@@ -223,7 +219,6 @@ int DTREagerBlobObject::child_depth() const {
 }
 
 Maybe<double> DTREagerBlobObject::child_cost(bool is_bp_required) const {
-
   double cost = 0;
 
   for (int i = 0; i < user_ops_.size(); ++i) {
@@ -235,9 +230,7 @@ Maybe<double> DTREagerBlobObject::child_cost(bool is_bp_required) const {
         const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
         CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
         bool add_flag = (!dtr_blob_object->is_in_memory());
-        if (is_bp_required) {
-          add_flag = add_flag && dtr_blob_object->is_bp_required();
-        }
+        if (is_bp_required) { add_flag = add_flag && dtr_blob_object->is_bp_required(); }
         if (add_flag) {
           auto com_time = dtr_blob_object->compute_time();
           auto c_cost = JUST(dtr_blob_object->child_cost(is_bp_required));
@@ -266,8 +259,8 @@ Maybe<double> DTREagerBlobObject::child_cost(bool is_bp_required) const {
 }
 
 Maybe<double> DTREagerBlobObject::neighbor_cost() const {
-  auto p_cost = JUST(parent_cost());
-  auto c_cost = JUST(child_cost());
+  const auto p_cost = JUST(parent_cost());
+  const auto c_cost = JUST(child_cost());
   return p_cost + c_cost + compute_time_;
 }
 
@@ -281,9 +274,7 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
       if (!dtr_blob_object->is_in_memory()) {
         double p_cost =
             Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
-            if (p_cost < dtr_blob_object->compute_time()) {
-              p_cost = dtr_blob_object->compute_time();
-            }
+        if (p_cost < dtr_blob_object->compute_time()) { p_cost = dtr_blob_object->compute_time(); }
         cost += p_cost;
       }
     }
@@ -297,9 +288,7 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
       if (!dtr_blob_object->is_in_memory()) {
         double c_cost =
             Global<one::DTRTensorPool>::Get()->find_father(dtr_blob_object->node)->compute_time();
-            if (c_cost < dtr_blob_object->compute_time()) {
-              c_cost = dtr_blob_object->compute_time();
-            }
+        if (c_cost < dtr_blob_object->compute_time()) { c_cost = dtr_blob_object->compute_time(); }
         cost += c_cost;
       }
     }
@@ -309,29 +298,54 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
 }
 
 Maybe<double> DTREagerBlobObject::cost() const {
-  const double n_cost = Global<DTRConfig>::Get()->use_disjoint_set ? JUST(approx_neighbor_cost())
-                                                                   : JUST(neighbor_cost());
-  double time_since_last_access = Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
+  const auto& heuristic = Global<DTRConfig>::Get()->heuristic;
+
+  const double time_since_last_access =
+      heuristic == "size" ? 1 : Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
+
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << std::dec << "n_cost " << static_cast<int64_t>(n_cost) << ", blob_body_bytes_ "
-              << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access
-              << std::endl;
-    const auto pd = parent_depth();
-    const auto cd = child_depth();
-    std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd + cd
-              << std::endl;
+    std::cout << std::dec
+              // << "n_cost " << static_cast<int64_t>(n_cost)
+              << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access "
+              << time_since_last_access << std::endl;
+    // const auto pd = parent_depth();
+    // const auto cd = child_depth();
+    // std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd + cd
+              // << std::endl;
   }
-  return n_cost / blob_body_bytes_ / time_since_last_access;
+  if (heuristic == "random") {
+    return static_cast<double>(rand()) / RAND_MAX;
+  } else if (heuristic == "size") {
+    return 1 / blob_body_bytes_double();
+  } else if (heuristic == "full") {
+    return JUST(neighbor_cost()) / blob_body_bytes_double() / time_since_last_access;
+  } else if (heuristic == "eq") {
+    return JUST(approx_neighbor_cost()) / blob_body_bytes_double() / time_since_last_access;
+  } else if (heuristic == "bp_aware") {
+    return reverse_cost();
+  } else if (heuristic == "depth") {
+    return parent_depth() + child_depth();
+  } else if (heuristic == "local") {
+    return compute_time_ / blob_body_bytes_double() / time_since_last_access;
+  } else if (heuristic == "lru") {
+    return 1 / time_since_last_access;
+  } else if (heuristic == "compute_time_and_size") {
+    return JUST(neighbor_cost()) / blob_body_bytes_double();
+  } else if (heuristic == "compute_time") {
+    return JUST(neighbor_cost());
+  } else {
+    return Error::InvalidValueError("");
+  }
 }
 
-Maybe<double> DTREagerBlobObject::reverse_cost() {
+Maybe<double> DTREagerBlobObject::reverse_cost() const {
   double cost = JUST(rev_fwd_cost());
   double bwd_cost = JUST(rev_bwd_cost());
 
   if (bwd_cost < cost) {
     set_recompute_mode(-2);
     cost = bwd_cost;
-  } 
+  }
   return cost;
 }
 
@@ -344,9 +358,11 @@ Maybe<double> DTREagerBlobObject::rev_fwd_cost() const {
   // parent_cost: sum of cost for all parent nodes that are not in memory
   double cost_parent = compute_time_ + JUST(parent_cost(true));
 
-  // sum of the cost for all potentials tensors that will be recomputed and stored in memory after the recomputation of the current tensor
+  // sum of the cost for all potentials tensors that will be recomputed and stored in memory after
+  // the recomputation of the current tensor
   double cost_fwd_potential = compute_time_;
-  size_t available_bytes = oneflow::GetDTRMemoryThreshold() - Global<one::DTRTensorPool>::Get()->get_total_memory();
+  size_t available_bytes =
+      oneflow::GetDTRMemoryThreshold() - Global<one::DTRTensorPool>::Get()->get_total_memory();
   size_t tmp_bytes = 0;
   auto* ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
@@ -355,7 +371,8 @@ Maybe<double> DTREagerBlobObject::rev_fwd_cost() const {
       auto object = input.lock();
       const auto dtr_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(object);
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (tmp_bytes + dtr_blob_object->compute_time() < available_bytes && !dtr_blob_object->is_in_memory() && dtr_blob_object->is_bp_required()) {
+      if (tmp_bytes + dtr_blob_object->compute_time() < available_bytes
+          && !dtr_blob_object->is_in_memory() && dtr_blob_object->is_bp_required()) {
         tmp_bytes += dtr_blob_object->compute_time();
       } else {
         break;
@@ -390,9 +407,7 @@ Maybe<double> DTREagerBlobObject::rev_bwd_cost() const {
         }
       }
     }
-    if (cost_parent < 0 ||tmp_cost < cost_parent) {
-      cost_parent = tmp_cost;
-    }
+    if (cost_parent < 0 || tmp_cost < cost_parent) { cost_parent = tmp_cost; }
   }
   cost_parent += compute_time_;
 
@@ -402,8 +417,7 @@ Maybe<double> DTREagerBlobObject::rev_bwd_cost() const {
 }
 
 size_t DTREagerBlobObject::input_size() const {
-  const auto& ptr = dynamic_cast<DTRInstrOperand*>(compute_op_.get());
-  return ptr->inputs().size();
+  return compute_op_->inputs().size();
 }
 
 const std::string& DTREagerBlobObject::compute_op_type_name() const {
@@ -411,6 +425,7 @@ const std::string& DTREagerBlobObject::compute_op_type_name() const {
 }
 
 bool DTREagerBlobObject::is_evictable() const {
+  if (compute_op_->inputs().empty()) { return false; }
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
   // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "conv_filter_grad") {
   // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul")

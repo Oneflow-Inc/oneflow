@@ -542,6 +542,7 @@ struct LocalCallOpKernelUtil {
     user_op::OpKernelState* state;
     TryInitOpKernelState(operand, device_ctx, &state);
     JUST(OpKernelCompute(operand, device_ctx, state));
+    
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
     return Maybe<void>::Ok();
@@ -925,16 +926,34 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     return Maybe<void>::Ok();
   }
 
+  static Maybe<double> GetEstimatedComputeTime(std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand> operand) {
+    size_t estimated_compute_time = 0;
+    JUST(
+        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+          estimated_compute_time += dtr_blob_object->BlobBodyBytes();
+          return Maybe<void>::Ok();
+        }));
+    JUST(
+        ForEachDTROutputTensor(operand, [&](const std::shared_ptr<vm::DTREagerBlobObject>& dtr_blob_object) -> Maybe<void> {
+          estimated_compute_time += dtr_blob_object->BlobBodyBytes();
+          return Maybe<void>::Ok();
+        }));
+
+    return estimated_compute_time;
+  }
+
   static inline Maybe<void> UpdateTensorInfo(vm::Instruction* instruction,
                                              double compute_time = -1.0) {
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
 
+    const double estimated_compute_time = JUST(GetEstimatedComputeTime(operand));
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
           // unpin inputs
           dtr_blob_object->unpin();
           return Maybe<void>::Ok();
         }));
+    Global<one::DTRTensorPool>::Get()->time_flies(estimated_compute_time);
 
     // find in_place op and do sth
     bool is_in_place = false;
@@ -961,10 +980,11 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     JUST(ForEachDTROutputTensor(
         operand,
         [&](const std::shared_ptr<vm::DTREagerBlobObject>& dtr_blob_object) -> Maybe<void> {
-          dtr_blob_object->set_compute_time(compute_time);
+          // dtr_blob_object->set_compute_time(estimated_compute_time);
+          dtr_blob_object->set_compute_time(dtr_blob_object->blob_body_bytes_double());
           // Condition - insert current blob into candidates only when blob memory > threshold (with
           // default 0)
-          dtr_blob_object->reset_node(compute_time);
+          dtr_blob_object->reset_node(estimated_compute_time);
           if (is_in_place) {
             dtr_blob_object->set_evict_attr(false);
           } else {
@@ -1015,6 +1035,9 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
           if (!dtr_blob_object->is_in_memory()) {
+            if (dtr_blob_object->input_size() == 0) {
+              std::cout << dtr_blob_object << std::endl;
+            }
             CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
             JUST(recompute(dtr_blob_object, stream));
           }
@@ -1027,6 +1050,10 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     CHECK_NOTNULL_OR_RETURN(operand);
     JUST(DoInfer(operand, stream));
     JUST(FullCompute(operand, device_ctx));
+
+    CHECK_GT_OR_RETURN(object->compute_time(), 0);
+    Global<one::DTRTensorPool>::Get()->time_flies(object->compute_time());
+    // JUST(Global<one::DTRTensorPool>::Get()->time_flies(GetEstimatedComputeTime(instruction)));
     if (oneflow::DTRDebugEnabled()) {
       // if (oneflow::DTRDebugEnabled() || !object->is_in_memory()) {
       CHECK_OR_RETURN(object->is_in_memory());

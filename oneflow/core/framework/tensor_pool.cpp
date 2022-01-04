@@ -46,6 +46,8 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
             << ", is evictable: " << (debo->is_evictable()) << ", compute op: " << compute_op
             << ", shape: " << debo->mut_blob_desc()->shape() << ", memory: " << mem << "MB"
             << ", ebo address: " << debo.get() << ", blob dptr: " << debo->blob().dptr()
+            // << ", parent_depth: " << debo->parent_depth()
+            // << ", child_depth: " << debo->child_depth() 
             << ", tensor buffer dptr: "
             << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
             // << ", data_type: " << debo->mut_blob_desc()->data_type()
@@ -62,16 +64,17 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double tensor_pool_mem = 0.;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
-      double cur_cost = -1;
       if (static_cast<bool>(shared_object->compute_op()) && !shared_object->is_pinned()
           && (shared_object->is_evictable()) && shared_object->is_in_memory()) {
-        // cur_cost = JUST(shared_object->cost());
-        cur_cost = JUST(shared_object->reverse_cost());
+        const double cur_cost = JUST(shared_object->cost());
+        // const double cur_cost = JUST(shared_object->reverse_cost());
         if (min_cost < 0 || min_cost > cur_cost) {
           best = shared_object.get();
           min_cost = cur_cost;
           evict_object_id = id;
         }
+      }
+      if (static_cast<bool>(shared_object->compute_op())) {
         if (oneflow::DTRDebugLevel() >= 2) {
           std::cout << "id " << id << ", ";
           printInfo(shared_object);
@@ -96,14 +99,22 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   }
   if (oneflow::DTRDebugEnabled()) {
     std::cout << "pool mem is " << tensor_pool_mem << "MB" << std::endl;
-    const auto pd = best->parent_depth();
-    const auto cd = best->child_depth();
-    std::cout << "Evict " << evict_object_id << "th object, depth is " << pd << "+" << cd << "="
-              << (pd + cd) << ", cost is " << min_cost << ", compute op is "
-              << (best ? best->compute_op()->shared_opkernel()->op_type_name() : "null")
-              << ", addr is " << best << std::endl;
+    if (best != nullptr) {
+      std::cout << "Evict " << evict_object_id << "th object , cost is " << min_cost
+                << ", compute op is "
+                << (best ? best->compute_op()->shared_opkernel()->op_type_name() : "null")
+                << ", addr is " << best << ", memory is "
+                << best->BlobBodyBytes() * 1. / 1024 / 1024 << std::endl;
+      // const auto pd = best->parent_depth();
+      // const auto cd = best->child_depth();
+      // std::cout << "depth is " << pd << "+" << cd << "=" << (pd + cd) << std::endl;
+    }
   }
   num_eviction_++;
+  // if (min_cost > 10) {
+  // JUST(display2());
+  // exit(1);
+  // }
   return best;
 }
 
@@ -120,7 +131,9 @@ Maybe<void> DTRTensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_o
   CHECK_NOTNULL_OR_RETURN(blob_object);
   CHECK_EQ_OR_RETURN(thres, 0);
   // if ((blob_object->is_evictable()) && (blob_object->memory() > thres)) {
-  if (true) {
+  // if (true) {
+  if (blob_object->compute_op()->shared_opkernel()->op_type_name() != "copy"
+      && blob_object->blob().mem_case().has_device_cuda_mem()) {
     // // for set version
     // candidates_.insert(blob_object);
 
@@ -151,34 +164,43 @@ Maybe<void> DTRTensorPool::clear() {
 }
 
 double DTRTensorPool::duration() {
-  auto t2 = std::chrono::steady_clock::now();
-  // time in seconds
-  std::chrono::duration<double> time_span = t2 - start_time_;
-  // // time in milli
-  // std::chrono::duration<double ,std::milli> time_span = t2 - start_time_;
-  return time_span.count();
+  return duration_;
+  // auto t2 = std::chrono::steady_clock::now();
+  // // time in seconds
+  // std::chrono::duration<double> time_span = t2 - start_time_;
+  // // // time in milli
+  // // std::chrono::duration<double ,std::milli> time_span = t2 - start_time_;
+  // return time_span.count();
 }
+
+void DTRTensorPool::time_flies(double t) { duration_ += t; }
 
 Maybe<void> DTRTensorPool::display2() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
   int id = 0;
   float total_mem = 0;
+  float living_mem = 0;
   float pinned_mem = 0;
   for (const auto& object : candidates_) {
     if (auto shared_object = object.lock()) {
-      if (shared_object->is_in_memory()) {
+      // if (shared_object->is_in_memory()) {
+      if (true) {
         std::cout << "id " << id << ", ";
         printInfo(shared_object);
         total_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
-        if (shared_object->is_pinned()) {
-          pinned_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+        if (shared_object->is_in_memory()){
+          living_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+          if (shared_object->is_pinned()) {
+            pinned_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
+          }
         }
       }
     }
     id++;
   }
   std::cout << "Total memory: " << total_mem << "MB" << std::endl;
+  std::cout << "Living memory: " << living_mem << "MB" << std::endl;
   std::cout << "Pinned memory: " << pinned_mem << "MB" << std::endl;
   return Maybe<void>::Ok();
 }
@@ -238,13 +260,9 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
   return Maybe<void>::Ok();
 }
 
-void DTRTensorPool::set_total_memory(size_t mem) {
-  total_memory_bytes_ = mem;
-}
+void DTRTensorPool::set_total_memory(size_t mem) { total_memory_bytes_ = mem; }
 
-size_t DTRTensorPool::get_total_memory() {
-  return total_memory_bytes_;
-}
+size_t DTRTensorPool::get_total_memory() { return total_memory_bytes_; }
 
 }  // namespace one
 }  // namespace oneflow

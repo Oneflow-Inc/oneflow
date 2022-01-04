@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
 #define ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
 
+#include <utility>
+
 #include "oneflow/core/common/global.h"
 
 namespace oneflow {
@@ -30,13 +32,13 @@ struct DTRConfig {
   float memory_threshold;
   int debug_level;
   int memory_policy;
-  bool use_disjoint_set;
-  DTRConfig(bool is_enabled, float memory_threshold, int debug_level, int memory_policy, bool use_disjoint_set)
+  std::string heuristic;
+  DTRConfig(bool is_enabled, float memory_threshold, int debug_level, int memory_policy, const std::string &heuristic)
       : is_enabled(is_enabled),
         memory_threshold(memory_threshold),
         debug_level(debug_level),
         memory_policy(memory_policy),
-        use_disjoint_set(use_disjoint_set) {}
+        heuristic(heuristic) {}
 };
 
 class MultiClient {};

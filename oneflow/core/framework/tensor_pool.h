@@ -50,6 +50,7 @@ struct DTRTensorPool {
   // do not need Maybe
   const std::chrono::steady_clock::time_point start_time() { return start_time_; }
   double duration();
+  void time_flies(double t);
   Maybe<void> display();
   Maybe<void> display2();
   void add_recompute_times() { num_recomputation_++; }
@@ -61,6 +62,7 @@ struct DTRTensorPool {
   // TODO: Implementation of disjoint-set data structure
 
  private:
+  double duration_;
   // vector for eviction, set for non-eviction.
   // std::set<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::vector<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;

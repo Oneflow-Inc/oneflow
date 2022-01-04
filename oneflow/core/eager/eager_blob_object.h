@@ -108,6 +108,8 @@ class EagerBlobObject : public BlobObject {
     last_used_device_ = last_used_device;
   }
 
+  double blob_body_bytes_double() const { return static_cast<double>(blob_body_bytes_); }
+
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
@@ -165,7 +167,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
         is_bp_required_(false),
         compute_time_(0),
         last_access_time_(0),
-        time_since_last_access_(0),
         pinned_(0),
         recompute_mode_(1),
         compute_op_(nullptr) {}
@@ -197,7 +198,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void set_last_access_time(double val) { last_access_time_ = val; }
   void set_evict_attr(bool val) { could_evict_ = val; }
   void set_bp_required(bool val) { is_bp_required_ = val; }
-  void set_recompute_mode(int val) { recompute_mode_ = val; }
+  void set_recompute_mode(int val) const { recompute_mode_ = val; }
 
   const std::string& compute_op_type_name() const;
 
@@ -211,11 +212,11 @@ class DTREagerBlobObject final : public EagerBlobObject {
 
   void pin() {
     pinned_++;
-    // if (oneflow::DTRDebugEnabled()) {std::cout << "pinned " << this << std::endl;}
+    if (oneflow::DTRDebugEnabled()) {std::cout << "pinned " << this << ", " << (pinned_ - 1) << " to " << pinned_ << std::endl;}
   }
   void unpin() {
     pinned_--;
-    // if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned " << this << std::endl;}
+    if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned " << this << ", " << (pinned_ + 1) << " to " << pinned_ << std::endl;}
   }
   void update_access_time();
   void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
@@ -231,7 +232,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
 
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost() const;
-  Maybe<double> reverse_cost();
+  Maybe<double> reverse_cost() const;
 
   std::shared_ptr<DisjNode> node;
   void reset_node(double t) {
@@ -244,9 +245,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   bool is_bp_required_;
   double compute_time_;
   double last_access_time_;
-  double time_since_last_access_;
   size_t pinned_;
-  int recompute_mode_;    // 1 - forward recomputation; 0-1 - reverse recomputation
+  mutable int recompute_mode_;    // 1 - forward recomputation; 0-1 - reverse recomputation
   std::unique_ptr<DTRInstrOperand> compute_op_;
   std::vector<std::unique_ptr<DTRInstrOperand>> user_ops_;
 };

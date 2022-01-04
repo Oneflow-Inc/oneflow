@@ -63,9 +63,6 @@ Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
   JUST(this->tensor_->set_requires_grad(old_requires_grad));
 
   auto blob_object = JUST(this->tensor_->eager_blob_object());
-  // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
-  //   dtr_eager_blob_object->set_evict_attr(false);
-  // }
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
     dtr_eager_blob_object->set_evict_attr(false);
   }
@@ -88,6 +85,7 @@ Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
       CHECK_NOTNULL_OR_RETURN(input_holder);
       input_holders.push_back(input_holder);
     } else {
+      // std::cout << "no dtr tensor, bug?" << std::endl;
       // do nothing
     }
   }
