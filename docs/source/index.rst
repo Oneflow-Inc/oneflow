@@ -14,6 +14,7 @@ OneFlow API Reference
     oneflow
     tensor
     nn
+    nn.init
     functional
     module
     autograd
