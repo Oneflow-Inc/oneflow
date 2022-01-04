@@ -423,8 +423,15 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.erfinv,
     """
-     See :func:`oneflow.erfinv`
-     """,
+    See :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfinv_,
+    """
+    Inplace version of `oneflow.erfinv`
+    """,
 )
 
 add_docstr(

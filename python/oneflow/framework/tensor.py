@@ -457,6 +457,10 @@ def _erfinv(self):
     return flow._C.erfinv(self)
 
 
+def _erfinv_inplace(self):
+    return flow._C.erfinv_(self)
+
+
 def _expm1(self):
     return flow.expm1(self)
 
@@ -857,6 +861,7 @@ def RegisterMethods():
     Tensor.erf = _erf
     Tensor.erfc = _erfc
     Tensor.erfinv = _erfinv
+    Tensor.erfinv_ = _erfinv_inplace
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
