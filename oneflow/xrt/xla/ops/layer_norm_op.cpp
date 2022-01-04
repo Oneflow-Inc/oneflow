@@ -85,10 +85,6 @@ void LayerNormOp::Compile(XlaOpContext* ctx) {
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized_0")) {
-    ctx->SetOutput("normalized_0", Reshape(output, input_shape));
-  }
-
   Shape gamma_shape = Shape({norm_dims});
   // output = Reshape(output, Shape({batch_dims, norm_dims}));
   if (ctx->Attr<bool>("scale")) {
@@ -122,6 +118,11 @@ void LayerNormGradOp::Compile(XlaOpContext* ctx) {
   xla::XlaOp activation = ctx->Input("x_0");
   xla::XlaOp mean = ctx->Input("mean_0");
   xla::XlaOp inv_variance = ctx->Input("inv_variance_0");
+
+  if (ctx->HasInput("gamma_0")) {
+    xla::XlaOp gamma = ctx->Input("gamma_0");
+    output_grad = output_grad * gamma;
+  }
 
   Shape activation_shape = ctx->InputShape("x_0");
   int begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
@@ -184,21 +185,13 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
     xla::XlaOp beta_grad = xla::Reduce(output_grad, Zero(builder, data_type), add_func, batch_dims);
     ctx->SetOutput("beta_diff_0", beta_grad);
   }
+  xla::XlaOp x = ctx->Input("x_0");
+  xla::XlaOp mean = ctx->Input("mean_0");
+  xla::XlaOp inv_variance = ctx->Input("inv_variance_0");
   if (ctx->HasOutput("gamma_diff_0")) {
-    xla::XlaOp normalized = ctx->Input("normalized_0");
-    xla::XlaOp gamma_grad = normalized * output_grad;
+    xla::XlaOp gamma_grad = (x - mean) * inv_variance * output_grad;
     gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func, batch_dims);
     ctx->SetOutput("gamma_diff_0", gamma_grad);
-  }
-  if (ctx->HasOutput("normalized_diff_0")) {
-    xla::XlaOp normalized_grad;
-    if (ctx->HasInput("gamma_0")) {
-      xla::XlaOp gamma = ctx->Input("gamma_0");
-      normalized_grad = xla::Mul(output_grad, gamma, norm_dims);
-    } else {
-      normalized_grad = output_grad;
-    }
-    ctx->SetOutput("normalized_diff_0", normalized_grad);
   }
 }
 

@@ -4967,6 +4967,7 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$mean,
     OneFlow_Tensor:$inv_variance,
+    Optional<OneFlow_Tensor>:$gamma,
     Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
@@ -4985,14 +4986,13 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
 def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    Optional<OneFlow_Tensor>:$normalized,
-    Optional<OneFlow_Tensor>:$gamma
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance
   );
   let output = (outs
-    Optional<OneFlow_Tensor>:$normalized_diff,
     Optional<OneFlow_Tensor>:$beta_diff,
-    Optional<OneFlow_Tensor>:$gamma_diff,
-    Optional<OneFlow_Tensor>:$reduce_buf
+    Optional<OneFlow_Tensor>:$gamma_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis
