@@ -25,8 +25,12 @@ set(TEST_WITH_TORCH_IMG_TAG "registry.cn-beijing.aliyuncs.com/oneflow/test-with-
 # TODO: generate resource spec by running nvidia-smi
 set(CODEGEN_PYTHON_EXECUTABLE python3 CACHE STRING "Python executable to generate spec .json files")
 set(CTEST_RESOURCE_SPEC_FILE "${PROJECT_BINARY_DIR}/gen-resource-spec.json" CACHE STRING "" FORCE)
+if(BUILD_CUDA)
+  set(CTEST_RESOURCE_SPEC_FILE_ARGS "--cuda")
+endif()
+
 execute_process(
-  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/gen-resource-spec.py
+  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/gen-resource-spec.py ${CTEST_RESOURCE_SPEC_FILE_ARGS}
   OUTPUT_FILE ${CTEST_RESOURCE_SPEC_FILE}
   COMMAND_ERROR_IS_FATAL ANY
   OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -159,6 +163,7 @@ function(add_oneflow_python_test)
       set(portNumberPrefix "[port ${portNumber}]")
     endif()
     set(TEST_NAME "[GPUx${ONEFLOW_TEST_DEVICE_NUM}]${testNamePrefix}${portNumberPrefix}[${${prefix}_NAME}]${PYTHON_TEST_FILE}")
+    set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC}")
     if (RUN_IN_DOCKER)
       set(CONTAINER_FIXTURE ${TORCH_CONTAINER_FIXTURE})
       if (${prefix}_SINGLE_CLIENT)
@@ -168,7 +173,7 @@ function(add_oneflow_python_test)
       if (NOT TEST_CONTAINER_NAME)
         message(FATAL_ERROR "found empty TEST_CONTAINER_NAME: ${TEST_CONTAINER_NAME}")
       endif()
-      set(DOCKER_EXEC_PREFIX "${CTEST_DOCKER_EXEC};${TEST_CONTAINER_NAME}")
+      list(APPEND DOCKER_EXEC_PREFIX ${TEST_CONTAINER_NAME})
     endif()
     # use a list to prevent DOCKER_EXEC_PREFIX is treated as one command
     add_test(NAME ${TEST_NAME}
@@ -194,7 +199,7 @@ function(add_oneflow_python_test)
     set(resourceGroups "${resourceGroups},cpu:${ONEFLOW_TEST_DEVICE_NUM}")
     set_tests_properties(${TEST_NAME}
       PROPERTIES
-        ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
+        ENVIRONMENT "$<$<BOOL:${RUN_IN_DOCKER}>:RUN_IN_DOCKER=1>;$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
         RESOURCE_GROUPS "${resourceGroups}"
         LABELS "${testLabels};"
         FIXTURES_REQUIRED ${CONTAINER_FIXTURE}
