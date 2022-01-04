@@ -331,25 +331,32 @@ std::string KeyValueStoreImpl<Key>::IndexFileName() const {
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::SaveIndexFile() {
-  FileHandle index_file(IndexFileName().c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
-  IndexEntry<Key> entry{};
+  FileHandle index_file(IndexFileName().c_str(), O_CREAT | O_RDWR, 0644);
+  using Entry = IndexEntry<Key>;
+  const size_t total_size = sizeof(Entry) * key2id_.size();
+  index_file.Truncate(total_size);
+  MappedFileHandle mapped_file(std::move(index_file), PROT_READ | PROT_WRITE);
+  Entry* entries = static_cast<Entry*>(mapped_file.ptr());
+  size_t count = 0;
   for (const auto& pair : key2id_) {
-    entry.key = pair.first;
-    entry.index = pair.second;
-    PCHECK(write(index_file.fd(), &entry, sizeof(IndexEntry<Key>)) == sizeof(IndexEntry<Key>));
+    entries[count].key = pair.first;
+    entries[count].index = pair.second;
+    count += 1;
   }
 }
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::LoadIndexFile() {
   FileHandle index_file(IndexFileName().c_str(), O_RDONLY, 0644);
-  IndexEntry<Key> entry{};
+  using Entry = IndexEntry<Key>;
   const size_t size = index_file.Size();
-  CHECK_EQ(size % sizeof(IndexEntry<Key>), 0);
-  key2id_.reserve(size / sizeof(IndexEntry<Key>));
-  for (size_t i = 0; i < size / sizeof(IndexEntry<Key>); ++i) {
-    PCHECK(read(index_file.fd(), &entry, sizeof(IndexEntry<Key>)) == sizeof(IndexEntry<Key>));
-    CHECK(key2id_.emplace(entry.key, entry.index).second);
+  MappedFileHandle mapped_file(std::move(index_file), PROT_READ);
+  const Entry* entries = static_cast<Entry*>(mapped_file.ptr());
+  CHECK_EQ(size % sizeof(Entry), 0);
+  size_t n_entries = size / sizeof(Entry);
+  key2id_.reserve(n_entries);
+  for (size_t i = 0; i < n_entries; ++i) {
+    CHECK(key2id_.emplace(entries[i].key, entries[i].index).second);
   }
 }
 

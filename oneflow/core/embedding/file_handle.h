@@ -21,6 +21,9 @@ limitations under the License.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
+#include <sys/mman.h>
 
 namespace oneflow {
 
@@ -59,6 +62,13 @@ class FileHandle final {
 
   size_t Size() { return size_; }
 
+  size_t BlockSize() {
+    CHECK_NE(fd_, -1);
+    int block_size = 0;
+    PCHECK(ioctl(fd_, BLKSSZGET, &block_size) == 0);
+    return block_size;
+  }
+
   void Truncate(size_t new_size) {
     CHECK_NE(fd_, -1);
     if (new_size == size_) { return; }
@@ -69,6 +79,38 @@ class FileHandle final {
  private:
   size_t size_;
   int fd_;
+};
+
+class MappedFileHandle final {
+ public:
+  OF_DISALLOW_COPY(MappedFileHandle);
+  MappedFileHandle() : file_(), ptr_(nullptr) {}
+  explicit MappedFileHandle(FileHandle&& file, int prot) : file_(std::move(file)), ptr_(nullptr) {
+    CHECK_NE(file_.fd(), -1);
+    void* ptr = mmap(nullptr, file_.Size(), prot, MAP_SHARED, file_.fd(), 0);
+    CHECK_NE(ptr, MAP_FAILED);
+    ptr_ = ptr;
+  }
+  MappedFileHandle(MappedFileHandle&& other) noexcept : MappedFileHandle() {
+    *this = std::move(other);
+  }
+  MappedFileHandle& operator=(MappedFileHandle&& other) noexcept {
+    Unmap();
+    this->file_ = std::move(other.file_);
+    this->ptr_ = other.ptr_;
+    other.ptr_ = nullptr;
+    return *this;
+  }
+  ~MappedFileHandle() { Unmap(); }
+
+  void* ptr() { return ptr_; }
+
+ private:
+  void Unmap() {
+    if (ptr_ != nullptr) { PCHECK(munmap(ptr_, file_.Size()) == 0); }
+  }
+  FileHandle file_;
+  void* ptr_;
 };
 
 }  // namespace embedding
