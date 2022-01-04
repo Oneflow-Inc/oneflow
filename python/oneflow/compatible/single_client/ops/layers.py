@@ -873,7 +873,7 @@ def layer_norm_grad(
         oneflow._oneflow_internal.BlobDesc: Gradient with respect to input `Blob`.
     """
     op_builder = (
-         flow.user_op_builder(name)
+        flow.user_op_builder(name)
         .Op("layer_norm_grad")
         .Input("dy", [dy])
         .Input("x", [x])
@@ -927,10 +927,7 @@ def layer_norm_param_grad(
         .Attr("begin_params_axis", begin_params_axis)
         .Build()
     )
-    (
-        beta_diff,
-        gamma_diff,
-    ) = op.InferAndTryRun().RemoteBlobList()
+    (beta_diff, gamma_diff,) = op.InferAndTryRun().RemoteBlobList()
     return (beta_diff, gamma_diff)
 
 
