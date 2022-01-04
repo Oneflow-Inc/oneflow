@@ -8712,6 +8712,10 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
+// Group: ERFINV
+// erfinv
+// Total: 1
+
 def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
@@ -8724,5 +8728,3 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfac
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
-

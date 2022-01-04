@@ -44,10 +44,16 @@ class GpuErfinvKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_ERFINV_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("erfinv").SetCreateFn<GpuErfinvKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_ERFINV_KERNEL(dtype)                                                      \
+  REGISTER_USER_KERNEL("erfinv")                                                                \
+      .SetCreateFn<GpuErfinvKernel<dtype>>()                                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 REGISTER_CUDA_ERFINV_KERNEL(float)
 REGISTER_CUDA_ERFINV_KERNEL(double)

@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#define _USE_MATH_DEFINES
 #include <math.h>
-#define CENTRAL_RANGE 0.7
-
 namespace oneflow {
 
 template<typename T>
@@ -33,16 +30,17 @@ class CpuErfinvKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = x->shape().elem_cnt();
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
+    constexpr float central_range = 0.7;
+    T a[4] = {T(0.886226899), T(-1.645349621), T(0.914624893), T(-0.140543331)};
+    T b[4] = {T(-2.118377725), T(1.442710462), T(-0.329097515), T(0.012229801)};
+    T c[4] = {T(-1.970840454), T(-1.624906493), T(3.429567803), T(1.641345311)};
+    T d[2] = {T(3.543889200), T(1.637067800)};
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       T z, num, dem;
-      T a[4] = {T(0.886226899), T(-1.645349621), T(0.914624893), T(-0.140543331)};
-      T b[4] = {T(-2.118377725), T(1.442710462), T(-0.329097515), T(0.012229801)};
-      T c[4] = {T(-1.970840454), T(-1.624906493), T(3.429567803), T(1.641345311)};
-      T d[2] = {T(3.543889200), T(1.637067800)};
       T x_abs = std::abs(x_ptr[i]);
       if (x_abs > 1.0) y_ptr[i] = std::numeric_limits<T>::quiet_NaN();
       if (x_abs == 1.0) y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x_ptr[i]);
-      if (x_abs <= static_cast<T>(CENTRAL_RANGE)) {
+      if (x_abs <= static_cast<T>(central_range)) {
         z = x_ptr[i] * x_ptr[i];
         num = (((a[3] * z + a[2]) * z + a[1]) * z + a[0]);
         dem = ((((b[3] * z + b[2]) * z + b[1]) * z + b[0]) * z + static_cast<T>(1.0));
@@ -67,10 +65,16 @@ class CpuErfinvKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ERFINV_KERNEL(dtype)                                               \
-  REGISTER_USER_KERNEL("erfinv").SetCreateFn<CpuErfinvKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_ERFINV_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("erfinv")                                                                \
+      .SetCreateFn<CpuErfinvKernel<dtype>>()                                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 REGISTER_CPU_ERFINV_KERNEL(float)
 REGISTER_CPU_ERFINV_KERNEL(double)
