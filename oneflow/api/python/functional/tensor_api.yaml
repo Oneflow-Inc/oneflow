@@ -14,25 +14,30 @@
 
 - name: "tensor"
   signature: [
-    "Tensor (PyObject* data, *, DataType dtype=None, Device device=None,
-             Bool requires_grad=False) => TensorWithData",
-    "Tensor (PyObject* data, *, DataType dtype=None, Placement placement,
-             SbpList sbp, Bool requires_grad=False) => ConsistentTensorWithData",
-  ]
+      "Tensor (PyObject* data, *, DataType dtype=None, Device device=None,
+      Bool requires_grad=False) => TensorWithData",
+      "Tensor (PyObject* data, *, DataType dtype=None, Placement placement,
+      SbpList sbp, Bool requires_grad=False) => ConsistentTensorWithData",
+    ]
   bind_python: True
 
 - name: "_legacy_tensor_ctor"
-  signature: [
-    "Tensor (*, Device device=None) => TensorEmptyCtor",
-    "Tensor (*, Placement placement, SbpList sbp) => ConsistentTensorEmptyCtor",
-    "Tensor (Tensor other) => TensorWithOtherCtor",
-    "Tensor (PyObject* data, *, Device device=None) => TensorWithDataCtor",
-    "Tensor (PyObject* data, *, Placement placement, SbpList sbp) => ConsistentTensorWithDataCtor",
-    "Tensor (Shape size, *, Device device=None) => TensorWithShapeCtor",
-    "Tensor (Shape size, *, Placement placement, SbpList sbp) => ConsistentTensorWithShapeCtor",
-  ]
+  signature:
+    [
+      "Tensor (*, Device device=None) => TensorEmptyCtor",
+      "Tensor (*, Placement placement, SbpList sbp) => ConsistentTensorEmptyCtor",
+      "Tensor (Tensor other) => TensorWithOtherCtor",
+      "Tensor (PyObject* data, *, Device device=None) => TensorWithDataCtor",
+      "Tensor (PyObject* data, *, Placement placement, SbpList sbp) => ConsistentTensorWithDataCtor",
+      "Tensor (Shape size, *, Device device=None) => TensorWithShapeCtor",
+      "Tensor (Shape size, *, Placement placement, SbpList sbp) => ConsistentTensorWithShapeCtor",
+    ]
   bind_python: True
 
 - name: "assign_local_tensor"
-  signature: "Void (Tensor ref, Tensor value)=> AssignLocalTensorFunctor"
+  signature: "Void (Tensor ref, Tensor value) => AssignLocalTensorFunctor"
+  bind_python: True
+
+- name: "from_numpy"
+  signature: "Tensor (PyObject* obj) => LocalTensorSharedNumpyData"
   bind_python: True

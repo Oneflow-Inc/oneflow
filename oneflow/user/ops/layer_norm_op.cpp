@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -40,19 +41,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 
 }  // namespace
 
-REGISTER_USER_OP("layer_norm")
-    .Input("x")
-    .OptionalInput("beta")
-    .OptionalInput("gamma")
-    .Output("y")
-    .Output("mean")
-    .Output("inv_variance")
-    .Attr<bool>("center")
-    .Attr<bool>("scale")
-    .Attr<int64_t>("begin_norm_axis")
-    .Attr<int64_t>("begin_params_axis")
-    .Attr<double>("epsilon")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+/* static */ Maybe<void> LayerNormOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
       user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);
@@ -81,8 +70,13 @@ REGISTER_USER_OP("layer_norm")
       *mean->mut_shape() = InferBnParamShape(x.shape(), begin_norm_axis);
       *inv_variance = *mean;
       return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+    }
+
+/*static*/ Maybe<void> LayerNormOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LayerNormOp::GetSbp(user_op::SbpContext* ctx) {
       const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
       int64_t begin_norm_axis =
           ShiftNegativeAxisIfNeed(x_shape, ctx->Attr<int64_t>("begin_norm_axis"));
@@ -97,8 +91,9 @@ REGISTER_USER_OP("layer_norm")
             .Build();
       }
       return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    }
+
+/* static */ Maybe<void> LayerNormOp::InferDataType(user_op::InferContext* ctx) {
       const bool center = ctx->Attr<bool>("center");
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
@@ -117,19 +112,9 @@ REGISTER_USER_OP("layer_norm")
       *mean->mut_data_type() = InferBnParamDataType(x.data_type());
       *inv_variance->mut_data_type() = mean->data_type();
       return Maybe<void>::Ok();
-    });
+    }
 
-REGISTER_USER_OP("layer_norm_grad")
-    .Input("dy")
-    .Input("x")
-    .Input("mean")
-    .Input("inv_variance")
-    .OptionalInput("gamma")
-    .OptionalInput("_add_to_output")
-    .Output("dx")
-    .Attr<int64_t>("begin_norm_axis")
-    .Attr<double>("epsilon")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+/* static */ Maybe<void> LayerNormGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
@@ -148,15 +133,21 @@ REGISTER_USER_OP("layer_norm_grad")
         CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
       }
       return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+    }
+
+/*static*/ Maybe<void> LayerNormGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LayerNormGradOp::GetSbp(user_op::SbpContext* ctx) {
       int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
       for (int i = 0; i < begin_norm_axis; ++i) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    }
+
+/* static */ Maybe<void> LayerNormGradOp::InferDataType(user_op::InferContext* ctx) {
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
@@ -172,17 +163,9 @@ REGISTER_USER_OP("layer_norm_grad")
         CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type());
       }
       return Maybe<void>::Ok();
-    });
+    }
 
-REGISTER_USER_OP("layer_norm_param_grad")
-    .Input("dy")
-    .Input("x")
-    .Input("mean")
-    .Input("inv_variance")
-    .OptionalOutput("beta_diff")
-    .OptionalOutput("gamma_diff")
-    .Attr<int64_t>("begin_params_axis")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+/* static */ Maybe<void> LayerNormParamGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
       // TODO: tsai: replace lambda with user op if
       auto has_tensor = [ctx](const std::string& bn) -> bool {
         bool ret = false;
@@ -219,8 +202,13 @@ REGISTER_USER_OP("layer_norm_param_grad")
         CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
       }
       return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+    }
+
+/*static*/ Maybe<void> LayerNormParamGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LayerNormParamGradOp::GetSbp(user_op::SbpContext* ctx) {
       int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
       for (int i = 0; i < begin_params_axis; ++i) {
         ctx->NewBuilder()
@@ -232,8 +220,9 @@ REGISTER_USER_OP("layer_norm_param_grad")
             .Build();
       }
       return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    }
+
+/* static */ Maybe<void> LayerNormParamGradOp::InferDataType(user_op::InferContext* ctx) {
       auto has_tensor = [ctx](const std::string& bn) -> bool {
         bool ret = false;
         for (auto& t : ctx->inputs()) {
@@ -261,7 +250,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
         CHECK_EQ_OR_RETURN(gamma.data_type(), dy.data_type());
       }
       return Maybe<void>::Ok();
-    });
+    }
 
 REGISTER_USER_OP_GRAD("layer_norm")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
