@@ -50,8 +50,9 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
             ndim=4, dim1=30, dim2=40, dim3=50, requires_grad=False
         ).to(device)
         y = torch.linalg.norm(x)
-        print(f'grad_norm {y.oneflow:.4f}\t')
+        print(f"grad_norm {y.oneflow:.4f}\t")
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
