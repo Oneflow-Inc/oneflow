@@ -8732,3 +8732,5 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+#endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
