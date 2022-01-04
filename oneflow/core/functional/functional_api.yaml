@@ -1553,8 +1553,8 @@
   signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Stack"
   bind_python: True
 
-- name: "stack_backward"
-  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackBackward"
+- name: "stack_grad"
+  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackGrad"
   bind_python: False
 
 - name: "local_to_consistent"

@@ -491,23 +491,25 @@ class StackFunctor {
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     const int64_t ninput = inputs.size();
-    int64_t axis = dim;
     int64_t ndims = inputs[0]->ndim();
-    int64_t max_dim_size = 0;
     int64_t stack_dim = dim;
-    if (dim < 0) { stack_dim = stack_dim + ndims; }
+    if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
+    CHECK_OR_RETURN(stack_dim >= 0 && stack_dim <= ndims)
+        << "Index Error: Dimension out of range (expected in range of [" << -ndims - 1 << ", "
+        << ndims << "], but got " << stack_dim;
     const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
     for (const auto& input : inputs) {
       for (int i = 0; i < ndims; ++i) {
-        if (axis == i) { max_dim_size += 1; }
         CHECK_OR_RETURN(input->shape()->At(i) == first_in_shape->At(i))
-            << " Sizes of tensors must match except in dimension " << axis << ". Got "
-            << input->shape()->At(i) << " and " << first_in_shape->At(i)
-            << " is expected in dimension 1.";
+            << " Stacks expects each tensor to be equal size"
+               ", but got "
+            << first_in_shape->ToString() << " at first input and " << input->shape()->ToString()
+            << " which index is " << i;
       }
     }
+    int64_t max_dim_size = ninput;
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    JUST(attrs.SetAttr<int64_t>("axis", stack_dim));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
     TensorTuple outputs;
     for (int i = 0; i < ninput; i += kMaxInputCount) {
@@ -518,19 +520,19 @@ class StackFunctor {
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
-    return this->operator()(outputs, axis);
+    return this->operator()(outputs, stack_dim);
   }
 
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
-class StackBackwardFunctor {
+class StackGradFunctor {
  public:
-  StackBackwardFunctor() {
+  StackGradFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 1; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("stack_backward")
+      ops_[n] = CHECK_JUST(one::OpBuilder("stack_grad")
                                .Input("in")
                                .Input("like", n + 1)
                                .Output("out", n + 1)
@@ -2541,7 +2543,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
-  m.add_functor<impl::StackBackwardFunctor>("StackBackward");
+  m.add_functor<impl::StackGradFunctor>("StackGrad");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");

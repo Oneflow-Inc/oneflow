@@ -24,8 +24,8 @@ namespace one {
 
 struct StackCaptureState : public AutoGradCaptureState {
   std::vector<bool> requires_grad;
-  int64_t axis;
-  int64_t input_num;
+  int64_t axis = 1;
+  int64_t input_num = 2;
 };
 
 class Stack : public OpExprGradFunction<StackCaptureState> {
@@ -68,12 +68,11 @@ Maybe<void> Stack::Apply(const StackCaptureState* ctx, const TensorTuple& out_gr
   if (ctx->input_num == 1) {
     in_grads->at(0) = out_grads.at(0);
   } else {
-    // const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, ctx->axis));
-    const auto& results = JUST(functional::StackBackward(out_grads.at(0), like, ctx->axis));
+    const auto& results = JUST(functional::StackGrad(out_grads.at(0), like, ctx->axis));
     CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
-
-    for (int i = 0; i < ctx->input_num; ++i)
+    for (int i = 0; i < ctx->input_num; ++i) {
       if (ctx->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }
+    }
   }
   return Maybe<void>::Ok();
 }
