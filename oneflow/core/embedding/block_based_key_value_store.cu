@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/embedding/block_based_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/embedding/hash_functions.cuh"
+#include "oneflow/core/embedding/file_handle.h"
 #include <omp.h>
 #include <robin_hood.h>
 #include <fcntl.h>
@@ -38,52 +39,6 @@ struct Buffer {
   uint32_t offset_in_block = 0;
   uint32_t buffer_id = 0;
   struct iovec io_vec {};
-};
-
-class FileGuard final {
- public:
-  OF_DISALLOW_COPY(FileGuard);
-  FileGuard() : fd_(-1), size_(0) {}
-  FileGuard(const std::string& filename, int flag) : fd_(-1) {
-    fd_ = open(filename.c_str(), flag, 0644);
-    PCHECK(fd_ != -1);
-    struct stat sb {};
-    PCHECK(fstat(fd_, &sb) == 0);
-    size_ = sb.st_size;
-  }
-  FileGuard(FileGuard&& other) noexcept : fd_(-1), size_(0) { *this = std::move(other); }
-  FileGuard& operator=(FileGuard&& other) noexcept {
-    this->Close();
-    fd_ = other.fd_;
-    other.fd_ = -1;
-    size_ = other.size_;
-    other.size_ = 0;
-    return *this;
-  }
-  ~FileGuard() { Close(); }
-
-  int fd() { return fd_; }
-
-  void Close() {
-    if (fd_ != -1) {
-      PCHECK(close(fd_) == 0);
-      fd_ = -1;
-    }
-  }
-
-  size_t Size() { return size_; }
-
-  void ExtendTo(size_t new_size) {
-    CHECK_NE(fd_, -1);
-    CHECK_GE(new_size, size_);
-    if (new_size == size_) { return; }
-    PCHECK(ftruncate(fd_, new_size) == 0);
-    size_ = new_size;
-  }
-
- private:
-  size_t size_;
-  int fd_;
 };
 
 template<typename Key>
@@ -165,7 +120,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint64_t block_size_;
   uint64_t values_per_block_;
   robin_hood::unordered_flat_map<Key, uint64_t> key2id_;
-  std::vector<FileGuard> value_files_;
+  std::vector<FileHandle> value_files_;
   std::string path_;
   uint8_t* host_query_blocks_;
   std::vector<io_uring> io_rings_;
@@ -233,7 +188,7 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
         const uint64_t block_in_chunk = block_id - chunk_id * NUM_BLOCKS_PER_CHUNK;
         const uint64_t block_offset = block_in_chunk * block_size_;
         const uint64_t offset_in_chunk = block_offset + id_in_block * value_size_;
-        FileGuard& file = value_files_.at(chunk_id);
+        FileHandle& file = value_files_.at(chunk_id);
         buffer->index = i;
         buffer->offset_in_block = id_in_block * value_size_;
         io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring));
@@ -294,7 +249,7 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
   const uint64_t end_chunk_id = end_block_id / NUM_BLOCKS_PER_CHUNK;
   value_files_.reserve(end_chunk_id + 1);
   for (uint64_t new_chunk_id = value_files_.size(); new_chunk_id <= end_chunk_id; ++new_chunk_id) {
-    value_files_.emplace_back(ChunkName(new_chunk_id), O_CREAT | O_RDWR | O_DIRECT);
+    value_files_.emplace_back(ChunkName(new_chunk_id).c_str(), O_CREAT | O_RDWR | O_DIRECT, 0644);
   }
   uint64_t write_blocks = 0;
   while (write_blocks < num_blocks) {
@@ -306,9 +261,9 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
                  (batch_chunk_id + 1) * NUM_BLOCKS_PER_CHUNK - batch_start_block_id);
     const uint64_t bytes_to_write = blocks_to_write * block_size_;
     const uint64_t offset_in_chunk = block_in_chunk * block_size_;
-    FileGuard& file = value_files_.at(batch_chunk_id);
+    FileHandle& file = value_files_.at(batch_chunk_id);
     CHECK_LE(file.Size(), offset_in_chunk);
-    file.ExtendTo(offset_in_chunk + bytes_to_write);
+    file.Truncate(offset_in_chunk + bytes_to_write);
     PCHECK(pwrite(file.fd(), host_query_blocks_ + write_blocks * block_size_, bytes_to_write,
                   offset_in_chunk)
            == bytes_to_write);
