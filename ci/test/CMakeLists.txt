@@ -184,7 +184,7 @@ function(add_oneflow_python_test)
       COMMAND ${DOCKER_EXEC_PREFIX};${PYTHON_EXECUTABLE};${DISTRIBUTED_LAUNCH_PREFIX};${PYTHON_TEST_FILE};--failfast;--verbose
     )
     set(vramRequired 600)
-    if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_resnet50")
+    if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_resnet50|python/oneflow/test/modules/test_compatiblity.py")
       set(vramRequired 6000)
     endif()
     if(PYTHON_TEST_FILE MATCHES "python/oneflow/test/modules/test_rnn.py$")
