@@ -444,10 +444,10 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 }  // namespace
 
 struct LocalCallOpKernelUtil final {
-  static inline Maybe<void> Compute(vm::Instruction* instruction) {
-    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
+  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
+    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     if (unlikely(operand->need_temp_storage())) {
       InferTempStorageBlobDesc(operand);
@@ -465,8 +465,8 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline LocalCallOpKernelPhyInstrOperand* GetLocalCallOpKernelPhyInstrOperand(
-      vm::Instruction* instruction) {
-    auto* operand = CHECK_NOTNULL(instruction->instr_msg().phy_instr_operand().get());
+      const vm::InstructionMsg& instr_msg) {
+    auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
     return CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand));
   }
 
@@ -542,7 +542,11 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction));
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction->instr_msg()));
+}
+
+void LocalCallOpKernelInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(*instr_msg));
 }
 
 std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
