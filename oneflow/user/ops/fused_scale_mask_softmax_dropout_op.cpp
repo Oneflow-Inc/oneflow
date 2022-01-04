@@ -77,7 +77,6 @@ namespace oneflow {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_EQ_OR_RETURN(dy_desc.shape(), softmax_y_desc.shape());
-  // CHECK_OR_RETURN(dy_desc.shape() == mask_desc.shape());
   CHECK_OR_RETURN(dy_desc.shape().At(dy_desc.shape().NumAxes() - 1)
                   == mask_desc.shape().At(mask_desc.shape().NumAxes() - 1));
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
