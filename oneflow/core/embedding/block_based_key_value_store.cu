@@ -44,9 +44,16 @@ struct Buffer {
 };
 
 template<typename Key>
-struct alignas(2 * std::max(sizeof(Key), sizeof(uint64_t))) IndexEntry {
-  Key key;
-  uint64_t index;
+struct IndexEntry {
+  static constexpr size_t align_size = std::max(sizeof(Key), sizeof(uint64_t));
+  union {
+    typename std::aligned_storage<align_size, align_size>::type pad;
+    Key data;
+  } key;
+  union {
+    typename std::aligned_storage<align_size, align_size>::type pad;
+    uint64_t data;
+  } index;
 };
 
 std::string GetChunkName(uint64_t chunk_id) {
@@ -339,8 +346,8 @@ void KeyValueStoreImpl<Key>::SaveIndexFile() {
   Entry* entries = static_cast<Entry*>(mapped_file.ptr());
   size_t count = 0;
   for (const auto& pair : key2id_) {
-    entries[count].key = pair.first;
-    entries[count].index = pair.second;
+    entries[count].key.data = pair.first;
+    entries[count].index.data = pair.second;
     count += 1;
   }
 }
@@ -356,7 +363,7 @@ void KeyValueStoreImpl<Key>::LoadIndexFile() {
   size_t n_entries = size / sizeof(Entry);
   key2id_.reserve(n_entries);
   for (size_t i = 0; i < n_entries; ++i) {
-    CHECK(key2id_.emplace(entries[i].key, entries[i].index).second);
+    CHECK(key2id_.emplace(entries[i].key.data, entries[i].index.data).second);
   }
 }
 
