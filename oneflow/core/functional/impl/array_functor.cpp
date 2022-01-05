@@ -1008,7 +1008,7 @@ class ReshapeFunctor {
         bool is_view_valid =
             checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        if (is_view_valid) { return view::Reshape(x->contiguous(), infered_shape); }
+        if (is_view_valid) { return view::Reshape(x, infered_shape); }
       }
     }
 
@@ -1062,7 +1062,7 @@ class ViewFunctor {
         CHECK_OR_RETURN(is_view_valid)
             << " >> view size is not compatible with input tensor's size and stride (at least one "
                "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x->contiguous(), infered_shape);
+        return view::Reshape(x, infered_shape);
       }
     }
 
@@ -1864,7 +1864,7 @@ class TensorGetItemFunctor {
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
                              &target_dims));
 
-    auto expand_input = x->contiguous();
+    auto expand_input = x;
     for (int i = 0; i < expand_dims.size(); ++i) {
       int64_t dim = expand_dims.at(i);
       expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
@@ -1897,11 +1897,17 @@ class TensorGetItemFunctor {
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
-    if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+    if (shape != *(result->shape())) { 
+      result = JUST(Reshape(result->contiguous(), shape)); 
+    }
+    if (!tensor_indices.empty()) { 
+      result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); 
+    }
 
     // TODO(): Returns a view of tensor `x`.
-    if (result == x) { result = JUST(Identity(x)); }
+    if (result == x) { 
+      result = JUST(Identity(x)); 
+    }
     return result;
   }
 };
@@ -2433,8 +2439,8 @@ class MeshgridFunctor {
     for (int i = 0; i < size; ++i) {
       view_shape.Set(i, -1);
       std::shared_ptr<one::Tensor> reshaped =
-          JUST(Reshape(tensor_consts.at(i), view_shape))->contiguous();
-      grids[i] = JUST(Expand(reshaped, grids_shape));
+          JUST(Reshape(tensor_consts.at(i), view_shape));
+      grids[i] = JUST(Expand(reshaped, grids_shape))->contiguous();
       view_shape.Set(i, 1);
     }
 

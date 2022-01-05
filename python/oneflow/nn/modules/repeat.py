@@ -84,7 +84,7 @@ def repeat_op(input, *sizes):
             expand_dim.insert(0, sizes[i])
             out_reshape.insert(0, sizes[i])
     new_tensor = flow.reshape(input, in_reshape)
-    tmp_tensor = new_tensor.expand(*expand_dim)
+    tmp_tensor = new_tensor.expand(*expand_dim).contiguous()
     out = flow.reshape(tmp_tensor, out_reshape)
     return out
 

@@ -1728,7 +1728,7 @@ class L2NormalizeFunctor {
 
       const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
           *op_, {JUST(functional::Transpose(input, input_perm))->contiguous()}, attrs));
-      return functional::Transpose(result->at(0), input_perm);
+      return JUST(functional::Transpose(result->at(0), input_perm))->contiguous();
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
