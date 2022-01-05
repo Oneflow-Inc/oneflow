@@ -170,8 +170,8 @@ class TestAddModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
-    def test_0shape_add(test_case):
+    @autotest(check_graph=True)
+    def test_0_size_add(test_case):
         device = random_device()
         x = random_pytorch_tensor(2, 0, 3).to(device)
         y = random_pytorch_tensor(2, 1, 3).to(device)
@@ -194,7 +194,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_add_with_alpha(test_case):
         device = random_device()
         x1 = random_pytorch_tensor(2, 2, 3).to(device).mean()

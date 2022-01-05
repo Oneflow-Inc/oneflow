@@ -23,14 +23,14 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestTile(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tile_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
         reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         z = torch.tile(x, reps)
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_tile_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
         reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))

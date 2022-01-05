@@ -26,7 +26,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedFill(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_masked_fill_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -36,7 +36,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0, value)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_masked_fill_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -46,7 +46,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0, value)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_masked_fill_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)

@@ -74,9 +74,43 @@ Maybe<BoxingDividor> RawFlattenInHierarchy() {
       });
 }
 
+Maybe<Symbol<PlacedNdSbp>> RawUnflattenHierarchy(Symbol<PlacedNdSbp> in_placed_nd_sbp,
+                                                 Symbol<PlacedNdSbp> out_placed_nd_sbp) {
+  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  const auto& in_sbp_parallel = in_placed_nd_sbp->nd_sbp()->sbp_parallel(0);
+  cfg::NdSbp unflattened_nd_sbp;
+  for (int64_t i = 0; i < out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {
+    unflattened_nd_sbp.mutable_sbp_parallel()->Add()->CopyFrom(in_sbp_parallel);
+  }
+  return JUST(PlacedNdSbp::New(SymbolOf(unflattened_nd_sbp), out_placed_nd_sbp->placement()));
+}
+
+static constexpr auto* UnflattenHierarchy = DECORATE(&RawUnflattenHierarchy, ThreadLocal);
+
+Maybe<BoxingDividor> RawUnflattenInHierarchy() {
+  return std::make_shared<BoxingDividor>(
+      "UnflattenInHierarchy",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return UnflattenHierarchy(in, out);
+      });
+}
+
+Maybe<BoxingDividor> RawUnflattenOutHierarchy() {
+  return std::make_shared<BoxingDividor>(
+      "UnflattenOutHierarchy",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return UnflattenHierarchy(out, in);
+      });
+}
+
 }  // namespace
 
 decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarchy, ThreadLocal);
+decltype(UnflattenInHierarchy) UnflattenInHierarchy =
+    DECORATE(&RawUnflattenInHierarchy, ThreadLocal);
+decltype(UnflattenOutHierarchy) UnflattenOutHierarchy =
+    DECORATE(&RawUnflattenOutHierarchy, ThreadLocal);
 
 namespace {
 

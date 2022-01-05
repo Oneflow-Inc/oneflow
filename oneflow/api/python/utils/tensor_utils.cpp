@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/framework/data_consistency_check.h"
+#include "oneflow/core/framework/consistency_check.h"
 
 namespace py = pybind11;
 
