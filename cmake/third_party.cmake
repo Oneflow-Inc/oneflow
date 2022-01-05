@@ -40,13 +40,13 @@ if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
+if (WITH_ONETBB)
+  include(oneTBB)
+endif()
+
 include(hwloc)
 if (WITH_ONEDNN)
   include(oneDNN)
-endif()
-
-if (WITH_ONETBB)
-  include(oneTBB)
 endif()
 
 set_mirror_url_with_hash(INJA_URL 
@@ -163,12 +163,13 @@ set(oneflow_third_party_libs
     ${LZ4_STATIC_LIBRARIES}
     nlohmann_json::nlohmann_json
 )
-if (WITH_ONEDNN)
-  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
-endif()
 
 if (WITH_ONETBB)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONETBB_STATIC_LIBRARIES})
+endif()
+
+if (WITH_ONEDNN)
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
 
 if (NOT WITH_XLA)
@@ -200,11 +201,11 @@ set(oneflow_third_party_dependencies
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
-if (WITH_ONEDNN)
-  list(APPEND oneflow_third_party_dependencies onednn)
-endif()
 if (WITH_ONETBB)
   list(APPEND oneflow_third_party_dependencies onetbb)
+endif()
+if (WITH_ONEDNN)
+  list(APPEND oneflow_third_party_dependencies onednn)
 endif()
 if (WITH_ZLIB)
   list(APPEND oneflow_third_party_dependencies zlib)
@@ -238,12 +239,13 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
 )
-if (WITH_ONEDNN)
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
-endif()
 
 if (WITH_ONETBB)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONETBB_INCLUDE_DIR})
+endif()
+
+if (WITH_ONEDNN)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
 
 if (NOT WITH_XLA)
