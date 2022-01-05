@@ -25,6 +25,7 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
   BoxingCollector boxing_collector;
   boxing_collector.Init(op_graph);
   std::vector<cfg::NdSbp> middle_sbps;
+  HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations
   op_graph.ForEachNode([&](const OpNode* node) -> Maybe<void> {
     OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
@@ -71,6 +72,9 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
             const auto& old_val = ReplaceInputLbnInOpCustomizedConf(
                 &consumer_op_conf, ibn, GenLogicalBlobName(middle_node_lbi));
             CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
+            if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
+              op_node2op_conf[node] = consumer_op_conf;
+            }
           }
         }
       }
@@ -78,6 +82,9 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
 
     return Maybe<void>::Ok();
   });
+  for (const auto& op_node7op_conf : op_node2op_conf) {
+    JUST(job_builder->MutOpOnlyOnce(op_node7op_conf.second));
+  }
   return Maybe<void>::Ok();
 }
 
