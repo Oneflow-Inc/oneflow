@@ -3975,6 +3975,38 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, Declare
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_CumsumOp : OneFlow_BaseOp<"cumsum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CumsumGradOp : OneFlow_BaseOp<"cumsum_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
