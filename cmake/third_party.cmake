@@ -328,7 +328,7 @@ if (THIRD_PARTY)
   endif()
   get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
   foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    if(of_include_src_dir MATCHES "/include")
+    if(of_include_src_dir MATCHES "/include$")
       # it requires two slashes, but in CMake doc it states only one slash is needed
       set(of_include_src_dir "${of_include_src_dir}//")
     endif()
