@@ -381,6 +381,10 @@ def _softsign(self):
     return flow.softsign(self)
 
 
+def _swapaxes(self, dim0, dim1):
+    return flow._C.swapaxes(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -883,6 +887,7 @@ def RegisterMethods():
     Tensor.chunk = _chunk
     Tensor.split = _split
     Tensor.squeeze = _squeeze
+    Tensor.swapaxes = _swapaxes
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
