@@ -66,16 +66,17 @@ class CpuErfinvKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ERFINV_KERNEL(dtype)                                                       \
-  REGISTER_USER_KERNEL("erfinv")                                                                \
-      .SetCreateFn<CpuErfinvKernel<dtype>>()                                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_CPU_ERFINV_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("erfinv")                                                       \
+      .SetCreateFn<CpuErfinvKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInplaceProposalFn(                                                           \
+          [](const user_op::InferContext&,                                             \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {   \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));             \
+            return Maybe<void>::Ok();                                                  \
+          });
 
 REGISTER_CPU_ERFINV_KERNEL(float)
 REGISTER_CPU_ERFINV_KERNEL(double)
