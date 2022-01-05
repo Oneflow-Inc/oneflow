@@ -507,8 +507,9 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.floor_,
-    """
-    See :func:`oneflow.floor`
+    r"""
+    In-place version of :func:`oneflow.floor`
+
     """,
 )
 
