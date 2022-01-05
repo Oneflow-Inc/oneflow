@@ -389,6 +389,10 @@
   signature: "Tensor (Tensor x, Tensor dy) => SquareGrad"
   bind_python: False
 
+- name: "sqrt_square_sum"
+  signature: "Tensor (Tensor x) => SqrtSquareSum"
+  bind_python: True
+
 - name: "std"
   signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => StandardDeviation"
   bind_python: True
@@ -1864,3 +1868,11 @@
 - name: "in_top_k"
   signature: "Tensor (Tensor targets, Tensor predictions, Int32 k) => InTopK"
   bind_python: True
+
+- name: "cumsum"
+  signature: "Tensor (Tensor input, Int64 dim) => Cumsum"
+  bind_python: True
+
+- name: "cumsum_grad"
+  signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
+  bind_python: False 
