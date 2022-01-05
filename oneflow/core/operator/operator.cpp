@@ -711,11 +711,10 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           is_same_sbp = true;
         }
       }
-      double copy_cost = JUST(ComputEagerCopyCostBetweenNdSbp(
+      total_copy_cost += JUST(ComputEagerCopyCostBetweenNdSbp(
           JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
           JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
           JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetOpParallelDesc()), is_same_sbp));
-      total_copy_cost += copy_cost;
     }
     if (total_copy_cost <= GetValidMaxCopyCost()) {
       if (select_sbp_idx == -1) {
