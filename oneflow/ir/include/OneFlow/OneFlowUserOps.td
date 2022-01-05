@@ -3977,10 +3977,10 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, Declare
 
 def OneFlow_CumsumOp : OneFlow_BaseOp<"cumsum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$out
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64Attr:$dim
