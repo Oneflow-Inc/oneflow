@@ -142,6 +142,7 @@ OneFlow Tensor Class
             std, 
             storage_offset, 
             stride, 
+            swapaxes, 
             sub, 
             tan, 
             tanh, 
