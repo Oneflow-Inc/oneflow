@@ -108,6 +108,8 @@ bool PyStringSequenceCheck(PyObject* obj);
 
 Maybe<const char*> PyStringAsString(PyObject* obj);
 
+std::string PyObjectToReprStr(PyObject* obj);
+
 // Scalar
 bool PyScalarCheck(PyObject* obj);
 Maybe<Scalar> PyUnpackScalar(PyObject* obj);
