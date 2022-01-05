@@ -168,10 +168,10 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   // TODO: tsai: replace lambda with user op if
   auto has_tensor = [ctx](const std::string& bn) -> bool {
     bool ret = false;
-    for (auto t : ctx->inputs()) {
+    for (const auto& t : ctx->inputs()) {
       if (bn == t.first) { return true; }
     }
-    for (auto t : ctx->outputs()) {
+    for (const auto& t : ctx->outputs()) {
       if (bn == t.first) { return true; }
     }
     return ret;
