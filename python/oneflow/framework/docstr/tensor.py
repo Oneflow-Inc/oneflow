@@ -506,6 +506,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    """
+    See :func:`oneflow.floor`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor

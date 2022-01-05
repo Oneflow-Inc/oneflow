@@ -60,6 +60,7 @@ OneFlow Tensor Class
             flip, 
             float, 
             floor, 
+            floor_, 
             fmod,
             gather, 
             ge, 
