@@ -1879,4 +1879,4 @@
 
 - name: "cumsum_grad"
   signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
-  bind_python: False 
+  bind_python: False

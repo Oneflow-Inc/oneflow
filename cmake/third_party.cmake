@@ -158,7 +158,6 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
-    ${ROCKSDB_STATIC_LIB}
     nlohmann_json::nlohmann_json
 )
 if (WITH_ONEDNN)
