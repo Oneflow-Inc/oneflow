@@ -438,7 +438,11 @@ def _clamp_inplace(self, min=None, max=None):
 
 
 def _clip(self, min=None, max=None):
-    return flow.clip(self, min=min, max=max)
+    return flow._C.clip(self, min=min, max=max)
+
+
+def _clip_inplace(self, min=None, max=None):
+    return flow._C.clip_(self, min=min, max=max)
 
 
 def _cos(self):
@@ -852,6 +856,7 @@ def RegisterMethods():
     Tensor.clamp = _clamp
     Tensor.clamp_ = _clamp_inplace
     Tensor.clip = _clip
+    Tensor.clip_ = _clip_inplace
     Tensor.cos = _cos
     Tensor.cosh = _cosh
     Tensor.expand_as = _expand_as

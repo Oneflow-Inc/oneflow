@@ -745,3 +745,10 @@ add_docstr(
     Alias for :func:`oneflow.clamp`. 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.clip_,
+    """
+    Alias for :func:`oneflow.clamp_`. 
+    """,
+)
