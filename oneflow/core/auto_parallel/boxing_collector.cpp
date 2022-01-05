@@ -132,30 +132,6 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
           nd_sbp_lists[i], nd_sbp_lists[j], logical_blob_size, in_hierarchy, in_hierarchy));
     }
   }
-  // test debug
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "===================origin copy cost==================" << std::endl;
-    // Print the origin copy cost table
-    std::cout << "Cost\t";
-    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpParallelToString(nd_sbp_lists[j]) << "\t"; }
-    std::cout << std::endl;
-    for (int32_t i = 0; i < n; i++) {
-      std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
-      for (int32_t j = 0; j < n; j++) {
-        if (minimum_copy_cost[i][j] > cut_cost) {
-          std::cout << "X\t";
-        } else {
-          std::cout << minimum_copy_cost[i][j] << "\t";
-        }
-      }
-      std::cout << std::endl;
-    }
-
-    std::cout << std::endl;
-    std::cout << "Original Copy Cost" << std::endl;
-    std::cout << "logical blob size: " << logical_blob_size << std::endl;
-    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
-  }
 
   auto NotMiddleNode = [&](int32_t i, int32_t j, int32_t k, int32_t middle_node_num_ik) -> bool {
     // Not allow i -> i -> j or i -> j -> j.
@@ -226,7 +202,6 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
 
 // Print the cost and middle nodes
 void BoxingCollector::PrintBoxingTables() {
-  // test debug
   if (GlobalProcessCtx::Rank() == 0) {
     std::cout << "===================minimum copy cost==================" << std::endl;
     // other parameters
@@ -372,8 +347,6 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   // Filter out unsuitable middle nodes before computing minimum cost.
   customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc, parallel_hierarchy);
   customized_boxing_collector.GenerateCombination(5);
-  // test debug
-  customized_boxing_collector.PrintBoxingTables();
   JUST(customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
                                                      producer_parallel_desc, consumer_parallel_desc,
                                                      false, middle_sbps));
