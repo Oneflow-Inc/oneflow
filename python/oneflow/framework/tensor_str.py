@@ -91,7 +91,7 @@ def set_printoptions(
             PRINT_OPTS.linewidth = 80
         elif profile == "full":
             PRINT_OPTS.precision = 4
-            PRINT_OPTS.threshold = inf
+            PRINT_OPTS.threshold = math.inf
             PRINT_OPTS.edgeitems = 3
             PRINT_OPTS.linewidth = 80
 
