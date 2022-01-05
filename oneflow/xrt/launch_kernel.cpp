@@ -22,9 +22,6 @@ limitations under the License.
 #include "oneflow/xrt/utility/env.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
-namespace oneflow {
-namespace xrt {
-
 // General executable setup.
 // Maximum temporary workspace bytes.
 int64_t FLAGS_max_workspace_bytes = EnvToInt64(FLAGS_max_workspace_bytes, -1);
@@ -37,6 +34,8 @@ extern bool FLAGS_tensorrt_fp16;
 extern bool FLAGS_tensorrt_int8;
 extern std::string FLAGS_int8_calibration;
 
+namespace oneflow {
+namespace xrt {
 static Parameter BuildParameter(const Blob& blob, const std::string& name) {
   const auto& desc = blob.blob_desc();
   return Parameter(name, const_cast<void*>(blob.dptr<void>()), desc.shape(), desc.data_type());

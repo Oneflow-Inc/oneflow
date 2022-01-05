@@ -29,9 +29,6 @@ limitations under the License.
 #include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
 #endif  // WITH_TENSORRT
 
-namespace oneflow {
-namespace xrt {
-
 // Minium nodes of a cluster after clustering.
 int32_t FLAGS_clustering_minimum_nodes = EnvToInt(FLAGS_clustering_minimum_nodes, 1);
 // Maxium nodes of a cluster after clustering.
@@ -59,6 +56,9 @@ bool FLAGS_tensorrt_int8 = EnvToBool(FLAGS_tensorrt_int8, false);
 // Default is empty, and this means the calibration table will be implictly generated if
 // tensorrt_int8 flag is true.
 std::string FLAGS_int8_calibration = EnvToString(FLAGS_int8_calibration, "");
+
+namespace oneflow {
+namespace xrt {
 
 #define OP_TYPE_CASE(op) OperatorConf::k##op##Conf
 
