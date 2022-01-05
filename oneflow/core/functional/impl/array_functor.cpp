@@ -520,7 +520,7 @@ class StackFunctor {
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
-    return this->operator()(outputs, stack_dim);
+    return Concat(outputs, stack_dim);
   }
 
  private:
