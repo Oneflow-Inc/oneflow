@@ -20,13 +20,32 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
+namespace {
 template<typename T>
-__global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr,
-                                              const VarParam var_param) {
-  CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
-    const size_t input_offset = LinearIndex2Offset(i, var_param.dim_size_in_caxis,
-                                                   var_param.stride_in_caxis, var_param.caxis_size);
-    ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
+__inline__ __device__ T Nan();
+
+template<>
+__inline__ __device__ float Nan<float>() {
+  return CUDART_NAN_F;
+}
+
+template<>
+__inline__ __device__ double Nan<double>() {
+  return CUDART_NAN;
+}
+}  // namespace
+
+template<typename T>
+__global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, const VarParam var_param,
+                                              bool is_nan) {
+  if (is_nan) {
+    CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) { out_ptr[i] = Nan<T>(); }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
+      const size_t input_offset = LinearIndex2Offset(
+          i, var_param.dim_size_in_caxis, var_param.stride_in_caxis, var_param.caxis_size);
+      ComputeVarUsingWelford(&in_ptr[input_offset], &out_ptr[i], var_param);
+    }
   }
 }
 
@@ -58,6 +77,10 @@ __device__ int32_t done_block_count = 0;
 template<typename T>
 __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
                                     const VarParam var_param) {
+  if (var_param.elem_cnt == 1 && var_param.unbiased == true) {
+    if (blockIdx.x == 0 && threadIdx.x == 0) { *out_ptr = Nan<T>(); }
+    return;
+  }
   const size_t elems_per_block = var_param.elem_cnt / gridDim.x;
   const size_t elems_per_thread = elems_per_block / blockDim.x;
 
@@ -154,8 +177,10 @@ struct VarFunctor<DeviceType::kCUDA, T> final {
           <<<grid_dim, block_dim, shm_size, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               in_ptr, out_ptr, tmp_buffer_ptr, var_param);
     } else {
+      // if var_param.parallel_num is 0, do nothing, return 0-size tensor
+      if (var_param.parallel_num == 0) { return; }
       RUN_CUDA_KERNEL(ComputeVarUsingWelfordWrapper<T>, stream, var_param.parallel_num, in_ptr,
-                      out_ptr, var_param);
+                      out_ptr, var_param, IsNanOut(var_param));
     }
   }
 };

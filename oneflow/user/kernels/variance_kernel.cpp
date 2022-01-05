@@ -34,11 +34,6 @@ class VarKernel final : public user_op::OpKernel {
     const bool unbiased = ctx->Attr<bool>("unbiased");
     const T* in_ptr = input->dptr<T>();
     T* out_ptr = output->mut_dptr<T>();
-    const int64_t elem_cnt = input->shape().elem_cnt();
-    if (elem_cnt == 0 || (elem_cnt == 1 && unbiased == true)) {
-      *out_ptr = std::numeric_limits<double>::quiet_NaN();
-      return;
-    }
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
     T* tmp_buffer_ptr = axis.size() == input->shape().NumAxes()
                             ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()

@@ -23,25 +23,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 namespace oneflow {
 namespace user_op {
-namespace {
-#ifdef WITH_CUDA
-void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
-  // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
-  if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
-    *grid_dim =
-        std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
-    *block_dim = kCudaThreadsNumPerBlock;
-  } else {
-    *grid_dim = 1;
-    int32_t aligned_block_dim =
-        (total_elem_cnt >= kCudaThreadsNumPerBlock)
-            ? kCudaThreadsNumPerBlock
-            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
-    *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
-  }
-}
-#endif  // WITH_CUDA
-}  // namespace
 
 OF_DEVICE_FUNC size_t LinearIndex2Offset(const size_t linear_index,
                                          const int32_t* dim_size_in_axis_ptr,
@@ -95,8 +76,7 @@ class VarParamHelper final {
  private:
   void ComputeElemCntAndParallelNum() {
     for (int i = 0; i < axis_.size(); i++) { param.elem_cnt *= input_shape_.At(axis_[i]); }
-    CHECK_GT(param.elem_cnt, 0);
-    param.parallel_num = input_shape_.elem_cnt() / param.elem_cnt;
+    for (int i = 0; i < caxis_.size(); i++) { param.parallel_num *= input_shape_.At(caxis_[i]); }
   }
 
   void ComputeStrideVec(const std::vector<int32_t> axis, int32_t* stride_vec) {
@@ -153,6 +133,31 @@ OF_DEVICE_FUNC void ComputeVarUsingWelford(const T* in_ptr, T* out_ptr, const Va
   }
   *out_ptr = m2 / (var_param.unbiased ? count - 1 : count);
 }
+
+namespace {
+
+OF_DEVICE_FUNC bool IsNanOut(const VarParam var_param) {
+  return (var_param.elem_cnt == 0) || (var_param.elem_cnt == 1 && var_param.unbiased == true);
+}
+
+#ifdef WITH_CUDA
+void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
+  // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
+  if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
+    *grid_dim =
+        std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
+    *block_dim = kCudaThreadsNumPerBlock;
+  } else {
+    *grid_dim = 1;
+    int32_t aligned_block_dim =
+        (total_elem_cnt >= kCudaThreadsNumPerBlock)
+            ? kCudaThreadsNumPerBlock
+            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
+    *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
+  }
+}
+#endif  // WITH_CUDA
+}  // namespace
 
 template<DeviceType device_type, typename T>
 struct VarFunctor final {
