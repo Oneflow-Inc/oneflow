@@ -540,7 +540,7 @@ class ExpandFunctor {
     // if input tensor is eager local, than try return tensor's view first
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::Expand(x->contiguous(), in_shape, expand_shape);
+        return view::Expand(x, in_shape, expand_shape);
       }
     }
 
@@ -588,7 +588,7 @@ class ExpandDimsFunctor {
     // if input tensor is eager local, than try return tensor's view first
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::ExpandDims(x->contiguous(), expand_dim);
+        return view::ExpandDims(x, expand_dim);
       }
     }
 
@@ -1160,7 +1160,7 @@ class NarrowFunctor {
     if (narrow_dim < 0) { narrow_dim += ndim; }
     if (input->is_local() && !(LazyMode::is_enabled())) {
       if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
-        return JUST(view::Narrow(input->contiguous(), narrow_dim, start, length));
+        return JUST(view::Narrow(input, narrow_dim, start, length));
       }
     }
     MutableAttrMap attrs;
@@ -1284,7 +1284,7 @@ class SqueezeFunctor {
     // if input tensor is eager local, than try return tensor's view first
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::Squeeze(x->contiguous(), squeeze_dims);
+        return view::Squeeze(x, squeeze_dims);
       }
     }
 
@@ -1379,7 +1379,7 @@ class UnfoldTensorFunctor {
     // if input tensor is eager local, than try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::UnfoldTensor(x->contiguous(), attrs);
+        return view::UnfoldTensor(x, attrs);
       }
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
