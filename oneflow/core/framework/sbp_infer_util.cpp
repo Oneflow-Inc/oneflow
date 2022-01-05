@@ -275,26 +275,29 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
         reduced_in_parallel_desc, reduced_out_parallel_desc);
   }
 
-  double logical_blob_size =
-      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
-  bool on_same_devices =
-      reduced_in_parallel_desc.EqualsIgnoringHierarchy(reduced_out_parallel_desc);
-
-  if (in_dim == 2 && out_dim == 2) {
-    // 2d to 2d
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         in_hierarchy, on_same_devices);
-  } else if (in_dim == 2 && out_dim == 1) {
-    // 2d to 1d
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         in_hierarchy, on_same_devices);
-  } else if (in_dim == 1 && out_dim == 2) {
-    // 1d to 2d
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         out_hierarchy, on_same_devices);
+  double total_cost = 0.0;
+  if (reduced_in_parallel_desc == reduced_out_parallel_desc) {
+    // nd to nd
+    for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
+      total_cost += JUST(ComputCopyCostBetweenTwoSbpParallel(
+          reduced_in_nd_sbp.sbp_parallel(i), reduced_out_nd_sbp.sbp_parallel(i), logical_blob_desc,
+          reduced_in_parallel_desc, reduced_out_parallel_desc));
+    }
   } else {
-    return kUnsupportedBoxing;
+    double logical_blob_size =
+        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
+      // P -> ?
+      if (reduced_in_nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) {
+        total_cost += (reduced_in_parallel_desc.hierarchy()->At(i) - 1) * logical_blob_size;
+      }
+      // ? -> B
+      if (reduced_out_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
+        total_cost += (reduced_out_parallel_desc.hierarchy()->At(i) - 1) * logical_blob_size;
+      }
+    }
   }
+  return total_cost;
 }
 
 }  // namespace oneflow
