@@ -28,7 +28,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
 bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_broadcast_parallel()) { return false; }
@@ -36,7 +35,8 @@ bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
-Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                        const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
@@ -47,7 +47,7 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
 }
 
 static constexpr auto* CheckAsymmetricBroadcast =
-    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocal);
+    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocalCopiable);
 
 Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
@@ -81,7 +81,6 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
 }
 
 static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, ThreadLocal);
-
 }  // namespace
 
 Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
