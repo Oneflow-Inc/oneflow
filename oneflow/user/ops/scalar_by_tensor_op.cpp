@@ -63,12 +63,14 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 }  // namespace
 
 /*static*/ Maybe<void> ScalarAddByTensorOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("scalar", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
-  return Maybe<void>::Ok();
+  return MakeGetSbpFn([](user_op::SbpContext* ctx) {
+    ctx->NewBuilder()
+        .PartialSum(user_op::OpArg("x", 0))
+        .PartialSum(user_op::OpArg("scalar", 0))
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 /*static*/ Maybe<void> ScalarAddByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
@@ -81,12 +83,14 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 }
 
 /*static*/ Maybe<void> ScalarSubByTensorOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("scalar", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
-  return Maybe<void>::Ok();
+  return MakeGetSbpFn([](user_op::SbpContext* ctx) {
+    ctx->NewBuilder()
+        .PartialSum(user_op::OpArg("x", 0))
+        .PartialSum(user_op::OpArg("scalar", 0))
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 /*static*/ Maybe<void> ScalarSubByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
@@ -99,17 +103,19 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 }
 
 /*static*/ Maybe<void> ScalarMulByTensorOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("x", 0))
-      .Broadcast(user_op::OpArg("scalar", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("scalar", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
-  return Maybe<void>::Ok();
+  return MakeGetSbpFn([](user_op::SbpContext* ctx) {
+    ctx->NewBuilder()
+        .PartialSum(user_op::OpArg("x", 0))
+        .Broadcast(user_op::OpArg("scalar", 0))
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("x", 0))
+        .PartialSum(user_op::OpArg("scalar", 0))
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 /*static*/ Maybe<void> ScalarMulByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
@@ -122,12 +128,14 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 }
 
 /*static*/ Maybe<void> ScalarDivByTensorOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("x", 0))
-      .Broadcast(user_op::OpArg("scalar", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
-  return Maybe<void>::Ok();
+  return MakeGetSbpFn([](user_op::SbpContext* ctx) {
+    ctx->NewBuilder()
+        .PartialSum(user_op::OpArg("x", 0))
+        .Broadcast(user_op::OpArg("scalar", 0))
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+    return Maybe<void>::Ok();
+  })(ctx);
 }
 /*static*/ Maybe<void> ScalarDivByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
