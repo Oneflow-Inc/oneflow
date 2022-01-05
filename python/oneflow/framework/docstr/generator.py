@@ -58,7 +58,6 @@ oneflow.Generator.device.__doc__ = r"""
     """
 
 oneflow.Generator.manual_seed.__doc__ = r"""
-
     Sets the seed for generating random numbers. Returns a torch.Generator object. 
     It is recommended to set a large seed, i.e. a number that has a good balance of 0 and 1 bits. 
     Avoid having many 0 bits in the seed.
@@ -80,3 +79,69 @@ oneflow.Generator.manual_seed.__doc__ = r"""
         <oneflow._oneflow_internal.Generator object at 0x7f3a1cfba1a8>
 
     """
+
+
+add_docstr(
+    oneflow.Generator.set_state.__func__,
+    r"""
+    Sets the Generator state.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> g_auto = flow.Generator()
+        >>> g_auto_other = flow.Generator()
+        >>> g_auto.set_state(g_auto_other.get_state())
+
+    """,
+)
+
+add_docstr(
+    oneflow.Generator.get_state.__func__,
+    r"""
+    Returns the Generator state as a flow.Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> g_auto = flow.Generator()
+        >>> g_auto.get_state()
+        tensor([  1, 209, 156, 241,  48,  61,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   
+            0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0], dtype=oneflow.uint8)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Generator.seed.__func__,
+    r"""
+    Gets a non-deterministic random number from std::random_device or the current time and uses it to seed a Generator.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> g_auto = flow.Generator()
+        >>> g_auto.seed()
+        8267152500171235
+
+    """,
+)
+
+add_docstr(
+    oneflow.Generator.initial_seed.__func__,
+    r"""
+    Returns the initial seed for generating random numbers.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> g_auto.initial_seed()
+        67280421310721
+
+    """,
+)

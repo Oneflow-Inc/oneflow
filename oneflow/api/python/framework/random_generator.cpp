@@ -23,6 +23,9 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::options options;
+  options.disable_function_signatures();
+
   auto rng = py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator");
 
   rng.def(py::init([](const std::string& device) {
@@ -33,60 +36,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           }),
           py::arg("device") = "auto")
       .def("set_current_seed", &one::Generator::set_current_seed)
-      .def("initial_seed", &one::Generator::current_seed, R"mydelimiter(
-    Returns the initial seed for generating random numbers.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> g_auto.initial_seed()
-        67280421310721
-      )mydelimiter")
-      .def("seed", &one::Generator::seed, R"mydelimiter(
-    Gets a non-deterministic random number from std::random_device or the current time and uses it to seed a Generator.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> g_auto = flow.Generator()
-        >>> g_auto.seed()
-        8267152500171235
-      )mydelimiter")
+      .def("initial_seed", &one::Generator::current_seed)
+      .def("seed", &one::Generator::seed)
       .def_property_readonly(
           "device", [](const one::Generator& generator) { return generator.device().GetOrThrow(); })
-      .def(
-          "get_state",
-          [](const one::Generator& generator) { return generator.GetState().GetPtrOrThrow(); },
-          R"mydelimiter(
-    Sets the Generator state.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> g_auto = flow.Generator()
-        >>> g_auto.get_state()
-        tensor([  1, 209, 156, 241,  48,  61,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0], dtype=oneflow.uint8)
-      )mydelimiter")
-      .def(
-          "set_state",
-          [](one::Generator& generator, const std::shared_ptr<one::Tensor>& state) {
-            return generator.SetState(state).GetOrThrow();
-          },
-          R"mydelimiter(
-    Sets the Generator state.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> g_auto = flow.Generator()
-        >>> g_auto_other = flow.Generator()
-        >>> g_auto.set_state(g_auto_other.get_state())
-      )mydelimiter");
+      .def("get_state",
+           [](const one::Generator& generator) { return generator.GetState().GetPtrOrThrow(); })
+      .def("set_state", [](one::Generator& generator, const std::shared_ptr<one::Tensor>& state) {
+        return generator.SetState(state).GetOrThrow();
+      });
 
   m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
   m.def("default_generator", [](const std::string& device_tag) {
@@ -95,6 +53,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
     return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
   });
+
+  options.enable_function_signatures();
 }
 
 }  // namespace oneflow

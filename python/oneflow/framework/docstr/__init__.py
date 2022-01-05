@@ -42,8 +42,5 @@ from .chunk import *
 from .broadcast_like import *
 from .arange import *
 from .split import *
-<<<<<<< HEAD
 from .generator import *
-=======
 from .swapaxes import *
->>>>>>> dev_add_doc_for_pybind_type
