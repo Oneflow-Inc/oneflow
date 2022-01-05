@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -88,7 +89,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
+  NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
+    // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
+    // InferSbp in op is a deterministic algorithm
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
     const auto& infer_args =
         JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
@@ -184,8 +189,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   if (out_parallel_id->has_value()) {
     const auto& nd_sbp = JUST(tensor->nd_sbp());
     const auto& parallel_desc = JUST(tensor->parallel_desc());
-    CHECK_OR_RETURN(nd_sbp == out_nd_sbp) << ". nd_sbp: " << *JUST(NdSbpToString(nd_sbp))
-                                          << ", out_nd_sbp" << *JUST(NdSbpToString(out_nd_sbp));
+    CHECK_OR_RETURN(nd_sbp == out_nd_sbp)
+        << ". nd_sbp: " << NdSbpToString(nd_sbp) << ", out_nd_sbp" << NdSbpToString(out_nd_sbp);
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {

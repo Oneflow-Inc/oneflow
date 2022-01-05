@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,26 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
-#define ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
+"""
+import unittest
+from collections import OrderedDict
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/job/parallel_desc.h"
+import oneflow as flow
+import oneflow.unittest
 
-namespace oneflow {
+from oneflow.test_utils.automated_test_util import *
 
-Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
-                                 Symbol<ParallelDesc> placement);
 
-}  // namespace oneflow
+@flow.unittest.skip_unless_1n1d()
+class TestCumsum(flow.unittest.TestCase):
+    @autotest(n=30, check_graph=True)
+    def test_cumsum(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        z = torch.cumsum(x, dim)
+        return z
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
+
+if __name__ == "__main__":
+    unittest.main()

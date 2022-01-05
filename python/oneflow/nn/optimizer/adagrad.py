@@ -123,12 +123,10 @@ class Adagrad(Optimizer):
                 )
 
         self._op = (
-            flow.builtin_op("adagrad_update")
+            flow.stateful_op("adagrad_update")
             .Input("model")
             .Input("model_diff")
             .Input("sum")
-            .Attr("l1", 0.0)
-            .Attr("weight_decay", 0.0)
             .Build()
         )
 
@@ -145,7 +143,7 @@ class Adagrad(Optimizer):
                 loss = closure()
             for param_group in self.param_groups:
                 kwargs = {
-                    "learning_rate_val": param_group["lr"],
+                    "learning_rate": param_group["lr"],
                     "l2": param_group["weight_decay"],
                     "epsilon": param_group["eps"],
                     "lr_decay": param_group["lr_decay"],
@@ -155,7 +153,9 @@ class Adagrad(Optimizer):
                     if param.grad is None:
                         continue
                     sum_tensor = self._state[param]["sum"]
-                    self._op(param, param.grad, sum_tensor, **kwargs)
+                    flow._C.dispatch_adagrad_update(
+                        self._op, (param, param.grad, sum_tensor), **kwargs
+                    )
 
             self._state["step"] = self._state["step"] + 1
             return loss
