@@ -292,8 +292,10 @@ def _floor_divide(self, other):
 def _floor(self):
     return flow._C.floor(self)
 
+
 def _floor_inplace_(self):
     return flow._C.floor_(self)
+
 
 def _neg(self):
     return flow.neg(self)
