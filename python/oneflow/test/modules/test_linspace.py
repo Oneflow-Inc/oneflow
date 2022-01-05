@@ -54,13 +54,29 @@ class TestLinspace(flow.unittest.TestCase):
         x = flow.linspace(start=0, end=10, steps=2, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
-    
+
     def test_linspace_bug(test_case):
         drop_path_rate = 0.1
-        depths=[2, 2, 6, 2]
+        depths = [2, 2, 6, 2]
         flow_res = flow.linspace(0, drop_path_rate, sum(depths))
-        torch_res = np.array([0.0000, 0.0091, 0.0182, 0.0273, 0.0364, 0.0455, 0.0545, 0.0636, 0.0727, 0.0818, 0.0909, 0.1000])
+        torch_res = np.array(
+            [
+                0.0000,
+                0.0091,
+                0.0182,
+                0.0273,
+                0.0364,
+                0.0455,
+                0.0545,
+                0.0636,
+                0.0727,
+                0.0818,
+                0.0909,
+                0.1000,
+            ]
+        )
         test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()
