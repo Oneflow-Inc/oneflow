@@ -22,19 +22,21 @@ limitations under the License.
 #include "oneflow/xrt/utility/env.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
-// General executable setup.
-DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
-             "Maximum temporary workspace bytes.");
-// TENSORRT executable setup.
-DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
-             "Maximum batch size for builder of TENSORRT engine.");
-
-DECLARE_bool(tensorrt_fp16);
-DECLARE_bool(tensorrt_int8);
-DECLARE_string(int8_calibration);
-
 namespace oneflow {
 namespace xrt {
+
+// General executable setup.
+// Maximum temporary workspace bytes.
+int64_t FLAGS_max_workspace_bytes = EnvToInt64(FLAGS_max_workspace_bytes, -1);
+
+// TENSORRT executable setup.
+// Maximum batch size for builder of TENSORRT engine.
+int32_t FLAGS_max_batch_size = EnvToInt(FLAGS_max_batch_size, 1);
+
+extern bool FLAGS_tensorrt_fp16;
+extern bool FLAGS_tensorrt_int8;
+extern std::string FLAGS_int8_calibration;
+
 static Parameter BuildParameter(const Blob& blob, const std::string& name) {
   const auto& desc = blob.blob_desc();
   return Parameter(name, const_cast<void*>(blob.dptr<void>()), desc.shape(), desc.data_type());
