@@ -51,7 +51,6 @@ T = TypeVar("T", bound="Module")
 class Module(object):
     def __init__(self):
         self.training = True
-        self._consistent = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -62,10 +61,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-
-    @property
-    def consistent(self):
-        return self._consistent
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -472,8 +467,8 @@ class Module(object):
         for module in self.children():
             module._apply(fn, applied_dict)
 
-        def can_use_assign_copy(tensor, tensor_applied):
-            return tensor.is_local == tensor_applied.is_local
+        def can_use_data_assign(tensor, tensor_applied):
+            return (tensor.is_leaf and tensor_applied.is_leaf)
 
         for (key, param) in self._parameters.items():
             if param is None:
@@ -497,7 +492,7 @@ class Module(object):
             else:
                 param_applied = applied_dict[param]
 
-            if can_use_assign_copy(param_applied, param):
+            if can_use_data_assign(param_applied, param):
                 if need_apply:
                     self._parameters[key].data = param_applied
                     applied_dict[param] = param_applied
