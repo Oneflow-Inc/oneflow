@@ -38,8 +38,8 @@ struct LayerNormCaptureState : public AutoGradCaptureState {
   size_t inv_variance_index = 3;
 };
 
-// y, mean, inv_variance, [normalized] =
-//   layer_norm(x, [beta], [gamma], center=False, scale=False, begin_norm_axis=1,
+// y, mean, inv_variance =
+//   layer_norm(x, [gamma], [beta], center=False, scale=False, begin_norm_axis=1,
 //              begin_params_axis=-1, epsilon=1e-5)
 class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
  public:
