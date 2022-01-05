@@ -51,10 +51,9 @@ def set_rng_state(state):
     """
     sets the state of the default random number generator to the given state
     """
-
     return oneflow.default_generator.set_state(state)
 
 
 default_generator = oneflow._oneflow_internal.default_generator("cpu")
-oneflow._oneflow_internal.Generator.__getstate__ = _getstate
-oneflow._oneflow_internal.Generator.__setstate__ = _setstate
+Generator.__getstate__ = _getstate
+Generator.__setstate__ = _setstate

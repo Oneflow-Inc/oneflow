@@ -43,7 +43,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         >>> import oneflow as flow
         >>> g_auto.initial_seed()
         67280421310721
-          ----------
       )mydelimiter")
       .def("seed", &one::Generator::seed, R"mydelimiter(
     Gets a non-deterministic random number from std::random_device or the current time and uses it to seed a Generator.
@@ -69,8 +68,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     .. code-block:: python
 
         >>> g_auto = flow.Generator()
-        >>> g_auto_other = flow.Generator()
-        >>> g_auto.set_state(g_auto_other.get_state())
+        >>> g_auto.get_state()
+        tensor([  1, 209, 156, 241,  48,  61,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0], dtype=oneflow.uint8)
       )mydelimiter")
       .def(
           "set_state",
@@ -85,8 +84,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     .. code-block:: python
 
         >>> g_auto = flow.Generator()
-        >>> g_auto.get_state()
-        tensor([  1, 209, 156, 241,  48,  61,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0], dtype=oneflow.uint8)
+        >>> g_auto_other = flow.Generator()
+        >>> g_auto.set_state(g_auto_other.get_state())
       )mydelimiter");
 
   m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
