@@ -33,6 +33,7 @@ OneFlow Tensor Class
             clamp, 
             clamp_,
             clip, 
+            clip_, 
             clone, 
             copy_, 
             cos, 

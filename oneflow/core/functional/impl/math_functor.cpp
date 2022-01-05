@@ -801,15 +801,19 @@ class ClampBaseFunctor {
     } else {
       op = clip_op_.get();
     }
-    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    if(inplace && x->requires_grad()){
-      JUST(CheckInplaceValid(x));
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get()));
-    }else{
-      JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get()));
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      if (x->requires_grad()) {
+        JUST(CheckInplaceValid(x));
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get(), attrs));
+      } else {
+        JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get(), attrs));
+      }
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
     }
-    return outputs->at(0); 
   }
 
  private:
@@ -818,38 +822,37 @@ class ClampBaseFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
-class ClampFunctor : public ClampBaseFunctor{
-public: 
+class ClampFunctor : public ClampBaseFunctor {
+ public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampBaseFunctor::operator()(x, min, max, false); 
+    return ClampBaseFunctor::operator()(x, min, max, false);
   }
-}; 
+};
 
-class ClampInplaceFunctor : public ClampBaseFunctor{
-public: 
+class ClampInplaceFunctor : public ClampBaseFunctor {
+ public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampBaseFunctor::operator()(x, min, max, true); 
+    return ClampBaseFunctor::operator()(x, min, max, true);
   }
-}; 
+};
 
-
-class ClipFunctor{
-public: 
+class ClipFunctor {
+ public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return Clamp(x, min, max); 
+    return Clamp(x, min, max);
   }
-}; 
+};
 
-class ClipInplaceFunctor{
-public: 
+class ClipInplaceFunctor {
+ public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampInplace(x, min, max); 
+    return ClampInplace(x, min, max);
   }
-}; 
+};
 class SqrtSquareSumFunctor {
  public:
   SqrtSquareSumFunctor() {

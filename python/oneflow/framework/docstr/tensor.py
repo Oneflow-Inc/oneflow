@@ -735,20 +735,20 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.clamp_,
     """
-    Inplace version of :func:`oneflow.clamp`. 
+    Inplace version of :func:`oneflow.Tensor.clamp`. 
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clip,
     """
-    Alias for :func:`oneflow.clamp`. 
+    Alias for :func:`oneflow.Tensor.clamp`. 
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clip_,
     """
-    Alias for :func:`oneflow.clamp_`. 
+    Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )

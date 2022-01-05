@@ -641,6 +641,7 @@ def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     """
     return addmm(input, mat1, mat2, alpha, beta)
 
+
 @register_tensor_op("cosh")
 def cosh_op(input):
     """
