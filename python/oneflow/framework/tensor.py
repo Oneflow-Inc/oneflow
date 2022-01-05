@@ -292,7 +292,7 @@ def _floor_divide(self, other):
 def _floor(self):
     return flow._C.floor(self)
 
-def _floor_inplace(self):
+def _floor_inplace_(self):
     return flow._C.floor_(self)
 
 def _neg(self):
@@ -805,7 +805,7 @@ def RegisterMethods():
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
     Tensor.floor = _floor
-    Tensor.floor_ = _floor_inplace
+    Tensor.floor_ = _floor_inplace_
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
