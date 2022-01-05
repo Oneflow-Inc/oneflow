@@ -50,7 +50,7 @@ Maybe<EagerBoxingCall> EagerBoxingCall::New(Symbol<cfg::NdSbp> in_nd_sbp,
                                             Symbol<cfg::NdSbp> out_nd_sbp,
                                             Symbol<ParallelDesc> in_parallel_desc,
                                             Symbol<ParallelDesc> out_parallel_desc,
-                                            const std::shared_ptr<const Shape>& logical_shape) {
+                                            const Shape& logical_shape) {
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
       in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, logical_shape));
@@ -85,8 +85,7 @@ HashMap<std::string, BoxingFunctionT>* MutName2BoxingFunction() {
 }
 
 Maybe<BoxingFunctionT> RawGetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
-                                            Symbol<PlacedNdSbp> out,
-                                            const std::shared_ptr<const Shape>& logical_shape) {
+                                            Symbol<PlacedNdSbp> out, const Shape& logical_shape) {
   const auto& Checker =
       JUST_MSG(MapAt(*MutName2BoxingChecker(), method_name),
                std::stringstream() << "boxing checker not found. checker_name: " << method_name);
@@ -99,8 +98,7 @@ Maybe<BoxingFunctionT> RawGetBoxingFunction(const std::string& method_name, Symb
 }  // namespace
 
 Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
-                                         Symbol<PlacedNdSbp> out,
-                                         const std::shared_ptr<const Shape>& logical_shape) {
+                                         Symbol<PlacedNdSbp> out, const Shape& logical_shape) {
   return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(method_name, in, out, logical_shape);
 }
 
@@ -116,7 +114,7 @@ void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT
 }
 
 Maybe<void> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                    const std::shared_ptr<const Shape>& logical_shape) const {
+                                    const Shape& logical_shape) const {
   const auto& Checker =
       JUST_MSG(MapAt(*MutName2BoxingChecker(), boxing_name_),
                std::stringstream() << "boxing checker not found. checker_name: " << boxing_name_);
@@ -124,15 +122,14 @@ Maybe<void> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> 
   return Maybe<void>::Ok();
 }
 
-Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(
-    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-    const std::shared_ptr<const Shape>& logical_shape) const {
+Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
+                                                           Symbol<PlacedNdSbp> out,
+                                                           const Shape& logical_shape) const {
   return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(boxing_name_, in, out, logical_shape);
 }
 
-Maybe<void> DivideAndConquerBoxingExpr::Check(
-    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-    const std::shared_ptr<const Shape>& logical_shape) const {
+Maybe<void> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                              const Shape& logical_shape) const {
   const auto& middle = JUST((*boxing_dividor_)(in, out));
   JUST(lhs_conquer_->Check(in, middle, logical_shape));
   JUST(rhs_conquer_->Check(middle, out, logical_shape));
@@ -140,8 +137,7 @@ Maybe<void> DivideAndConquerBoxingExpr::Check(
 }
 
 Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
-    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-    const std::shared_ptr<const Shape>& logical_shape) const {
+    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out, const Shape& logical_shape) const {
   const auto& middle = JUST((*boxing_dividor_)(in, out));
   const auto& lhs_boxing_func = JUST(lhs_conquer_->GetBoxingFunction(in, middle, logical_shape));
   const auto& rhs_boxing_func = JUST(rhs_conquer_->GetBoxingFunction(middle, out, logical_shape));
@@ -158,14 +154,14 @@ Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
 }
 
 Maybe<void> OrBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                const std::shared_ptr<const Shape>& logical_shape) const {
+                                const Shape& logical_shape) const {
   if (lhs_boxing_->Check(in, out, logical_shape).IsOk()) { return Maybe<void>::Ok(); }
   return rhs_boxing_->Check(in, out, logical_shape);
 }
 
-Maybe<BoxingFunctionT> OrBoxingExpr::GetBoxingFunction(
-    Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-    const std::shared_ptr<const Shape>& logical_shape) const {
+Maybe<BoxingFunctionT> OrBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
+                                                       Symbol<PlacedNdSbp> out,
+                                                       const Shape& logical_shape) const {
   if (lhs_boxing_->Check(in, out, logical_shape).IsOk()) {
     return lhs_boxing_->GetBoxingFunction(in, out, logical_shape);
   }

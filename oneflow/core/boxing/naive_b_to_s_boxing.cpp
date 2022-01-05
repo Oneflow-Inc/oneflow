@@ -36,7 +36,7 @@ bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
 
 Maybe<void> RawCheckNaiveBToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                              const std::shared_ptr<const Shape>& logical_shape) {
+                              const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 

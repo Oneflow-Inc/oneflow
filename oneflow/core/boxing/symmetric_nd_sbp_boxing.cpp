@@ -59,7 +59,7 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
-          in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, input->shape()));
+          in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
                                             out_parallel_desc));
 }
@@ -67,7 +67,7 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
 }  // namespace
 
 Maybe<void> CheckSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                      const std::shared_ptr<const Shape>& logical_shape) {
+                                      const Shape& logical_shape) {
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());

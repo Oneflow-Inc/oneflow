@@ -49,7 +49,7 @@ struct EagerBoxingCall {
   static Maybe<EagerBoxingCall> New(Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                     Symbol<ParallelDesc> in_parallel_desc,
                                     Symbol<ParallelDesc> out_parallel_desc,
-                                    const std::shared_ptr<const Shape>& logical_shape);
+                                    const Shape& logical_shape);
 
   Maybe<one::Tensor> Apply(const std::shared_ptr<one::Tensor>& input) const;
 
@@ -60,15 +60,13 @@ struct EagerBoxingCall {
   const Symbol<ParallelDesc> out_parallel_desc;
 };
 
-using BoxingCheckerT =
-    std::function<Maybe<void>(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                              const std::shared_ptr<const Shape>& logical_shape)>;
+using BoxingCheckerT = std::function<Maybe<void>(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                                 const Shape& logical_shape)>;
 using BoxingFunctionT = std::function<Maybe<one::Tensor>(
     const std::shared_ptr<one::Tensor>& input, Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out)>;
 
 Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
-                                         Symbol<PlacedNdSbp> out,
-                                         const std::shared_ptr<const Shape>& logical_shape);
+                                         Symbol<PlacedNdSbp> out, const Shape& logical_shape);
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Check,
                             const BoxingFunctionT& BoxingFunction);
@@ -107,10 +105,9 @@ class BoxingExprIf {
   virtual ~BoxingExprIf() = default;
 
   virtual Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                            const std::shared_ptr<const Shape>& logical_shape) const = 0;
-  virtual Maybe<BoxingFunctionT> GetBoxingFunction(
-      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-      const std::shared_ptr<const Shape>& logical_shape) const = 0;
+                            const Shape& logical_shape) const = 0;
+  virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                                   const Shape& logical_shape) const = 0;
 
  protected:
   BoxingExprIf() = default;
@@ -126,10 +123,9 @@ class AtomicBoxingExpr final : public BoxingExprIf {
       : BoxingExprIf(), boxing_name_(boxing_name) {}
 
   Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                    const std::shared_ptr<const Shape>& logical_shape) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(
-      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-      const std::shared_ptr<const Shape>& logical_shape) const override;
+                    const Shape& logical_shape) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                           const Shape& logical_shape) const override;
 
  private:
   const std::string boxing_name_;
@@ -150,10 +146,9 @@ class DivideAndConquerBoxingExpr final : public BoxingExprIf {
         rhs_conquer_(rhs_conquer) {}
 
   Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                    const std::shared_ptr<const Shape>& logical_shape) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(
-      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-      const std::shared_ptr<const Shape>& logical_shape) const override;
+                    const Shape& logical_shape) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                           const Shape& logical_shape) const override;
 
  private:
   const std::shared_ptr<BoxingDividor> boxing_dividor_;
@@ -172,10 +167,9 @@ class OrBoxingExpr final : public BoxingExprIf {
       : BoxingExprIf(), lhs_boxing_(lhs_boxing), rhs_boxing_(rhs_boxing) {}
 
   Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                    const std::shared_ptr<const Shape>& logical_shape) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(
-      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-      const std::shared_ptr<const Shape>& logical_shape) const override;
+                    const Shape& logical_shape) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                           const Shape& logical_shape) const override;
 
  private:
   const std::shared_ptr<BoxingExprIf> lhs_boxing_;

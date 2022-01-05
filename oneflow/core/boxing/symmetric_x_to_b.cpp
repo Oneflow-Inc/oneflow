@@ -55,13 +55,13 @@ auto* CachedGetAllSplitNdSbpWithAxisEqualZero =
     DECORATE(&GetAllSplitNdSbpWithAxisEqualZero, ThreadLocal);
 
 Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                  const std::shared_ptr<const Shape>& logical_shape) {
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
   if (in->nd_sbp()->sbp_parallel(0).has_split_parallel()) {
     int64_t split_axis = in->nd_sbp()->sbp_parallel(0).split_parallel().axis();
-    CHECK_OR_RETURN(logical_shape->At(split_axis) % in->placement()->parallel_num() == 0);
+    CHECK_OR_RETURN(logical_shape.At(split_axis) % in->placement()->parallel_num() == 0);
   }
   CHECK_OR_RETURN(in->placement() == out->placement());
   return Maybe<void>::Ok();
@@ -81,9 +81,9 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
   if (IsPartialSumSbp(tensor_nd_sbp->sbp_parallel(0))) {
     BoxingFunctionT PToBBoxingFunction;
     if (tensor_placement->device_type() == DeviceType::kCUDA) {
-      PToBBoxingFunction = *JUST(GetBoxingFunction("nccl-p-to-b", in, out, tensor->shape()));
+      PToBBoxingFunction = *JUST(GetBoxingFunction("nccl-p-to-b", in, out, *tensor->shape()));
     } else if (tensor_placement->device_type() == DeviceType::kCPU) {
-      PToBBoxingFunction = *JUST(GetBoxingFunction("ccl-p-to-b", in, out, tensor->shape()));
+      PToBBoxingFunction = *JUST(GetBoxingFunction("ccl-p-to-b", in, out, *tensor->shape()));
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -92,9 +92,9 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
   if (IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
     BoxingFunctionT SToBBoxingFunction;
     if (tensor_placement->device_type() == DeviceType::kCUDA) {
-      SToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out, tensor->shape()));
+      SToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out, *tensor->shape()));
     } else if (tensor_placement->device_type() == DeviceType::kCPU) {
-      SToBBoxingFunction = *JUST(GetBoxingFunction("ccl-s-to-b", in, out, tensor->shape()));
+      SToBBoxingFunction = *JUST(GetBoxingFunction("ccl-s-to-b", in, out, *tensor->shape()));
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -108,10 +108,10 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
     BoxingFunctionT SToSBoxingFunction;
     if (tensor_placement->device_type() == DeviceType::kCUDA) {
       SToSBoxingFunction = *JUST(GetBoxingFunction(
-          "nccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp, tensor->shape()));
+          "nccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp, *tensor->shape()));
     } else if (tensor_placement->device_type() == DeviceType::kCPU) {
       SToSBoxingFunction = *JUST(GetBoxingFunction(
-          "ccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp, tensor->shape()));
+          "ccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp, *tensor->shape()));
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -122,10 +122,10 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
     BoxingFunctionT SToBBoxingFunction;
     if (tensor_placement->device_type() == DeviceType::kCUDA) {
       SToBBoxingFunction = *JUST(GetBoxingFunction(
-          "nccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out, tensor_with_s0_sbp->shape()));
+          "nccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out, *tensor_with_s0_sbp->shape()));
     } else if (tensor_placement->device_type() == DeviceType::kCPU) {
       SToBBoxingFunction = *JUST(GetBoxingFunction(
-          "ccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out, tensor_with_s0_sbp->shape()));
+          "ccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out, *tensor_with_s0_sbp->shape()));
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }

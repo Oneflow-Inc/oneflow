@@ -25,7 +25,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                  const std::shared_ptr<const Shape>& logical_shape) {
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());

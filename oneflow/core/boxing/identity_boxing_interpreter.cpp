@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                             const std::shared_ptr<const Shape>& logical_shape) {
+                             const Shape& logical_shape) {
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->placement()->parallel_num() == 1 || in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();

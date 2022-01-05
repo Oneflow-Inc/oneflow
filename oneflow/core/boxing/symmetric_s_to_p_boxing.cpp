@@ -40,7 +40,7 @@ static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLoc
 
 Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
                                           Symbol<cfg::SbpParallel> src_sbp,
-                                          const std::shared_ptr<const Shape>& logical_shape) {
+                                          const Shape& logical_shape) {
   return one::OpBuilder("eager_symmetric_s_to_p", *JUST(UniqueStr("eager_symmetric_s_to_p")))
       .Input("in")
       .Output("out")
@@ -53,7 +53,7 @@ static constexpr auto* CachedEagerSymmetricSToPOpExpr =
     DECORATE(&EagerSymmetricSToP, ThreadLocalCopiable);
 
 Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                  const std::shared_ptr<const Shape>& logical_shape) {
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -76,7 +76,7 @@ Maybe<one::Tensor> SymmetricSToP(const std::shared_ptr<one::Tensor>& tensor, Sym
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
   std::shared_ptr<one::OpExpr> op_expr = JUST(CachedEagerSymmetricSToPOpExpr(
-      tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0)), tensor->shape()));
+      tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0)), *tensor->shape()));
 
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
 }

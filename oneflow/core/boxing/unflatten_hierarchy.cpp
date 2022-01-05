@@ -23,7 +23,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                       const std::shared_ptr<const Shape>& logical_shape) {
+                                       const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_GT_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   for (int i = 0; i < out->nd_sbp()->sbp_parallel_size(); ++i) {
