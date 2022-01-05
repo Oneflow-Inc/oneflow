@@ -1687,7 +1687,7 @@ class MovedimIntFunctor {
 
 class CumsumFunctor {
  public:
-  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("in").Output("out").Build()); }
+  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
