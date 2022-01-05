@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -102,11 +103,11 @@ PyFrameObject* get_frame_back(PyFrameObject* frame) {
 std::string get_cur_frame_stack_str() {
   PyFrameObject* cur_frame = PyEval_GetFrame();
   if (cur_frame == NULL) return "";
-  std::string cur_f_str = "Python stack[-1]: " + PyObjectToReprStr((PyObject*)cur_frame);
+  std::string cur_f_str = "Python stack[-1]: " + *CHECK_JUST(PyObjectToReprStr((PyObject*)cur_frame));
 
   PyFrameObject* back_frame = get_frame_back(cur_frame);
   if (back_frame == NULL) return cur_f_str;
-  std::string back_f_str = PyObjectToReprStr((PyObject*)back_frame);
+  std::string back_f_str = *CHECK_JUST(PyObjectToReprStr((PyObject*)back_frame));
   cur_f_str = "Python stack[-2]: " + back_f_str + "; " + cur_f_str;
   Py_XDECREF(back_frame);
 

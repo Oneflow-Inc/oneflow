@@ -18,6 +18,7 @@ limitations under the License.
 #include <object.h>
 
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
@@ -62,12 +63,10 @@ Maybe<const char*> PyStringAsString(PyObject* str_object) {
   return str;
 }
 
-std::string PyObjectToReprStr(PyObject* obj) {
+Maybe<std::string> PyObjectToReprStr(PyObject* obj) {
   PyObject* repr_obj = PyObject_Repr(obj);
-  PyObject* bytes = PyUnicode_AsEncodedString(repr_obj, "utf-8", "~E~");
-  const char* str = PyBytes_AS_STRING(bytes);
+  const char* str = JUST(PyStringAsString(repr_obj));
   Py_XDECREF(repr_obj);
-  Py_XDECREF(str);
   return std::string(str);
 }
 
