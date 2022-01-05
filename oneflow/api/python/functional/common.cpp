@@ -93,11 +93,7 @@ bool PyScalarCheck(PyObject* obj) { return PyLong_Check(obj) || PyFloat_Check(ob
 
 Maybe<Scalar> PyUnpackScalar(PyObject* obj) {
   if (PyBool_Check(obj)) {
-    if (obj == Py_True) {
-      return std::make_shared<Scalar>(true);
-    } else {
-      return std::make_shared<Scalar>(false);
-    }
+    return std::make_shared<Scalar>(obj == Py_True);
   } else if (PyLong_Check(obj)) {
     return std::make_shared<Scalar>(static_cast<int64_t>(PyLong_AsLongLong(obj)));
   } else if (PyFloat_Check(obj)) {
