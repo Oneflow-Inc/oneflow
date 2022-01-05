@@ -12,6 +12,5 @@ FetchContent_Declare(
     URL_HASH MD5=${JSON_URL_HASH}
 )
 
-if(THIRD_PARTY)
-    FetchContent_MakeAvailable(json)
-endif()
+
+FetchContent_MakeAvailable(json)
