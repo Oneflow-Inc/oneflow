@@ -12,20 +12,20 @@ OneFlow API Reference
     :caption: OneFlow Python API
 
     oneflow
-    tensor
     nn
-    nn.init
     functional
-    module
+    tensor
     autograd
-    graph
-    linalg
-    image
-    optim
-    utils
     cuda
-    env
     distributed
+    linalg
+    nn.init
+    optim
+    module
+    graph
+    image
+    utils
+    env
     comm
     placement
     sbp
