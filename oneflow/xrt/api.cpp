@@ -53,7 +53,8 @@ bool FLAGS_tensorrt_fp16 = EnvToBool(FLAGS_tensorrt_fp16, false);
 bool FLAGS_tensorrt_int8 = EnvToBool(FLAGS_tensorrt_int8, false);
 
 // TensorRT int8 calibration table directory.
-// Default is empty, and this means the calibration table will be implictly generated if tensorrt_int8 flag is true.
+// Default is empty, and this means the calibration table will be implictly generated if
+// tensorrt_int8 flag is true.
 std::string FLAGS_int8_calibration = EnvToString(FLAGS_int8_calibration, "");
 
 namespace oneflow {
