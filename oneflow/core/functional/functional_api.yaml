@@ -1313,6 +1313,10 @@
   signature: "Tensor (Tensor x) => Floor"
   bind_python: True
 
+- name: "floor_"
+  signature: "Tensor (Tensor x) => Floor_"
+  bind_python: True
+
 - name: "floor_grad"
   signature: "Tensor (Tensor x, Tensor dy) => FloorGrad"
   bind_python: False
