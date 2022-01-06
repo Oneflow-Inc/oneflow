@@ -354,11 +354,7 @@ if (BUILD_CPP_API)
   file(GLOB_RECURSE of_cpp_api_files
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
-  if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
-    oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
-  else()
-    oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
-  endif()
+  oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
   set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
   target_link_libraries(oneflow_cpp PRIVATE ${of_libs} of_api_common ${oneflow_third_party_libs})
 endif()
@@ -463,26 +459,57 @@ endif(BUILD_PYTHON)
 
 
 set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/api")
-install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
+install(DIRECTORY oneflow/api/cpp/ DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
   COMPONENT oneflow_cpp_include
   EXCLUDE_FROM_ALL
   FILES_MATCHING
   PATTERN "*.h"
+  PATTERN "tests" EXCLUDE
+)
+
+set(LIBONEFLOW_SHARE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/share")
+install(DIRECTORY cmake/ DESTINATION ${LIBONEFLOW_SHARE_DIR}
+  COMPONENT oneflow_cpp_share
+  EXCLUDE_FROM_ALL
+  FILES_MATCHING
+  PATTERN "oneflow-config.cmake"
+  PATTERN "caches" EXCLUDE
+  PATTERN "third_party" EXCLUDE
+)
+
+set(LIBONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/lib")
+install(TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj
+  COMPONENT oneflow_cpp_lib
+  LIBRARY DESTINATION ${LIBONEFLOW_LIBRARY_DIR}
 )
 
 add_custom_target(install_oneflow_cpp_include
   COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_include
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  DEPENDS oneflow_internal
+  DEPENDS oneflow_cpp
 )
+
+add_custom_target(install_oneflow_cpp_share
+  COMMAND
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_share
+      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  DEPENDS oneflow_cpp
+)
+
+add_custom_target(install_oneflow_cpp_lib
+  COMMAND
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_lib
+      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  DEPENDS oneflow_cpp
+)
+
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy oneflow_cpp)
-  add_dependencies(of_include_copy install_oneflow_cpp_include)
-  copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
+  add_dependencies(of_include_copy install_oneflow_cpp_include install_oneflow_cpp_share install_oneflow_cpp_lib)
 
-  if(WITH_MLIR)
-    file(GLOB mlir_shared_libs "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib/*.14git")
-    copy_files("${mlir_shared_libs}" "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib" "${LIBONEFLOW_LIBRARY_DIR}" of_include_copy)
-  endif(WITH_MLIR)
+  # if(WITH_MLIR)
+  #   file(GLOB mlir_shared_libs "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib/*.14git")
+  #   copy_files("${mlir_shared_libs}" "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib" "${LIBONEFLOW_LIBRARY_DIR}" of_include_copy)
+  # endif(WITH_MLIR)
 endif(BUILD_CPP_API)
