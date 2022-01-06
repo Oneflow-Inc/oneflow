@@ -24,7 +24,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
@@ -32,7 +33,7 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveOneToOne = DECORATE(&RawCheckNaiveOneToOne, ThreadLocal);
+static constexpr auto* CheckNaiveOneToOne = DECORATE(&RawCheckNaiveOneToOne, ThreadLocalCopiable);
 
 }  // namespace
 
