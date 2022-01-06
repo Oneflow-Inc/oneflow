@@ -722,13 +722,11 @@ def _gather(self, dim, index):
 
 
 def _numpy(self):
-    # reference torch, cuda tensor needs '.cpu()' firstly
-    assert self.device == flow.device(
-        "cpu"
-    ), f"can't convert {str(self.device)} device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first."
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    if self.device != flow.device("cpu"):
+        self = self.cpu()
     return self.to_numpy()
 
 
