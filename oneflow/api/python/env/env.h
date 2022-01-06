@@ -81,8 +81,8 @@ inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
   return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
 }
-inline Maybe<void> SetFLAGS_logtostderr(bool flag) {
-  FLAGS_logtostderr = flag;
+inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
+  FLAGS_alsologtostderr = flag;
   return Maybe<void>::Ok();
 }
 inline Maybe<bool> GetFLAGS_logtostderr() { return FLAGS_logtostderr; }  // namespace oneflow

@@ -103,11 +103,12 @@ PyFrameObject* get_frame_back(PyFrameObject* frame) {
 std::string get_cur_frame_stack_str() {
   PyFrameObject* cur_frame = PyEval_GetFrame();
   if (cur_frame == NULL) return "";
-  std::string cur_f_str = "Python stack[-1]: " + *CHECK_JUST(PyObjectToReprStr((PyObject*)cur_frame));
+  std::string cur_f_str =
+      "Python stack[-1]: " + PyObjectToReprStr((PyObject*)cur_frame).GetOrThrow();
 
   PyFrameObject* back_frame = get_frame_back(cur_frame);
   if (back_frame == NULL) return cur_f_str;
-  std::string back_f_str = *CHECK_JUST(PyObjectToReprStr((PyObject*)back_frame));
+  std::string back_f_str = PyObjectToReprStr((PyObject*)back_frame).GetOrThrow();
   cur_f_str = "Python stack[-2]: " + back_f_str + "; " + cur_f_str;
   Py_XDECREF(back_frame);
 
