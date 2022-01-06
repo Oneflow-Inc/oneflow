@@ -106,7 +106,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
-from oneflow._C import floor
+from oneflow._C import floor, floor_
 from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import negative
@@ -171,6 +171,9 @@ from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
+from oneflow._C import erfinv, erfinv_
+from oneflow._C import cumsum
+from oneflow._C import swapaxes
 
 
 from . import sbp
@@ -343,6 +346,7 @@ from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
+from oneflow.nn.modules.slice import logical_slice_op as logical_slice
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
