@@ -571,14 +571,14 @@ LogicalResult JobImporter::ProcessJob() {
 template<typename OpType, typename AdaptorType>
 void UpdatePlacement(OpType* op, AdaptorType& adaptor, ::oneflow::Job& job) {
   auto* pg = job.mutable_placement()->add_placement_group();
-  pg->mutable_op_set()->add_op_name(adaptor.op_name().getValue().str());
-  pg->mutable_parallel_conf()->set_device_tag(adaptor.device_tag().getValue().str());
+  pg->mutable_op_set()->add_op_name(adaptor.op_name().str());
+  pg->mutable_parallel_conf()->set_device_tag(adaptor.device_tag().str());
   for (auto p : adaptor.device_name()) {
     pg->mutable_parallel_conf()->add_device_name(
         p.template dyn_cast<StringAttr>().getValue().str());
   }
-  if (adaptor.hierarchy()) {
-    for (auto dim : adaptor.hierarchy()) {
+  if (::llvm::Optional<ArrayAttr> hierarchy = adaptor.hierarchy()) {
+    for (auto dim : hierarchy->getValue()) {
       pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
           dim.template dyn_cast<IntegerAttr>().getInt());
     }
@@ -682,7 +682,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
 LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, system_op_adaptor, job);
-  auto op_name = system_op_adaptor.op_name().getValue().str();
+  auto op_name = system_op_adaptor.op_name().str();
   ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
   for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
     auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();

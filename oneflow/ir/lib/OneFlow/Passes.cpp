@@ -129,16 +129,16 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
                                                op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
   attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                 op_to_replace_adaptor.device_tag());
+                 op_to_replace_adaptor.device_tagAttr());
   attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
                  op_to_replace_adaptor.device_name());
   attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                 op_to_replace_adaptor.hierarchy());
+                 op_to_replace_adaptor.hierarchyAttr());
   attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                  rewriter.getStringAttr(op_name));
   // TODO: use functions in oneflow to genearated bn
   attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                 op_to_replace_adaptor.scope_symbol_id());
+                 op_to_replace_adaptor.scope_symbol_idAttr());
   return attributes;
 }
 
