@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/user/image/jpeg_decoder.h"
 
 #include <opencv2/opencv.hpp>
 #include <jpeglib.h>
@@ -164,11 +165,6 @@ REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
 
 namespace {
 
-enum class JpegReturnType {
-  kOk = 0,
-  kError = 1,
-};
-
 JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
                                  RandomCropGenerator* random_crop_gen,
                                  const std::string& color_space, TensorBuffer* buffer) {
@@ -265,25 +261,12 @@ JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
   return JpegReturnType::kOk;
 }
 
-void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,
-                                        const std::string& name, const std::string& color_space,
-                                        RandomCropGenerator* random_crop_gen) {
-  CHECK(record.feature().find(name) != record.feature().end()) << "Field " << name << " not found";
-  const Feature& feature = record.feature().at(name);
-  CHECK(feature.has_bytes_list());
-  CHECK(feature.bytes_list().value_size() == 1);
-  const std::string& src_data = feature.bytes_list().value(0);
-
-  if (JpegPartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
-                        color_space, buffer)
-      == JpegReturnType::kOk) {
-    return;
-  }
-
-  // cv::_InputArray image_data(src_data.data(), src_data.size());
-  // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
+void OpenCvPartialDecode(const unsigned char* data, size_t length,
+                                 RandomCropGenerator* random_crop_gen,
+                                 const std::string& color_space, cv::Mat &out_mat)
+{
   cv::Mat image =
-      cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
+      cv::imdecode(cv::Mat(1, length, CV_8UC1, (void*)data),  // NOLINT
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
   int W = image.cols;
   int H = image.rows;
@@ -301,27 +284,94 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
     CHECK(newW > 0 && newW <= W);
     CHECK(newH > 0 && newH <= H);
     cv::Rect roi(x, y, newW, newH);
-    image(roi).copyTo(image_roi);
-    image = image_roi;
-    W = image.cols;
-    H = image.rows;
+    image(roi).copyTo(out_mat);
+    W = out_mat.cols;
+    H = out_mat.rows;
     CHECK(W == newW);
     CHECK(H == newH);
+  }else{
+    image.copyTo(out_mat);
   }
+}
+
+void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,
+                                        const std::string& name, const std::string& color_space,
+                                        RandomCropGenerator* random_crop_gen) {
+  CHECK(record.feature().find(name) != record.feature().end()) << "Field " << name << " not found";
+  const Feature& feature = record.feature().at(name);
+  CHECK(feature.has_bytes_list());
+  CHECK(feature.bytes_list().value_size() == 1);
+  const std::string& src_data = feature.bytes_list().value(0);
+
+  cv::Mat image_mat;
+  JpegDecoder jpeg_decode;
+  
+  if (jpeg_decode.PartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
+                        nullptr, 0, color_space, image_mat)
+      == JpegReturnType::kOk) {
+    // convert color space 
+    // jpeg decode output RGB
+    if (ImageUtil::IsColor(color_space) && color_space != "RGB") {
+      ImageUtil::ConvertColor("RGB", image_mat, color_space, image_mat);
+  }
+  }else{
+    OpenCvPartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
+                        color_space, image_mat);
+    // convert color space
+    // opencv decode output BGR
+    if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
+      ImageUtil::ConvertColor("BGR", image_mat, color_space, image_mat);
+    }
+    
+  }
+
+  
+  // cv::_InputArray image_data(src_data.data(), src_data.size());
+  // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
+
+  // cv::Mat image =
+  //     cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
+  //                  ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
+  // int W = image.cols;
+  // int H = image.rows;
+
+  // // random crop
+  // if (random_crop_gen != nullptr) {
+  //   CHECK(image.data != nullptr);
+  //   cv::Mat image_roi;
+  //   CropWindow crop;
+  //   random_crop_gen->GenerateCropWindow({H, W}, &crop);
+  //   const int y = crop.anchor.At(0);
+  //   const int x = crop.anchor.At(1);
+  //   const int newH = crop.shape.At(0);
+  //   const int newW = crop.shape.At(1);
+  //   CHECK(newW > 0 && newW <= W);
+  //   CHECK(newH > 0 && newH <= H);
+  //   cv::Rect roi(x, y, newW, newH);
+  //   image(roi).copyTo(image_roi);
+  //   image = image_roi;
+  //   W = image.cols;
+  //   H = image.rows;
+  //   CHECK(W == newW);
+  //   CHECK(H == newH);
+  // }
 
   // convert color space
-  if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
-    ImageUtil::ConvertColor("BGR", image, color_space, image);
-  }
+  // if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
+  //   ImageUtil::ConvertColor("BGR", image, color_space, image);
+  // }
 
-  CHECK(image.isContinuous());
+  int W = image_mat.cols;
+  int H = image_mat.rows;
+
+  CHECK(image_mat.isContinuous());
   const int c = ImageUtil::IsColor(color_space) ? 3 : 1;
-  CHECK_EQ(c, image.channels());
+  CHECK_EQ(c, image_mat.channels());
   Shape image_shape({H, W, c});
   buffer->Resize(image_shape, DataType::kUInt8);
   CHECK_EQ(image_shape.elem_cnt(), buffer->nbytes());
-  CHECK_EQ(image_shape.elem_cnt(), image.total() * image.elemSize());
-  memcpy(buffer->mut_data<uint8_t>(), image.ptr(), image_shape.elem_cnt());
+  CHECK_EQ(image_shape.elem_cnt(), image_mat.total() * image_mat.elemSize());
+  memcpy(buffer->mut_data<uint8_t>(), image_mat.ptr(), image_shape.elem_cnt());
 }
 
 }  // namespace
