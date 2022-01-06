@@ -99,7 +99,9 @@ std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOp
   for (const auto& arg : op.user_conf().output()) { names_appeared.insert(arg.first); }
   for (const auto& arg_def : arg_defs) {
     const auto& key = arg_def.name();
-    auto result_size = op.user_conf().output().at(key).s_size();
+    const auto& it = op.user_conf().output().find(key);
+    if (it == op.user_conf().output().end()) { continue; }
+    auto result_size = it->second.s_size();
     if (result_size == 0) { continue; }
     for (int32_t i = 0; i < result_size; i++) {
       const auto output_lbn = op_name + "/" + key + "_" + std::to_string(i);

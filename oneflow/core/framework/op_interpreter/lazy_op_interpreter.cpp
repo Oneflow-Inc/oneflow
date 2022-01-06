@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -73,12 +75,8 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
 Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
                                  const OpAttribute& op_attribute, const std::string& bn_in_op,
                                  const std::shared_ptr<ParallelDesc>& parallel_desc,
-                                 const bool is_lazy, const bool is_local, const bool requires_grad,
-                                 const bool is_leaf) {
-  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
+                                 const bool is_local) {
   CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
-  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
-  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
 
   CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
   const auto& blob_desc_sign_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
@@ -100,7 +98,8 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     cfg::NdSbp nd_sbp(nd_sbp_it->second);
-    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp));
+    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
+        << "The input sbp is not valid for an inplace operation, please try to use non-inplace.";
     CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
   }
   return Maybe<void>::Ok();
@@ -418,12 +417,15 @@ namespace {
 Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_expr,
                                                         TensorTuple* outputs,
                                                         const OpExprInterpContext& ctx) {
+  NonRecursiveMetaInfoConsistencyCheckScope non_scope;
   bool is_local;
   std::shared_ptr<const ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc).shared_from_symbol();
+    const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
+    parallel_desc = parallel_desc_sym.shared_from_symbol();
+    JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp));
     is_local = false;
   } else {
     // NOTE(chengcheng): local
@@ -650,6 +652,21 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     }
   }
 
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+
+  // Disable boxing if the computation is inplace.
+  for (int i = 0; i < op_expr.output_size(); ++i) {
+    const auto& output = outputs->at(i);
+    if (output) {
+      const std::string& lbn = TensorNameScope::Global()->Lookup(output);
+      CHECK_OR_RETURN(!lbn.empty()) << "The output which index is " << i
+                                    << " has no tensor name, please check whether the inplaced "
+                                       "output is also an input of the operation "
+                                    << new_op_name;
+      JUST(infer_ctx->DisableBoxing(lbn));
+    }
+  }
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
@@ -660,9 +677,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
   auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
-
-  // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const std::string& obn = op_expr.indexed_obns().at(i);
     if (!(*outputs)[i]) {
@@ -670,10 +684,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
           JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     } else {
       const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
-      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
-                                is_local,
-                                /* requires_grad */ false,
-                                /* is_leaf */ true));
+      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
     }
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }

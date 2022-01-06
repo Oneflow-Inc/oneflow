@@ -39,7 +39,8 @@ bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
-Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
@@ -49,7 +50,7 @@ Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricBToP = DECORATE(&RawCheckSymmetricBToP, ThreadLocal);
+static constexpr auto* CheckSymmetricBToP = DECORATE(&RawCheckSymmetricBToP, ThreadLocalCopiable);
 
 }  // namespace
 
