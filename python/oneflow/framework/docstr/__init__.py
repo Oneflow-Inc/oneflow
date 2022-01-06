@@ -43,3 +43,4 @@ from .broadcast_like import *
 from .arange import *
 from .split import *
 from .clamp import *
+from .swapaxes import *

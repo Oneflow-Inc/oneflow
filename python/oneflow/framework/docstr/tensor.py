@@ -381,6 +381,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.swapaxes,
+    """
+    See :func:`oneflow.swapaxes`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`
