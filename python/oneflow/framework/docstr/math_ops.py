@@ -112,6 +112,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+
+    """,
+)
+
+add_docstr(
     oneflow.div,
     r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
