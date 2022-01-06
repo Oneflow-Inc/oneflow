@@ -727,7 +727,7 @@ def autotest(
                                 )
                                 if equality_res == False:
                                     print_note_fake_program()
-                                    print("---------Tensor Shape--------")
+                                    print("===================Wrong Tensor Shape=================")
                                     print(flow_tensor.shape)
                                     print(
                                         eager_tensor_2_graph_tensor[flow_tensor].shape
