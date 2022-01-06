@@ -135,12 +135,8 @@ class TensorBufferPool final {
   using TensorBufferList = std::vector<std::unique_ptr<detail::TensorBufferImpl>>;
 
   static TensorBufferPool& Get() {
-    if (!Ptr()) { Ptr().reset(new TensorBufferPool()); }
-    return *Ptr().get();
-  }
-
-  static void Delete() {
-    if (Ptr()) { Ptr().reset(); }
+    static TensorBufferPool instance;
+    return instance;
   }
 
   ~TensorBufferPool();
@@ -155,11 +151,6 @@ class TensorBufferPool final {
   void set_thread_local_cache_size(size_t thread_local_cache_size);
 
  private:
-  static std::unique_ptr<TensorBufferPool>& Ptr() {
-    static std::unique_ptr<TensorBufferPool> ptr;
-    return ptr;
-  }
-
   static TensorBufferList& ThreadLocalCache() {
     thread_local TensorBufferList thread_local_cache;
     return thread_local_cache;

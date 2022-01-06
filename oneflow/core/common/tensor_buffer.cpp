@@ -190,7 +190,6 @@ TensorBufferPool::TensorBufferPool()
       thread_local_cache_size_(GetTensorBufferPoolThreadLocalCacheSize()) {}
 
 TensorBufferPool::~TensorBufferPool() {
-  ThreadLocalCache().clear();
   std::unique_lock<std::mutex> lck(mtx_);
   global_free_list_.clear();
 }
@@ -262,6 +261,7 @@ void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) {
 }
 
 void TensorBufferPool::set_pool_size(size_t pool_size) {
+  std::unique_lock<std::mutex> lck(mtx_);
   pool_size_ = pool_size;
   if (thread_local_cache_size_ > pool_size_) { thread_local_cache_size_ = pool_size_; }
 }
@@ -273,6 +273,7 @@ void TensorBufferPool::set_thread_local_cache_size(size_t thread_local_cache_siz
 }
 
 void TensorBufferPool::set_pool_size_base(size_t base) {
+  std::unique_lock<std::mutex> lck(mtx_);
   pool_size_ = GetTensorBufferPoolSize(base);
   if (thread_local_cache_size_ > pool_size_) { thread_local_cache_size_ = pool_size_; }
 }
