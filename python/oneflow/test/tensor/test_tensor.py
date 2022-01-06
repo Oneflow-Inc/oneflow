@@ -1511,6 +1511,26 @@ class TestTensor(flow.unittest.TestCase):
         return x.erfc()
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(
+        check_graph=False, auto_backward=False
+    )  # Todo: After add gradient func, you should set `auto_backward` as True
+    def test_erfinv_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-1, high=1).to(device).requires_grad_(False)
+        return x.erfinv()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(
+        check_graph=False, auto_backward=False
+    )  # Todo: After add gradient func, you should set `auto_backward` as True
+    def test_erfinv_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-1, high=1).to(device).requires_grad_(False)
+        y = x + 1
+        y.erfinv_()
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
     def test_exp_tensor_with_random_data(test_case):
         device = random_device()
