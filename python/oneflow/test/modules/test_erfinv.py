@@ -15,6 +15,11 @@ limitations under the License.
 """
 
 import unittest
+from collections import OrderedDict
+
+import numpy as np
+from scipy import special
+from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -23,14 +28,13 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestStackModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
-    def test_stack_with_random_data(test_case):
+class TestErfinvModule(flow.unittest.TestCase):
+    @autotest(check_graph=True, auto_backward=False)
+    def test_flow_erfinv_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        y = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        out = torch.stack((x, y), dim=random(low=-5, high=5).to(int))
-        return out
+        x = random_pytorch_tensor(requires_grad=False).to(device)
+        y = torch.erfinv(x)
+        return y
 
 
 if __name__ == "__main__":

@@ -428,6 +428,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.erfinv,
+    """
+    See :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfinv_,
+    """
+    Inplace version of :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.fill_,
     """
     Tensor.fill_(value) → Tensor
@@ -509,6 +523,14 @@ add_docstr(
     Tensor.nelement() → int
 
     Alias for numel()
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+
     """,
 )
 
