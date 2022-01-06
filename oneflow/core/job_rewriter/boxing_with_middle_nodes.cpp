@@ -68,13 +68,14 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
           lbi_ptr = &middle_node_lbi;
           // Replace input blob with configuration from middle nodes
           if (middle_node_id == middle_sbps.size() - 1) {
-            OperatorConf consumer_op_conf = node->op().op_conf();
+            // Only update operator configuration once
+            if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
+              op_node2op_conf[node] = node->op().op_conf();
+            }
+            OperatorConf& consumer_op_conf = op_node2op_conf[node];
             const auto& old_val = ReplaceInputLbnInOpCustomizedConf(
                 &consumer_op_conf, ibn, GenLogicalBlobName(middle_node_lbi));
             CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
-            if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
-              op_node2op_conf[node] = consumer_op_conf;
-            }
           }
         }
       }
