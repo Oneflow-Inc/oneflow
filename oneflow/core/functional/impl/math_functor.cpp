@@ -628,6 +628,31 @@ class Transpose2dimFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SwapaxesFunctor {
+ public:
+  SwapaxesFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
+                           const int32_t dim1) const {
+    const int64_t ndim = x->shape()->NumAxes();
+    int32_t dim_0 = dim0;
+    int32_t dim_1 = dim1;
+
+    if (dim0 < 0) { dim_0 += ndim; }
+    if (dim1 < 0) { dim_1 += ndim; }
+
+    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
+    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
+    return Transpose2dim(x, dim0, dim1);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
@@ -1685,6 +1710,34 @@ class MovedimIntFunctor {
   }
 };
 
+class ErfinvFunctor {
+ public:
+  ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ErfinvInplaceFunctor {
+ public:
+  ErfinvInplaceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), {}));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CumsumFunctor {
  public:
   CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("x").Output("y").Build()); }
@@ -1753,6 +1806,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
+  m.add_functor<SwapaxesFunctor>("Swapaxes");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
@@ -1785,6 +1839,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
+  m.add_functor<ErfinvFunctor>("Erfinv");
+  m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
 };
