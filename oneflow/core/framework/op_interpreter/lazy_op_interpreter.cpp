@@ -75,8 +75,7 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
 Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
                                  const OpAttribute& op_attribute, const std::string& bn_in_op,
                                  const std::shared_ptr<ParallelDesc>& parallel_desc,
-                                 const bool is_lazy, const bool is_local) {
-  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
+                                 const bool is_local) {
   CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
 
   CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
@@ -685,8 +684,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
           JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     } else {
       const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
-      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
-                                is_local));
+      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
     }
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }

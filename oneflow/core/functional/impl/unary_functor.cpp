@@ -27,7 +27,9 @@ namespace functional {
 
 namespace impl {
 
-#define INPLACE_UNARY_FLOAT_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)
+#define INPLACE_UNARY_FLOAT_FUNC_SEQ      \
+  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
+  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
 
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
@@ -153,6 +155,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR(Tanh, "Tanh");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
+  m.add_functor<InplaceFloorFunctor>("Floor_");
 };
 
 #undef ADD_UNARY_FUNCTOR
