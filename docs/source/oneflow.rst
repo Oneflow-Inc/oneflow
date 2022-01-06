@@ -54,6 +54,7 @@ oneflow
             expm1, 
             erf, 
             erfc, 
+            erfinv, 
             flatten, 
             flip, 
             floor, 
