@@ -1731,7 +1731,7 @@ class ErfinvFunctor {
  public:
   ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, {});
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, {});
   }
 
  private:
@@ -1747,7 +1747,7 @@ class ErfinvInplaceFunctor {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), {}));
+    JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get(), {}));
     return outputs->at(0);
   }
 
