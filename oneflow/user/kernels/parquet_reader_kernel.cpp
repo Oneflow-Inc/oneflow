@@ -483,7 +483,7 @@ Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
     CHECK_NOTNULL_OR_RETURN(col_desc);
     // check def and rep level
     if (!((col_desc->max_definition_level() == 1 && col_desc->max_repetition_level() == 0)
-          || (col_desc->max_definition_level() == 3 && col_desc->max_repetition_level() == 1))) {
+          || (col_desc->max_repetition_level() == 1 && col_desc->name() == "element"))) {
       return Error::RuntimeError() << "It's only supported for now that read values with primitive "
                                       "type or LIST type from column";
     }

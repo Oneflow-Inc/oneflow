@@ -50,6 +50,10 @@ def get_wdl_path():
     return "/dataset/wdl_parquet/train/"
 
 
+def get_wdl_path_2():
+    return "/dataset/dlrm_parquet/train/"
+
+
 def get_wdl_schema():
     return [
         # {"col_id": 0, "shape": (26,), "dtype": flow.int32},
@@ -57,6 +61,14 @@ def get_wdl_schema():
         # {"col_id": 2, "shape": (), "dtype": flow.int32},
         {"col_name": "labels", "shape": (), "dtype": flow.int32},
         # {"col_id": 3, "shape": (2,), "dtype": flow.int32},
+    ]
+
+
+def get_wdl_schema_2():
+    return [
+        {"col_name": "labels", "shape": (), "dtype": flow.double},
+        {"col_id": 1, "shape": (13,), "dtype": flow.double},
+        {"col_id": 2, "shape": (26,), "dtype": flow.int32},
     ]
 
 
@@ -78,6 +90,12 @@ class MyGraph(flow.nn.Graph):
 class ParquetReaderTestCase(oneflow.unittest.TestCase):
     def test_wdl(test_case):
         reader = make_parquet_reader(get_wdl_path(), get_wdl_schema())
+        columns = reader()
+        for col in columns:
+            print(col)
+
+    def test_wdl_2(test_case):
+        reader = make_parquet_reader(get_wdl_path_2(), get_wdl_schema_2())
         columns = reader()
         for col in columns:
             print(col)
