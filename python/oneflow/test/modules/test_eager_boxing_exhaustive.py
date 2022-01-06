@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import itertools
 import unittest
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import os
 
 import oneflow.unittest
 from test_util import GenArgList
@@ -28,8 +29,6 @@ from test_util import GenArgList
 def _test_eager_boxing_normal_1d_exhaustive_testing(
     test_case, shape, in_device, out_device, in_device_list, out_device_list
 ):
-    import itertools
-
     sbps = [
         flow.sbp.split(0),
         flow.sbp.split(1),
@@ -71,8 +70,6 @@ def _test_eager_boxing_normal_1d_exhaustive_testing(
 def _test_eager_boxing_symmetric_2d_exhaustive_testing(
     test_case, in_device, out_device
 ):
-    import itertools
-
     sbps = [
         flow.sbp.split(0),
         flow.sbp.split(1),
@@ -114,8 +111,6 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
 def _test_eager_boxing_1d_special_split_axis(
     test_case, in_device, out_device, in_device_list, out_device_list
 ):
-    import itertools
-
     sbps = [
         flow.sbp.split(2),
         flow.sbp.split(4),
@@ -155,11 +150,7 @@ def _test_eager_boxing_1d_special_split_axis(
         )
 
 
-def _test_eager_boxing_2d_special_split_axis(
-    test_case, in_device, out_device
-):
-    import itertools
-
+def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
     sbps = [
         flow.sbp.split(2),
         flow.sbp.split(4),
@@ -185,16 +176,14 @@ def _test_eager_boxing_2d_special_split_axis(
             )
             y = x.to_consistent(placement=out_placement, sbp=elem[1])
 
-            z = y.to_consistent(placement=out_placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+            z = y.to_consistent(
+                placement=out_placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
+            )
             test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
         except flow._oneflow_internal.exception.BoxingNotSupportedException:
-            failed_boxing.append(
-                (elem, in_device, out_device)
-            )
+            failed_boxing.append((elem, in_device, out_device))
         except flow._oneflow_internal.exception.UnimplementedException:
-            failed_boxing.append(
-                (elem, in_device, out_device)
-            )
+            failed_boxing.append((elem, in_device, out_device))
 
     if flow.env.get_rank() == 0:
         print(
@@ -223,7 +212,6 @@ class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
         arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_symmetric_2d_exhaustive_testing(test_case, *arg)
-
 
 
 @flow.unittest.skip_unless_1n4d()
