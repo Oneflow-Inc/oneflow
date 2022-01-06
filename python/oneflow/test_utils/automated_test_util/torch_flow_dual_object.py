@@ -295,7 +295,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
-                                ignore_apis_list = ["to", "tensor", "_to", "train"]
+                                ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
 
@@ -328,16 +328,18 @@ def GetDualObject(name, pytorch, oneflow):
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
-                                            self.test_module_func = oneflow
 
                                         def build(self):
-                                            return self.test_module_func(
+                                            return oneflow(
                                                 *oneflow_args, **oneflow_kwargs
                                             )
 
                                     try:
-                                        test_g = TestGraphOfFunctional()
-                                        test_g_res = test_g()
+                                        if (oneflow.__name__ == "to" or oneflow.__name__ == "_to") and oneflow_res.device.type == oneflow_args[0]:
+                                            test_g_res = oneflow_res
+                                        else:
+                                            test_g = TestGraphOfFunctional()
+                                            test_g_res = test_g()
                                     except Exception as e:
                                         print_note_fake_program()
                                         raise OneFlowGraphBuildOrRunError(e)

@@ -63,11 +63,9 @@ class TestEye(flow.unittest.TestCase):
     def test_eye_with_random_data(test_case):
         n = random(low=1, high=5).to(int)
         m = random(low=1, high=5).to(int)
-        x = torch.eye(n=n, m=m)
+        x = torch.eye(n=n, m=m, device=random_device())
         x.oneflow.requires_grad = True
         x.pytorch.requires_grad = True
-        device = random_device()
-        x.to(device)
         return x
 
 
