@@ -15,23 +15,19 @@ endif()
 if(WIN32)
     message(FATAL_ERROR "Windows system does not support onetbb")
 else()
-    if(BUILD_SHARED_LIBS)
-      if("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".dylib")
-        set(ONETBB_LIBRARY_NAMES libtbb${tbb_CMAKE_DEBUG_POSTFIX}.dylib)
-      elseif("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".so")
-        set(ONETBB_LIBRARY_NAMES libtbb${tbb_CMAKE_DEBUG_POSTFIX}.so)
-        set(TBB_LIBRARY_TYPE ON)
-      else()
-        message(FATAL_ERROR "${CMAKE_SHARED_LIBRARY_SUFFIX} not support for onetbb")
-      endif()
+    if("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".dylib")
+      set(ONETBB_LIBRARY_NAMES libtbb${tbb_CMAKE_DEBUG_POSTFIX}.dylib)
+    elseif("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".so")
+      set(ONETBB_LIBRARY_NAMES libtbb${tbb_CMAKE_DEBUG_POSTFIX}.so)
+      set(TBB_LIBRARY_TYPE ON)
     else()
-      set(ONETBB_LIBRARY_NAMES libtbb${tbb_CMAKE_DEBUG_POSTFIX}.a )
-      set(TBB_LIBRARY_TYPE OFF)
+      message(FATAL_ERROR "${CMAKE_SHARED_LIBRARY_SUFFIX} not support for onetbb")
     endif()
+
 endif()
 
 foreach(LIBRARY_NAME ${ONETBB_LIBRARY_NAMES})
-    list(APPEND ONETBB_STATIC_LIBRARIES ${ONETBB_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND ONETBB_SHARED_LIBRARIES ${ONETBB_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
 
@@ -43,7 +39,7 @@ ExternalProject_Add(onetbb
     URL_MD5 5e5f2ee22a0d19c0abbe7478f1c7ccf6
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_BYPRODUCTS ${ONETBB_STATIC_LIBRARIES}
+    BUILD_BYPRODUCTS ${ONETBB_SHARED_LIBRARIES}
     CMAKE_CACHE_ARGS
         -DCMAKE_INSTALL_PREFIX:STRING=${ONETBB_INSTALL_DIR}
         -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
@@ -56,9 +52,9 @@ ExternalProject_Add(onetbb
         -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
         -DTBB_EXAMPLES:BOOL=OFF
         -DTBB_TEST:BOOL=OFF
-        -DBUILD_SHARED_LIBS:BOOL=${TBB_LIBRARY_TYPE}
+        -DBUILD_SHARED_LIBS:BOOL=ON
 )
 
 endif(THIRD_PARTY)
 add_library(onetbb_imported UNKNOWN IMPORTED)
-set_property(TARGET onetbb_imported PROPERTY IMPORTED_LOCATION "${ONETBB_STATIC_LIBRARIES}")
+set_property(TARGET onetbb_imported PROPERTY IMPORTED_LOCATION "${ONETBB_SHARED_LIBRARIES}")

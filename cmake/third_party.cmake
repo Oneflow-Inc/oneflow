@@ -165,7 +165,7 @@ set(oneflow_third_party_libs
 )
 
 if (WITH_ONETBB)
-  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONETBB_STATIC_LIBRARIES})
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONETBB_SHARED_LIBRARIES})
 endif()
 
 if (WITH_ONEDNN)
