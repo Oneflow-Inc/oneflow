@@ -318,14 +318,13 @@ def GetDualObject(name, pytorch, oneflow):
                                 # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
                                 # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
                                 elif (
-                                    "oneflow.nn.modules" not in oneflow.__module__
+                                    ("oneflow.nn.modules" not in oneflow.__module__)
                                     or inspect.isfunction(oneflow)
                                     or (
                                         inspect.ismethod(oneflow)
                                         and "oneflow.nn.modules" in oneflow.__module__
                                     )
                                 ):
-
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
