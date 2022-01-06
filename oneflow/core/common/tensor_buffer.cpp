@@ -167,13 +167,27 @@ void TensorBuffer::Swap(TensorBuffer& other) { std::swap(impl_, other.impl_); }
 
 namespace {
 
-constexpr size_t kDefaultPoolSize = 1024;
+constexpr size_t kDefaultPoolSizeBase = 1024;
+constexpr float kDefaultPoolSizeFactor = 2.0f;
 constexpr size_t kDefaultThreadLocalCacheSize = 64;
+
+size_t GetTensorBufferPoolSize(size_t base = kDefaultPoolSizeBase) {
+  float factor =
+      ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_POOL_SIZE_FACTOR", kDefaultPoolSizeFactor);
+  return static_cast<size_t>(std::ceil(base * factor));
+}
+
+size_t GetTensorBufferPoolThreadLocalCacheSize() {
+  size_t cache_size = ParseIntegerFromEnv("ONEFLOW_TENSOR_BUFFER_POOL_THREAD_LOCAL_CACHE_SIZE",
+                                          kDefaultThreadLocalCacheSize);
+  return cache_size;
+}
 
 }  // namespace
 
 TensorBufferPool::TensorBufferPool()
-    : pool_size_(kDefaultPoolSize), thread_local_cache_size_(kDefaultThreadLocalCacheSize) {}
+    : pool_size_(GetTensorBufferPoolSize()),
+      thread_local_cache_size_(GetTensorBufferPoolThreadLocalCacheSize()) {}
 
 TensorBufferPool::~TensorBufferPool() {
   ThreadLocalCache().clear();
@@ -210,13 +224,57 @@ void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape,
 
 void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {
   if (!tensor_buffer.impl_) { return; }
-  std::unique_lock<std::mutex> lck(mtx_);
-  if (global_free_list_.size() < pool_size_) {
-    global_free_list_.push_back(std::move(tensor_buffer.impl_));
+  auto& thread_local_cache = ThreadLocalCache();
+  if (thread_local_cache.size() < thread_local_cache_size_) {
+    thread_local_cache.push_back(std::move(tensor_buffer.impl_));
+  } else {
+    std::unique_lock<std::mutex> lck(mtx_);
+    if (global_free_list_.size() < pool_size_) {
+      global_free_list_.push_back(std::move(tensor_buffer.impl_));
+    }
   }
   tensor_buffer.impl_.reset();
 }
 
-void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) { UNIMPLEMENTED(); }
+void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) {
+  auto& thread_local_cache = ThreadLocalCache();
+  size_t remain = tensor_buffers.size();
+  while (thread_local_cache.size() < thread_local_cache_size_) {
+    if (tensor_buffers.back().impl_) {
+      thread_local_cache.push_back(std::move(tensor_buffers.back().impl_));
+    }
+    tensor_buffers.pop_back();
+    remain--;
+  }
+  if (remain > 0) {
+    std::unique_lock<std::mutex> lck(mtx_);
+    while (global_free_list_.size() < pool_size_) {
+      if (tensor_buffers.back().impl_) {
+        global_free_list_.push_back(std::move(tensor_buffers.back().impl_));
+      }
+      tensor_buffers.pop_back();
+      remain--;
+    }
+  }
+  if (remain > 0) {
+    for (auto& tensor_buffer : tensor_buffers) { tensor_buffer.impl_.reset(); }
+  }
+}
+
+void TensorBufferPool::set_pool_size(size_t pool_size) {
+  pool_size_ = pool_size;
+  if (thread_local_cache_size_ > pool_size_) { thread_local_cache_size_ = pool_size_; }
+}
+
+void TensorBufferPool::set_thread_local_cache_size(size_t thread_local_cache_size) {
+  if (thread_local_cache_size <= pool_size_ && thread_local_cache_size >= 0) {
+    thread_local_cache_size_ = thread_local_cache_size;
+  }
+}
+
+void TensorBufferPool::set_pool_size_base(size_t base) {
+  pool_size_ = GetTensorBufferPoolSize(base);
+  if (thread_local_cache_size_ > pool_size_) { thread_local_cache_size_ = pool_size_; }
+}
 
 }  // namespace oneflow

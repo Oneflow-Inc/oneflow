@@ -30,8 +30,7 @@ class OneRecDataReader final : public DataReader<TensorBuffer> {
  public:
   OneRecDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
     const int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
-    TensorBufferPool::Get().set_pool_size(batch_size * 2);
-    TensorBufferPool::Get().set_thread_local_cache_size(batch_size / 8);
+    TensorBufferPool::Get().set_pool_size_base(batch_size);
     const auto random_shuffle = ctx->Attr<bool>("random_shuffle");
     parser_.reset(new OneRecParser());
     if (random_shuffle) {

@@ -150,10 +150,9 @@ class TensorBufferPool final {
   void Deallocate(TensorBuffer& tensor_buffer);
   void Deallocate(std::vector<TensorBuffer>& tensor_buffers);
 
-  void set_pool_size(size_t pool_size) { pool_size_ = pool_size; }
-  void set_thread_local_cache_size(size_t thread_local_cache_size) {
-    thread_local_cache_size_ = thread_local_cache_size;
-  }
+  void set_pool_size(size_t pool_size);
+  void set_pool_size_base(size_t base);
+  void set_thread_local_cache_size(size_t thread_local_cache_size);
 
  private:
   static std::unique_ptr<TensorBufferPool>& Ptr() {
