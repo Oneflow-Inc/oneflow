@@ -44,6 +44,7 @@ global_check_allclose = True
 global_atol = 1e-5
 gloal_rtol = 1e-5
 
+
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
 
@@ -55,7 +56,6 @@ vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
-
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -221,12 +221,13 @@ def check_eager_graph_tensor(eager_res, graph_res):
         )
         if equality_res == False:
             print_note_fake_program()
-            print(
-                "===================Wrong nn.Graph Tensor Shape================="
-            )
+            print("===================Wrong nn.Graph Tensor Shape=================")
             print(eager_res.shape)
             print(graph_res.shape)
-        assert(equality_res), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
+        assert (
+            equality_res
+        ), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
+
 
 def GetDualObject(name, pytorch, oneflow):
     global counter
@@ -356,7 +357,7 @@ def GetDualObject(name, pytorch, oneflow):
                                             )
 
                                     try:
-                                        # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported. 
+                                        # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
                                         if (
                                             (
                                                 oneflow.__name__ == "to"
@@ -377,7 +378,9 @@ def GetDualObject(name, pytorch, oneflow):
                                         for _, g_res in enumerate(test_g_res):
                                             check_eager_graph_tensor(oneflow_res, g_res)
                                     else:
-                                        check_eager_graph_tensor(oneflow_res, test_g_res)
+                                        check_eager_graph_tensor(
+                                            oneflow_res, test_g_res
+                                        )
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
