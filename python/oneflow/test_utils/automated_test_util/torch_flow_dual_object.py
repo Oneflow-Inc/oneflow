@@ -40,7 +40,9 @@ postulate = [".rand", ".Tensor"]
 
 testing = False
 testing_graph = False
-
+global_check_allclose = True
+global_atol = 1e-5
+gloal_rtol = 1e-5
 
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
@@ -53,7 +55,7 @@ vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
-eager_tensor_2_graph_tensor = dict()
+
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -208,6 +210,24 @@ counter = 0
 align_exception = os.getenv("ONEFLOW_TEST_ALIGN_EXCEPTION") is not None
 
 
+def check_eager_graph_tensor(eager_res, graph_res):
+    if global_check_allclose:
+        equality_res = np.allclose(
+            eager_res.numpy(),
+            graph_res.numpy(),
+            rtol=gloal_rtol,
+            atol=global_atol,
+            equal_nan=True,
+        )
+        if equality_res == False:
+            print_note_fake_program()
+            print(
+                "===================Wrong nn.Graph Tensor Shape================="
+            )
+            print(eager_res.shape)
+            print(graph_res.shape)
+        assert(equality_res), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
+
 def GetDualObject(name, pytorch, oneflow):
     global counter
     counter += 1
@@ -336,6 +356,7 @@ def GetDualObject(name, pytorch, oneflow):
                                             )
 
                                     try:
+                                        # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported. 
                                         if (
                                             (
                                                 oneflow.__name__ == "to"
@@ -353,14 +374,10 @@ def GetDualObject(name, pytorch, oneflow):
                                         raise OneFlowGraphBuildOrRunError(e)
                                 if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
-                                        for idx, g_res in enumerate(test_g_res):
-                                            eager_tensor_2_graph_tensor[
-                                                oneflow_res[idx]
-                                            ] = g_res
+                                        for _, g_res in enumerate(test_g_res):
+                                            check_eager_graph_tensor(oneflow_res, g_res)
                                     else:
-                                        eager_tensor_2_graph_tensor[
-                                            oneflow_res
-                                        ] = test_g_res
+                                        check_eager_graph_tensor(oneflow_res, test_g_res)
 
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
@@ -412,13 +429,10 @@ def GetDualObject(name, pytorch, oneflow):
                                 print_note_fake_program()
                                 raise OneFlowGraphBuildOrRunError(e)
                             if isinstance(test_g_res, tuple):
-                                for idx, g_res in enumerate(test_g_res):
-                                    eager_tensor_2_graph_tensor[
-                                        oneflow_res[idx]
-                                    ] = g_res
+                                for _, g_res in enumerate(test_g_res):
+                                    check_eager_graph_tensor(oneflow_res, g_res)
                             else:
-                                eager_tensor_2_graph_tensor[oneflow_res] = test_g_res
-
+                                check_eager_graph_tensor(oneflow_res, test_g_res)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
@@ -524,7 +538,6 @@ def clear_note_fake_program():
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
     vis_tensor.clear()
-    eager_tensor_2_graph_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
@@ -660,6 +673,11 @@ def autotest(
                     raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
+                global global_check_allclose, global_rtol, global_atol
+                global_check_allclose = check_allclose
+                global_rtol = rtol
+                global_atol = atol
+
                 try:
                     global testing_graph
                     # for generate fake program input tensor
@@ -679,7 +697,6 @@ def autotest(
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
-                    func_outputs = res
                     for x in res:
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
@@ -722,46 +739,10 @@ def autotest(
                         test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                     if verbose:
                         print(f"{f.__name__} test eager passed.")
-                # check graph
-                for output in func_outputs:
-                    flow_tensor = output.oneflow
-                    if isinstance(flow_tensor, flow.Tensor):
-                        if flow_tensor in eager_tensor_2_graph_tensor:
-                            if check_allclose:
-                                equality_res = np.allclose(
-                                    flow_tensor.numpy(),
-                                    eager_tensor_2_graph_tensor[flow_tensor].numpy(),
-                                    rtol=rtol,
-                                    atol=atol,
-                                    equal_nan=True,
-                                )
-                                if equality_res == False:
-                                    print_note_fake_program()
-                                    print(
-                                        "===================Wrong Tensor Shape================="
-                                    )
-                                    print(flow_tensor.shape)
-                                    print(
-                                        eager_tensor_2_graph_tensor[flow_tensor].shape
-                                    )
-                                test_case.assertTrue(
-                                    equality_res,
-                                    f"Check graph failed: graph result {eager_tensor_2_graph_tensor[flow_tensor].numpy()} not equals to eager result {flow_tensor.numpy()}.",
-                                )
 
-                            if verbose:
-                                print(f"{f.__name__} test graph passed.")
-                        else:
-                            if check_graph:
-                                print_note_fake_program()
-                                test_case.assertTrue(
-                                    False,
-                                    f"{f.__name__} cannot find module/function/method to check graph.",
-                                )
-                    else:
-                        warnings.warn(
-                            f"some outputs of {f.__name__} fail to check graph."
-                        )
+                if verbose and check_graph:
+                    print(f"{f.__name__} test graph passed.")
+
                 n -= 1
                 loop += 1
 
