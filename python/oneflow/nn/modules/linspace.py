@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import List, Optional, Union
-
+import math
 import oneflow as flow
 
 
@@ -67,7 +67,7 @@ def linspace_op(
         end = start + 1.0
     else:
         step = (end - start) * 1.0 / (steps - 1)
-        if ((end - start) / (steps - 1)) * (steps - 1) == (end - start):
+        if math.isclose(((end - start) / (steps - 1)) * (steps - 1), (end - start)):
             end = end + step / 2.0
     if placement is None:
         if isinstance(device, str):
