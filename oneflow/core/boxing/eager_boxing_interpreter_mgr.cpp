@@ -132,13 +132,14 @@ static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<cfg::NdSbp> out_nd_sbp,
                                                    Symbol<ParallelDesc> in_parallel_desc,
-                                                   Symbol<ParallelDesc> out_parallel_desc) {
+                                                   Symbol<ParallelDesc> out_parallel_desc,
+                                                   const Shape& logical_shape) {
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
-  const auto& status = TRY(main_boxing_expr->Check(in, out));
+  const auto& status = TRY(main_boxing_expr->Check(in, out, logical_shape));
   if (status.IsOk()) {
-    const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
+    const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out, logical_shape));
     return std::shared_ptr<EagerBoxingInterpreter>(
         new NaiveEagerBoxingInterpreter(boxing_func, JUST(status)));
   }
@@ -151,7 +152,8 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                               << ", to_placement: " << *JUST(PlacementToString(out_parallel_desc));
 }
 
-static constexpr auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
+static constexpr auto* CachedGetBoxingInterpreter =
+    DECORATE(&GetBoxingInterpreter, ThreadLocalCopiable);
 
 std::unique_ptr<EagerBoxingLogger> CreateEagerBoxingLogger() {
   if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
@@ -168,9 +170,10 @@ EagerBoxingInterpreterManager::EagerBoxingInterpreterManager()
 
 Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInterpreter(
     Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  const auto& boxing_interpreter =
-      JUST(CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc,
+    const Shape& logical_shape) const {
+  const auto& boxing_interpreter = JUST(CachedGetBoxingInterpreter(
+      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, logical_shape));
   eager_boxing_logger_->Log(*JUST(boxing_interpreter->boxing_interpreter_status()));
   return boxing_interpreter;
 }
