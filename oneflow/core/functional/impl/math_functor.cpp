@@ -1713,6 +1713,34 @@ class MovedimIntFunctor {
   }
 };
 
+class ErfinvFunctor {
+ public:
+  ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ErfinvInplaceFunctor {
+ public:
+  ErfinvInplaceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), {}));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CumsumFunctor {
  public:
   CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("x").Output("y").Build()); }
@@ -1814,6 +1842,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
+  m.add_functor<ErfinvFunctor>("Erfinv");
+  m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
 };
