@@ -42,3 +42,5 @@ from .chunk import *
 from .broadcast_like import *
 from .arange import *
 from .split import *
+from .erfinv import *
+from .swapaxes import *

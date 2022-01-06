@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -118,17 +119,20 @@ class EagerNaiveSToSOpKernelCache final : public user_op::OpKernelCache {
 
 size_t InferNaiveSToSKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  const Shape& shape = ctx->Attr<Shape>("shape");
+  Shape shape = ctx->Attr<Shape>("shape");
+  const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
   Symbol<ParallelDesc> out_parallel_desc = CHECK_JUST(TxtStringToPlacement(out_parallel_conf_txt));
-  const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
-  Symbol<ParallelDesc> in_parallel_desc = CHECK_JUST(TxtStringToPlacement(in_parallel_conf_txt));
-  int64_t maximum_parallel_num =
-      out_parallel_desc->parallel_num() > in_parallel_desc->parallel_num()
-          ? out_parallel_desc->parallel_num()
-          : in_parallel_desc->parallel_num();
-  size_t tensor_byte_size =
-      shape.elem_cnt() / maximum_parallel_num * GetSizeOfDataType(in_tensor.data_type());
+
+  int64_t out_parallel_num = out_parallel_desc->parallel_num();
+  if (out_parallel_num > 1) {
+    CHECK_LT(out_split_axis, shape.NumAxes());
+    BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
+    const auto& opt_parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+    int64_t parallel_id = opt_parallel_id->value_or(0);
+    shape.Set(out_split_axis, bs.At(parallel_id).size());
+  }
+  size_t tensor_byte_size = shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
   return tensor_byte_size;
 }
 

@@ -628,6 +628,31 @@ class Transpose2dimFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SwapaxesFunctor {
+ public:
+  SwapaxesFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
+                           const int32_t dim1) const {
+    const int64_t ndim = x->shape()->NumAxes();
+    int32_t dim_0 = dim0;
+    int32_t dim_1 = dim1;
+
+    if (dim0 < 0) { dim_0 += ndim; }
+    if (dim1 < 0) { dim_1 += ndim; }
+
+    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
+    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
+    return Transpose2dim(x, dim0, dim1);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
@@ -810,6 +835,19 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class SqrtSquareSumFunctor {
+ public:
+  SqrtSquareSumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sqrt_square_sum").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class VectorNormFunctor {
  public:
   VectorNormFunctor() {}
@@ -834,6 +872,7 @@ class VectorNormFunctor {
       }
       dtype_val = x->dtype();
     }
+    bool full_dim_flag = true;
     std::vector<int32_t> dim;
     if (!input_dim.has_value()) {
       std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
@@ -848,7 +887,9 @@ class VectorNormFunctor {
         } else {
           dim.emplace_back(dim_check[i] + x->shape()->NumAxes());
         }
+        if (dim[i] != i) { full_dim_flag = false; }
       }
+      if ((int)dim.size() < x->shape()->NumAxes()) { full_dim_flag = false; }
     }
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
@@ -859,6 +900,9 @@ class VectorNormFunctor {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
         res = JUST(ReduceMin(JUST(Abs(x)), dim, keepdim));
+      } else if (ord_val == 2.0 && keepdim == false && full_dim_flag
+                 && x->requires_grad() == false) {
+        res = JUST(SqrtSquareSum(x));
       } else {
         res =
             JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
@@ -1666,9 +1710,37 @@ class MovedimIntFunctor {
   }
 };
 
+class ErfinvFunctor {
+ public:
+  ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ErfinvInplaceFunctor {
+ public:
+  ErfinvInplaceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), {}));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CumsumFunctor {
  public:
-  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("in").Output("out").Build()); }
+  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
@@ -1734,10 +1806,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
+  m.add_functor<SwapaxesFunctor>("Swapaxes");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
@@ -1765,6 +1839,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
+  m.add_functor<ErfinvFunctor>("Erfinv");
+  m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
 };
