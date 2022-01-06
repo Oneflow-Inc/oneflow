@@ -496,8 +496,6 @@ void MemBlockBuffer::FindFreeOffsetAndNewBufferSize(int64_t size, int64_t* offse
     *offset = buffer_size_;
     *new_buffer_size = buffer_size_ + size;
   }
-  // for 0-dim tensor
-  if (size == 0) { *offset = 0; }
 }
 
 void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
@@ -518,7 +516,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     }
     int64_t offset = -1;
     buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
-    CHECK(offset >= 0 && offset < buffer_size);
+    CHECK(offset >= 0 && offset <= buffer_size);
     CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
   }
   result->mem_block_size = buffer_size;

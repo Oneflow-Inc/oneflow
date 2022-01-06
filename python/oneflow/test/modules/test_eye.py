@@ -68,6 +68,13 @@ class TestEye(flow.unittest.TestCase):
         x.pytorch.requires_grad = True
         return x
 
+    @autotest(check_graph=True, auto_backward=False)
+    def test_eye_with_random_data(test_case):
+        n = random(low=0, high=1).to(int)
+        m = random(low=0, high=2).to(int)
+        x = torch.eye(n=n, m=m, device=random_device())
+        return x
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentEye(flow.unittest.TestCase):
