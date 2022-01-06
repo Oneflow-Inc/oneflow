@@ -65,7 +65,7 @@ class TestFloor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x + 1
-        y = x.floor_()
+        y.floor_()
         return y
 
 
