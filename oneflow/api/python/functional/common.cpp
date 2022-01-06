@@ -59,9 +59,9 @@ bool PyStringSequenceCheck(PyObject* obj) {
 
 Maybe<std::string> PyStringAsString(PyObject* str_obj) {
   PyObject* bytes = PyUnicode_AsEncodedString(str_obj, "utf-8", "~E~");
-  const char* str = PyBytes_AS_STRING(bytes);
+  std::string str = PyBytes_AS_STRING(bytes);
   Py_XDECREF(bytes);
-  return std::string(str);
+  return str;
 }
 
 Maybe<std::string> PyObjectToReprStr(PyObject* obj) {

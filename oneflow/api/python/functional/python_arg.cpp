@@ -66,7 +66,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
 
 template<>
 Maybe<std::string> PythonArg::ObjectAs<std::string>() const {
-  return std::make_shared<std::string>(*JUST(PyStringAsString(object_)));
+  return JUST(PyStringAsString(object_));
 }
 
 template<>
@@ -187,9 +187,8 @@ Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
 
 template<>
 Maybe<std::vector<std::string>> PythonArg::ObjectAs<std::vector<std::string>>() const {
-  return PyUnpackSequence<std::string>(object_, [](PyObject* item) -> Maybe<std::string> {
-    return std::make_shared<std::string>(*JUST(PyStringAsString(item)));
-  });
+  return PyUnpackSequence<std::string>(
+      object_, [](PyObject* item) -> Maybe<std::string> { return JUST(PyStringAsString(item)); });
 }
 
 Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
