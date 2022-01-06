@@ -15,22 +15,25 @@ limitations under the License.
 """
 
 import unittest
+from collections import OrderedDict
+
+import numpy as np
+
+from oneflow.test_utils.automated_test_util import *
+from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
-
 
 @flow.unittest.skip_unless_1n1d()
-class TestStackModule(flow.unittest.TestCase):
+class TestSwapaxes(flow.unittest.TestCase):
     @autotest(check_graph=True)
-    def test_stack_with_random_data(test_case):
+    def test_swapaxes_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        y = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        out = torch.stack((x, y), dim=random(low=-5, high=5).to(int))
-        return out
+        x = random_pytorch_tensor(ndim=3).to(device)
+        y = torch.swapaxes(x, random(0, 2).to(int), random(0, 2).to(int))
+        return y
 
 
 if __name__ == "__main__":
