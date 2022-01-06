@@ -288,6 +288,13 @@
     ]
   bind_python: True
 
+- name: "swapaxes"
+  signature:
+    [
+      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes",
+    ]
+  bind_python: True
+
 - name: "permute"
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
@@ -1560,6 +1567,10 @@
 - name: "stack"
   signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Stack"
   bind_python: True
+
+- name: "stack_grad"
+  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackGrad"
+  bind_python: False
 
 - name: "local_to_consistent"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"

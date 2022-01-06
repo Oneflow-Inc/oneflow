@@ -130,6 +130,7 @@ oneflow
             sum, 
             sqrt, 
             square,  
+            swapaxes, 
             tan, 
             tanh, 
             tensor, 
