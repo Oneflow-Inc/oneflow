@@ -405,7 +405,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                  buffer_manager.StoreValuesPtr(), buffer_manager.NumStoreMissingPtr(),
                  buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
                  reinterpret_cast<uint64_t*>(out_context->mut_dptr()));
-      OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumCacheMissingPtr(),
+      OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumStoreMissingPtr(),
                                     sizeof(uint32_t), cudaMemcpyDefault,
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       CHECK_JUST(ctx->stream()->Sync());
