@@ -145,7 +145,7 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
   // TODO: get copy cost from each EagerBoxingInterpreter
   if (!TRY(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
                producer_sbp_parallel, consumer_sbp_parallel, producer_parallel_desc,
-               consumer_parallel_desc))
+               consumer_parallel_desc, logical_blob_desc.shape()))
            .IsOk()) {
     return kUnsupportedBoxing;
   }
