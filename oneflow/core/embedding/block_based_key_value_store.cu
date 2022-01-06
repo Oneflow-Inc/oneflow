@@ -34,13 +34,13 @@ namespace {
 constexpr uint64_t NUM_BLOCKS_PER_CHUNK = 4 * 1024 * 1024;
 constexpr uint32_t NUM_IO_THREADS = 4;
 constexpr uint32_t IO_QD = 128;
+constexpr uint32_t kRingSubmitBatch = 32;
 constexpr uint32_t kChunkNameSuffixLength = 8;
 
 struct Buffer {
   uint32_t index = 0;
   uint32_t offset_in_block = 0;
-  uint32_t buffer_id = 0;
-  struct iovec io_vec {};
+  void* ptr = nullptr;
 };
 
 template<typename Key>
@@ -110,15 +110,16 @@ class KeyValueStoreImpl : public KeyValueStore {
     host_query_blocks_ =
         static_cast<uint8_t*>(aligned_alloc(block_size_, (max_query_length_ + values_per_block_ - 1)
                                                              / values_per_block_ * block_size_));
+    buffer_ptr_ =
+        static_cast<uint8_t*>(aligned_alloc(block_size_, NUM_IO_THREADS * IO_QD * block_size_));
     io_rings_.resize(NUM_IO_THREADS);
     for (auto& ring : io_rings_) { PCHECK(io_uring_queue_init(IO_QD, &ring, 0) == 0); }
     thread_buffers_.resize(NUM_IO_THREADS);
-    for (auto& buffers : thread_buffers_) {
+    for (uint32_t tid = 0; tid < NUM_IO_THREADS; ++tid) {
+      auto& buffers = thread_buffers_.at(tid);
       buffers.resize(IO_QD);
       for (uint32_t i = 0; i < IO_QD; ++i) {
-        buffers.at(i).buffer_id = i;
-        buffers.at(i).io_vec.iov_len = block_size_;
-        buffers.at(i).io_vec.iov_base = aligned_alloc(block_size_, block_size_);
+        buffers.at(i).ptr = buffer_ptr_ + (tid * IO_QD + i) * block_size_;
       }
     }
     std::unordered_map<uint64_t, std::string> chunks;
@@ -143,9 +144,7 @@ class KeyValueStoreImpl : public KeyValueStore {
     OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
     free(host_query_blocks_);
     for (auto& ring : io_rings_) { io_uring_queue_exit(&ring); }
-    for (auto& buffers : thread_buffers_) {
-      for (auto& buffer : buffers) { free(buffer.io_vec.iov_base); }
-    }
+    free(buffer_ptr_);
   }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
@@ -179,6 +178,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint8_t* host_query_blocks_;
   std::vector<io_uring> io_rings_;
   std::vector<std::vector<Buffer>> thread_buffers_;
+  uint8_t* buffer_ptr_{};
 };
 
 template<typename Key>
@@ -200,18 +200,16 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
   std::atomic<uint64_t> missing_counter(0);
 #pragma omp parallel num_threads(NUM_IO_THREADS)
   {
-    std::unique_ptr<uint8_t> block_data(
-        static_cast<uint8_t*>(aligned_alloc(block_size_, block_size_)));
-
     const uint32_t thread_id = omp_get_thread_num();
     const uint32_t num_threads = omp_get_num_threads();
     auto& ring = io_rings_.at(thread_id);
     const uint32_t keys_per_thread = (num_keys + num_threads - 1) / num_threads;
-    const uint64_t start_i = thread_id * keys_per_thread;
-    const uint64_t end_i = std::min(start_i + keys_per_thread, static_cast<uint64_t>(num_keys));
-    const uint64_t num_to_read = end_i - start_i;
-    uint64_t num_read_done = 0;
-    uint64_t num_ring_reading = 0;
+    const uint32_t start_i = thread_id * keys_per_thread;
+    const uint32_t end_i = std::min(start_i + keys_per_thread, num_keys);
+    const uint32_t num_to_read = end_i - start_i;
+    uint32_t num_read_done = 0;
+    uint32_t num_ring_reading = 0;
+    uint32_t pending_submit = 0;
     for (uint64_t i = start_i; i < end_i; ++i) {
       const Key key = host_query_keys_[i];
       auto it = key2id_.find(key);
@@ -224,10 +222,10 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
         if (num_ring_reading == IO_QD) {
           struct io_uring_cqe* cqe = nullptr;
           PCHECK(io_uring_wait_cqe(&ring, &cqe) == 0);
+          CHECK_EQ(cqe->res, block_size_);
           buffer = static_cast<Buffer*>(io_uring_cqe_get_data(cqe));
           std::memcpy(static_cast<uint8_t*>(host_query_values_) + buffer->index * value_size_,
-                      static_cast<uint8_t*>(buffer->io_vec.iov_base) + buffer->offset_in_block,
-                      value_size_);
+                      static_cast<uint8_t*>(buffer->ptr) + buffer->offset_in_block, value_size_);
           io_uring_cqe_seen(&ring, cqe);
         }
         if (buffer == nullptr) {
@@ -246,18 +244,23 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
         buffer->index = i;
         buffer->offset_in_block = id_in_block * value_size_;
         io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring));
-        io_uring_prep_readv(sqe, file.fd(), &buffer->io_vec, 1, block_offset);
+        io_uring_prep_read(sqe, file.fd(), buffer->ptr, block_size_, block_offset);
         io_uring_sqe_set_data(sqe, buffer);
-        io_uring_submit(&ring);
+        pending_submit += 1;
+        if (pending_submit == kRingSubmitBatch) {
+          PCHECK(io_uring_submit(&ring) == pending_submit);
+          pending_submit = 0;
+        }
       }
     }
+    if (pending_submit > 0) { PCHECK(io_uring_submit(&ring) == pending_submit); }
     while (num_ring_reading != 0) {
       struct io_uring_cqe* cqe = nullptr;
       PCHECK(io_uring_wait_cqe(&ring, &cqe) == 0);
+      CHECK_EQ(cqe->res, block_size_);
       Buffer* buffer = static_cast<Buffer*>(io_uring_cqe_get_data(cqe));
       std::memcpy(static_cast<uint8_t*>(host_query_values_) + buffer->index * value_size_,
-                  static_cast<uint8_t*>(buffer->io_vec.iov_base) + buffer->offset_in_block,
-                  value_size_);
+                  static_cast<uint8_t*>(buffer->ptr) + buffer->offset_in_block, value_size_);
       io_uring_cqe_seen(&ring, cqe);
       num_ring_reading -= 1;
     }
@@ -278,9 +281,9 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
 template<typename Key>
 void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const void* keys,
                                  const void* values, uint64_t* context) {
+  auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
   if (num_keys == 0) { return; }
-  auto cuda_stream = stream->As<ep::CudaStream>();
   OF_CUDA_CHECK(cudaMemcpyAsync(host_query_keys_, keys, key_size_ * num_keys, cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(host_query_values_, values, value_size_ * num_keys,
