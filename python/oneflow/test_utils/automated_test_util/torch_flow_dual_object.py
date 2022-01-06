@@ -325,6 +325,7 @@ def GetDualObject(name, pytorch, oneflow):
                                         and "oneflow.nn.modules" in oneflow.__module__
                                     )
                                 ):
+
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -335,7 +336,14 @@ def GetDualObject(name, pytorch, oneflow):
                                             )
 
                                     try:
-                                        if (oneflow.__name__ == "to" or oneflow.__name__ == "_to") and oneflow_res.device.type == oneflow_args[0]:
+                                        if (
+                                            (
+                                                oneflow.__name__ == "to"
+                                                or oneflow.__name__ == "_to"
+                                            )
+                                            and oneflow_res.device.type
+                                            == oneflow_args[0]
+                                        ):
                                             test_g_res = oneflow_res
                                         else:
                                             test_g = TestGraphOfFunctional()
@@ -729,7 +737,9 @@ def autotest(
                                 )
                                 if equality_res == False:
                                     print_note_fake_program()
-                                    print("===================Wrong Tensor Shape=================")
+                                    print(
+                                        "===================Wrong Tensor Shape================="
+                                    )
                                     print(flow_tensor.shape)
                                     print(
                                         eager_tensor_2_graph_tensor[flow_tensor].shape
