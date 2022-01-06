@@ -102,7 +102,7 @@ OF_DEVICE_FUNC void DoScatterScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_
       __trap();
 #else
       UNIMPLEMENTED() << "The index element " << idx_elem << " is out of bounds for dimension "
-                      << dim << " with size " << upper_bound << std::endl;
+                      << dim << " with size " << upper_bound << ".";
 #endif
     }
     coordinate[dim] = idx_elem;
