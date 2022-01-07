@@ -35,6 +35,7 @@ if(THIRD_PARTY)
 
 ExternalProject_Add(onednn
     PREFIX onednn
+    DEPENDS install-tbb
     URL ${ONEDNN_URL}
     URL_MD5 c60ea96acbaccec053be7e3fa81c6184
     UPDATE_COMMAND ""
@@ -55,7 +56,8 @@ ExternalProject_Add(onednn
         -DDNNL_BUILD_EXAMPLES:BOOL=OFF
         -DDNNL_BUILD_TESTS:BOOL=OFF
         -DDNNL_LIBRARY_TYPE:STRING=${DNNL_LIBRARY_TYPE}
-        -DDNNL_CPU_RUNTIME:STRING=OMP
+        -DDNNL_CPU_RUNTIME:STRING=TBB
+        -DTBBROOT:STRING=${ONETBB_INSTALL_DIR}
 )
 
 endif(THIRD_PARTY)

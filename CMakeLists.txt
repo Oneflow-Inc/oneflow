@@ -225,12 +225,12 @@ if(BUILD_CPP_API)
   endif(BUILD_SHARED_LIBS)
 endif(BUILD_CPP_API)
 
-include(third_party)
-
 set(ONETBB_URL https://github.com/oneapi-src/oneTBB/archive/refs/tags/v2021.5.0.tar.gz)
 use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
 set(ONETBB_MD5 5e5f2ee22a0d19c0abbe7478f1c7ccf6)
 add_subdirectory(external)
+
+include(third_party)
 
 if (BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
