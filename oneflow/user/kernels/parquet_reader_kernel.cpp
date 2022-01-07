@@ -40,25 +40,38 @@ template<typename DType>
 Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader) {
   using T = typename DType::c_type;
   thread_local std::vector<T> values;
+  CHECK_OR_RETURN(values.empty() || values.size() == 1);
+
   auto* typed_col_reader = static_cast<parquet::TypedColumnReader<DType>*>(col_reader);
   int64_t values_read = 0;
   int16_t def_level = 0;
   int16_t rep_level = 0;
-  auto sample = std::make_shared<TensorBuffer>();
-  bool read_sample_done = false;
-  while (typed_col_reader->HasNext() && !read_sample_done) {
+  size_t row_read = values.empty() ? 0 : 1;
+  size_t sample_size = values.size();
+
+  do {
     T value;
     auto levels_read = typed_col_reader->ReadBatch(1, &def_level, &rep_level, &value, &values_read);
     CHECK_EQ_OR_RETURN(levels_read, 1);
     CHECK_EQ_OR_RETURN(values_read, 1);
     CHECK_OR_RETURN(rep_level == 0 || rep_level == 1);
-    if (rep_level == 0 && !values.empty()) {
-      sample->Resize(Shape({static_cast<int64_t>(values.size())}), GetDataType<T>::value);
-      std::copy(values.begin(), values.end(), sample->mut_data<T>());
-      read_sample_done = true;
-      values.resize(0);
-    }
-    values.push_back(std::move(value));
+    values.push_back(value);
+    if (rep_level == 0) { row_read += 1; }
+    if (row_read <= 1) { sample_size += 1; }
+  } while (typed_col_reader->HasNext() && row_read <= 1);
+
+  CHECK_LE_OR_RETURN(sample_size, values.size());
+  auto sample = std::make_shared<TensorBuffer>();
+  sample->Resize(Shape({static_cast<int64_t>(sample_size)}), GetDataType<T>::value);
+  std::copy(values.begin(), values.begin() + sample_size, sample->mut_data<T>());
+
+  if (row_read > 1) {
+    // The last value which is the beginning of the next row must be kept,
+    // swap it to the front and resize the vector to 1
+    std::swap(values.front(), values.back());
+    values.resize(1);
+  } else {
+    values.resize(0);
   }
   return sample;
 }
