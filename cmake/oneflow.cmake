@@ -458,7 +458,7 @@ if(BUILD_PYTHON)
 endif(BUILD_PYTHON)
 
 
-set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/api")
+set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow")
 install(DIRECTORY oneflow/api/cpp/ DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
   COMPONENT oneflow_cpp_include
   EXCLUDE_FROM_ALL
@@ -478,7 +478,8 @@ install(DIRECTORY cmake/ DESTINATION ${LIBONEFLOW_SHARE_DIR}
 )
 
 set(LIBONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/lib")
-install(TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj
+get_property(MLIR_RELATED_TARGETS GLOBAL PROPERTY MLIR_EXPORTS)
+install(TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj ${MLIR_RELATED_TARGETS}
   COMPONENT oneflow_cpp_lib
   LIBRARY DESTINATION ${LIBONEFLOW_LIBRARY_DIR}
 )
@@ -507,9 +508,4 @@ add_custom_target(install_oneflow_cpp_lib
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy oneflow_cpp)
   add_dependencies(of_include_copy install_oneflow_cpp_include install_oneflow_cpp_share install_oneflow_cpp_lib)
-
-  # if(WITH_MLIR)
-  #   file(GLOB mlir_shared_libs "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib/*.14git")
-  #   copy_files("${mlir_shared_libs}" "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib" "${LIBONEFLOW_LIBRARY_DIR}" of_include_copy)
-  # endif(WITH_MLIR)
 endif(BUILD_CPP_API)
