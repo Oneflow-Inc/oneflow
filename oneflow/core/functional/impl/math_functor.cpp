@@ -781,15 +781,15 @@ class CastFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ClampFunctor {
+class ClampBaseFunctor {
  public:
-  ClampFunctor() {
+  ClampBaseFunctor() {
     clip_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar").Input("x").Output("y").Build());
     clip_min_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_min").Input("x").Output("y").Build());
     clip_max_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_max").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
-                           const Optional<Scalar>& max) const {
+                           const Optional<Scalar>& max, bool inplace) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
         << "Requires one of argument `min` and `max` at least in clip.";
     MutableAttrMap attrs;
@@ -826,7 +826,19 @@ class ClampFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      if (x->requires_grad()) {
+        JUST(CheckInplaceValid(x));
+        outputs->at(0) = x;
+        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get(), attrs));
+      } else {
+        JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get(), attrs));
+      }
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
+    }
   }
 
  private:
@@ -835,6 +847,37 @@ class ClampFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class ClampFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
+                           const Optional<Scalar>& max) const {
+    return ClampBaseFunctor::operator()(x, min, max, false);
+  }
+};
+
+class ClampInplaceFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
+                           const Optional<Scalar>& max) const {
+    return ClampBaseFunctor::operator()(x, min, max, true);
+  }
+};
+
+class ClipFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
+                           const Optional<Scalar>& max) const {
+    return Clamp(x, min, max);
+  }
+};
+
+class ClipInplaceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
+                           const Optional<Scalar>& max) const {
+    return ClampInplace(x, min, max);
+  }
+};
 class SqrtSquareSumFunctor {
  public:
   SqrtSquareSumFunctor() {
@@ -1811,6 +1854,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<ClampInplaceFunctor>("ClampInplace");
+  m.add_functor<ClampFunctor>("Clip");
+  m.add_functor<ClampInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
