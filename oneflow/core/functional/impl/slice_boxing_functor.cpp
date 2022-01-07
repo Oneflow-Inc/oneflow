@@ -51,7 +51,7 @@ Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerSToBpExpr = DECORATE(&EagerSToB, ThreadLocalCopiable);
+static constexpr auto* CachedEagerSToBOpExpr = DECORATE(&EagerSToB, ThreadLocalCopiable);
 
 Maybe<one::UserOpExpr> EagerPToB(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc, const Shape& shape) {
@@ -65,7 +65,7 @@ Maybe<one::UserOpExpr> EagerPToB(Symbol<ParallelDesc> in_parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerPToBpExpr = DECORATE(&EagerPToB, ThreadLocalCopiable);
+static constexpr auto* CachedEagerPToBOpExpr = DECORATE(&EagerPToB, ThreadLocalCopiable);
 
 Maybe<one::UserOpExpr> EagerNaiveSToS(Symbol<ParallelDesc> in_parallel_desc,
                                       Symbol<ParallelDesc> out_parallel_desc,
@@ -99,7 +99,7 @@ Maybe<one::UserOpExpr> EagerBToS(Symbol<ParallelDesc> in_parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerBToSpExpr = DECORATE(&EagerBToS, ThreadLocalCopiable);
+static constexpr auto* CachedEagerBToSOpExpr = DECORATE(&EagerBToS, ThreadLocalCopiable);
 
 Maybe<one::UserOpExpr> EagerPToS(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc,
@@ -115,7 +115,7 @@ Maybe<one::UserOpExpr> EagerPToS(Symbol<ParallelDesc> in_parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerPToSpExpr = DECORATE(&EagerPToS, ThreadLocalCopiable);
+static constexpr auto* CachedEagerPToSOpExpr = DECORATE(&EagerPToS, ThreadLocalCopiable);
 
 Maybe<one::UserOpExpr> EagerSToP(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc,
@@ -131,7 +131,7 @@ Maybe<one::UserOpExpr> EagerSToP(Symbol<ParallelDesc> in_parallel_desc,
       .Build();
 }
 
-static constexpr auto* CachedEagerSToPpExpr = DECORATE(&EagerSToP, ThreadLocalCopiable);
+static constexpr auto* CachedEagerSToPOpExpr = DECORATE(&EagerSToP, ThreadLocalCopiable);
 
 }  // namespace
 
@@ -150,7 +150,7 @@ class EagerSToBFunctor {
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBpExpr(
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
@@ -167,7 +167,7 @@ class EagerPToBFunctor {
       CHECK_OR_RETURN(x->is_eager());
     }
     std::shared_ptr<OpExpr> op_expr =
-        JUST(CachedEagerPToBpExpr(in_parallel_desc, out_parallel_desc, shape));
+        JUST(CachedEagerPToBOpExpr(in_parallel_desc, out_parallel_desc, shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
@@ -213,7 +213,7 @@ class EagerBToSFunctor {
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSpExpr(
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
@@ -234,7 +234,7 @@ class EagerPToSFunctor {
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSpExpr(
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
@@ -255,7 +255,7 @@ class EagerSToPFunctor {
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToPpExpr(
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToPOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
