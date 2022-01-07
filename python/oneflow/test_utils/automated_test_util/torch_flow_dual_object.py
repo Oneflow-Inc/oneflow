@@ -295,7 +295,14 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
-                                ignore_apis_list = ["to", "tensor", "_to", "train"]
+                                ignore_apis_list = [
+                                    "to",
+                                    "tensor",
+                                    "_to",
+                                    "train",
+                                    "to_consistent",
+                                    "to_local",
+                                ]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
 
@@ -540,12 +547,37 @@ class DualObject:
         return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
 
     def __getattr__(self, key):
-        pytorch_attr = getattr(self.pytorch, key)
+        if key in ["to_consistent", "to_local"]:
+
+            def identity(*args, **kwargs):
+                if isinstance(self.pytorch, torch_original.Tensor):
+                    return self.pytorch.clone()
+                return self.pytorch
+
+            pytorch_attr = identity
+        else:
+            pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
+        if pytorch_attr is None:
+            assert oneflow_attr is None
+            return None
         new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
+
+    def __setattr__(self, key, value):
+        if isinstance(value, DualObject):
+            setattr(self.pytorch, key, value.pytorch)
+            setattr(self.oneflow, key, value.oneflow)
+        else:
+            self.__dict__[key] = value
+
+    def __eq__(self, other):
+        if isinstance(other, DualObject):
+            return self.pytorch == other.pytorch and self.oneflow == other.oneflow
+        else:
+            return self.pytorch == other
 
 
 dual_modules_to_test = []
@@ -667,6 +699,7 @@ def autotest(
                         print(e)
                     loop += 1
                     continue
+                func_outputs = []
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]

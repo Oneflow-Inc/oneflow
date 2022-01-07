@@ -378,6 +378,73 @@ class gpu_device(generator):
         return random_util.choice(["cuda"])
 
 
+class random_placement(generator):
+    def __init__(self):
+        super().__init__([])
+        self.node_size = flow.env.get_node_size()
+        self.world_size = flow.env.get_world_size()
+        self.num_rank_for_each_node = self.world_size // self.node_size
+
+    def _calc_device(self):
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            return "cpu"
+        else:
+            return random_util.choice(["cuda", "cpu"])
+
+    def _calc_value(self):
+        device = self._calc_device()
+        device_ids = [i for i in range(self.num_rank_for_each_node)]
+        hierarchy = random_util.choice(
+            [(self.world_size,), (self.node_size, self.num_rank_for_each_node)]
+        )
+        return flow.placement(
+            device, {i: device_ids for i in range(self.node_size)}, hierarchy
+        )
+
+
+class random_cpu_placement(random_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return "cpu"
+
+
+class random_gpu_placement(random_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return "cuda"
+
+
+class random_sbp(generator):
+    def __init__(self, placement=None, dim=1, max_dim=0):
+        super().__init__([])
+        if placement is not None:
+            if isinstance(placement, random_placement):
+                self.dim = len(placement.value().hierarchy)
+            elif isinstance(placement, flow.placement):
+                self.dim = len(placement.hierarchy)
+            else:
+                raise RuntimeError(
+                    f"placement should be instance of random_placement or oneflow.placement"
+                )
+        else:
+            self.dim = dim
+        self.max_dim = max_dim
+
+    def _calc_value(self):
+        if self.max_dim == 0:
+            return (flow.sbp.broadcast for i in range(self.dim))
+        all_sbps = [flow.sbp.split(i) for i in range(self.max_dim)] + [
+            flow.sbp.broadcast,
+            flow.sbp.partial_sum,
+        ]
+        sbp = [random_util.choice(all_sbps) for i in range(self.dim)]
+        return sbp
+
+
 def test_against_pytorch(
     test_case,
     callable_name,
@@ -667,6 +734,10 @@ __all__ = [
     "random_device",
     "cpu_device",
     "gpu_device",
+    "random_placement",
+    "random_cpu_placement",
+    "random_gpu_placement",
+    "random_sbp",
     "random",
     "random_or_nothing",
     "oneof",
