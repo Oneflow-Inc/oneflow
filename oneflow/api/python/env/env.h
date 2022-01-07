@@ -85,7 +85,9 @@ inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
   FLAGS_alsologtostderr = flag;
   return Maybe<void>::Ok();
 }
-inline Maybe<bool> GetFLAGS_logtostderr() { return FLAGS_logtostderr; }  // namespace oneflow
+inline Maybe<bool> GetFLAGS_alsologtostderr() {
+  return FLAGS_alsologtostderr;
+}  // namespace oneflow
 inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   FLAGS_v = v_level;
   return Maybe<void>::Ok();

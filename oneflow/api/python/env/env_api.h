@@ -56,7 +56,7 @@ inline void SetFLAGS_alsologtostderr(bool flag) {
   return oneflow::SetFLAGS_alsologtostderr(flag).GetOrThrow();
 }
 
-inline bool GetFLAGS_logtostderr() { return oneflow::GetFLAGS_logtostderr().GetOrThrow(); }
+inline bool GetFLAGS_alsologtostderr() { return oneflow::GetFLAGS_alsologtostderr().GetOrThrow(); }
 
 inline void SetFLAGS_v(int32_t v_level) { return oneflow::SetFLAGS_v(v_level).GetOrThrow(); }
 

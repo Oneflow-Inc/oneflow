@@ -93,7 +93,7 @@ class BlockScopeContext(object):
 class GLogScopeContext(object):
     def __init__(self, s_level, v_level=0):
         self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
-        self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_logtostderr()
+        self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
         self._v = v_level
         self._s = s_level
 
