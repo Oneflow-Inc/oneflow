@@ -59,14 +59,22 @@ class TestEye(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_eye_with_random_data(test_case):
-        n = random().to(int)
-        m = random().to(int)
-        x = torch.eye(n=n, m=m)
-        device = random_device()
-        x.to(device)
-        x = random_pytorch_tensor().to(device)
+        n = random(low=1, high=5).to(int)
+        m = random(low=1, high=5).to(int)
+        x = torch.eye(n=n, m=m, device=random_device())
+        x.oneflow.requires_grad = True
+        x.pytorch.requires_grad = True
+        return x
+
+    @autotest(check_graph=True)
+    def test_eye_with_0_size_random_data(test_case):
+        n = random(low=0, high=5).to(int)
+        m = random(low=0, high=5).to(int)
+        x = torch.eye(n=n, m=m, device=random_device())
+        x.oneflow.requires_grad = True
+        x.pytorch.requires_grad = True
         return x
 
 
