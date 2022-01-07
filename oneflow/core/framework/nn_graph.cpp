@@ -279,13 +279,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   NewRuntimeBuffers();
 
-  JUST(DumpToVariable2BlobMap());
+  JUST(GetVariableRealBlobAfterCompilePass());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::DumpToVariable2BlobMap() {
+Maybe<void> NNGraph::GetVariableRealBlobAfterCompilePass() {
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   JUST(vm::CurrentRankSync());
   for (const std::string& var_name : variable_op_names_) {
@@ -293,15 +293,12 @@ Maybe<void> NNGraph::DumpToVariable2BlobMap() {
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
-    // Check sbp whether same or not and allow auto_parallel to change sbp.
     if (tensor->is_consistent()) {
       cfg::NdSbpSignature nd_sbp_signature = cfg::NdSbpSignature(
           job_.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(var_name));
       cfg::NdSbp job_nd_sbp = nd_sbp_signature.bn_in_op2nd_sbp().at("out");
-      if (*JUST(tensor->nd_sbp()) == job_nd_sbp) {
-        const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-      } else {
+      // Change variable tensor's impl with new sbp when job pass has changed their sbp.
+      if (*JUST(tensor->nd_sbp()) != job_nd_sbp) {
         LOG(INFO) << "Variable with name `" << var_name << "` change sbp from "
                   << NdSbpParallelToString(*JUST(tensor->nd_sbp())) << " to "
                   << NdSbpParallelToString(job_nd_sbp);
@@ -313,11 +310,10 @@ Maybe<void> NNGraph::DumpToVariable2BlobMap() {
             tensor, JUST(tensor->parallel_desc()), job_sbp_parallels, {}));
         JUST(vm::CurrentRankSync());
         // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
-        variable_op_name2tensor_.at(var_name)->set_data(new_tensor);
-        const std::shared_ptr<one::MirroredTensor> local_var =
-            JUST(new_tensor->cur_rank_phy_tensor());
-        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+        tensor->set_data(new_tensor);
       }
+      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
     } else {
       var_blob = JUST(tensor->eager_blob_object())->mut_blob();
     }

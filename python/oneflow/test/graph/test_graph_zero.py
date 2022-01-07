@@ -22,11 +22,10 @@ import oneflow.unittest
 
 
 def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
-    P = flow.placement("cuda", {0: [0, 1]})
-    B = flow.sbp.broadcast
-    S0 = flow.sbp.split(0)
-
-    def train_with_graph(iter_num=3):
+    def train_with_graph(iter_num=1):
+        P = flow.placement("cuda", {0: [0, 1]})
+        B = flow.sbp.broadcast
+        S0 = flow.sbp.split(0)
         linear = flow.nn.Linear(8, 4)
         linear = linear.to_consistent(placement=P, sbp=B)
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -66,19 +65,35 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 loss.backward()
                 return out
 
+        class LinearEvalGraphWithZeRO(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = linear
+
+                self.config.enable_amp(True)
+
+            def build(self, x):
+                out = self.linear(x)
+                return out
+
         linear_t_g = LinearTrainGraphWithZeRO()
+        linear_e_g = LinearEvalGraphWithZeRO()
 
-        def one_iter():
-            of_graph_out = linear_t_g(x)
-            if flow.env.get_rank() == 0:
-                print("graph repr ", linear_t_g)
-            print("out ", of_graph_out)
-            return of_graph_out.numpy(), linear_t_g.linear.weight.origin.numpy()
+        def one_train_iter():
+            out = linear_t_g(x)
+        
+        def one_eval_iter():
+            out = linear_e_g(x)
 
-        check_list = []
         for i in range(iter_num):
-            check_list.append(one_iter())
-        return check_list
+            one_train_iter()
+
+        test_case.assertEqual(linear.weight.sbp[0], S0)
+        test_case.assertEqual(linear.bias.sbp[0], S0)
+
+        one_eval_iter()
+        one_train_iter()
+        one_eval_iter()
 
     iter_num = 1
     graph_check_list = train_with_graph(iter_num)
@@ -90,10 +105,10 @@ class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
     def test_linear_train_graph_with_zero_1(test_case):
         _test_linear_train_graph_with_zero(test_case, 1)
 
-    def test_linear_train_graph_with_zero_2(test_case):
+    def _test_linear_train_graph_with_zero_2(test_case):
         _test_linear_train_graph_with_zero(test_case, 2)
 
-    def test_linear_train_graph_with_zero_3(test_case):
+    def _test_linear_train_graph_with_zero_3(test_case):
         _test_linear_train_graph_with_zero(test_case, 3)
 
 

@@ -113,7 +113,6 @@ CompTaskNode* NewCompTaskNode4OpNode(const OpNode* op_node) {
                  NewObj<int32_t, OpCompTaskNodeCreator>(op_type_case))
           ->NewCompTaskNode(op_conf);
     } else {
-      std::cout << "normal forward task node op :" << op_conf.DebugString();
       return new NormalForwardCompTaskNode;
     }
   }
