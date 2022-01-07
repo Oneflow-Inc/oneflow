@@ -1658,6 +1658,7 @@ class VarianceFunctor {
       CHECK_GE_OR_RETURN(ndim, dims.size())
           << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
           << "], but got " << dims.size();
+      std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
     JUST(attrs.SetAttr<std::vector<int32_t>>("dim", axis));
