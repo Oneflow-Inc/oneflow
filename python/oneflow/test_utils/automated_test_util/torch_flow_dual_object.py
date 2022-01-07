@@ -211,7 +211,11 @@ align_exception = os.getenv("ONEFLOW_TEST_ALIGN_EXCEPTION") is not None
 
 
 def check_eager_graph_tensor(eager_res, graph_res):
-    if global_check_allclose and isinstance(eager_res, flow.Tensor) and isinstance(graph_res, flow.Tensor):
+    if (
+        global_check_allclose
+        and isinstance(eager_res, flow.Tensor)
+        and isinstance(graph_res, flow.Tensor)
+    ):
         equality_res = np.allclose(
             eager_res.numpy(),
             graph_res.numpy(),
@@ -359,13 +363,20 @@ def GetDualObject(name, pytorch, oneflow):
                                     try:
                                         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
                                         if (
-                                            (
-                                                oneflow.__name__ == "to"
-                                                or oneflow.__name__ == "_to"
-                                            )
+                                            oneflow.__name__ == "to"
+                                            or oneflow.__name__ == "_to"
                                         ):
-                                            if isinstance(oneflow_res, flow.Tensor) and oneflow_res.device.type == oneflow_args[0]:
-                                                test_g_res = oneflow_res
+                                            if isinstance(oneflow_res, flow.Tensor):
+                                                if (
+                                                    oneflow_args
+                                                    and oneflow_res.device.type
+                                                    == oneflow_args[0]
+                                                ) or (
+                                                    oneflow_kwargs
+                                                    and oneflow_res.device.type
+                                                    == oneflow_kwargs["device"]
+                                                ):
+                                                    test_g_res = oneflow_res
                                             else:
                                                 pass
                                         else:
