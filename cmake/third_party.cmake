@@ -129,11 +129,6 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-# libraries only a top level .so or exe should be linked to
-set(oneflow_exe_third_party_libs
-    glog::glog
-)
-
 set(oneflow_test_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}

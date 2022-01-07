@@ -210,7 +210,7 @@ include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj PUBLIC ${oneflow_exe_third_party_libs})
+target_link_libraries(of_functional_obj PUBLIC glog::glog)
 add_dependencies(of_functional_obj of_cfgobj)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
@@ -227,7 +227,7 @@ if(BUILD_PYTHON)
   oneflow_add_library(of_functional_tensor_obj STATIC
       ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS}
       ${FUNCTIONAL_OPS_GENERATED_SRCS} ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj PUBLIC ${oneflow_exe_third_party_libs})
+  target_link_libraries(of_functional_tensor_obj PUBLIC glog::glog)
   add_dependencies(of_functional_tensor_obj of_cfgobj)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
@@ -326,7 +326,7 @@ if(BUILD_PYTHON)
                         of_api_common
                         ${oneflow_third_party_libs}
                         of_pyext_obj
-                        ${oneflow_exe_third_party_libs})
+                        glog::glog)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
   target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
@@ -389,7 +389,7 @@ endfunction()
 if(BUILD_TESTING)
   if (of_all_test_cc)
     oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
-    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs} ${oneflow_test_libs})
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog ${oneflow_test_libs})
   endif()
 
   if (BUILD_CPP_API)
