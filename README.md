@@ -79,6 +79,22 @@ docker pull oneflowinc/oneflow:nightly-cuda10.2
 docker pull oneflowinc/oneflow:nightly-cuda11.1
 ```
 
+## Publication
+
+- [OneFlow: Redesign the Distributed Deep Learning Framework from Scratch](https://arxiv.org/abs/2110.15032)
+- Bibtex Citation
+
+  ```
+  @misc{yuan2021oneflow,
+        title={OneFlow: Redesign the Distributed Deep Learning Framework from Scratch},
+        author={Jinhui Yuan and Xinqi Li and Cheng Cheng and Juncheng Liu and Ran Guo and Shenghang Cai and Chi Yao and Fei Yang and Xiaodong Yi and Chuan Wu and Haoran Zhang and Jie Zhao},
+        year={2021},
+        eprint={2110.15032},
+        archivePrefix={arXiv},
+        primaryClass={cs.DC}
+  }
+  ```
+
 ### Build from Source
 
 <details>
