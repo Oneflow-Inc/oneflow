@@ -1313,6 +1313,10 @@
   signature: "Tensor (Tensor x) => Floor"
   bind_python: True
 
+- name: "floor_"
+  signature: "Tensor (Tensor x) => Floor_"
+  bind_python: True
+
 - name: "floor_grad"
   signature: "Tensor (Tensor x, Tensor dy) => FloorGrad"
   bind_python: False
@@ -1400,6 +1404,21 @@
 - name: "clamp"
   signature:
     ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  bind_python: true
+
+- name: "clamp_"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  bind_python: true
+
+- name: "clip"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clip"]
+  bind_python: true
+
+- name: "clip_"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClipInplace"]
   bind_python: true
 
 - name: "clamp_grad"

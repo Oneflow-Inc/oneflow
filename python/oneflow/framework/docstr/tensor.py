@@ -527,6 +527,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
@@ -743,5 +751,33 @@ add_docstr(
 
     See :func:`oneflow.gather`
 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp,
+    """
+    See :func:`oneflow.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp_,
+    """
+    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip,
+    """
+    Alias for :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip_,
+    """
+    Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )
