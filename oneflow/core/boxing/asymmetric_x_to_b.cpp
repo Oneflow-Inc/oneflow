@@ -28,17 +28,21 @@ bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
-Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                   const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
+  if (in->nd_sbp()->sbp_parallel(0).has_split_parallel()) {
+    int64_t split_axis = in->nd_sbp()->sbp_parallel(0).split_parallel().axis();
+    CHECK_OR_RETURN(logical_shape.At(split_axis) % in->placement()->parallel_num() == 0);
+  }
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
                   || in->placement()->Bigger(*out->placement()));
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckAsymmetricXToB = DECORATE(&RawCheckAsymmetricXToB, ThreadLocal);
+static constexpr auto* CheckAsymmetricXToB = DECORATE(&RawCheckAsymmetricXToB, ThreadLocalCopiable);
 
 Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
   cfg::NdSbp broadcast_nd_sbp;
@@ -60,13 +64,13 @@ Maybe<one::Tensor> AsymmetricXToB(const std::shared_ptr<one::Tensor>& tensor,
   Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastNdSbp());
   const auto& broadcast_in_placed_nd_sbp =
       JUST(PlacedNdSbp::New(broadcast_nd_sbp, tensor_placement));
-  const auto& SymXToBBoxingFunction =
-      *JUST(GetBoxingFunction("symmetric-x-to-b", in, broadcast_in_placed_nd_sbp));
+  const auto& SymXToBBoxingFunction = *JUST(
+      GetBoxingFunction("symmetric-x-to-b", in, broadcast_in_placed_nd_sbp, *tensor->shape()));
   std::shared_ptr<one::Tensor> broadcast_input =
       JUST(SymXToBBoxingFunction(tensor, in, broadcast_in_placed_nd_sbp));
 
-  const auto& AsymBroadcastBoxingFunction =
-      *JUST(GetBoxingFunction("asymmetric-broadcast", broadcast_in_placed_nd_sbp, out));
+  const auto& AsymBroadcastBoxingFunction = *JUST(GetBoxingFunction(
+      "asymmetric-broadcast", broadcast_in_placed_nd_sbp, out, *broadcast_input->shape()));
   return AsymBroadcastBoxingFunction(broadcast_input, broadcast_in_placed_nd_sbp, out);
 }
 

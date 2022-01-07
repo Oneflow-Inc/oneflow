@@ -13,20 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
+add_docstr(
+    oneflow.swapaxes,
+    """This function is equivalent to NumPy’s swapaxes function.
 
-def BalancedPartNums(total, part_size):
-    base = int(total / part_size)
-    remainder = total % part_size
-    return [base + int(i < remainder) for i in range(part_size)]
+    For example:
 
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+               
+        >>> x = flow.tensor([[[0,1],[2,3]],[[4,5],[6,7]]])
+        >>> x.shape
+        oneflow.Size([2, 2, 2])
+        >>> flow.swapaxes(x, 0, 1).shape
+        oneflow.Size([2, 2, 2])
+        >>> flow.swapaxes(x, 0, 2).shape
+        oneflow.Size([2, 2, 2])
 
-def BalancedRanges(total, part_size):
-    balanced_part_nums = BalancedPartNums(total, part_size)
-    ranges = []
-    start = 0
-    for part_num in balanced_part_nums:
-        end = start + part_num
-        ranges.append((start, end))
-        start = end
-    return ranges
+    """,
+)

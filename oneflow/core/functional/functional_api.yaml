@@ -288,6 +288,13 @@
     ]
   bind_python: True
 
+- name: "swapaxes"
+  signature:
+    [
+      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes",
+    ]
+  bind_python: True
+
 - name: "permute"
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
@@ -539,6 +546,14 @@
     "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Bool requires_grad=False, Placement placement, SbpList sbp) => Eye",
     "Tensor (Scalar n, Scalar m=None, *, DataType dtype=kFloat, Bool requires_grad=False, Placement placement, Sbp sbp) => Eye",
     ]
+  bind_python: True
+
+- name: "erfinv"
+  signature: "Tensor (Tensor x) => Erfinv"
+  bind_python: True
+
+- name: "erfinv_"
+  signature: "Tensor (Tensor x) => ErfinvInplace"
   bind_python: True
 
 - name: "arange"
@@ -1298,6 +1313,10 @@
   signature: "Tensor (Tensor x) => Floor"
   bind_python: True
 
+- name: "floor_"
+  signature: "Tensor (Tensor x) => Floor_"
+  bind_python: True
+
 - name: "floor_grad"
   signature: "Tensor (Tensor x, Tensor dy) => FloorGrad"
   bind_python: False
@@ -1556,6 +1575,10 @@
 - name: "stack"
   signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Stack"
   bind_python: True
+
+- name: "stack_grad"
+  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackGrad"
+  bind_python: False
 
 - name: "local_to_consistent"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
