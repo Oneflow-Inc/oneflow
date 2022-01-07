@@ -324,6 +324,8 @@ class KeyValueStoreImpl : public KeyValueStore {
            uint64_t* context) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
            uint64_t* context) override;
+  void LoadSnapshot(const std::string& name) override { UNIMPLEMENTED(); }
+  void SaveSnapshot(const std::string& name) override { UNIMPLEMENTED(); }
 
  private:
   Encoder encoder_;

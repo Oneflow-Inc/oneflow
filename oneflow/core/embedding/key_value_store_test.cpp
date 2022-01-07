@@ -47,6 +47,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   float* values_host = nullptr;
   uint64_t* context = nullptr;
   uint32_t* n_missing = nullptr;
+  uint32_t* host_n_missing = nullptr;
   uint64_t* missing_keys = nullptr;
   uint32_t* missing_indices = nullptr;
   size_t keys_size = sizeof(uint64_t) * num_embeddings;
@@ -58,6 +59,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaMalloc(&context, context_size));
   OF_CUDA_CHECK(cudaMallocHost(&keys_host, keys_size));
   OF_CUDA_CHECK(cudaMallocHost(&values_host, values_size));
+  OF_CUDA_CHECK(cudaMallocHost(&host_n_missing, sizeof(uint32_t)));
   OF_CUDA_CHECK(cudaMalloc(&missing_keys, batch_size * sizeof(uint64_t)));
   OF_CUDA_CHECK(cudaMalloc(&missing_indices, batch_size * sizeof(uint32_t)));
   OF_CUDA_CHECK(cudaMalloc(&n_missing, sizeof(uint32_t)));
@@ -79,6 +81,9 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
                missing_keys, missing_indices, context + offset);
+    OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    ASSERT_EQ(*host_n_missing, num_keys);
     store->Put(stream, num_keys, keys + offset, values + offset * embedding_vec_size,
                context + offset);
   }
@@ -88,6 +93,9 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
                missing_keys, missing_indices, context + offset);
+    OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    ASSERT_EQ(*host_n_missing, 0);
   }
   OF_CUDA_CHECK(cudaMemcpy(values_host, values, values_size, cudaMemcpyDefault));
   OF_CUDA_CHECK(cudaDeviceSynchronize());
@@ -103,6 +111,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaFree(values));
   OF_CUDA_CHECK(cudaFreeHost(keys_host));
   OF_CUDA_CHECK(cudaFreeHost(values_host));
+  OF_CUDA_CHECK(cudaFreeHost(host_n_missing));
   OF_CUDA_CHECK(cudaFree(n_missing));
   OF_CUDA_CHECK(cudaFree(missing_keys));
   OF_CUDA_CHECK(cudaFree(missing_indices));
