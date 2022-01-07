@@ -99,7 +99,7 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
   const auto& lhs_boxing = JUST(NToOneBoxingExpr());
   // 1 to 1 -> 1 to n
   const auto& rhs_boxing =
-      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(OptionalBoxing("naive-1-to-1")),
+      JUST(BoxingExpr(JUST(OutFirstDeviceAndAllBroadcast()), JUST(OptionalBoxing("naive-1-to-1")),
                       JUST(OneToNBoxingExpr())));
   return boxing_expr_with_inclusive_placement
          | JUST(BoxingExpr(JUST(InFirstDeviceAndAllBroadcast()), lhs_boxing, rhs_boxing));
