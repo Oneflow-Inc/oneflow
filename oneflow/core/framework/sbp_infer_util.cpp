@@ -71,14 +71,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
       }
     }
     // P->B
-    /* BUG(wyg): lazy boxing will use "P->S + S->B", but eager boxing will transport directly.
-     * But transport directly have two questions:
-     * 1. Copy cost will be larger.
-     * 2. Sometimes P->B let the data in different device be different, because a+b may be different
-     *    from b+a.
-     */
-    return logical_blob_size * (producer_parallel_desc.parallel_num() - 1)
-           * producer_parallel_desc.parallel_num();
+    return logical_blob_size * (producer_parallel_desc.parallel_num() - 1);
   } else {
     double logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
@@ -191,21 +184,27 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
           in_sbp, out_sbp, logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
     }
   } else {
-    total_cost =
+    double logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
-    for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
-      // P -> ?
-      if (reduced_in_nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) {
-        total_cost *= reduced_in_parallel_desc.hierarchy()->At(i);
+    {
+      double in_cost = 1.0;
+      for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
+        // P -> ?
+        if (reduced_in_nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) {
+          in_cost *= reduced_in_parallel_desc.hierarchy()->At(i);
+        }
       }
+      total_cost += logical_blob_size * in_cost;
     }
-    // BUG(wyg): It is P->B bug: we directly transport data now, so we use `*=`.
-    // See detail in ComputCopyCostBetweenTwoSbpParallel function
-    for (int32_t i = 0; i < reduced_out_parallel_desc.hierarchy()->NumAxes(); ++i) {
-      // ? -> B
-      if (reduced_out_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
-        total_cost *= reduced_out_parallel_desc.hierarchy()->At(i);
+    {
+      double out_cost = 1.0;
+      for (int32_t i = 0; i < reduced_out_parallel_desc.hierarchy()->NumAxes(); ++i) {
+        // ? -> B
+        if (reduced_out_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
+          out_cost *= reduced_out_parallel_desc.hierarchy()->At(i);
+        }
       }
+      total_cost += logical_blob_size * out_cost;
     }
   }
   return total_cost;
