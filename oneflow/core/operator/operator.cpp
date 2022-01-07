@@ -702,15 +702,10 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
   for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
     double total_copy_cost = 0.0;
     for (const auto& ibn : input_bns()) {
-      bool is_same_sbp = false;
-      {
-        const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
-        if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) {
-          is_same_sbp = true;
-        } else if (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type())) {
-          is_same_sbp = true;
-        }
-      }
+      const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
+      bool is_same_sbp =
+          (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
+          || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
       total_copy_cost += JUST(ComputEagerCopyCostBetweenNdSbp(
           JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
           JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
