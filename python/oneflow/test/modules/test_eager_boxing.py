@@ -3214,5 +3214,63 @@ class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
         )
 
 
+def _test_eager_consistent_cast_1d_uneven_split(test_case, device_type, shape):
+    np_arr = np.random.uniform(-1e-05, 1e-05, shape)
+    placement = flow.placement(device_type, {0: range(flow.env.get_world_size())})
+    x = flow.tensor(
+        np_arr, dtype=flow.float32, device=device_type, requires_grad=False,
+    )
+    x = x.to_consistent(placement=placement, sbp=[flow.sbp.broadcast])
+    # B To S(0)
+    y = x.to_consistent(placement=placement, sbp=[flow.sbp.split(0)])
+    from oneflow.framework import balanced_splitter as balanced_splitter
+
+    s0_balanced_ranges = balanced_splitter.BalancedRanges(
+        shape[0], flow.env.get_world_size()
+    )
+    s0_range_of_this_rank = s0_balanced_ranges[flow.env.get_rank()]
+    test_case.assertEqual(y.placement, placement)
+    test_case.assertTrue(
+        np.array_equal(
+            y.to_local().numpy(),
+            x.to_local().numpy()[s0_range_of_this_rank[0] : s0_range_of_this_rank[1]],
+        )
+    )
+
+    # S(0) To S(1)
+    z = y.to_consistent(placement=placement, sbp=[flow.sbp.split(1)])
+    s1_balanced_ranges = flow.framework.balanced_splitter.BalancedRanges(
+        shape[1], flow.env.get_world_size()
+    )
+    s1_range_of_this_rank = s1_balanced_ranges[flow.env.get_rank()]
+
+    test_case.assertEqual(z.placement, placement)
+    test_case.assertTrue(
+        np.allclose(
+            z.to_local().numpy(),
+            x.to_local().numpy()[
+                ..., s1_range_of_this_rank[0] : s1_range_of_this_rank[1]
+            ],
+        )
+    )
+
+    # S(1) To B
+    w = z.to_consistent(placement=placement, sbp=[flow.sbp.broadcast])
+    test_case.assertEqual(w.placement, placement)
+
+    test_case.assertTrue(np.allclose(w.to_local().numpy(), x.to_local().numpy()))
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
+    def test_eager_consistent_cast_1d_uneven_split(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(25, 33), (13, 17)]
+        for arg in GenArgList(arg_dict):
+            _test_eager_consistent_cast_1d_uneven_split(test_case, *arg)
+
+
 if __name__ == "__main__":
     unittest.main()
