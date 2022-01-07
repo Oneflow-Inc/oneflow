@@ -30,7 +30,7 @@ struct VirtualMachineEngine;
 enum InstructionFuseType {
   kInvalidInstructionFuseType = 0,
   kDisableInstructionFuse,
-  kEnableInstructionFuseAtAnyPostion,
+  kEnableInstructionFuseAtAnyPosition,
   kEnableInstructionFuseAsTailOnly,
 };
 
@@ -49,6 +49,10 @@ class InstructionType {
   virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const;
   virtual void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
+  }
+  void OnDispatchIf(const InstructionMsg& instr_msg) const { OnDispatch(instr_msg); }
+  virtual void OnDispatch(const InstructionMsg& instr_msg) const {
+    // Do nothing
   }
   virtual void ComputeInFuseMode(InstructionMsg* instr_msg) const { LOG(FATAL) << "UNIMPLEMENTED"; }
   virtual void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {

@@ -38,10 +38,10 @@ class FusePhyInstrOperand : public PhyInstrOperand {
         CHECK(instr_msg->instr_type_id().instruction_type().fuse_type()
                   == kEnableInstructionFuseAsTailOnly
               || instr_msg->instr_type_id().instruction_type().fuse_type()
-                     == kEnableInstructionFuseAtAnyPostion);
+                     == kEnableInstructionFuseAtAnyPosition);
       } else {
         CHECK(instr_msg->instr_type_id().instruction_type().fuse_type()
-              == kEnableInstructionFuseAtAnyPostion);
+              == kEnableInstructionFuseAtAnyPosition);
       }
       if (unlikely(stream_sequential_dependence_ == nullptr)) {
         stream_sequential_dependence_ =

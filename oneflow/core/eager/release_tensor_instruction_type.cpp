@@ -34,7 +34,7 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
 
   using stream_type = StreamT;
 
-  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPostion; }
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Release(const vm::InstructionMsg& instr_msg) const {

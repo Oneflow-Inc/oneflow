@@ -32,6 +32,13 @@ namespace oneflow {
 
 namespace {
 
+template<typename T>
+int MicrosecondsFrom(const T& start) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
+                                                               - start)
+      .count();
+}
+
 Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
@@ -91,19 +98,42 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
   };
 }
 
+void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
+  Initializer(thread_ctx);
+  while (thread_ctx->ReceiveAndRun() == intrusive::kChannelStatusSuccess) {
+    for (bool is_continue = true; is_continue;) {
+      is_continue = false;
+      auto start = std::chrono::steady_clock::now();
+      static constexpr int kWorkingMicroseconds = 100;
+      // Every time worker threads wake up, there run for about `kWorkingMicroseconds`.
+      // The cost of os thread switching is about 5-10 microseconds. Doing more worker in
+      // a single waiting up can reach higher performance.
+      do {
+        static constexpr int kTryCntPerTimoutTest = 10000;
+        // Every time kWorkingMicroseconds timeout tested, worker threads run for about
+        // kNumSchedulingPerTimoutTest.
+        // The cost of `MicrosecondsFrom(start)` is about 400ns, while the empty TryReceiveAndRun
+        // costs about 10ns.
+        for (int i = 0; i < kTryCntPerTimoutTest; ++i) {
+          is_continue = (thread_ctx->TryReceiveAndRun() > 0) || is_continue;
+        }
+      } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
+    }
+  }
+}
+
 }  // namespace
 
 VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
     : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
-  OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Main");
+  OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
-    auto thread =
-        std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
+    auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
@@ -157,17 +187,6 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   }
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-template<typename T>
-int MicrosecondsFrom(const T& start) {
-  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
-                                                               - start)
-      .count();
-}
-
-}  // namespace
 
 void VirtualMachine::Loop(const std::function<void()>& Initializer) {
   Initializer();

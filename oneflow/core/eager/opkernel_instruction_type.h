@@ -27,11 +27,12 @@ namespace vm {
 
 class LocalCallOpKernelInstructionType : public vm::InstructionType {
  public:
+  void OnDispatch(const InstructionMsg& instr_msg) const override;
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
 
-  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPostion; }
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
   std::string DebugOpTypeName(const vm::InstructionMsg& instr_msg) const override;
 

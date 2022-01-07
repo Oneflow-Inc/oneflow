@@ -157,7 +157,7 @@ void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
       // no fuse
       MakeAndAppendFusedInstruction(&fused_instr_msg_list, pending_instr_msgs);
       mut_local_pending_msg_list()->MoveToDstBack(instr_msg, pending_instr_msgs);
-    } else if (likely(FusableBetween(kEnableInstructionFuseAtAnyPostion, instr_msg, fuse_begin))) {
+    } else if (likely(FusableBetween(kEnableInstructionFuseAtAnyPosition, instr_msg, fuse_begin))) {
       // fuse
       mut_local_pending_msg_list()->MoveToDstBack(instr_msg, &fused_instr_msg_list);
     } else if (likely(FusableBetween(kEnableInstructionFuseAsTailOnly, instr_msg, fuse_begin))) {
@@ -544,6 +544,7 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
+  OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
@@ -561,6 +562,7 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
     }
     OF_PROFILER_RANGE_POP();
   }
+  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
@@ -568,6 +570,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
+  instruction->instr_msg().instr_type_id().instruction_type().OnDispatch(instruction->instr_msg());
   if (OnSchedulerThread(stream_type)) {
     stream_type.Run(this, instruction);
   } else {

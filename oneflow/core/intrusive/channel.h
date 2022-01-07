@@ -79,10 +79,8 @@ class Channel {
   }
 
   ChannelStatus TryMoveTo(List<HookField>* dst) {
+    if (list_head_.size() == 0) { return kChannelStatusSuccess; }
     std::unique_lock<std::mutex> lock(*mut_mutex());
-    if (list_head_.empty()) { return kChannelStatusSuccess; }
-    mut_cond()->wait(lock, [this]() { return (!list_head_.empty()) || is_closed_; });
-    if (list_head_.empty()) { return kChannelStatusErrorClosed; }
     list_head_.MoveToDstBack(dst);
     return kChannelStatusSuccess;
   }
