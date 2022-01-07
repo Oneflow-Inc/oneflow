@@ -31,7 +31,7 @@ namespace embedding {
 
 namespace {
 
-constexpr uint64_t NUM_BLOCKS_PER_CHUNK = 16 * 1024 * 1024;
+constexpr uint64_t NUM_BLOCKS_PER_CHUNK = 4 * 1024 * 1024;
 
 template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
