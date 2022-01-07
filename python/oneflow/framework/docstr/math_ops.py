@@ -689,56 +689,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.clamp,
-    r"""
-    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
-    a resulting tensor:
-
-    .. math::
-        y_i = \begin{cases}
-            \text{min} & \text{if } x_i < \text{min} \\
-            x_i & \text{if } \text{min} \leq x_i \leq \text{max} \\
-            \text{max} & \text{if } x_i > \text{max}
-        \\end{cases}
-
-    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
-    and :attr:`max` must be real numbers, otherwise they should be integers.
-
-    Args:
-        input (Tensor): the input tensor.
-        min (Number): lower-bound of the range to be clamped to. Defaults to None.
-        max (Number): upper-bound of the range to be clamped to. Defaults to None.
-        out (Tensor, optional): the output tensor.
-
-    For example:
-
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.clamp(input, min=-0.5, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.clamp(input, min=None, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.clamp(input, min=-0.5, max=None)
-        >>> output
-        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-    """,
-)
-
-add_docstr(
     oneflow.cos,
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
