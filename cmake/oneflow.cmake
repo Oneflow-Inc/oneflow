@@ -477,35 +477,28 @@ install(DIRECTORY cmake/ DESTINATION ${LIBONEFLOW_SHARE_DIR}
   PATTERN "third_party" EXCLUDE
 )
 
-set(LIBONEFLOW_LIBRARY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/lib")
+set(LIBONEFLOW_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp")
 get_property(MLIR_RELATED_TARGETS GLOBAL PROPERTY MLIR_EXPORTS)
-install(TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj ${MLIR_RELATED_TARGETS}
-  COMPONENT oneflow_cpp_lib
-  LIBRARY DESTINATION ${LIBONEFLOW_LIBRARY_DIR}
+install(TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj oneflow_cpp_api_testexe ${MLIR_RELATED_TARGETS}
+  COMPONENT oneflow_cpp_target
+  LIBRARY DESTINATION ${LIBONEFLOW_DIR}/lib
+  ARCHIVE DESTINATION ${LIBONEFLOW_DIR}/lib
+  RUNTIME DESTINATION ${LIBONEFLOW_DIR}/bin
 )
 
-add_custom_target(install_oneflow_cpp_include
+add_custom_target(install_oneflow_cpp
   COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_include
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  DEPENDS oneflow_cpp
-)
-
-add_custom_target(install_oneflow_cpp_share
   COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_share
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  DEPENDS oneflow_cpp
-)
-
-add_custom_target(install_oneflow_cpp_lib
   COMMAND
-      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_lib
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_target
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   DEPENDS oneflow_cpp
 )
 
 if (BUILD_CPP_API)
-  add_dependencies(of_include_copy oneflow_cpp)
-  add_dependencies(of_include_copy install_oneflow_cpp_include install_oneflow_cpp_share install_oneflow_cpp_lib)
+  add_dependencies(of_include_copy install_oneflow_cpp)
 endif(BUILD_CPP_API)
