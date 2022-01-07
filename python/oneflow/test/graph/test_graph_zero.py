@@ -46,16 +46,16 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 if zero_stage == 1:
                     print("zero stage 1 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config._set_zero_redundancy_optimizer_split_min_size(1)
+                    self.config.set_zero_redundancy_optimizer_split_min_size(1)
                 if zero_stage == 2:
                     print("zero stage 2 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config._set_zero_redundancy_optimizer_split_min_size(1)
+                    self.config.set_zero_redundancy_optimizer_split_min_size(1)
                     flow.boxing.nccl.enable_use_compute_stream(True)
                 if zero_stage == 3:
                     print("zero stage 3 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config._set_zero_redundancy_optimizer_split_min_size(1)
+                    self.config.set_zero_redundancy_optimizer_split_min_size(1)
                     flow.boxing.nccl.enable_use_compute_stream(True)
                     flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
