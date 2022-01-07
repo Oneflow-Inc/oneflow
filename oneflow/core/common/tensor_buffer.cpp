@@ -237,27 +237,22 @@ void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {
 
 void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) {
   auto& thread_local_cache = ThreadLocalCache();
-  size_t remain = tensor_buffers.size();
-  while (thread_local_cache.size() < thread_local_cache_size_) {
+  while (thread_local_cache.size() < thread_local_cache_size_ && tensor_buffers.size() > 0) {
     if (tensor_buffers.back().impl_) {
       thread_local_cache.push_back(std::move(tensor_buffers.back().impl_));
     }
     tensor_buffers.pop_back();
-    remain--;
   }
-  if (remain > 0) {
+  if (tensor_buffers.size() > 0) {
     std::unique_lock<std::mutex> lck(mtx_);
-    while (global_free_list_.size() < pool_size_) {
+    while (global_free_list_.size() < pool_size_ && tensor_buffers.size() > 0) {
       if (tensor_buffers.back().impl_) {
         global_free_list_.push_back(std::move(tensor_buffers.back().impl_));
       }
       tensor_buffers.pop_back();
-      remain--;
     }
   }
-  if (remain > 0) {
-    for (auto& tensor_buffer : tensor_buffers) { tensor_buffer.impl_.reset(); }
-  }
+  for (auto& tensor_buffer : tensor_buffers) { tensor_buffer.impl_.reset(); }
 }
 
 void TensorBufferPool::set_pool_size(size_t pool_size) {
