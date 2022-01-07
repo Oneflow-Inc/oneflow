@@ -698,7 +698,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
     std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
   int32_t select_sbp_idx = -1;
-  double min_copy_cost = 0.0;
+  double min_copy_cost = GetValidMaxCopyCost();
   for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
     double total_copy_cost = 0.0;
     for (const auto& ibn : input_bns()) {
@@ -716,16 +716,9 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
           JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetOpParallelDesc()), is_same_sbp));
     }
-    if (total_copy_cost <= GetValidMaxCopyCost()) {
-      if (select_sbp_idx == -1) {
-        select_sbp_idx = i;
-        min_copy_cost = total_copy_cost;
-      } else if (min_copy_cost > total_copy_cost) {
-        select_sbp_idx = i;
-        min_copy_cost = total_copy_cost;
-      } else {
-        // Not best nd_sbp. Do nothing.
-      }
+    if (total_copy_cost <= min_copy_cost) {
+      select_sbp_idx = i;
+      min_copy_cost = total_copy_cost;
     }
   }
   // Can't find any available sbp
