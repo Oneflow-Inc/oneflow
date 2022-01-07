@@ -184,18 +184,11 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
   double total_cost = 0.0;
   if (reduced_in_parallel_desc == reduced_out_parallel_desc) {
     // nd to nd
-    double shape_split = 1.0;
     for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
       const auto& in_sbp = reduced_in_nd_sbp.sbp_parallel(i);
       const auto& out_sbp = reduced_out_nd_sbp.sbp_parallel(i);
-      total_cost += JUST(ComputCopyCostBetweenTwoSbpParallel(in_sbp, out_sbp, logical_blob_desc,
-                                                             reduced_in_parallel_desc,
-                                                             reduced_out_parallel_desc))
-                    / shape_split;
-      // If they are same split axis, the later logical_blob_desc will be decreased.
-      if (in_sbp.has_split_parallel() && in_sbp == out_sbp) {
-        shape_split *= logical_blob_desc.shape().At(in_sbp.split_parallel().axis());
-      }
+      total_cost += JUST(ComputCopyCostBetweenTwoSbpParallel(
+          in_sbp, out_sbp, logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
     }
   } else {
     total_cost =
@@ -206,6 +199,8 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
         total_cost *= reduced_in_parallel_desc.hierarchy()->At(i);
       }
     }
+    // BUG(wyg): It is P->B bug: we directly transport data now, so we use `*=`.
+    // See detail in ComputCopyCostBetweenTwoSbpParallel function
     for (int32_t i = 0; i < reduced_out_parallel_desc.hierarchy()->NumAxes(); ++i) {
       // ? -> B
       if (reduced_out_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
