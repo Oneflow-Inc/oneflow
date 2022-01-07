@@ -22,9 +22,12 @@ from oneflow.nn.modules.constant import _ConstantBase
 
 
 class _Loss(Module):
-    def __init__(self, reduction: str = "mean") -> None:
+    def __init__(self, reduction: str = "mean", check_batchmean=False) -> None:
         super(_Loss, self).__init__()
-        assert reduction in ["none", "mean", "sum"]
+        reductions = ["none", "mean", "sum"]
+        if check_batchmean:
+            reductions.append("batchmean")
+        assert reduction in reductions
         self.reduction = reduction
 
 
@@ -422,7 +425,7 @@ class KLDivLoss(_Loss):
     """
 
     def __init__(self, reduction: str = "mean", log_target: bool = False) -> None:
-        super(KLDivLoss, self).__init__(reduction)
+        super(KLDivLoss, self).__init__(reduction, True)  # check_batchmean = True
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
@@ -1013,6 +1016,24 @@ class TripletMarginLoss(Module):
             reduction=self.reduction,
         )
         return triplet_loss
+
+
+class SoftTargetCrossEntropy(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        return flow._C.soft_target_cross_entropy(input, target)
+
+
+class JsdCrossEntropy(Module):
+    def __init__(self, num_splits=3, alpha=12) -> None:
+        super().__init__()
+        self.num_splits = num_splits
+        self.alpha = alpha
+
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        return flow._C.jsd_cross_entropy(input, target, self.num_splits, self.alpha)
 
 
 if __name__ == "__main__":

@@ -53,7 +53,7 @@ struct KLDivFunctor<half, LOG_TARGET> {
 };
 
 template<typename T, bool LOG_TARGET>
-struct KLDivGradFunctor {
+struct KLDivInputGradFunctor {
   __device__ __forceinline__ T operator()(T target_val, T dy_val) const {
     if (LOG_TARGET) {
       return -exp(target_val) * dy_val;
@@ -65,7 +65,7 @@ struct KLDivGradFunctor {
 };
 
 template<bool LOG_TARGET>
-struct KLDivGradFunctor<half, LOG_TARGET> {
+struct KLDivInputGradFunctor<half, LOG_TARGET> {
   __device__ __forceinline__ half operator()(half target_val, half dy_val) const {
     if (LOG_TARGET) {
       return __hneg(hexp(target_val) * dy_val);
@@ -73,6 +73,43 @@ struct KLDivGradFunctor<half, LOG_TARGET> {
       const half zero_val = __float2half(0.f);
       return target_val > zero_val ? __hneg(target_val * dy_val) : zero_val;
     }
+  }
+};
+
+template<typename T, bool LOG_TARGET>
+struct KLDivTargetGradFunctor {
+  const T zero_val_ = static_cast<T>(0);
+  const T one_val_ = static_cast<T>(1);
+  __device__ __forceinline__ T operator()(T input_val, T target_val, T dy_val) const {
+    if (LOG_TARGET) {
+      return dy_val * ((target_val + one_val_ - input_val) * exp(target_val));
+    } else {
+      return target_val == zero_val_ ? zero_val_
+                                     : dy_val * (log(target_val) + one_val_ - input_val);
+    }
+  }
+};
+
+template<bool LOG_TARGET>
+struct KLDivTargetGradFunctor<float, LOG_TARGET> {
+  const float zero_val_ = static_cast<float>(0);
+  const float one_val_ = static_cast<float>(1);
+  __device__ __forceinline__ float operator()(float input_val, float target_val,
+                                              float dy_val) const {
+    if (LOG_TARGET) {
+      return dy_val * ((target_val + one_val_ - input_val) * expf(target_val));
+    } else {
+      return target_val == zero_val_ ? zero_val_
+                                     : dy_val * (logf(target_val) + one_val_ - input_val);
+    }
+  }
+};
+
+template<bool LOG_TARGET>
+struct KLDivTargetGradFunctor<half, LOG_TARGET> {
+  const KLDivTargetGradFunctor<float, LOG_TARGET> f;
+  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val) const {
+    return f(__half2float(input_val), __half2float(target_val), __half2float(dy_val));
   }
 };
 
@@ -95,18 +132,38 @@ class KLDivKernel : public SimpleLossKernel<DeviceType::kCUDA, T, KLDivKernel<T>
 };
 
 template<typename T>
-class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivGradKernel<T>> {
+class KLDivInputGradKernel
+    : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivInputGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx) const {
     const bool log_target = ctx->Attr<bool>("log_target");
     if (log_target) {
       OF_CUDA_CHECK((cuda::elementwise::Binary(
-          KLDivGradFunctor<T, /*LOG_TARGET*/ true>(), elem_cnt, dx, target, dy,
+          KLDivInputGradFunctor<T, /*LOG_TARGET*/ true>(), elem_cnt, dx, target, dy,
           ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
     } else {
       OF_CUDA_CHECK((cuda::elementwise::Binary(
-          KLDivGradFunctor<T, /*LOG_TARGET*/ false>(), elem_cnt, dx, target, dy,
+          KLDivInputGradFunctor<T, /*LOG_TARGET*/ false>(), elem_cnt, dx, target, dy,
+          ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+    }
+  }
+};
+
+template<typename T>
+class KLDivTargetGradKernel
+    : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivTargetGradKernel<T>> {
+ public:
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, const T* dy, T* dx) const {
+    const bool log_target = ctx->Attr<bool>("log_target");
+    if (log_target) {
+      OF_CUDA_CHECK((cuda::elementwise::Ternary(
+          KLDivTargetGradFunctor<T, /*LOG_TARGET*/ true>(), elem_cnt, dx, input, target, dy,
+          ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+    } else {
+      OF_CUDA_CHECK((cuda::elementwise::Ternary(
+          KLDivTargetGradFunctor<T, /*LOG_TARGET*/ false>(), elem_cnt, dx, input, target, dy,
           ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
     }
   }
@@ -115,7 +172,8 @@ class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCUDA, T, KLDivG
 }  // namespace
 
 REGISTER_SIMPLE_LOSS_KERNEL_CUDA("kl_div_loss", KLDivKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("kl_div_loss_grad", KLDivGradKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("kl_div_loss_input_grad", KLDivInputGradKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CUDA("kl_div_loss_target_grad", KLDivTargetGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow
