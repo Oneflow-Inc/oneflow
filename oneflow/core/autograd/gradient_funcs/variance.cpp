@@ -76,17 +76,10 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
   std::shared_ptr<Tensor> out_grad = out_grads.at(0);
   if (ctx->keepdim == false) {
     // for broadcast mul
-    const int32_t input_dims = x->shape()->NumAxes();
     const std::shared_ptr<const Shape>& out_grad_shape = out_grad->shape();
     DimVector unsqueeze_vector(out_grad_shape->dim_vec());
-    if (ctx->axis.size() == input_dims) {
-      // output grad is scalar tensor, insert method result in segmentfault
-      unsqueeze_vector.resize(input_dims);
-      for (const auto& item : ctx->axis) { unsqueeze_vector.at(item) = 1; }
-    } else {
-      for (int i = 0; i < ctx->axis.size(); i++) {
-        unsqueeze_vector.insert(unsqueeze_vector.begin() + ctx->axis.at(i), 1);
-      }
+    for (int i = 0; i < ctx->axis.size(); i++) {
+      unsqueeze_vector.insert(unsqueeze_vector.begin() + ctx->axis.at(i), 1);
     }
     Shape unsqueeze_shape(unsqueeze_vector);
     CHECK_EQ_OR_RETURN(unsqueeze_shape.elem_cnt(), out_grad_shape->elem_cnt());
