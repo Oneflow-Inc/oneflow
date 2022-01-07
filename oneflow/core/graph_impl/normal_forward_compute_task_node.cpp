@@ -47,14 +47,7 @@ void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::stri
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<const Operator> sole_op = op();
-  if (sole_op->op_name() == "model.embedding.wte") {
-    int i = 200;
-    std::cout << "catch var." << i;
-  }
   size_t mem_block_num = RegstNum4OpSameOutputBlob(sole_op->op_conf().op_type_case());
-  if (sole_op->op_name() == "model.embedding.wte") {
-    std::cout << "mem_block_num " << mem_block_num;
-  }
   if (sole_op->op_conf().has_user_conf()) {
     const std::string& op_type_name = sole_op->op_conf().user_conf().op_type_name();
     const auto* op_reg_result = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
@@ -68,10 +61,6 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
   // create multi out regst by output blob name in op
-
-  if (sole_op->op_name() == "model.embedding.wte") {
-    std::cout << "mem_block_num " << mem_block_num;
-  }
 
   HashMap<LogicalBlobId, std::string> lbi2out_regst_name;
   for (const std::string& obn : sole_op->output_bns()) {
