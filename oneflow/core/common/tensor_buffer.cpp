@@ -225,11 +225,13 @@ void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {
   if (!tensor_buffer.impl_) { return; }
   auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache.size() < thread_local_cache_size_) {
-    thread_local_cache.push_back(std::move(tensor_buffer.impl_));
+    thread_local_cache.emplace_back(nullptr);
+    std::swap(thread_local_cache.back(), tensor_buffer.impl_);
   } else {
     std::unique_lock<std::mutex> lck(mtx_);
     if (global_free_list_.size() < pool_size_) {
-      global_free_list_.push_back(std::move(tensor_buffer.impl_));
+      global_free_list_.emplace_back(nullptr);
+      std::swap(global_free_list_.back(), tensor_buffer.impl_);
     }
   }
   if (tensor_buffer.impl_) { tensor_buffer.impl_.reset(); }
