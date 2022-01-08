@@ -187,14 +187,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
     CHECK_NOTNULL_OR_RETURN(user_ops_[i].get());
     return user_ops_[i].get();
   }
-  void set_compute_time(double val) {
-    if (val > 0) {
-      compute_time_ = val;
-    } else {
-      compute_time_ = blob_body_bytes_;
-    }
-    // std::cout << "Compute time: " << compute_time_ << std::endl;
-  }
+  void set_compute_time(double val);
   void set_last_access_time(double val) { last_access_time_ = val; }
   void set_evict_attr(bool val) { could_evict_ = val; }
   void set_bp_required(bool val) { is_bp_required_ = val; }

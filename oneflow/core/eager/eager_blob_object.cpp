@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
@@ -65,10 +67,13 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(blob->dptr());
+    LOG(INFO) << "ebo " << this << " has no body";
     return Maybe<void>::Ok();
   }
   if (blob->dptr() != nullptr) {
     CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
+    LOG(INFO) << "ebo " << this << " body already allocated, blob_body_bytes_: " << blob_body_bytes_
+              << ", required_body_bytes: " << required_body_bytes;
     return Maybe<void>::Ok();
   }
   {
@@ -79,6 +84,20 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
+    if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
+      if (auto* dtr_allocator =
+              dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {
+        if (auto* dtr_ebo = dynamic_cast<vm::DTREagerBlobObject*>(this)) {
+          dtr_allocator->Mark(dtr_ebo, dptr);
+        } else {
+          // do nothing
+          LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
+        }
+      } else {
+        LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
+      }
+    }
+    CHECK_NOTNULL_OR_RETURN(dptr);
     tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
     blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(non_pod_initer_.get(), blob_.get());
@@ -99,6 +118,7 @@ Maybe<void> DTREagerBlobObject::evict() {
   JUST(DeallocateBlobDataPtr());
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_NE_OR_RETURN(is_in_memory(), true);
+  Global<one::DTRTensorPool>::Get()->inc_num_eviction();
   return Maybe<void>::Ok();
 }
 
@@ -121,6 +141,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
       operand->dev_vm_dep_object_consume_mode());
+  LOG(INFO) << "set compute_op_ of " << this << " to " << compute_op_.get();
   // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
@@ -131,6 +152,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
 
 void DTREagerBlobObject::update_access_time() {
   last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
+  LOG(INFO) << "update_access_time to " << last_access_time_;
 }
 
 void DTREagerBlobObject::update_user_ops(
@@ -305,13 +327,14 @@ Maybe<double> DTREagerBlobObject::cost() const {
 
   if (oneflow::DTRDebugEnabled()) {
     std::cout << std::dec
-              // << "n_cost " << static_cast<int64_t>(n_cost)
+              << "ap compute " << JUST(approx_neighbor_cost())
               << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access "
               << time_since_last_access << std::endl;
     // const auto pd = parent_depth();
     // const auto cd = child_depth();
-    // std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd + cd
-              // << std::endl;
+    // std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd +
+    // cd
+    // << std::endl;
   }
   if (heuristic == "random") {
     return static_cast<double>(rand()) / RAND_MAX;
@@ -333,9 +356,26 @@ Maybe<double> DTREagerBlobObject::cost() const {
     return JUST(neighbor_cost()) / blob_body_bytes_double();
   } else if (heuristic == "compute_time") {
     return JUST(neighbor_cost());
+  } else if (heuristic == "eq_compute_time_and_last_access") {
+    return JUST(approx_neighbor_cost()) / time_since_last_access;
+  } else if (heuristic == "local_compute_time_and_last_access") {
+    return compute_time_ / time_since_last_access;
+  } else if (heuristic == "local_compute_time") {
+    return compute_time_;
   } else {
     return Error::InvalidValueError("");
   }
+}
+
+void DTREagerBlobObject::set_compute_time(double val) {
+  if (val > 0) {
+    compute_time_ = val;
+  } else {
+    compute_time_ = blob_body_bytes_;
+  }
+  if (compute_op_type_name() == "add_n") { compute_time_ *= (blob_body_bytes_ * blob_body_bytes_); }
+  LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
+            << compute_op_type_name() << std::endl;
 }
 
 Maybe<double> DTREagerBlobObject::reverse_cost() const {
@@ -416,17 +456,21 @@ Maybe<double> DTREagerBlobObject::rev_bwd_cost() const {
   return base_cost * cost_parent / cost_fwd_potential;
 }
 
-size_t DTREagerBlobObject::input_size() const {
-  return compute_op_->inputs().size();
-}
+size_t DTREagerBlobObject::input_size() const { return compute_op_->inputs().size(); }
 
 const std::string& DTREagerBlobObject::compute_op_type_name() const {
+  static std::string no_compute_op = "no compute op";
+  if (!compute_op_) {
+    LOG(INFO) << "no compute op for " << this;
+    return no_compute_op;
+  }
   return compute_op_->shared_opkernel()->op_type_name();
 }
 
 bool DTREagerBlobObject::is_evictable() const {
+  if (!compute_op_) { return false; }
   if (compute_op_->inputs().empty()) { return false; }
-  if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
+  // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
   // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "conv_filter_grad") {
   // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul")
   // { return false; }

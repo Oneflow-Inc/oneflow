@@ -141,6 +141,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
+  Maybe<void> Temp();
+
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor,
                                        const std::shared_ptr<SpinCounter>& spin_counter,

@@ -58,7 +58,7 @@ DtrCudaAllocator::~DtrCudaAllocator() {
 }
 
 void DtrCudaAllocator::Mark(DTREagerBlobObject* ebo, char* mem_ptr) {
-  LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr;
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr; }
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo;
 }
@@ -94,8 +94,7 @@ void DtrCudaAllocator::DeallocatePiece(Piece* piece) {
   piece->ptr = nullptr;
   piece->size = 0;
   piece->bin_num = kInvalidBinNum;
-  piece->is_free = true;
-  piece->tensor = nullptr;
+  CHECK(piece->is_free);
   piece->prev = nullptr;
   piece->next = recycle_piece_list_;
   recycle_piece_list_ = piece;
@@ -110,6 +109,22 @@ void DtrCudaAllocator::UnMarkPiece(Piece* piece) {
   auto it = ptr2piece_.find(piece->ptr);
   CHECK(it != ptr2piece_.end());
   ptr2piece_.erase(it);
+}
+
+void DtrCudaAllocator::DisplayAllPieces() {
+  for (const auto& pair : ptr2piece_) {
+    Piece* piece = pair.second;
+    std::stringstream ss;
+    ss << "piece " << piece << ", " << (void*)piece->ptr << ", " << piece->size << ", "
+       << piece->bin_num;
+    if (piece->tensor) {
+      ss << ", tensor: " << piece->tensor
+         << ", compute op: " << piece->tensor->compute_op_type_name();
+    } else {
+      ss << ", no tensor";
+    }
+    LOG(INFO) << ss.str();
+  }
 }
 
 void DtrCudaAllocator::Display() {
@@ -145,6 +160,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
     piece->prev = nullptr;
     piece->next = nullptr;
     piece->is_free = true;
+    piece->tensor = nullptr;
     piece->bin_num = kInvalidBinNum;
     InsertPiece2Bin(piece);
     MarkPiece(piece);
@@ -160,26 +176,56 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
       CHECK(IsAlignedSize(piece->size));
       if (piece->size >= aligned_size) {
         bin->pieces.erase(it);
-        piece->bin_num = kInvalidBinNum;
-        piece->is_free = false;
-        if (piece->size > aligned_size) {
-          Piece* new_piece = AllocatePiece();
-          new_piece->ptr = piece->ptr + aligned_size;
-          new_piece->size = piece->size - aligned_size;
-          piece->size = aligned_size;
 
-          Piece* next_p = piece->next;
-          piece->next = new_piece;
-          new_piece->prev = piece;
-          new_piece->next = next_p;
-          if (next_p != nullptr) { next_p->prev = new_piece; }
+        if (piece->size == aligned_size) {
+          piece->bin_num = kInvalidBinNum;
+          piece->is_free = false;
+        } else if (piece->size > aligned_size) {
+          if (left_) {
+            piece->bin_num = kInvalidBinNum;
+            piece->is_free = false;
 
-          new_piece->is_free = true;
-          new_piece->bin_num = kInvalidBinNum;
-          CHECK(IsAlignedSize(piece->size));
-          CHECK(IsAlignedSize(new_piece->size));
-          InsertPiece2Bin(new_piece);
-          MarkPiece(new_piece);
+            Piece* new_piece = AllocatePiece();
+            new_piece->ptr = piece->ptr + aligned_size;
+            new_piece->size = piece->size - aligned_size;
+            piece->size = aligned_size;
+
+            Piece* next_p = piece->next;
+            piece->next = new_piece;
+            new_piece->prev = piece;
+            new_piece->next = next_p;
+            if (next_p != nullptr) { next_p->prev = new_piece; }
+
+            new_piece->is_free = true;
+            new_piece->bin_num = kInvalidBinNum;
+            CHECK(IsAlignedSize(piece->size));
+            CHECK(IsAlignedSize(new_piece->size));
+            InsertPiece2Bin(new_piece);
+            MarkPiece(new_piece);
+          } else {
+            // is right
+            piece->bin_num = kInvalidBinNum;
+            // piece is still free
+
+            Piece* new_piece = AllocatePiece();
+            new_piece->ptr = piece->ptr + piece->size - aligned_size;
+            new_piece->size = aligned_size;
+            piece->size -= aligned_size;
+
+            Piece* next_p = piece->next;
+            piece->next = new_piece;
+            new_piece->prev = piece;
+            new_piece->next = next_p;
+            if (next_p != nullptr) { next_p->prev = new_piece; }
+
+            new_piece->is_free = false;
+            new_piece->bin_num = kInvalidBinNum;
+            CHECK(IsAlignedSize(piece->size));
+            CHECK(IsAlignedSize(new_piece->size));
+            InsertPiece2Bin(piece);
+            MarkPiece(new_piece);
+            return new_piece;
+          }
         }
         return piece;
       }
@@ -202,15 +248,16 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-double get_cost(vm::DTREagerBlobObject* ebo) {
+double get_cost(const vm::DTREagerBlobObject* ebo) {
   if (ebo == nullptr) { return 0.; }
-  const double cost = CHECK_JUST(ebo->cost()) * (ebo->is_pinned() ? 3 : 1);
-  if (isinf(cost)) { return std::numeric_limits<double>::max(); }
+  const double cost = CHECK_JUST(ebo->cost());
+  CHECK(!isinf(cost));
+  CHECK(!isnan(cost));
   return cost;
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
-  LOG(INFO) << "size: " << size;
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "size: " << size; }
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
@@ -220,9 +267,15 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
   auto min_end = start;
   while (end != ptr2piece_.end()) {
     if (total_size < size) {
-      if (end->second->tensor != nullptr
-          && (!end->second->tensor->is_evictable())) {
-        LOG(INFO) << "skip tensor: " << end->second->tensor << ", size: " << end->second->tensor->blob_body_bytes_double();
+      const auto* end_tensor = end->second->tensor;
+      if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
+        if (oneflow::DTRDebugEnabled()) {
+          LOG(INFO) << "skip tensor: " << end_tensor
+                    << ", size: " << end_tensor->blob_body_bytes_double() << ", compute op "
+                    << end_tensor->compute_op_type_name();
+          LOG(INFO) << "num_pinned: " << end_tensor->num_pinned()
+                    << ", is_evictable: " << end_tensor->is_evictable();
+        }
         end++;
         start = end;
         total_size = 0;
@@ -230,19 +283,29 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         continue;
       }
       total_size += end->second->size;
-      cost += get_cost(end->second->tensor);
+      cost += get_cost(end_tensor);
       end++;
-      LOG(INFO) << "move end, total_size: " << total_size << ", cost: " << cost;
+
+      if (oneflow::DTRDebugEnabled()) {
+        LOG(INFO) << "move end, compute op: "
+                  << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
+                  << ", total_size: " << total_size << ", cost: " << cost;
+      }
     } else {
       if (min_cost > cost) {
         min_cost = cost;
         min_start = start;
         min_end = end;
-        LOG(INFO) << "record, min_cost: " << min_cost;
+        if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "record, min_cost: " << min_cost; }
       }
+      const auto* start_tensor = start->second->tensor;
       total_size -= start->second->size;
-      cost -= get_cost(start->second->tensor);
-      LOG(INFO) << "move start, total_size: " << total_size << ", cost: " << cost;
+      cost -= get_cost(start_tensor);
+      if (oneflow::DTRDebugEnabled()) {
+        LOG(INFO) << "move start, compute op: "
+                  << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
+                  << ", total_size: " << total_size << ", cost: " << cost;
+      }
       start++;
     }
   }
@@ -255,15 +318,15 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
     pieces_to_be_evicted.push_back(piece);
   }
   for (auto* piece : pieces_to_be_evicted) {
-    LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
-              << ", cost: " << get_cost(piece->tensor);
-    size2 += piece->size;
-    if (piece->tensor != nullptr) {
-      LOG(INFO) << "evict";
-      CHECK_JUST(piece->tensor->evict());
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
+                << ", cost: " << get_cost(piece->tensor) << ", compute op: "
+                << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no tensor");
     }
+    size2 += piece->size;
+    if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict()); }
   }
-  LOG(INFO) << "evict size: " << size2;
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "evict size: " << size2; }
   return FindPiece(size);
 }
 
@@ -288,6 +351,8 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
   *mem_ptr = piece->ptr;
   total_allocate_bytes_ += size;
+
+  if (std::getenv("OF_DTR_LR") != nullptr) { left_ = !left_; }
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
   //             << "MB, total mem: " << (total_memory_bytes_ / 1024. / 1024.)
@@ -308,6 +373,7 @@ void DtrCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CHECK(!piece->is_free);
 
   piece->is_free = true;
+  piece->tensor = nullptr;
 
   Piece* last_piece_insert_to_bin = piece;
   Piece* next_p = piece->next;

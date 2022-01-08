@@ -34,6 +34,8 @@ class ThreadSafeAllocator final : public Allocator {
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
+  Allocator* backend_allocator() const { return backend_allocator_.get(); }
+
  private:
   std::unique_ptr<Allocator> backend_allocator_;
   std::recursive_mutex mutex4backend_allocator_;

@@ -71,11 +71,12 @@ Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
 
 Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << "set inputs of " << this << " (ebo " << JUST(eager_blob_object()).get() << ") to ";
+    std::stringstream ss;
+    ss << "set inputs of " << this << " (ebo " << JUST(eager_blob_object()).get() << ") to ";
     for (const auto& x : inputs) {
-      std::cout << x.get() << " (ebo " << JUST(x->eager_blob_object()).get() << "), ";
+      ss << x.get() << " (ebo " << JUST(x->eager_blob_object()).get() << "), ";
     }
-    std::cout << std::endl;
+    LOG(INFO) << ss.str();
   }
   std::vector<std::shared_ptr<Holder>> input_holders;
   for (const auto& x : inputs) {
@@ -85,12 +86,15 @@ Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
       CHECK_NOTNULL_OR_RETURN(input_holder);
       input_holders.push_back(input_holder);
     } else {
-      // std::cout << "no dtr tensor, bug?" << std::endl;
+      LOG(INFO) << "no dtr ebo, ebo " << JUST(x->eager_blob_object()).get() << ", real type "
+                << typeid(*x).name() << ", " << typeid(*JUST(x->AsMirroredTensor())).name()
+                << ", bug?" << std::endl;
       // do nothing
     }
   }
   holder_ =
       std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
+  LOG(INFO) << "set_tenosr_inputs done";
   return Maybe<void>::Ok();
 }
 
@@ -131,6 +135,12 @@ Maybe<Tensor> MirroredTensor::detach() const {
   return tensor;
 }
 
+Maybe<Tensor> DTRMirroredTensor::detach() const {
+  auto tensor = std::make_shared<DTRMirroredTensor>(CHECK_NOTNULL(std::dynamic_pointer_cast<DTREagerMirroredTensorImpl>(JUST(impl_->detach()))));
+  tensor->holder_ = this->holder_;
+  return std::dynamic_pointer_cast<Tensor>(tensor);
+}
+
 Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
@@ -142,7 +152,7 @@ Maybe<Tensor> MirroredTensor::clone() const {
 Maybe<void> DTRMirroredTensor::set_blob_object_bp_required() {
   auto blob_object = CHECK_JUST(eager_blob_object());
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
-  // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+    // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
     dtr_eager_blob_object->set_bp_required(true);
   }
   return Maybe<void>::Ok();

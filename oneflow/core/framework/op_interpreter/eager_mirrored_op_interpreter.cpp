@@ -164,6 +164,18 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
+  if (oneflow::DTREnabled()) {
+    CHECK_OR_RETURN(std::all_of(input_eager_blob_objects->begin(),
+                                input_eager_blob_objects->end(),
+                                [](const std::shared_ptr<vm::EagerBlobObject>& t) {
+                                  return dynamic_cast<vm::DTREagerBlobObject*>(t.get()) != nullptr;
+                                }));
+    CHECK_OR_RETURN(std::all_of(output_eager_blob_objects->begin(),
+                                output_eager_blob_objects->end(),
+                                [](const std::shared_ptr<vm::EagerBlobObject>& t) {
+                                  return dynamic_cast<vm::DTREagerBlobObject*>(t.get()) != nullptr;
+                                }));
+  }
 
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
@@ -172,7 +184,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  for (const auto &output : *outputs) {
+  LOG(INFO) << kernel->op_type_name();
+  for (const auto& output : *outputs) {
     if (auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output)) {
       JUST(dtr_output->set_tensor_inputs(inputs));
     }

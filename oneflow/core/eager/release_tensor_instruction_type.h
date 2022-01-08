@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
 
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/cuda_stream_type.h"
 
 namespace oneflow {
 
@@ -35,6 +36,17 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
  public:
   ReleaseTensorInstructionType() = default;
   ~ReleaseTensorInstructionType() override = default;
+
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
+};
+
+class TempInstructionType : public vm::InstructionType {
+ public:
+  TempInstructionType() = default;
+  ~TempInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
 
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;

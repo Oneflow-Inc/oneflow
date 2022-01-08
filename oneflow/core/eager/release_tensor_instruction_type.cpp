@@ -19,6 +19,9 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
 
 namespace oneflow {
 
@@ -78,7 +81,7 @@ void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
       dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << "release tensor " << ptr->eager_blob_object().get() << " with ref count "
+    LOG(INFO) << "release tensor " << ptr->eager_blob_object().get() << " with ref count "
               << ptr->eager_blob_object().use_count() << std::endl;
   }
   CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
@@ -101,6 +104,17 @@ class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
 };
 COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("gpu.ReleaseTensor"));
 #endif
+
+void TempInstructionType::Infer(vm::Instruction* instruction) const { UNIMPLEMENTED(); }
+
+void TempInstructionType::Compute(vm::Instruction* instruction) const {
+  auto* allocator = CHECK_NOTNULL(dynamic_cast<vm::DtrCudaAllocator*>(
+      CHECK_NOTNULL(dynamic_cast<vm::ThreadSafeAllocator*>(
+                        instruction->stream().device_ctx()->mut_allocator()))
+          ->backend_allocator()));
+  allocator->DisplayAllPieces();
+}
+COMMAND(vm::RegisterInstructionType<TempInstructionType>("Temp"));
 
 }  // namespace vm
 }  // namespace oneflow

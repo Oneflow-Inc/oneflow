@@ -47,6 +47,7 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     if (new_grad) { current_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
+    LOG(INFO) << "add";
     DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     // Should not inplace accumulate grad. For example,
     // >>> z = x + y
@@ -56,9 +57,10 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
     const auto& output =
-        JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/false));
+        JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/true));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
+    LOG(INFO) << "set";
     JUST(autograd_meta->set_acc_grad(current_grad));
   }
   return Maybe<void>::Ok();
@@ -120,9 +122,11 @@ StackFunctionNode::StackFunctionNode(
   output_meta_data_.resize(outputs.size());
   output_tensor_infos_.reserve(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
-    const auto& autograd_meta =
-        NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
-    outputs.at(i)->set_autograd_meta(autograd_meta);
+    if (!outputs.at(i)->has_autograd_meta()) {
+      const auto& autograd_meta =
+          NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
+      outputs.at(i)->set_autograd_meta(autograd_meta);
+    }
     output_meta_data_.at(i) = outputs.at(i)->mut_autograd_meta();
     output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
   }

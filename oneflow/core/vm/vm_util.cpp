@@ -56,6 +56,15 @@ Maybe<void> ClusterSync() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Temp() {
+  JUST(PhysicalRun([](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->Temp());
+    return Maybe<void>::Ok();
+  }));
+
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> CurrentRankSync() {
   BlockingCounter bc(1);
   JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {

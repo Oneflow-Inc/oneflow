@@ -34,8 +34,11 @@ class DtrCudaAllocator final : public Allocator {
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void Mark(DTREagerBlobObject* ebo, char* mem_ptr);
+  void DisplayAllPieces();
 
  private:
+  bool left_ = true;
+
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
 

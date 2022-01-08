@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/vm/cuda_allocator.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 
@@ -39,8 +40,10 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
         cuda_handler_(new CudaStreamHandle(nullptr)),
-        cuda_allocator_(
-            new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))),
+        cuda_allocator_(new ThreadSafeAllocator(std::unique_ptr<Allocator>(
+            (std::getenv("OF_DTR") != nullptr)
+                ? static_cast<Allocator*>(new DtrCudaAllocator(device_id))
+                : new CudaAllocator(device_id)))),
         device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }

@@ -150,7 +150,7 @@ class DTREagerBlobObject;
 
 class DTRUtil {
  public:
-  static Maybe<void> recompute(DTREagerBlobObject* object, const Stream& stream);
+  static Maybe<void> recompute(vm::DTREagerBlobObject* object, DeviceCtx* device_ctx);
 };
 
 }  // namespace vm

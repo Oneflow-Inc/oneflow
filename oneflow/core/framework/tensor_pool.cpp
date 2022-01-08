@@ -55,6 +55,10 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
 }
 }  // namespace
 
+void DTRTensorPool::inc_num_eviction() {
+  num_eviction_++;
+}
+
 Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double min_cost = -1;
   vm::DTREagerBlobObject* best(nullptr);
@@ -173,7 +177,10 @@ double DTRTensorPool::duration() {
   // return time_span.count();
 }
 
-void DTRTensorPool::time_flies(double t) { duration_ += t; }
+void DTRTensorPool::time_flies(double t) { 
+  duration_ += t;
+  LOG(INFO) << "time flies " << t << " to " << duration_;
+}
 
 Maybe<void> DTRTensorPool::display2() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
@@ -232,7 +239,7 @@ std::shared_ptr<vm::DisjNode> DTRTensorPool::find_father(std::shared_ptr<vm::Dis
   }
 }
 
-void DTRTensorPool::update_after_recompute(vm::DTREagerBlobObject* obj) {
+void DTRTensorPool::update_after_compute(vm::DTREagerBlobObject* obj) {
   auto&& fa = find_father(obj->node);
   fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
   obj->reset_node(obj->compute_time());

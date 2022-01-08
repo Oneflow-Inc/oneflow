@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/intrusive/list.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 
@@ -29,6 +30,11 @@ void AccessBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
 
 void AccessBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+  if (eager_blob_object_->producer_op_device().has_value()) {
+    DoEach(nullptr, CHECK_JUST(eager_blob_object_->producer_op_device())
+                        ->mut_schedule_local_dep_object()
+                        ->mut_mirrored_object());
+  }
   if (modifier_ == "mut") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 

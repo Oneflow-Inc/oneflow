@@ -448,7 +448,7 @@ class MirroredTensor : public TensorIf<MirroredTensor>,
   }
 
   // Operators for tensor
-  Maybe<Tensor> detach() const override;
+  virtual Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -499,6 +499,8 @@ class DTRMirroredTensor final : public MirroredTensor {
   ~DTRMirroredTensor() = default;
 
   Maybe<void> set_tensor_inputs(const TensorTuple& inputs);
+
+  Maybe<Tensor> detach() const override;
 
   std::shared_ptr<Holder> holder() const { return holder_; }
 

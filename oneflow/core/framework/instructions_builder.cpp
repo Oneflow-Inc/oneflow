@@ -1054,6 +1054,15 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::Temp() {
+  const std::string instr_name = "Temp";
+  intrusive::shared_ptr<vm::InstructionMsg> instruction =
+      intrusive::make_shared<vm::InstructionMsg>(instr_name);
+  *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>([](){});
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
                                                 const std::string& modifier,
                                                 Symbol<Device> op_device) {
