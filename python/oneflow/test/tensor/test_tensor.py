@@ -1033,10 +1033,28 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
+    def test_clamp_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1
+        y.clamp_(min=random().to(float), max=random().to(float))
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
     def test_clamp_minnone_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
         y = input.clamp(min=random().to(float) | nothing(), max=random().to(float))
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_clamp_inplace_minnone_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1
+        y.clamp_(min=random().to(float) | nothing(), max=random().to(float))
         return y
 
     @flow.unittest.skip_unless_1n1d()
@@ -1049,10 +1067,28 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
+    def test_clamp_inplace_maxnone_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1
+        y.clamp_(min=random().to(float), max=random().to(float) | nothing())
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
     def test_clip_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
         y = input.clip(min=random().to(float), max=random().to(float))
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_clip_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1
+        y.clip_(min=random().to(float), max=random().to(float))
         return y
 
     @flow.unittest.skip_unless_1n1d()
@@ -1065,10 +1101,28 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)
+    def test_clip_inplace_maxnone_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1
+        y.clip_(min=random().to(float), max=random().to(float) | nothing())
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
     def test_clip_maxnone_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
         y = input.clip(min=random().to(float), max=random().to(float) | nothing())
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_clip_inplace_maxnone_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x + 1
+        y.clip_(min=random().to(float), max=random().to(float) | nothing())
         return y
 
     @flow.unittest.skip_unless_1n1d()
