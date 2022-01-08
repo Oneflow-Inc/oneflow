@@ -289,7 +289,7 @@ def GetDualObject(name, pytorch, oneflow):
                                         )
                                     )
                                 ):
-                                    pass
+                                    extra_input_tensor.add(pytorch_res)
                                 elif (
                                     len(pytorch_args) > 0
                                     and isinstance(
