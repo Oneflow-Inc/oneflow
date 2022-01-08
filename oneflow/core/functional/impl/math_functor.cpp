@@ -1636,35 +1636,39 @@ class StandardDeviationFunctor {
 
 class VarianceFunctor {
  public:
+  VarianceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("var").Input("input").Output("output").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    const int32_t ndim = input->shape()->NumAxes();
+    if (!IsFloatingDataType(input->dtype()->data_type())) {
+      return Error::RuntimeError() << "var only support floating point dtypes";
+    }
+    MutableAttrMap attrs;
+    if (unbiased) { JUST(attrs.SetAttr<bool>("unbiased", JUST(unbiased))); }
+    if (keepdim) { JUST(attrs.SetAttr<bool>("keepdim", JUST(keepdim))); }
     std::vector<int32_t> axis;
+    const int ndim = input->shape()->NumAxes();
     axis.reserve(ndim);
-    if (dim.has_value() == false) {
-      for (int i = 0; i < ndim; ++i) { axis.emplace_back(i); }
+    if (!dim) {
+      for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())
           << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
           << "], but got " << dims.size();
+      std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
-    bool unbias = true;
-    bool keepdims = false;
-    if (unbiased.has_value()) { unbias = JUST(unbiased); }
-    if (keepdim.has_value()) { keepdims = JUST(keepdim); }
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dim", axis));
+    JUST(attrs.SetAttr<DataType>("dtype", input->dtype()->data_type()));
 
-    JUST(CheckAxis(axis, *input->shape()));
-    int32_t reduce_count = 1;
-    for (int i = 0; i < axis.size(); ++i) { reduce_count *= input->shape()->At(axis[i]); }
-    if (unbias) { reduce_count -= 1; }
-    const auto& sub =
-        JUST(functional::Sub(input, JUST(functional::ReduceMean(input, axis, (bool)true))));
-    const auto& sum = JUST(functional::ReduceSum(JUST(functional::Square(sub)), axis, keepdims));
-    return functional::ScalarDiv(sum, Scalar(reduce_count));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class DotFunctor {
