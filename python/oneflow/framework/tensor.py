@@ -753,6 +753,11 @@ def _numpy(self):
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
+    if self.is_consistent:
+        self = self.to_consistent(
+            placement=self.placement, sbp=flow.sbp.broadcast
+        ).to_local()
+    assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
     return self.to_numpy()

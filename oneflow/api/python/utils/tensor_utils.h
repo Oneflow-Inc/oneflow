@@ -43,27 +43,12 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 template<typename T>
 inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
   const std::shared_ptr<Tensor> t = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
-  py::handle handle;
-  std::shared_ptr<MirroredTensor> tensor;
-  CHECK_OR_RETURN(JUST(t->device()) == JUST(Device::New("cpu")));
-  CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
-  if (t->is_local()) {
-    tensor = JUST(t->AsMirroredTensor());
-    // set base object attr
-    handle = py::handle(py_tensor.ptr());
-  } else {
-    const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
-    const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
-    CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
-    cfg::SbpParallel broadcast_sbp;
-    broadcast_sbp.mutable_broadcast_parallel();
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
-                                                    SymbolOf(broadcast_sbp));
-    std::vector<Symbol<cfg::SbpParallel>> none;
-    const auto& consistent_tensor =
-        JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
-    tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
-  }
+
+  std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
+  CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
+  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  // set base object attr
+  py::handle handle = py::handle(py_tensor.ptr());
 
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
