@@ -67,13 +67,16 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(blob->dptr());
-    LOG(INFO) << "ebo " << this << " has no body";
+    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "ebo " << this << " has no body"; }
     return Maybe<void>::Ok();
   }
   if (blob->dptr() != nullptr) {
     CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
-    LOG(INFO) << "ebo " << this << " body already allocated, blob_body_bytes_: " << blob_body_bytes_
-              << ", required_body_bytes: " << required_body_bytes;
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "ebo " << this
+                << " body already allocated, blob_body_bytes_: " << blob_body_bytes_
+                << ", required_body_bytes: " << required_body_bytes;
+    }
     return Maybe<void>::Ok();
   }
   {
@@ -91,10 +94,14 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
           dtr_allocator->Mark(dtr_ebo, dptr);
         } else {
           // do nothing
-          LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
+          if (oneflow::DTRDebugEnabled()) {
+            LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
+          }
         }
       } else {
-        LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
+        if (oneflow::DTRDebugEnabled()) {
+          LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
+        }
       }
     }
     CHECK_NOTNULL_OR_RETURN(dptr);
@@ -141,7 +148,9 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
       operand->dev_vm_dep_object_consume_mode());
-  LOG(INFO) << "set compute_op_ of " << this << " to " << compute_op_.get();
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "set compute_op_ of " << this << " to " << compute_op_.get();
+  }
   // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
 
@@ -152,7 +161,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
 
 void DTREagerBlobObject::update_access_time() {
   last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
-  LOG(INFO) << "update_access_time to " << last_access_time_;
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "update_access_time to " << last_access_time_; }
 }
 
 void DTREagerBlobObject::update_user_ops(
@@ -326,10 +335,9 @@ Maybe<double> DTREagerBlobObject::cost() const {
       heuristic == "size" ? 1 : Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
 
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << std::dec
-              << "ap compute " << JUST(approx_neighbor_cost())
-              << ", blob_body_bytes_ " << blob_body_bytes_ << ", time_since_last_access "
-              << time_since_last_access << std::endl;
+    std::cout << std::dec << "ap compute " << JUST(approx_neighbor_cost()) << ", blob_body_bytes_ "
+              << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access
+              << std::endl;
     // const auto pd = parent_depth();
     // const auto cd = child_depth();
     // std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd +
@@ -374,8 +382,11 @@ void DTREagerBlobObject::set_compute_time(double val) {
     compute_time_ = blob_body_bytes_;
   }
   if (compute_op_type_name() == "add_n") { compute_time_ *= (blob_body_bytes_ * blob_body_bytes_); }
-  LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
-            << compute_op_type_name() << std::endl;
+  // else if (compute_op_type_name() == "conv2d") { compute_time_ *= (blob_body_bytes_); }
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
+              << compute_op_type_name() << std::endl;
+  }
 }
 
 Maybe<double> DTREagerBlobObject::reverse_cost() const {
@@ -461,7 +472,7 @@ size_t DTREagerBlobObject::input_size() const { return compute_op_->inputs().siz
 const std::string& DTREagerBlobObject::compute_op_type_name() const {
   static std::string no_compute_op = "no compute op";
   if (!compute_op_) {
-    LOG(INFO) << "no compute op for " << this;
+    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "no compute op for " << this; }
     return no_compute_op;
   }
   return compute_op_->shared_opkernel()->op_type_name();

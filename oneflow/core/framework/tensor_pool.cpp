@@ -45,9 +45,10 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
             << ", is pinned: " << (debo->num_pinned())
             << ", is evictable: " << (debo->is_evictable()) << ", compute op: " << compute_op
             << ", shape: " << debo->mut_blob_desc()->shape() << ", memory: " << mem << "MB"
-            << ", ebo address: " << debo.get() << ", blob dptr: " << debo->blob().dptr()
+            << ", ebo address: " << debo.get() << ", blob dptr: "
+            << debo->blob().dptr()
             // << ", parent_depth: " << debo->parent_depth()
-            // << ", child_depth: " << debo->child_depth() 
+            // << ", child_depth: " << debo->child_depth()
             << ", tensor buffer dptr: "
             << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
             // << ", data_type: " << debo->mut_blob_desc()->data_type()
@@ -55,9 +56,7 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
 }
 }  // namespace
 
-void DTRTensorPool::inc_num_eviction() {
-  num_eviction_++;
-}
+void DTRTensorPool::inc_num_eviction() { num_eviction_++; }
 
 Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double min_cost = -1;
@@ -177,9 +176,9 @@ double DTRTensorPool::duration() {
   // return time_span.count();
 }
 
-void DTRTensorPool::time_flies(double t) { 
+void DTRTensorPool::time_flies(double t) {
   duration_ += t;
-  LOG(INFO) << "time flies " << t << " to " << duration_;
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "time flies " << t << " to " << duration_; }
 }
 
 Maybe<void> DTRTensorPool::display2() {
@@ -196,7 +195,7 @@ Maybe<void> DTRTensorPool::display2() {
         std::cout << "id " << id << ", ";
         printInfo(shared_object);
         total_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
-        if (shared_object->is_in_memory()){
+        if (shared_object->is_in_memory()) {
           living_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;
           if (shared_object->is_pinned()) {
             pinned_mem += shared_object->BlobBodyBytes() * 1. / 1024 / 1024;

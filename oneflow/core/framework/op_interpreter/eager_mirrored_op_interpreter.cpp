@@ -165,8 +165,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
   if (oneflow::DTREnabled()) {
-    CHECK_OR_RETURN(std::all_of(input_eager_blob_objects->begin(),
-                                input_eager_blob_objects->end(),
+    CHECK_OR_RETURN(std::all_of(input_eager_blob_objects->begin(), input_eager_blob_objects->end(),
                                 [](const std::shared_ptr<vm::EagerBlobObject>& t) {
                                   return dynamic_cast<vm::DTREagerBlobObject*>(t.get()) != nullptr;
                                 }));
@@ -184,7 +183,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  LOG(INFO) << kernel->op_type_name();
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << kernel->op_type_name(); }
   for (const auto& output : *outputs) {
     if (auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output)) {
       JUST(dtr_output->set_tensor_inputs(inputs));

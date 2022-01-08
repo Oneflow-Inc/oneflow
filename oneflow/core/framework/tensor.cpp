@@ -94,7 +94,7 @@ Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
   }
   holder_ =
       std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
-  LOG(INFO) << "set_tenosr_inputs done";
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "set_tenosr_inputs done"; }
   return Maybe<void>::Ok();
 }
 
@@ -136,7 +136,8 @@ Maybe<Tensor> MirroredTensor::detach() const {
 }
 
 Maybe<Tensor> DTRMirroredTensor::detach() const {
-  auto tensor = std::make_shared<DTRMirroredTensor>(CHECK_NOTNULL(std::dynamic_pointer_cast<DTREagerMirroredTensorImpl>(JUST(impl_->detach()))));
+  auto tensor = std::make_shared<DTRMirroredTensor>(
+      CHECK_NOTNULL(std::dynamic_pointer_cast<DTREagerMirroredTensorImpl>(JUST(impl_->detach()))));
   tensor->holder_ = this->holder_;
   return std::dynamic_pointer_cast<Tensor>(tensor);
 }
