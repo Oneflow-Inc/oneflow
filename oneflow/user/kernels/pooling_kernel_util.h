@@ -257,6 +257,80 @@ OF_DEVICE_FUNC void Maxpool2dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     const int64_t src_start = (n * n_channel + c) * src_height * src_width;
     const int64_t dst_start = (n * n_channel + c) * dst_height * dst_width;
     const int64_t index = src_start + h * src_width + w;
+
+    const int64_t maxindex = dst_start + indice_ptr[index];
+    if (maxindex != -1) {
+      /* update gradient, equals to dest[maxindex] += src[index]; */
+      DeviceAdd<T>::Invoke(src + index, dest + maxindex);
+    }
+  }
+}
+
+template<typename T>
+OF_DEVICE_FUNC void Maxpool2dForwardCLastCompute(
+    const NdIndexOffsetHelper<int64_t, 4> index_helper, int64_t elem_num, const T* src, T* dest,
+    int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int64_t n_batch,
+    const int64_t n_channel, const int64_t x_height, const int64_t x_width, const int64_t y_height,
+    const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
+    const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
+    const int32_t dilation_w) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t n, h, w, c;
+    index_helper.OffsetToNdIndex(num, n, h, w, c);
+
+    const int64_t x_start_idx = n * n_channel * x_width * x_height;
+    const int64_t y_start_idx = n * n_channel * y_height * y_width;
+    int64_t hstart = h * stride_h - padding_h;
+    int64_t wstart = w * stride_w - padding_w;
+    const int64_t hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
+                             ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
+                             : x_height;
+    const int64_t wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
+                             ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
+                             : x_width;
+
+    while (hstart < 0) { hstart += dilation_h; }
+    while (wstart < 0) { wstart += dilation_w; }
+
+    /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
+    int64_t maxindex = hstart * x_width + wstart;
+    int64_t src_idx = 0;
+
+    /* equal to -std::numeric_limits<T>::infinity(); */
+    T max_value = detail::numeric_limits<T>::lower_bound();
+
+    for (int64_t i = hstart; i < hend; i += dilation_h) {
+      for (int64_t j = wstart; j < wend; j += dilation_w) {
+        const int64_t tcntr = i * x_width * n_channel + j * n_channel + c;
+        const int64_t search_idx = x_start_idx + tcntr;
+        T val = src[search_idx];
+
+        if (val > max_value || detail::numerics<T>::isnan(val)) {
+          max_value = val;
+          maxindex = tcntr;
+          src_idx = search_idx;
+        }
+      }
+    }
+    const int64_t out_idx = y_start_idx + h * y_width * n_channel + w * n_channel + c;
+    dest[out_idx] = src[src_idx];
+    indice_ptr[out_idx] = maxindex;
+  }
+}
+
+template<typename T>
+OF_DEVICE_FUNC void Maxpool2dBackwardCLastCompute(const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                                             const int64_t elem_num, const T* src, T* dest,
+                                             const int64_t* indice_ptr, const int64_t n_batch,
+                                             const int64_t n_channel, const int64_t src_height,
+                                             const int64_t src_width, const int64_t dst_height,
+                                             const int64_t dst_width) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t n, c, h, w;
+    index_helper.OffsetToNdIndex(num, n, c, h, w);
+    const int64_t src_start = n * n_channel * src_height * src_width;
+    const int64_t dst_start = n * n_channel * dst_height * dst_width;
+    const int64_t index = src_start + h * src_width + w;
     const int64_t maxindex = dst_start + indice_ptr[index];
     if (maxindex != -1) {
       /* update gradient, equals to dest[maxindex] += src[index]; */

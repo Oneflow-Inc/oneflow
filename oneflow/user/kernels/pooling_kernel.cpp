@@ -66,7 +66,47 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
-    Maxpool2dForwardCompute<T>(
+    if(params_3d.data_format()=="channels_first"){
+      Maxpool2dForwardCompute<T>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
+        params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
+        params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[1],
+        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+    } else {
+      Maxpool2dForwardCLastCompute<T>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
+        params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
+        params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[1],
+        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+    }
+  }
+
+  static void Maxpool2dBackward(ep::Stream* stream,
+                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+                                const int64_t elem_num, const T* src, T* dest,
+                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+    if(params_3d.data_format()=="channels_first"){
+      Maxpool2dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
+                                params_3d.num_batch(), params_3d.num_channel(),
+                                params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+                                params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+    } else {
+      Maxpool2dBackwardCLastCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
+                                params_3d.num_batch(), params_3d.num_channel(),
+                                params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+                                params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+    }
+  }
+
+  static void Maxpool2dForwardCLast(ep::Stream* stream,
+                               const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                               const MaxPoolingParams3D& params_3d) {
+    Maxpool2dForwardCLastCompute<T>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
@@ -75,11 +115,11 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
         params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool2dBackward(ep::Stream* stream,
+  static void Maxpool2dBackwardCLast(ep::Stream* stream,
                                 const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
-    Maxpool2dBackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
+    Maxpool2dBackwardCLastCompute<T>(index_helper, elem_num, src, dest, indice_ptr,
                                 params_3d.num_batch(), params_3d.num_channel(),
                                 params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
                                 params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
@@ -216,9 +256,13 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-
-    PoolingKernelUtil<device_type, T>::Maxpool2dForward(ctx->stream(), index_helper, elem_num, src,
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
+    if (data_format == "channels_first" || data_format == "channels_last") {
+      PoolingKernelUtil<device_type, T>::Maxpool2dForward(ctx->stream(), index_helper, elem_num, src,
                                                         dest, indice_ptr, params_3d);
+    } else{
+      UNIMPLEMENTED();
+    }
   };
 };
 
@@ -255,8 +299,13 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    PoolingKernelUtil<device_type, T>::Maxpool2dBackward(ctx->stream(), index_helper, elem_num, src,
+    const std::string& data_format = ctx->Attr<std::string>("data_format");
+    if (data_format == "channels_first" || data_format == "channels_last") {
+      PoolingKernelUtil<device_type, T>::Maxpool2dBackward(ctx->stream(), index_helper, elem_num, src,
                                                          dest, indice_ptr, params_3d);
+    } else{
+      UNIMPLEMENTED();
+    }
   };
 };
 
