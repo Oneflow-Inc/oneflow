@@ -32,11 +32,7 @@ def _of_image_normalize(images, image_static_shape, std, mean):
     )
     image_tensor_buffer = flow.tensor_to_tensor_buffer(image_tensors, instance_dims=3)
     image_normalizer = flow.nn.image.normalize(std, mean)
-    norm_images = flow.tensor_buffer_to_tensor(
-        image_normalizer(image_tensor_buffer),
-        dtype=image_tensors.dtype,
-        instance_shape=list(image_tensors.shape[-3:]),
-    )
+    norm_images = image_normalizer(image_tensor_buffer)
     return norm_images.numpy()
 
 
