@@ -232,7 +232,7 @@ void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {
       global_free_list_.push_back(std::move(tensor_buffer.impl_));
     }
   }
-  tensor_buffer.impl_.reset();
+  if (tensor_buffer.impl_) { tensor_buffer.impl_.reset(); }
 }
 
 void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) {
