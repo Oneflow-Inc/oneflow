@@ -45,13 +45,6 @@ class DataReader {
   void Close() {
     if (!is_closed_.load()) {
       is_closed_.store(true);
-      // bool buffer_drained = false;
-      // while (!buffer_drained) {
-      //   BatchType abandoned_batch;
-      //   auto status = batch_buffer_.TryReceive(&abandoned_batch);
-      //   CHECK_NE(status, BufferStatus::kBufferStatusErrorClosed);
-      //   buffer_drained = (status == BufferStatus::kBufferStatusEmpty);
-      // }
       batch_buffer_.Close();
     }
   }
