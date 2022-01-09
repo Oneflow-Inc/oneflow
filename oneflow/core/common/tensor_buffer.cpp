@@ -289,6 +289,4 @@ void TensorBufferPool::set_thread_local_cache_size(size_t thread_local_cache_siz
   }
 }
 
-
-
 }  // namespace oneflow
