@@ -27,7 +27,7 @@ FetchContent_MakeAvailable(tbb)
 set_property(GLOBAL PROPERTY TBB_SRC_DIR "${tbb_SOURCE_DIR}/cpp/src;${tbb_BINARY_DIR}/src")
 
 add_custom_target(install-tbb
-  DEPENDS tbb
+  DEPENDS tbb tbbmalloc tbbmalloc_proxy
   COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_PREFIX=${ONETBB_INSTALL_DIR}
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
