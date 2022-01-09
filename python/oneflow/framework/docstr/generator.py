@@ -16,8 +16,13 @@ limitations under the License.
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
-oneflow.Generator.__doc__ = r"""
+add_docstr(
+    oneflow.Generator,
+    r"""
     flow.Generator(device='auto') → Generator
+
+    The documentation of Generator related apis is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.Generator.html
 
     Creates and returns a generator object that manages the state of the algorithm which produces pseudo random numbers. 
     Used as a keyword argument in many In-place random sampling functions.
@@ -38,10 +43,13 @@ oneflow.Generator.__doc__ = r"""
         >>> g_auto = flow.Generator()
         >>> g_auto = flow.Generator(device='auto')
 
-    """
+    """,
+)
 
 
-oneflow.Generator.device.__doc__ = r"""
+add_docstr(
+    oneflow.Generator.device,
+    r"""
     Generator.device -> device
 
     Gets the current device of the generator.
@@ -55,10 +63,14 @@ oneflow.Generator.device.__doc__ = r"""
         >>> g_auto.device
         device(type='auto', index=0)
 
-    """
+    """,
+)
 
-oneflow.Generator.manual_seed.__doc__ = r"""
-    Sets the seed for generating random numbers. Returns a torch.Generator object. 
+
+add_docstr(
+    oneflow.Generator.manual_seed,
+    r"""
+    Sets the seed for generating random numbers. Returns a flow.Generator object. 
     It is recommended to set a large seed, i.e. a number that has a good balance of 0 and 1 bits. 
     Avoid having many 0 bits in the seed.
        
@@ -78,7 +90,8 @@ oneflow.Generator.manual_seed.__doc__ = r"""
         >>> g_auto
         <oneflow._oneflow_internal.Generator object at 0x7f3a1cfba1a8>
 
-    """
+    """,
+)
 
 
 add_docstr(

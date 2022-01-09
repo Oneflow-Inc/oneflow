@@ -50,6 +50,8 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
       }
     }
     py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
+  } else if (Py_TYPE(obj)->tp_name == PyProperty_Type.tp_name) {
+    py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
   } else {
     THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function.";
   }
