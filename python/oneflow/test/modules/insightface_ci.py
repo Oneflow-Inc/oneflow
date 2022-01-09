@@ -26,6 +26,7 @@ from collections import OrderedDict
 from test_util import GenArgDict
 import requests
 import shutil
+from easydict import EasyDict as edict
 
 
 def conv3x3(
@@ -242,9 +243,9 @@ def prepare(base_path="/insightface_dataset/"):
         shutil.unpack_archive(filename=os.path.join(
             base_path, "insightface_ci.zip"), extract_dir=base_path, format='zip')
     else:
-        if not os.path.exists(os.path.join(base_path, "insightface_ci/"))
-        res = requests.get(url=file_url)
-           with open(os.path.join(base_path, "insightface_ci.zip"), mode='wb') as f:
+        if not os.path.exists(os.path.join(base_path, "insightface_ci/")):
+            res = requests.get(url=file_url)
+            with open(os.path.join(base_path, "insightface_ci.zip"), mode='wb') as f:
                 f.write(res.content)
             shutil.unpack_archive(filename=os.path.join(
                 base_path, "insightface_ci.zip"), extract_dir=base_path, format='zip')
@@ -607,7 +608,6 @@ class Trainer(object):
             loss = loss.to_consistent(
                 sbp=flow.sbp.broadcast).to_local().numpy()
             self.losses.update(loss, 1)
-        
 
     def train_eager(self):
         self.train_module = ddp(self.train_module)
@@ -629,38 +629,60 @@ class Trainer(object):
             self.losses.update(loss, 1)
 
 
-def train(test_case, cfg):
+def train(test_case, graph, resume, fp16):
     work_path = "/insightface_dataset/"
     prepare(work_path)
     rank = flow.env.get_rank()
     world_size = flow.env.get_world_size()
     placement = flow.env.all_device_placement("cuda")
     load_path = os.path.join(work_path, "insightface_ci", "base_model")
-    total_batch_size=48
+    total_batch_size = 64
 
-    cfg.batch_size=total_batch_size / world_size
-    cfg.loss="cosface"
-    cfg.resume=True
+    cfg = edict()
+    cfg.batch_size = int(total_batch_size / world_size)
+    cfg.loss = "cosface"
+    cfg.graph = graph
+    cfg.resume = resume
+    cfg.fp16 = fp16
+    cfg.network = "r18"
+    cfg.output = None
+    cfg.embedding_size = 512
+    cfg.model_parallel = False
+    cfg.partial_fc = 0
+    cfg.sample_rate = 1
+    cfg.momentum = 0.9
+    cfg.weight_decay = 5e-4
+    cfg.lr = 0.1
+    cfg.synthetic = False
+    cfg.scale_grad = False
+    cfg.dataset = "Agedb"
+    cfg.ofrecord_path = "/data/disk1/zhuwang/face_data/data_oneflow/"
+    cfg.ofrecord_part_num = 4
+    cfg.num_classes = 564
+    cfg.num_image = 16483
+    cfg.num_epoch = 100
+    cfg.warmup_epoch = -1
+    cfg.decay_epoch = [80,90]
+
     trainer = Trainer(cfg, placement, load_path, world_size, rank)
-
     loss = trainer()
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n2d()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# @flow.unittest.skip_unless_1n2d()
 class TestInsightfaceTrain(flow.unittest.TestCase):
     def test_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["graph"] = True
-        arg_dict["resume"] = True
+        arg_dict["graph"] = [True]
+        arg_dict["resume"] = [True]
         arg_dict["fp16"] = [True, False]
         for arg in GenArgDict(arg_dict):
             train(test_case, **arg)
 
     def test_eager(test_case):
         arg_dict = OrderedDict()
-        arg_dict["graph"] = False
-        arg_dict["resume"] = True
+        arg_dict["graph"] = [False]
+        arg_dict["resume"] = [True]
         arg_dict["fp16"] = [False]
         for arg in GenArgDict(arg_dict):
             train(test_case,  **arg)
