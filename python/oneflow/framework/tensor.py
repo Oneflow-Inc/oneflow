@@ -754,9 +754,8 @@ def _numpy(self):
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
     if self.is_consistent:
-        self = self.to_consistent(
-            placement=self.placement, sbp=flow.sbp.broadcast
-        ).to_local()
+        sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
+        self = self.to_consistent(placement=self.placement, sbp=sbp_list).to_local()
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
