@@ -218,9 +218,9 @@ class MaxPool2d(Module):
         import oneflow as flow 
         import numpy as np
 
-        of_maxpool2d = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
+        m = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
         x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        y = of_maxpool2d(x)
+        y = m(x)
         y.shape 
         oneflow.Size([1, 4, 4, 4])
 
