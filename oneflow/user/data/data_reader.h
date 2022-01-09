@@ -40,7 +40,11 @@ class DataReader {
     if (load_thrd_.joinable()) { load_thrd_.join(); }
   }
 
-  void Read(user_op::KernelComputeContext* ctx);
+  void Read(user_op::KernelComputeContext* ctx) {
+    CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
+    auto batch = FetchBatchData();
+    parser_->Parse(batch, ctx);
+  }
 
   void Close() {
     if (!is_closed_.load()) {
@@ -76,21 +80,6 @@ class DataReader {
   Buffer<BatchType> batch_buffer_;
   std::thread load_thrd_;
 };
-
-template<typename LoadTarget>
-inline void DataReader<LoadTarget>::Read(user_op::KernelComputeContext* ctx) {
-  CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
-  auto batch = FetchBatchData();
-  parser_->Parse(batch, ctx);
-}
-
-template<>
-inline void DataReader<TensorBuffer>::Read(user_op::KernelComputeContext* ctx) {
-  CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
-  auto batch = FetchBatchData();
-  parser_->Parse(batch, ctx);
-  TensorBufferPool::Get().Deallocate(batch);
-}
 
 }  // namespace data
 

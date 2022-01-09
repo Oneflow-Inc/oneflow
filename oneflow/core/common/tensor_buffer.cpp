@@ -102,16 +102,14 @@ void TensorBufferImpl::Swap(TensorBufferImpl* other) {
 
 }  // namespace detail
 
-TensorBuffer::~TensorBuffer() { TensorBufferPool::Get().Deallocate(*this); }
+TensorBuffer::~TensorBuffer() { TensorBufferPool::Get().Deallocate(impl_); }
 
 TensorBuffer::TensorBuffer(const Shape& shape, DataType dtype) {
-  TensorBufferPool::Get().Allocate(*this, shape, dtype);
+  TensorBufferPool::Get().Allocate(impl_, shape, dtype);
 }
 
 TensorBuffer& TensorBuffer::operator=(TensorBuffer&& other) noexcept {
-  if (impl_) { TensorBufferPool::Get().Deallocate(*this); }
   impl_ = std::move(other.impl_);
-  other.impl_.reset();
   return *this;
 }
 
@@ -119,7 +117,7 @@ void TensorBuffer::Reset(const Shape& shape, DataType dtype) {
   if (is_allocated()) {
     impl_->Reset(shape, dtype);
   } else {
-    TensorBufferPool::Get().Allocate(*this, shape, dtype);
+    TensorBufferPool::Get().Allocate(impl_, shape, dtype);
   }
 }
 
@@ -159,7 +157,7 @@ const void* TensorBuffer::raw_data() const {
 
 void TensorBuffer::CopyFrom(const TensorBuffer& src) {
   CHECK(src.is_allocated()) << "TensorBuffer src is not allocated";
-  if (!is_allocated()) { TensorBufferPool::Get().Allocate(*this, src.shape(), src.data_type()); }
+  if (!is_allocated()) { TensorBufferPool::Get().Allocate(impl_, src.shape(), src.data_type()); }
   impl_->CopyFrom(src.impl_.get());
 }
 
@@ -193,13 +191,8 @@ TensorBufferPool::TensorBufferPool()
   thread_local_cache.reserve(thread_local_cache_size_);
 }
 
-TensorBufferPool::~TensorBufferPool() {
-  std::unique_lock<std::mutex> lck(mtx_);
-  global_free_list_.clear();
-}
-
-void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape, DataType dtype) {
-  CHECK(!tensor_buffer.impl_) << "TensorBuffer is already allocated";
+void TensorBufferPool::Allocate(ItemT& item, const Shape& shape, DataType dtype) {
+  CHECK(!item) << "TensorBuffer is already allocated";
   auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache.empty() && thread_local_cache_size_ > 0) {
     std::unique_lock<std::mutex> lck(mtx_);
@@ -208,66 +201,34 @@ void TensorBufferPool::Allocate(TensorBuffer& tensor_buffer, const Shape& shape,
                        ? (global_free_list_.end() - thread_local_cache_size_)
                        : global_free_list_.begin();
       for (auto it = begin; it < global_free_list_.end(); ++it) {
-        thread_local_cache.emplace_back(nullptr);
-        std::swap(thread_local_cache.back(), *it);
+        thread_local_cache.push_back(std::move(*it));
       }
       global_free_list_.erase(begin, global_free_list_.end());
     }
   }
 
   if (thread_local_cache.empty()) {
-    tensor_buffer.impl_ = std::make_unique<detail::TensorBufferImpl>(shape, dtype);
+    item.reset(new detail::TensorBufferImpl(shape, dtype));
   } else {
-    tensor_buffer.impl_ = std::move(thread_local_cache.back());
-    CHECK(tensor_buffer.impl_);
+    item = std::move(thread_local_cache.back());
     thread_local_cache.pop_back();
-    tensor_buffer.impl_->Reset(shape, dtype);
+    CHECK(item);
+    item->Reset(shape, dtype);
   }
 }
 
-void TensorBufferPool::Deallocate(TensorBuffer& tensor_buffer) {
-  if (!tensor_buffer.impl_) { return; }
+void TensorBufferPool::Deallocate(ItemT& item) {
+  if (!item) { return; }
   auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache.size() < thread_local_cache_size_) {
-    thread_local_cache.emplace_back(nullptr);
-    std::swap(thread_local_cache.back(), tensor_buffer.impl_);
+    thread_local_cache.push_back(std::move(item));
   } else {
     std::unique_lock<std::mutex> lck(mtx_);
     if (global_free_list_.size() < pool_size_) {
-      global_free_list_.emplace_back(nullptr);
-      std::swap(global_free_list_.back(), tensor_buffer.impl_);
+      global_free_list_.push_back(std::move(item));
     }
   }
-  if (tensor_buffer.impl_) { tensor_buffer.impl_.reset(); }
-}
-
-void TensorBufferPool::Deallocate(std::vector<TensorBuffer>& tensor_buffers) {
-  auto& thread_local_cache = ThreadLocalCache();
-  while (thread_local_cache.size() < thread_local_cache_size_ && tensor_buffers.size() > 0) {
-    if (tensor_buffers.back().impl_) {
-      thread_local_cache.push_back(std::move(tensor_buffers.back().impl_));
-    }
-    tensor_buffers.pop_back();
-  }
-  if (tensor_buffers.size() > 0) {
-    std::unique_lock<std::mutex> lck(mtx_);
-    while (global_free_list_.size() < pool_size_ && tensor_buffers.size() > 0) {
-      if (tensor_buffers.back().impl_) {
-        global_free_list_.push_back(std::move(tensor_buffers.back().impl_));
-      }
-      tensor_buffers.pop_back();
-    }
-  }
-  for (auto& tensor_buffer : tensor_buffers) { tensor_buffer.impl_.reset(); }
-}
-
-void TensorBufferPool::set_pool_size(size_t pool_size) {
-  {
-    std::unique_lock<std::mutex> lck(mtx_);
-    pool_size_ = pool_size;
-    if (pool_size_ > global_free_list_.capacity()) { global_free_list_.reserve(pool_size_); }
-  }
-  if (thread_local_cache_size_ > pool_size_) { set_thread_local_cache_size(pool_size_); }
+  if (item) { item.reset(); }
 }
 
 void TensorBufferPool::set_pool_size_base(size_t base) {
@@ -276,6 +237,7 @@ void TensorBufferPool::set_pool_size_base(size_t base) {
     std::unique_lock<std::mutex> lck(mtx_);
     pool_size_ = pool_size;
     if (pool_size_ > global_free_list_.capacity()) { global_free_list_.reserve(pool_size_); }
+    if (pool_size_ < global_free_list_.size()) { global_free_list_.resize(pool_size_); }
   }
   if (thread_local_cache_size_ > pool_size_) { set_thread_local_cache_size(pool_size_); }
 }
@@ -286,6 +248,9 @@ void TensorBufferPool::set_thread_local_cache_size(size_t thread_local_cache_siz
   auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache_size_ > thread_local_cache.capacity()) {
     thread_local_cache.reserve(thread_local_cache_size_);
+  }
+  if (thread_local_cache_size_ < thread_local_cache.size()) {
+    thread_local_cache.resize(thread_local_cache_size_);
   }
 }
 

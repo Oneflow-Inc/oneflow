@@ -77,9 +77,7 @@ class TensorBuffer final {
   TensorBuffer(const TensorBuffer&) = delete;
   TensorBuffer& operator=(const TensorBuffer&) = delete;
 
-  TensorBuffer(TensorBuffer&& other) noexcept : impl_(std::move(other.impl_)) {
-    other.impl_.reset();
-  }
+  TensorBuffer(TensorBuffer&& other) noexcept : impl_(std::move(other.impl_)) {}
   TensorBuffer& operator=(TensorBuffer&& other) noexcept;
 
   bool is_allocated() const { return bool(impl_); }
@@ -132,27 +130,26 @@ inline TensorBuffer GetTypeByDataType(std::integral_constant<DataType, DataType:
 
 class TensorBufferPool final {
  public:
-  using TensorBufferList = std::vector<std::unique_ptr<detail::TensorBufferImpl>>;
+  using ItemT = std::unique_ptr<detail::TensorBufferImpl>;
+  using ListT = std::vector<ItemT>;
 
   static TensorBufferPool& Get() {
     static TensorBufferPool instance;
     return instance;
   }
 
-  ~TensorBufferPool();
+  ~TensorBufferPool() = default;
   OF_DISALLOW_COPY_AND_MOVE(TensorBufferPool);
 
-  void Allocate(TensorBuffer& tensor_buffer, const Shape& shape, DataType dtype);
-  void Deallocate(TensorBuffer& tensor_buffer);
-  void Deallocate(std::vector<TensorBuffer>& tensor_buffers);
+  void Allocate(ItemT& item, const Shape& shape, DataType dtype);
+  void Deallocate(ItemT& item);
 
-  void set_pool_size(size_t pool_size);
   void set_pool_size_base(size_t base);
   void set_thread_local_cache_size(size_t thread_local_cache_size);
 
  private:
-  static TensorBufferList& ThreadLocalCache() {
-    thread_local TensorBufferList thread_local_cache;
+  static ListT& ThreadLocalCache() {
+    thread_local ListT thread_local_cache;
     return thread_local_cache;
   }
 
@@ -161,7 +158,7 @@ class TensorBufferPool final {
   size_t pool_size_;
   size_t thread_local_cache_size_;
 
-  TensorBufferList global_free_list_;
+  ListT global_free_list_;
   std::mutex mtx_;
 };
 
