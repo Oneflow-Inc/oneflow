@@ -159,6 +159,7 @@ OneFlow Tensor Class
             tril, 
             triu, 
             type_as, 
+            T,
             unfold, 
             uniform_, 
             unsqueeze, 

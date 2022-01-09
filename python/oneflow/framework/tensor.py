@@ -759,6 +759,9 @@ def _to(self, *args, **kwargs):
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
+def _T(self):
+    return flow._C.T(self)
+
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
@@ -911,6 +914,7 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
+    Tensor.T = _T
 
 
 def register_tensor_op(op_name):
