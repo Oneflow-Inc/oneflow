@@ -17,12 +17,14 @@ else()
       elseif("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".so")
         set(ONEDNN_LIBRARY_NAMES libdnnl.so)
         set(DNNL_LIBRARY_TYPE SHARED)
+        set(DNNL_LIBRARY_RPATH ON)
       else()
         message(FATAL_ERROR "${CMAKE_SHARED_LIBRARY_SUFFIX} not support for onednn")
       endif()
     else()
       set(ONEDNN_LIBRARY_NAMES libdnnl.a )
       set(DNNL_LIBRARY_TYPE STATIC)
+      set(DNNL_LIBRARY_RPATH OFF)
     endif()
 endif()
 
@@ -32,7 +34,7 @@ endforeach()
 
 
 if(THIRD_PARTY)
-
+message(STATUS "ExternalProject_Add onednn = ${ONETBB_INSTALL_DIR}")
 ExternalProject_Add(onednn
     PREFIX onednn
     DEPENDS install-tbb
@@ -56,6 +58,8 @@ ExternalProject_Add(onednn
         -DDNNL_BUILD_EXAMPLES:BOOL=OFF
         -DDNNL_BUILD_TESTS:BOOL=OFF
         -DDNNL_LIBRARY_TYPE:STRING=${DNNL_LIBRARY_TYPE}
+        -DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=${DNNL_LIBRARY_RPATH}
+        -DCMAKE_INSTALL_RPATH:STRING=${ONETBB_INSTALL_DIR}
         -DDNNL_CPU_RUNTIME:STRING=TBB
         -DTBBROOT:STRING=${ONETBB_INSTALL_DIR}
 )
