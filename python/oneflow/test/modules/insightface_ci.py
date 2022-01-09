@@ -296,12 +296,8 @@ class OFRecordDataLoader(nn.Module):
             )
         )
 
-        self.flip = (
-            flow.nn.CoinFlip(batch_size=batch_size,
-                             placement=placement, sbp=sbp)
-            if mode == "train"
-            else None
-        )
+        self.flip = None
+        
 
         rgb_mean = [127.5, 127.5, 127.5]
         rgb_std = [127.5, 127.5, 127.5]
@@ -532,6 +528,7 @@ class Trainer(object):
         self.world_size = world_size
         self.rank = rank
         self.train_total_steps = train_total_steps
+        self.frequent = 50
 
         # model
         self.backbone = get_model(cfg.network, dropout=0.0,
@@ -573,9 +570,9 @@ class Trainer(object):
     def __call__(self):
         # Train
         if self.cfg.graph:
-            self.train_graph()
+            return self.train_graph()
         else:
-            self.train_eager()
+            return self.train_eager()
 
     def load_state_dict(self):
 
@@ -608,6 +605,7 @@ class Trainer(object):
             loss = loss.to_consistent(
                 sbp=flow.sbp.broadcast).to_local().numpy()
             self.losses.update(loss, 1)
+        return self.losses.avg
 
     def train_eager(self):
         self.train_module = ddp(self.train_module)
@@ -628,6 +626,8 @@ class Trainer(object):
             loss = loss.numpy()
             self.losses.update(loss, 1)
 
+        return self.losses.avg
+
 
 def train(test_case, graph, resume, fp16):
     work_path = "/insightface_dataset/"
@@ -637,6 +637,7 @@ def train(test_case, graph, resume, fp16):
     placement = flow.env.all_device_placement("cuda")
     load_path = os.path.join(work_path, "insightface_ci", "base_model")
     total_batch_size = 64
+    loss_base=16
 
     cfg = edict()
     cfg.batch_size = int(total_batch_size / world_size)
@@ -662,14 +663,14 @@ def train(test_case, graph, resume, fp16):
     cfg.num_image = 16483
     cfg.num_epoch = 100
     cfg.warmup_epoch = -1
-    cfg.decay_epoch = [80,90]
+    cfg.decay_epoch = [80, 90]
 
-    trainer = Trainer(cfg, placement, load_path, world_size, rank)
+    trainer = Trainer(cfg, placement, load_path, world_size, rank, 500)
     loss = trainer()
+    test_case.assertTrue(abs(loss-loss_base)<1)
 
 
-# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-# @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestInsightfaceTrain(flow.unittest.TestCase):
     def test_graph(test_case):
         arg_dict = OrderedDict()
