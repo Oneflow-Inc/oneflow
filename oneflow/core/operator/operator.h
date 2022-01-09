@@ -54,6 +54,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
+  const std::string& op_loc() const { return op_conf().loc(); }
   DeviceType device_type() const;
   const OperatorConf& op_conf() const;
   std::shared_ptr<const OperatorConf> shared_op_conf() const;

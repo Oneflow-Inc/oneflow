@@ -308,6 +308,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+  const std::string& op_loc() const override { return user_op_conf_->op_conf().loc(); }
 
  private:
   user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
