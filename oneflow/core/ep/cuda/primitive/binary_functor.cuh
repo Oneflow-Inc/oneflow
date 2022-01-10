@@ -27,6 +27,13 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, Src, Dst> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, bool, bool> {
+  OF_DEVICE_FUNC bool operator()(bool src0, bool src1) const {
+    return static_cast<bool>(pow(static_cast<double>(src0), static_cast<double>(src1)));
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
   OF_DEVICE_FUNC half operator()(half src0, half src1) const {
     return static_cast<half>(pow(static_cast<float>(src0), static_cast<float>(src1)));
