@@ -188,11 +188,24 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     embedding_lookup_new_op_conf.set_stream_name_hint("EMBEDDING");
     add_ops.push_back(embedding_lookup_new_op_conf);
 
+    std::string embedding_lbn = embedding_lookup_op.output("embeddings", 0);
+    if (ctx->job_desc().enable_auto_mixed_precision()) {
+      auto cast_op = user_op::UserOpConfWrapperBuilder(user_op_conf.op_name() + "_cast_f2h")
+                         .Op("cast")
+                         .Input("in", embedding_lbn)
+                         .Output("out")
+                         .Attr<DataType>("dtype", DataType::kFloat16)
+                         .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
+                         .Build();
+      embedding_lbn = cast_op.output("out", 0);
+      add_ops.push_back(cast_op.op_conf());
+    }
+
     // embedding shuffle op
     user_op::UserOpConfWrapperBuilder embedding_shuffle_op_builder(user_op_conf.op_name());
     user_op::UserOpConfWrapper embedding_shuffle_op =
         embedding_shuffle_op_builder.OpTypeName("embedding_shuffle")
-            .Input("cur_rank_embeddings", embedding_lookup_op.output("embeddings", 0))
+            .Input("cur_rank_embeddings", embedding_lbn)
             .Input("cur_rank_num_unique_ids",
                    AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
             .Input("cur_rank_reverse_idx",
@@ -221,6 +234,21 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           continue;
         }
         delete_op_names.push_back(update_op_conf.op_name());
+
+        std::string update_embedding_diff_lbn = update_op_conf.input("embedding_diff", 0);
+        if (ctx->job_desc().enable_auto_mixed_precision()
+            && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", false)) {
+          LogicalBlobId embedding_diff_lbi =
+              GenLogicalBlobId(update_op_conf.input("embedding_diff", 0));
+          const OpNode* cast_node = op_graph.OpNode4OpName(embedding_diff_lbi.op_name());
+          if (cast_node->op().op_conf().has_user_conf()) {
+            const user_op::UserOpConfWrapper cast_op_conf(cast_node->op().op_conf());
+            if (cast_op_conf.op_type_name() == "cast") {
+              update_embedding_diff_lbn = cast_op_conf.input("in", 0);
+              delete_op_names.push_back(cast_op_conf.op_name());
+            }
+          }
+        }
         // embedding_gradient_shuffle op
         user_op::UserOpConfWrapperBuilder embedding_gradient_shuffle_op_builder(
             user_op_conf.op_name() + "_embedding_gradient_shuffle");
@@ -232,7 +260,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                        AddIdentityOp(id_shuffle_op.output("cur_rank_reverse_idx", 0)))
                 .Input("num_unique_ids", AddIdentityOp(id_shuffle_op.output("num_unique_ids", 0)))
                 .Input("ids_reverse_idx", AddIdentityOp(id_shuffle_op.output("ids_reverse_idx", 0)))
-                .Input("embedding_diff", update_op_conf.input("embedding_diff", 0))
+                .Input("embedding_diff", update_embedding_diff_lbn)
                 .Input("num_unique_ids_matrix",
                        AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
                 .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
@@ -244,6 +272,19 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
         std::string embedding_diff_lbn =
             embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0);
+
+        if (ctx->job_desc().enable_auto_mixed_precision()
+            && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", false)) {
+          auto cast_op = user_op::UserOpConfWrapperBuilder(user_op_conf.op_name() + "_cast_h2f")
+                             .Op("cast")
+                             .Input("in", embedding_diff_lbn)
+                             .Output("out")
+                             .Attr<DataType>("dtype", DataType::kFloat)
+                             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
+                             .Build();
+          embedding_diff_lbn = cast_op.output("out", 0);
+          add_ops.push_back(cast_op.op_conf());
+        }
 
         HashMap<LogicalBlobId, LogicalBlobId> embedding_lbi2embedding_diff_lbi;
         embedding_lbi2embedding_diff_lbi.emplace(
