@@ -39,6 +39,9 @@ struct DTRTensorPool {
     if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
+  void set_current_op_type_name(std::string op_type_name);
+  const std::string& current_op_type_name();
+
   void set_total_memory(size_t mem);
   size_t get_total_memory();
 
@@ -60,6 +63,10 @@ struct DTRTensorPool {
   void update_after_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
 
+  std::set<vm::LocalCallOpKernelPhyInstrOperand*> operand_visited_;
+  HashMap<vm::DTREagerBlobObject*, int> reference_nums_;
+  std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;
+
   // TODO: Implementation of disjoint-set data structure
 
  private:
@@ -72,6 +79,7 @@ struct DTRTensorPool {
   int num_eviction_;
   int num_recomputation_;
   int num_destruction_;
+  std::string current_op_type_name_;
 };
 
 }  // namespace one

@@ -203,14 +203,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   bool is_evictable() const;
   bool is_bp_required() const { return is_bp_required_; }
 
-  void pin() {
-    pinned_++;
-    if (oneflow::DTRDebugEnabled()) {std::cout << "pinned " << this << ", " << (pinned_ - 1) << " to " << pinned_ << std::endl;}
-  }
-  void unpin() {
-    pinned_--;
-    if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned " << this << ", " << (pinned_ + 1) << " to " << pinned_ << std::endl;}
-  }
+  void pin();
+  void unpin();
   void update_access_time();
   void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict();

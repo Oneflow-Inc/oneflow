@@ -151,7 +151,7 @@ Maybe<Tensor> MirroredTensor::clone() const {
 }
 
 Maybe<void> DTRMirroredTensor::set_blob_object_bp_required() {
-  auto blob_object = CHECK_JUST(eager_blob_object());
+  auto blob_object = JUST(eager_blob_object());
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
     // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
     dtr_eager_blob_object->set_bp_required(true);

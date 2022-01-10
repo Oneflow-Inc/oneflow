@@ -169,7 +169,23 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
           piece->bin_num = kInvalidBinNum;
           piece->is_free = false;
         } else if (piece->size > aligned_size) {
-          if (left_) {
+          const std::string& name = Global<one::DTRTensorPool>::Get()->current_op_type_name();
+          const bool choose_left = [&]() {
+            if (std::getenv("OF_DTR_NLR") != nullptr) {
+              std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
+                                                               "conv_filter_grad"};
+              if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
+                  != high_compute_cost_names.cend()) {
+                return true;
+              }
+              return false;
+
+            } else {
+              return left_;
+            }
+          }();
+          if (choose_left) {
+            if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "left: " << name; }
             piece->bin_num = kInvalidBinNum;
             piece->is_free = false;
 
@@ -277,6 +293,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (oneflow::DTRDebugEnabled()) {
         LOG(INFO) << "move end, compute op: "
                   << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
+                  << ", size: " << end->second->size
                   << ", total_size: " << total_size << ", cost: " << cost;
       }
     } else {
@@ -292,6 +309,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (oneflow::DTRDebugEnabled()) {
         LOG(INFO) << "move start, compute op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
+                  << ", size: " << start->second->size
                   << ", total_size: " << total_size << ", cost: " << cost;
       }
       start++;
@@ -307,7 +325,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
   }
   for (auto* piece : pieces_to_be_evicted) {
     if (oneflow::DTRDebugEnabled()) {
-      LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
+      LOG(INFO) << "release ebo: " << piece->tensor << " dptr: " << (void*)piece->ptr << ", size: " << piece->size
                 << ", cost: " << get_cost(piece->tensor) << ", compute op: "
                 << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no tensor");
     }
