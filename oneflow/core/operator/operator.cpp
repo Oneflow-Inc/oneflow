@@ -721,7 +721,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     std::ostringstream err;
     err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
     err << "Condidate nd sbp signature are: "
-        << JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+        << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
     err << ", but inputs sbp are:";
     {
       std::ostringstream input_sbp_str;
