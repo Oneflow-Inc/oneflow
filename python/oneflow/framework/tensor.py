@@ -770,6 +770,9 @@ def _gather(self, dim, index):
 def _T(self):
     return flow._C.T(self)
 
+def _t(self):
+    return flow._C.t(self)
+
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
@@ -924,7 +927,8 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
-    Tensor.T = _T
+    Tensor.T = property(_T)
+    Tensor.t = _t
 
 
 def register_tensor_op(op_name):
