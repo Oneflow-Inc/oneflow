@@ -767,6 +767,7 @@ add_docstr(
     Inplace version of :func:`oneflow.Tensor.clamp`. 
     """,
 )
+
 add_docstr(
     oneflow.Tensor.clip,
     """
