@@ -114,6 +114,7 @@ class TensorBuffer final {
  private:
   friend class TensorBufferPool;
 
+  void Allocate(const Shape& shape, DataType dtype);
   void* raw_data();
   const void* raw_data() const;
 
@@ -133,9 +134,26 @@ class TensorBufferPool final {
   using ItemT = std::unique_ptr<detail::TensorBufferImpl>;
   using ListT = std::vector<ItemT>;
 
-  static TensorBufferPool& Get() {
-    static TensorBufferPool instance;
-    return instance;
+  static TensorBufferPool* Get() {
+    auto& ptr = GetPtr();
+    CHECK(ptr) << "TensorBufferPool has not been created";
+    return ptr.get();
+  }
+
+  static TensorBufferPool* TryGet() {
+    auto& ptr = GetPtr();
+    return ptr.get();
+  }
+
+  static void New() {
+    auto& ptr = GetPtr();
+    CHECK(!ptr) << "TensorBufferPool is already New";
+    ptr.reset(new TensorBufferPool());
+  }
+
+  static void Delete() {
+    auto& ptr = GetPtr();
+    if (ptr) { ptr.reset(); }
   }
 
   ~TensorBufferPool() = default;
@@ -148,6 +166,11 @@ class TensorBufferPool final {
   void set_thread_local_cache_size(size_t thread_local_cache_size);
 
  private:
+  static std::unique_ptr<TensorBufferPool>& GetPtr() {
+    static std::unique_ptr<TensorBufferPool> ptr;
+    return ptr;
+  }
+
   static ListT& ThreadLocalCache() {
     thread_local ListT thread_local_cache;
     return thread_local_cache;

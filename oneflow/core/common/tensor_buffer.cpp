@@ -102,22 +102,31 @@ void TensorBufferImpl::Swap(TensorBufferImpl* other) {
 
 }  // namespace detail
 
-TensorBuffer::~TensorBuffer() { TensorBufferPool::Get().Deallocate(impl_); }
-
-TensorBuffer::TensorBuffer(const Shape& shape, DataType dtype) {
-  TensorBufferPool::Get().Allocate(impl_, shape, dtype);
+TensorBuffer::~TensorBuffer() {
+  if (auto* pool = TensorBufferPool::TryGet()) { pool->Deallocate(impl_); }
 }
+
+TensorBuffer::TensorBuffer(const Shape& shape, DataType dtype) { Allocate(shape, dtype); }
 
 TensorBuffer& TensorBuffer::operator=(TensorBuffer&& other) noexcept {
   impl_ = std::move(other.impl_);
   return *this;
 }
 
+void TensorBuffer::Allocate(const Shape& shape, DataType dtype) {
+  CHECK(!is_allocated());
+  if (auto* pool = TensorBufferPool::TryGet()) {
+    pool->Allocate(impl_, shape, dtype);
+  } else {
+    impl_.reset(new detail::TensorBufferImpl(shape, dtype));
+  }
+}
+
 void TensorBuffer::Reset(const Shape& shape, DataType dtype) {
   if (is_allocated()) {
     impl_->Reset(shape, dtype);
   } else {
-    TensorBufferPool::Get().Allocate(impl_, shape, dtype);
+    Allocate(shape, dtype);
   }
 }
 
@@ -157,7 +166,7 @@ const void* TensorBuffer::raw_data() const {
 
 void TensorBuffer::CopyFrom(const TensorBuffer& src) {
   CHECK(src.is_allocated()) << "TensorBuffer src is not allocated";
-  if (!is_allocated()) { TensorBufferPool::Get().Allocate(impl_, src.shape(), src.data_type()); }
+  if (!is_allocated()) { Allocate(src.shape(), src.data_type()); }
   impl_->CopyFrom(src.impl_.get());
 }
 

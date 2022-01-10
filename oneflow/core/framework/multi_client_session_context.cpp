@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
@@ -91,6 +92,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     Global<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
+    TensorBufferPool::New();
 
     for (const std::string& lib_path : config_proto.load_lib_path()) {
       // TODO(chengcheng): remove load_lib_path in config proto. using LoadLibraryNow
@@ -149,6 +151,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
     }
 
+    TensorBufferPool::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<TaskStreamIndexManager>::Delete();
     Global<IDMgr>::Delete();
