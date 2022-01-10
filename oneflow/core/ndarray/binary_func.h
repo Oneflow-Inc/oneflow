@@ -154,6 +154,17 @@ struct BinaryFuncPow final {
   }
 };
 
+template<>
+struct BinaryFuncPow<bool> final {
+  static OF_DEVICE_FUNC bool Invoke(const bool x, const bool y) {
+#if defined(__CUDACC__)
+    return static_cast<bool>(powf(static_cast<float>(x), static_cast<float>(y)));
+#else
+    return static_cast<bool>(std::pow(static_cast<float>(x), static_cast<float>(y)));
+#endif
+  }
+};
+
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
 
 template<>
