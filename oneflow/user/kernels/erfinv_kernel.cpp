@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include <math.h>
+#define PI 3.14159265358979323846L
 namespace oneflow {
 
 template<typename T>
@@ -52,16 +52,14 @@ class CpuErfinvKernel final : public user_op::OpKernel {
         dem = (d[1] * z + d[0]) * z + static_cast<T>(1.0);
         y_ptr[i] = std::copysign(num, x) / dem;
       }
-      y_ptr[i] =
-          y_ptr[i]
-          - (std::erf(y_ptr[i]) - x)
-                / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(static_cast<double>(M_PI))))
-                   * std::exp(-y_ptr[i] * y_ptr[i]));
-      y_ptr[i] =
-          y_ptr[i]
-          - (std::erf(y_ptr[i]) - x)
-                / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(static_cast<double>(M_PI))))
-                   * std::exp(-y_ptr[i] * y_ptr[i]));
+      y_ptr[i] = y_ptr[i]
+                 - (std::erf(y_ptr[i]) - x)
+                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(static_cast<double>(PI))))
+                          * std::exp(-y_ptr[i] * y_ptr[i]));
+      y_ptr[i] = y_ptr[i]
+                 - (std::erf(y_ptr[i]) - x)
+                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(static_cast<double>(PI))))
+                          * std::exp(-y_ptr[i] * y_ptr[i]));
     }
   }
 
