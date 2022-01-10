@@ -174,10 +174,6 @@ from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
-<<<<<<< HEAD
-=======
-from oneflow._C import T
->>>>>>> 91b306eab5e016783424b929dae9113d5f1b7990
 from oneflow._C import t
 
 
