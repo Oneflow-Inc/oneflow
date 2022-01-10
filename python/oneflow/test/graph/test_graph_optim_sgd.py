@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import numpy as np
+import copy
 
 from test_util import GenArgList
 from optimizer_test_util import clip_grad_norm_np
@@ -74,7 +75,7 @@ def compare_with_numpy_sgd(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         sgd_x = sgd_graph(mask_tensor)
-        of_res_list.append(simp_module.para0.numpy())
+        of_res_list.append(copy.copy(simp_module.para0.numpy()))
 
     np_res_list = []
 
@@ -94,7 +95,6 @@ def compare_with_numpy_sgd(
 
     train_by_numpy()
     test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=1e-3, atol=1e-3))
-
 
 def compare_with_numpy_sgd_clip_grad(
     test_case,
@@ -157,7 +157,7 @@ def compare_with_numpy_sgd_clip_grad(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         sgd_x = sgd_graph(mask_tensor)
-        of_res_list.append(simp_module.para0.numpy())
+        of_res_list.append(copy.copy(simp_module.para0.numpy()))
 
     np_res_list = []
 
