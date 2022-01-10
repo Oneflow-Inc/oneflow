@@ -755,8 +755,8 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.T,
-    """Perform the transpose of the Tensor.
+    oneflow.Tensor.t,
+    """Equal to Tensor.T.
 
     Args:
         input (oneflow.Tensor): An input tensor.
@@ -773,13 +773,14 @@ add_docstr(
 
         >>> x = flow.Tensor(np.random.randn(2,3))
         >>> x
-        tensor([[-0.5295,  0.4981, -0.8340],
-                [-0.8147, -0.7652, -0.0873]], dtype=oneflow.float32)
-        >>> x.T()
-        tensor([[-0.5295, -0.8147],
-                [ 0.4981, -0.7652],
-                [-0.8340, -0.0873]], dtype=oneflow.float32)
-        >>> x.T().shape
+        tensor([[1.0113, 0.6090, 0.3203],
+                [1.3242, 0.8037, 0.3942]], dtype=oneflow.float32)
+        >>> y = x.t()
+        >>> y
+        tensor([[1.0113, 1.3242],
+                [0.6090, 0.8037],
+                [0.3203, 0.3942]], dtype=oneflow.float32)
+        >>> y.shape
         oneflow.Size([3, 2])
 
     """,
