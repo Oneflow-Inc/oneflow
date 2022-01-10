@@ -145,7 +145,7 @@ struct SetContext {
     if (hit_mask != 0) {
       lru_way_idx = lru_queue[thread_ctx.lane_id];
       insert_way = __ffs(static_cast<int>(hit_mask)) - 1;
-      int lru_lane_id = __ffs(__ballot_sync(kFullMask, lru_way_idx == insert_way));
+      int lru_lane_id = __ffs(__ballot_sync(kFullMask, lru_way_idx == insert_way)) - 1;
       if (thread_ctx.lane_id <= lru_lane_id) {
         lru_way_idx = __shfl_up_sync(__activemask(), lru_way_idx, 1);
       }
