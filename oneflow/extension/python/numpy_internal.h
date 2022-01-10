@@ -22,6 +22,8 @@ limitations under the License.
 // ************************
 
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/shape_vec.h"
 
 // PyArrayObject cannot be forward declared, or a compile error will occur
 
@@ -55,6 +57,10 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type);
 Maybe<DataType> NumpyTypeToOFDataType(int np_array_type);
 
 Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
+
+std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec);
+
+std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type);
 
 Maybe<void> InitNumpyCAPI();
 
