@@ -61,23 +61,37 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
                              | JUST(BoxingExpr("identity"))));
 }
 
-Maybe<BoxingExprIf> SymmetricOnedToNdBoxingExpr() {
+Maybe<BoxingExprIf> SymmetricOneDimToNDimBoxingExpr() {
   return JUST(
       BoxingExpr(JUST(UnflattenInHierarchy()), JUST(BoxingExpr("unflatten-hierarchy")),
                  JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity"))));
 }
 
-Maybe<BoxingExprIf> SymmetricNdToOnedBoxingExpr() {
+Maybe<BoxingExprIf> SymmetricNDimToOneDimBoxingExpr() {
   return JUST(
       BoxingExpr(JUST(UnflattenOutHierarchy()),
                  JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity")),
                  JUST(BoxingExpr("flatten-hierarchy"))));
 }
 
+Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
+  return JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+         | JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
+                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-s-to-s"))
+                               | JUST(BoxingExpr("ccl-s-to-s")),
+                           JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))));
+}
+
+Maybe<BoxingExprIf> ASymmetricOneDimXToBBoxingExpr() {
+  return JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
+                         JUST(BoxingExpr("identity")) | JUST(SymmetricOneDimXToBBoxingExpr()),
+                         JUST(BoxingExpr("asymmetric-broadcast"))));
+}
+
 Maybe<BoxingExprIf> GenericBoxingExpr() {
   // in_placement contain out_placement or out_placement contain in_placement
   const auto& boxing_expr_with_inclusive_placement =
-      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
+      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(ASymmetricOneDimXToBBoxingExpr()),
                       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("symmetric-b-to-p"))
                           | JUST(BoxingExpr("symmetric-b-to-s"))));
   // in_placement and out_placement have no containment relationship
@@ -92,20 +106,21 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
-  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("cuda-copy-h2d"))
-                     | JUST(BoxingExpr("cuda-copy-d2h")) | JUST(BoxingExpr("nccl-p-to-b"))
-                     | JUST(BoxingExpr("ccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b"))
-                     | JUST(BoxingExpr("ccl-s-to-b")) | JUST(BoxingExpr("nccl-s-to-s"))
-                     | JUST(BoxingExpr("ccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
-                     | JUST(BoxingExpr("ccl-p-to-s")) | JUST(BoxingExpr("symmetric-b-to-p"))
-                     | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("symmetric-s-to-p"))
-                     | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
-                     | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
-                     | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
-                     | JUST(BoxingExpr("naive-b-to-s")) | JUST(BoxingExpr("naive-p-to-b"))
-                     | JUST(BoxingExpr("naive-p-to-s")) | JUST(OneToNBoxingExpr())
-                     | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr())
-                     | JUST(SymmetricOnedToNdBoxingExpr()) | JUST(SymmetricNdToOnedBoxingExpr());
+  const auto& core =
+      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("cuda-copy-h2d"))
+      | JUST(BoxingExpr("cuda-copy-d2h")) | JUST(BoxingExpr("nccl-p-to-b"))
+      | JUST(BoxingExpr("ccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b"))
+      | JUST(BoxingExpr("ccl-s-to-b")) | JUST(BoxingExpr("nccl-s-to-s"))
+      | JUST(BoxingExpr("ccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
+      | JUST(BoxingExpr("ccl-p-to-s")) | JUST(BoxingExpr("symmetric-b-to-p"))
+      | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("symmetric-s-to-p"))
+      | JUST(SymmetricOneDimXToBBoxingExpr()) | JUST(ASymmetricOneDimXToBBoxingExpr())
+      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("naive-s-to-s"))
+      | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
+      | JUST(BoxingExpr("naive-b-to-s")) | JUST(BoxingExpr("naive-p-to-b"))
+      | JUST(BoxingExpr("naive-p-to-s")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
+      | JUST(GenericBoxingExpr()) | JUST(SymmetricOneDimToNDimBoxingExpr())
+      | JUST(SymmetricNDimToOneDimBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 
