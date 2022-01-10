@@ -483,26 +483,76 @@ class ConcatFunctor {
 
 class StackFunctor {
  public:
-  StackFunctor() = default;
-  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
-    CHECK_GE_OR_RETURN(inputs.size(), 1) << "Needs one input at least.";
-    int64_t ndims = inputs.at(0)->shape()->NumAxes();
-    int64_t stack_dim = dim;
-    for (int i = 1; i < inputs.size(); ++i) {
-      CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
-          << "The input dimensions are not equal.";
+  StackFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("stack").Input("in", n + 1).Output("out").Build());
     }
-    CHECK_OR_RETURN(dim >= -(ndims + 1) && dim <= ndims)
-        << "( Dimension out of range, expected to be in range of [" << -(ndims + 1) << ", " << ndims
-        << "], but got " << dim << " )";
-    if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
-    TensorTuple expand_inputs(inputs.size());
-    if (inputs.size() == 1) { return ExpandDims(inputs.at(0), stack_dim); }
-    for (int i = 0; i < inputs.size(); ++i) {
-      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), stack_dim));
-    }
-    return Concat(expand_inputs, stack_dim);
   }
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+    const int64_t ninput = inputs.size();
+    int64_t ndims = inputs[0]->ndim();
+    int64_t stack_dim = dim;
+    if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
+    CHECK_OR_RETURN(stack_dim >= 0 && stack_dim <= ndims)
+        << "Index Error: Dimension out of range (expected in range of [" << -ndims - 1 << ", "
+        << ndims << "], but got " << stack_dim;
+    const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
+    for (const auto& input : inputs) {
+      for (int i = 0; i < ndims; ++i) {
+        CHECK_OR_RETURN(input->shape()->At(i) == first_in_shape->At(i))
+            << " Stacks expects each tensor to be equal size"
+               ", but got "
+            << first_in_shape->ToString() << " at first input and " << input->shape()->ToString()
+            << " which index is " << i;
+      }
+    }
+    int64_t max_dim_size = ninput;
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", stack_dim));
+    JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
+    TensorTuple outputs;
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      outputs.emplace_back(
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+    }
+    if (outputs.size() == 1) { return outputs.at(0); }
+    return Concat(outputs, stack_dim);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
+class StackGradFunctor {
+ public:
+  StackGradFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("stack_grad")
+                               .Input("in")
+                               .Input("like", n + 1)
+                               .Output("out", n + 1)
+                               .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
+                                const int64_t& axis) const {
+    CHECK_GE_OR_RETURN(like.size(), 2);
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    TensorTuple inputs(like.size() + 1);
+    inputs[0] = x;
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
 class ExpandFunctor {
@@ -911,7 +961,7 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     // if input tensor is eager local, than return tensor's view
-    if (x->is_eager() && x->is_local()) { return view::Reshape(x, shape); }
+    if (x->is_local() && !(LazyMode::is_enabled())) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -969,15 +1019,15 @@ class SliceGradBaseFunctor {
  public:
   SliceGradBaseFunctor() = default;
   virtual ~SliceGradBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& like,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const Shape& like,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("like_shape", like));
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  protected:
@@ -992,7 +1042,7 @@ class SliceFunctor : public SliceBaseFunctor {
 class SliceGradFunctor : public SliceGradBaseFunctor {
  public:
   SliceGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Input("like").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Output("dx").Build());
   }
 };
 
@@ -2493,6 +2543,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
+  m.add_functor<impl::StackGradFunctor>("StackGrad");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
