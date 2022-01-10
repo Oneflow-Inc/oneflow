@@ -63,7 +63,7 @@ struct DTRTensorPool {
   void update_after_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
 
-  std::set<vm::LocalCallOpKernelPhyInstrOperand*> operand_visited_;
+  std::set<vm::DTRInstrOperand*> operand_visited_;
   HashMap<vm::DTREagerBlobObject*, int> reference_nums_;
   std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;
 

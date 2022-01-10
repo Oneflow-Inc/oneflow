@@ -121,17 +121,22 @@ DTREagerBlobObject::~DTREagerBlobObject() {
 }
 
 void DTREagerBlobObject::pin() {
-    pinned_++;
-    if (oneflow::DTRDebugEnabled()) {std::cout << "pinned " << this << ", " << (pinned_ - 1) << " to " << pinned_ << std::endl;}
+  pinned_++;
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "pinned " << this << ", " << (pinned_ - 1) << " to " << pinned_ << std::endl;
+  }
 }
 
 void DTREagerBlobObject::unpin() {
-    CHECK_GT(pinned_, 0) << this;
-    pinned_--;
-    if (oneflow::DTRDebugEnabled()) {std::cout << "unpinned " << this << ", " << (pinned_ + 1) << " to " << pinned_ << std::endl;}
+  CHECK_GT(pinned_, 0) << this;
+  pinned_--;
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "unpinned " << this << ", " << (pinned_ + 1) << " to " << pinned_ << std::endl;
+  }
 }
 
 Maybe<void> DTREagerBlobObject::evict() {
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "evict " << this; }
   evict_flag_ = true;
   JUST(DeallocateBlobDataPtr());
   if (blob_) { blob_->reset_dptr(nullptr); }
@@ -392,7 +397,8 @@ void DTREagerBlobObject::set_compute_time(double val) {
   } else {
     compute_time_ = blob_body_bytes_;
   }
-  // if (compute_op_type_name() == "add_n") { compute_time_ *= (blob_body_bytes_ * blob_body_bytes_); }
+  // if (compute_op_type_name() == "add_n") { compute_time_ *= (blob_body_bytes_ *
+  // blob_body_bytes_); }
   if (compute_op_type_name() == "conv2d") { compute_time_ *= (blob_body_bytes_); }
   if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= (blob_body_bytes_); }
   if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= (blob_body_bytes_); }
