@@ -781,5 +781,27 @@ add_docstr(
                 [-0.8340, -0.0873]], dtype=oneflow.float32)
         >>> x.T().shape
         oneflow.Size([3, 2])
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp_,
+    """
+    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip,
+    """
+    Alias for :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip_,
+    """
+    Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )
