@@ -755,31 +755,10 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.T,
-    """Perform the transpose of the Tensor.
+    oneflow.Tensor.t,
+    """
+    Tensor.t() → Tensor
 
-    Args:
-        input (oneflow.Tensor): An input tensor.
-
-    Returns:
-        oneflow.Tensor: A Tensor.    
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> x
-        tensor([[-0.5295,  0.4981, -0.8340],
-                [-0.8147, -0.7652, -0.0873]], dtype=oneflow.float32)
-        >>> x.T()
-        tensor([[-0.5295, -0.8147],
-                [ 0.4981, -0.7652],
-                [-0.8340, -0.0873]], dtype=oneflow.float32)
-        >>> x.T().shape
-        oneflow.Size([3, 2])
+    See :func:`oneflow.t`
     """,
 )

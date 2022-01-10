@@ -44,3 +44,4 @@ from .arange import *
 from .split import *
 from .erfinv import *
 from .swapaxes import *
+from .tensor_t import *

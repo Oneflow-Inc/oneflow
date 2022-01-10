@@ -2523,20 +2523,17 @@ class GenTensorBufferFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class TensorTFunctor {
+class TransposeAllDimFunctor {
  public:
-  TensorTFunctor() {}
+  TransposeAllDimFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     const int64_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> permute;
-    permute.reserve(ndim);
-    for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
+    permute.resize(ndim);
+    std::iota(permute.begin(), permute.end(), 0);
     std::reverse(permute.begin(), permute.end());
     return Transpose(x, permute);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
@@ -2642,7 +2639,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
-  m.add_functor<impl::TensorTFunctor>("TensorT");
+  m.add_functor<impl::TransposeAllDimFunctor>("TransposeAllDimProperty");
+  m.add_functor<impl::TransposeAllDimFunctor>("TransposeAllDimFunction");
 };
 
 }  // namespace functional
