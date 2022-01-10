@@ -96,6 +96,7 @@ def compare_with_numpy_sgd(
     train_by_numpy()
     test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=1e-3, atol=1e-3))
 
+
 def compare_with_numpy_sgd_clip_grad(
     test_case,
     device,
