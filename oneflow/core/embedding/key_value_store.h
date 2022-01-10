@@ -34,6 +34,8 @@ class KeyValueStore {
                    uint64_t* context) = 0;
   virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
                    uint64_t* context) = 0;
+  virtual void LoadSnapshot(const std::string& name) = 0;
+  virtual void SaveSnapshot(const std::string& name) = 0;
 };
 
 }  // namespace embedding

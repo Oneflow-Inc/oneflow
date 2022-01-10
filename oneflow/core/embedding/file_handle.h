@@ -29,6 +29,8 @@ namespace oneflow {
 
 namespace embedding {
 
+inline bool FileExists(const char* name) { return access(name, F_OK) == 0; }
+
 class FileHandle final {
  public:
   OF_DISALLOW_COPY(FileHandle);
@@ -62,13 +64,6 @@ class FileHandle final {
 
   size_t Size() { return size_; }
 
-  size_t BlockSize() {
-    CHECK_NE(fd_, -1);
-    int block_size = 0;
-    PCHECK(ioctl(fd_, BLKSSZGET, &block_size) == 0);
-    return block_size;
-  }
-
   void Truncate(size_t new_size) {
     CHECK_NE(fd_, -1);
     if (new_size == size_) { return; }
@@ -77,8 +72,8 @@ class FileHandle final {
   }
 
  private:
-  size_t size_;
   int fd_;
+  size_t size_;
 };
 
 class MappedFileHandle final {
