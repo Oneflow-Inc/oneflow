@@ -35,7 +35,12 @@ class Embedding(Module):
                                     i.e. it remains as a fixed "pad". For a newly constructed Embedding,
                                     the embedding vector at :attr:`padding_idx` will default to all zeros,
                                     but can be updated to another value to be used as the padding vector.
-    
+        max_norm (float, optional): If given, each embedding vector with norm larger than max_norm is renormalized to have 
+                                    norm max_norm
+        norm_type (float, optional): The p of the p-norm to compute for the max_norm option. Default 2.
+        scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
+                                                frequency of the words in the mini-batch. Default False
+                                                
     For example:
 
     .. code-block:: python
@@ -97,7 +102,6 @@ class Embedding(Module):
         if self.padding_idx is not None:
             with flow.no_grad():
                 self.weight[self.padding_idx] = 0
-                #self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
         if self.max_norm is not None:
@@ -129,7 +133,11 @@ def embedding(
         padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
                                      therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
                                      i.e. it remains as a fixed "pad".
-
+        max_norm (float, optional): If given, each embedding vector with norm larger than max_norm is renormalized to have 
+                                    norm max_norm
+        norm_type (float, optional): The p of the p-norm to compute for the max_norm option. Default 2.
+        scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
+                                                frequency of the words in the mini-batch. Default False
     For example:
 
     .. code-block:: python
@@ -152,7 +160,6 @@ def embedding(
     """
     assert sparse is False, "Not support sparse=True yet!"
     if padding_idx is not None:
-        #weight[padding_idx].fill_(0)
         weight[padding_idx] = 0
 
     if max_norm is not None:
