@@ -38,10 +38,9 @@ def _test_flow_erfinv_with_nan_data(test_case, device):
     x = flow.tensor(
         np.arange(2, 22).reshape(4, 5), dtype=flow.float32, device=flow.device(device)
     )
+    of_out = flow.erfinv(x)
     np_out = np.full((4, 5), np.nan)
-    of_out = ",".join(str(i) for i in flow.erfinv(x).numpy())
-    np_out = ",".join(str(i) for i in np_out)
-    test_case.assertEqual(of_out, np_out)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out, equal_nan=True))
 
 
 @flow.unittest.skip_unless_1n1d()
