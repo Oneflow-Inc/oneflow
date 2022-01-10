@@ -101,8 +101,8 @@ class Embedding(Module):
 
     def forward(self, indices):
         if self.max_norm is not None:
-            flow._C.embedding_renorm_(self.weight, input, self.max_norm, self.norm_type)
-        return flow._C.embedding(self.weight, input, self.padding_idx, self.scale_grad_by_freq)
+            flow._C.embedding_renorm_(self.weight, indices, self.max_norm, self.norm_type)
+        return flow._C.embedding(self.weight, indices, self.padding_idx, self.scale_grad_by_freq)
 
 
 def embedding(
@@ -156,7 +156,7 @@ def embedding(
         weight[padding_idx] = 0
 
     if max_norm is not None:
-        weight = flow._C.embedding_renorm(weight, max_norm, norm_type)
+        weight = flow._C.embedding_renorm_(weight, input, max_norm, norm_type)
     
     return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
 
