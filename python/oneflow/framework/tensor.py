@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow._oneflow_internal.exception import IndexException
-import oneflow.framework.tensor_str as tensor_str_util
+import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
@@ -142,11 +142,11 @@ def _str(self):
 
 
 def _repr(self):
-    return tensor_str_util._gen_tensor_str(self)
+    return tensor_str._gen_tensor_str(self)
 
 
 def _meta_repr(self):
-    return tensor_str_util._gen_tensor_meta_str(self)
+    return tensor_str._gen_tensor_meta_str(self)
 
 
 def _eq(self, other):
@@ -293,6 +293,10 @@ def _floor(self):
     return flow._C.floor(self)
 
 
+def _floor_inplace_(self):
+    return flow._C.floor_(self)
+
+
 def _neg(self):
     return flow.neg(self)
 
@@ -381,6 +385,10 @@ def _softsign(self):
     return flow.softsign(self)
 
 
+def _swapaxes(self, dim0, dim1):
+    return flow._C.swapaxes(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -430,11 +438,19 @@ def _ceil(self):
 
 
 def _clamp(self, min=None, max=None):
-    return flow.clamp(self, min=min, max=max)
+    return flow._C.clamp(self, min=min, max=max)
+
+
+def _clamp_(self, min=None, max=None):
+    return flow._C.clamp_(self, min=min, max=max)
 
 
 def _clip(self, min=None, max=None):
-    return flow.clip(self, min=min, max=max)
+    return flow._C.clip(self, min=min, max=max)
+
+
+def _clip_(self, min=None, max=None):
+    return flow._C.clip_(self, min=min, max=max)
 
 
 def _cos(self):
@@ -451,6 +467,14 @@ def _erf(self):
 
 def _erfc(self):
     return flow.erfc(self)
+
+
+def _erfinv(self):
+    return flow._C.erfinv(self)
+
+
+def _erfinv_inplace(self):
+    return flow._C.erfinv_(self)
 
 
 def _expm1(self):
@@ -803,6 +827,7 @@ def RegisterMethods():
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
     Tensor.floor = _floor
+    Tensor.floor_ = _floor_inplace_
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
@@ -846,12 +871,16 @@ def RegisterMethods():
     Tensor.arctan = _arctan
     Tensor.ceil = _ceil
     Tensor.clamp = _clamp
+    Tensor.clamp_ = _clamp_
     Tensor.clip = _clip
+    Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
+    Tensor.erfinv = _erfinv
+    Tensor.erfinv_ = _erfinv_inplace
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
@@ -883,6 +912,7 @@ def RegisterMethods():
     Tensor.chunk = _chunk
     Tensor.split = _split
     Tensor.squeeze = _squeeze
+    Tensor.swapaxes = _swapaxes
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
