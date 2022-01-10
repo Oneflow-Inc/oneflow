@@ -133,6 +133,14 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
+    @autotest(auto_backward=False, check_graph=True)
+    def test_0dim_div(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
+        y = random_pytorch_tensor(ndim=0).to(device)
+        z = x / y
+        return z
+
 
 if __name__ == "__main__":
     unittest.main()

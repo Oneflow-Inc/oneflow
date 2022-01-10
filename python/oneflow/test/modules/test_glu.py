@@ -24,7 +24,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestGluModule(flow.unittest.TestCase):
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_glu_module_with_random_data(test_case):
         device = random_device()
         dim = random(-3, 3).to(int)

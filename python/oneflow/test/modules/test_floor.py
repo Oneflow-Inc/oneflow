@@ -68,6 +68,13 @@ class TestFloor(flow.unittest.TestCase):
         y.floor_()
         return y
 
+    @autotest(check_graph=True)
+    def test_flow_floor_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
+        y = torch.floor(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

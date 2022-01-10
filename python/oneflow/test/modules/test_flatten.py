@@ -90,6 +90,17 @@ class TestFlattenModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(check_graph=True)
+    def test_flatten_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
+        y = torch.flatten(
+            x,
+            start_dim=random(1, 6).to(int) | nothing(),
+            end_dim=random(1, 6).to(int) | nothing(),
+        )
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

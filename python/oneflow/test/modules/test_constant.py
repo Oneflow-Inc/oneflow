@@ -76,9 +76,23 @@ class TestConstantModule(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
+    def test_flow_zeros_like_list_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
+        y = torch.zeros_like(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_ones_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
+        y = torch.ones_like(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_ones_like_list_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
         y = torch.ones_like(x)
         return y
 
@@ -86,6 +100,17 @@ class TestConstantModule(flow.unittest.TestCase):
     def test_flow_new_ones_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
+        y = x.new_ones(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
+        return y
+
+    @autotest(auto_backward=True, check_graph=True)
+    def test_flow_new_ones_list_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
         y = x.new_ones(
             (random().to(int), random().to(int), random().to(int)),
             device=device.value(),
