@@ -122,8 +122,8 @@ from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
 from oneflow._C import ceil
-from oneflow._C import clamp
-from oneflow._C import clamp as clip
+from oneflow._C import clamp, clamp_
+from oneflow._C import clip, clip_
 from oneflow._C import cos
 from oneflow._C import cosh
 from oneflow._C import diagonal
@@ -174,6 +174,10 @@ from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
+<<<<<<< HEAD
+=======
+from oneflow._C import T
+>>>>>>> 91b306eab5e016783424b929dae9113d5f1b7990
 from oneflow._C import t
 
 
