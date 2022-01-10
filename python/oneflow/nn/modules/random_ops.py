@@ -351,7 +351,7 @@ def randint_op(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> _ = generator.manual_seed(0)
         >>> y = flow.randint(0, 5, (3,3), generator=generator) # construct local tensor
         >>> y
         tensor([[2, 2, 3],
@@ -473,7 +473,7 @@ def randperm_op(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> _ = generator.manual_seed(0)
         >>> y = flow.randperm(5, generator=generator) # construct local tensor
         >>> y
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
