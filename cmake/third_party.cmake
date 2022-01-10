@@ -45,7 +45,7 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
-set_mirror_url_with_hash(INJA_URL 
+set_mirror_url_with_hash(INJA_URL
   https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
   611e6b7206d0fb89728a3879f78b4775
 )
@@ -328,11 +328,11 @@ if (THIRD_PARTY)
   endif()
   get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
   foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR})
     if(of_include_src_dir MATCHES "/include$")
-      set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR_PARENT})
+      # it requires two slashes, but in CMake doc it states only one slash is needed
+      set(of_include_src_dir "${of_include_src_dir}//")
     endif()
-    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR_DST}
+    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
       COMPONENT oneflow_py_include
       EXCLUDE_FROM_ALL
     )
