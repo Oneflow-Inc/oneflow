@@ -81,9 +81,9 @@ void BoxingCollector::CollectUniverse(const auto_parallel::SbpNode<cfg::NdSbpSig
 }
 // Collect Sbp Parallel
 void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
-  if (SbpParallelUniverse.find(sbp) == SbpParallelUniverse.end()) {
-    int32_t curr_size = SbpParallelUniverse.size();
-    SbpParallelUniverse[sbp] = curr_size;
+  if (SbpParallelUniverse_.find(sbp) == SbpParallelUniverse_.end()) {
+    int32_t curr_size = SbpParallelUniverse_.size();
+    SbpParallelUniverse_[sbp] = curr_size;
     id2SbpParallel.push_back(sbp);
   }
 }

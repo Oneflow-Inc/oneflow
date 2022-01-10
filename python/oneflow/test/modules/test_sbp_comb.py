@@ -25,7 +25,14 @@ import oneflow.unittest
 
 class TestModule(nn.Module):
     def forward(self, x):
-        sbp_1ds = [flow.sbp.broadcast, flow.sbp.partial_sum, flow.sbp.split(0), flow.sbp.split(1), flow.sbp.split(2), flow.sbp.split(3)]
+        sbp_1ds = [
+            flow.sbp.broadcast,
+            flow.sbp.partial_sum,
+            flow.sbp.split(0),
+            flow.sbp.split(1),
+            flow.sbp.split(2),
+            flow.sbp.split(3),
+        ]
         failed_boxing_num = 0
 
         for sbp1 in sbp_1ds:
@@ -38,14 +45,16 @@ class TestModule(nn.Module):
 
         return x
 
+
 class TestGraph(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
-    
+
     def build(self, x):
         x = self.model(x)
         return x
+
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -54,11 +63,16 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         model = TestModule()
         graph = TestGraph(model)
 
-        x = flow.zeros(12, 12, 12, 12,  sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
-        placement=flow.placement("cuda", {0: range(4)}, (2, 2)))
+        x = flow.zeros(
+            12,
+            12,
+            12,
+            12,
+            sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
+            placement=flow.placement("cuda", {0: range(4)}, (2, 2)),
+        )
         y = graph(x)
+
 
 if __name__ == "__main__":
     unittest.main()
-
-
