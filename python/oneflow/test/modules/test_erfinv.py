@@ -27,8 +27,35 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
+def _test_flow_erfinv_with_1_data(test_case, device):
+    x = flow.tensor(np.ones((5, 5)), dtype=flow.float32, device=flow.device(device))
+    of_out = flow.erfinv(x)
+    np_out = np.full((5, 5), np.inf)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
+def _test_flow_erfinv_with_gt_1_data(test_case, device):
+    x = flow.tensor(
+        np.arange(2, 22).reshape(4, 5), dtype=flow.float32, device=flow.device(device)
+    )
+    np_out = np.full((4, 5), np.nan)
+    of_out = ",".join(str(i) for i in flow.erfinv(x).numpy())
+    np_out = ",".join(str(i) for i in np_out)
+    test_case.assertEqual(of_out, np_out)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestErfinvModule(flow.unittest.TestCase):
+    def test_flow_erfinv(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_flow_erfinv_with_1_data,
+            _test_flow_erfinv_with_gt_1_data,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
     @autotest(check_graph=True, auto_backward=False)
     def test_flow_erfinv_with_random_data(test_case):
         device = random_device()

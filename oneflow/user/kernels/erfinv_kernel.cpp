@@ -39,8 +39,14 @@ class CpuErfinvKernel final : public user_op::OpKernel {
       T z, num, dem;
       T x = x_ptr[i];  // Promise the correctness of inplace version.
       T x_abs = std::abs(x);
-      if (x_abs > 1.0) y_ptr[i] = std::numeric_limits<T>::quiet_NaN();
-      if (x_abs == 1.0) y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x);
+      if (x_abs > 1.0) {
+        y_ptr[i] = std::numeric_limits<T>::quiet_NaN();
+        continue;
+      }
+      if (x_abs == 1.0) {
+        y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x);
+        continue;
+      }
       if (x_abs <= static_cast<T>(central_range)) {
         z = x * x;
         num = (((a[3] * z + a[2]) * z + a[1]) * z + a[0]);
