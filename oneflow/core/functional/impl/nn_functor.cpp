@@ -1878,7 +1878,7 @@ class FusedBiasAddDropoutFunctor {
       axis_val += num_axes;
     }
     JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis_val));
-    if (p >= 0.0) {
+    if (p > 0.0) {
       return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
                return OpInterpUtil::Dispatch<Tensor>(
                    *random_mask_like_op_, {a},
