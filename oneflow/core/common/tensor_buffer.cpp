@@ -224,9 +224,7 @@ void TensorBufferPool::Deallocate(ItemT& item) {
     thread_local_cache.push_back(std::move(item));
   } else {
     std::unique_lock<std::mutex> lck(mtx_);
-    if (global_free_list_.size() < pool_size_) {
-      global_free_list_.push_back(std::move(item));
-    }
+    if (global_free_list_.size() < pool_size_) { global_free_list_.push_back(std::move(item)); }
   }
   if (item) { item.reset(); }
 }
