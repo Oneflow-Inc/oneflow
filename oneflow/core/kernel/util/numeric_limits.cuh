@@ -18,6 +18,8 @@ limitations under the License.
 #include <limits.h>
 #include <math.h>
 #include <float.h>
+#include <cuda_fp16.h>
+#include <half.hpp>
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
@@ -114,6 +116,14 @@ struct numeric_limits<float> {
   OF_NUMERICS_FUNC float max() { return FLT_MAX; }
   OF_NUMERICS_FUNC float lower_bound() { return -static_cast<float>(inf); }
   OF_NUMERICS_FUNC float upper_bound() { return static_cast<float>(inf); }
+};
+
+template<>
+struct numeric_limits<half> {
+  OF_NUMERICS_FUNC half lowest() { return __float2half(0xFBFF); }
+  OF_NUMERICS_FUNC half max() { return __float2half(0x7BFF); }
+  OF_NUMERICS_FUNC half lower_bound() { return __float2half(0xFC00); }
+  OF_NUMERICS_FUNC half upper_bound() { return __float2half(0x7C00); }
 };
 
 template<>
