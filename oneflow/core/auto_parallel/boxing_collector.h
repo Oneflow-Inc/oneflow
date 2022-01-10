@@ -17,12 +17,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
 #define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
 
-#include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/common/hash_container.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
-#include "sbp_graph.h"
 #include "sbp_util.h"
 
 namespace oneflow {
@@ -33,23 +30,13 @@ class BoxingCollector {
 
   ~BoxingCollector() = default;
 
-  // Collect all the possible Sbp Parallel from an OpGraph
-  void CollectUniverse(const OpGraph& op_graph);
-  // Collect all the possible Sbp Parallel from a cfg::NdSbpSignature
-  void CollectUniverse(const cfg::NdSbpSignature& nd_sbp_sig);
-  // Collect all the possible Sbp Parallel from a SbpNode
-  void CollectUniverse(const auto_parallel::SbpNode<cfg::NdSbpSignature>* sbp_node);
-  // Collect all the possible Sbp Parallel from a SbpGraph
-  void CollectUniverse(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
   // Collect Sbp Parallel
   void CollectUniverse(const cfg::SbpParallel& sbp);
 
-  // Construct a boxing collector with given sbp graph
-  void Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph);
-  // Construct a boxing collector with given operator graph
-  void Init(const OpGraph& op_graph);
+  // Construct a boxing collector with given maximum number of axis
+  void Init(int32_t max_axis);
 
   // Generate nd sbp list
   void GenerateNdSbpList();

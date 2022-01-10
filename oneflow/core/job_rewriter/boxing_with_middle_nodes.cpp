@@ -23,7 +23,7 @@ namespace oneflow {
 Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder) {
   // Initialize boxing collector
   BoxingCollector boxing_collector;
-  boxing_collector.Init(op_graph);
+  boxing_collector.Init(6);
   std::vector<cfg::NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations

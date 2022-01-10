@@ -40,45 +40,15 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 }
 }  // namespace
 
-// Construct a boxing collector with given operator graph
-void BoxingCollector::Init(const OpGraph& op_graph) {
+// Construct a boxing collector with given maximum number of axis
+void BoxingCollector::Init(int32_t max_axis) {
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
-  CollectUniverse(2);
-  CollectUniverse(op_graph);
+  CollectUniverse(max_axis);
   GenerateNdSbpList();
   GenerateCombination(2);
 }
 
-// Construct a boxing collector with given sbp graph
-void BoxingCollector::Init(const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
-  CollectUniverse(sbp_graph);
-  GenerateNdSbpList();
-  GenerateCombination(2);
-}
-
-// Collect all the possible Sbp Parallel from an OpGraph
-void BoxingCollector::CollectUniverse(const OpGraph& op_graph) {
-  op_graph.ForEachNode(
-      [&](const OpNode* node) -> void { CollectUniverse(node->nd_sbp_signature()); });
-}
-
-// Collect all the possible Sbp Parallel from an SbpGraph
-void BoxingCollector::CollectUniverse(
-    const auto_parallel::SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
-  for (const auto* sbp_node : sbp_graph.NodeList) { CollectUniverse(sbp_node); }
-}
-
-// Collect all the possible Sbp Parallel from a cfg::NdSbpSignature
-void BoxingCollector::CollectUniverse(const cfg::NdSbpSignature& nd_sbp_sig) {
-  for (const auto& pair : nd_sbp_sig.bn_in_op2nd_sbp()) {
-    for (const auto& sbp : pair.second.sbp_parallel()) { CollectUniverse(sbp); }
-  }
-}
-// Collect all the possible Sbp Parallel from a SbpNode
-void BoxingCollector::CollectUniverse(const auto_parallel::SbpNode<cfg::NdSbpSignature>* sbp_node) {
-  for (const auto& nd_sbp_sig : sbp_node->SbpSignatureObjList) { CollectUniverse(nd_sbp_sig); }
-}
 // Collect Sbp Parallel
 void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
   if (SbpParallelUniverse_.find(sbp) == SbpParallelUniverse_.end()) {
