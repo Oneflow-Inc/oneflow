@@ -457,12 +457,11 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
-set(LIBONEFLOW_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp")
+set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/liboneflow_cpp)
 
 install(DIRECTORY oneflow/api/cpp/ 
   COMPONENT oneflow_cpp_all
-  DESTINATION ${LIBONEFLOW_DIR}/include/oneflow
-  EXCLUDE_FROM_ALL
+  DESTINATION include/oneflow
   FILES_MATCHING
   PATTERN "*.h"
   PATTERN "tests" EXCLUDE
@@ -470,15 +469,15 @@ install(DIRECTORY oneflow/api/cpp/
 
 install(FILES ${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake
   COMPONENT oneflow_cpp_all
-  DESTINATION ${LIBONEFLOW_DIR}/share
+  DESTINATION share
 )
 
 get_property(MLIR_RELATED_TARGETS GLOBAL PROPERTY MLIR_EXPORTS)
 install(TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj oneflow_cpp_api_testexe ${MLIR_RELATED_TARGETS}
   COMPONENT oneflow_cpp_all
-  LIBRARY DESTINATION ${LIBONEFLOW_DIR}/lib
-  ARCHIVE DESTINATION ${LIBONEFLOW_DIR}/lib
-  RUNTIME DESTINATION ${LIBONEFLOW_DIR}/bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 if(BUILD_SHARED_LIBS)
@@ -491,9 +490,9 @@ if(BUILD_SHARED_LIBS)
     get_filename_component(resolved_file_name ${resolved_file_path} NAME)
     install(FILES ${resolved_file_path}
       COMPONENT oneflow_cpp_all
-      DESTINATION ${LIBONEFLOW_DIR}/lib
+      DESTINATION lib
     )
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${resolved_file_name} ${LIBONEFLOW_DIR}/lib/${file_name})"
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${resolved_file_name} ${CMAKE_INSTALL_PREFIX}/lib/${file_name})"
       COMPONENT oneflow_cpp_all
     )
   endforeach()
@@ -508,4 +507,11 @@ add_custom_target(install_oneflow_cpp
 
 if (BUILD_CPP_API)
   add_dependencies(of_include_copy install_oneflow_cpp)
+
+  string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
+  set(CPACK_GENERATOR ZIP)
+  set(CPACK_PACKAGE_NAME liboneflow)
+  set(CPACK_PACKAGE_VERSION 0.7.0) 
+  set(CPACK_INSTALL_CMAKE_PROJECTS ${PROJECT_BINARY_DIR};oneflow;oneflow_cpp_all;/)
+  include(CPack)
 endif(BUILD_CPP_API)
