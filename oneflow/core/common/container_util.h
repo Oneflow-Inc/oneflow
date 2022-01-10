@@ -76,7 +76,7 @@ template<typename T>
 using SmallSet = std::vector<T>;
 
 template<typename T>
-std::pair<SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
+std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
   for (auto iter = vec->begin(); iter != vec->end(); ++iter) {
     if (*iter == elem) { return std::make_pair(iter, false); }
   }

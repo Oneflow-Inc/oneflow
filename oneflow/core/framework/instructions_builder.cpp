@@ -1086,10 +1086,11 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
     const auto& opt_last_used_device = eager_blob_object->last_used_device();
     if (unlikely(!opt_last_used_device.has_value())) { continue; }
     const auto& last_used_device = JUST(opt_last_used_device);
-    if (last_used_device != op_device) { SmallSetInsert(last_used_devices, last_used_device); }
+    if (last_used_device != op_device) { SmallSetInsert(&last_used_devices, last_used_device); }
   }
   for (const auto& last_used_device : last_used_devices) {
     std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
+    dep_objects.reserve(last_used_devices.size());
     for (const auto& eager_blob_object : *eager_blob_objects) {
       const auto& opt_last_used_device = eager_blob_object->last_used_device();
       if (unlikely(!opt_last_used_device.has_value())) { continue; }

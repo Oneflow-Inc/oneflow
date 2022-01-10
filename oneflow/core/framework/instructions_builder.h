@@ -410,8 +410,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
                              Symbol<Device> op_device);
-  Maybe<void> SoftSyncStream(std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_object,
-                             const std::string& modifier, Symbol<Device> op_device);
+  Maybe<void> SoftSyncStream(
+      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_object,
+      const std::string& modifier, Symbol<Device> op_device);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,

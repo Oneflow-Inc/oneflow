@@ -89,8 +89,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclTouchOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
+/* static */ Maybe<Symbol<Device>> EagerNcclTouchOp::InferDevice(user_op::DeviceInferContext* ctx) {
   return DeviceInferFn<&IsAsyncLaunched>(ctx);
 }
 
