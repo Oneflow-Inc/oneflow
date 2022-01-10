@@ -26,9 +26,12 @@ set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 FetchContent_MakeAvailable(tbb)
 set_property(GLOBAL PROPERTY TBB_SRC_DIR "${tbb_SOURCE_DIR}/cpp/src;${tbb_BINARY_DIR}/src")
 
+install(TARGETS tbb tbbmalloc tbbmalloc_proxy COMPONENT OneFlowTBB)
+
 add_custom_target(install-tbb
   DEPENDS tbb tbbmalloc tbbmalloc_proxy
   COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_PREFIX=${ONETBB_INSTALL_DIR}
+      -DCMAKE_INSTALL_COMPONENT=OneFlowTBB
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
 )
