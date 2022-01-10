@@ -74,9 +74,9 @@ class Embedding(Module):
                 ), "Padding_idx must be within num_embeddings"
                 padding_idx = self.num_embeddings + padding_idx
         self.padding_idx = padding_idx
-        assert max_norm is None, "Not support max_norm yet!"
-        assert norm_type is None, "Not support norm_type yet!"
-        assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.scale_grad_by_freq = scale_grad_by_freq
         assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
@@ -96,11 +96,13 @@ class Embedding(Module):
     def _fill_padding_idx_with_zero(self) -> None:
         if self.padding_idx is not None:
             with flow.no_grad():
-                self.weight[self.padding_idx].fill_(0)
+                self.weight[self.padding_idx] = 0
+                #self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
-        res = flow._C.gather(self.weight, indices, axis=0)
-        return res
+        if self.max_norm is not None:
+            flow._C.embedding_renorm_(self.weight, input, self.max_norm, self.norm_type)
+        return flow._C.embedding(self.weight, input, self.padding_idx, self.scale_grad_by_freq)
 
 
 def embedding(
@@ -148,14 +150,15 @@ def embedding(
         >>> output.shape
         oneflow.Size([1, 4, 3])
     """
-    assert max_norm is None, "Not support max_norm yet!"
-    assert norm_type is None, "Not support norm_type yet!"
-    assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
     assert sparse is False, "Not support sparse=True yet!"
     if padding_idx is not None:
-        weight[padding_idx].fill_(0)
-    res = flow._C.gather(weight, input, axis=0)
-    return res
+        #weight[padding_idx].fill_(0)
+        weight[padding_idx] = 0
+
+    if max_norm is not None:
+        weight = flow._C.embedding_renorm(weight, max_norm, norm_type)
+    
+    return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
 
 
 if __name__ == "__main__":
