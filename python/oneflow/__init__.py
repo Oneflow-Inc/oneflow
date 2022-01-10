@@ -175,6 +175,7 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
 from oneflow._C import T
+from oneflow._C import t
 
 
 from . import sbp
