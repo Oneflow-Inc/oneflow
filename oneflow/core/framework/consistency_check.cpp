@@ -149,6 +149,10 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
+  if (!placement->containing_current_rank()) {
+    return Maybe<void>::Ok();
+  }
+  
   const auto& rank_group = JUST(RankGroup::New(placement));
 
   std::vector<char> recv_buffer(buffer_size);
