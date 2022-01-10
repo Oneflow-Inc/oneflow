@@ -149,5 +149,6 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -70,5 +70,6 @@ class TestSign(flow.unittest.TestCase):
         y = torch.sign(x)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -114,5 +114,6 @@ class TestLogicalXorModule(flow.unittest.TestCase):
         y = torch.logical_xor(x1, x2)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()

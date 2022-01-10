@@ -121,5 +121,6 @@ class TestNe(flow.unittest.TestCase):
         y3 = torch.ne(x1, 2.0)
         return (y1, y2, y3)
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -93,5 +93,6 @@ class TestLogicalOrModule(flow.unittest.TestCase):
         y = torch.logical_or(x1, x2)
         return y
 
+
 if __name__ == "__main__":
     unittest.main()
