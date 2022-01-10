@@ -303,6 +303,10 @@
   signature: "Tensor (Tensor input) => TensorT"
   bind_python: True 
 
+- name: "t"
+  signature: "Tensor (Tensor input) => Tensort"
+  bind_python: True
+
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
   bind_python: True
