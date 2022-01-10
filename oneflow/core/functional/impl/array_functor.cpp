@@ -2523,6 +2523,19 @@ class GenTensorBufferFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TileFunctor {
+ public:
+  TileFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& reps) const {
+    dim = reps.ndim
+    JUST(attrs.SetAttr<int32_t>("instance_dims", instance_dims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
