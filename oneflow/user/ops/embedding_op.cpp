@@ -19,65 +19,19 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ auto EmbeddingRenormOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
-  const int64_t axis = ctx->Attr<int64_t>("axis");
-  const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
-  CHECK_GT_OR_RETURN(indices.shape().NumAxes(), 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-
-  DimVector dim_vec;
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin(),
-                in.shape().dim_vec().cbegin() + axis);
-  dim_vec.insert(dim_vec.end(), indices.shape().dim_vec().cbegin(),
-                indices.shape().dim_vec().cend());
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + axis + 1,
-                in.shape().dim_vec().end());
-  *out->mut_shape() = Shape(dim_vec);
-  out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  CHECK_EQ_OR_RETURN(in_shape.NumAxes(), 2);
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ auto EmbeddingRenormOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return EmbeddingRenormOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto EmbeddingRenormOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
-  const int64_t in_num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
-  const int64_t indices_num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
-  const int64_t gather_axis = ctx->Attr<int64_t>("axis");
-  CHECK_GE_OR_RETURN(gather_axis, 0);
-  CHECK_LT_OR_RETURN(gather_axis, in_num_axes);
-  FOR_RANGE(int64_t, i, 0, indices_num_axes) {
-    ctx->NewBuilder()
-    .Split(user_op::OpArg("indices", 0), i)
-    .Broadcast(user_op::OpArg("in", 0))
-    .Split(user_op::OpArg("out", 0), gather_axis + i)
-    .Build();
-  }
-  FOR_RANGE(int64_t, i, 0, in_num_axes) {
-    if (i == gather_axis) {
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("indices", 0))
-          .Split(user_op::OpArg("in", 0), i)
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-    } else {
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("indices", 0))
-          .Split(user_op::OpArg("in", 0), i)
-          .Split(user_op::OpArg("out", 0), i < gather_axis ? i : i + indices_num_axes - 1)
-          .Build();
-    }
-  }
   return Maybe<void>::Ok();
 }
 /*static*/ auto EmbeddingRenormOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
-  *out->mut_data_type() = in.data_type();
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
