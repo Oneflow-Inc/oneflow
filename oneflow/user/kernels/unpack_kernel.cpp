@@ -22,7 +22,7 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type>
-class UnpackKernel final : public user_op::OpKernel {
+class UnpackKernel final : public user_op::OpKernel, public user_op::OpKernelStateAndCacheProvider {
  public:
   UnpackKernel() = default;
   ~UnpackKernel() override = default;

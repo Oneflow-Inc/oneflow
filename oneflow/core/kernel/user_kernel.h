@@ -63,6 +63,7 @@ class UserKernel final : public Kernel {
   mutable std::shared_ptr<user_op::OpKernelCache> opkernel_cache_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
+  const user_op::OpKernelStateAndCacheProvider* state_and_cache_provider_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
   std::unique_ptr<UserKernelInitAndCacheContext> cache_ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;

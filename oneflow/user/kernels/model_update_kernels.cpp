@@ -179,7 +179,8 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
 }
 
 template<DeviceType device_type, typename T, typename K>
-class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
+class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel,
+                                           public user_op::OpKernelStateAndCacheProvider {
  public:
   IndexedSlicesSGDUpdateKernel() = default;
   ~IndexedSlicesSGDUpdateKernel() override = default;
@@ -307,7 +308,8 @@ REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
-class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
+class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel,
+                                                public user_op::OpKernelStateAndCacheProvider {
  public:
   IndexedSlicesMomentumUpdateKernel() = default;
   ~IndexedSlicesMomentumUpdateKernel() override = default;
@@ -532,7 +534,8 @@ REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
-class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
+class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel,
+                                            public user_op::OpKernelStateAndCacheProvider {
  public:
   IndexedSlicesAdamUpdateKernel() = default;
   ~IndexedSlicesAdamUpdateKernel() override = default;

@@ -88,7 +88,8 @@ class EagerSymmetricSToPOpKernelCache final : public user_op::OpKernelCache {
 }  // namespace
 
 template<DeviceType device_type>
-class EagerSymmetricSToPKernel final : public user_op::OpKernel {
+class EagerSymmetricSToPKernel final : public user_op::OpKernel,
+                                       public user_op::OpKernelStateAndCacheProvider {
  public:
   EagerSymmetricSToPKernel() = default;
   ~EagerSymmetricSToPKernel() override = default;

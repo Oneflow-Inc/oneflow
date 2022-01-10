@@ -34,7 +34,9 @@ class OFRecordImageClassificationReaderKernelState final : public user_op::OpKer
 
 }  // namespace
 
-class OFRecordImageClassificationReaderKernel final : public user_op::OpKernel {
+class OFRecordImageClassificationReaderKernel final
+    : public user_op::OpKernel,
+      public user_op::OpKernelStateAndCacheProvider {
  public:
   OFRecordImageClassificationReaderKernel() = default;
   ~OFRecordImageClassificationReaderKernel() override = default;

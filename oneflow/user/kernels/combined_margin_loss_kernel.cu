@@ -104,12 +104,13 @@ std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelCache(
 }  // namespace
 
 template<typename T, typename K>
-class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
+class CombinedMarginLossGpuKernel final : public user_op::OpKernel,
+                                          public user_op::OpKernelStateAndCacheProvider {
  public:
   CombinedMarginLossGpuKernel() = default;
   ~CombinedMarginLossGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
+  using user_op::OpKernelStateAndCacheProvider::InitOpKernelCache;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "x");
@@ -163,12 +164,13 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_CUDA_KERNEL, FLOA
                                  INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
-class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
+class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel,
+                                              public user_op::OpKernelStateAndCacheProvider {
  public:
   CombinedMarginLossGradGpuKernel() = default;
   ~CombinedMarginLossGradGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
+  using user_op::OpKernelStateAndCacheProvider::InitOpKernelCache;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "dy");

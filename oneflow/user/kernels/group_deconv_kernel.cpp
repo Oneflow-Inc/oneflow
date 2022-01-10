@@ -330,7 +330,8 @@ std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(user_op::Kerne
 }
 
 template<typename T>
-class DeconvCpuKernel final : public user_op::OpKernel {
+class DeconvCpuKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeconvCpuKernel);
   DeconvCpuKernel() = default;
@@ -338,7 +339,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  using user_op::OpKernel::InitOpKernelCache;
+  using user_op::OpKernelStateAndCacheProvider::InitOpKernelCache;
   void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
                          std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     if (*cache_ptr != nullptr && (flag & user_op::OpKernelCache::kAttrNotChanged)) {

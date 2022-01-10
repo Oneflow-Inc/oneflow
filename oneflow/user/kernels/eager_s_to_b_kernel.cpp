@@ -136,7 +136,8 @@ size_t InferEagerSToBKernelTmpBufferSize(user_op::InferContext* ctx) {
 }  // namespace
 
 template<DeviceType device_type>
-class EagerSToBKernel final : public user_op::OpKernel {
+class EagerSToBKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   EagerSToBKernel() = default;
   ~EagerSToBKernel() override = default;

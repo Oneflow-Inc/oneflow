@@ -77,7 +77,9 @@ __global__ void InitializeIndices(int32_t elem_cnt, int32_t* indices_ptr) {
 
 }  // namespace
 
-class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpKernel {
+class GenerateRandomBatchPermutationIndicesGPUKernel final
+    : public user_op::OpKernel,
+      public user_op::OpKernelStateAndCacheProvider {
  public:
   GenerateRandomBatchPermutationIndicesGPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesGPUKernel() = default;

@@ -428,15 +428,16 @@ class StatefulLocalOpKernel final {
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
   void TryInitOpKernelStateAndCache(
-      const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
-      EagerBlobObjectListRawPtr outputs,
+      const user_op::OpKernelStateAndCacheProvider* provider, DeviceCtx* device_ctx,
+      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
       ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
       user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
-  user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
-    return op_kernel_state_map_.at(opkernel).get();
+  user_op::OpKernelState* mut_opkernel_state(
+      const user_op::OpKernelStateAndCacheProvider* provider) {
+    return op_kernel_state_map_.at(provider).get();
   }
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
@@ -462,8 +463,10 @@ class StatefulLocalOpKernel final {
                                    std::shared_ptr<const user_op::OpKernel>>>,
              DataType_MAX>
       dtype2cached_kernels_;
-  HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
-  HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
+  HashMap<const user_op::OpKernelStateAndCacheProvider*, std::shared_ptr<user_op::OpKernelState>>
+      op_kernel_state_map_;
+  HashMap<const user_op::OpKernelStateAndCacheProvider*, std::shared_ptr<user_op::OpKernelCache>>
+      op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;

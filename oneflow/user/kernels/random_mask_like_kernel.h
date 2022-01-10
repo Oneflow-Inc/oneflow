@@ -36,7 +36,9 @@ class RandomMaskLikeKernelState : public user_op::OpKernelState {
 namespace {
 
 template<DeviceType device_type>
-class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class RandomMaskLikeKernel final : public user_op::OpKernel,
+                                   public user_op::CudaGraphSupport,
+                                   public user_op::OpKernelStateAndCacheProvider {
  public:
   RandomMaskLikeKernel() = default;
   ~RandomMaskLikeKernel() = default;

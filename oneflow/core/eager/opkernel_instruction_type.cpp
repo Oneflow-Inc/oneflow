@@ -499,9 +499,16 @@ struct LocalCallOpKernelUtil final {
       // skipped.
       state = nullptr;
     }
-    operand->mut_opkernel()->TryInitOpKernelStateAndCache(
-        operand->user_opkernel(), device_ctx, operand->inputs().get(), operand->outputs().get(),
-        operand->consistent_tensor_infer_result().get(), state, cache);
+    auto* provider =
+        dynamic_cast<const user_op::OpKernelStateAndCacheProvider*>(operand->user_opkernel());
+    if (provider != nullptr) {
+      operand->mut_opkernel()->TryInitOpKernelStateAndCache(
+          provider, device_ctx, operand->inputs().get(), operand->outputs().get(),
+          operand->consistent_tensor_infer_result().get(), state, cache);
+    } else {
+      state = nullptr;
+      cache = nullptr;
+    }
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,

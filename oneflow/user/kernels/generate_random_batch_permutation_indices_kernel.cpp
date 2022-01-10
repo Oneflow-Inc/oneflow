@@ -20,7 +20,9 @@ limitations under the License.
 
 namespace oneflow {
 
-class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpKernel {
+class GenerateRandomBatchPermutationIndicesCPUKernel final
+    : public user_op::OpKernel,
+      public user_op::OpKernelStateAndCacheProvider {
  public:
   GenerateRandomBatchPermutationIndicesCPUKernel() = default;
   ~GenerateRandomBatchPermutationIndicesCPUKernel() = default;

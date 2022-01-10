@@ -292,10 +292,11 @@ class OpKernel;
 template<typename T>
 OpKernel* NewOpKernel();
 
-class OpKernel {
+class OpKernelStateAndCacheProvider {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OpKernel);
-  virtual ~OpKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(OpKernelStateAndCacheProvider);
+  OpKernelStateAndCacheProvider() = default;
+  virtual ~OpKernelStateAndCacheProvider() = default;
 
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
@@ -309,6 +310,12 @@ class OpKernel {
                                  std::shared_ptr<OpKernelCache>* cache_ptr) const {
     *cache_ptr = InitOpKernelCache(ctx);
   }
+};
+
+class OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpKernel);
+  virtual ~OpKernel() = default;
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
     Compute(ctx);

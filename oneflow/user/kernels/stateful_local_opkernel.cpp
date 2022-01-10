@@ -465,28 +465,28 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
 }
 
 void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
-    const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
-    EagerBlobObjectListRawPtr outputs,
+    const user_op::OpKernelStateAndCacheProvider* provider, DeviceCtx* device_ctx,
+    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
     user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
   LocalUserKernelInitAndCacheContext init_and_cache_ctx(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
       inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
   if (state != nullptr) {
-    auto it = op_kernel_state_map_.find(op_kernel);
+    auto it = op_kernel_state_map_.find(provider);
     if (it != op_kernel_state_map_.end()) {
       *state = it->second.get();
     } else {
-      auto created_state = op_kernel->CreateOpKernelState(&init_and_cache_ctx);
-      op_kernel_state_map_.emplace(op_kernel, created_state);
+      auto created_state = provider->CreateOpKernelState(&init_and_cache_ctx);
+      op_kernel_state_map_.emplace(provider, created_state);
       *state = created_state.get();
     }
   }
 
   {
-    auto& cache_in_map = op_kernel_cache_map_[op_kernel];
-    op_kernel->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
-                                 &cache_in_map);
+    auto& cache_in_map = op_kernel_cache_map_[provider];
+    provider->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
+                                &cache_in_map);
     *cache = cache_in_map.get();
   }
 }

@@ -65,7 +65,8 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
   ncclComm_t comm_{};
 };
 
-class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
+class NcclLogicalAllReduceKernel final : public user_op::OpKernel,
+                                         public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogicalAllReduceKernel() = default;
   ~NcclLogicalAllReduceKernel() override = default;
@@ -92,7 +93,8 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
+class NcclLogicalReduceScatterKernel final : public user_op::OpKernel,
+                                             public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogicalReduceScatterKernel() = default;
   ~NcclLogicalReduceScatterKernel() override = default;
@@ -120,7 +122,8 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
+class NcclLogicalAllGatherKernel final : public user_op::OpKernel,
+                                         public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogicalAllGatherKernel() = default;
   ~NcclLogicalAllGatherKernel() override = default;
@@ -148,7 +151,8 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
+class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel,
+                                                public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogicalAllGatherNoncontinuous() = default;
   ~NcclLogicalAllGatherNoncontinuous() override = default;
@@ -210,7 +214,8 @@ size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx
 }
 
 template<typename T>
-class NcclLogicalS2SKernel final : public user_op::OpKernel {
+class NcclLogicalS2SKernel final : public user_op::OpKernel,
+                                   public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogicalS2SKernel() = default;
   ~NcclLogicalS2SKernel() override = default;

@@ -35,7 +35,8 @@ __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* key
   }
 }
 
-class GpuRandPermKernel final : public user_op::OpKernel {
+class GpuRandPermKernel final : public user_op::OpKernel,
+                                public user_op::OpKernelStateAndCacheProvider {
  public:
   GpuRandPermKernel() = default;
   ~GpuRandPermKernel() = default;

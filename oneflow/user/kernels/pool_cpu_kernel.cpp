@@ -355,7 +355,8 @@ struct PoolCpuKernelUtil {
 }  // namespace
 
 template<typename T>
-class AvgPool1DCpuKernel final : public user_op::OpKernel {
+class AvgPool1DCpuKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool1DCpuKernel() = default;
   ~AvgPool1DCpuKernel() = default;
@@ -374,7 +375,8 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
+class AvgPool1DGradCpuKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool1DGradCpuKernel() = default;
   ~AvgPool1DGradCpuKernel() = default;
@@ -393,7 +395,8 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool2DCpuKernel final : public user_op::OpKernel {
+class AvgPool2DCpuKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool2DCpuKernel() = default;
   ~AvgPool2DCpuKernel() = default;
@@ -412,7 +415,8 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
+class AvgPool2DGradCpuKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool2DGradCpuKernel() = default;
   ~AvgPool2DGradCpuKernel() = default;
@@ -431,7 +435,8 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool3DCpuKernel final : public user_op::OpKernel {
+class AvgPool3DCpuKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool3DCpuKernel() = default;
   ~AvgPool3DCpuKernel() = default;
@@ -450,7 +455,8 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
+class AvgPool3DGradCpuKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool3DGradCpuKernel() = default;
   ~AvgPool3DGradCpuKernel() = default;
@@ -469,7 +475,8 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool1DCpuKernel final : public user_op::OpKernel {
+class MaxPool1DCpuKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool1DCpuKernel() = default;
   ~MaxPool1DCpuKernel() = default;
@@ -488,7 +495,8 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
+class MaxPool1DGradCpuKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool1DGradCpuKernel() = default;
   ~MaxPool1DGradCpuKernel() = default;
@@ -507,7 +515,8 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool2DCpuKernel final : public user_op::OpKernel {
+class MaxPool2DCpuKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool2DCpuKernel() = default;
   ~MaxPool2DCpuKernel() = default;
@@ -526,7 +535,8 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
+class MaxPool2DGradCpuKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool2DGradCpuKernel() = default;
   ~MaxPool2DGradCpuKernel() = default;
@@ -545,7 +555,8 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool3DCpuKernel final : public user_op::OpKernel {
+class MaxPool3DCpuKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool3DCpuKernel() = default;
   ~MaxPool3DCpuKernel() = default;
@@ -564,7 +575,8 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
+class MaxPool3DGradCpuKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool3DGradCpuKernel() = default;
   ~MaxPool3DGradCpuKernel() = default;

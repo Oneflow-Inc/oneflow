@@ -74,7 +74,9 @@ std::shared_ptr<user_op::OpKernelCache> CreateUnsortedSegmentSumOpKernelCache(
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class UnsortedSegmentSumKernel final : public user_op::OpKernel,
+                                       public user_op::CudaGraphSupport,
+                                       public user_op::OpKernelStateAndCacheProvider {
  public:
   UnsortedSegmentSumKernel() = default;
   ~UnsortedSegmentSumKernel() override = default;
@@ -139,7 +141,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE,
 
 #ifdef WITH_CUDA
 template<typename K>
-class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
+class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel,
+                                           public user_op::OpKernelStateAndCacheProvider {
  public:
   UnsortedSegmentSumHalfKernel() = default;
   ~UnsortedSegmentSumHalfKernel() override = default;

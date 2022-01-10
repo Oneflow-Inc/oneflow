@@ -143,7 +143,9 @@ struct ConvCudnnOpKernelCache final : public user_op::OpKernelCache {
 };
 
 template<typename T, size_t NDims>
-class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class ConvGpuKernel final : public user_op::OpKernel,
+                            public user_op::CudaGraphSupport,
+                            public user_op::OpKernelStateAndCacheProvider {
  public:
   ConvGpuKernel() = default;
   ~ConvGpuKernel() = default;

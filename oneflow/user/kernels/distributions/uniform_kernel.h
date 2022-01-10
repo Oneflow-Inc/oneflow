@@ -25,7 +25,8 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-class UniformKernel final : public user_op::OpKernel {
+class UniformKernel final : public user_op::OpKernel,
+                            public user_op::OpKernelStateAndCacheProvider {
  public:
   UniformKernel() = default;
   ~UniformKernel() = default;

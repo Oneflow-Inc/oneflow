@@ -607,12 +607,15 @@ void UserKernel::InitUserKernel(ep::Stream* stream) {
             op_type_name, UserKernelRegContext(kernel_conf())));
     CHECK_NOTNULL(kernel_reg_val);
     kernel_.reset(kernel_reg_val->create_fn());
+    state_and_cache_provider_ =
+        dynamic_cast<const user_op::OpKernelStateAndCacheProvider*>(kernel_.get());
   }
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(KernelContext* ctx) {
   UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
-  return kernel_->CreateOpKernelState(&init_ctx);
+  if (state_and_cache_provider_ == nullptr) { return std::shared_ptr<user_op::OpKernelState>(); }
+  return state_and_cache_provider_->CreateOpKernelState(&init_ctx);
 }
 
 const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() const {
@@ -625,8 +628,12 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 
   if (updated) {
     cache_ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
-                               &opkernel_cache_);
+    if (state_and_cache_provider_ == nullptr) {
+      opkernel_cache_.reset();
+    } else {
+      state_and_cache_provider_->InitOpKernelCache(
+          cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged, &opkernel_cache_);
+    }
   } else {
     // do nothing
   }
@@ -668,8 +675,12 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   InitUserKernel(ctx->stream());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx);
-  kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
-                             &opkernel_cache_);
+  if (state_and_cache_provider_ == nullptr) {
+    opkernel_cache_.reset();
+  } else {
+    state_and_cache_provider_->InitOpKernelCache(
+        cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged, &opkernel_cache_);
+  }
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
@@ -744,6 +755,8 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
       op_type_name, UserKernelRegContext(kernel_conf)));
   CHECK_NOTNULL(kernel_reg_val);
   kernel_.reset(kernel_reg_val->create_fn());
+  state_and_cache_provider_ =
+      dynamic_cast<const user_op::OpKernelStateAndCacheProvider*>(kernel_.get());
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -764,9 +777,18 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
+    if (state_and_cache_provider_ == nullptr) {
+      new_opkernel_state.reset();
+    } else {
+      new_opkernel_state = state_and_cache_provider_->CreateOpKernelState(&init_and_cache_ctx);
+    }
   }
-  kernel_->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged, &cache_);
+  if (state_and_cache_provider_ == nullptr) {
+    cache_.reset();
+  } else {
+    state_and_cache_provider_->InitOpKernelCache(&init_and_cache_ctx,
+                                                 user_op::OpKernelCache::kAllMayChanged, &cache_);
+  }
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {

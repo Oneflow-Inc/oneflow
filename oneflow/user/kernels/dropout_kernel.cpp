@@ -46,7 +46,8 @@ void FusedDropoutKernel(ep::Stream* stream, const int64_t elem_cnt,
 }
 
 template<typename T>
-class DropoutKernelCPU final : public user_op::OpKernel {
+class DropoutKernelCPU final : public user_op::OpKernel,
+                               public user_op::OpKernelStateAndCacheProvider {
  public:
   DropoutKernelCPU() = default;
   ~DropoutKernelCPU() = default;

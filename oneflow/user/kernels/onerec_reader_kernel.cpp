@@ -33,7 +33,8 @@ class OneRecReaderWrapper final : public user_op::OpKernelState {
 
 }  // namespace
 
-class OneRecReaderKernel final : public user_op::OpKernel {
+class OneRecReaderKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   OneRecReaderKernel() = default;
   ~OneRecReaderKernel() override = default;

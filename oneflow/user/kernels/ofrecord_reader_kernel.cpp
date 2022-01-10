@@ -33,7 +33,8 @@ class OFRecordReaderWrapper final : public user_op::OpKernelState {
 
 }  // namespace
 
-class OFRecordReaderKernel final : public user_op::OpKernel {
+class OFRecordReaderKernel final : public user_op::OpKernel,
+                                   public user_op::OpKernelStateAndCacheProvider {
  public:
   OFRecordReaderKernel() = default;
   ~OFRecordReaderKernel() override = default;

@@ -22,7 +22,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename K>
-class BernoulliKerenl final : public user_op::OpKernel {
+class BernoulliKerenl final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   BernoulliKerenl() = default;
   ~BernoulliKerenl() override = default;

@@ -375,7 +375,8 @@ void InitBiasMulBuf(T* dptr, int64_t num) {
 }
 
 template<typename T, size_t NDims>
-class ConvCpuKernel final : public user_op::OpKernel {
+class ConvCpuKernel final : public user_op::OpKernel,
+                            public user_op::OpKernelStateAndCacheProvider {
  public:
   ConvCpuKernel() = default;
   ~ConvCpuKernel() = default;
@@ -476,7 +477,8 @@ REGISTER_CONV_KERNEL(conv2d, double, 2);
 REGISTER_CONV_KERNEL(conv3d, double, 3);
 
 template<typename T>
-class ConvDataGradCpuKernel final : public user_op::OpKernel {
+class ConvDataGradCpuKernel final : public user_op::OpKernel,
+                                    public user_op::OpKernelStateAndCacheProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvDataGradCpuKernel);
   ConvDataGradCpuKernel() = default;
@@ -557,7 +559,8 @@ REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float);
 REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, double);
 
 template<typename T>
-class ConvFilterGradCpuKernel final : public user_op::OpKernel {
+class ConvFilterGradCpuKernel final : public user_op::OpKernel,
+                                      public user_op::OpKernelStateAndCacheProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradCpuKernel);
   ConvFilterGradCpuKernel() = default;

@@ -129,7 +129,8 @@ __global__ void CropMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t* in_d
 
 }  // namespace
 
-class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
+class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel,
+                                           public user_op::OpKernelStateAndCacheProvider {
  public:
   CropMirrorNormalizeGpuKernel() = default;
   ~CropMirrorNormalizeGpuKernel() override = default;

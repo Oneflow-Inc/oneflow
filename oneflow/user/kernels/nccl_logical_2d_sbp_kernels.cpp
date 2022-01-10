@@ -86,7 +86,8 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
   ncclComm_t comm_{};
 };
 
-class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
+class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel,
+                                             public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogical2DSameDim0AllReduce() = default;
   ~NcclLogical2DSameDim0AllReduce() override = default;
@@ -113,7 +114,8 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
+class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel,
+                                             public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogical2DSameDim0AllGather() = default;
   ~NcclLogical2DSameDim0AllGather() override = default;
@@ -141,7 +143,9 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
 };
 
 template<typename T>
-class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
+class NcclLogical2DSameDim0AllGatherNoncontinuous final
+    : public user_op::OpKernel,
+      public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogical2DSameDim0AllGatherNoncontinuous() = default;
   ~NcclLogical2DSameDim0AllGatherNoncontinuous() override = default;
@@ -204,7 +208,8 @@ size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferCo
 }
 
 template<typename T>
-class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
+class NcclLogical2DSameDim0All2All final : public user_op::OpKernel,
+                                           public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogical2DSameDim0All2All() = default;
   ~NcclLogical2DSameDim0All2All() override = default;
@@ -363,7 +368,8 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
   ncclComm_t comm_{};
 };
 
-class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
+class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel,
+                                             public user_op::OpKernelStateAndCacheProvider {
  public:
   NcclLogical2DSameDim1AllReduce() = default;
   ~NcclLogical2DSameDim1AllReduce() override = default;

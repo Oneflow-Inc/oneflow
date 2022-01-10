@@ -59,7 +59,9 @@ void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis, const cfg::NdSbp& i
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class GatherKernel final : public user_op::OpKernel,
+                           public user_op::CudaGraphSupport,
+                           public user_op::OpKernelStateAndCacheProvider {
  public:
   GatherKernel() = default;
   ~GatherKernel() override = default;

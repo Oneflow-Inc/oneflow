@@ -218,7 +218,8 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
 
 }  // namespace
 
-class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
+class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel,
+                                                   public user_op::OpKernelStateAndCacheProvider {
  public:
   OFRecordImageDecoderRandomCropKernel() = default;
   ~OFRecordImageDecoderRandomCropKernel() override = default;

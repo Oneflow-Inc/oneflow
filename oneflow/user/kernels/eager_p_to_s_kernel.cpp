@@ -137,7 +137,8 @@ size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 }  // namespace
 
 template<DeviceType device_type>
-class EagerPToSKernel final : public user_op::OpKernel {
+class EagerPToSKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   EagerPToSKernel() = default;
   ~EagerPToSKernel() override = default;

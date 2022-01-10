@@ -302,7 +302,8 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
 }
 
 template<typename T>
-class LogicalSliceKernel final : public user_op::OpKernel {
+class LogicalSliceKernel final : public user_op::OpKernel,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   LogicalSliceKernel() = default;
   ~LogicalSliceKernel() = default;
@@ -351,7 +352,8 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class LogicalSliceAssignKernel final : public user_op::OpKernel {
+class LogicalSliceAssignKernel final : public user_op::OpKernel,
+                                       public user_op::OpKernelStateAndCacheProvider {
  public:
   LogicalSliceAssignKernel() = default;
   ~LogicalSliceAssignKernel() = default;

@@ -46,7 +46,8 @@ class NvtxOpKernelState final : public user_op::OpKernelState {
   int64_t counter_;
 };
 
-class NvtxStartKernel final : public user_op::OpKernel {
+class NvtxStartKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   NvtxStartKernel() = default;
   ~NvtxStartKernel() override = default;
@@ -89,7 +90,8 @@ REGISTER_USER_KERNEL("nvtx_start")
       return Maybe<void>::Ok();
     });
 
-class NvtxEndKernel final : public user_op::OpKernel {
+class NvtxEndKernel final : public user_op::OpKernel,
+                            public user_op::OpKernelStateAndCacheProvider {
  public:
   NvtxEndKernel() = default;
   ~NvtxEndKernel() override = default;

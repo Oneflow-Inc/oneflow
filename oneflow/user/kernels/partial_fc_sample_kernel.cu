@@ -281,7 +281,8 @@ void MapLabel(ep::Stream* stream, const int64_t num_classes, const int64_t batch
 }  // namespace
 
 template<typename T, typename K>
-class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
+class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel,
+                                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   DistributedPartialFcSampleGpuKernel() = default;
   ~DistributedPartialFcSampleGpuKernel() override = default;

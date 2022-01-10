@@ -37,6 +37,7 @@ class EagerKernel final : public Kernel {
   void InitOpKernel(const KernelConf& kernel_conf);
   void ForwardDataContent(KernelContext* kernel_ctx) const override { UNIMPLEMENTED(); }
   std::unique_ptr<const user_op::OpKernel> kernel_;
+  const user_op::OpKernelStateAndCacheProvider* state_and_cache_provider_;
   mutable std::shared_ptr<user_op::OpKernelCache> cache_;
 };
 

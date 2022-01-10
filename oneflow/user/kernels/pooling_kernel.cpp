@@ -113,7 +113,8 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPool1dKernel final : public user_op::OpKernel {
+class MaxPool1dKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool1dKernel() = default;
   ~MaxPool1dKernel() = default;
@@ -149,7 +150,8 @@ class MaxPool1dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPool1dGradKernel final : public user_op::OpKernel {
+class MaxPool1dGradKernel final : public user_op::OpKernel,
+                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool1dGradKernel() = default;
   ~MaxPool1dGradKernel() = default;
@@ -187,7 +189,8 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPool2dKernel final : public user_op::OpKernel {
+class MaxPool2dKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool2dKernel() = default;
   ~MaxPool2dKernel() = default;
@@ -223,7 +226,8 @@ class MaxPool2dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPool2dGradKernel final : public user_op::OpKernel {
+class MaxPool2dGradKernel final : public user_op::OpKernel,
+                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool2dGradKernel() = default;
   ~MaxPool2dGradKernel() = default;
@@ -261,7 +265,8 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPool3dKernel final : public user_op::OpKernel {
+class MaxPool3dKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool3dKernel() = default;
   ~MaxPool3dKernel() = default;
@@ -297,7 +302,8 @@ class MaxPool3dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPool3dGradKernel final : public user_op::OpKernel {
+class MaxPool3dGradKernel final : public user_op::OpKernel,
+                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool3dGradKernel() = default;
   ~MaxPool3dGradKernel() = default;

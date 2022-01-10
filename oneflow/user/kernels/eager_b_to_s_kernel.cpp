@@ -156,7 +156,8 @@ size_t InferEagerBToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 }  // namespace
 
 template<DeviceType device_type>
-class EagerBToSKernel final : public user_op::OpKernel {
+class EagerBToSKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   EagerBToSKernel() = default;
   ~EagerBToSKernel() override = default;

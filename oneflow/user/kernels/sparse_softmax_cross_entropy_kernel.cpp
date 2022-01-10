@@ -160,7 +160,8 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel,
 };
 
 template<DeviceType device_type, typename T, typename K>
-class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
+class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel,
+                                                    public user_op::OpKernelStateAndCacheProvider {
  public:
   SparseSoftmaxCrossEntropyMsGradKernel() = default;
   ~SparseSoftmaxCrossEntropyMsGradKernel() = default;

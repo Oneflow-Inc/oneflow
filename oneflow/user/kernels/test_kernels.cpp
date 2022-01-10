@@ -274,7 +274,8 @@ REGISTER_USER_KERNEL("TestDynamicSource")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
-class TestRandomSourceKernel final : public user_op::OpKernel {
+class TestRandomSourceKernel final : public user_op::OpKernel,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   TestRandomSourceKernel() = default;
   ~TestRandomSourceKernel() = default;

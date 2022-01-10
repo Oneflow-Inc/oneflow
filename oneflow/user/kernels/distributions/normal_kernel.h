@@ -26,7 +26,7 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-class NormalKernel final : public user_op::OpKernel {
+class NormalKernel final : public user_op::OpKernel, public user_op::OpKernelStateAndCacheProvider {
  public:
   NormalKernel() = default;
   ~NormalKernel() = default;

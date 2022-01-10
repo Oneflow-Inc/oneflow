@@ -67,7 +67,8 @@ int64_t update_to(int64_t to) {
 }
 
 template<DeviceType device_type, typename T>
-class UniformIntKernel final : public user_op::OpKernel {
+class UniformIntKernel final : public user_op::OpKernel,
+                               public user_op::OpKernelStateAndCacheProvider {
  public:
   UniformIntKernel() = default;
   ~UniformIntKernel() = default;

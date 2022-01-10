@@ -59,7 +59,8 @@ std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelCache(
 }  // namespace
 
 template<typename T, typename K>
-class CombinedMarginLossCpuKernel final : public user_op::OpKernel {
+class CombinedMarginLossCpuKernel final : public user_op::OpKernel,
+                                          public user_op::OpKernelStateAndCacheProvider {
  public:
   CombinedMarginLossCpuKernel() = default;
   ~CombinedMarginLossCpuKernel() override = default;
@@ -120,7 +121,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_CPU_KERNEL, FLOAT
                                  INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
-class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
+class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel,
+                                              public user_op::OpKernelStateAndCacheProvider {
  public:
   CombinedMarginLossGradCpuKernel() = default;
   ~CombinedMarginLossGradCpuKernel() override = default;

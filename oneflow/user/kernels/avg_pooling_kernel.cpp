@@ -119,7 +119,8 @@ struct AvgPoolingKernelUtil<DeviceType::kCPU, T> {
 };
 
 template<DeviceType device_type, typename T>
-class AvgPool1dKernel final : public user_op::OpKernel {
+class AvgPool1dKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool1dKernel() = default;
   ~AvgPool1dKernel() = default;
@@ -152,7 +153,8 @@ class AvgPool1dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class AvgPool1dGradKernel final : public user_op::OpKernel {
+class AvgPool1dGradKernel final : public user_op::OpKernel,
+                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool1dGradKernel() = default;
   ~AvgPool1dGradKernel() = default;
@@ -187,7 +189,8 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class AvgPool2dKernel final : public user_op::OpKernel {
+class AvgPool2dKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool2dKernel() = default;
   ~AvgPool2dKernel() = default;
@@ -220,7 +223,8 @@ class AvgPool2dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class AvgPool2dGradKernel final : public user_op::OpKernel {
+class AvgPool2dGradKernel final : public user_op::OpKernel,
+                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool2dGradKernel() = default;
   ~AvgPool2dGradKernel() = default;
@@ -255,7 +259,8 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class AvgPool3dKernel final : public user_op::OpKernel {
+class AvgPool3dKernel final : public user_op::OpKernel,
+                              public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool3dKernel() = default;
   ~AvgPool3dKernel() = default;
@@ -288,7 +293,8 @@ class AvgPool3dKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class AvgPool3dGradKernel final : public user_op::OpKernel {
+class AvgPool3dGradKernel final : public user_op::OpKernel,
+                                  public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool3dGradKernel() = default;
   ~AvgPool3dGradKernel() = default;

@@ -22,7 +22,8 @@ limitations under the License.
 #include "oneflow/user/kernels/distributions/common.h"
 namespace oneflow {
 
-class CpuRandPermKernel final : public user_op::OpKernel {
+class CpuRandPermKernel final : public user_op::OpKernel,
+                                public user_op::OpKernelStateAndCacheProvider {
  public:
   CpuRandPermKernel() = default;
   ~CpuRandPermKernel() = default;

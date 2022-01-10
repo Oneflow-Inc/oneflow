@@ -121,7 +121,9 @@ class CMNAttr final : public user_op::OpKernelState {
 
 }  // namespace
 
-class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::OpKernel {
+class CropMirrorNormalizeFromStaticShapeToFloatKernel final
+    : public user_op::OpKernel,
+      public user_op::OpKernelStateAndCacheProvider {
  public:
   CropMirrorNormalizeFromStaticShapeToFloatKernel() = default;
   ~CropMirrorNormalizeFromStaticShapeToFloatKernel() override = default;
@@ -203,7 +205,9 @@ REGISTER_USER_KERNEL("crop_mirror_normalize_from_uint8")
                      && (user_op::HobDataType("in", 0) == DataType::kUInt8)
                      && (user_op::HobDataType("out", 0) == DataType::kFloat));
 
-class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::OpKernel {
+class CropMirrorNormalizeFromTensorBufferToFloatKernel final
+    : public user_op::OpKernel,
+      public user_op::OpKernelStateAndCacheProvider {
  public:
   CropMirrorNormalizeFromTensorBufferToFloatKernel() = default;
   ~CropMirrorNormalizeFromTensorBufferToFloatKernel() override = default;
@@ -310,7 +314,8 @@ class RandBoolGen final : public user_op::OpKernelState {
 
 }  // namespace
 
-class CoinFlipKernel final : public user_op::OpKernel {
+class CoinFlipKernel final : public user_op::OpKernel,
+                             public user_op::OpKernelStateAndCacheProvider {
  public:
   CoinFlipKernel() = default;
   ~CoinFlipKernel() override = default;
@@ -373,7 +378,8 @@ void ImageRandomCropImpl(const TensorBuffer* in_buffer, TensorBuffer* out_buffer
 
 }  // namespace
 
-class ImageRandomCropKernel final : public user_op::OpKernel {
+class ImageRandomCropKernel final : public user_op::OpKernel,
+                                    public user_op::OpKernelStateAndCacheProvider {
  public:
   ImageRandomCropKernel() = default;
   ~ImageRandomCropKernel() override = default;

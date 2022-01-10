@@ -145,7 +145,9 @@ struct PoolGpuKernelUtil {
 }  // namespace
 
 template<typename T>
-class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AvgPool1DGpuKernel final : public user_op::OpKernel,
+                                 public user_op::CudaGraphSupport,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool1DGpuKernel() = default;
   ~AvgPool1DGpuKernel() = default;
@@ -163,7 +165,9 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 };
 
 template<typename T>
-class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AvgPool1DGradGpuKernel final : public user_op::OpKernel,
+                                     public user_op::CudaGraphSupport,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool1DGradGpuKernel() = default;
   ~AvgPool1DGradGpuKernel() = default;
@@ -180,7 +184,9 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 };
 
 template<typename T>
-class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AvgPool2DGpuKernel final : public user_op::OpKernel,
+                                 public user_op::CudaGraphSupport,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool2DGpuKernel() = default;
   ~AvgPool2DGpuKernel() = default;
@@ -198,7 +204,9 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 };
 
 template<typename T>
-class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AvgPool2DGradGpuKernel final : public user_op::OpKernel,
+                                     public user_op::CudaGraphSupport,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool2DGradGpuKernel() = default;
   ~AvgPool2DGradGpuKernel() = default;
@@ -216,7 +224,9 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 };
 
 template<typename T>
-class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AvgPool3DGpuKernel final : public user_op::OpKernel,
+                                 public user_op::CudaGraphSupport,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool3DGpuKernel() = default;
   ~AvgPool3DGpuKernel() = default;
@@ -234,7 +244,9 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 };
 
 template<typename T>
-class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AvgPool3DGradGpuKernel final : public user_op::OpKernel,
+                                     public user_op::CudaGraphSupport,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   AvgPool3DGradGpuKernel() = default;
   ~AvgPool3DGradGpuKernel() = default;
@@ -252,7 +264,9 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 };
 
 template<typename T>
-class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class MaxPool1DGpuKernel final : public user_op::OpKernel,
+                                 public user_op::CudaGraphSupport,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool1DGpuKernel() = default;
   ~MaxPool1DGpuKernel() = default;
@@ -270,7 +284,9 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 };
 
 template<typename T>
-class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class MaxPool1DGradGpuKernel final : public user_op::OpKernel,
+                                     public user_op::CudaGraphSupport,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool1DGradGpuKernel() = default;
   ~MaxPool1DGradGpuKernel() = default;
@@ -288,7 +304,9 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 };
 
 template<typename T>
-class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class MaxPool2DGpuKernel final : public user_op::OpKernel,
+                                 public user_op::CudaGraphSupport,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool2DGpuKernel() = default;
   ~MaxPool2DGpuKernel() = default;
@@ -306,7 +324,9 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 };
 
 template<typename T>
-class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class MaxPool2DGradGpuKernel final : public user_op::OpKernel,
+                                     public user_op::CudaGraphSupport,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool2DGradGpuKernel() = default;
   ~MaxPool2DGradGpuKernel() = default;
@@ -324,7 +344,9 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 };
 
 template<typename T>
-class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class MaxPool3DGpuKernel final : public user_op::OpKernel,
+                                 public user_op::CudaGraphSupport,
+                                 public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool3DGpuKernel() = default;
   ~MaxPool3DGpuKernel() = default;
@@ -342,7 +364,9 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 };
 
 template<typename T>
-class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class MaxPool3DGradGpuKernel final : public user_op::OpKernel,
+                                     public user_op::CudaGraphSupport,
+                                     public user_op::OpKernelStateAndCacheProvider {
  public:
   MaxPool3DGradGpuKernel() = default;
   ~MaxPool3DGradGpuKernel() = default;
