@@ -112,7 +112,7 @@ class Testrandperm(flow.unittest.TestCase):
         y = torch.randperm(1, device=device)
         return y
 
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_auto_0(test_case):
         device = random_device()
         y = torch.randperm(0, device=device)
