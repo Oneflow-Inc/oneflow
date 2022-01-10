@@ -125,12 +125,12 @@ void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_
   }
 }
 
-Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                              const cfg::NdSbp& consumer_sbp_parallel,
-                                              const BlobDesc& logical_blob_desc,
-                                              const ParallelDesc& producer_parallel_desc,
-                                              const ParallelDesc& consumer_parallel_desc,
-                                              bool is_same_sbp) {
+Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                               const cfg::NdSbp& consumer_sbp_parallel,
+                                               const BlobDesc& logical_blob_desc,
+                                               const ParallelDesc& producer_parallel_desc,
+                                               const ParallelDesc& consumer_parallel_desc,
+                                               bool is_same_sbp) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
@@ -172,6 +172,72 @@ Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
     return ComputCopyCostBetweenTwoSbpParallel(
         reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0), logical_blob_desc,
         reduced_in_parallel_desc, reduced_out_parallel_desc);
+  }
+
+  double total_cost = 0.0;
+  if (reduced_in_parallel_desc == reduced_out_parallel_desc) {
+    // nd to nd
+    for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
+      const auto& in_sbp = reduced_in_nd_sbp.sbp_parallel(i);
+      const auto& out_sbp = reduced_out_nd_sbp.sbp_parallel(i);
+      total_cost += JUST(ComputCopyCostBetweenTwoSbpParallel(
+          in_sbp, out_sbp, logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
+    }
+  } else {
+    double logical_blob_size =
+        logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+    {
+      double in_cost = 1.0;
+      for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
+        // P -> ?
+        if (reduced_in_nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) {
+          in_cost *= reduced_in_parallel_desc.hierarchy()->At(i);
+        }
+      }
+      total_cost += logical_blob_size * in_cost;
+    }
+    {
+      double out_cost = 1.0;
+      for (int32_t i = 0; i < reduced_out_parallel_desc.hierarchy()->NumAxes(); ++i) {
+        // ? -> B
+        if (reduced_out_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
+          out_cost *= reduced_out_parallel_desc.hierarchy()->At(i);
+        }
+      }
+      total_cost += logical_blob_size * out_cost;
+    }
+  }
+  return total_cost;
+}
+
+Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                              const cfg::NdSbp& consumer_sbp_parallel,
+                                              const BlobDesc& logical_blob_desc,
+                                              const ParallelDesc& producer_parallel_desc,
+                                              const ParallelDesc& consumer_parallel_desc,
+                                              bool is_same_sbp) {
+  if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
+    return Error::RuntimeError() << "Illegal sbp parallel has been found.";
+  }
+  ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
+  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
+  cfg::NdSbp reduced_in_nd_sbp;
+  cfg::NdSbp reduced_out_nd_sbp;
+  InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
+                         consumer_sbp_parallel, &reduced_in_parallel_desc,
+                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
+
+  const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
+  const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
+
+  bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
+  if (same_nd_sbp && in_hierarchy == out_hierarchy) { return 0.0; }
+
+  // Will directly modify output blob of source op. Requiring data having same sbp_parallel.
+  if (is_same_sbp
+      && !(reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
+           && same_nd_sbp)) {
+    return kUnsupportedBoxing;
   }
 
   double total_cost = 0.0;

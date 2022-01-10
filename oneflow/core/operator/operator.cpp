@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/common/multi_client.h"
 
 namespace oneflow {
 
@@ -49,6 +50,16 @@ Maybe<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf)
   if (IsCpuOnly(*op_conf)) { CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU); }
   JUST(rptr->Init(op_conf));
   return std::shared_ptr<Operator>(rptr);
+}
+
+using CopyCostFunc = Maybe<double>(const cfg::NdSbp&, const cfg::NdSbp&, const BlobDesc&,
+                                   const ParallelDesc&, const ParallelDesc&, bool);
+Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
+  if (LazyMode::is_enabled() || (!JUST(IsMultiClient()))) {
+    return &ComputeLazyCopyCostBetweenNdSbp;
+  } else {
+    return &ComputeEagerCopyCostBetweenNdSbp;
+  }
 }
 
 }  // namespace
@@ -696,7 +707,7 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
 Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     cfg::NdSbpSignature* nd_sbp_signature,
     const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
-    std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
   int32_t select_sbp_idx = -1;
   double min_copy_cost = GetValidMaxCopyCost();
   for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
@@ -706,7 +717,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       bool is_same_sbp =
           (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
           || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
-      total_copy_cost += JUST(ComputEagerCopyCostBetweenNdSbp(
+      total_copy_cost += JUST(JUST(GetComputeCopyCostFunc())(
           JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
           JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
           JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetOpParallelDesc()), is_same_sbp));
@@ -736,6 +747,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
   nd_sbp_signature->CopyFrom(nd_sbp_sig_list.at(select_sbp_idx));
   return Maybe<void>::Ok();
 }
+
 Maybe<void> Operator::InferSbpSignature(
     cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,

@@ -36,8 +36,17 @@ void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_
                           const cfg::SbpSignatureList& sbp_sig_list,
                           std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list);
 
-// compute copy cost
-Maybe<double> ComputEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+// TODO: unified lazy and eager boxing
+// Compute eager copy cost
+Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                               const cfg::NdSbp& consumer_sbp_parallel,
+                                               const BlobDesc& logical_blob_desc,
+                                               const ParallelDesc& producer_parallel_desc,
+                                               const ParallelDesc& consumer_parallel_desc,
+                                               bool is_same_sbp);
+
+// Compute lazy copy cost
+Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
                                               const cfg::NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,

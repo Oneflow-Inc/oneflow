@@ -290,7 +290,7 @@ class Operator {
   Maybe<void> GreedilyFindMinCopyCostNdSbp(
       cfg::NdSbpSignature* nd_sbp_signature,
       const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
-      std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
+      const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
