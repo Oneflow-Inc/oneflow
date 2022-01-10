@@ -28,7 +28,7 @@ namespace broadcast_elementwise_binary {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_ENTRY,
                                  BINARY_COMPARISION_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
-                                 CUDA_PRIMITIVE_INT8_TYPE_SEQ);
+                                 CUDA_PRIMITIVE_BOOL_TYPE_SEQ);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
