@@ -456,7 +456,11 @@ struct LocalCallOpKernelUtil final {
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    const auto* provider =
+        dynamic_cast<const user_op::OpKernelStateAndCacheProvider*>(operand->user_opkernel());
+    if (provider != nullptr) {
+      TryInitOpKernelStateAndCache(operand, provider, device_ctx, &state, &cache);
+    }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
@@ -489,26 +493,19 @@ struct LocalCallOpKernelUtil final {
     return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
   }
 
-  static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
-                                                  DeviceCtx* device_ctx,
-                                                  user_op::OpKernelState** state,
-                                                  user_op::OpKernelCache** cache) {
+  static inline void TryInitOpKernelStateAndCache(
+      LocalCallOpKernelPhyInstrOperand* operand,
+      const user_op::OpKernelStateAndCacheProvider* provider, DeviceCtx* device_ctx,
+      user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
     if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
       // skipped.
       state = nullptr;
     }
-    auto* provider =
-        dynamic_cast<const user_op::OpKernelStateAndCacheProvider*>(operand->user_opkernel());
-    if (provider != nullptr) {
-      operand->mut_opkernel()->TryInitOpKernelStateAndCache(
-          provider, device_ctx, operand->inputs().get(), operand->outputs().get(),
-          operand->consistent_tensor_infer_result().get(), state, cache);
-    } else {
-      state = nullptr;
-      cache = nullptr;
-    }
+    operand->mut_opkernel()->TryInitOpKernelStateAndCache(
+        provider, device_ctx, operand->inputs().get(), operand->outputs().get(),
+        operand->consistent_tensor_infer_result().get(), state, cache);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
