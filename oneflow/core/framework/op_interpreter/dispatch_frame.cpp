@@ -13,36 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_LAZY_MODE_H_
-#define ONEFLOW_CORE_JOB_LAZY_MODE_H_
-
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
+#include <string>
 
 namespace oneflow {
 
-class LazyMode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LazyMode);
-  LazyMode() = delete;
-  ~LazyMode() = delete;
+/* static */ std::string* DispatchFrame::get_str_ptr() {
+  static thread_local std::string frame_str = "";
+  return &frame_str;
+}
 
-  static bool is_enabled();
-  class Guard {
-   public:
-    explicit Guard(bool enabled) : prev_mode_(LazyMode::is_enabled()) {
-      LazyMode::set_enabled(enabled);
-    }
-    ~Guard() { LazyMode::set_enabled(prev_mode_); }
+/* static */ std::string DispatchFrame::get_str() { return *get_str_ptr(); }
 
-   private:
-    bool prev_mode_;
-  };
-
- private:
-  static bool* get_mode_ptr();
-  static void set_enabled(bool enabled);
-};
+/* static */ void DispatchFrame::set_str(std::string str) { *get_str_ptr() = std::move(str); }
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_LAZY_MODE_H_
