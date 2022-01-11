@@ -75,7 +75,7 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
   const std::shared_ptr<one::Tensor>& local_tensor = JUST(tensor->cur_rank_phy_tensor());
 
   std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToConsistent(
-      local_tensor, reduced_out->placement(), *JUST(GetSbpList(reduced_out->nd_sbp())),
+      local_tensor, reduced_in->placement(), *JUST(GetSbpList(reduced_in->nd_sbp())),
       *tensor->shape(), tensor->dtype()));
 
   const auto& boxing_interpreter =
