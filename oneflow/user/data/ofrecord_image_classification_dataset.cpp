@@ -93,8 +93,8 @@ void LoadWorker(Dataset<TensorBuffer>* record_dataset,
   }
 }
 
-void DecodeWorker(const std::string image_feature_name, const std::string label_feature_name,
-                  const std::string color_space, Buffer<TensorBuffer>* in_buffer,
+void DecodeWorker(const std::string& image_feature_name, const std::string& label_feature_name,
+                  const std::string& color_space, Buffer<TensorBuffer>* in_buffer,
                   Buffer<ImageClassificationDataInstance>* out_buffer) {
   while (true) {
     TensorBuffer serialized_record;
