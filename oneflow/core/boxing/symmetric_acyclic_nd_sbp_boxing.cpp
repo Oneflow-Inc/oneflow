@@ -72,7 +72,7 @@ Maybe<void> CheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<Plac
   CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
   CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
-  JUST(CheckIsNdSbpBoxingAcyclicAfterDecompose(in, out, logical_shape));
+  JUST(CheckIsNdSbpBoxingAcyclicWithDecompose(in, out, logical_shape));
   return Maybe<void>::Ok();
 }
 

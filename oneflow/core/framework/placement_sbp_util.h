@@ -76,9 +76,9 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
 
 extern Maybe<void> (*CheckIsNdSbpBoxingAcyclic)(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
 
-extern Maybe<void> (*CheckIsNdSbpBoxingAcyclicAfterDecompose)(Symbol<PlacedNdSbp> in,
-                                                              Symbol<PlacedNdSbp> out,
-                                                              const Shape& logical_shape);
+extern Maybe<void> (*CheckIsNdSbpBoxingAcyclicWithDecompose)(Symbol<PlacedNdSbp> in,
+                                                             Symbol<PlacedNdSbp> out,
+                                                             const Shape& logical_shape);
 
 static constexpr auto* GetSubConsistentTensorMeta =
     DECORATE(&private_details::CalcSubConsistentTensorMeta, ThreadLocal);

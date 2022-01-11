@@ -629,9 +629,9 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNd
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RawCheckIsNdSbpBoxingAcyclicAfterDecompose(Symbol<PlacedNdSbp> in,
-                                                       Symbol<PlacedNdSbp> out,
-                                                       const Shape& logical_shape) {
+Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
+                                                      Symbol<PlacedNdSbp> out,
+                                                      const Shape& logical_shape) {
   using namespace private_details;
   Symbol<cfg::NdSbp> src_nd_sbp = in->nd_sbp();
   Symbol<cfg::NdSbp> dst_nd_sbp = out->nd_sbp();
@@ -657,8 +657,8 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicAfterDecompose(Symbol<PlacedNdSbp> in,
 decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
     DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);
 
-decltype(CheckIsNdSbpBoxingAcyclicAfterDecompose) CheckIsNdSbpBoxingAcyclicAfterDecompose =
-    DECORATE(&RawCheckIsNdSbpBoxingAcyclicAfterDecompose, ThreadLocalCopiable);
+decltype(CheckIsNdSbpBoxingAcyclicWithDecompose) CheckIsNdSbpBoxingAcyclicWithDecompose =
+    DECORATE(&RawCheckIsNdSbpBoxingAcyclicWithDecompose, ThreadLocalCopiable);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc) {
