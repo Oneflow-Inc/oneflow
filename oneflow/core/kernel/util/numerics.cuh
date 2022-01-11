@@ -220,9 +220,7 @@ struct numerics<float> {
 
 template<>
 struct numerics<half> {
-  OF_NUMERICS_FUNC bool isnan(half a) {
-    return ::isnan((float)a);
-  }
+  OF_NUMERICS_FUNC bool isnan(half a) { return ::isnan((float)a); }
 };
 
 template<>

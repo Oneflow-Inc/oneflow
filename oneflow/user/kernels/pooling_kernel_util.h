@@ -35,7 +35,8 @@ namespace oneflow {
 
 #define POOLING_DATA_TYPE_CPU_SEQ POOLING_DATA_TYPE_SEQ
 
-#define POOLING_DATA_TYPE_CUDA_SEQ POOLING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+#define POOLING_DATA_TYPE_CUDA_SEQ \
+  POOLING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
@@ -120,7 +121,6 @@ struct PoolingKernelUtil {
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 };
-
 
 template<typename T>
 OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<int64_t, 3> index_helper,
