@@ -35,6 +35,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
 
         x = flow.randint(1, 100, (4, 8), dtype=flow.float32, placement=P, sbp=S0)
 
+        flow.boxing.nccl.enable_use_compute_stream(True)
         class LinearTrainGraphWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -47,11 +48,6 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                     print("zero stage 1 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
                     self.config.set_zero_redundancy_optimizer_split_min_size(1)
-                if zero_stage == 2:
-                    print("zero stage 2 optimization")
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_split_min_size(1)
-                    flow.boxing.nccl.enable_use_compute_stream(True)
                 if zero_stage == 3:
                     print("zero stage 3 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
@@ -88,6 +84,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         for i in range(iter_num):
             one_train_iter()
 
+        print("==========", linear_t_g._optimization_conf_proto)
         # After pass rewrite in training graph, parameters' sbp has been
         # changed from flow.sbp.broadcast to flow.sbp.split(0)
         test_case.assertEqual(linear.weight.sbp[0], S0)
