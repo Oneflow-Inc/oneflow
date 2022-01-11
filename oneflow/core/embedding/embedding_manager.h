@@ -31,9 +31,6 @@ class EmbeddingMgr final {
   EmbeddingMgr() = default;
   ~EmbeddingMgr();
 
-  embedding::Cache* GetCache(const embedding::EmbeddingOptions& options, int64_t parallel_id,
-                             int64_t parallel_num);
-
   embedding::KeyValueStore* GetKeyValueStore(const embedding::EmbeddingOptions& options,
                                              int64_t parallel_id, int64_t parallel_num);
 
