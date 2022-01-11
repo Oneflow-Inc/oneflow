@@ -548,6 +548,14 @@
     ]
   bind_python: True
 
+- name: "erfinv"
+  signature: "Tensor (Tensor x) => Erfinv"
+  bind_python: True
+
+- name: "erfinv_"
+  signature: "Tensor (Tensor x) => ErfinvInplace"
+  bind_python: True
+
 - name: "arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
@@ -1305,6 +1313,10 @@
   signature: "Tensor (Tensor x) => Floor"
   bind_python: True
 
+- name: "floor_"
+  signature: "Tensor (Tensor x) => Floor_"
+  bind_python: True
+
 - name: "floor_grad"
   signature: "Tensor (Tensor x, Tensor dy) => FloorGrad"
   bind_python: False
@@ -1392,6 +1404,21 @@
 - name: "clamp"
   signature:
     ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  bind_python: true
+
+- name: "clamp_"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  bind_python: true
+
+- name: "clip"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clip"]
+  bind_python: true
+
+- name: "clip_"
+  signature:
+    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClipInplace"]
   bind_python: true
 
 - name: "clamp_grad"
