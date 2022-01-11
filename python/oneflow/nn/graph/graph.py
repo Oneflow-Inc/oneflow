@@ -119,7 +119,6 @@ class Graph(object):
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
-        session.TryInit()
         session.AddCGraph(self._c_nn_graph)
 
     def build(self, *args):
@@ -493,6 +492,11 @@ class Graph(object):
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
+            # Try to init session as late as possible to set resource config form graph init.
+            session = session_ctx.GetDefaultSession()
+            assert type(session) is MultiClientSession
+            session.TryInit()
+
             build_graph_start = time.perf_counter()
             eager_outputs = self._build_graph(*args)
             build_graph_end = time.perf_counter()
