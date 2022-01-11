@@ -47,6 +47,8 @@ class FixedTable {
   };
 
   virtual uint16_t BlockSize() const = 0;
+  virtual void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
+                    uint32_t* missing_indices) = 0;
   virtual void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint16_t* offsets) = 0;
   virtual void Get(uint32_t num_keys, const void* keys, void* values, uint32_t* n_missing,
                    uint32_t* missing_indices) = 0;

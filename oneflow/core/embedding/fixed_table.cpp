@@ -133,7 +133,10 @@ class RingEngine final {
   }
 
   void WaitUntilDone() {
-    if (pending_submit_ > 0) { PCHECK(io_uring_submit(&ring_) == pending_submit_); }
+    if (pending_submit_ > 0) {
+      PCHECK(io_uring_submit(&ring_) == pending_submit_);
+      pending_submit_ = 0;
+    }
     while (num_readings_ != 0) {
       struct io_uring_cqe* cqe = nullptr;
       PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
@@ -236,6 +239,8 @@ class FixedTableImpl : public FixedTable {
   }
 
   uint16_t BlockSize() const override;
+  void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
+            uint32_t* missing_indices) override;
   void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint16_t* offsets) override;
   void Get(uint32_t num_keys, const void* keys, void* values, uint32_t* n_missing,
            uint32_t* missing_indices) override;
@@ -273,6 +278,29 @@ class FixedTableImpl : public FixedTable {
 template<typename Key, typename Engine>
 uint16_t FixedTableImpl<Key, Engine>::BlockSize() const {
   return block_size_;
+}
+
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
+                                       uint32_t* missing_indices) {
+  std::atomic<uint32_t> atomic_n_missing(0);
+#pragma omp parallel num_threads(kNumReadThreads)
+  {
+    const uint32_t thread_id = omp_get_thread_num();
+    const uint32_t num_threads = omp_get_num_threads();
+    const uint32_t keys_per_thread = (num_keys + num_threads - 1) / num_threads;
+    const uint32_t start_i = thread_id * keys_per_thread;
+    const uint32_t end_i = std::min(start_i + keys_per_thread, num_keys);
+    for (uint64_t i = start_i; i < end_i; ++i) {
+      const Key key = static_cast<const Key*>(keys)[i];
+      auto it = row_id_mapping_.find(key);
+      if (it == row_id_mapping_.end()) {
+        const uint32_t index = atomic_n_missing.fetch_add(1, std::memory_order_relaxed);
+        missing_indices[index] = i;
+      }
+    }
+  }
+  *n_missing = atomic_n_missing.load(std::memory_order_relaxed);
 }
 
 template<typename Key, typename Engine>

@@ -58,7 +58,8 @@ template<typename Key, typename Elem>
 void InitCudaLruCacheContext(const CudaLruCacheOptions& options,
                              CudaLruCacheContext<Key, Elem>* ctx) {
   const size_t key_size_per_set = kWarpSize * sizeof(Key);
-  const size_t lines_size_per_set = kWarpSize * options.line_size * sizeof(Elem);
+  const uint32_t line_size = options.value_size / sizeof(Elem);
+  const size_t lines_size_per_set = kWarpSize * line_size * sizeof(Elem);
   const size_t lru_size_per_set = kWarpSize * sizeof(uint8_t);
   const size_t mutex_size_per_set = sizeof(cuda::binary_semaphore<cuda::thread_scope_device>);
   const size_t size_per_set =
@@ -66,7 +67,7 @@ void InitCudaLruCacheContext(const CudaLruCacheOptions& options,
   const size_t n_set = options.memory_budget_mb * 1024 * 1024 / size_per_set;
   CHECK_GT(n_set, 0);
   ctx->n_set = n_set;
-  ctx->line_size = options.line_size;
+  ctx->line_size = line_size;
   const size_t keys_size = n_set * key_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
   OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, keys_size));
@@ -211,6 +212,19 @@ struct SetContext {
   cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
 };
 
+template<typename Elem>
+__device__ void Zero(Elem* elem) {
+  *elem = 0;
+}
+
+template<>
+__device__ void Zero<uint4>(uint4* elem) {
+  elem->x = 0;
+  elem->y = 0;
+  elem->z = 0;
+  elem->w = 0;
+}
+
 template<typename Key, typename Elem, bool test_only>
 __global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys,
                           const Key* keys, Elem* values, uint32_t* n_missing_keys,
@@ -238,7 +252,7 @@ __global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num
       if (key == 0) {
         if (!test_only) {
           for (int j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
-            (values + key_idx * cache_ctx.line_size)[j] = 0;
+            Zero(values + key_idx * cache_ctx.line_size + j);
           }
         }
         continue;
@@ -407,7 +421,8 @@ template<typename Key, typename Elem>
 class CudaLruCache : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaLruCache);
-  explicit CudaLruCache(const CudaLruCacheOptions& options) : device_index_{} {
+  explicit CudaLruCache(const CudaLruCacheOptions& options)
+      : device_index_{}, max_query_length_(options.max_query_length) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     InitCudaLruCacheContext(options, &ctx_);
   }
@@ -416,7 +431,10 @@ class CudaLruCache : public Cache {
     DestroyCudaLruCacheContext(&ctx_);
   }
 
+  uint32_t KeySize() const override { return sizeof(Key); }
+  uint32_t ValueSize() const override { return sizeof(Elem) * ctx_.line_size; }
   uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
+  uint32_t MaxQueryLength() const override { return max_query_length_; }
 
   void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
             void* missing_keys, uint32_t* missing_indices) override {
@@ -468,27 +486,29 @@ class CudaLruCache : public Cache {
 
  private:
   int device_index_;
+  uint32_t max_query_length_;
   CudaLruCacheContext<Key, Elem> ctx_;
 };
 
 template<typename Key>
 std::unique_ptr<Cache> DispatchValueType(const CudaLruCacheOptions& options) {
-  if (options.value_type == DataType::kFloat) {
-    return std::unique_ptr<Cache>(new CudaLruCache<Key, float>(options));
+  if (options.value_size % sizeof(uint4) == 0) {
+    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint4>(options));
+  } else if (options.value_size % sizeof(uint64_t) == 0) {
+    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint64_t>(options));
+  } else if (options.value_size % sizeof(uint32_t) == 0) {
+    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint32_t>(options));
+  } else if (options.value_size % sizeof(uint16_t) == 0) {
+    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint16_t>(options));
   } else {
-    UNIMPLEMENTED();
-    return nullptr;
+    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint8_t>(options));
   }
 }
 
 std::unique_ptr<Cache> DispatchKeyType(const CudaLruCacheOptions& options) {
-  if (options.key_type == DataType::kInt32) {
-    return DispatchValueType<int32_t>(options);
-  } else if (options.key_type == DataType::kUInt32) {
+  if (options.key_size == sizeof(uint32_t)) {
     return DispatchValueType<uint32_t>(options);
-  } else if (options.key_type == DataType::kInt64) {
-    return DispatchValueType<int64_t>(options);
-  } else if (options.key_type == DataType::kUInt64) {
+  } else if (options.key_size == sizeof(uint64_t)) {
     return DispatchValueType<uint64_t>(options);
   } else {
     UNIMPLEMENTED();

@@ -13,27 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_CUDA_LRU_CACHE_H_
-#define ONEFLOW_EMBEDDING_CUDA_LRU_CACHE_H_
+#ifndef ONEFLOW_EMBEDDING_CACHED_KEY_VALUE_STORE_H_
+#define ONEFLOW_EMBEDDING_CACHED_KEY_VALUE_STORE_H_
 
+#include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/embedding/cache.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
 namespace embedding {
 
-struct CudaLruCacheOptions {
-  uint64_t memory_budget_mb;
-  uint32_t max_query_length;
-  uint32_t key_size;
-  uint32_t value_size;
-};
-
-std::unique_ptr<Cache> NewCudaLruCache(const CudaLruCacheOptions& options);
+std::unique_ptr<KeyValueStore> NewCachedKeyValueStore(std::unique_ptr<KeyValueStore>&& store,
+                                                      std::unique_ptr<Cache>&& cache);
 
 }  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_CUDA_LRU_CACHE_H_
+#endif  // ONEFLOW_EMBEDDING_CACHED_KEY_VALUE_STORE_H_

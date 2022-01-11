@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
 #include "oneflow/core/embedding/block_based_key_value_store.h"
+#include "oneflow/core/embedding/cached_key_value_store.h"
+#include "oneflow/core/embedding/cuda_lru_cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -36,13 +38,12 @@ bool HasCudaDevice() {
 
 void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_embeddings,
                        size_t embedding_vec_size, size_t num_shards) {
-  std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
-      new ep::DeviceManagerRegistry());
-  auto device = device_manager_registry->GetDevice(DeviceType::kCUDA, 0);
+  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
   ep::Stream* stream = device->CreateStream();
 
   uint64_t* keys = nullptr;
   float* values = nullptr;
+  float* values1 = nullptr;
   uint64_t* keys_host = nullptr;
   float* values_host = nullptr;
   uint64_t* context = nullptr;
@@ -56,6 +57,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   const size_t batch_size = 128;
   OF_CUDA_CHECK(cudaMalloc(&keys, keys_size));
   OF_CUDA_CHECK(cudaMalloc(&values, values_size));
+  OF_CUDA_CHECK(cudaMalloc(&values1, values_size));
   OF_CUDA_CHECK(cudaMalloc(&context, context_size));
   OF_CUDA_CHECK(cudaMallocHost(&keys_host, keys_size));
   OF_CUDA_CHECK(cudaMallocHost(&values_host, values_size));
@@ -79,7 +81,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
 
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
-    store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
+    store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
                missing_keys, missing_indices, context + offset);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
@@ -109,6 +111,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaGetLastError());
   OF_CUDA_CHECK(cudaFree(keys));
   OF_CUDA_CHECK(cudaFree(values));
+  OF_CUDA_CHECK(cudaFree(values1));
   OF_CUDA_CHECK(cudaFreeHost(keys_host));
   OF_CUDA_CHECK(cudaFreeHost(values_host));
   OF_CUDA_CHECK(cudaFreeHost(host_n_missing));
@@ -121,6 +124,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
 
 TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
   if (!HasCudaDevice()) { return; }
+  Global<ep::DeviceManagerRegistry>::New();
   CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
   options.value_length = 128;
@@ -133,10 +137,13 @@ TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
 
   TestKeyValueStore(store.get(), options.num_keys, options.num_keys, options.value_length,
                     options.num_shards);
+  store.reset();
+  Global<ep::DeviceManagerRegistry>::Delete();
 }
 
 TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
   if (!HasCudaDevice()) { return; }
+  Global<ep::DeviceManagerRegistry>::New();
   CudaInMemoryKeyValueStoreOptions options{};
   options.num_shards = 4;
   options.value_length = 128;
@@ -149,10 +156,13 @@ TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
 
   TestKeyValueStore(store.get(), options.num_keys, options.num_keys * 0.75, options.value_length,
                     options.num_shards);
+  store.reset();
+  Global<ep::DeviceManagerRegistry>::Delete();
 }
 
 TEST(BlockBasedKeyValueStore, BlockBasedKeyValueStore) {
   if (!HasCudaDevice()) { return; }
+  Global<ep::DeviceManagerRegistry>::New();
   BlockBasedKeyValueStoreOptions options{};
   options.path = "/tmp/test_db";
   options.value_length = 128;
@@ -162,6 +172,32 @@ TEST(BlockBasedKeyValueStore, BlockBasedKeyValueStore) {
   options.block_size = 512;
   std::unique_ptr<KeyValueStore> store = NewBlockBasedKeyValueStore(options);
   TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, options.value_length, 4);
+  store.reset();
+  Global<ep::DeviceManagerRegistry>::Delete();
+}
+
+TEST(CachedKeyValueStore, CachedKeyValueStore) {
+  if (!HasCudaDevice()) { return; }
+  Global<ep::DeviceManagerRegistry>::New();
+  BlockBasedKeyValueStoreOptions store_options{};
+  store_options.path = "/tmp/test_db";
+  store_options.value_length = 128;
+  store_options.key_type = DataType::kInt64;
+  store_options.value_type = DataType::kFloat;
+  store_options.max_query_length = 128;
+  store_options.block_size = 512;
+  std::unique_ptr<KeyValueStore> store = NewBlockBasedKeyValueStore(store_options);
+  CudaLruCacheOptions cache_options{};
+  cache_options.value_size = 512;
+  cache_options.memory_budget_mb = 8;
+  cache_options.max_query_length = 128;
+  cache_options.key_size = 8;
+  std::unique_ptr<Cache> cache = NewCudaLruCache(cache_options);
+  std::unique_ptr<KeyValueStore> cached_store =
+      NewCachedKeyValueStore(std::move(store), std::move(cache));
+  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, store_options.value_length, 4);
+  cached_store.reset();
+  Global<ep::DeviceManagerRegistry>::Delete();
 }
 
 #endif  // WITH_CUDA

@@ -84,12 +84,11 @@ embedding::Cache* EmbeddingMgr::GetCache(const embedding::EmbeddingOptions& embe
   }
   embedding::CudaLruCacheOptions options{};
   const uint32_t line_size = embedding_options.EmbeddingSize();
-  options.line_size = line_size;
   options.memory_budget_mb = embedding_options.CacheMemoryBudgetMb();
   CHECK_GT(options.memory_budget_mb, 0);
   options.max_query_length = 65536 * 26;
-  options.key_type = DataType::kInt64;
-  options.value_type = DataType::kFloat;
+  options.key_size = GetSizeOfDataType(DataType::kInt64);
+  options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
   std::unique_ptr<embedding::Cache> cache = embedding::NewCudaLruCache(options);
   auto pair = cache_map_.emplace(map_key, std::move(cache));
   CHECK(pair.second);

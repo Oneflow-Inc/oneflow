@@ -29,6 +29,10 @@ class KeyValueStore {
   KeyValueStore() = default;
   virtual ~KeyValueStore() = default;
 
+  virtual uint32_t KeySize() const = 0;
+  virtual uint32_t ValueSize() const = 0;
+  virtual uint32_t MaxQueryLength() const = 0;
+
   virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
                    uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
                    uint64_t* context) = 0;

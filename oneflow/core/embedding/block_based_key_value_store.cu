@@ -73,6 +73,12 @@ class KeyValueStoreImpl : public KeyValueStore {
     OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
   }
 
+  uint32_t KeySize() const override { return key_size_; }
+
+  uint32_t ValueSize() const override { return value_size_; }
+
+  uint32_t MaxQueryLength() const override { return GetMaxVal<int32_t>(); }
+
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
            uint64_t* context) override;
@@ -105,8 +111,6 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
                                  uint32_t* missing_indices, uint64_t* context) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_query_values_, values, num_keys * value_size_,
-                                cudaMemcpyDefault, cuda_stream->cuda_stream()));
   CHECK_LE(num_keys, max_query_length_);
   if (num_keys == 0) {
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t),

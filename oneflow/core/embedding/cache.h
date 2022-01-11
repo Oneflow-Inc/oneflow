@@ -29,6 +29,9 @@ class Cache {
   Cache() = default;
   virtual ~Cache() = default;
 
+  virtual uint32_t KeySize() const = 0;
+  virtual uint32_t ValueSize() const = 0;
+  virtual uint32_t MaxQueryLength() const = 0;
   virtual uint64_t Capacity() const = 0;
   virtual void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
                     void* missing_keys, uint32_t* missing_indices) = 0;

@@ -43,11 +43,10 @@ TEST(CudaLruCache, CudaLruCache) {
 
   CudaLruCacheOptions options{};
   const uint32_t line_size = 128;
-  options.line_size = line_size;
+  options.value_size = 512;
   options.memory_budget_mb = 8;
   options.max_query_length = 65536;
-  options.key_type = DataType::kInt64;
-  options.value_type = DataType::kFloat;
+  options.key_size = 8;
   std::unique_ptr<Cache> cache(NewCudaLruCache(options));
 
   std::unordered_set<int64_t> in_cache;

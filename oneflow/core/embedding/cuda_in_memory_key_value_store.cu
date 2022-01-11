@@ -303,6 +303,8 @@ class KeyValueStoreImpl : public KeyValueStore {
         num_keys_(options.num_keys),
         num_device_keys_(options.num_device_keys) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    key_size_ = sizeof(Key);
+    value_size_ = value_length_ * sizeof(Elem);
     const size_t device_values_size = num_device_keys_ * value_length_ * sizeof(Elem);
     if (device_values_size > 0) { OF_CUDA_CHECK(cudaMalloc(&device_values_, device_values_size)); }
     CHECK_GE(num_keys_, num_device_keys_);
@@ -318,6 +320,12 @@ class KeyValueStoreImpl : public KeyValueStore {
     if (device_values_size > 0) { OF_CUDA_CHECK(cudaFree(device_values_)); }
     OF_CUDA_CHECK(cudaFreeHost(host_values_));
   }
+
+  uint32_t KeySize() const override { return key_size_; }
+
+  uint32_t ValueSize() const override { return value_size_; }
+
+  uint32_t MaxQueryLength() const override { return GetMaxVal<int32_t>(); }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
@@ -335,6 +343,8 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint64_t num_device_keys_;
   Elem* device_values_;
   Elem* host_values_;
+  uint32_t key_size_{};
+  uint32_t value_size_{};
 };
 
 template<typename Encoder, typename Key, typename Elem>
