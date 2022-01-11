@@ -81,7 +81,9 @@ def DistributedDataParallel(
                 )
                 output = []
                 for i, keys in enumerate(out_key_list):
-                    output.append(dict(zip(keys, out_values[i * len(keys): (i + 1) * len(keys)])))
+                    output.append(
+                        dict(zip(keys, out_values[i * len(keys) : (i + 1) * len(keys)]))
+                    )
                 return output
             else:
                 # For List[Tensor] return type.
