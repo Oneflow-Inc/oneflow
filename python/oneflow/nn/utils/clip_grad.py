@@ -90,45 +90,92 @@ def clip_grad_norm_(
     norm_type = float(norm_type)
     if len(parameters) == 0:
         return flow.tensor(0.0)
-    device = parameters[0].grad.device
-    if norm_type == float("inf"):
-        norms = [p.grad.detach().abs().max().to(device) for p in parameters]
-        total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
-    elif norm_type == float("-inf"):
-        norms = [p.grad.detach().abs().min().to(device) for p in parameters]
-        total_norm = norms[0] if len(norms) == 1 else flow.min(flow.stack(norms))
-    else:
-        total_norm = flow.linalg.vector_norm(
-            flow.stack(
-                [
-                    flow.linalg.vector_norm(p.grad.detach(), norm_type).to(device)
-                    for p in parameters
-                ]
-            ),
-            norm_type,
-        )
-    if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
-        if error_if_nonfinite:
-            raise RuntimeError(
-                f"The total norm of order {norm_type} for gradients from "
-                "`parameters` is non-finite, so it cannot be clipped. To disable "
-                "this error and scale the gradients by the non-finite norm anyway, "
-                "set `error_if_nonfinite=False`"
-            )
-        else:
-            warnings.warn(
-                "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
-                "Note that the default behavior will change in a future release to error out "
-                "if a non-finite total norm is encountered. At that point, setting "
-                "error_if_nonfinite=false will be required to retain the old behavior.",
-                FutureWarning,
-                stacklevel=2,
-            )
 
-    clip_coef = max_norm / (total_norm + 1e-6)
-    clip_coef_clamped = clip_coef.clamp(max=1.0)
-    for p in parameters:
-        p.grad.detach().mul_(clip_coef_clamped.to(p.grad.device))
+    if parameters[0].is_consistent:
+        assert all(
+            [p.is_consistent for p in parameters]
+        ), "All parameters must be consistent tensor."
+        if norm_type == float("inf"):
+            norms = [p.grad.detach().abs().max() for p in parameters]
+            total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
+        elif norm_type == float("-inf"):
+            norms = [p.grad.detach().abs().min() for p in parameters]
+            total_norm = norms[0] if len(norms) == 1 else flow.min(flow.stack(norms))
+        else:
+            total_norm = flow.linalg.vector_norm(
+                flow.stack(
+                    [
+                        flow.linalg.vector_norm(p.grad.detach(), norm_type)
+                        for p in parameters
+                    ]
+                ),
+                norm_type,
+            )
+        if (
+            np.isnan(total_norm.to_local().numpy()).all()
+            or np.isinf(total_norm.to_local().numpy()).all()
+        ):
+            if error_if_nonfinite:
+                raise RuntimeError(
+                    f"The total norm of order {norm_type} for gradients from "
+                    "`parameters` is non-finite, so it cannot be clipped. To disable "
+                    "this error and scale the gradients by the non-finite norm anyway, "
+                    "set `error_if_nonfinite=False`"
+                )
+            else:
+                warnings.warn(
+                    "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
+                    "Note that the default behavior will change in a future release to error out "
+                    "if a non-finite total norm is encountered. At that point, setting "
+                    "error_if_nonfinite=false will be required to retain the old behavior.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+
+        clip_coef = max_norm / (total_norm + 1e-6)
+        clip_coef_clamped = clip_coef.clamp(max=1.0)
+        for p in parameters:
+            p.grad.detach().mul_(clip_coef_clamped)
+    else:
+        device = parameters[0].grad.device
+        if norm_type == float("inf"):
+            norms = [p.grad.detach().abs().max().to(device) for p in parameters]
+            total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
+        elif norm_type == float("-inf"):
+            norms = [p.grad.detach().abs().min().to(device) for p in parameters]
+            total_norm = norms[0] if len(norms) == 1 else flow.min(flow.stack(norms))
+        else:
+            total_norm = flow.linalg.vector_norm(
+                flow.stack(
+                    [
+                        flow.linalg.vector_norm(p.grad.detach(), norm_type).to(device)
+                        for p in parameters
+                    ]
+                ),
+                norm_type,
+            )
+        if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
+            if error_if_nonfinite:
+                raise RuntimeError(
+                    f"The total norm of order {norm_type} for gradients from "
+                    "`parameters` is non-finite, so it cannot be clipped. To disable "
+                    "this error and scale the gradients by the non-finite norm anyway, "
+                    "set `error_if_nonfinite=False`"
+                )
+            else:
+                warnings.warn(
+                    "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
+                    "Note that the default behavior will change in a future release to error out "
+                    "if a non-finite total norm is encountered. At that point, setting "
+                    "error_if_nonfinite=false will be required to retain the old behavior.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+
+        clip_coef = max_norm / (total_norm + 1e-6)
+        clip_coef_clamped = clip_coef.clamp(max=1.0)
+        for p in parameters:
+            p.grad.detach().mul_(clip_coef_clamped.to(p.grad.device))
     return total_norm
 
 
