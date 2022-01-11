@@ -130,7 +130,7 @@ bool StringToInteger(const std::string& str, int64_t* value) {
 }
 
 bool StringToFloat(const std::string& str, float* value) {
-  char* end;
+  char* end = nullptr;
   float v = std::strtof(str.data(), &end);
   if (end == str.data()) {
     return false;
@@ -165,12 +165,9 @@ int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value) {
 float ParseFloatFromEnv(const std::string& env_var, float default_value) {
   const char* env_p = std::getenv(env_var.c_str());
   if (env_p == nullptr) { return default_value; }
-  float value;
-  if (StringToFloat(env_p, &value)) {
-    return value;
-  } else {
-    return default_value;
-  }
+  float value = default_value;
+  StringToFloat(env_p, &value);
+  return value;
 }
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value) {
