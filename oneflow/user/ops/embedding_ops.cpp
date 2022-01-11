@@ -15,15 +15,17 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   DimVector out_dim_vec = ctx->InputShape("ids", 0).dim_vec();
-  const int64_t embedding_vec_size = ctx->Attr<int64_t>("embedding_size");
-  CHECK_EQ_OR_RETURN(embedding_vec_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
-  out_dim_vec.push_back(embedding_vec_size);
+  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
+  const int64_t embedding_size = options.EmbeddingSize();
+  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
+  out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
@@ -85,7 +87,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
           builder.Op("sgd_embedding_update_placeholder")
               .Input("ids", op.input("ids", 0))
               .Input("embedding_diff", op.GetGradTensorWithOpOutput("embeddings", 0))
-              .Attr<std::string>("name", op.attr<std::string>("name"))
+              .Attr<std::string>("embedding_options", op.attr<std::string>("embedding_options"))
               .Build();
       AddOp(grad_op);
       return Maybe<void>::Ok();

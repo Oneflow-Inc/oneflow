@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
@@ -112,7 +113,8 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("unique_ids", 0);
   DimVector out_dim_vec = ids_shape.dim_vec();
-  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
+  const int64_t embedding_size = options.EmbeddingSize();
   CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
@@ -169,7 +171,8 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids_reverse_idx", 0);
   DimVector out_dim_vec = ids_shape.dim_vec();
-  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
+  const int64_t embedding_size = options.EmbeddingSize();
   CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);

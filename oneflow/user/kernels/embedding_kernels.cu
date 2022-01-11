@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
@@ -47,11 +48,9 @@ void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, s
 
 template<typename T, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
-                                const float* learning_rate, float learning_rate_val,
-                                const int64_t* skip_if, const T* model_diff, const T* model,
-                                T* updated_model) {
-  if (skip_if != nullptr && *skip_if != 0) { return; }
-  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+                                const float* learning_rate, const int64_t* skip_if,
+                                const T* model_diff, const T* model, T* updated_model) {
+  float learning_rate_val = *learning_rate;
   const int64_t n = *num_unique_ids * embedding_size;
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T model_val = model[i];
@@ -212,16 +211,20 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   explicit EmbeddingKernelState(user_op::KernelInitContext* ctx)
       : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
+    options_.reset(new embedding::EmbeddingOptions(ctx->Attr<std::string>("embedding_options")));
   }
   ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
 
   void* HostNumKeys() { return host_num_keys_; }
+
+  embedding::EmbeddingOptions* EmbeddingOptions() { return options_.get(); }
 
   one::Generator* generator() { return generator_.get(); }
 
  private:
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
+  std::unique_ptr<embedding::EmbeddingOptions> options_;
 };
 
 template<typename T, typename K>
@@ -264,15 +267,16 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     uint64_t seed = cuda_generator->current_seed();
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
-    embedding::Cache* cache =
-        Global<EmbeddingMgr>::Get()->GetCache("MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
+    embedding::Cache* cache = Global<EmbeddingMgr>::Get()->GetCache(
+        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
+    const int64_t embedding_size = options->EmbeddingSize();
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
@@ -364,10 +368,11 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::Cache* cache =
-        Global<EmbeddingMgr>::Get()->GetCache("MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
+    embedding::Cache* cache = Global<EmbeddingMgr>::Get()->GetCache(
+        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
@@ -375,7 +380,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
 
     // just for debug, lookup not need so much tmp_buffer like prefetch kernel
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
+    const int64_t embedding_size = options->EmbeddingSize();
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), embedding_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
@@ -455,10 +460,11 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::Cache* cache =
-        Global<EmbeddingMgr>::Get()->GetCache("MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
+    embedding::Cache* cache = Global<EmbeddingMgr>::Get()->GetCache(
+        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        "MyEmbeddingTest", ctx->parallel_ctx().parallel_id());
+        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
 
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
@@ -480,12 +486,8 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
 
-    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
-    const float* learning_rate_ptr = nullptr;
-    if (ctx->has_input("learning_rate", 0)) {
-      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
-      learning_rate_ptr = learning_rate->dptr<float>();
-    }
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const float* learning_rate_ptr = learning_rate->dptr<float>();
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
@@ -496,9 +498,8 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
     SGDUpdateKernel<T, IDX>
         <<<BlocksNum4ThreadsNum(embedding_diff->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, learning_rate_val,
-            skip_if_ptr, embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(),
-            update_unique_embeddings);
+            embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, skip_if_ptr,
+            embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(), update_unique_embeddings);
     LOG(INFO) << ctx->parallel_ctx().parallel_id()
               << " update put to cache num ids: " << *host_num_keys;
     cache->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), update_unique_embeddings,

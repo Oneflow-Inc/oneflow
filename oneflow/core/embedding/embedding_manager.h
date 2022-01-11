@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "oneflow/core/embedding/cuda_lru_cache.h"
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
+#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
@@ -30,9 +31,11 @@ class EmbeddingMgr final {
   EmbeddingMgr() = default;
   ~EmbeddingMgr();
 
-  embedding::Cache* GetCache(const std::string& name, int64_t parallel_id);
+  embedding::Cache* GetCache(const embedding::EmbeddingOptions& options, int64_t parallel_id,
+                             int64_t parallel_num);
 
-  embedding::KeyValueStore* GetKeyValueStore(const std::string& name, int64_t parallel_id);
+  embedding::KeyValueStore* GetKeyValueStore(const embedding::EmbeddingOptions& options,
+                                             int64_t parallel_id, int64_t parallel_num);
 
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::Cache>> cache_map_;

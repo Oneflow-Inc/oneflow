@@ -21,29 +21,36 @@ import oneflow._oneflow_internal
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
+import json
 
 
 class OneEmbeddingLookup(Module):
     def __init__(self, options):
         super().__init__()
-        self.name = options["name"]
-        self.embedding_size = options["embedding_size"]
         self.dtype = options["dtype"]
-        self.encoder = options["encoder"]
-        self.partitioning = options["partitioning"]
-        self.initializer = options["initializer"]
-        self.optimizer = options["optimizer"]
-        self.backend = options["backend"]
+        embedding_options = {
+            "embedding_name": "EmbeddingTest",
+            "base_learning_rate": 24,
+            "optimizer": "adam",
+            "optimizer_conf": {
+                "beta1": 0.9,
+                "beta2": 0.9,
+                "epsilon": 0.001,
+                "amsgrad": 0,
+            },
+            "warmup_type": "linear",
+            "warmup_conf": {"warmup_batches": 2750, "start_multiplier": 0.0},
+            "learning_rate_decay_type": "polynomial",
+            "learning_rate_decay_conf": {
+                "decay_batches": 27772,
+                "end_learning_rate": 0.0,
+                "power": 2.0,
+                "cycle": False,
+            },
+        }
+        self.embedding_options = json.dumps(embedding_options)
 
     def forward(self, ids):
         return flow._C.embedding_lookup_placeholder(
-            ids,
-            self.name,
-            self.embedding_size,
-            self.dtype,
-            self.encoder,
-            self.partitioning,
-            self.initializer,
-            self.optimizer,
-            self.backend,
+            ids, self.dtype, self.embedding_options,
         )

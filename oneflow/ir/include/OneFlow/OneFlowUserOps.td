@@ -8808,14 +8808,8 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
     AnyType:$embeddings
   );
   let attrs = (ins
-    StrAttr:$name,
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     OneFlow_DataType:$dtype,
-    StrAttr:$encoder,
-    StrAttr:$partitioning,
-    StrAttr:$initializer,
-    StrAttr:$optimizer,
-    StrAttr:$backend
+    StrAttr:$embedding_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8832,8 +8826,7 @@ def OneFlow_SgdEmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"sgd_embedding_upda
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
-    StrAttr:$name,
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+    StrAttr:$embedding_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8855,7 +8848,7 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
     AnyType:$partition_index
   );
   let attrs = (ins
-    StrAttr:$partitioning
+    StrAttr:$embedding_options
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8878,7 +8871,7 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
     AnyType:$embeddings
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+    StrAttr:$embedding_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8900,7 +8893,7 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
     AnyType:$cur_rank_unique_embedding_diff
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+    StrAttr:$embedding_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8917,7 +8910,7 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
     AnyType:$context
   );
   let attrs = (ins
-    StrAttr:$name
+    StrAttr:$embedding_options
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8937,9 +8930,8 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     AnyType:$out_context
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     OneFlow_DataType:$dtype,
-    StrAttr:$name
+    StrAttr:$embedding_options
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8959,9 +8951,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
     Optional<AnyType>:$skip_if
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
-    StrAttr:$name,
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+    StrAttr:$embedding_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

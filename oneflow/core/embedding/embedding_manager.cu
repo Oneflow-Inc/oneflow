@@ -64,7 +64,9 @@ EmbeddingMgr::~EmbeddingMgr() {
   }
 }
 
-embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parallel_id) {
+embedding::Cache* EmbeddingMgr::GetCache(const embedding::EmbeddingOptions& embedding_options,
+                                         int64_t parallel_id, int64_t parallel_num) {
+  const std::string& name = embedding_options.EmbeddingName();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   int device_id = 0;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
@@ -81,9 +83,9 @@ embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parall
     return it->second.get();
   }
   embedding::CudaLruCacheOptions options{};
-  const uint32_t line_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
+  const uint32_t line_size = embedding_options.EmbeddingSize();
   options.line_size = line_size;
-  options.memory_budget_mb = ParseIntegerFromEnv("CACHE_MEMORY_BUDGET_MB", 0);
+  options.memory_budget_mb = embedding_options.CacheMemoryBudgetMb();
   CHECK_GT(options.memory_budget_mb, 0);
   options.max_query_length = 65536 * 26;
   options.key_type = DataType::kInt64;
@@ -94,8 +96,10 @@ embedding::Cache* EmbeddingMgr::GetCache(const std::string& name, int64_t parall
   return pair.first->second.get();
 }
 
-embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name,
-                                                         int64_t parallel_id) {
+embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
+    const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
+    int64_t parallel_num) {
+  const std::string& name = embedding_options.EmbeddingName();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   int device_id = 0;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
@@ -110,27 +114,31 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& name
   if (it != key_value_store_map_.end()) { return it->second.get(); }
 
   std::unique_ptr<embedding::KeyValueStore> store;
-  std::string kv_store = GetStringFromEnv("KEY_VALUE_STORE", "");
+  const std::string& kv_store = embedding_options.KVStore();
   if (kv_store == "cuda_in_memory") {
     embedding::CudaInMemoryKeyValueStoreOptions options{};
     options.num_shards = 4;
-    options.value_length = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
-    options.num_keys = ParseIntegerFromEnv("NUM_KEYS", 0);
+    options.value_length = embedding_options.EmbeddingSize();
+    options.num_keys = embedding_options.NumKeys();
     CHECK_GT(options.num_keys, 0);
-    options.num_device_keys = ParseIntegerFromEnv("NUM_DEVICE_KEYS", 0);
+    options.num_device_keys = embedding_options.NumDeviceKeys();
     options.key_type = DataType::kInt64;
     options.value_type = DataType::kFloat;
     options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
     store = NewCudaInMemoryKeyValueStore(options);
   } else if (kv_store == "block_based") {
-    std::string path = GetStringFromEnv("BLOCK_BASED_PATH", "");
+    const std::string& path = embedding_options.FixedTablePath();
+    const std::string& num_rank = std::to_string(parallel_num);
+    const int32_t rank_id_suffix_length = num_rank.size();
+    const std::string& rank_id = std::to_string(parallel_id);
     embedding::BlockBasedKeyValueStoreOptions options{};
-    options.path = path + std::to_string(parallel_id);
-    options.value_length = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
+    options.path = path + "/" + std::string(rank_id_suffix_length - rank_id.size(), '0') + rank_id
+                   + "_" + num_rank;
+    options.value_length = embedding_options.EmbeddingSize();
     options.key_type = DataType::kInt64;
     options.value_type = DataType::kFloat;
     options.max_query_length = 65536 * 26;
-    options.block_size = ParseIntegerFromEnv("BLOCK_BASED_BLOCK_SIZE", 512);
+    options.block_size = embedding_options.FixedTableBlockSize();
     store = NewBlockBasedKeyValueStore(options);
   } else {
     UNIMPLEMENTED();

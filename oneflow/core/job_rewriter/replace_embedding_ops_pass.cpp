@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include "oneflow/core/job_rewriter/autograd.h"
+#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
@@ -88,7 +89,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
   int job_id = rand();
   TeePersistentLogStream::Create(StrCat("my_optimized_job", job_id))->Write(job_builder->job());
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
-  auto AddScheduleOp = [&](const OptimizerConf& optimizer_conf,
+  auto AddScheduleOp = [&](const embedding::EmbeddingOptions& embedding_options,
                            const std::string& op_name) -> std::string {
     const class oneflow::OpNode* op_node =
         op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
@@ -98,13 +99,14 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     schedule_op_conf.set_name(op_name);
     auto* schedule_conf = schedule_op_conf.mutable_learning_rate_schedule_conf();
     schedule_conf->set_train_step(train_conf.train_step_lbn());
-    schedule_conf->set_learning_rate(optimizer_conf.base_learning_rate());
+    schedule_conf->set_learning_rate(embedding_options.BaseLearningRate());
     schedule_conf->set_out("out");
-    if (optimizer_conf.has_warmup_conf()) {
-      *schedule_conf->mutable_warmup_conf() = optimizer_conf.warmup_conf();
+    if (embedding_options.WarmupType() != "none") {
+      *schedule_conf->mutable_warmup_conf() = embedding_options.WarmupConfProto();
     }
-    if (optimizer_conf.has_learning_rate_decay()) {
-      *schedule_conf->mutable_learning_rate_decay() = optimizer_conf.learning_rate_decay();
+    if (embedding_options.LearningRateDecayType() != "none") {
+      *schedule_conf->mutable_learning_rate_decay() =
+          embedding_options.LearningRateDecayConfProto();
     }
     schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
     job_builder->AddOps(parallel_conf, {schedule_op_conf});
@@ -116,7 +118,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     if (!op_conf.has_user_conf()) { return; }
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
     if (user_op_conf.op_type_name() != "embedding_lookup_placeholder") { return; }
-    LOG(ERROR) << "user_op_conf " << user_op_conf.op_name();
+    embedding::EmbeddingOptions options(user_op_conf.attr<std::string>("embedding_options"));
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
 
@@ -145,7 +147,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Output("cur_rank_reverse_idx")
             .Output("num_unique_ids_matrix")
             .Output("partition_index")
-            .Attr<std::string>("partitioning", user_op_conf.attr<std::string>("partitioning"))
+            .Attr<std::string>("embedding_options",
+                               user_op_conf.attr<std::string>("embedding_options"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
@@ -161,7 +164,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
             .Input("unique_ids", unique_ids_lbn)
             .Output("context")
-            .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
+            .Attr<std::string>("embedding_options",
+                               user_op_conf.attr<std::string>("embedding_options"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
     OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
@@ -179,9 +183,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Input("context", embedding_prefetch_op.output("context", 0))
             .Output("embeddings")
             .Output("out_context")
-            .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
             .Attr<DataType>("dtype", user_op_conf.attr<DataType>("dtype"))
-            .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
+            .Attr<std::string>("embedding_options",
+                               user_op_conf.attr<std::string>("embedding_options"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
     OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
@@ -216,7 +220,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                    AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
             .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
             .Output("embeddings")
-            .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
+            .Attr<std::string>("embedding_options",
+                               user_op_conf.attr<std::string>("embedding_options"))
             .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
             .Build();
     // add_ops.push_back(embedding_shuffle_op.op_conf());
@@ -230,7 +235,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
         if (update_op_conf.op_type_name() != "sgd_embedding_update_placeholder") { continue; }
-        if (update_op_conf.attr<std::string>("name") != user_op_conf.attr<std::string>("name")) {
+        if (update_op_conf.attr<std::string>("embedding_options")
+            != user_op_conf.attr<std::string>("embedding_options")) {
           continue;
         }
         delete_op_names.push_back(update_op_conf.op_name());
@@ -265,7 +271,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                        AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
                 .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
                 .Output("cur_rank_unique_embedding_diff")
-                .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
+                .Attr<std::string>("embedding_options",
+                                   user_op_conf.attr<std::string>("embedding_options"))
                 .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())
                 .Build();
         add_ops.push_back(embedding_gradient_shuffle_op.op_conf());
@@ -294,17 +301,14 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                                                    &embedding_lbi2embedding_diff_lbi));
         ScaleModelDiffByLossScale(ctx, op_graph, job_builder, &embedding_lbi2embedding_diff_lbi);
         embedding_diff_lbn = GenLogicalBlobName(embedding_lbi2embedding_diff_lbi.begin()->second);
-        LOG(ERROR) << "embedding_diff_lbn " << embedding_diff_lbn;
 
         // dynamic loss scale, now only support one embedding
         DynamicLossScaleAddGradient(ctx, op_graph, job_builder, embedding_diff_lbn,
                                     user_op_conf.op_conf().scope_symbol_id(),
                                     op_node->parallel_desc().parallel_conf());
 
-        // optimizer_conf as embedding param, now use train_conf.optimizer_conf(0) to test
-        const auto& optimizer_conf = train_conf.optimizer_conf(0);
         const std::string& learning_rate_lbn =
-            AddScheduleOp(optimizer_conf, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
+            AddScheduleOp(options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
         user_op::UserOpConfWrapperBuilder sgd_embedding_update_op_builder(
             user_op_conf.op_name() + "_sgd_embedding_update");
         sgd_embedding_update_op_builder.OpTypeName("sgd_embedding_update")
@@ -324,8 +328,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         }
         user_op::UserOpConfWrapper sgd_embedding_update_op =
             sgd_embedding_update_op_builder
-                .Attr<int64_t>("embedding_size", user_op_conf.attr<int64_t>("embedding_size"))
-                .Attr<std::string>("name", user_op_conf.attr<std::string>("name"))
+                .Attr<std::string>("embedding_options",
+                                   user_op_conf.attr<std::string>("embedding_options"))
                 .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
                 .Build();
         OperatorConf sgd_embedding_update_new_op_conf = sgd_embedding_update_op.op_conf();
@@ -335,10 +339,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
     job_builder->DelOps(delete_op_names);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), add_ops);
-    LOG(ERROR) << "xxxxxxxxxxxxx delete" << delete_op_names.size();
-
-    // OperatorConf new_op_conf = op_conf;
-    // new_op_conf.set_stream_name_hint("EMBEDDING");
   });
   srand((unsigned)time(NULL));
   job_id = rand();
