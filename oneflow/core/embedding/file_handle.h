@@ -80,9 +80,10 @@ class MappedFileHandle final {
  public:
   OF_DISALLOW_COPY(MappedFileHandle);
   MappedFileHandle() : file_(), ptr_(nullptr) {}
-  explicit MappedFileHandle(FileHandle&& file, int prot) : file_(std::move(file)), ptr_(nullptr) {
+  MappedFileHandle(FileHandle&& file, size_t size, int prot)
+      : file_(std::move(file)), ptr_(nullptr) {
     CHECK_NE(file_.fd(), -1);
-    void* ptr = mmap(nullptr, file_.Size(), prot, MAP_SHARED, file_.fd(), 0);
+    void* ptr = mmap(nullptr, size, prot, MAP_SHARED, file_.fd(), 0);
     CHECK_NE(ptr, MAP_FAILED);
     ptr_ = ptr;
   }
@@ -99,6 +100,8 @@ class MappedFileHandle final {
   ~MappedFileHandle() { Unmap(); }
 
   void* ptr() { return ptr_; }
+
+  FileHandle& file() { return file_; }
 
  private:
   void Unmap() {

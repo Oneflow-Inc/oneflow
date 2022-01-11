@@ -23,7 +23,6 @@ limitations under the License.
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <liburing.h>
 
 namespace oneflow {
 

@@ -21,7 +21,12 @@ limitations under the License.
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <sys/syscall.h>
+#include <linux/aio_abi.h>
+#include <unistd.h>
+#ifdef WITH_LIBURING
 #include <liburing.h>
+#endif  // WITH_LIBURING
 
 namespace oneflow {
 
@@ -32,6 +37,7 @@ namespace {
 constexpr uint32_t kNumReadThreads = 4;
 constexpr uint32_t kRingQueueDepth = 128;
 constexpr uint32_t kRingSubmitBatch = 32;
+constexpr uint32_t kAioQueueDepth = 128;
 constexpr uint32_t kChunkNameSuffixLength = 8;
 constexpr char const* kInitSnapshotName = "index";
 constexpr char const* kFinalSnapshotName = "index";
@@ -95,7 +101,103 @@ class KeyIteratorImpl : public FixedTable::KeyIterator {
   typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator end_;
 };
 
-template<typename Key>
+#ifdef WITH_LIBURING
+
+class RingEngine final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RingEngine);
+  RingEngine() : ring_{}, pending_submit_(0), num_readings_(0) {
+    PCHECK(io_uring_queue_init(kRingQueueDepth, &ring_, 0) == 0);
+  }
+  ~RingEngine() {
+    WaitUntilDone();
+    io_uring_queue_exit(&ring_);
+  }
+
+  void AsyncPread(int fd, void* buf, size_t count, off_t offset) {
+    if (num_readings_ == kRingQueueDepth) {
+      struct io_uring_cqe* cqe = nullptr;
+      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
+      CHECK_GE(cqe->res, 0);
+      io_uring_cqe_seen(&ring_, cqe);
+    } else {
+      num_readings_ += 1;
+    }
+    io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring_));
+    io_uring_prep_read(sqe, fd, buf, count, offset);
+    pending_submit_ += 1;
+    if (pending_submit_ == kRingSubmitBatch) {
+      PCHECK(io_uring_submit(&ring_) == pending_submit_);
+      pending_submit_ = 0;
+    }
+  }
+
+  void WaitUntilDone() {
+    if (pending_submit_ > 0) { PCHECK(io_uring_submit(&ring_) == pending_submit_); }
+    while (num_readings_ != 0) {
+      struct io_uring_cqe* cqe = nullptr;
+      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
+      CHECK_GE(cqe->res, 0);
+      io_uring_cqe_seen(&ring_, cqe);
+      num_readings_ -= 1;
+    }
+  }
+
+ private:
+  io_uring ring_;
+  uint32_t pending_submit_;
+  uint32_t num_readings_;
+};
+
+#endif  // WITH_LIBURING
+
+class AioEngine final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AioEngine);
+  AioEngine() : ctx_{}, num_readings_(0) {
+    PCHECK(syscall(__NR_io_setup, kAioQueueDepth, &ctx_) >= 0);
+    cbs_.resize(kAioQueueDepth);
+    cbs_ptr_.resize(kAioQueueDepth);
+    for (uint32_t i = 0; i < kAioQueueDepth; ++i) { cbs_ptr_[i] = &cbs_[i]; }
+    events_.resize(kAioQueueDepth);
+  }
+  ~AioEngine() {
+    WaitUntilDone();
+    PCHECK(syscall(__NR_io_destroy, ctx_) >= 0);
+  }
+
+  void AsyncPread(int fd, void* buf, size_t count, off_t offset) {
+    if (num_readings_ == kAioQueueDepth) { WaitUntilDone(); }
+    struct iocb* cb = &cbs_.at(num_readings_);
+    cb->aio_fildes = fd;
+    cb->aio_lio_opcode = IOCB_CMD_PREAD;
+    cb->aio_reqprio = 0;
+    cb->aio_buf = reinterpret_cast<uintptr_t>(buf);
+    cb->aio_nbytes = count;
+    cb->aio_offset = offset;
+    const long nr = 1;
+    PCHECK(syscall(__NR_io_submit, ctx_, nr, &cbs_ptr_.at(num_readings_)) >= 0);
+    num_readings_ += 1;
+  }
+
+  void WaitUntilDone() {
+    if (num_readings_ != 0) {
+      PCHECK(syscall(__NR_io_getevents, ctx_, num_readings_, num_readings_, events_.data(), nullptr)
+             >= 0);
+      for (long i = 0; i < num_readings_; ++i) { CHECK_GT(events_.at(i).res, 0); }
+      num_readings_ = 0;
+    }
+  }
+
+ private:
+  aio_context_t ctx_;
+  long num_readings_;
+  std::vector<struct iocb> cbs_;
+  std::vector<struct iocb*> cbs_ptr_;
+  std::vector<struct io_event> events_;
+};
+
+template<typename Key, typename Engine>
 class FixedTableImpl : public FixedTable {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FixedTableImpl);
@@ -107,8 +209,8 @@ class FixedTableImpl : public FixedTable {
         block_size_(options.block_size) {
     CHECK_GE(block_size_, value_size_);
     values_per_block_ = block_size_ / value_size_;
-    io_rings_.resize(kNumReadThreads);
-    for (auto& ring : io_rings_) { PCHECK(io_uring_queue_init(kRingQueueDepth, &ring, 0) == 0); }
+    engines_.resize(kNumReadThreads);
+    for (uint32_t tid = 0; tid < kNumReadThreads; ++tid) { engines_.at(tid).reset(new Engine); }
     std::unordered_map<uint64_t, std::string> chunks;
     ListChunkFiles(path_, kValueFilenamePrefix, &chunks);
     for (auto& chunk : chunks) {
@@ -131,7 +233,6 @@ class FixedTableImpl : public FixedTable {
   ~FixedTableImpl() override {
     for (auto& file : value_files_) { file.Close(); }
     SaveSnapshotImpl(kFinalSnapshotName);
-    for (auto& ring : io_rings_) { io_uring_queue_exit(&ring); }
   }
 
   uint16_t BlockSize() const override;
@@ -158,7 +259,7 @@ class FixedTableImpl : public FixedTable {
 
   uint32_t values_per_block_;
 
-  std::vector<io_uring> io_rings_;
+  std::vector<std::unique_ptr<Engine>> engines_;
 
   std::vector<uint16_t> offsets_buffer_;
   std::vector<char> blocks_buffer_;
@@ -169,39 +270,29 @@ class FixedTableImpl : public FixedTable {
   std::vector<FileHandle> value_files_;
 };
 
-template<typename Key>
-uint16_t FixedTableImpl<Key>::BlockSize() const {
+template<typename Key, typename Engine>
+uint16_t FixedTableImpl<Key, Engine>::BlockSize() const {
   return block_size_;
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
-                                    uint16_t* offsets) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
+                                            uint16_t* offsets) {
   std::lock_guard<std::mutex> lock(mutex_);
 #pragma omp parallel num_threads(kNumReadThreads)
   {
     const uint32_t thread_id = omp_get_thread_num();
     const uint32_t num_threads = omp_get_num_threads();
-    auto& ring = io_rings_.at(thread_id);
+    auto& engine = *engines_.at(thread_id);
     const uint32_t keys_per_thread = (num_keys + num_threads - 1) / num_threads;
     const uint32_t start_i = thread_id * keys_per_thread;
     const uint32_t end_i = std::min(start_i + keys_per_thread, num_keys);
-    uint32_t num_ring_reading = 0;
-    uint32_t pending_submit = 0;
     for (uint64_t i = start_i; i < end_i; ++i) {
       const Key key = static_cast<const Key*>(keys)[i];
       auto it = row_id_mapping_.find(key);
       if (it == row_id_mapping_.end()) {
         offsets[i] = block_size_;
       } else {
-        if (num_ring_reading == kRingQueueDepth) {
-          struct io_uring_cqe* cqe = nullptr;
-          PCHECK(io_uring_wait_cqe(&ring, &cqe) == 0);
-          CHECK_EQ(cqe->res, block_size_);
-          io_uring_cqe_seen(&ring, cqe);
-        } else {
-          num_ring_reading += 1;
-        }
         const uint64_t id = it->second;
         const uint64_t block_id = id / values_per_block_;
         const uint16_t id_in_block = id - block_id * values_per_block_;
@@ -210,31 +301,18 @@ void FixedTableImpl<Key>::GetBlocks(uint32_t num_keys, const void* keys, void* b
         const uint64_t block_in_chunk = block_id - chunk_id * num_blocks_per_chunk_;
         const uint64_t block_offset = block_in_chunk * block_size_;
         FileHandle& file = value_files_.at(chunk_id);
-        io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring));
         offsets[i] = offset_in_block;
-        io_uring_prep_read(sqe, file.fd(), static_cast<char*>(blocks) + i * block_size_,
-                           block_size_, block_offset);
-        pending_submit += 1;
-        if (pending_submit == kRingSubmitBatch) {
-          PCHECK(io_uring_submit(&ring) == pending_submit);
-          pending_submit = 0;
-        }
+        engine.AsyncPread(file.fd(), static_cast<char*>(blocks) + i * block_size_, block_size_,
+                          block_offset);
       }
     }
-    if (pending_submit > 0) { PCHECK(io_uring_submit(&ring) == pending_submit); }
-    while (num_ring_reading != 0) {
-      struct io_uring_cqe* cqe = nullptr;
-      PCHECK(io_uring_wait_cqe(&ring, &cqe) == 0);
-      CHECK_EQ(cqe->res, block_size_);
-      io_uring_cqe_seen(&ring, cqe);
-      num_ring_reading -= 1;
-    }
+    engine.WaitUntilDone();
   }
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::Get(uint32_t num_keys, const void* keys, void* values,
-                              uint32_t* n_missing, uint32_t* missing_indices) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void* values,
+                                      uint32_t* n_missing, uint32_t* missing_indices) {
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
   if (value_size_ == block_size_) {
@@ -261,8 +339,9 @@ void FixedTableImpl<Key>::Get(uint32_t num_keys, const void* keys, void* values,
   *n_missing = missing_count;
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
+                                            const void* blocks) {
   const uint32_t num_blocks = (num_keys + values_per_block_ - 1) / values_per_block_;
   const uint32_t num_padded_keys = num_blocks * values_per_block_;
   const uint64_t start = physical_table_size_;
@@ -298,8 +377,8 @@ void FixedTableImpl<Key>::PutBlocks(uint32_t num_keys, const void* keys, const v
   }
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::Put(uint32_t num_keys, const void* keys, const void* values) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const void* values) {
   const void* blocks_ptr = nullptr;
   if (value_size_ == block_size_) {
     blocks_ptr = values;
@@ -321,29 +400,29 @@ void FixedTableImpl<Key>::Put(uint32_t num_keys, const void* keys, const void* v
   PutBlocks(num_keys, keys, blocks_ptr);
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::WithKeyIterator(std::function<void(KeyIterator* iter)> fn) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::WithKeyIterator(std::function<void(KeyIterator* iter)> fn) {
   KeyIteratorImpl<Key> iter(row_id_mapping_);
   fn(&iter);
 }
 
-template<typename Key>
-std::string FixedTableImpl<Key>::ValueFileName(uint64_t chunk_id) const {
+template<typename Key, typename Engine>
+std::string FixedTableImpl<Key, Engine>::ValueFileName(uint64_t chunk_id) const {
   return path_ + "/" + kValueFilenamePrefix + GetChunkName(chunk_id);
 }
 
-template<typename Key>
-std::string FixedTableImpl<Key>::SnapshotFilename(const std::string& name) const {
+template<typename Key, typename Engine>
+std::string FixedTableImpl<Key, Engine>::SnapshotFilename(const std::string& name) const {
   return path_ + "/" + kSnapshotFilenamePrefix + name;
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::LoadSnapshotImpl(const std::string& name) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
   FileHandle snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
   using Entry = IndexEntry<Key>;
   const size_t size = snapshot_file.Size();
-  MappedFileHandle mapped_file(std::move(snapshot_file), PROT_READ);
+  MappedFileHandle mapped_file(std::move(snapshot_file), size, PROT_READ);
   const Entry* entries = static_cast<Entry*>(mapped_file.ptr());
   CHECK_EQ(size % sizeof(Entry), 0);
   size_t n_entries = size / sizeof(Entry);
@@ -354,14 +433,14 @@ void FixedTableImpl<Key>::LoadSnapshotImpl(const std::string& name) {
   }
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::SaveSnapshotImpl(const std::string& name) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
   FileHandle snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
   using Entry = IndexEntry<Key>;
   const size_t total_size = sizeof(Entry) * row_id_mapping_.size();
   snapshot_file.Truncate(total_size);
-  MappedFileHandle mapped_file(std::move(snapshot_file), PROT_READ | PROT_WRITE);
+  MappedFileHandle mapped_file(std::move(snapshot_file), total_size, PROT_READ | PROT_WRITE);
   Entry* entries = static_cast<Entry*>(mapped_file.ptr());
   size_t count = 0;
   for (const auto& pair : row_id_mapping_) {
@@ -371,23 +450,29 @@ void FixedTableImpl<Key>::SaveSnapshotImpl(const std::string& name) {
   }
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::LoadSnapshot(const std::string& name) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::LoadSnapshot(const std::string& name) {
   LoadSnapshotImpl(name);
 }
 
-template<typename Key>
-void FixedTableImpl<Key>::SaveSnapshot(const std::string& name) {
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
   SaveSnapshotImpl(name);
 }
 
 }  // namespace
 
 std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
+#ifdef WITH_LIBURING
+  using Engine = RingEngine;
+#else
+  using Engine = AioEngine;
+#endif  // WITH_LIBURING
+
   if (options.key_size == 4) {
-    return std::unique_ptr<FixedTable>(new FixedTableImpl<uint32_t>(options));
+    return std::unique_ptr<FixedTable>(new FixedTableImpl<uint32_t, Engine>(options));
   } else if (options.key_size == 8) {
-    return std::unique_ptr<FixedTable>(new FixedTableImpl<uint64_t>(options));
+    return std::unique_ptr<FixedTable>(new FixedTableImpl<uint64_t, Engine>(options));
   } else {
     UNIMPLEMENTED();
     return nullptr;
