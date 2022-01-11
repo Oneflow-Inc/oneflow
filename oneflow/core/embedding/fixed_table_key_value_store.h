@@ -13,30 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_BLOCK_BASED_KEY_VALUE_STORE_H_
-#define ONEFLOW_EMBEDDING_BLOCK_BASED_KEY_VALUE_STORE_H_
+#ifndef ONEFLOW_EMBEDDING_FIXED_TABLE_KEY_VALUE_STORE_H_
+#define ONEFLOW_EMBEDDING_FIXED_TABLE_KEY_VALUE_STORE_H_
 
 #include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/embedding/fixed_table.h"
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
 namespace embedding {
 
-struct BlockBasedKeyValueStoreOptions {
-  size_t value_length = 0;
-  DataType key_type = DataType::kInvalidDataType;
-  DataType value_type = DataType::kInvalidDataType;
-  std::string path;
-  uint32_t max_query_length;
-  uint32_t block_size;
+struct FixedTableKeyValueStoreOptions {
+  FixedTableOptions table_options{};
+  uint32_t max_query_length{};
 };
 
-std::unique_ptr<KeyValueStore> NewBlockBasedKeyValueStore(
-    const BlockBasedKeyValueStoreOptions& options);
+std::unique_ptr<KeyValueStore> NewFixedTableKeyValueStore(
+    const FixedTableKeyValueStoreOptions& options);
 
 }  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_BLOCK_BASED_KEY_VALUE_STORE_H_
+#endif  // ONEFLOW_EMBEDDING_FIXED_TABLE_KEY_VALUE_STORE_H_

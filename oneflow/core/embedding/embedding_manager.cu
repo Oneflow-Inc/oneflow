@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/embedding_manager.h"
-#include "oneflow/core/embedding/block_based_key_value_store.h"
+#include "oneflow/core/embedding/fixed_table_key_value_store.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
 
@@ -29,15 +29,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     int64_t parallel_num) {
   const std::string& name = embedding_options.EmbeddingName();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
-  int device_id = 0;
-  OF_CUDA_CHECK(cudaGetDevice(&device_id));
   std::unique_lock<std::mutex> lock(mutex_);
-  auto device_id_it = device_id_map_.find(map_key);
-  if (device_id_it == device_id_map_.end()) {
-    device_id_map_[map_key] = device_id;
-  } else {
-    CHECK_EQ(device_id_it->second, device_id);
-  }
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) { return it->second.get(); }
 
@@ -68,15 +60,17 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     const std::string& num_rank = std::to_string(parallel_num);
     const int32_t rank_id_suffix_length = num_rank.size();
     const std::string& rank_id = std::to_string(parallel_id);
-    embedding::BlockBasedKeyValueStoreOptions options{};
-    options.path = path + "/" + std::string(rank_id_suffix_length - rank_id.size(), '0') + rank_id
-                   + "_" + num_rank;
-    options.value_length = embedding_options.EmbeddingSize();
-    options.key_type = DataType::kInt64;
-    options.value_type = DataType::kFloat;
+    embedding::FixedTableKeyValueStoreOptions options{};
+    options.table_options.path = path + "/"
+                                 + std::string(rank_id_suffix_length - rank_id.size(), '0')
+                                 + rank_id + "_" + num_rank;
+    options.table_options.value_size =
+        embedding_options.EmbeddingSize() * GetSizeOfDataType(DataType::kFloat);
+    options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
     options.max_query_length = 65536 * 26;
-    options.block_size = embedding_options.FixedTableBlockSize();
-    store = NewBlockBasedKeyValueStore(options);
+    options.table_options.block_size = embedding_options.FixedTableBlockSize();
+    options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
+    store = NewFixedTableKeyValueStore(options);
   } else {
     UNIMPLEMENTED();
   }

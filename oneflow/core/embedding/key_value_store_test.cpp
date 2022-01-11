@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
-#include "oneflow/core/embedding/block_based_key_value_store.h"
+#include "oneflow/core/embedding/fixed_table_key_value_store.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
 #include "oneflow/core/embedding/cuda_lru_cache.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -160,18 +160,20 @@ TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
   Global<ep::DeviceManagerRegistry>::Delete();
 }
 
-TEST(BlockBasedKeyValueStore, BlockBasedKeyValueStore) {
+TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
-  BlockBasedKeyValueStoreOptions options{};
-  options.path = "/tmp/test_db";
-  options.value_length = 128;
-  options.key_type = DataType::kUInt64;
-  options.value_type = DataType::kFloat;
+  FixedTableKeyValueStoreOptions options{};
+  uint32_t value_length = 128;
+  options.table_options.path = "/tmp/test_db";
+  options.table_options.value_size = value_length * sizeof(float);
+  options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
+  options.table_options.block_size = 512;
+  options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   options.max_query_length = 128;
-  options.block_size = 512;
-  std::unique_ptr<KeyValueStore> store = NewBlockBasedKeyValueStore(options);
-  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, options.value_length, 4);
+
+  std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(options);
+  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, value_length, 4);
   store.reset();
   Global<ep::DeviceManagerRegistry>::Delete();
 }
@@ -179,14 +181,15 @@ TEST(BlockBasedKeyValueStore, BlockBasedKeyValueStore) {
 TEST(CachedKeyValueStore, CachedKeyValueStore) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
-  BlockBasedKeyValueStoreOptions store_options{};
-  store_options.path = "/tmp/test_db";
-  store_options.value_length = 128;
-  store_options.key_type = DataType::kInt64;
-  store_options.value_type = DataType::kFloat;
+  FixedTableKeyValueStoreOptions store_options{};
+  store_options.table_options.path = "/tmp/test_db";
+  uint32_t value_length = 128;
+  store_options.table_options.value_size = value_length * sizeof(float);
+  store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
+  store_options.table_options.block_size = 512;
+  store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   store_options.max_query_length = 128;
-  store_options.block_size = 512;
-  std::unique_ptr<KeyValueStore> store = NewBlockBasedKeyValueStore(store_options);
+  std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
   CudaLruCacheOptions cache_options{};
   cache_options.value_size = 512;
   cache_options.memory_budget_mb = 8;
@@ -195,7 +198,7 @@ TEST(CachedKeyValueStore, CachedKeyValueStore) {
   std::unique_ptr<Cache> cache = NewCudaLruCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
-  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, store_options.value_length, 4);
+  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length, 4);
   cached_store.reset();
   Global<ep::DeviceManagerRegistry>::Delete();
 }

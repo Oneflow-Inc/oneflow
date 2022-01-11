@@ -38,7 +38,6 @@ class EmbeddingMgr final {
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::Cache>> cache_map_;
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::KeyValueStore>>
       key_value_store_map_;
-  HashMap<std::pair<std::string, int64_t>, int> device_id_map_;
   std::mutex mutex_;
 };
 

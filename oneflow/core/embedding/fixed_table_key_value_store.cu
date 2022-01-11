@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/block_based_key_value_store.h"
+#include "oneflow/core/embedding/fixed_table_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/embedding/file_handle.h"
 #include "oneflow/core/embedding/fixed_table.h"
@@ -30,29 +30,16 @@ namespace embedding {
 
 namespace {
 
-constexpr uint64_t NUM_BLOCKS_PER_CHUNK = 4 * 1024 * 1024;
-
 template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreImpl);
-  explicit KeyValueStoreImpl(const BlockBasedKeyValueStoreOptions& options)
-      : device_index_(-1),
-        value_length_(options.value_length),
-        max_query_length_(options.max_query_length),
-        block_size_(options.block_size) {
+  explicit KeyValueStoreImpl(const FixedTableKeyValueStoreOptions& options)
+      : device_index_(-1), max_query_length_(options.max_query_length) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    key_size_ = GetSizeOfDataType(options.key_type);
-    value_size_ = GetSizeOfDataType(options.value_type) * value_length_;
-
-    FixedTableOptions table_options{};
-    table_options.path = options.path;
-    table_options.key_size = key_size_;
-    table_options.value_size = value_size_;
-    table_options.num_blocks_per_chunk = NUM_BLOCKS_PER_CHUNK;
-    table_options.block_size = block_size_;
-    table_ = NewFixedTable(table_options);
-    CHECK_GE(block_size_, value_size_);
+    key_size_ = options.table_options.key_size;
+    value_size_ = options.table_options.value_size;
+    table_ = NewFixedTable(options.table_options);
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(
         device_index_, reinterpret_cast<void**>(&host_query_keys_), key_size_ * max_query_length_));
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
@@ -90,7 +77,6 @@ class KeyValueStoreImpl : public KeyValueStore {
   void SaveSnapshot(const std::string& name) override;
 
   int device_index_;
-  uint32_t value_length_;
   uint32_t max_query_length_;
   uint32_t key_size_;
   uint32_t value_size_;
@@ -99,7 +85,6 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint32_t* host_n_missing_{};
   Key* host_missing_keys_{};
   uint32_t* host_missing_indices_{};
-  uint64_t block_size_;
 
   std::mutex mutex_;
   std::unique_ptr<FixedTable> table_;
@@ -162,8 +147,8 @@ void KeyValueStoreImpl<Key>::SaveSnapshot(const std::string& name) {
 
 }  // namespace
 
-std::unique_ptr<KeyValueStore> NewBlockBasedKeyValueStore(
-    const BlockBasedKeyValueStoreOptions& options) {
+std::unique_ptr<KeyValueStore> NewFixedTableKeyValueStore(
+    const FixedTableKeyValueStoreOptions& options) {
   return std::unique_ptr<KeyValueStore>(new KeyValueStoreImpl<uint64_t>(options));
 }
 
