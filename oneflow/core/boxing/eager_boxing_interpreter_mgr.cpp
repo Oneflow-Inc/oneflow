@@ -144,7 +144,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(SymmetricNDimToNDimBoxingExpr())
                      | JUST(SymmetricOneDimToNDimBoxingExpr())
                      | JUST(SymmetricNDimToOneDimBoxingExpr());
-  // clang-format off
+  // clang-format on
   return core | JUST(OptionalCudaCopy(core));
 }
 
