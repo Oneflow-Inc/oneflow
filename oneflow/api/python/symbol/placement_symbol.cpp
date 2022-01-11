@@ -243,6 +243,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
                                return device_type;
                              })
+      .def_property_readonly("device_ids",
+                             [](Symbol<ParallelDesc> p) {
+                               std::map<int64_t, py::list> device_ids;
+                               for (int64_t machine_id : p->sorted_machine_ids()) {
+                                 int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
+                                 for (int64_t device_id : p->sorted_dev_phy_ids(machine_id)) {
+                                   device_ids[node_id].append(py::cast(device_id));
+                                 }
+                               }
+                               return device_ids;
+                             })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
       .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String)
