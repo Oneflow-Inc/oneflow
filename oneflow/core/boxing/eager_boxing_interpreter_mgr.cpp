@@ -143,7 +143,8 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(GenericBoxingExpr())
                      | JUST(SymmetricNDimToNDimBoxingExpr())
                      | JUST(SymmetricOneDimToNDimBoxingExpr())
-                     | JUST(SymmetricNDimToOneDimBoxingExpr());
+                     | JUST(SymmetricNDimToOneDimBoxingExpr())
+                     | JUST(BoxingExpr("nd-sbp-dim-reduce"));
   // clang-format on
   return core | JUST(OptionalCudaCopy(core));
 }
