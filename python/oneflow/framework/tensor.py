@@ -588,7 +588,7 @@ def _chunk(self, chunks=None, dim=None):
     return flow._C.chunk(self, chunks, dim)
 
 
-def _split(self, split_size_or_sections=None, dim=None):
+def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
 
 
