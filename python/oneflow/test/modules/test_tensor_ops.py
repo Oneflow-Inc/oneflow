@@ -66,7 +66,7 @@ class TestCuda(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorOps(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_cpu(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
