@@ -218,11 +218,11 @@ void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
   }
 }
 
-Maybe<std::string> SbpSignatureListAsString(const cfg::SbpSignatureList& sbp_signatures,
-                                            const PbRpf<std::string>& inputs,
-                                            const PbRpf<std::string>& outputs) {
+Maybe<std::string> NdSbpSignatureListAsString(
+    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list, const PbRpf<std::string>& inputs,
+    const PbRpf<std::string>& outputs) {
   std::ostringstream ss;
-  if (sbp_signatures.sbp_signature_size() == 0) { return ss.str(); }
+  if (nd_sbp_sig_list.empty()) { return ss.str(); }
 
   auto WalkIO =
       [&](const std::function<Maybe<std::string>(const std::string&)>& bn_handler) -> Maybe<void> {
@@ -244,15 +244,15 @@ Maybe<std::string> SbpSignatureListAsString(const cfg::SbpSignatureList& sbp_sig
   ss << ": ";
 
   ss << "[\n";
-  for (const auto& sbp_signature : sbp_signatures.sbp_signature()) {
+  for (const auto& nd_sbp_sig : nd_sbp_sig_list) {
     ss << "\t";
     JUST(WalkIO([&](const std::string& bn) -> Maybe<std::string> {
-      auto it = sbp_signature.bn_in_op2sbp_parallel().find(bn);
-      if (it == sbp_signature.bn_in_op2sbp_parallel().end()) {
+      auto it = nd_sbp_sig.bn_in_op2nd_sbp().find(bn);
+      if (it == nd_sbp_sig.bn_in_op2nd_sbp().end()) {
         return Error::RuntimeError()
-               << "can't find " << bn << "in SbpSignature: " << sbp_signature.DebugString();
+               << "can't find " << bn << "in NdSbpSignature: " << nd_sbp_sig.DebugString();
       }
-      return SbpParallelToString(it->second);
+      return NdSbpToString(it->second);
     }));
     ss << ",\n";
   }
