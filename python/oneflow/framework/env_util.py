@@ -75,10 +75,16 @@ def api_env_init() -> bool:
 
 
 def check_non_localhost_proxy_and_print_warning():
-    for env_var_name in ['http_proxy', 'HTTP_PROXY', 'https_proxy', 'HTTPS_PROXY']:
+    for env_var_name in ["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"]:
         env_var_value = os.getenv(env_var_name)
-        if env_var_value is not None and (not '://localhost' in env_var_value) and (not "://127.0.0.1" in env_var_value):
-            print(f"Proxy through another machine ({env_var_value}) is incompatible with OneFlow. Please unset them by `unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY`")
+        if (
+            env_var_value is not None
+            and (not "://localhost" in env_var_value)
+            and (not "://127.0.0.1" in env_var_value)
+        ):
+            print(
+                f"Proxy through another machine ({env_var_value}) is incompatible with OneFlow. Please unset them by `unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY`"
+            )
             break
 
 
