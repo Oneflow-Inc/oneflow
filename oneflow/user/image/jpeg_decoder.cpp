@@ -98,10 +98,9 @@ JpegReturnType JpegDecoder::PartialDecode(const unsigned char* data, size_t leng
     roi.y = 0;
     roi.width = u_crop_w;
     roi.height = u_crop_h;
-    out_mat = image(roi);
-  } else {
-    out_mat = image;
+    image(roi);
   }
+  image.copyTo(out_mat);
 
   return JpegReturnType::kOk;
 }
