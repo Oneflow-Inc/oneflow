@@ -61,19 +61,6 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
                              | JUST(BoxingExpr("identity"))));
 }
 
-Maybe<BoxingExprIf> SymmetricOnedToNdBoxingExpr() {
-  return JUST(BoxingExpr(
-      JUST(UnflattenInHierarchy()), JUST(BoxingExpr("unflatten-hierarchy")),
-      JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity"))));
-}
-
-Maybe<BoxingExprIf> SymmetricNdToOnedBoxingExpr() {
-  return JUST(BoxingExpr(
-      JUST(UnflattenOutHierarchy()),
-      JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp")) | JUST(BoxingExpr("identity")),
-      JUST(BoxingExpr("flatten-hierarchy"))));
-}
-
 Maybe<BoxingExprIf> SymmetricNdToNdBoxingExpr() {
   return JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp"))
          | JUST(BoxingExpr(
@@ -83,10 +70,35 @@ Maybe<BoxingExprIf> SymmetricNdToNdBoxingExpr() {
                  | JUST(BoxingExpr("identity"))));
 }
 
+Maybe<BoxingExprIf> SymmetricOneDimToNDimBoxingExpr() {
+  return JUST(BoxingExpr(JUST(UnflattenInHierarchy()), JUST(BoxingExpr("unflatten-hierarchy")),
+                         JUST(SymmetricNdToNdBoxingExpr()) | JUST(BoxingExpr("identity"))));
+}
+
+Maybe<BoxingExprIf> SymmetricNDimToOneDimBoxingExpr() {
+  return JUST(BoxingExpr(JUST(UnflattenOutHierarchy()),
+                         JUST(SymmetricNdToNdBoxingExpr()) | JUST(BoxingExpr("identity")),
+                         JUST(BoxingExpr("flatten-hierarchy"))));
+}
+
+Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
+  return JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+         | JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
+                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-s-to-s"))
+                               | JUST(BoxingExpr("ccl-s-to-s")),
+                           JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))));
+}
+
+Maybe<BoxingExprIf> ASymmetricOneDimXToBBoxingExpr() {
+  return JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
+                         JUST(BoxingExpr("identity")) | JUST(SymmetricOneDimXToBBoxingExpr()),
+                         JUST(BoxingExpr("asymmetric-broadcast"))));
+}
+
 Maybe<BoxingExprIf> GenericBoxingExpr() {
   // in_placement contain out_placement or out_placement contain in_placement
   const auto& boxing_expr_with_inclusive_placement =
-      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
+      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(ASymmetricOneDimXToBBoxingExpr()),
                       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("symmetric-b-to-p"))
                           | JUST(BoxingExpr("symmetric-b-to-s"))));
   // in_placement and out_placement have no containment relationship
@@ -108,13 +120,14 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(BoxingExpr("ccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
                      | JUST(BoxingExpr("ccl-p-to-s")) | JUST(BoxingExpr("symmetric-b-to-p"))
                      | JUST(BoxingExpr("symmetric-b-to-s")) | JUST(BoxingExpr("symmetric-s-to-p"))
-                     | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-s-to-s"))
+                     | JUST(SymmetricOneDimXToBBoxingExpr())
+                     | JUST(ASymmetricOneDimXToBBoxingExpr()) | JUST(BoxingExpr("naive-s-to-s"))
                      | JUST(BoxingExpr("naive-1-to-1")) | JUST(BoxingExpr("naive-s-to-b"))
                      | JUST(BoxingExpr("naive-b-to-s")) | JUST(BoxingExpr("naive-p-to-b"))
                      | JUST(BoxingExpr("naive-p-to-s")) | JUST(OneToNBoxingExpr())
                      | JUST(NToOneBoxingExpr()) | JUST(GenericBoxingExpr())
-                     | JUST(SymmetricNdToNdBoxingExpr()) | JUST(SymmetricOnedToNdBoxingExpr())
-                     | JUST(SymmetricNdToOnedBoxingExpr());
+                     | JUST(SymmetricNdToNdBoxingExpr()) | JUST(SymmetricOneDimToNDimBoxingExpr())
+                     | JUST(SymmetricNDimToOneDimBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 
