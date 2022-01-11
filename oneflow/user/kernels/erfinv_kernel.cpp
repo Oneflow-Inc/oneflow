@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#define PI 3.14159265358979323846L
+#include <cmath>
 namespace oneflow {
 
 template<typename T>
@@ -60,11 +60,11 @@ class CpuErfinvKernel final : public user_op::OpKernel {
       }
       y_ptr[i] = y_ptr[i]
                  - (std::erf(y_ptr[i]) - x)
-                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(static_cast<double>(PI))))
+                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI)))
                           * std::exp(-y_ptr[i] * y_ptr[i]));
       y_ptr[i] = y_ptr[i]
                  - (std::erf(y_ptr[i]) - x)
-                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(static_cast<double>(PI))))
+                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI)))
                           * std::exp(-y_ptr[i] * y_ptr[i]));
     }
   }
