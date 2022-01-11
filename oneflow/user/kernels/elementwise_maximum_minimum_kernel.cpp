@@ -36,7 +36,7 @@ struct ElemwiseXimumFunctor<DeviceType::kCPU, Opt, T> final {
 }  // namespace
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 }  // namespace oneflow

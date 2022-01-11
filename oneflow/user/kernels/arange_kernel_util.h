@@ -20,11 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define ARANGE_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ     \
-  INT_DATA_TYPE_SEQ          \
-  UNSIGNED_INT_DATA_TYPE_SEQ
-
 namespace user_op {
 template<DeviceType device_type, typename T>
 struct ArangeFunctor final {

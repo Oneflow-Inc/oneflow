@@ -27,7 +27,7 @@ struct ArangeFunctor<DeviceType::kCPU, T> final {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ARANGE_FUNCTOR, (DeviceType::kCPU),
-                                 ARANGE_DATA_TYPE_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

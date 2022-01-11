@@ -21,11 +21,6 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-#define RANGE_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ    \
-  INT_DATA_TYPE_SEQ         \
-  UNSIGNED_INT_DATA_TYPE_SEQ
-
 template<DeviceType device_type, typename T>
 struct EyeFunctor final {
   void operator()(ep::Stream* stream, const int64_t& cols, const int64_t& rows, T* out);

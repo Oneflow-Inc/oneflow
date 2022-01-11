@@ -39,6 +39,16 @@ int8_t GetDtypeMatchedValue(double floating, int64_t integral) {
 }
 
 template<>
+uint8_t GetDtypeMatchedValue(double floating, int64_t integral) {
+  return static_cast<uint8_t>(integral);
+}
+
+template<>
+int16_t GetDtypeMatchedValue(double floating, int64_t integral) {
+  return static_cast<int16_t>(integral);
+}
+
+template<>
 int32_t GetDtypeMatchedValue(double floating, int64_t integral) {
   return static_cast<int32_t>(integral);
 }

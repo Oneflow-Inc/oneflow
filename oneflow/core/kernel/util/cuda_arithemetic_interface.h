@@ -32,83 +32,39 @@ struct ArithemeticIf<DeviceType::kCUDA> {
   static void InitializeWithConstConf(ep::Stream* stream,
                                       const ConstantInitializerConf& initializer_conf, Blob* blob);
 
-  static void MulByScalar(ep::Stream* stream, const int64_t n, const float* x, const float y,
-                          float* z);
-  static void MulByScalar(ep::Stream* stream, const int64_t n, const double* x, const double y,
-                          double* z);
-  static void MulByScalar(ep::Stream* stream, const int64_t n, const float16* x, const float16 y,
-                          float16* z);
-  static void MulByScalar(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t y,
-                          int8_t* z);
-  static void MulByScalar(ep::Stream* stream, const int64_t n, const int32_t* x, const int32_t y,
-                          int32_t* z);
-  static void MulByScalar(ep::Stream* stream, const int64_t n, const int64_t* x, const int64_t y,
-                          int64_t* z);
+// clang-format off
+#define ARITH_VALUE_FUNC(func)                                                                            \
+  static void func(ep::Stream* stream, const int64_t n, const float* x, const float y, float* z);         \
+  static void func(ep::Stream* stream, const int64_t n, const double* x, const double y, double* z);      \
+  static void func(ep::Stream* stream, const int64_t n, const float16* x, const float16 y, float16* z);   \
+  static void func(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t y, int8_t* z);      \
+  static void func(ep::Stream* stream, const int64_t n, const uint8_t* x, const uint8_t y, uint8_t* z);   \
+  static void func(ep::Stream* stream, const int64_t n, const int16_t* x, const int16_t y, int16_t* z);   \
+  static void func(ep::Stream* stream, const int64_t n, const int32_t* x, const int32_t y, int32_t* z);   \
+  static void func(ep::Stream* stream, const int64_t n, const int64_t* x, const int64_t y, int64_t* z); 
+// clang-format on 
 
-  static void AddByScalar(ep::Stream* stream, const int64_t n, const float* x, const float y,
-                          float* z);
-  static void AddByScalar(ep::Stream* stream, const int64_t n, const double* x, const double y,
-                          double* z);
-  static void AddByScalar(ep::Stream* stream, const int64_t n, const float16* x, const float16 y,
-                          float16* z);
-  static void AddByScalar(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t y,
-                          int8_t* z);
-  static void AddByScalar(ep::Stream* stream, const int64_t n, const int32_t* x, const int32_t y,
-                          int32_t* z);
-  static void AddByScalar(ep::Stream* stream, const int64_t n, const int64_t* x, const int64_t y,
-                          int64_t* z);
+ARITH_VALUE_FUNC(MulByScalar);
+ARITH_VALUE_FUNC(AddByScalar);
+#undef ARITH_VALUE_FUNC 
 
-  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
-                             float* z);
-  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
-                             double* z);
-  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
-                             const float16* y, float16* z);
-  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
-                             int8_t* z);
-  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
-                             const int32_t* y, int32_t* z);
-  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
-                             const int64_t* y, int64_t* z);
+// clang-format off
+#define ARITH_PTR_FUNC(func)                                                                              \
+  static void func(ep::Stream* stream, const int64_t n, const float* x, const float* y, float* z);        \
+  static void func(ep::Stream* stream, const int64_t n, const double* x, const double* y, double* z);     \
+  static void func(ep::Stream* stream, const int64_t n, const float16* x, const float16* y, float16* z);  \
+  static void func(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y, int8_t* z);     \
+  static void func(ep::Stream* stream, const int64_t n, const uint8_t* x, const uint8_t* y, uint8_t* z);  \
+  static void func(ep::Stream* stream, const int64_t n, const int16_t* x, const int16_t* y, int16_t* z);  \
+  static void func(ep::Stream* stream, const int64_t n, const int32_t* x, const int32_t* y, int32_t* z);  \
+  static void func(ep::Stream* stream, const int64_t n, const int64_t* x, const int64_t* y, int64_t* z); 
+// clang-format on 
 
-  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
-                             float* z);
-  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
-                             double* z);
-  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
-                             const float16* y, float16* z);
-  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
-                             int8_t* z);
-  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
-                             const int32_t* y, int32_t* z);
-  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
-                             const int64_t* y, int64_t* z);
-
-  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
-                             float* z);
-  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
-                             double* z);
-  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
-                             const float16* y, float16* z);
-  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
-                             int8_t* z);
-  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
-                             const int32_t* y, int32_t* z);
-  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
-                             const int64_t* y, int64_t* z);
-
-  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
-                             float* z);
-  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
-                             double* z);
-  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
-                             const float16* y, float16* z);
-  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
-                             int8_t* z);
-  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
-                             const int32_t* y, int32_t* z);
-  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
-                             const int64_t* y, int64_t* z);
+ARITH_PTR_FUNC(MulByScalarPtr);
+ARITH_PTR_FUNC(AddByScalarPtr);
+ARITH_PTR_FUNC(SubByScalarPtr);
+ARITH_PTR_FUNC(DivByScalarPtr);
+#undef ARITH_PTR_FUNC 
 };
 
 }  // namespace oneflow

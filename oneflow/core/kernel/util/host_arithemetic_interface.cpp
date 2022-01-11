@@ -54,6 +54,8 @@ void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
 MUL_BY_SCALAR(float);
 MUL_BY_SCALAR(double);
 MUL_BY_SCALAR(int8_t);
+MUL_BY_SCALAR(uint8_t);
+MUL_BY_SCALAR(int16_t);
 MUL_BY_SCALAR(int32_t);
 MUL_BY_SCALAR(int64_t);
 
@@ -68,6 +70,8 @@ MUL_BY_SCALAR(int64_t);
 ADD_BY_SCALAR(float);
 ADD_BY_SCALAR(double);
 ADD_BY_SCALAR(int8_t);
+ADD_BY_SCALAR(uint8_t);
+ADD_BY_SCALAR(int16_t);
 ADD_BY_SCALAR(int32_t);
 ADD_BY_SCALAR(int64_t);
 
@@ -82,6 +86,8 @@ ADD_BY_SCALAR(int64_t);
 MUL_BY_SCALAR_PTR(float);
 MUL_BY_SCALAR_PTR(double);
 MUL_BY_SCALAR_PTR(int8_t);
+MUL_BY_SCALAR_PTR(uint8_t);
+MUL_BY_SCALAR_PTR(int16_t);
 MUL_BY_SCALAR_PTR(int32_t);
 MUL_BY_SCALAR_PTR(int64_t);
 
@@ -96,6 +102,8 @@ MUL_BY_SCALAR_PTR(int64_t);
 ADD_BY_SCALAR_PTR(float);
 ADD_BY_SCALAR_PTR(double);
 ADD_BY_SCALAR_PTR(int8_t);
+ADD_BY_SCALAR_PTR(uint8_t);
+ADD_BY_SCALAR_PTR(int16_t);
 ADD_BY_SCALAR_PTR(int32_t);
 ADD_BY_SCALAR_PTR(int64_t);
 
@@ -110,6 +118,8 @@ ADD_BY_SCALAR_PTR(int64_t);
 SUB_BY_SCALAR_PTR(float);
 SUB_BY_SCALAR_PTR(double);
 SUB_BY_SCALAR_PTR(int8_t);
+SUB_BY_SCALAR_PTR(uint8_t);
+SUB_BY_SCALAR_PTR(int16_t);
 SUB_BY_SCALAR_PTR(int32_t);
 SUB_BY_SCALAR_PTR(int64_t);
 
@@ -124,6 +134,8 @@ SUB_BY_SCALAR_PTR(int64_t);
 DIV_BY_SCALAR_PTR(float);
 DIV_BY_SCALAR_PTR(double);
 DIV_BY_SCALAR_PTR(int8_t);
+DIV_BY_SCALAR_PTR(uint8_t);
+DIV_BY_SCALAR_PTR(int16_t);
 DIV_BY_SCALAR_PTR(int32_t);
 DIV_BY_SCALAR_PTR(int64_t);
 

@@ -53,7 +53,7 @@ struct DimGatherFunctor<DeviceType::kCUDA, float16, IDX_T> final {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_GATHER_FUNCTOR, (DeviceType::kCUDA),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_CUDA_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

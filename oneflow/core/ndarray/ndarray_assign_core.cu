@@ -53,9 +53,8 @@ struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, T, X, NDIMS> final {
   template struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(ret_dtype_pair), \
                                            OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
-                                     BOOL_DATA_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ, DIM_SEQ);
+                                 ARITHMETIC_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN, HALF_DATA_TYPE_SEQ, HALF_DATA_TYPE_SEQ,
                                  DIM_SEQ);
 

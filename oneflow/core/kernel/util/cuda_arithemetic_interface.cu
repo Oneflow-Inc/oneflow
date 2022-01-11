@@ -102,6 +102,8 @@ void LaunchUnaryByScalarPtr(ep::Stream* stream, const int64_t n, const T* x, con
   OP_BY_SCALAR(op, float)       \
   OP_BY_SCALAR(op, double)      \
   OP_BY_SCALAR(op, int8_t)      \
+  OP_BY_SCALAR(op, uint8_t)     \
+  OP_BY_SCALAR(op, int16_t)     \
   OP_BY_SCALAR(op, int32_t)     \
   OP_BY_SCALAR(op, int64_t)     \
   OP_BY_SCALAR_HALF(op)
@@ -127,6 +129,8 @@ DEFINE_OP_BY_SCALAR(Add)
   OP_BY_SCALAR_PTR(op, float)       \
   OP_BY_SCALAR_PTR(op, double)      \
   OP_BY_SCALAR_PTR(op, int8_t)      \
+  OP_BY_SCALAR_PTR(op, uint8_t)     \
+  OP_BY_SCALAR_PTR(op, int16_t)     \
   OP_BY_SCALAR_PTR(op, int32_t)     \
   OP_BY_SCALAR_PTR(op, int64_t)     \
   OP_BY_SCALAR_PTR_HALF(op)

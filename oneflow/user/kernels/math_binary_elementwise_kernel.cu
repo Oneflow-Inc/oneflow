@@ -138,7 +138,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AN
                                  MATH_BINARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv),
-                                 INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 INT_DATA_TYPE_SEQ)
 
 template<template<typename> class BinaryFunctor>
 class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {

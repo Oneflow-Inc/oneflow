@@ -359,22 +359,20 @@ struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func> final 
   template struct NdarrayMatrixColReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
   template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  ARITHMETIC_REDUCE_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ,
                                  LOGICAL_REDUCE_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                    \
   template struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
                                            binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
-                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_REDUCE_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ, DIM_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ,
                                  LOGICAL_REDUCE_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow
