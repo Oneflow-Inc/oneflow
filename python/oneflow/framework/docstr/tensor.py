@@ -548,7 +548,8 @@ add_docstr(
     """
     Tensor.numpy() → numpy.ndarray
 
-    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to self tensor will be reflected in the ndarray and vice versa.
+    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to
+     self tensor will be reflected in the ndarray and vice versa.
     """,
 )
 
@@ -751,5 +752,33 @@ add_docstr(
 
     See :func:`oneflow.gather`
 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp,
+    """
+    See :func:`oneflow.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp_,
+    """
+    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip,
+    """
+    Alias for :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip_,
+    """
+    Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )
