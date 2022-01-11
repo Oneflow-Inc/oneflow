@@ -229,8 +229,9 @@ Maybe<Tensor> ConsistentToConsistent(
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   std::shared_ptr<one::OpExpr> op;
   if (unlikely(!LazyMode::is_enabled()
-      && JUST(x->parallel_desc())->hierarchy()->NumAxes() != parallel_desc->hierarchy()->NumAxes()
-      && grad_sbp_parallels.size() == 0)) {
+               && JUST(x->parallel_desc())->hierarchy()->NumAxes()
+                      != parallel_desc->hierarchy()->NumAxes()
+               && grad_sbp_parallels.size() == 0)) {
     op = JUST(GetConsistentToConsistentOpExpr(*JUST(GetSbpList(JUST(x->nd_sbp())))));
   } else {
     op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
