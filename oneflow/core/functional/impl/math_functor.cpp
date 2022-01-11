@@ -840,10 +840,10 @@ class ClampBaseFunctor {
       op = clip_op_.get();
     }
     if (inplace) {
+      JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
       if (x->requires_grad()) {
-        JUST(CheckInplaceValid(x));
-        outputs->at(0) = x;
         JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x->contiguous()))}, outputs.get(), attrs));
       } else {
         JUST(OpInterpUtil::Dispatch(*op, {x->contiguous()}, outputs.get(), attrs));
