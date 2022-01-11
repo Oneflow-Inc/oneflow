@@ -30,8 +30,6 @@ add_docstr(
  
     For example:
 
-
-
     .. code-block:: python
 
         >>> import oneflow as flow
