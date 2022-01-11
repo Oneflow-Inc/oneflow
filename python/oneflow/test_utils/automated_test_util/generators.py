@@ -25,6 +25,9 @@ import torch
 
 import oneflow as flow
 
+from .consistent_scope import *
+from .util import broadcast
+
 py_tuple = tuple
 NoneType = type(None)
 
@@ -95,6 +98,8 @@ class generator:
     def value(self):
         if self._value is None:
             self._value = self._calc_value()
+            if is_consistent():
+                self._value = broadcast(self._value)
         return self._value
 
     def size(self):
@@ -336,6 +341,8 @@ class random_tensor(generator):
             shape[3] = dim3
         if ndim == 5:
             shape[4] = dim4
+
+        pytorch_tensor = None
         if dtype == float:
             np_arr = rng.uniform(low=low, high=high, size=shape)
             return torch.Tensor(np_arr)
@@ -437,9 +444,13 @@ class random_sbp(generator):
     def _calc_value(self):
         if self.max_dim == 0:
             return (flow.sbp.broadcast for i in range(self.dim))
-        all_sbps = [flow.sbp.split(i) for i in range(self.max_dim)] + [
+        # TODO(hjchen2): generate all possible sbp
+        # all_sbps = [flow.sbp.split(i) for i in range(self.max_dim)] + [
+        #     flow.sbp.broadcast,
+        #     flow.sbp.partial_sum,
+        # ]
+        all_sbps = [
             flow.sbp.broadcast,
-            flow.sbp.partial_sum,
         ]
         sbp = [random_util.choice(all_sbps) for i in range(self.dim)]
         return sbp

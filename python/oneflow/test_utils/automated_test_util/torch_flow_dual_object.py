@@ -35,6 +35,8 @@ except ImportError:
     )
 
 from .generators import Nothing, generator, random_tensor
+from .consistent_scope import *
+from .util import broadcast
 
 postulate = [".rand", ".Tensor"]
 
@@ -585,6 +587,8 @@ class DualObject:
                 return self.pytorch
 
             pytorch_attr = identity
+        elif key in ["placement", "sbp"]:
+            pytorch_attr = "unused"
         else:
             pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
@@ -792,6 +796,32 @@ def autotest(
     return deco
 
 
+def consistent_autotest(
+    n=20,
+    auto_backward=True,
+    rtol=0.0001,
+    atol=1e-05,
+    check_graph=True,
+    check_allclose=True,
+):
+    def deco(f):
+        @functools.wraps(f)
+        def new_f(test_case):
+            with ConsistentScope() as scope:
+                return autotest(
+                    n=n,
+                    auto_backward=auto_backward,
+                    rtol=rtol,
+                    atol=atol,
+                    check_graph=check_graph,
+                    check_allclose=check_allclose,
+                )(f)(test_case)
+
+        return new_f
+
+    return deco
+
+
 def random_pytorch_tensor(
     ndim=None,
     dim0=1,
@@ -811,12 +841,21 @@ def random_pytorch_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
-    flow_tensor = flow.tensor(
-        pytorch_tensor.detach().cpu().numpy(),
-        requires_grad=(requires_grad and dtype != int),
-    )
+    if is_consistent():
+        flow_tensor = flow.tensor(
+            pytorch_tensor.detach().cpu().numpy(),
+            requires_grad=(requires_grad and dtype != int),
+            placement=flow.env.all_device_placement("cpu"),
+            sbp=flow.sbp.broadcast,
+        )
+    else:
+        flow_tensor = flow.tensor(
+            pytorch_tensor.detach().cpu().numpy(),
+            requires_grad=(requires_grad and dtype != int),
+        )
+
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "random_pytorch_tensor"]
+__all__ = ["autotest", "consistent_autotest", "random_pytorch_tensor"]

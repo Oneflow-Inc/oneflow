@@ -203,9 +203,23 @@ def tensor_setstate(self, pickle_dict):
         )
 
 
+def placement_getstate(self):
+    return {
+        "device_type": self.device_type,
+        "device_ids": self.device_ids,
+        "hierarchy": self.hierarchy,
+    }
+
+
+def placement_setstate(self, state):
+    return self.__init__(state["device_type"], state["device_ids"], state["hierarchy"])
+
+
 def RegisterMethods():
     Tensor.__setstate__ = tensor_setstate
     Tensor.__getstate__ = tensor_getstate
+    flow._oneflow_internal.placement.__getstate__ = placement_getstate
+    flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
 def legacy_load(
