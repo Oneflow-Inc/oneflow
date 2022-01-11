@@ -88,11 +88,13 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         for i in range(iter_num):
             one_train_iter()
 
+        # After pass rewrite in training graph, parameters' sbp has been
+        # changed from flow.sbp.broadcast to flow.sbp.split(0)
         test_case.assertEqual(linear.weight.sbp[0], S0)
         test_case.assertEqual(linear.bias.sbp[0], S0)
 
-        one_eval_iter()
-        one_train_iter()
+        # In evaluation graph, paramters's sbp are flow.sbp.split(0).
+        # But their consumer will consum them as flow.sbp.broadcast.
         one_eval_iter()
 
     iter_num = 1
