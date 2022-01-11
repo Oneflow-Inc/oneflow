@@ -480,9 +480,8 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
     }
   }
   hierarchy += ")";
-  std::string placement_str = "oneflow.placement(device_type=" + device_type
-                              + ", machine_device_ids=" + machine_device_ids
-                              + ", hierarchy=" + hierarchy + ")";
+  std::string placement_str = "oneflow.placement(device_type=" + device_type + ", device_ids="
+                              + machine_device_ids + ", hierarchy=" + hierarchy + ")";
   return placement_str;
 }
 
