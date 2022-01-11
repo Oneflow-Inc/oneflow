@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/functional/functional.h"
@@ -44,6 +43,8 @@ constexpr auto* InOutPlacedNdSbpDimReduce = DECORATE(&RawInOutPlacedNdSbpDimRedu
 
 Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                       const Shape& logical_shape) {
+  CHECK_OR_RETURN(in->nd_sbp()->sbp_parallel_size() > 1 || out->nd_sbp()->sbp_parallel_size() > 1);
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
   std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));

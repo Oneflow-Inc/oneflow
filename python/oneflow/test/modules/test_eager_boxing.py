@@ -3272,23 +3272,25 @@ class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
             _test_eager_consistent_cast_1d_uneven_split(test_case, *arg)
 
 
-def _test_eager_consistent_n_dim_reduce(test_case, device_type, sbp):
+def _test_eager_consistent_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
     np.random.seed(10)
     np_arr = np.random.uniform(-1e-05, 1e-05, (16, 32))
     placement0 = flow.placement(device_type, {0: [0]}, (1, 1))
     placement1 = flow.placement(device_type, {0: range(4)}, (2, 2))
-    
+
     # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0]}, hierarchy=(1, 1))
-    # (sbp, sbp)
+    # (src_sbp, src_sbp)
     x = flow.tensor(
-        np_arr, placement=placement1, sbp=[sbp, sbp], requires_grad=False,
+        np_arr, placement=placement0, sbp=[src_sbp, src_sbp], requires_grad=False,
     )
 
     # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
-    # (sbp, sbp)
-    y = x.to_consistent(placement=placement1, sbp=[sbp, sbp])
-    
-    z = y.to_consistent(placement=placement1, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+    # (dst_sbp, dst_sbp)
+    y = x.to_consistent(placement=placement1, sbp=[dst_sbp, dst_sbp])
+
+    z = y.to_consistent(
+        placement=placement1, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
+    )
     test_case.assertEqual(z.placement, placement1)
 
     test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr))
@@ -3300,7 +3302,8 @@ class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
     def test_eager_consistent_n_dim_reduce(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "cuda"]
-        arg_dict["sbp"] = [flow.broadcast, flow.split(0), flow.split(1)]
+        arg_dict["src_sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
+        arg_dict["dst_sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
         for arg in GenArgList(arg_dict):
             _test_eager_consistent_n_dim_reduce(test_case, *arg)
 
