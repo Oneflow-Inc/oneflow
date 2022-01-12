@@ -382,7 +382,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateConvOpKernelCache<T>(ctx, "in", "out", "weight");
   }
@@ -484,7 +484,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateConvOpKernelCache<T>(ctx, "dx", "dy", "filter");
   }
@@ -565,7 +565,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateConvOpKernelCache<T>(ctx, "x", "dy", "filter_diff");
   }

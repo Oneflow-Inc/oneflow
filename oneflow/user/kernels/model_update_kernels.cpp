@@ -184,7 +184,7 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
   IndexedSlicesSGDUpdateKernel() = default;
   ~IndexedSlicesSGDUpdateKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
@@ -312,7 +312,7 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
   IndexedSlicesMomentumUpdateKernel() = default;
   ~IndexedSlicesMomentumUpdateKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
@@ -536,7 +536,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
  public:
   IndexedSlicesAdamUpdateKernel() = default;
   ~IndexedSlicesAdamUpdateKernel() override = default;
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }

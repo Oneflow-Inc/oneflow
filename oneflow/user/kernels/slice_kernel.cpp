@@ -307,7 +307,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
   LogicalSliceKernel() = default;
   ~LogicalSliceKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
     const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
@@ -356,7 +356,7 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   LogicalSliceAssignKernel() = default;
   ~LogicalSliceAssignKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);

@@ -301,13 +301,13 @@ class OpKernel {
     return std::shared_ptr<OpKernelState>();
   }
 
-  virtual std::shared_ptr<OpKernelCache> CreateOpKernelCache(KernelCacheContext* ctx) const {
+  virtual std::shared_ptr<OpKernelCache> InitOpKernelCache(KernelCacheContext* ctx) const {
     return std::shared_ptr<OpKernelCache>();
   }
 
-  virtual void InitOpKernelCache(KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<OpKernelCache>* cache_ptr) const {
-    *cache_ptr = CreateOpKernelCache(ctx);
+  virtual void InitOpKernelCacheWithFlags(KernelCacheContext* ctx, int8_t flag,
+                                          std::shared_ptr<OpKernelCache>* cache_ptr) const {
+    *cache_ptr = InitOpKernelCache(ctx);
   }
 
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
@@ -333,10 +333,10 @@ OpKernel* NewOpKernel(Args&&... args) {
   OpKernel* ptr = new T(std::forward<Args>(args)...);
   ptr->has_state_or_cache_ = !(std::is_same<decltype(&OpKernel::CreateOpKernelState),
                                             decltype(&T::CreateOpKernelState)>::value
-                               && std::is_same<decltype(&OpKernel::CreateOpKernelCache),
-                                               decltype(&T::CreateOpKernelCache)>::value
                                && std::is_same<decltype(&OpKernel::InitOpKernelCache),
-                                               decltype(&T::InitOpKernelCache)>::value);
+                                               decltype(&T::InitOpKernelCache)>::value
+                               && std::is_same<decltype(&OpKernel::InitOpKernelCacheWithFlags),
+                                               decltype(&T::InitOpKernelCacheWithFlags)>::value);
   return ptr;
 }
 

@@ -125,7 +125,7 @@ class AvgPool1dKernel final : public user_op::OpKernel {
   ~AvgPool1dKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 1);
   }
@@ -158,7 +158,7 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
   ~AvgPool1dGradKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 1);
   }
@@ -193,7 +193,7 @@ class AvgPool2dKernel final : public user_op::OpKernel {
   ~AvgPool2dKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 2);
   }
@@ -226,7 +226,7 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
   ~AvgPool2dGradKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 2);
   }
@@ -261,7 +261,7 @@ class AvgPool3dKernel final : public user_op::OpKernel {
   ~AvgPool3dKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 3);
   }
@@ -294,7 +294,7 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
   ~AvgPool3dGradKernel() = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 3);
   }

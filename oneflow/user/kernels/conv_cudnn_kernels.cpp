@@ -166,7 +166,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     return state;
   }
 
-  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateConvCudnnOpKernelCache(ctx);
   }

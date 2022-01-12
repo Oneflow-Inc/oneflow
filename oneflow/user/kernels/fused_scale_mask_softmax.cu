@@ -108,9 +108,9 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(half)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(float)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(double)
+// REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(half)
+// REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(float)
+// REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL(double)
 #undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_CUDA_KERNEL
 
 template<typename T>
@@ -148,9 +148,9 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(float)
-REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(double)
+// REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(half)
+// REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(float)
+// REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL(double)
 #undef REGISTER_FUCED_SCALE_MASK_SOFTMAX_GRAD_KERNEL
 
 }  // namespace oneflow
