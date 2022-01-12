@@ -637,7 +637,7 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
           if (sbp_parallel.has_split_parallel()) {
             const int64_t axis = sbp_parallel.split_parallel().axis();
             CHECK_LE_OR_RETURN(axis, logical_shape.NumAxes());
-            CHECK_GT_OR_RETURN(logical_shape.At(axis), 0);
+            CHECK_GE_OR_RETURN(logical_shape.At(axis), 0);
             // nd_sbp must have same shape in each device
             if (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) != 0) { return true; }
             logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
