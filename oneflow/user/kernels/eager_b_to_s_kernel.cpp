@@ -159,8 +159,9 @@ class EagerBToSKernel final : public user_op::OpKernel {
   EagerBToSKernel() = default;
   ~EagerBToSKernel() override = default;
 
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerBToSOpKernelCache>(ctx); }
   }
 
