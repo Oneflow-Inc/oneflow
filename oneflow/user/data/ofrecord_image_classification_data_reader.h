@@ -34,7 +34,7 @@ class OFRecordImageClassificationDataReader final
   explicit OFRecordImageClassificationDataReader(user_op::KernelInitContext* ctx)
       : DataReader<ImageClassificationDataInstance>(ctx) {
     const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
-    if (auto* pool = TensorBufferPool::TryGet()) { pool->set_pool_size_base(batch_size); }
+    if (auto* pool = TensorBufferPool::TryGet()) { pool->AddPoolSizeByBase(batch_size); }
     std::unique_ptr<Dataset<TensorBuffer>> base(new OFRecordDataset(ctx));
     if (ctx->Attr<bool>("random_shuffle")) {
       base.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(base)));

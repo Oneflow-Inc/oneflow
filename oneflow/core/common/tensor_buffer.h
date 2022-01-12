@@ -162,8 +162,10 @@ class TensorBufferPool final {
   void Allocate(ItemT& item, const Shape& shape, DataType dtype);
   void Deallocate(ItemT& item);
 
-  void set_pool_size_base(size_t base);
-  void set_thread_local_cache_size(size_t thread_local_cache_size);
+  void AddPoolSizeByBase(size_t base);
+  void SetPoolSizeByBase(size_t base);
+  void SetPoolSize(size_t pool_size);
+  void SetThreadLocalCacheSize(size_t thread_local_cache_size);
 
  private:
   static std::unique_ptr<TensorBufferPool>& GetPtr() {
@@ -178,8 +180,8 @@ class TensorBufferPool final {
 
   TensorBufferPool();
 
-  size_t pool_size_;
   size_t thread_local_cache_size_;
+  size_t pool_size_;
 
   ListT global_free_list_;
   std::mutex mtx_;
