@@ -117,7 +117,7 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, nd_sbp_symbol_id);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, grad_nd_sbp_symbol_id);
 FLAT_MSG_END(FlatMetaInfoConsistency);
-// clang-format off
+// clang-format on
 
 Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::PrepareSendBufferAndCallback(
     int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
@@ -149,10 +149,8 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
-  if (!placement->containing_current_rank()) {
-    return Maybe<void>::Ok();
-  }
-  
+  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
+
   const auto& rank_group = JUST(RankGroup::New(placement));
 
   std::vector<char> recv_buffer(buffer_size);
@@ -185,12 +183,13 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
 namespace {
 
 Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
-    const Optional<Symbol<cfg::NdSbp>>& nd_sbp, const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+                                         const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
+                                         const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
   const auto& ctx = std::make_shared<CheckMetaInfoConsistencyAsyncTransportCtx>(
-    transport_token, placement, nd_sbp, grad_nd_sbp);
+      transport_token, placement, nd_sbp, grad_nd_sbp);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
@@ -215,7 +214,7 @@ NonRecursiveMetaInfoConsistencyCheckScope::NonRecursiveMetaInfoConsistencyCheckS
 }
 
 NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheckScope() {
- auto* recursive_depth = MutThreadLocalMetaInfoConsistencyCheckDepth();
+  auto* recursive_depth = MutThreadLocalMetaInfoConsistencyCheckDepth();
   --*recursive_depth;
 }
 
