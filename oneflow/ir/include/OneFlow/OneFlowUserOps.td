@@ -8795,8 +8795,8 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
 // Group: Embedding
-// embedding_lookup_placeholder, sgd_embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update
-// Total: 8
+// embedding_lookup_placeholder, sgd_embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update, embedding_put
+// Total: 9
 
 #ifdef GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS
 
@@ -8943,12 +8943,29 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
 def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$num_unique_ids,
-    AnyType:$unique_ids,
-    AnyType:$context,
     AnyType:$unique_embeddings,
     AnyType:$embedding_diff,
     Optional<AnyType>:$learning_rate,
     Optional<AnyType>:$skip_if
+  );
+  let output = (outs
+    AnyType:$updated_unique_embeddings
+  );
+  let attrs = (ins
+    StrAttr:$embedding_options
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$num_unique_ids,
+    AnyType:$unique_ids,
+    AnyType:$context,
+    AnyType:$unique_embeddings
   );
   let attrs = (ins
     StrAttr:$embedding_options

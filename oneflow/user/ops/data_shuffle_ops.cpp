@@ -144,6 +144,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
@@ -154,17 +155,39 @@ namespace oneflow {
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("num_unique_ids", 0), 0)
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("context", 0), 0)
       .Split(user_op::OpArg("unique_embeddings", 0), 0)
       .Broadcast(user_op::OpArg("learning_rate", 0))
       .Broadcast(user_op::OpArg("skip_if", 0))
       .Split(user_op::OpArg("embedding_diff", 0), 0)
+      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EmbeddingPutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> EmbeddingPutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> EmbeddingPutOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("num_unique_ids", 0), 0)
+      .Split(user_op::OpArg("unique_ids", 0), 0)
+      .Split(user_op::OpArg("context", 0), 0)
+      .Split(user_op::OpArg("unique_embeddings", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EmbeddingPutOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 

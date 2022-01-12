@@ -314,11 +314,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         sgd_embedding_update_op_builder.OpTypeName("sgd_embedding_update")
             .Input("num_unique_ids",
                    AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
-            .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
-            .Input("context", embedding_lookup_op.output("out_context", 0))
             .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
             .Input("embedding_diff", embedding_diff_lbn)
-            .Input("learning_rate", learning_rate_lbn);
+            .Input("learning_rate", learning_rate_lbn)
+            .Output("updated_unique_embeddings");
 
         if (train_conf.has_dynamic_loss_scale_policy()) {
           sgd_embedding_update_op_builder.Input(
@@ -335,6 +334,24 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         OperatorConf sgd_embedding_update_new_op_conf = sgd_embedding_update_op.op_conf();
         sgd_embedding_update_new_op_conf.set_stream_name_hint("EMBEDDING");
         add_ops.push_back(sgd_embedding_update_new_op_conf);
+
+        user_op::UserOpConfWrapperBuilder embedding_put_op_builder(user_op_conf.op_name()
+                                                                   + "_embedding_put");
+        user_op::UserOpConfWrapper embedding_put_op =
+            embedding_put_op_builder.OpTypeName("embedding_put")
+                .Input("num_unique_ids",
+                       AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
+                .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
+                .Input("context", embedding_lookup_op.output("out_context", 0))
+                .Input("unique_embeddings",
+                       sgd_embedding_update_op.output("updated_unique_embeddings", 0))
+                .Attr<std::string>("embedding_options",
+                                   user_op_conf.attr<std::string>("embedding_options"))
+                .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())
+                .Build();
+        OperatorConf embedding_put_new_op_conf = embedding_put_op.op_conf();
+        embedding_put_new_op_conf.set_stream_name_hint("EMBEDDING");
+        add_ops.push_back(embedding_put_new_op_conf);
       }
     }
     job_builder->DelOps(delete_op_names);
