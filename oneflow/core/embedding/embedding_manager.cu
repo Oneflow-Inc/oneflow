@@ -34,7 +34,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   if (it != key_value_store_map_.end()) { return it->second.get(); }
 
   embedding::CacheOptions cache_options{};
-  const uint32_t line_size = embedding_options.EmbeddingSize();
+  const uint32_t line_size = embedding_options.LineSize();
   cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
   cache_options.policy = embedding::CacheOptions::Policy::kLRU;
   cache_options.max_query_length = 65536 * 26;
