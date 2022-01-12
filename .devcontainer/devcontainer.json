@@ -7,7 +7,7 @@
 		// Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
 		// Use Debian 11, Debian 9, Ubuntu 18.04 or Ubuntu 21.04 on local arm64/Apple Silicon
 		"args": {
-			"VARIANT": "ubuntu-20.04"
+			"VARIANT": "llvm13"
 		}
 	},
 	"runArgs": [
@@ -27,7 +27,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "gcc -v",
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode",
+	"remoteUser": "root",
 	// "Dev container features" is not ready. Adding features will lead to failure on running AMD64 on ARM
 	// https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview
 	// "features": {
