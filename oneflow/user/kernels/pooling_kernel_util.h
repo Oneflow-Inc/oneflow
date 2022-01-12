@@ -100,15 +100,16 @@ struct PoolingKernelUtil {
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 
-  static void Maxpool2dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const MaxPoolingParams3D& params_3d);
+  static void Maxpool2dForwardCFirst(ep::Stream* stream,
+                                     const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+                                     const int64_t elem_num, const T* src, T* dest,
+                                     int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 
-  static void Maxpool2dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                                const int64_t elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
+  static void Maxpool2dBackwardCFirst(ep::Stream* stream,
+                                      const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+                                      const int64_t elem_num, const T* src, T* dest,
+                                      const int64_t* indice_ptr,
+                                      const MaxPoolingParams3D& params_3d);
 
   static void Maxpool2dForwardCLast(ep::Stream* stream,
                                     const NdIndexOffsetHelper<int64_t, 4>& index_helper,
@@ -196,7 +197,7 @@ OF_DEVICE_FUNC void Maxpool1dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
 }
 
 template<typename T>
-OF_DEVICE_FUNC void Maxpool2dForwardCompute(
+OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     const NdIndexOffsetHelper<int64_t, 4> index_helper, int64_t elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int64_t n_batch,
     const int64_t n_channel, const int64_t x_height, const int64_t x_width, const int64_t y_height,
@@ -255,12 +256,11 @@ OF_DEVICE_FUNC void Maxpool2dForwardCompute(
 }
 
 template<typename T>
-OF_DEVICE_FUNC void Maxpool2dBackwardCompute(const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                                             const int64_t elem_num, const T* src, T* dest,
-                                             const int64_t* indice_ptr, const int64_t n_batch,
-                                             const int64_t n_channel, const int64_t src_height,
-                                             const int64_t src_width, const int64_t dst_height,
-                                             const int64_t dst_width) {
+OF_DEVICE_FUNC void Maxpool2dBackwardComputeCFirst(
+    const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num, const T* src,
+    T* dest, const int64_t* indice_ptr, const int64_t n_batch, const int64_t n_channel,
+    const int64_t src_height, const int64_t src_width, const int64_t dst_height,
+    const int64_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, h, w;
     index_helper.OffsetToNdIndex(num, n, c, h, w);
