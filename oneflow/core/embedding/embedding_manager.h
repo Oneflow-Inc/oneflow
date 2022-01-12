@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 #include "oneflow/core/embedding/cuda_lru_cache.h"
-#include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
+#include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {

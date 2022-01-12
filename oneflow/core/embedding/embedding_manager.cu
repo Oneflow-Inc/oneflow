@@ -33,29 +33,20 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) { return it->second.get(); }
 
-  embedding::CudaLruCacheOptions cache_options{};
-  uint32_t line_size = embedding_options.LineSize();
-  cache_options.memory_budget_mb = embedding_options.CacheMemoryBudgetMb();
-  CHECK_GT(cache_options.memory_budget_mb, 0);
+  embedding::CacheOptions cache_options{};
+  const uint32_t line_size = embedding_options.EmbeddingSize();
+  cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+  cache_options.policy = embedding::CacheOptions::Policy::kLRU;
   cache_options.max_query_length = 65536 * 26;
   cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
   cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
-  std::unique_ptr<embedding::Cache> cache = embedding::NewCudaLruCache(cache_options);
+  cache_options.capacity =
+      embedding_options.CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
+  std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
 
   std::unique_ptr<embedding::KeyValueStore> store;
   const std::string& kv_store = embedding_options.KVStore();
-  if (kv_store == "cuda_in_memory") {
-    embedding::CudaInMemoryKeyValueStoreOptions options{};
-    options.num_shards = 4;
-    options.value_length = line_size;
-    options.num_keys = embedding_options.NumKeys();
-    CHECK_GT(options.num_keys, 0);
-    options.num_device_keys = embedding_options.NumDeviceKeys();
-    options.key_type = DataType::kInt64;
-    options.value_type = DataType::kFloat;
-    options.encoding_type = embedding::CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
-    store = NewCudaInMemoryKeyValueStore(options);
-  } else if (kv_store == "block_based") {
+  if (kv_store == "block_based") {
     const std::string& path = embedding_options.FixedTablePath();
     const std::string& num_rank = std::to_string(parallel_num);
     const int32_t rank_id_suffix_length = num_rank.size();

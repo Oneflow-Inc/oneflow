@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/embedding/full_cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -33,21 +34,11 @@ bool HasCudaDevice() {
   return true;
 }
 
-TEST(CudaLruCache, CudaLruCache) {
-  if (!HasCudaDevice()) { return; }
-
+void TestCache(Cache* cache, uint32_t line_size) {
   std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
       new ep::DeviceManagerRegistry());
   auto device = device_manager_registry->GetDevice(DeviceType::kCUDA, 0);
   ep::Stream* stream = device->CreateStream();
-
-  CudaLruCacheOptions options{};
-  const uint32_t line_size = 128;
-  options.value_size = 512;
-  options.memory_budget_mb = 8;
-  options.max_query_length = 65536;
-  options.key_size = 8;
-  std::unique_ptr<Cache> cache(NewCudaLruCache(options));
 
   std::unordered_set<int64_t> in_cache;
   const size_t n_iter = 128;
@@ -212,6 +203,36 @@ TEST(CudaLruCache, CudaLruCache) {
   OF_CUDA_CHECK(cudaFree(d_evicted_keys));
   OF_CUDA_CHECK(cudaFreeHost(evicted_keys));
   device->DestroyStream(stream);
+}
+
+TEST(Cache, CudaLruCache) {
+  if (!HasCudaDevice()) { return; }
+
+  CacheOptions options{};
+  options.policy = CacheOptions::Policy::kLRU;
+  const uint32_t line_size = 128;
+  options.value_size = 512;
+  options.capacity = 65536;
+  options.max_query_length = 65536;
+  options.key_size = 8;
+  options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
+
+  std::unique_ptr<Cache> cache(NewCache(options));
+  TestCache(cache.get(), line_size);
+}
+TEST(Cache, FullCache) {
+  if (!HasCudaDevice()) { return; }
+
+  CacheOptions options{};
+  options.policy = CacheOptions::Policy::kFull;
+  const uint32_t line_size = 128;
+  options.value_size = 512;
+  options.capacity = 65536;
+  options.max_query_length = 65536;
+  options.key_size = 8;
+  options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
+  std::unique_ptr<Cache> cache(NewCache(options));
+  TestCache(cache.get(), line_size);
 }
 
 #endif  // WITH_CUDA

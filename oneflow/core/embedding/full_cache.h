@@ -13,36 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_CUDA_IN_MEMORY_KEY_VALUE_STORE_H_
-#define ONEFLOW_EMBEDDING_CUDA_IN_MEMORY_KEY_VALUE_STORE_H_
+#ifndef ONEFLOW_EMBEDDING_FULL_CACHE_H_
+#define ONEFLOW_EMBEDDING_FULL_CACHE_H_
 
 #include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
 namespace embedding {
 
-struct CudaInMemoryKeyValueStoreOptions {
-  enum class EncodingType {
-    kPlain,
-    kOrdinal,
-  };
-  size_t num_shards = 0;
-  size_t value_length = 0;
-  DataType key_type = DataType::kInvalidDataType;
-  DataType value_type = DataType::kInvalidDataType;
-  size_t num_keys = 0;
-  size_t num_device_keys = 0;
-  EncodingType encoding_type = EncodingType::kOrdinal;
-  float load_factor = 0.75;
-};
-
-std::unique_ptr<KeyValueStore> NewCudaInMemoryKeyValueStore(
-    const CudaInMemoryKeyValueStoreOptions& options);
+std::unique_ptr<Cache> NewFullCache(const CacheOptions& options);
 
 }  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_CUDA_IN_MEMORY_KEY_VALUE_STORE_H_
+#endif  // ONEFLOW_EMBEDDING_FULL_CACHE_H_

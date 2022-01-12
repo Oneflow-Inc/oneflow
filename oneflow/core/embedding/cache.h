@@ -23,6 +23,24 @@ namespace oneflow {
 
 namespace embedding {
 
+struct CacheOptions {
+  enum class Policy {
+    kLRU,
+    kFull,
+  };
+  enum class MemoryKind {
+    kDevice,
+    kHost,
+  };
+  Policy policy = Policy::kLRU;
+  MemoryKind value_memory_kind = MemoryKind::kDevice;
+  uint64_t capacity{};
+  uint32_t max_query_length{};
+  uint32_t key_size{};
+  uint32_t value_size{};
+  float load_factor = 0.75;
+};
+
 class Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Cache);
@@ -42,6 +60,8 @@ class Cache {
   virtual void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                     uint32_t* n_dumped, void* keys, void* values) = 0;
 };
+
+std::unique_ptr<Cache> NewCache(const CacheOptions& options);
 
 }  // namespace embedding
 

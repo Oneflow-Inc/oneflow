@@ -227,7 +227,7 @@ class FixedTableImpl : public FixedTable {
                               + value_files_.back().Size() / block_size_)
                              * values_per_block_;
     } else {
-      physical_table_size_ = 1;
+      physical_table_size_ = 0;
     }
     if (FileExists(SnapshotFilename(kInitSnapshotName).c_str())) {
       LoadSnapshotImpl(kInitSnapshotName);

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
+#include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/embedding/embedding_manager.h"
@@ -61,7 +61,8 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
 
 template<typename T, typename IDX>
 __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embedding_size, float beta1,
-                                 float beta2, float epsilon, float bias_correction1, float bias_correction2, const IDX* num_unique_ids,
+                                 float beta2, float epsilon, float bias_correction1,
+                                 float bias_correction2, const IDX* num_unique_ids,
                                  const float* learning_rate, const int64_t* skip_if,
                                  const T* model_diff, const T* unique_values,
                                  T* updated_unique_values) {
@@ -82,8 +83,7 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
       const T next_v = beta2 * v + (1 - beta2) * model_diff_value * model_diff_value;
       T denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
       const T step_size = learning_rate_val / bias_correction1;
-      updated_unique_values[offset] =
-          model_val - step_size * (next_m / denom);
+      updated_unique_values[offset] = model_val - step_size * (next_m / denom);
       updated_unique_values[m_offset] = next_m;
       updated_unique_values[v_offset] = next_v;
     }

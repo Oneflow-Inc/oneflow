@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/cuda_in_memory_key_value_store.h"
 #include "oneflow/core/embedding/fixed_table_key_value_store.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
 #include "oneflow/core/embedding/cuda_lru_cache.h"
@@ -122,44 +121,6 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   device->DestroyStream(stream);
 }
 
-TEST(CudaInMemoryKeyValueStore, PlainEncoder) {
-  if (!HasCudaDevice()) { return; }
-  Global<ep::DeviceManagerRegistry>::New();
-  CudaInMemoryKeyValueStoreOptions options{};
-  options.num_shards = 4;
-  options.value_length = 128;
-  options.num_keys = 1024 * 16;
-  options.num_device_keys = 1024 * 4;
-  options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kPlain;
-  options.key_type = DataType::kUInt64;
-  options.value_type = DataType::kFloat;
-  std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
-
-  TestKeyValueStore(store.get(), options.num_keys, options.num_keys, options.value_length,
-                    options.num_shards);
-  store.reset();
-  Global<ep::DeviceManagerRegistry>::Delete();
-}
-
-TEST(CudaInMemoryKeyValueStore, OrdinalEncoder) {
-  if (!HasCudaDevice()) { return; }
-  Global<ep::DeviceManagerRegistry>::New();
-  CudaInMemoryKeyValueStoreOptions options{};
-  options.num_shards = 4;
-  options.value_length = 128;
-  options.num_keys = 1024 * 16;
-  options.num_device_keys = 1024 * 4;
-  options.encoding_type = CudaInMemoryKeyValueStoreOptions::EncodingType::kOrdinal;
-  options.key_type = DataType::kUInt64;
-  options.value_type = DataType::kFloat;
-  std::unique_ptr<KeyValueStore> store = NewCudaInMemoryKeyValueStore(options);
-
-  TestKeyValueStore(store.get(), options.num_keys, options.num_keys * 0.75, options.value_length,
-                    options.num_shards);
-  store.reset();
-  Global<ep::DeviceManagerRegistry>::Delete();
-}
-
 TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
@@ -190,12 +151,14 @@ TEST(CachedKeyValueStore, CachedKeyValueStore) {
   store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
-  CudaLruCacheOptions cache_options{};
+  CacheOptions cache_options{};
+  cache_options.policy = CacheOptions::Policy::kLRU;
+  cache_options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
   cache_options.value_size = 512;
-  cache_options.memory_budget_mb = 8;
+  cache_options.capacity = 130172;
   cache_options.max_query_length = 128;
   cache_options.key_size = 8;
-  std::unique_ptr<Cache> cache = NewCudaLruCache(cache_options);
+  std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
   TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length, 4);

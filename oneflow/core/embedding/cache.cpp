@@ -13,20 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_CUDA_LRU_CACHE_H_
-#define ONEFLOW_EMBEDDING_CUDA_LRU_CACHE_H_
-
 #include "oneflow/core/embedding/cache.h"
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/embedding/full_cache.h"
+#include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/embedding/hash_functions.cuh"
 
 namespace oneflow {
 
 namespace embedding {
 
-std::unique_ptr<Cache> NewCudaLruCache(const CacheOptions& options);
+std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
+  CHECK_GT(options.key_size, 0);
+  CHECK_GT(options.value_size, 0);
+  CHECK_GT(options.max_query_length, 0);
+  CHECK_GT(options.capacity, 0);
+  if (options.policy == CacheOptions::Policy::kLRU) {
+    return NewCudaLruCache(options);
+  } else if (options.policy == CacheOptions::Policy::kFull) {
+    return NewFullCache(options);
+  } else {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+}
 
 }  // namespace embedding
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_EMBEDDING_CUDA_LRU_CACHE_H_
