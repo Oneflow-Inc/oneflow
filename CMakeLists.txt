@@ -227,7 +227,7 @@ endif(BUILD_CPP_API)
 
 set(ONETBB_URL https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
 use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
-set(ONETBB_MD5 5e5f2ee22a0d19c0abbe7478f1c7ccf6)
+set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
 add_subdirectory(external)
 
 include(third_party)
