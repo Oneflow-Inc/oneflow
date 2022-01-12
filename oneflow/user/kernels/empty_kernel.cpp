@@ -47,15 +47,9 @@ class EmptyKernel final : public OpKernel {
 #define REGISTER_EMPTY_KERNEL(device, dtype_pair) \
   REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-#define TB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
-#define TOTAL_DATA_TYPE_SEQ ALL_DATA_TYPE_SEQ TB_DATA_TYPE_SEQ
+#define TOTAL_DATA_TYPE_SEQ ALL_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, TOTAL_DATA_TYPE_SEQ)
 #undef TOTAL_DATA_TYPE_SEQ
-
-REGISTER_EMPTY_XPU_KERNEL(DeviceType::kCPU, float16);
-#ifdef WITH_CUDA
-REGISTER_EMPTY_XPU_KERNEL(DeviceType::kCUDA, float16);
-#endif  // WITH_CUDA
 
 }  // namespace user_op
 }  // namespace oneflow
