@@ -254,8 +254,6 @@ class FlattenFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
-
-    std::cout << x->is_local() << !(LazyMode::is_enabled()) << std::endl;
     const auto& x_shape = x->shape();
     const int32_t x_dim = x_shape->dim_vec().size();
 
@@ -963,7 +961,7 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     // if input tensor is eager local, than return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {return view::Reshape(x, shape); }
+    if (x->is_local() && !(LazyMode::is_enabled())) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
