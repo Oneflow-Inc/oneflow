@@ -88,7 +88,9 @@ class TestScatter(flow.unittest.TestCase):
     def test_scatter_1n4d(test_case):
         output = flow.tensor([[1, 2], [3, 4]], device="cuda")
         if flow.env.get_rank() == 1:
-            tensor_list = [flow.tensor([[5, 6], [7, 8]], device="cuda") + i for i in range(4)]
+            tensor_list = [
+                flow.tensor([[5, 6], [7, 8]], device="cuda") + i for i in range(4)
+            ]
             flow.comm.scatter(output, tensor_list, src=1)
             test_case.assertTrue(
                 np.allclose(output.numpy(), np.array([[6, 7], [8, 9]]))
@@ -152,7 +154,8 @@ class TestAllToAll(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_all_to_all_1n4d(test_case):
         input_list = [
-            flow.tensor([0, 1], device="cuda") + i * 2 + flow.env.get_rank() * 8 for i in range(4)
+            flow.tensor([0, 1], device="cuda") + i * 2 + flow.env.get_rank() * 8
+            for i in range(4)
         ]
         output_list = [flow.tensor([0, 1], device="cuda") for _ in range(4)]
         flow.comm.all_to_all(output_list, input_list)
@@ -172,7 +175,8 @@ class TestReduceScatter(flow.unittest.TestCase):
     def test_reduce_scatter_1n4d(test_case):
         output = flow.tensor([[0, 0], [0, 0]], device="cuda")
         tensor_list = [
-            flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_rank() + i for i in range(4)
+            flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_rank() + i
+            for i in range(4)
         ]
         flow.comm.reduce_scatter(output, tensor_list)
         test_case.assertTrue(
