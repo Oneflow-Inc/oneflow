@@ -31,24 +31,6 @@ class EagerBoxingLogger {
   virtual void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const = 0;
 };
 
-class NullEagerBoxingLogger final : public EagerBoxingLogger {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NullEagerBoxingLogger);
-  NullEagerBoxingLogger() = default;
-  ~NullEagerBoxingLogger() override = default;
-
-  void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const override {}
-};
-
-class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NaiveEagerBoxingLogger);
-  NaiveEagerBoxingLogger() = default;
-  ~NaiveEagerBoxingLogger() override = default;
-
-  void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const override;
-};
-
 extern std::shared_ptr<const EagerBoxingLogger> (*CachedEagerBoxingLogger)();
 
 }  // namespace oneflow

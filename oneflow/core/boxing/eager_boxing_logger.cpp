@@ -19,14 +19,29 @@ limitations under the License.
 
 namespace oneflow {
 
-void NaiveEagerBoxingLogger::Log(const BoxingInterpreterStatus& status,
-                                 const std::string& prefix) const {
-  LOG(INFO) << prefix << "boxing interpreter route: " << (status.boxing_interpreter_routing());
-  LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
-  LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
-}
-
 namespace {
+
+class NullEagerBoxingLogger final : public EagerBoxingLogger {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NullEagerBoxingLogger);
+  NullEagerBoxingLogger() = default;
+  ~NullEagerBoxingLogger() override = default;
+
+  void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const override {}
+};
+
+class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NaiveEagerBoxingLogger);
+  NaiveEagerBoxingLogger() = default;
+  ~NaiveEagerBoxingLogger() override = default;
+
+  void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const override {
+    LOG(INFO) << prefix << "boxing interpreter route: " << (status.boxing_interpreter_routing());
+    LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
+    LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
+  }
+};
 
 std::shared_ptr<const EagerBoxingLogger> CreateEagerBoxingLogger() {
   if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
