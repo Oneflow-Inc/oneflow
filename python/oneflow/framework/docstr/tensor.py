@@ -52,6 +52,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.from_numpy,
+    r"""
+    Creates a ``Tensor`` from a ``numpy.ndarray``.
+
+    The returned tensor and ndarray share the same memory. Modifications to the tensor
+    will be reflected in the ndarray and vice versa.
+
+    It currently accepts ndarray with dtypes of numpy.float64, numpy.float32, numpy.float16,
+    numpy.int64, numpy.int32, numpy.int8, numpy.uint8.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.arange(6).reshape(2, 3)
+        >>> t = flow.from_numpy(np_arr)
+        >>> t
+        tensor([[0, 1, 2],
+                [3, 4, 5]], dtype=oneflow.int64)
+        >>> np_arr[0, 0] = -1
+        >>> t
+        tensor([[-1,  1,  2],
+                [ 3,  4,  5]], dtype=oneflow.int64)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atan2,
     r"""
     See :func:`oneflow.atan2`
@@ -345,6 +374,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.split,
+    """
+    See :func:`oneflow.split`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.swapaxes,
+    """
+    See :func:`oneflow.swapaxes`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`
@@ -381,6 +424,20 @@ add_docstr(
     oneflow.Tensor.exp,
     """
     See :func:`oneflow.exp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfinv,
+    """
+    See :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfinv_,
+    """
+    Inplace version of :func:`oneflow.erfinv`
     """,
 )
 
@@ -470,6 +527,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
@@ -483,7 +548,8 @@ add_docstr(
     """
     Tensor.numpy() → numpy.ndarray
 
-    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to self tensor will be reflected in the ndarray and vice versa.
+    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to
+     self tensor will be reflected in the ndarray and vice versa.
     """,
 )
 
@@ -686,5 +752,33 @@ add_docstr(
 
     See :func:`oneflow.gather`
 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp,
+    """
+    See :func:`oneflow.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp_,
+    """
+    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip,
+    """
+    Alias for :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip_,
+    """
+    Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )

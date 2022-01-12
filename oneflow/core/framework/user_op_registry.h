@@ -48,12 +48,13 @@ using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using InputArgModifyFn = std::function<Maybe<void>(GetInputArgModifier, const UserOpConfWrapper&)>;
+using InputArgModifyFn =
+    std::function<Maybe<void>(const GetInputArgModifier&, const UserOpConfWrapper&)>;
 using OutputArgModifier = OutputBlobModifier;
 using GetOutputArgModifier =
     std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 using OutputArgModifyFn =
-    std::function<Maybe<void>(GetOutputArgModifier, const UserOpConfWrapper&)>;
+    std::function<Maybe<void>(const GetOutputArgModifier&, const UserOpConfWrapper&)>;
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 
@@ -129,8 +130,7 @@ class OpRegistry final {
   OpRegistryResult GetResult() { return result_; }
 
  private:
-  OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
-                      bool num_as_min);
+  OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional);
   OpRegistry& DefaultedAttr(const std::string& name, AttrType type,
                             const std::function<void(UserOpDef::AttrDef*)>& SetDefault);
 
