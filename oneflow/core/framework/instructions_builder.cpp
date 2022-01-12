@@ -1093,7 +1093,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   }
   for (const auto& last_used_device : last_used_devices) {
     std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
-    dep_objects.reserve(last_used_devices.size());
+    dep_objects.reserve(eager_blob_objects->size());
     for (const auto& eager_blob_object : *eager_blob_objects) {
       const auto& opt_last_used_device = eager_blob_object->last_used_device();
       if (unlikely(!opt_last_used_device.has_value())) { continue; }
