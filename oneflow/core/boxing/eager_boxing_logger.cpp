@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/boxing/boxing_interpreter_status.h"
 
@@ -24,5 +25,20 @@ void NaiveEagerBoxingLogger::Log(const BoxingInterpreterStatus& status,
   LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
   LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
 }
+
+namespace {
+
+std::shared_ptr<const EagerBoxingLogger> CreateEagerBoxingLogger() {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
+    return std::shared_ptr<const EagerBoxingLogger>(new NaiveEagerBoxingLogger());
+  } else {
+    return std::shared_ptr<const EagerBoxingLogger>(new NullEagerBoxingLogger());
+  }
+}
+
+}  // namespace
+
+decltype(CachedEagerBoxingLogger) CachedEagerBoxingLogger =
+    DECORATE(&CreateEagerBoxingLogger, ThreadLocal);
 
 }  // namespace oneflow

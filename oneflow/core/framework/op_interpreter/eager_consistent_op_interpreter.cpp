@@ -44,14 +44,6 @@ namespace one {
 
 namespace {
 
-std::unique_ptr<const EagerBoxingLogger> CreateEagerBoxingLogger() {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
-    return std::unique_ptr<const EagerBoxingLogger>(new NaiveEagerBoxingLogger());
-  } else {
-    return std::unique_ptr<const EagerBoxingLogger>(new NullEagerBoxingLogger());
-  }
-}
-
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
@@ -85,7 +77,7 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg:
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
       in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
-  eager_boxing_logger.Log(*JUST(boxing_interpreter->boxing_interpreter_status()), "" /* prefix */);
+  eager_boxing_logger.Log(*JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
                                                           in_parallel_desc, out_parallel_desc));
@@ -165,7 +157,7 @@ auto* InterpretThenInitConsistentId = DECORATE(&Interpret, NonRecursiveInitConsi
 }  // namespace
 
 EagerConsistentInterpreter::EagerConsistentInterpreter()
-    : EagerInterpreter(), eager_boxing_logger_(CreateEagerBoxingLogger()) {}
+    : EagerInterpreter(), eager_boxing_logger_(CachedEagerBoxingLogger()) {}
 
 EagerConsistentInterpreter::~EagerConsistentInterpreter() = default;
 

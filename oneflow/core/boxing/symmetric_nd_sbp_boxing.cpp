@@ -28,16 +28,6 @@ namespace oneflow {
 
 namespace {
 
-std::shared_ptr<EagerBoxingLogger> CreateEagerBoxingLogger() {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
-    return std::shared_ptr<EagerBoxingLogger>(new NaiveEagerBoxingLogger());
-  } else {
-    return std::shared_ptr<EagerBoxingLogger>(new NullEagerBoxingLogger());
-  }
-}
-
-static constexpr auto* CachedEagerBoxingLogger = DECORATE(&CreateEagerBoxingLogger, ThreadLocal);
-
 Maybe<one::OpExpr> MakeToConsistentOpExpr() {
   std::shared_ptr<one::OpExpr> op_expr =
       JUST(one::CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent"))));
@@ -73,7 +63,7 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
   const auto& eager_boxing_logger = CachedEagerBoxingLogger();
   eager_boxing_logger->Log(*JUST(boxing_interpreter->boxing_interpreter_status()),
-                           "\t\tInternal boxing of symmetric-nd-sbp-to-nd-sbp, " /* prefix */);
+                           /* prefix */ "\t\tInternal boxing of symmetric-nd-sbp-to-nd-sbp, ");
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
                                             out_parallel_desc));
 }
