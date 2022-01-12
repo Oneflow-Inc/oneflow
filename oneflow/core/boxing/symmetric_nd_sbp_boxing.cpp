@@ -72,7 +72,8 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
   const auto& eager_boxing_logger = CachedEagerBoxingLogger();
-  eager_boxing_logger->Log(*JUST(boxing_interpreter->boxing_interpreter_status()), "\t\t");
+  eager_boxing_logger->Log(*JUST(boxing_interpreter->boxing_interpreter_status()),
+                           "\t\tInternal boxing of symmetric-nd-sbp-to-nd-sbp, " /* prefix */);
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
                                             out_parallel_desc));
 }

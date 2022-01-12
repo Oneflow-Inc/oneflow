@@ -19,10 +19,10 @@ limitations under the License.
 namespace oneflow {
 
 void NaiveEagerBoxingLogger::Log(const BoxingInterpreterStatus& status,
-                                 const std::string& indent) const {
-  LOG(INFO) << indent << "boxing interpreter route: " << (status.boxing_interpreter_routing());
-  LOG(INFO) << indent << "Altered state of sbp: " << (status.nd_sbp_routing());
-  LOG(INFO) << indent << "Altered state of placement: " << (status.placement_routing());
+                                 const std::string& prefix) const {
+  LOG(INFO) << prefix << "boxing interpreter route: " << (status.boxing_interpreter_routing());
+  LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
+  LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
 }
 
 }  // namespace oneflow
