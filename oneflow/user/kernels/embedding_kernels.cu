@@ -29,24 +29,6 @@ namespace oneflow {
 
 namespace {
 
-void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, size_t data_size,
-                const void* ptr) {
-  void* host_ptr;
-  OF_CUDA_CHECK(cudaMallocHost(&host_ptr, data_size));
-  std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
-      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
-                                                                ep::primitive::MemcpyKind::kDtoH);
-  CHECK(copyd2h_primitive);
-  copyd2h_primitive->Launch(stream, host_ptr, ptr, data_size);
-  CHECK_JUST(stream->Sync());
-  OF_CUDA_CHECK(cudaGetLastError());
-  std::ofstream dx_os;
-  dx_os.open(StrCat("test/" + filename + "_", parallel_id));
-  dx_os.write(reinterpret_cast<char*>(host_ptr), data_size);
-  dx_os.close();
-  OF_CUDA_CHECK(cudaFreeHost(host_ptr));
-}
-
 template<typename T, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
                                 const float* learning_rate, const int64_t* skip_if,
@@ -56,6 +38,30 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T model_val = model[i];
     updated_model[i] = model_val - learning_rate_val * model_diff[i];
+  }
+}
+
+template<typename T, typename IDX>
+__global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embedding_size,
+                                     float beta, const IDX* num_unique_ids,
+                                     const float* learning_rate, const int64_t* skip_if,
+                                     const T* model_diff, const T* unique_values,
+                                     T* updated_unique_values) {
+  float learning_rate_val = *learning_rate;
+  const int64_t rows = *num_unique_ids;
+  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+    const int64_t row_offset = row * line_size;
+    for (int col = threadIdx.x; col < embedding_size; col += blockDim.x) {
+      const int64_t offset = row_offset + col;
+      const int64_t momentum_offset = row_offset + embedding_size + col;
+      const T model_val = unique_values[offset];
+      const T momentum = unique_values[momentum_offset];
+      const T model_diff_val = model_diff[offset];
+      const T next_momentum = beta * momentum - learning_rate_val * model_diff_val;
+      const T next_model = model_val + next_momentum;
+      updated_unique_values[offset] = next_model;
+      updated_unique_values[momentum_offset] = next_momentum;
+    }
   }
 }
 
@@ -397,9 +403,48 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(float, int32_t)
 
+template<typename T, typename IDX>
+class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
+ public:
+  MomentumEmbeddingUpdateKernel() = default;
+  ~MomentumEmbeddingUpdateKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
+    user_op::Tensor* updated_unique_embeddings =
+        ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
+    const int64_t num_axes = unique_embeddings->shape().NumAxes();
+    const int64_t line_size = unique_embeddings->shape().At(num_axes - 1);
+    const int64_t num_keys = unique_embeddings->shape().elem_cnt() / line_size;
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    CHECK_EQ(line_size, embedding_size * 2);
+    const auto beta = ctx->Attr<float>("beta");
+
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const float* learning_rate_ptr = learning_rate->dptr<float>();
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+    // update kernel
+    MomentumUpdateKernel<T, IDX>
+        <<<num_keys, embedding_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            line_size, embedding_size, beta, num_unique_ids->dptr<IDX>(), learning_rate_ptr,
+            skip_if_ptr, embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(),
+            updated_unique_embeddings->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 #define REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                \
   REGISTER_USER_KERNEL("momentum_embedding_update")                                       \
-      .SetCreateFn<SgdEmbeddingUpdateKernel<t_dtype, idx_dtype>>()                        \
+      .SetCreateFn<MomentumEmbeddingUpdateKernel<t_dtype, idx_dtype>>()                   \
       .SetIsMatchedHob(                                                                   \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
