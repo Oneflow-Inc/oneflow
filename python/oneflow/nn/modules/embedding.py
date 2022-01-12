@@ -25,15 +25,18 @@ import json
 import os
 
 
+fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 512))
+optimizer = str(os.environ.get("OPTIMIZER","sgd"))
+
 class OneEmbeddingLookup(Module):
     def __init__(self, options):
         super().__init__()
         self.dtype = options["dtype"]
         embedding_options = {
             "embedding_name": "EmbeddingTest",
-            "fixed_table_block_size": 512,
+            "fixed_table_block_size": fixed_table_block_size,
             "base_learning_rate": 24,
-            "optimizer": "sgd",
+            "optimizer": optimizer,
             "optimizer_conf": {
                 "beta": 0.9,
                 "beta1": 0.9,
