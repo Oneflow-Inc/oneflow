@@ -30,13 +30,14 @@ class EmbeddingOptions final {
     // key_type_ = json_object["key_type"];
     // value_type_ = json_object["value_type"];
     embedding_size_ = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);  // json_object["embedding_size"];
+    line_size_ = embedding_size_;
     // l1_cache_policy_ = json_object["l1_cache_policy"];
     // l2_cache_policy_ = json_object["l2_cache_policy"];
     cache_memory_budget_mb_ = ParseIntegerFromEnv("CACHE_MEMORY_BUDGET_MB", 0);
     kv_store_ = GetStringFromEnv("KEY_VALUE_STORE", "");  // json_object["kv_store"];
     fixed_table_path_ =
         GetStringFromEnv("BLOCK_BASED_PATH", "");  // json_object["fixed_table_path"];
-    fixed_table_block_size_ = 512;                 // json_object["fixed_table_block_size"];
+    fixed_table_block_size_ = json_object["fixed_table_block_size"];
     // fixed_table_chunk_size_ = json_object["fixed_table_chunk_size"];
     num_keys_ = ParseIntegerFromEnv("NUM_KEYS", 0);  // json_object["num_keys"];
     num_device_keys_ =
@@ -47,11 +48,14 @@ class EmbeddingOptions final {
       // do nothing
     } else if (optimizer_ == "momentum") {
       beta_ = json_object["optimizer_conf"]["beta"];
+      line_size_ *= 2;
     } else if (optimizer_ == "adam") {
       beta1_ = json_object["optimizer_conf"]["beta1"];
       beta2_ = json_object["optimizer_conf"]["beta2"];
       epsilon_ = json_object["optimizer_conf"]["epsilon"];
       amsgrad_ = json_object["optimizer_conf"]["amsgrad"];
+      do_bias_correction_ = json_object["optimizer_conf"]["do_bias_correction"];
+      line_size_ *= 3;
     } else {
       UNIMPLEMENTED();
     }
@@ -93,6 +97,7 @@ class EmbeddingOptions final {
   DataType KeyType() const { return key_type_; }
   DataType ValueType() const { return value_type_; }
   int64_t EmbeddingSize() const { return embedding_size_; }
+  int64_t LineSize() const { return line_size_; }
   std::string L1CachePolicy() const { return l1_cache_policy_; }
   std::string L2CachePolicy() const { return l2_cache_policy_; }
   std::string KVStore() const { return kv_store_; }
@@ -103,6 +108,13 @@ class EmbeddingOptions final {
   int64_t NumKeys() const { return num_keys_; }
   int64_t NumDeviceKeys() const { return num_device_keys_; }
   std::string Optimizer() const { return optimizer_; }
+  float Beta() const { return beta_; }
+  float Beta1() const { return beta1_; }
+  float Beta2() const { return beta2_; }
+  float Epsilon() const { return epsilon_; }
+  bool Amsgrad() const { return amsgrad_; }
+  bool DoBiasCorrection() const { return do_bias_correction_; }
+
   float BaseLearningRate() const { return base_learning_rate_; }
   std::string WarmupType() const { return warmup_type_; }
   WarmupConf WarmupConfProto() const { return warmup_conf_; }
@@ -114,6 +126,7 @@ class EmbeddingOptions final {
   DataType key_type_;
   DataType value_type_;
   int64_t embedding_size_;
+  int64_t line_size_;
   std::string l1_cache_policy_;
   std::string l2_cache_policy_;
   std::string kv_store_;
@@ -129,7 +142,8 @@ class EmbeddingOptions final {
   float beta1_;
   float beta2_;
   float epsilon_;
-  float amsgrad_;
+  bool amsgrad_;
+  bool do_bias_correction_;
   std::string warmup_type_;
   WarmupConf warmup_conf_;
   std::string learning_rate_decay_type_;

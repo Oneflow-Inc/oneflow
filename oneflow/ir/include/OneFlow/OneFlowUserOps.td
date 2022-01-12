@@ -8926,6 +8926,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     AnyType:$context
   );
   let output = (outs
+    AnyType:$unique_values,
     AnyType:$embeddings,
     AnyType:$out_context
   );
@@ -8952,7 +8953,53 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
     AnyType:$updated_unique_embeddings
   );
   let attrs = (ins
-    StrAttr:$embedding_options
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$num_unique_ids,
+    AnyType:$unique_embeddings,
+    AnyType:$embedding_diff,
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$skip_if
+  );
+  let output = (outs
+    AnyType:$updated_unique_embeddings
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<F32Attr, "0.9">:$beta
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$num_unique_ids,
+    AnyType:$unique_embeddings,
+    AnyType:$embedding_diff,
+    Optional<AnyType>:$learning_rate,
+    Optional<AnyType>:$skip_if
+  );
+  let output = (outs
+    AnyType:$updated_unique_embeddings
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<F32Attr, "0.9">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.999">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
+    DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

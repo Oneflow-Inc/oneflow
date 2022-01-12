@@ -181,6 +181,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                    AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
             .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
             .Input("context", embedding_prefetch_op.output("context", 0))
+            .Output("unique_values")
             .Output("embeddings")
             .Output("out_context")
             .Attr<DataType>("dtype", user_op_conf.attr<DataType>("dtype"))
@@ -309,26 +310,40 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
         const std::string& learning_rate_lbn =
             AddScheduleOp(options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
-        user_op::UserOpConfWrapperBuilder sgd_embedding_update_op_builder(
-            user_op_conf.op_name() + "_sgd_embedding_update");
-        sgd_embedding_update_op_builder.OpTypeName("sgd_embedding_update")
+        user_op::UserOpConfWrapperBuilder embedding_update_op_builder(user_op_conf.op_name()
+                                                                      + "_embedding_update");
+
+        if (options.Optimizer() == "sgd") {
+          embedding_update_op_builder.OpTypeName("sgd_embedding_update");
+        } else if (options.Optimizer() == "momentum") {
+          embedding_update_op_builder.OpTypeName("momentum_embedding_update")
+              .Attr<float>("beta", options.Beta());
+        } else if (options.Optimizer() == "adam") {
+          embedding_update_op_builder.OpTypeName("adam_embedding_update")
+              .Attr<float>("beta1", options.Beta1())
+              .Attr<float>("beta2", options.Beta2())
+              .Attr<float>("epsilon", options.Epsilon())
+              .Attr<bool>("amsgrad", options.Amsgrad())
+              .Attr<bool>("do_bias_correction", options.DoBiasCorrection());
+        } else {
+          UNIMPLEMENTED();
+        }
+        embedding_update_op_builder
             .Input("num_unique_ids",
                    AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
-            .Input("unique_embeddings", embedding_lookup_op.output("embeddings", 0))
+            .Input("unique_embeddings", embedding_lookup_op.output("unique_values", 0))
             .Input("embedding_diff", embedding_diff_lbn)
             .Input("learning_rate", learning_rate_lbn)
             .Output("updated_unique_embeddings");
 
         if (train_conf.has_dynamic_loss_scale_policy()) {
-          sgd_embedding_update_op_builder.Input(
+          embedding_update_op_builder.Input(
               "skip_if",
               CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
                   .count_not_finite_lbn());
         }
         user_op::UserOpConfWrapper sgd_embedding_update_op =
-            sgd_embedding_update_op_builder
-                .Attr<std::string>("embedding_options",
-                                   user_op_conf.attr<std::string>("embedding_options"))
+            embedding_update_op_builder.Attr<int64_t>("embedding_size", options.EmbeddingSize())
                 .ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id())
                 .Build();
         OperatorConf sgd_embedding_update_new_op_conf = sgd_embedding_update_op.op_conf();

@@ -34,7 +34,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   if (it != key_value_store_map_.end()) { return it->second.get(); }
 
   embedding::CudaLruCacheOptions cache_options{};
-  const uint32_t line_size = embedding_options.EmbeddingSize();
+  uint32_t line_size = embedding_options.LineSize();
   cache_options.memory_budget_mb = embedding_options.CacheMemoryBudgetMb();
   CHECK_GT(cache_options.memory_budget_mb, 0);
   cache_options.max_query_length = 65536 * 26;
@@ -47,7 +47,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   if (kv_store == "cuda_in_memory") {
     embedding::CudaInMemoryKeyValueStoreOptions options{};
     options.num_shards = 4;
-    options.value_length = embedding_options.EmbeddingSize();
+    options.value_length = line_size;
     options.num_keys = embedding_options.NumKeys();
     CHECK_GT(options.num_keys, 0);
     options.num_device_keys = embedding_options.NumDeviceKeys();
@@ -64,8 +64,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     options.table_options.path = path + "/"
                                  + std::string(rank_id_suffix_length - rank_id.size(), '0')
                                  + rank_id + "_" + num_rank;
-    options.table_options.value_size =
-        embedding_options.EmbeddingSize() * GetSizeOfDataType(DataType::kFloat);
+    options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
     options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
     options.max_query_length = 65536 * 26;
     options.table_options.block_size = embedding_options.FixedTableBlockSize();

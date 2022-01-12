@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/embedding/embedding_options.h"
+#include "oneflow/core/ep/include/primitive/copy_nd.h"
 
 namespace oneflow {
 
@@ -58,24 +59,54 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_uni
   }
 }
 
+template<typename T, typename IDX>
+__global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embedding_size, float beta1,
+                                 float beta2, float epsilon, float bias_correction1, float bias_correction2, const IDX* num_unique_ids,
+                                 const float* learning_rate, const int64_t* skip_if,
+                                 const T* model_diff, const T* unique_values,
+                                 T* updated_unique_values) {
+  float learning_rate_val = *learning_rate;
+  const int64_t rows = *num_unique_ids;
+  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+    const int64_t row_offset = row * line_size;
+    for (int col = threadIdx.x; col < embedding_size; col += blockDim.x) {
+      const int64_t offset = row_offset + col;
+      const int64_t m_offset = row_offset + embedding_size + col;
+      const int64_t v_offset = row_offset + 2 * embedding_size + col;
+
+      const T model_val = unique_values[offset];
+      const T m = unique_values[m_offset];
+      const T v = unique_values[v_offset];
+      const T model_diff_value = model_diff[offset];
+      const T next_m = beta1 * m + (1 - beta1) * model_diff_value;
+      const T next_v = beta2 * v + (1 - beta2) * model_diff_value * model_diff_value;
+      T denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
+      const T step_size = learning_rate_val / bias_correction1;
+      updated_unique_values[offset] =
+          model_val - step_size * (next_m / denom);
+      updated_unique_values[m_offset] = next_m;
+      updated_unique_values[v_offset] = next_v;
+    }
+  }
+}
+
 template<typename T, typename K>
-__global__ void InitValueKernel(bool debug, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
-                                uint64_t inc_offset, const int64_t embedding_size,
-                                const uint32_t* num_missing_keys, const K* missing_keys,
-                                const uint32_t* missing_indices, T* values) {
+__global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
+                                uint64_t inc_offset, const int64_t line_size,
+                                const int64_t embedding_size, const uint32_t* num_missing_keys,
+                                const K* missing_keys, const uint32_t* missing_indices, T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   for (int row = blockIdx.x; row < *num_missing_keys; row += gridDim.x) {
     const uint32_t index = missing_indices[row];
-    for (int col = threadIdx.x; col < embedding_size; col += blockDim.x) {
-      const int64_t offset = index * embedding_size + col;
-      const T value = (curand_uniform(&state) - 0.5) * 0.1;  // [-0.05, 0.05]
-      if (debug) {
-        values[offset] = missing_keys[row];  // for debug
-      } else {
-        values[offset] = value;
+    for (int col = threadIdx.x; col < line_size; col += blockDim.x) {
+      const int64_t offset = index * line_size + col;
+      T value = 0;
+      if (col < embedding_size) {
+        value = (curand_uniform(&state) - 0.5) * 0.1;  // [-0.05, 0.05]
       }
+      values[offset] = value;
     }
   }
   __syncthreads();
@@ -92,12 +123,12 @@ template<typename T, typename K>
 class PrefetchTmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PrefetchTmpBufferManager);
-  PrefetchTmpBufferManager(void* ptr, const int64_t num_keys, const int64_t embedding_size)
+  PrefetchTmpBufferManager(void* ptr, const int64_t num_keys, const int64_t value_size)
       : ptr_(ptr) {
     const size_t num_store_missing_bytes = GetCudaAlignedSize(1 * sizeof(uint32_t));
     const size_t store_missing_keys_bytes = GetCudaAlignedSize(num_keys * sizeof(K));
     const size_t store_missing_indices_bytes = GetCudaAlignedSize(num_keys * sizeof(uint32_t));
-    const size_t store_values_bytes = GetCudaAlignedSize(num_keys * embedding_size * sizeof(T));
+    const size_t store_values_bytes = GetCudaAlignedSize(num_keys * value_size * sizeof(T));
 
     num_store_missing_offset_ = 0;
     store_missing_keys_offset_ = num_store_missing_offset_ + num_store_missing_bytes;
@@ -158,20 +189,6 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   std::unique_ptr<embedding::EmbeddingOptions> options_;
 };
 
-template<typename T, typename K>
-void DebugEmbeddingPrefetch(user_op::KernelComputeContext* ctx, uint32_t num_keys,
-                            const PrefetchTmpBufferManager<T, K>& buffer_manager) {
-  const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);
-  DumpToFile(ctx->stream(), "NumStoreMissingPtr", ctx->parallel_ctx().parallel_id(),
-             1 * sizeof(uint32_t), buffer_manager.NumStoreMissingPtr());
-  DumpToFile(ctx->stream(), "StoreMissingKeysPtr", ctx->parallel_ctx().parallel_id(),
-             num_keys * sizeof(K), buffer_manager.StoreMissingKeysPtr());
-  DumpToFile(ctx->stream(), "StoreMissingIndicesPtr", ctx->parallel_ctx().parallel_id(),
-             num_keys * sizeof(K), buffer_manager.StoreMissingIndicesPtr());
-  DumpToFile(ctx->stream(), "StoreValuesPtr", ctx->parallel_ctx().parallel_id(),
-             num_keys * embedding_size * sizeof(K), buffer_manager.StoreValuesPtr());
-}
-
 }  // namespace
 
 template<typename T, typename K, typename IDX>
@@ -206,8 +223,9 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = options->EmbeddingSize();
+    const int64_t line_size = options->LineSize();
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
-                                                  unique_ids->shape().elem_cnt(), embedding_size);
+                                                  unique_ids->shape().elem_cnt(), line_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(IDX),
                                   cudaMemcpyDefault,
@@ -222,16 +240,12 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t grid_size = BlocksNum4ThreadsNum(num_keys);
     uint64_t inc_offset = num_keys / grid_size + 1;
     InitValueKernel<T, K>
-        <<<grid_size, embedding_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            ParseBooleanFromEnv("DEBUG_SHUFFLE", false), seed, cuda_gen_state, inc_offset,
-            embedding_size, buffer_manager.NumStoreMissingPtr(),
-            buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
-            buffer_manager.StoreValuesPtr());
+        <<<grid_size, line_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            seed, cuda_gen_state, inc_offset, line_size, embedding_size,
+            buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
+            buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
     store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
                reinterpret_cast<uint64_t*>(context->mut_dptr()));
-    if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) {
-      DebugEmbeddingPrefetch<T, K>(ctx, num_keys, buffer_manager);
-    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -243,10 +257,10 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                  \
-        const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);         \
+        embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));  \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);     \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                         \
-            nullptr, unique_ids.shape().elem_cnt(), embedding_size);                       \
+            nullptr, unique_ids.shape().elem_cnt(), options.LineSize());                   \
         return buffer_manager.TotalBufferSize();                                           \
       });
 
@@ -275,13 +289,13 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
+    user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
 
-    // just for debug, lookup not need so much tmp_buffer like prefetch kernel
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t embedding_size = options->EmbeddingSize();
+    const int64_t value_size = 0;  // lookup not need value tmp buffer, so set value_size to 0
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
-                                                  unique_ids->shape().elem_cnt(), embedding_size);
+                                                  unique_ids->shape().elem_cnt(), value_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
 
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(uint32_t),
@@ -293,7 +307,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     OF_CUDA_CHECK(cudaMemcpyAsync(out_context->mut_dptr(), context->dptr(),
                                   context->shape().elem_cnt() * sizeof(uint64_t), cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    store->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), embeddings->mut_dptr(),
+    store->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_values->mut_dptr(),
                buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
                buffer_manager.StoreMissingIndicesPtr(),
                reinterpret_cast<uint64_t*>(out_context->mut_dptr()));
@@ -302,6 +316,17 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
     CHECK_EQ(*host_num_keys, 0);  // we think keys must be in cache or kv_store.
+
+    const int64_t ndims = unique_values->shape().NumAxes();
+    DimVector src_pos_vec(ndims, 0);
+    DimVector dst_pos_vec(ndims, 0);
+    std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, ndims);
+    CHECK(copy_nd_primitive);
+    copy_nd_primitive->Launch(ctx->stream(), unique_values->data_type(), ndims,
+                              embeddings->mut_dptr(), embeddings->shape().ptr(), dst_pos_vec.data(),
+                              unique_values->dptr(), unique_values->shape().ptr(),
+                              src_pos_vec.data(), embeddings->shape().ptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -315,10 +340,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("unique_ids", 0) == GetDataType<k_dtype>::value)       \
           && (user_op::HobDataType("embeddings", 0) == GetDataType<t_dtype>::value))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                 \
-        const int64_t embedding_size = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);        \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);    \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                        \
-            nullptr, unique_ids.shape().elem_cnt(), embedding_size);                      \
+            nullptr, unique_ids.shape().elem_cnt(), 0);                                   \
         return buffer_manager.TotalBufferSize();                                          \
       });
 
@@ -330,25 +354,15 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
   EmbeddingUpdateKernel() = default;
   ~EmbeddingUpdateKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingKernelState>(ctx);
-  }
-
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
-    CHECK(kernel_state != nullptr);
-    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
     user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
-    const int64_t embedding_size = options->EmbeddingSize();
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
 
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float* learning_rate_ptr = learning_rate->dptr<float>();
@@ -369,7 +383,7 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                         \
+#define REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                     \
   REGISTER_USER_KERNEL("sgd_embedding_update")                                            \
       .SetCreateFn<EmbeddingUpdateKernel<t_dtype, idx_dtype>>()                           \
       .SetIsMatchedHob(                                                                   \
@@ -377,7 +391,27 @@ class EmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
           && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value));
 
-REGISTER_CUDA_EMBEDDING_UPDATE_KERNEL(float, int32_t)
+REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(float, int32_t)
+
+#define REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                \
+  REGISTER_USER_KERNEL("momentum_embedding_update")                                       \
+      .SetCreateFn<EmbeddingUpdateKernel<t_dtype, idx_dtype>>()                           \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
+          && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
+          && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value));
+
+REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(float, int32_t)
+
+#define REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                    \
+  REGISTER_USER_KERNEL("adam_embedding_update")                                           \
+      .SetCreateFn<EmbeddingUpdateKernel<t_dtype, idx_dtype>>()                           \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
+          && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
+          && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value));
+
+REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(float, int32_t)
 
 template<typename IDX>
 class EmbeddingPutKernel final : public user_op::OpKernel {

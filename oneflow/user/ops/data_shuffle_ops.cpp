@@ -118,6 +118,16 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
+  if (options.Optimizer() == "sgd") {
+    // do nothing
+  } else if (options.Optimizer() == "momentum") {
+    out_dim_vec.at(out_dim_vec.size() - 1) *= 2;
+  } else if (options.Optimizer() == "adam") {
+    out_dim_vec.at(out_dim_vec.size() - 1) *= 3;
+  } else {
+    UNIMPLEMENTED();
+  }
+  *ctx->OutputShape("unique_values", 0) = Shape(out_dim_vec);
   *ctx->OutputShape("out_context", 0) = ctx->InputShape("context", 0);
   return Maybe<void>::Ok();
 }
@@ -131,6 +141,7 @@ namespace oneflow {
       .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("context", 0), 0)
       .Split(user_op::OpArg("unique_ids", 0), 0)
+      .Split(user_op::OpArg("unique_values", 0), 0)
       .Split(user_op::OpArg("embeddings", 0), 0)
       .Split(user_op::OpArg("out_context", 0), 0)
       .Build();
@@ -138,6 +149,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
   *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
   *ctx->OutputDType("out_context", 0) = ctx->InputDType("context", 0);
   return Maybe<void>::Ok();
@@ -165,6 +177,60 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> MomentumEmbeddingUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("num_unique_ids", 0), 0)
+      .Split(user_op::OpArg("unique_embeddings", 0), 0)
+      .Broadcast(user_op::OpArg("learning_rate", 0))
+      .Broadcast(user_op::OpArg("skip_if", 0))
+      .Split(user_op::OpArg("embedding_diff", 0), 0)
+      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("updated_unique_embeddings", 0) = ctx->InputShape("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> AdamEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("num_unique_ids", 0), 0)
+      .Split(user_op::OpArg("unique_embeddings", 0), 0)
+      .Broadcast(user_op::OpArg("learning_rate", 0))
+      .Broadcast(user_op::OpArg("skip_if", 0))
+      .Split(user_op::OpArg("embedding_diff", 0), 0)
+      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AdamEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
