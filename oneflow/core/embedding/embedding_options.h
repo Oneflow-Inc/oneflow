@@ -53,7 +53,6 @@ class EmbeddingOptions final {
       beta1_ = json_object["optimizer_conf"]["beta1"];
       beta2_ = json_object["optimizer_conf"]["beta2"];
       epsilon_ = json_object["optimizer_conf"]["epsilon"];
-      amsgrad_ = json_object["optimizer_conf"]["amsgrad"];
       do_bias_correction_ = json_object["optimizer_conf"]["do_bias_correction"];
       line_size_ *= 3;
     } else {
@@ -112,7 +111,6 @@ class EmbeddingOptions final {
   float Beta1() const { return beta1_; }
   float Beta2() const { return beta2_; }
   float Epsilon() const { return epsilon_; }
-  bool Amsgrad() const { return amsgrad_; }
   bool DoBiasCorrection() const { return do_bias_correction_; }
 
   float BaseLearningRate() const { return base_learning_rate_; }
@@ -142,7 +140,6 @@ class EmbeddingOptions final {
   float beta1_;
   float beta2_;
   float epsilon_;
-  bool amsgrad_;
   bool do_bias_correction_;
   std::string warmup_type_;
   WarmupConf warmup_conf_;

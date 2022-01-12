@@ -22,6 +22,7 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 import json
+import os
 
 
 class OneEmbeddingLookup(Module):
@@ -34,10 +35,10 @@ class OneEmbeddingLookup(Module):
             "base_learning_rate": 24,
             "optimizer": "adam",
             "optimizer_conf": {
+                "beta": 0.9,
                 "beta1": 0.9,
-                "beta2": 0.9,
-                "epsilon": 0.001,
-                "amsgrad": False,
+                "beta2": 0.999,
+                "epsilon": 1e-8,
                 "do_bias_correction": True,
             },
             "warmup_type": "linear",

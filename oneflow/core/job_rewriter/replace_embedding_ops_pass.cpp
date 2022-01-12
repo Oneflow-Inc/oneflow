@@ -308,6 +308,20 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                                     user_op_conf.op_conf().scope_symbol_id(),
                                     op_node->parallel_desc().parallel_conf());
 
+        auto AddAdamBiasCorrectionFactorOp = [&](float beta_val,
+                                                 const std::string& op_name) -> std::string {
+          user_op::UserOpConfWrapperBuilder op_builder(update_op_conf.op_name() + op_name);
+          const auto adam_bias_correction_factor_op =
+              op_builder.OpTypeName("adam_bias_correction_factor")
+                  .Input("train_step", train_conf.train_step_lbn())
+                  .Attr<float>("beta", beta_val)
+                  .Output("out")
+                  .ScopeSymbolId(update_op_conf.op_conf().scope_symbol_id())
+                  .Build();
+          add_ops.push_back(adam_bias_correction_factor_op.op_conf());
+          return adam_bias_correction_factor_op.output("out", 0);
+        };
+
         const std::string& learning_rate_lbn =
             AddScheduleOp(options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
         user_op::UserOpConfWrapperBuilder embedding_update_op_builder(user_op_conf.op_name()
@@ -323,8 +337,15 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
               .Attr<float>("beta1", options.Beta1())
               .Attr<float>("beta2", options.Beta2())
               .Attr<float>("epsilon", options.Epsilon())
-              .Attr<bool>("amsgrad", options.Amsgrad())
               .Attr<bool>("do_bias_correction", options.DoBiasCorrection());
+          if (options.DoBiasCorrection()) {
+            const std::string bias_correction1_lbn =
+                AddAdamBiasCorrectionFactorOp(options.Beta1(), "adam_bias_correction_factor1");
+            const std::string bias_correction2_lbn =
+                AddAdamBiasCorrectionFactorOp(options.Beta2(), "adam_bias_correction_factor2");
+            embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
+                .Input("bias_correction2", bias_correction2_lbn);
+          }
         } else {
           UNIMPLEMENTED();
         }

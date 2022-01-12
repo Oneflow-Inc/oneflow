@@ -220,10 +220,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
+      .Broadcast(ctx->inputs())
       .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Broadcast(user_op::OpArg("learning_rate", 0))
-      .Broadcast(user_op::OpArg("skip_if", 0))
       .Split(user_op::OpArg("embedding_diff", 0), 0)
       .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
       .Build();

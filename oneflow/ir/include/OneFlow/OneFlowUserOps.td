@@ -8988,7 +8988,9 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
     AnyType:$unique_embeddings,
     AnyType:$embedding_diff,
     Optional<AnyType>:$learning_rate,
-    Optional<AnyType>:$skip_if
+    Optional<AnyType>:$skip_if,
+    Optional<OneFlow_Tensor>:$bias_correction1,
+    Optional<OneFlow_Tensor>:$bias_correction2
   );
   let output = (outs
     AnyType:$updated_unique_embeddings
@@ -8998,7 +9000,6 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
     DefaultValuedAttr<F32Attr, "0.9">:$beta1,
     DefaultValuedAttr<F32Attr, "0.999">:$beta2,
     DefaultValuedAttr<F32Attr, "0.">:$epsilon,
-    DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
     DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
   let has_logical_tensor_desc_infer_fn = 1;
