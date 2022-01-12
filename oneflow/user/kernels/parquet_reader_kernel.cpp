@@ -421,6 +421,7 @@ Maybe<void> ParquetReader::InitParquetFiles(const std::string& path) {
     parquet_files_.push_back(file_info.path());
   }
   CHECK_GT_OR_RETURN(parquet_files_.size(), 0) << base_path_ << " contains no *.parquet file";
+  std::sort(parquet_files_.begin(), parquet_files_.end());
   // parquet file metadata
   auto first_parquet_file_reader =
       parquet::ParquetFileReader::OpenFile(parquet_files_[0], use_mmap_);
