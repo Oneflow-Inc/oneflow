@@ -457,7 +457,7 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
-set(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/liboneflow_cpp)
+set(LIBONEFLOW_DIR ${PROJECT_BINARY_DIR}/liboneflow_cpp)
 
 install(DIRECTORY oneflow/api/cpp/ 
   COMPONENT oneflow_cpp_all
@@ -492,7 +492,7 @@ if(BUILD_SHARED_LIBS)
       COMPONENT oneflow_cpp_all
       DESTINATION lib
     )
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${resolved_file_name} ${CMAKE_INSTALL_PREFIX}/lib/${file_name})"
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${resolved_file_name} ${LIBONEFLOW_DIR}/lib/${file_name})"
       COMPONENT oneflow_cpp_all
     )
   endforeach()
@@ -501,6 +501,7 @@ endif(BUILD_SHARED_LIBS)
 add_custom_target(install_oneflow_cpp
   COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_all
+      -DCMAKE_INSTALL_PREFIX="${LIBONEFLOW_DIR}"
       -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
   DEPENDS oneflow_cpp
 )
