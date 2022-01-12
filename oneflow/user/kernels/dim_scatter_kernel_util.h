@@ -38,12 +38,14 @@ using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 #define INSTANTIATE_DIM_SCATTER_FUNCTORS(device_type, opt)               \
   template struct DimScatterFunctor<device_type, uint8_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, int8_t, int32_t, opt>;  \
+  template struct DimScatterFunctor<device_type, int16_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, int32_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, int64_t, int32_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int32_t, opt>;   \
   template struct DimScatterFunctor<device_type, double, int32_t, opt>;  \
   template struct DimScatterFunctor<device_type, uint8_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, int8_t, int64_t, opt>;  \
+  template struct DimScatterFunctor<device_type, int16_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, int32_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, int64_t, int64_t, opt>; \
   template struct DimScatterFunctor<device_type, float, int64_t, opt>;   \
@@ -68,6 +70,11 @@ struct BinOpAddFunctor<int8_t> {
 template<>
 struct BinOpAddFunctor<uint8_t> {
   OF_DEVICE_FUNC static void apply(const uint8_t* x, uint8_t* y) { *y += *x; }
+};
+
+template<>
+struct BinOpAddFunctor<int16_t> {
+  OF_DEVICE_FUNC static void apply(const int16_t* x, int16_t* y) { *y += *x; }
 };
 
 template<>

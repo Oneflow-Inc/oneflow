@@ -86,6 +86,11 @@ struct DeviceAdd<DeviceType::kCUDA, int8_t> {
 };
 
 template<>
+struct DeviceAdd<DeviceType::kCUDA, int16_t> {
+  __device__ __forceinline__ static void Invoke(const int16_t* x, int16_t* y) { *y += *x; }
+};
+
+template<>
 struct DeviceAdd<DeviceType::kCUDA, int64_t> {
   __device__ __forceinline__ static void Invoke(const int64_t* x, int64_t* y) { *y += *x; }
 };
