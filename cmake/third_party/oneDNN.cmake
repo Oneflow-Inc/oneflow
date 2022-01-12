@@ -34,7 +34,6 @@ endforeach()
 
 
 if(THIRD_PARTY)
-message(STATUS "ExternalProject_Add onednn = ${ONETBB_INSTALL_DIR}")
 ExternalProject_Add(onednn
     PREFIX onednn
     DEPENDS install-tbb
