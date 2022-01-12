@@ -53,7 +53,10 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
       && reduced_out->nd_sbp()->sbp_parallel_size() == 1) {
     return Maybe<void>::Ok();
   }
-  if (reduced_in->placement() == reduced_out->placement()) { return Maybe<void>::Ok(); }
+  if ((reduced_in->placement() != in->placement() || reduced_out->placement() != out->placement())
+      && reduced_in->placement() == reduced_out->placement()) {
+    return Maybe<void>::Ok();
+  }
   return Error::CheckFailedError();
 }
 
