@@ -4,27 +4,12 @@
 include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowEnums.td"
 include "OneFlow/OneFlowInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Pass/PassBase.td"
-include "mlir/Interfaces/CallInterfaces.td"
 include "OneFlow/OneFlowBase.td"
 
-def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
-  let summary = "";
-  let attrs = (ins
-    StrArrayAttr:$output_lbns
-  );
-  let hasCanonicalizer = 1;
-}
-
-def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
-  let summary = "";
-  let attrs = (ins
-    StrArrayAttr:$input_bns,
-    StrArrayAttr:$output_lbns
-  );
-  let hasCanonicalizer = 1;
-}
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Pass/PassBase.td"
 
 def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   let builders = [
@@ -50,6 +35,29 @@ def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   ];
 }
 
+#ifndef REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
+
+def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompatible]> {
+  let summary = "";
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
+  let attrs = (ins
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
+  let summary = "";
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
+  let attrs = (ins
+    StrArrayAttr:$input_bns,
+    StrArrayAttr:$output_lbns
+  );
+  let hasCanonicalizer = 1;
+}
+
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
   let summary = "";
   let input = (ins
@@ -62,6 +70,8 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
 // JIT ops
 
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
+  let input = (ins Variadic<AnyType>:$data_input);
+  let output = (outs Variadic<AnyType>:$data_output);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
@@ -92,6 +102,138 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
   }];
 }
 
+class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
+        OneFlow_IsImportCompatible,
+        DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
+  let input = (ins);
+  let output = (ins);
+  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
+  dag required_attrs = (ins StrArrayAttr:$output_lbns);
+  dag custom_attrs = (ins);
+  let attrs = !con(
+    required_attrs,
+    custom_attrs
+  );
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSource]> {
+  let summary = "";
+  let input = (ins);
+  let output = (outs AnyType:$output);
+  let custom_attrs = (ins
+    ShapeAttr:$shape,
+    OptionalAttr<OneFlow_DataType>:$data_type,
+    DefaultValuedAttr<StrAttr, "\"weight\"">:$model_name,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
+    DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
+    DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    StrArrayAttr:$nd_sbp
+  );
+}
+
+def OneFlow_InputOp : OneFlow_ConcreteSystemOp<"input", [OneFlow_TensorSource]> {
+  let summary = "";
+  let input = (ins AnyType:$input);
+  let output = (outs AnyType:$output);
+  let custom_attrs = (ins
+    OptionalAttr<ShapeAttr>:$shape,
+    OptionalAttr<OneFlow_DataType>:$data_type,
+    OptionalAttr<BoolAttr>:$is_dynamic,
+    OptionalAttr<StrArrayAttr>:$nd_sbp,
+    OptionalAttr<StrAttr>:$job_name
+  );
+  let builders = [
+    OpBuilder<(ins
+      "::oneflow::OperatorConf":$op_conf
+    )>
+  ];
+}
+
+def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", [OneFlow_TensorSource]> {
+  let summary = "";
+  let input = (ins AnyType:$input);
+  let output = (outs AnyType:$output);
+  let custom_attrs = (ins
+    OptionalAttr<ShapeAttr>:$shape,
+    OptionalAttr<OneFlow_DataType>:$data_type,
+    OptionalAttr<BoolAttr>:$is_dynamic,
+    OptionalAttr<StrArrayAttr>:$nd_sbp,
+    OptionalAttr<StrAttr>:$job_name
+  );
+}
+
+def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionLike, IsolatedFromAbove, Symbol]>  {
+  let regions = (region AnyRegion:$body);
+
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttr:$type,
+    OptionalAttr<StrAttr>:$sym_visibility
+  );
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type)
+  >];
+
+  let extraClassDeclaration = [{
+    bool isDeclaration() { return isExternal(); }
+
+  private:
+    friend class OpTrait::FunctionLike<Job>;
+
+    unsigned getNumFuncArguments() { return getType().getInputs().size(); }
+
+    unsigned getNumFuncResults() { return getType().getResults().size(); }
+
+    LogicalResult verifyType() {
+      auto type = getTypeAttr().getValue();
+      if (!type.isa<FunctionType>())
+        return emitOpError("requires '" + getTypeAttrName() +
+                           "' attribute of function type");
+      return success();
+    }
+  }];
+
+  let parser = [{ return ::mlir::oneflow::parseJob(parser, result); }];
+  let printer = [{ return ::mlir::oneflow::print(*this, p); }];
+  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+}
+
+def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
+                                MemRefsNormalizable, ReturnLike, Terminator]> {
+  let summary = "return operation";
+  let description = [{
+    The "return" operation represents a return operation within a Job.
+    The operation takes an optional tensor operand and produces no results.
+    The operand type must match the signature of the job function that contains
+    the operation. For example:
+
+    ```mlir
+      job @foo() -> tensor<2xf64> {
+        ...
+        oneflow.return %0 : tensor<2xf64>
+      }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [
+    OpBuilder<(ins),
+    [{ build($_builder, $_state, llvm::None); }]>];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+
+  let printer = [{ return ::mlir::oneflow::print(p, *this); }];
+  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+  let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
+}
+
+#endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
+
 #endif // ONEFLOW_OPS
 
 #ifndef ONEFLOW_PASSES
@@ -103,7 +245,7 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
 }
 
-def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "FuncOp"> {
+def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
   let summary = "Greedily maps all parallel loops to gpu hardware ids";
   let constructor = "mlir::oneflow::createMapSCFToGPUPass()";
   let dependentDialects = ["scf::SCFDialect"];
@@ -120,7 +262,7 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
 }
 
-def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "FuncOp"> {
+def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }

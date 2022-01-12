@@ -135,8 +135,9 @@ class UserOpInferContext final : public user_op::InferContext {
     auto InitTensorDesc = [&](const ArgVec& arg_vec, const PbRpf<std::string>& bns) {
       CHECK_EQ(arg_vec.size(), bns.size());
       for (int32_t i = 0; i < arg_vec.size(); ++i) {
+        const auto& bn_i = bns.Get(i);
         BlobDesc* blob = GetBlobDesc4BnInOp(bns.Get(i));
-        CHECK_NOTNULL(blob);
+        CHECK(blob != nullptr) << bn_i;
         arg2tensor_desc_.emplace(arg_vec.at(i), GenTensorDescFromBlobDesc(blob));
       }
     };
@@ -152,8 +153,7 @@ class UserOpInferContext final : public user_op::InferContext {
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) override {
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return &(it->second);
@@ -260,6 +260,7 @@ class UserOpInferContext final : public user_op::InferContext {
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+  const std::string& op_loc() const override { return op_->op_loc(); }
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return op_->user_op_conf(); }

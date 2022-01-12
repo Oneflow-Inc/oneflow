@@ -106,6 +106,7 @@ class ReadOneRecFunctor {
     JUST(attrs.SetAttr<bool>("verify_example", verify_example));
 
     if (placement.has_value()) {
+      JUST(CheckDeviceIdsIsValid(JUST(placement)));
       CHECK_OR_RETURN(sbp.has_value())
           << "placement is not None, but sbp is None. It's not allowed.";
       AttrMap attrmap(attrs);

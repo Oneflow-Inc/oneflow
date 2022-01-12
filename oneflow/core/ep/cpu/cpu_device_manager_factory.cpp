@@ -29,8 +29,8 @@ class CpuDeviceManagerFactory : public DeviceManagerFactory {
   CpuDeviceManagerFactory() = default;
   ~CpuDeviceManagerFactory() override = default;
 
-  std::unique_ptr<DeviceManager> NewDeviceManager() override {
-    return std::make_unique<CpuDeviceManager>();
+  std::unique_ptr<DeviceManager> NewDeviceManager(DeviceManagerRegistry* registry) override {
+    return std::make_unique<CpuDeviceManager>(registry);
   }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
