@@ -169,7 +169,7 @@ DEFINE_BINARY_FUNCTOR(EqualOrLess, <=)
     std::string l_str = lhs_.DebugStr(ctx, display_result);                                 \
     std::string r_str = rhs_.DebugStr(ctx, display_result);                                 \
     std::ostringstream string_stream;                                                       \
-    string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";               \
+    string_stream << "(" << l_str << " " << OF_PP_STRINGIZE(op) << " " << r_str << ")";     \
     return string_stream.str();                                                             \
   }
 
