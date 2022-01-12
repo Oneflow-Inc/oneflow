@@ -31,9 +31,9 @@ class OneEmbeddingLookup(Module):
         self.dtype = options["dtype"]
         embedding_options = {
             "embedding_name": "EmbeddingTest",
-            "fixed_table_block_size": 1536,
+            "fixed_table_block_size": 512,
             "base_learning_rate": 24,
-            "optimizer": "adam",
+            "optimizer": "sgd",
             "optimizer_conf": {
                 "beta": 0.9,
                 "beta1": 0.9,
