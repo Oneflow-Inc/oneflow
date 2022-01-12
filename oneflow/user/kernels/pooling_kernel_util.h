@@ -286,8 +286,8 @@ OF_DEVICE_FUNC void Maxpool2dBackwardComputeCLast(
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, h, w;
     index_helper.OffsetToNdIndex(num, n, c, h, w);
-    const int64_t src_start = n * n_channel * src_height * src_width;
-    const int64_t dst_start = n * n_channel * dst_height * dst_width;
+    const int64_t src_start = n * src_height * src_width * n_channel;
+    const int64_t dst_start = n * dst_height * dst_width * n_channel;
     const int64_t index = src_start + h * src_width + w;
     const int64_t maxindex = dst_start + indice_ptr[index];
     if (maxindex != -1) {
