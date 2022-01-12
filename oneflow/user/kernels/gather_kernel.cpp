@@ -64,7 +64,7 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   GatherKernel() = default;
   ~GatherKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const auto axis = ctx->Attr<int64_t>("axis");

@@ -109,8 +109,7 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGpuKernel() = default;
   ~CombinedMarginLossGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "x");
   }
@@ -168,8 +167,7 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGradGpuKernel() = default;
   ~CombinedMarginLossGradGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "dy");
   }

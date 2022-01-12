@@ -79,7 +79,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
   UnsortedSegmentSumKernel() = default;
   ~UnsortedSegmentSumKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateUnsortedSegmentSumOpKernelCache(ctx);
   }
@@ -144,7 +144,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   UnsortedSegmentSumHalfKernel() = default;
   ~UnsortedSegmentSumHalfKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateUnsortedSegmentSumOpKernelCache(ctx);
   }

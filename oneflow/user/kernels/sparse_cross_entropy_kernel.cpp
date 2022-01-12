@@ -67,7 +67,7 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
   SparseCrossEntropyMsKernel() = default;
   ~SparseCrossEntropyMsKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prediction", 0);
@@ -172,7 +172,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
   SparseCrossEntropyMsGradKernel() = default;
   ~SparseCrossEntropyMsGradKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prediction", 0);

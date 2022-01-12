@@ -164,7 +164,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
  public:
   SparseSoftmaxCrossEntropyMsGradKernel() = default;
   ~SparseSoftmaxCrossEntropyMsGradKernel() = default;
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prob", 0);

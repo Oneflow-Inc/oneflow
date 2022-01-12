@@ -64,7 +64,7 @@ class CombinedMarginLossCpuKernel final : public user_op::OpKernel {
   CombinedMarginLossCpuKernel() = default;
   ~CombinedMarginLossCpuKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "x");
   }
@@ -125,7 +125,7 @@ class CombinedMarginLossGradCpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGradCpuKernel() = default;
   ~CombinedMarginLossGradCpuKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> CreateOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "dy");
   }
