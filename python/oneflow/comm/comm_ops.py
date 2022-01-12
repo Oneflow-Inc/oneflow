@@ -112,6 +112,7 @@ def all_gather(tensor_list, tensor):
         placement=placement, sbp=flow.sbp.split(0)
     ).to_consistent(placement=placement, sbp=flow.sbp.broadcast).to_local()
     assert len(tensor_list) == flow.env.get_world_size()
+    # TODO(): getitem has bug on consistent tensor with size = [2, 1].
     for i in range(tensor.shape[0]):
         tensor_list[i] = tensor[i]
 
