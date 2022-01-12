@@ -8474,6 +8474,7 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, NoGrad, Decl
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_UNARY_OP_DEFINITIONS

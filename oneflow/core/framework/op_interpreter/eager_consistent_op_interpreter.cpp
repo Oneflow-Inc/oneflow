@@ -91,7 +91,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
-    // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
     JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
     const auto& infer_args =
