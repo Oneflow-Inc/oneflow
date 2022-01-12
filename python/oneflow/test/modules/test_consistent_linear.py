@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 """
-class TestAddModule(flow.unittest.TestCase):
+class TestLinearModule(flow.unittest.TestCase):
     @consistent
     @autotest(check_graph=False)
     def test_linear_with_random_data(test_case):
