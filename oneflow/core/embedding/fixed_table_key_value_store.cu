@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/fixed_table_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/embedding/file_handle.h"
 #include "oneflow/core/embedding/fixed_table.h"
 #include <omp.h>
 #include <robin_hood.h>

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/fixed_table.h"
-#include "oneflow/core/embedding/file_handle.h"
+#include "oneflow/core/embedding/posix_file.h"
 #include <omp.h>
 #include <robin_hood.h>
 #include <fcntl.h>
@@ -210,6 +210,7 @@ class FixedTableImpl : public FixedTable {
         value_size_(options.value_size),
         num_blocks_per_chunk_(options.num_blocks_per_chunk),
         block_size_(options.block_size) {
+    PosixFile::CreateDirectoryIfNotExists(options.path, 0755);
     CHECK_GE(block_size_, value_size_);
     values_per_block_ = block_size_ / value_size_;
     engines_.resize(kNumReadThreads);
@@ -219,7 +220,7 @@ class FixedTableImpl : public FixedTable {
     for (auto& chunk : chunks) {
       if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
       CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
-      FileHandle value_file(chunk.second.c_str(), O_RDWR | O_DIRECT, 0644);
+      PosixFile value_file(chunk.second.c_str(), O_RDWR | O_DIRECT, 0644);
       value_files_.at(chunk.first) = std::move(value_file);
     }
     if (!value_files_.empty()) {
@@ -229,7 +230,7 @@ class FixedTableImpl : public FixedTable {
     } else {
       physical_table_size_ = 0;
     }
-    if (FileExists(SnapshotFilename(kInitSnapshotName).c_str())) {
+    if (PosixFile::FileExists(SnapshotFilename(kInitSnapshotName).c_str())) {
       LoadSnapshotImpl(kInitSnapshotName);
     }
   }
@@ -272,7 +273,7 @@ class FixedTableImpl : public FixedTable {
   std::mutex mutex_;
   uint64_t physical_table_size_;
   robin_hood::unordered_flat_map<Key, uint64_t> row_id_mapping_;
-  std::vector<FileHandle> value_files_;
+  std::vector<PosixFile> value_files_;
 };
 
 template<typename Key, typename Engine>
@@ -328,7 +329,7 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
         const uint64_t chunk_id = block_id / num_blocks_per_chunk_;
         const uint64_t block_in_chunk = block_id - chunk_id * num_blocks_per_chunk_;
         const uint64_t block_offset = block_in_chunk * block_size_;
-        FileHandle& file = value_files_.at(chunk_id);
+        PosixFile& file = value_files_.at(chunk_id);
         offsets[i] = offset_in_block;
         engine.AsyncPread(file.fd(), static_cast<char*>(blocks) + i * block_size_, block_size_,
                           block_offset);
@@ -389,7 +390,7 @@ void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
     } else {
       CHECK_LE(batch_chunk_id, value_files_.size());
     }
-    FileHandle& file = value_files_.at(batch_chunk_id);
+    PosixFile& file = value_files_.at(batch_chunk_id);
     const uint64_t block_in_chunk = batch_start_block_id - batch_chunk_id * num_blocks_per_chunk_;
     const uint64_t blocks_to_write =
         std::min(num_blocks - write_blocks,
@@ -447,10 +448,10 @@ std::string FixedTableImpl<Key, Engine>::SnapshotFilename(const std::string& nam
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  FileHandle snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
+  PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
   using Entry = IndexEntry<Key>;
   const size_t size = snapshot_file.Size();
-  MappedFileHandle mapped_file(std::move(snapshot_file), size, PROT_READ);
+  PosixMappedFile mapped_file(std::move(snapshot_file), size, PROT_READ);
   const Entry* entries = static_cast<Entry*>(mapped_file.ptr());
   CHECK_EQ(size % sizeof(Entry), 0);
   size_t n_entries = size / sizeof(Entry);
@@ -464,11 +465,11 @@ void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  FileHandle snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
+  PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
   using Entry = IndexEntry<Key>;
   const size_t total_size = sizeof(Entry) * row_id_mapping_.size();
   snapshot_file.Truncate(total_size);
-  MappedFileHandle mapped_file(std::move(snapshot_file), total_size, PROT_READ | PROT_WRITE);
+  PosixMappedFile mapped_file(std::move(snapshot_file), total_size, PROT_READ | PROT_WRITE);
   Entry* entries = static_cast<Entry*>(mapped_file.ptr());
   size_t count = 0;
   for (const auto& pair : row_id_mapping_) {
