@@ -28,7 +28,7 @@ class EagerBoxingLogger {
   EagerBoxingLogger() = default;
   virtual ~EagerBoxingLogger() = default;
 
-  virtual void Log(const BoxingInterpreterStatus& status) = 0;
+  virtual void Log(const BoxingInterpreterStatus& status, const std::string& indent) const = 0;
 };
 
 class NullEagerBoxingLogger final : public EagerBoxingLogger {
@@ -37,7 +37,7 @@ class NullEagerBoxingLogger final : public EagerBoxingLogger {
   NullEagerBoxingLogger() = default;
   ~NullEagerBoxingLogger() override = default;
 
-  void Log(const BoxingInterpreterStatus& status) override {}
+  void Log(const BoxingInterpreterStatus& status, const std::string& indent) const override {}
 };
 
 class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
@@ -46,7 +46,7 @@ class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
   NaiveEagerBoxingLogger() = default;
   ~NaiveEagerBoxingLogger() override = default;
 
-  void Log(const BoxingInterpreterStatus& status) override;
+  void Log(const BoxingInterpreterStatus& status, const std::string& indent) const override;
 };
 
 }  // namespace oneflow
