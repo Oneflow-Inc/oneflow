@@ -744,15 +744,14 @@ def _to(self, *args, **kwargs):
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
-<<<<<<< HEAD
+
 def _T(self):
     return flow._C.T(self)
+
 
 def _t(self):
     return flow._C.t(self)
 
-=======
->>>>>>> upstream/master
 
 def _numpy(self):
     assert (
@@ -926,6 +925,7 @@ def RegisterMethods():
     Tensor.any = _any
     Tensor.T = property(_T)
     Tensor.t = _t
+
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):

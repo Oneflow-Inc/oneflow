@@ -3271,6 +3271,7 @@ class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_eager_consistent_cast_1d_uneven_split(test_case, *arg)
 
+
 def _test_eager_consistent_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
     np.random.seed(10)
     np_arr = np.random.uniform(-1e-05, 1e-05, (16, 32))
