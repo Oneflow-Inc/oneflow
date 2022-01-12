@@ -21,6 +21,7 @@ def broadcast(obj, src: int = 0):
     rank = flow.env.get_rank()
     if src == rank:
         obj_bytes = pickle.dumps(obj)
-        return pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_bytes, src))
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(obj_bytes, src)
     else:
-        return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(None, src)
+    return pickle.loads(obj_bytes)

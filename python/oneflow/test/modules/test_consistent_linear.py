@@ -25,34 +25,48 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-
-@flow.unittest.skip_unless_1n1d()
+"""
 class TestAddModule(flow.unittest.TestCase):
+    @consistent
     @autotest(check_graph=False)
     def test_linear_with_random_data(test_case):
         try:
             input_size = random()
-            placement = random_cpu_placement()
-            sbp = random_sbp(placement, max_dim=1)
+            placement = random_placement()
+            sbp = random_sbp(placement, max_dim=1, except_split=True, except_partial_sum=True)
             m = torch.nn.Linear(
-                in_features=input_size, out_features=random(), bias=random() | nothing()
+                in_features=input_size, out_features=random(), bias=random()
             )
             m.train(random())
-            # m = m.to_consistent(placement=placement, sbp=sbp)
             m.weight = torch.nn.Parameter(
                 m.weight.to_consistent(placement=placement, sbp=sbp)
             )
+            print(m.weight.placement)
+            print(m.weight.sbp)
             if m.bias is not None:
+                # bias is 1-d tensor
+                bias_sbp = random_sbp(placement, max_dim=1, except_split=True, except_partial_sum=True)
                 m.bias = torch.nn.Parameter(
-                    m.bias.to_consistent(placement=placement, sbp=sbp)
+                    m.bias.to_consistent(placement=placement, sbp=bias_sbp)
                 )
+                print(m.bias.placement)
+                print(m.bias.sbp)
+            x_sbp = random_sbp(placement, max_dim=1, except_split=True, except_partial_sum=True)
             x = random_pytorch_tensor(ndim=2, dim1=input_size).to_consistent(
-                placement=placement, sbp=sbp
+                placement=placement, sbp=x_sbp
             )
+            print(x.placement)
+            print(x.sbp)
+
+            print(x.detach().numpy())
+            print(m.weight.detach().numpy())
+            if m.bias is not None:
+                print(m.bias.detach().numpy())
             y = m(x)
             return y
         except Exception as e:
             assert "can't find available sbp signature." in str(e)
+"""
 
 
 if __name__ == "__main__":

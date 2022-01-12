@@ -26,85 +26,45 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
+@autotest(n=1, check_graph=False)
+def _test_add_with_alpha(test_case, placement, sbp):
+    try:
+        x1 = (
+            random_pytorch_tensor(2, 8, 8)
+            .to_consistent(placement=placement, sbp=sbp)
+            .mean()
+        )
+        x2 = (
+            random_pytorch_tensor(2, 8, 8)
+            .to_consistent(placement=placement, sbp=sbp)
+            .mean()
+        )
+        x3 = (
+            random_pytorch_tensor(2, 8, 8)
+            .to_consistent(placement=placement, sbp=sbp)
+            .mean()
+        )
+        y = random_pytorch_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
+        s = random().to(float)
+        alpha = random().to(float)
+        z1 = torch.add(x1, y, alpha=alpha)
+        z2 = torch.add(x2, s, alpha=alpha)
+        z3 = torch.add(s, x3, alpha=alpha)
+        return z1, z2, z3
+    except Exception as e:
+        print(
+            "Failed to apply add operation on x and y with (placement: %s, sbp: %s)"
+            % (placement.value(), sbp.value()),
+        )
+        print(str(e))
+
+
 class TestAddModule(flow.unittest.TestCase):
-    @consistent_autotest(check_graph=False)
-    def test_0_size_add(test_case):
-        try:
-            placement = random_placement()
-            sbp = random_sbp(placement, max_dim=2)
-            x = random_pytorch_tensor(2, 0, 3)
-            y = random_pytorch_tensor(2, 1, 3)
-            x = x.to_consistent(placement=placement, sbp=sbp, grad_sbp=x.sbp)
-            y = y.to_consistent(placement=placement, sbp=sbp, grad_sbp=y.sbp)
-            out = x + y
-            return out
-        except Exception as e:
-            print(
-                "Failed to apply add operation on x and y with (placement: %s, sbp: %s)"
-                % (placement.value(), sbp.value()),
-            )
-            assert "can't find available sbp signature." in str(e)
-
-    # @autotest(auto_backward=False, check_graph=False)
-    # def test_0dim_inplace_add(test_case):
-    #     try:
-    #         placement = random_placement()
-    #         sbp = random_sbp(placement, max_dim=2)
-    #         x = random_pytorch_tensor(2, 2, 3, requires_grad=False).to_consistent(placement=placement, sbp=sbp)
-    #         y = random_pytorch_tensor(1, 10).to_consistent(placement=placement, sbp=random_sbp(placement, max_dim=1))
-    #         x += y.mean()
-    #         return x
-    #     except Exception as e:
-    #         assert 'can\'t find available sbp signature.' in str(e)
-
-    # @autotest(check_graph=False)
-    # def test_0dim_two_inplace_add(test_case):
-    #     try:
-    #         placement = random_placement()
-    #         sbp = random_sbp(placement, max_dim=2)
-    #         x = random_pytorch_tensor(2, 2, 3).to_consistent(placement=placement, sbp=sbp).mean()
-    #         y = random_pytorch_tensor(2, 2, 3).to_consistent(placement=placement, sbp=sbp)
-    #         x += y.mean()
-    #         return x
-    #     except Exception as e:
-    #         assert 'can\'t find available sbp signature.' in str(e)
-
-    @consistent_autotest(check_graph=False)
+    @consistent
     def test_add_with_alpha(test_case):
-        try:
-            placement = random_placement()
-            sbp = random_sbp(placement, max_dim=2)
-            x1 = (
-                random_pytorch_tensor(2, 2, 3)
-                .to_consistent(placement=placement, sbp=sbp)
-                .mean()
-            )
-            x2 = (
-                random_pytorch_tensor(2, 2, 3)
-                .to_consistent(placement=placement, sbp=sbp)
-                .mean()
-            )
-            x3 = (
-                random_pytorch_tensor(2, 2, 3)
-                .to_consistent(placement=placement, sbp=sbp)
-                .mean()
-            )
-            y = random_pytorch_tensor(2, 2, 3).to_consistent(
-                placement=placement, sbp=sbp
-            )
-            s = random().to(float)
-            alpha = random().to(float)
-            z1 = torch.add(x1, y, alpha=alpha)
-            z2 = torch.add(x2, s, alpha=alpha)
-            z3 = torch.add(s, x3, alpha=alpha)
-            return z1, z2, z3
-        except Exception as e:
-            print(
-                "Failed to apply add operation on x and y with (placement: %s, sbp: %s)"
-                % (placement.value(), sbp.value()),
-            )
-            # assert "can't find available sbp signature." in str(e)
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_add_with_alpha(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

@@ -563,9 +563,9 @@ def clear_note_fake_program():
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
-        self.pytorch = pytorch
-        self.oneflow = oneflow
         if isinstance(pytorch, torch_original.nn.Module):
+            if is_consistent():
+                pytorch = broadcast(pytorch)
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
             oneflow.load_state_dict(state_dict, strict=False)
@@ -574,6 +574,8 @@ class DualObject:
         if isinstance(pytorch, torch_original.Tensor):
             if testing:
                 dual_objects_to_test.append(self)
+        self.pytorch = pytorch
+        self.oneflow = oneflow
 
     def __repr__(self):
         return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
@@ -707,11 +709,11 @@ def autotest(
 
     def deco(f):
         @functools.wraps(f)
-        def new_f(test_case):
-            nonlocal n
-            loop_limit = n * 20
+        def new_f(test_case, *args, **kwargs):
+            count = n
+            loop_limit = count * 20
             loop = 0
-            while n > 0:
+            while count > 0:
                 clear_note_fake_program()
                 if loop > loop_limit:
                     raise ValueError("autotest stuck in an endless loop!")
@@ -729,7 +731,7 @@ def autotest(
                     testing = True
                     if check_graph:
                         testing_graph = True
-                    res = f(test_case)
+                    res = f(test_case, *args, **kwargs)
                     testing = False
                     testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
@@ -788,7 +790,7 @@ def autotest(
                 if verbose and check_graph:
                     print(f"{f.__name__} test graph passed.")
 
-                n -= 1
+                count -= 1
                 loop += 1
 
         return new_f
@@ -796,30 +798,13 @@ def autotest(
     return deco
 
 
-def consistent_autotest(
-    n=20,
-    auto_backward=True,
-    rtol=0.0001,
-    atol=1e-05,
-    check_graph=True,
-    check_allclose=True,
-):
-    def deco(f):
-        @functools.wraps(f)
-        def new_f(test_case):
-            with ConsistentScope() as scope:
-                return autotest(
-                    n=n,
-                    auto_backward=auto_backward,
-                    rtol=rtol,
-                    atol=atol,
-                    check_graph=check_graph,
-                    check_allclose=check_allclose,
-                )(f)(test_case)
+def consistent(f):
+    @functools.wraps(f)
+    def new_f(*args, **kwargs):
+        with ConsistentScope() as scope:
+            return f(*args, **kwargs)
 
-        return new_f
-
-    return deco
+    return new_f
 
 
 def random_pytorch_tensor(
@@ -858,4 +843,4 @@ def random_pytorch_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "consistent_autotest", "random_pytorch_tensor"]
+__all__ = ["autotest", "consistent", "random_pytorch_tensor"]

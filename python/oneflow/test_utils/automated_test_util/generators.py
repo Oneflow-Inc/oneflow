@@ -18,7 +18,8 @@ import os
 import random as random_util
 import typing
 from collections import namedtuple
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Sequence, Union
+from itertools import product
 
 import numpy as np
 import torch
@@ -82,6 +83,7 @@ class generator:
     def __init__(self, children):
         self.children = children
         self._value = None
+        self._has_value = False
 
     def _init(self):
         self._value = None
@@ -96,10 +98,11 @@ class generator:
         raise NotImplementedError()
 
     def value(self):
-        if self._value is None:
+        if not self._has_value:
             self._value = self._calc_value()
             if is_consistent():
                 self._value = broadcast(self._value)
+            self._has_value = True
         return self._value
 
     def size(self):
@@ -385,12 +388,18 @@ class gpu_device(generator):
         return random_util.choice(["cuda"])
 
 
-class random_placement(generator):
+class all_placement(generator):
     def __init__(self):
         super().__init__([])
         self.node_size = flow.env.get_node_size()
         self.world_size = flow.env.get_world_size()
         self.num_rank_for_each_node = self.world_size // self.node_size
+
+    def __len__(self):
+        return len(self.value())
+
+    def __getitem__(self, key):
+        return self.value()[key]
 
     def _calc_device(self):
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
@@ -398,15 +407,30 @@ class random_placement(generator):
         else:
             return random_util.choice(["cuda", "cpu"])
 
-    def _calc_value(self):
+    def _calc_all_placement(self):
         device = self._calc_device()
         device_ids = [i for i in range(self.num_rank_for_each_node)]
-        hierarchy = random_util.choice(
-            [(self.world_size,), (self.node_size, self.num_rank_for_each_node)]
-        )
-        return flow.placement(
-            device, {i: device_ids for i in range(self.node_size)}, hierarchy
-        )
+        all_hierarchy = [
+            (self.world_size,),
+            (self.node_size, self.num_rank_for_each_node),
+        ]
+        return [
+            flow.placement(
+                device, {i: device_ids for i in range(self.node_size)}, hierarchy
+            )
+            for hierarchy in all_hierarchy
+        ]
+
+    def _calc_value(self):
+        return self._calc_all_placement()
+
+
+class random_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_value(self):
+        return random_util.choice(self._calc_all_placement())
 
 
 class random_cpu_placement(random_placement):
@@ -425,8 +449,17 @@ class random_gpu_placement(random_placement):
         return "cuda"
 
 
-class random_sbp(generator):
-    def __init__(self, placement=None, dim=1, max_dim=0):
+class all_sbp(generator):
+    def __init__(
+        self,
+        placement=None,
+        dim=1,
+        max_dim=0,
+        except_split=False,
+        excpet_broadcast=False,
+        except_partial_sum=False,
+        valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
+    ):
         super().__init__([])
         if placement is not None:
             if isinstance(placement, random_placement):
@@ -440,20 +473,69 @@ class random_sbp(generator):
         else:
             self.dim = dim
         self.max_dim = max_dim
+        self.except_split = except_split
+        self.excpet_broadcast = excpet_broadcast
+        self.except_partial_sum = except_partial_sum
+        if valid_split_axis is not None:
+            if isinstance(valid_split_axis, int):
+                self.valid_split_axis = [
+                    valid_split_axis,
+                ]
+            else:
+                self.valid_split_axis = list(valid_split_axis)
+        else:
+            self.valid_split_axis = [i for i in range(self.max_dim)]
+
+    def __len__(self):
+        return len(self.value())
+
+    def __getitem__(self, key):
+        return self.value()[key]
+
+    def _calc_all_sbp(self):
+        # scalar only use broadcast sbp
+        if self.max_dim == 0:
+            return [
+                [flow.sbp.broadcast for i in range(self.dim)],
+            ]
+        all_sbps = []
+        if not self.except_split:
+            for i in range(self.max_dim):
+                if i in self.valid_split_axis:
+                    all_sbps.append(flow.sbp.split(i))
+        if not self.excpet_broadcast:
+            all_sbps.append(flow.sbp.broadcast)
+        if not self.except_partial_sum:
+            all_sbps.append(flow.sbp.partial_sum)
+        return list(product(all_sbps, repeat=self.dim))
 
     def _calc_value(self):
-        if self.max_dim == 0:
-            return (flow.sbp.broadcast for i in range(self.dim))
-        # TODO(hjchen2): generate all possible sbp
-        # all_sbps = [flow.sbp.split(i) for i in range(self.max_dim)] + [
-        #     flow.sbp.broadcast,
-        #     flow.sbp.partial_sum,
-        # ]
-        all_sbps = [
-            flow.sbp.broadcast,
-        ]
-        sbp = [random_util.choice(all_sbps) for i in range(self.dim)]
-        return sbp
+        return self._calc_all_sbp()
+
+
+class random_sbp(all_sbp):
+    def __init__(
+        self,
+        placement=None,
+        dim=1,
+        max_dim=0,
+        except_split=False,
+        excpet_broadcast=False,
+        except_partial_sum=False,
+        valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
+    ):
+        super().__init__(
+            placement,
+            dim,
+            max_dim,
+            except_split,
+            excpet_broadcast,
+            except_partial_sum,
+            valid_split_axis,
+        )
+
+    def _calc_value(self):
+        return random_util.choice(self._calc_all_sbp())
 
 
 def test_against_pytorch(
@@ -748,7 +830,9 @@ __all__ = [
     "random_placement",
     "random_cpu_placement",
     "random_gpu_placement",
+    "all_placement",
     "random_sbp",
+    "all_sbp",
     "random",
     "random_or_nothing",
     "oneof",
