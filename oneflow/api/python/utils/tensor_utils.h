@@ -30,13 +30,55 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-
+#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/extension/python/numpy.h"
 namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
+
+template<typename T>
+inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
+  const std::shared_ptr<Tensor> t = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
+
+  std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
+  CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
+  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  // set base object attr
+  py::handle handle = py::handle(py_tensor.ptr());
+
+  const size_t ndim = tensor->ndim();
+  const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
+  // NumPy strides use bytes. OneFlow strides use element counts.
+  const auto stride = numpy::OFStrideToNumpyStride(JUST(tensor->stride())->StrideVec(),
+                                                   tensor->dtype()->data_type());
+
+  T* data_ptr = nullptr;
+  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t ofblob_ptr) {
+    data_ptr = reinterpret_cast<OfBlob*>(ofblob_ptr)->mut_blob()->mut_dptr<T>();
+  });
+  bool is_printed = false;
+  SpinCounter::SpinWait(
+      1,
+      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, "mut");
+        });
+      },
+      [&is_printed]() {
+        if (!is_printed) {
+          blocking::StackInfoCallback();
+          is_printed = true;
+        }
+      });
+
+  return py::array(
+      py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim, shape, stride),
+      handle);
+}
 
 template<typename T>
 inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(

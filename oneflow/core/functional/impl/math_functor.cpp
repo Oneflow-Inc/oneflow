@@ -648,9 +648,6 @@ class SwapaxesFunctor {
         << "], but got " << dim_1 << ")";
     return Transpose2dim(x, dim0, dim1);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class ArangeFunctor {
@@ -827,10 +824,10 @@ class ClampBaseFunctor {
       op = clip_op_.get();
     }
     if (inplace) {
+      JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
       if (x->requires_grad()) {
-        JUST(CheckInplaceValid(x));
-        outputs->at(0) = x;
         JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get(), attrs));
       } else {
         JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get(), attrs));
