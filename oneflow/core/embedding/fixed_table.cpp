@@ -44,7 +44,7 @@ constexpr char const* kValueFilenamePrefix = "value-";
 constexpr char const* kLockFilename = "FIXED_TABLE";
 constexpr char const* kKeySizeFilename = "KEY_SIZE";
 constexpr char const* kValueSizeFilename = "VALUE_SIZE";
-constexpr char const* kBlockSizeFilename = "BLOCK_SIZE";
+constexpr char const* kPhysicalBlockSizeFilename = "PHYSICAL_BLOCK_SIZE";
 constexpr char const* kNumBlocksPerChunkFilename = "NUM_BLOCKS_PER_CHUNK";
 
 void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
@@ -58,7 +58,7 @@ void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool in
     std::ifstream ifs(pathname);
     int64_t value = 0;
     ifs >> value;
-    LOG(FATAL) << "Check failed: " << pathname;
+    if (value != expected) { LOG(FATAL) << "Check failed: " << pathname; }
   }
 }
 
@@ -228,19 +228,21 @@ class FixedTableImpl : public FixedTable {
       : path_(options.path),
         key_size_(options.key_size),
         value_size_(options.value_size),
-        num_blocks_per_chunk_(options.num_blocks_per_chunk),
-        block_size_(options.block_size) {
+        num_blocks_per_chunk_(options.num_blocks_per_chunk) {
     PosixFile::RecursiveCreateDirectory(options.path, 0755);
     const std::string lock_filename = options.path + "/" + kLockFilename;
     const bool init = !PosixFile::FileExists(lock_filename.c_str());
     lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
     InitOrCheckMetaValue(options.path + "/" + kKeySizeFilename, key_size_, init);
     InitOrCheckMetaValue(options.path + "/" + kValueSizeFilename, value_size_, init);
-    InitOrCheckMetaValue(options.path + "/" + kBlockSizeFilename, block_size_, init);
+    InitOrCheckMetaValue(options.path + "/" + kPhysicalBlockSizeFilename,
+                         options.physical_block_size, init);
     InitOrCheckMetaValue(options.path + "/" + kNumBlocksPerChunkFilename, num_blocks_per_chunk_,
                          init);
-    CHECK_GE(block_size_, value_size_);
-    values_per_block_ = block_size_ / value_size_;
+    logical_block_size_ = options.physical_block_size >= value_size_
+                              ? options.physical_block_size
+                              : RoundUp(value_size_, options.physical_block_size);
+    values_per_block_ = logical_block_size_ / value_size_;
     engines_.resize(kNumReadThreads);
     for (uint32_t tid = 0; tid < kNumReadThreads; ++tid) { engines_.at(tid).reset(new Engine); }
     std::unordered_map<uint64_t, std::string> chunks;
@@ -253,7 +255,7 @@ class FixedTableImpl : public FixedTable {
     }
     if (!value_files_.empty()) {
       physical_table_size_ = ((value_files_.size() - 1) * num_blocks_per_chunk_
-                              + value_files_.back().Size() / block_size_)
+                              + value_files_.back().Size() / logical_block_size_)
                              * values_per_block_;
     } else {
       physical_table_size_ = 0;
@@ -267,7 +269,7 @@ class FixedTableImpl : public FixedTable {
 
   uint32_t ValueSize() const override { return value_size_; }
 
-  uint16_t BlockSize() const override;
+  uint16_t LogicalBlockSize() const override;
   void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
             uint32_t* missing_indices) override;
   void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint16_t* offsets) override;
@@ -290,7 +292,7 @@ class FixedTableImpl : public FixedTable {
   uint32_t key_size_;
   uint32_t value_size_;
   uint64_t num_blocks_per_chunk_;
-  uint16_t block_size_;
+  uint16_t logical_block_size_;
 
   uint32_t values_per_block_;
 
@@ -307,8 +309,8 @@ class FixedTableImpl : public FixedTable {
 };
 
 template<typename Key, typename Engine>
-uint16_t FixedTableImpl<Key, Engine>::BlockSize() const {
-  return block_size_;
+uint16_t FixedTableImpl<Key, Engine>::LogicalBlockSize() const {
+  return logical_block_size_;
 }
 
 template<typename Key, typename Engine>
@@ -351,7 +353,7 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
       const Key key = static_cast<const Key*>(keys)[i];
       auto it = row_id_mapping_.find(key);
       if (it == row_id_mapping_.end()) {
-        offsets[i] = block_size_;
+        offsets[i] = logical_block_size_;
       } else {
         const uint64_t id = it->second;
         const uint64_t block_id = id / values_per_block_;
@@ -359,11 +361,11 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
         const uint64_t offset_in_block = id_in_block * value_size_;
         const uint64_t chunk_id = block_id / num_blocks_per_chunk_;
         const uint64_t block_in_chunk = block_id - chunk_id * num_blocks_per_chunk_;
-        const uint64_t block_offset = block_in_chunk * block_size_;
+        const uint64_t block_offset = block_in_chunk * logical_block_size_;
         PosixFile& file = value_files_.at(chunk_id);
         offsets[i] = offset_in_block;
-        engine.AsyncPread(file.fd(), static_cast<char*>(blocks) + i * block_size_, block_size_,
-                          block_offset);
+        engine.AsyncPread(file.fd(), static_cast<char*>(blocks) + i * logical_block_size_,
+                          logical_block_size_, block_offset);
       }
     }
     engine.WaitUntilDone();
@@ -376,24 +378,26 @@ void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void*
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
-  if (value_size_ == block_size_) {
+  if (value_size_ == logical_block_size_) {
     blocks_ptr = values;
   } else {
-    blocks_buffer_.resize((num_keys + 1) * block_size_);
+    blocks_buffer_.resize((num_keys + 1) * logical_block_size_);
     blocks_ptr = blocks_buffer_.data()
-                 + (block_size_ - reinterpret_cast<uintptr_t>(blocks_buffer_.data()) % block_size_);
+                 + (logical_block_size_
+                    - reinterpret_cast<uintptr_t>(blocks_buffer_.data()) % logical_block_size_);
   }
   GetBlocks(num_keys, keys, blocks_ptr, offsets_buffer_.data());
   uint32_t missing_count = 0;
   for (uint32_t i = 0; i < num_keys; ++i) {
-    if (offsets_buffer_.at(i) == block_size_) {
+    if (offsets_buffer_.at(i) == logical_block_size_) {
       missing_indices[missing_count] = i;
       missing_count += 1;
     } else {
-      if (value_size_ != block_size_) {
-        std::memcpy(static_cast<char*>(values) + i * value_size_,
-                    static_cast<char*>(blocks_ptr) + (i * block_size_) + offsets_buffer_.at(i),
-                    value_size_);
+      if (value_size_ != logical_block_size_) {
+        std::memcpy(
+            static_cast<char*>(values) + i * value_size_,
+            static_cast<char*>(blocks_ptr) + (i * logical_block_size_) + offsets_buffer_.at(i),
+            value_size_);
       }
     }
   }
@@ -428,11 +432,11 @@ void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
     const uint64_t blocks_to_write =
         std::min(num_blocks - write_blocks,
                  (batch_chunk_id + 1) * num_blocks_per_chunk_ - batch_start_block_id);
-    const uint64_t bytes_to_write = blocks_to_write * block_size_;
-    const uint64_t offset_in_chunk = block_in_chunk * block_size_;
+    const uint64_t bytes_to_write = blocks_to_write * logical_block_size_;
+    const uint64_t offset_in_chunk = block_in_chunk * logical_block_size_;
     CHECK_LE(file.Size(), offset_in_chunk);
     file.Truncate(offset_in_chunk + bytes_to_write);
-    PCHECK(pwrite(file.fd(), static_cast<const char*>(blocks) + write_blocks * block_size_,
+    PCHECK(pwrite(file.fd(), static_cast<const char*>(blocks) + write_blocks * logical_block_size_,
                   bytes_to_write, offset_in_chunk)
            == bytes_to_write);
     write_blocks += blocks_to_write;
@@ -443,19 +447,20 @@ template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const void* values) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
-  if (value_size_ == block_size_) {
+  if (value_size_ == logical_block_size_) {
     blocks_ptr = values;
   } else {
     const uint32_t num_blocks = (num_keys + values_per_block_ - 1) / values_per_block_;
-    blocks_buffer_.resize((num_blocks + 1) * block_size_);
+    blocks_buffer_.resize((num_blocks + 1) * logical_block_size_);
     void* blocks_buffer_ptr =
         blocks_buffer_.data()
-        + (block_size_ - reinterpret_cast<uintptr_t>(blocks_buffer_.data()) % block_size_);
+        + (logical_block_size_
+           - reinterpret_cast<uintptr_t>(blocks_buffer_.data()) % logical_block_size_);
     for (uint32_t i = 0; i < num_keys; i += values_per_block_) {
       const uint32_t block_id = i / values_per_block_;
       const uint32_t copy_size =
-          (num_keys - i) < values_per_block_ ? (num_keys - i) * value_size_ : block_size_;
-      std::memcpy(static_cast<char*>(blocks_buffer_ptr) + block_id * block_size_,
+          (num_keys - i) < values_per_block_ ? (num_keys - i) * value_size_ : logical_block_size_;
+      std::memcpy(static_cast<char*>(blocks_buffer_ptr) + block_id * logical_block_size_,
                   static_cast<const char*>(values) + i * value_size_, copy_size);
     }
     blocks_ptr = blocks_buffer_ptr;
@@ -536,6 +541,11 @@ void FixedTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
 }  // namespace
 
 std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
+  CHECK(!options.path.empty());
+  CHECK_GT(options.value_size, 0);
+  CHECK_GT(options.num_blocks_per_chunk, 0);
+  CHECK_GT(options.physical_block_size, 0);
+  CHECK_GT(options.key_size, 0);
 #ifdef WITH_LIBURING
   using Engine = RingEngine;
 #else

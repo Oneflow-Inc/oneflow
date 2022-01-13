@@ -25,10 +25,10 @@ namespace embedding {
 
 struct FixedTableOptions {
   std::string path;
-  uint32_t key_size;
-  uint32_t value_size;
-  uint64_t num_blocks_per_chunk;
-  uint16_t block_size;
+  uint32_t key_size = 0;
+  uint32_t value_size = 0;
+  uint64_t num_blocks_per_chunk = 4 * 1024 * 1024;
+  uint16_t physical_block_size = 4096;
 };
 
 class FixedTable {
@@ -48,7 +48,7 @@ class FixedTable {
 
   virtual uint32_t KeySize() const = 0;
   virtual uint32_t ValueSize() const = 0;
-  virtual uint16_t BlockSize() const = 0;
+  virtual uint16_t LogicalBlockSize() const = 0;
   virtual void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
                     uint32_t* missing_indices) = 0;
   virtual void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint16_t* offsets) = 0;

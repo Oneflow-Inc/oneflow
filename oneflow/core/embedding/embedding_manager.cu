@@ -47,7 +47,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
   options.max_query_length = 65536 * 26;
-  options.table_options.block_size = embedding_options.FixedTableBlockSize();
+  options.table_options.physical_block_size = embedding_options.FixedTableBlockSize();
   options.table_options.num_blocks_per_chunk = embedding_options.FixedTableChunkSize();
   store = NewFixedTableKeyValueStore(options);
 

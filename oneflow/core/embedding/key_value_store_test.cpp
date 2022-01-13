@@ -180,7 +180,7 @@ TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   options.table_options.path = path;
   options.table_options.value_size = value_length * sizeof(float);
   options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
-  options.table_options.block_size = 512;
+  options.table_options.physical_block_size = 512;
   options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   options.max_query_length = 128;
 
@@ -200,7 +200,7 @@ TEST(CachedKeyValueStore, LRU) {
   uint32_t value_length = 128;
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
-  store_options.table_options.block_size = 512;
+  store_options.table_options.physical_block_size = 512;
   store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
@@ -229,7 +229,7 @@ TEST(CachedKeyValueStore, Full) {
   uint32_t value_length = 128;
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
-  store_options.table_options.block_size = 512;
+  store_options.table_options.physical_block_size = 512;
   store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
