@@ -486,6 +486,7 @@ if(BUILD_CPP_API)
 
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)
+    list(APPEND LIBONEFLOW_TARGETS oneflow_testexe)
   endif(BUILD_TESTING)
 
   install(TARGETS ${LIBONEFLOW_TARGETS}
@@ -502,7 +503,9 @@ if(BUILD_CPP_API)
         -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
     DEPENDS oneflow_cpp
   )
-
+  if(BUILD_TESTING)
+    add_dependencies(install_oneflow_cpp oneflow_cpp_api_testexe oneflow_testexe)
+  endif(BUILD_TESTING)
   add_dependencies(of_include_copy install_oneflow_cpp)
 
   string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
