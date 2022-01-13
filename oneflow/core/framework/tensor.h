@@ -417,10 +417,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_cuda() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
-  Maybe<Tensor> data() override {
-    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
-    return std::static_pointer_cast<Tensor>(shared_from_this());
-  }
+  Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -522,10 +519,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
-  Maybe<Tensor> data() override {
-    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
-    return std::static_pointer_cast<Tensor>(shared_from_this());
-  }
+  Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
