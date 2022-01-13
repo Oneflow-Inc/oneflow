@@ -41,7 +41,6 @@ Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) 
 Shape ZeroDimCompatiableShape(const Shape& shape) {
   if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
     DimVector dim_vec;
-    dim_vec = shape.dim_vec();
     dim_vec.emplace_back(1);
     return Shape(dim_vec);
   }
