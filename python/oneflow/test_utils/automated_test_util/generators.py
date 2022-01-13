@@ -403,12 +403,14 @@ class all_placement(generator):
 
     def _calc_device(self):
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            return "cpu"
+            return [
+                "cpu",
+            ]
         else:
-            return random_util.choice(["cuda", "cpu"])
+            return ["cuda", "cpu"]
 
     def _calc_all_placement(self):
-        device = self._calc_device()
+        all_device = self._calc_device()
         device_ids = [i for i in range(self.num_rank_for_each_node)]
         all_hierarchy = [
             (self.world_size,),
@@ -418,7 +420,7 @@ class all_placement(generator):
             flow.placement(
                 device, {i: device_ids for i in range(self.node_size)}, hierarchy
             )
-            for hierarchy in all_hierarchy
+            for device, hierarchy in list(product(all_device, all_hierarchy))
         ]
 
     def _calc_value(self):

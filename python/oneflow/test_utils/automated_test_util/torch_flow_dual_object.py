@@ -595,7 +595,9 @@ class DualObject:
             pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
         if pytorch_attr is None:
-            assert oneflow_attr is None
+            assert (
+                oneflow_attr is None
+            ), f"pytorch value is None for attr {key}, but oneflow is not."
             return None
         new_name = f"{self.name}.{key}"
         global call_pytorch
@@ -740,7 +742,6 @@ def autotest(
                         print(e)
                     loop += 1
                     continue
-                func_outputs = []
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
