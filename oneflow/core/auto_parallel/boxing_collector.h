@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingCollector final{
+class BoxingCollector final {
  public:
   BoxingCollector() = default;
 
