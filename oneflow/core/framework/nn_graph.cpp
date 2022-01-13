@@ -188,8 +188,6 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 
 Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
   JUST(vm::CurrentRankSync());
-  // NOTE(chengcheng): New EagerTensor need set LazyMode false.
-  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
@@ -218,8 +216,13 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       } else {
         OF_UNIMPLEMENTED();
       }
-      std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
-          blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+      std::shared_ptr<one::Tensor> tensor;
+      {
+        // NOTE(chengcheng): New EagerTensor need set LazyMode false.
+        auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+        tensor = JUST(one::functional::ConsistentConstant(
+            blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+      }
       JUST(vm::CurrentRankSync());
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       Blob* var_blob = JUST(local_var->eager_blob_object())->mut_blob();
@@ -236,7 +239,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
     } else {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
           << " nn.Graph ONLY support variable_op with empty conf,"
-          << " because variable is inited by eager tensor."
+          << " because variable is initted by eager tensor."
           << " This error variable conf is : " << variable_op.op_conf().DebugString()
           << " in nn.Graph " << name_;
       CHECK_OR_RETURN(variable_op_names_.find(var_name) != variable_op_names_.end())
@@ -248,6 +251,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
+  LazyMode::Guard lazy_mode_enabled_guard(true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
