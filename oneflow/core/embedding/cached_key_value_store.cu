@@ -58,7 +58,7 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
     num_elems_per_value_ = store_->ValueSize() / sizeof(Elem);
   }
   ~CacheKeyValueStoreImpl() {
-    SyncToStore();
+    SyncCacheToStore();
     OF_CUDA_CHECK(cudaFree(num_buffer_));
     OF_CUDA_CHECK(cudaFreeHost(host_num_buffer_));
     OF_CUDA_CHECK(cudaFree(keys_buffer_));
@@ -72,16 +72,17 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   uint32_t KeySize() const override { return store_->KeySize(); }
   uint32_t ValueSize() const override { return store_->ValueSize(); }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
+
+  void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
+
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
-           uint64_t* context) override;
-  void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
-           uint64_t* context) override;
+           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
+  void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
 
  private:
-  void SyncToStore();
+  void SyncCacheToStore();
 
   std::unique_ptr<KeyValueStore> store_;
   std::unique_ptr<Cache> cache_;
@@ -100,9 +101,20 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
 };
 
 template<typename Key, typename Elem>
+void CacheKeyValueStoreImpl<Key, Elem>::WithIterator(
+    const std::function<void(KVBaseIterator* iter)>& fn) {
+  if (cache_->Policy() == CacheOptions::Policy::kFull) {
+    cache_->WithIterator(fn);
+  } else {
+    SyncCacheToStore();
+    store_->WithIterator(fn);
+  }
+}
+
+template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
                                             void* values, uint32_t* n_missing, void* missing_keys,
-                                            uint32_t* missing_indices, uint64_t* context) {
+                                            uint32_t* missing_indices) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   cache_->Get(stream, num_keys, keys, values, num_buffer_, keys_buffer_, indices_buffer0_);
@@ -116,7 +128,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
     return;
   }
   store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, missing_keys,
-              indices_buffer1_, context);
+              indices_buffer1_);
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, n_missing, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
@@ -128,7 +140,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                            const void* values, uint64_t* context) {
+                                            const void* values) {
   std::lock_guard<std::mutex> lock(mutex_);
   synced_ = false;
   auto cuda_stream = stream->As<ep::CudaStream>();
@@ -136,24 +148,48 @@ void CacheKeyValueStoreImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t num_key
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
-  store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, context);
+  store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_);
 }
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
   store_->LoadSnapshot(name);
+  cache_->Clear();
+  if (cache_->Policy() == CacheOptions::Policy::kFull) {
+    CudaCurrentDeviceGuard guard(device_index_);
+    auto device =
+        Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+    CHECK(device);
+    auto* stream = device->CreateStream();
+    auto* cuda_stream = stream->As<ep::CudaStream>();
+    store_->WithIterator([&](KVBaseIterator* iter) {
+      iter->NextN(stream, max_query_length_, num_buffer_, keys_buffer_, values_buffer_);
+      OF_CUDA_CHECK(cudaDeviceSynchronize());
+      OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
+                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
+      CHECK_JUST(stream->Sync());
+      if (*host_num_buffer_ == 0) { return; }
+      cache_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, num_buffer_, nullptr,
+                  nullptr);
+      OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
+                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
+      CHECK_JUST(stream->Sync());
+      CHECK_EQ(*host_num_buffer_, 0);
+    });
+    device->DestroyStream(stream);
+  }
 }
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::SaveSnapshot(const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  SyncToStore();
+  SyncCacheToStore();
   store_->SaveSnapshot(name);
 }
 
 template<typename Key, typename Elem>
-void CacheKeyValueStoreImpl<Key, Elem>::SyncToStore() {
+void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
   if (synced_) { return; }
   CudaCurrentDeviceGuard guard(device_index_);
   auto device =
@@ -171,7 +207,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncToStore() {
                                   cudaMemcpyDefault, cuda_stream->cuda_stream()));
     CHECK_JUST(stream->Sync());
     if (*host_num_buffer_ == 0) { continue; }
-    store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, nullptr);
+    store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_);
     CHECK_JUST(stream->Sync());
   }
   device->DestroyStream(stream);

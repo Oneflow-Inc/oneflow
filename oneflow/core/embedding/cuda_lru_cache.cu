@@ -55,6 +55,13 @@ __global__ void InitCacheSetMutex(uint32_t n_set,
 }
 
 template<typename Key, typename Elem>
+void ClearCudaLruCacheContext(CudaLruCacheContext<Key, Elem>* ctx) {
+  OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, ctx->n_set * kWarpSize * sizeof(Key)));
+  OF_CUDA_CHECK(cudaMemset(ctx->lru_queue, 0, ctx->n_set * kWarpSize * sizeof(uint8_t)));
+  InitCacheSetMutex<<<(ctx->n_set - 1 + 256) / 256, 256>>>(ctx->n_set, ctx->mutex);
+}
+
+template<typename Key, typename Elem>
 void InitCudaLruCacheContext(const CacheOptions& options, CudaLruCacheContext<Key, Elem>* ctx) {
   const size_t key_size_per_set = kWarpSize * sizeof(Key);
   const uint32_t line_size = options.value_size / sizeof(Elem);
@@ -69,19 +76,16 @@ void InitCudaLruCacheContext(const CacheOptions& options, CudaLruCacheContext<Ke
   ctx->line_size = line_size;
   const size_t keys_size = n_set * key_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
-  OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, keys_size));
   const size_t lines_size = n_set * lines_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
-  OF_CUDA_CHECK(cudaMemset(ctx->lines, 0, lines_size));
   const size_t lru_queue_size = n_set * lru_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lru_queue), lru_queue_size));
-  OF_CUDA_CHECK(cudaMemset(ctx->lru_queue, 0, lru_queue_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->mutex), mutex_size));
   OF_CUDA_CHECK(
       cudaMalloc(&(ctx->query_indices_buffer), options.max_query_length * sizeof(uint32_t)));
   OF_CUDA_CHECK(cudaMalloc(&(ctx->query_keys_buffer), options.max_query_length * sizeof(Key)));
-  InitCacheSetMutex<<<(n_set - 1 + 256) / 256, 256>>>(n_set, ctx->mutex);
+  ClearCudaLruCacheContext(ctx);
 }
 
 template<typename Key, typename Elem>
@@ -432,6 +436,8 @@ class CudaLruCache : public Cache {
   uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
+  CacheOptions::Policy Policy() const override { return CacheOptions::Policy::kLRU; }
+
   void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
             void* missing_keys, uint32_t* missing_indices) override {
     auto cuda_stream = stream->As<ep::CudaStream>();
@@ -479,6 +485,8 @@ class CudaLruCache : public Cache {
         ctx_, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
         static_cast<Elem*>(values));
   }
+
+  void Clear() override { ClearCudaLruCacheContext<Key, Elem>(&ctx_); }
 
  private:
   int device_index_;

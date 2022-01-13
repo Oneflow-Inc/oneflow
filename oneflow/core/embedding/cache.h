@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_EMBEDDING_CACHE_H_
 #define ONEFLOW_EMBEDDING_CACHE_H_
 
+#include "oneflow/core/embedding/kv_base.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -41,7 +42,7 @@ struct CacheOptions {
   float load_factor = 0.75;
 };
 
-class Cache {
+class Cache : public KVBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Cache);
   Cache() = default;
@@ -51,6 +52,7 @@ class Cache {
   virtual uint32_t ValueSize() const = 0;
   virtual uint32_t MaxQueryLength() const = 0;
   virtual uint64_t Capacity() const = 0;
+  virtual CacheOptions::Policy Policy() const = 0;
   virtual void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
                     void* missing_keys, uint32_t* missing_indices) = 0;
   virtual void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
@@ -59,6 +61,9 @@ class Cache {
                    uint32_t* n_evicted, void* evicted_keys, void* evicted_values) = 0;
   virtual void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                     uint32_t* n_dumped, void* keys, void* values) = 0;
+  virtual void Clear() = 0;
+
+  void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
 };
 
 std::unique_ptr<Cache> NewCache(const CacheOptions& options);

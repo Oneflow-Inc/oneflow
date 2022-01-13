@@ -251,8 +251,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
     OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
-    OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(uint64_t)));
-    OF_CUDA_CHECK(cudaMemset(table_, 0, capacity_ * sizeof(TableEntry<Key, Index>)));
+    Clear();
   }
   ~OrdinalEncoder() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -278,6 +277,11 @@ class OrdinalEncoder {
     RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, uint64_t>), stream,
                     end_key_index - start_key_index, table_, start_key_index, end_key_index,
                     n_dumped, keys, context);
+  }
+
+  void Clear() {
+    OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(uint64_t)));
+    OF_CUDA_CHECK(cudaMemset(table_, 0, capacity_ * sizeof(TableEntry<Key, Index>)));
   }
 
  private:
@@ -325,6 +329,8 @@ class CacheImpl : public Cache {
 
   uint32_t MaxQueryLength() const override { return options_.max_query_length; }
 
+  CacheOptions::Policy Policy() const override { return CacheOptions::Policy::kFull; }
+
   void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
             void* missing_keys, uint32_t* missing_indices) override;
 
@@ -336,6 +342,8 @@ class CacheImpl : public Cache {
 
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override;
+
+  void Clear() override;
 
  private:
   OrdinalEncoder<Key, uint64_t> encoder_;
@@ -401,6 +409,11 @@ void CacheImpl<Key, Elem>::Dump(ep::Stream* stream, uint64_t start_key_index,
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem>), stream,
                   num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
+}
+
+template<typename Key, typename Elem>
+void CacheImpl<Key, Elem>::Clear() {
+  encoder_.Clear();
 }
 
 template<typename Key>

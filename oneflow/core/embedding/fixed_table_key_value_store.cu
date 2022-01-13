@@ -29,6 +29,42 @@ namespace embedding {
 
 namespace {
 
+class IteratorImpl : public KVBaseIterator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(IteratorImpl);
+  explicit IteratorImpl(FixedTable* table, FixedTable::KeyIterator* key_iter,
+                        void* host_keys_buffer, void* host_values_buffer, uint32_t* host_num_buffer)
+      : table_(table),
+        key_iter_(key_iter),
+        host_keys_buffer_(host_keys_buffer),
+        host_values_buffer_(host_values_buffer),
+        host_num_buffer_(host_num_buffer) {}
+  ~IteratorImpl() override = default;
+
+  void NextN(ep::Stream* stream, uint32_t n_request, uint32_t* n_result, void* keys,
+             void* values) override {
+    auto cuda_stream = stream->As<ep::CudaStream>();
+    CHECK_JUST(cuda_stream->Sync());
+    key_iter_->Next(n_request, host_num_buffer_, host_keys_buffer_);
+    OF_CUDA_CHECK(cudaMemcpyAsync(n_result, host_num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
+                                  cuda_stream->cuda_stream()));
+    if (*host_num_buffer_ != 0) {
+      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, *host_num_buffer_ * table_->KeySize(),
+                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
+      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_,
+                                    *host_num_buffer_ * table_->ValueSize(), cudaMemcpyDefault,
+                                    cuda_stream->cuda_stream()));
+    }
+  }
+
+ private:
+  FixedTable* table_;
+  FixedTable::KeyIterator* key_iter_;
+  void* host_keys_buffer_;
+  void* host_values_buffer_;
+  uint32_t* host_num_buffer_;
+};
+
 template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
  public:
@@ -66,15 +102,16 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint32_t MaxQueryLength() const override { return GetMaxVal<int32_t>(); }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
-           uint64_t* context) override;
-  void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
-           uint64_t* context) override;
+           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
+  void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
 
- private:
+  void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
+
   void LoadSnapshot(const std::string& name) override;
+
   void SaveSnapshot(const std::string& name) override;
 
+ private:
   int device_index_;
   uint32_t max_query_length_;
   uint32_t key_size_;
@@ -92,7 +129,7 @@ class KeyValueStoreImpl : public KeyValueStore {
 template<typename Key>
 void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
                                  void* values, uint32_t* n_missing, void* missing_keys,
-                                 uint32_t* missing_indices, uint64_t* context) {
+                                 uint32_t* missing_indices) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
@@ -121,7 +158,7 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                 const void* values, uint64_t* context) {
+                                 const void* values) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
@@ -132,6 +169,15 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
                                 cudaMemcpyDefault, cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
   table_->Put(num_keys, host_query_keys_, host_query_values_);
+}
+
+template<typename Key>
+void KeyValueStoreImpl<Key>::WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) {
+  table_->WithKeyIterator([&](FixedTable::KeyIterator* key_iter) {
+    IteratorImpl iter(table_.get(), key_iter, host_query_keys_, host_query_values_,
+                      host_n_missing_);
+    fn(&iter);
+  });
 }
 
 template<typename Key>

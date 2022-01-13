@@ -239,6 +239,10 @@ class FixedTableImpl : public FixedTable {
     SaveSnapshotImpl(kFinalSnapshotName);
   }
 
+  uint32_t KeySize() const override { return key_size_; }
+
+  uint32_t ValueSize() const override { return value_size_; }
+
   uint16_t BlockSize() const override;
   void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
             uint32_t* missing_indices) override;
@@ -247,7 +251,7 @@ class FixedTableImpl : public FixedTable {
            uint32_t* missing_indices) override;
   void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) override;
   void Put(uint32_t num_keys, const void* keys, const void* values) override;
-  void WithKeyIterator(std::function<void(KeyIterator* iter)> fn) override;
+  void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) override;
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
 
@@ -430,7 +434,8 @@ void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::WithKeyIterator(std::function<void(KeyIterator* iter)> fn) {
+void FixedTableImpl<Key, Engine>::WithKeyIterator(
+    const std::function<void(KeyIterator* iter)>& fn) {
   KeyIteratorImpl<Key> iter(row_id_mapping_);
   fn(&iter);
 }

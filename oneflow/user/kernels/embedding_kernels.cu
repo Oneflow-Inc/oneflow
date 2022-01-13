@@ -244,8 +244,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     uint32_t num_keys = *host_num_keys;
     store->Get(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
                buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-               buffer_manager.StoreMissingIndicesPtr(),
-               reinterpret_cast<uint64_t*>(context->mut_dptr()));
+               buffer_manager.StoreMissingIndicesPtr());
     // init values
     const int64_t grid_size = BlocksNum4ThreadsNum(num_keys);
     uint64_t inc_offset = num_keys / grid_size + 1;
@@ -254,8 +253,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
             seed, cuda_gen_state, inc_offset, line_size, embedding_size,
             buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
             buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
-    store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
-               reinterpret_cast<uint64_t*>(context->mut_dptr()));
+    store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -298,7 +296,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
 
@@ -313,14 +310,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
 
-    user_op::Tensor* out_context = ctx->Tensor4ArgNameAndIndex("out_context", 0);
-    OF_CUDA_CHECK(cudaMemcpyAsync(out_context->mut_dptr(), context->dptr(),
-                                  context->shape().elem_cnt() * sizeof(uint64_t), cudaMemcpyDefault,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     store->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_values->mut_dptr(),
                buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-               buffer_manager.StoreMissingIndicesPtr(),
-               reinterpret_cast<uint64_t*>(out_context->mut_dptr()));
+               buffer_manager.StoreMissingIndicesPtr());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumStoreMissingPtr(),
                                   sizeof(uint32_t), cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -536,10 +528,8 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    const user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    uint64_t* mut_context = reinterpret_cast<uint64_t*>(tmp_buffer->mut_dptr());
 
     IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(IDX),
@@ -547,11 +537,7 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     CHECK_JUST(ctx->stream()->Sync());
 
-    OF_CUDA_CHECK(cudaMemcpyAsync(mut_context, context->dptr(),
-                                  context->shape().elem_cnt() * sizeof(uint64_t), cudaMemcpyDefault,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    store->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_embeddings->dptr(),
-               mut_context);
+    store->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_embeddings->dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

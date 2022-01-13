@@ -46,6 +46,8 @@ class FixedTable {
     virtual void Next(uint32_t num_keys, uint32_t* return_keys, void* keys) = 0;
   };
 
+  virtual uint32_t KeySize() const = 0;
+  virtual uint32_t ValueSize() const = 0;
   virtual uint16_t BlockSize() const = 0;
   virtual void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
                     uint32_t* missing_indices) = 0;
@@ -54,7 +56,7 @@ class FixedTable {
                    uint32_t* missing_indices) = 0;
   virtual void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) = 0;
   virtual void Put(uint32_t num_keys, const void* keys, const void* values) = 0;
-  virtual void WithKeyIterator(std::function<void(KeyIterator* iter)> fn) = 0;
+  virtual void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
 };

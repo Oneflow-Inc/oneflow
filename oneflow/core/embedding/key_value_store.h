@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_EMBEDDING_KEY_VALUE_STORE_H_
 #define ONEFLOW_EMBEDDING_KEY_VALUE_STORE_H_
 
+#include "oneflow/core/embedding/kv_base.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -23,7 +24,7 @@ namespace oneflow {
 
 namespace embedding {
 
-class KeyValueStore {
+class KeyValueStore : public KVBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStore);
   KeyValueStore() = default;
@@ -34,10 +35,8 @@ class KeyValueStore {
   virtual uint32_t MaxQueryLength() const = 0;
 
   virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-                   uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices,
-                   uint64_t* context) = 0;
-  virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values,
-                   uint64_t* context) = 0;
+                   uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) = 0;
+  virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
 };
