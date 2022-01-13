@@ -372,6 +372,7 @@ Maybe<size_t> ParquetReader::GetColumnBatch(int col, TensorBuffer* buffer, size_
   CHECK_EQ_OR_RETURN(batch_size, batch_size_);
   std::vector<std::shared_ptr<TensorBuffer>> batch(batch_size);
   if (buffers_[col]->PullMany(batch.data(), batch.size()) != BufferType::kSuccess) { return 0; }
+  CHECK_EQ_OR_RETURN(batch.size(), batch_size);
   for (auto& sample : batch) {
     buffer->Swap(sample.get());
     buffer++;
