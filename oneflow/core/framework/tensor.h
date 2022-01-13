@@ -288,7 +288,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     return tensor_->consistent_tensor_meta();
   }
-  Maybe<Tensor> data() override { return tensor_; }
+  Maybe<Tensor> data() override { return tensor_->detach(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Parameter.data() in operators.
