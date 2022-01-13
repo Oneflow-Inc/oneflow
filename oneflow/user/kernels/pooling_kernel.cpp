@@ -52,7 +52,7 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<int64_t, 4>& index_h
                                   const int32_t kernel_size_h, const int32_t kernel_size_w,
                                   const int32_t stride_h, const int32_t stride_w,
                                   const int32_t dilation_h, const int32_t dilation_w) {
-  int64_t n=0, h=0, w=0, c=0;
+  int64_t n = 0, h = 0, w = 0, c = 0;
   for (int64_t num = 0; num < elem_num; ++num) {
     index_helper.OffsetToNdIndex(num, n, h, w, c);
 
