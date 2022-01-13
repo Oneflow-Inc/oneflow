@@ -487,9 +487,25 @@ if(BUILD_CPP_API)
   )
 
   get_property(MLIR_RELATED_TARGETS GLOBAL PROPERTY MLIR_EXPORTS)
+  get_property(LLVM_RELATED_TARGETS GLOBAL PROPERTY LLVM_EXPORTS)
 
+  list(REMOVE_ITEM LLVM_RELATED_TARGETS 
+    count
+    not
+    FileCheck
+    lli-child-target
+    llvm-jitlink-executor
+    llvm-PerfectShuffle
+    llvm-tblgen
+    mlir-tblgen
+    obj2yaml
+    oneflow_tblgen
+    yaml-bench
+    yaml2obj
+  )
+  
   set(LIBONEFLOW_TARGETS)
-  list(APPEND LIBONEFLOW_TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj ${MLIR_RELATED_TARGETS})
+  list(APPEND LIBONEFLOW_TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj ${MLIR_RELATED_TARGETS} ${LLVM_RELATED_TARGETS})
 
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)
