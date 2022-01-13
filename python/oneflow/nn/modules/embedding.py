@@ -25,7 +25,7 @@ import json
 import os
 
 
-fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 512))
+fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 4096))
 optimizer = str(os.environ.get("OPTIMIZER", "sgd"))
 
 
@@ -33,8 +33,19 @@ class OneEmbeddingLookup(Module):
     def __init__(self, options):
         super().__init__()
         self.dtype = options["dtype"]
+        if options.get("embedding_name") == None:
+            embedding_name = "EmbeddingTest"
+        else:
+            embedding_name = options["embedding_name"]
+        print("embedding_name", embedding_name)
+        if options.get("block_based_path") == None:
+            block_based_path = os.environ.get("BLOCK_BASED_PATH")
+        else:
+            block_based_path = options.get("block_based_path")
+        print("block_based_path", block_based_path)
+
         embedding_options = {
-            "embedding_name": "EmbeddingTest",
+            "embedding_name": embedding_name,
             "embedding_size": int(os.environ.get("EMBEDDING_SIZE", 128)),
             "l1_cache": {
                 "policy": str(os.environ.get("L1_CACHE_POLICY", "lru")),
@@ -49,7 +60,7 @@ class OneEmbeddingLookup(Module):
                 ),
             },
             "fixed_table": {
-                "path": os.environ.get("BLOCK_BASED_PATH"),
+                "path": block_based_path,
                 "block_size": fixed_table_block_size,
                 "chunk_size": 4 * 1024 * 1024,
             },

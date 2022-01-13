@@ -39,9 +39,10 @@ std::string BuildIdentityOp(JobBuilder* job_builder, const std::string& in_lbn,
 }
 
 void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                                 const std::string& gradient_lbn, int64_t scope_symbol_id,
-                                 const ParallelConf& parallel_conf) {
+                                 const std::vector<std::string>& gradient_lbns,
+                                 int64_t scope_symbol_id, const ParallelConf& parallel_conf) {
   if (job_builder->job().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
+    CHECK_GT(gradient_lbns.size(), 0);
     const auto& dynamic_loss_scale_state =
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     const LogicalBlobId count_not_finite_lbi =
@@ -50,22 +51,35 @@ void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
     if (op_node->op().op_conf().has_user_conf()
         && op_node->op().op_conf().user_conf().op_type_name() == "identity") {
       const user_op::UserOpConfWrapper identity_op_conf(op_node->op().op_conf());
-
-      const auto count_not_finite_op =
-          user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-CountNotFinite-"
-                                            + NewUniqueId())
-              .Op("count_not_finite")
-              .Input("x", gradient_lbn)
-              .Output("y")
-              .ScopeSymbolId(scope_symbol_id)
-              .Build();
-      job_builder->AddOps(parallel_conf, {count_not_finite_op.op_conf()});
-
+      std::string new_count_not_finite_lbn;
+      if (gradient_lbns.size() == 1) {
+        const auto count_not_finite_op =
+            user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-CountNotFinite-"
+                                              + NewUniqueId())
+                .Op("count_not_finite")
+                .Input("x", gradient_lbns.at(0))
+                .Output("y")
+                .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
+                .Build();
+        job_builder->AddOps(parallel_conf, {count_not_finite_op.op_conf()});
+        new_count_not_finite_lbn = count_not_finite_op.output("y", 0);
+      } else {
+        auto multi_count_not_finite_op_builder =
+            user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-MultiCountNotFinite-"
+                                              + NewUniqueId())
+                .Op("multi_count_not_finite")
+                .Output("y")
+                .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id());
+        for (const auto& lbn : gradient_lbns) { multi_count_not_finite_op_builder.Input("x", lbn); }
+        const auto multi_count_not_finite_op = multi_count_not_finite_op_builder.Build();
+        job_builder->AddOps(parallel_conf, {multi_count_not_finite_op.op_conf()});
+        new_count_not_finite_lbn = multi_count_not_finite_op.output("y", 0);
+      }
       user_op::UserOpConfWrapperBuilder add_op_builder("System-DynamicLossScale-CountNotFinite-Add_"
                                                        + NewUniqueId());
       const auto add_op = add_op_builder.Op("add_n")
                               .Input("in", identity_op_conf.input("in", 0))
-                              .Input("in", count_not_finite_op.output("y", 0))
+                              .Input("in", new_count_not_finite_lbn)
                               .Output("out")
                               .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
                               .Build();
@@ -365,6 +379,9 @@ class ReplaceEmbeddingOps final : public JobPass {
 
 Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_builder,
                                        JobPassCtx* ctx) const {
+  std::vector<std::string> gradient_lbns;
+  ParallelConf embedding_parallel_conf;
+  int64_t embedding_scope_symbol_id;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -431,10 +448,11 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         ScaleModelDiffByLossScale(ctx, op_graph, job_builder, &embedding_lbi2embedding_diff_lbi);
         embedding_diff_lbn = GenLogicalBlobName(embedding_lbi2embedding_diff_lbi.begin()->second);
 
-        // dynamic loss scale, now only support one embedding
-        DynamicLossScaleAddGradient(ctx, op_graph, job_builder, embedding_diff_lbn,
-                                    embedding_op.op_conf().scope_symbol_id(),
-                                    op_node->parallel_desc().parallel_conf());
+        // dynamic loss scale
+        gradient_lbns.push_back(embedding_diff_lbn);
+        // assert all embeddings same placement
+        embedding_scope_symbol_id = embedding_op.op_conf().scope_symbol_id();
+        embedding_parallel_conf = op_node->parallel_desc().parallel_conf();
 
         const std::string& learning_rate_lbn = AddScheduleOp(
             op_graph, job_builder, options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
@@ -447,6 +465,11 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     job_builder->DelOps(delete_op_names);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), add_ops);
   });
+  if (gradient_lbns.size() > 0) {
+    DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
+                                embedding_scope_symbol_id, embedding_parallel_conf);
+  }
+
   return Maybe<void>::Ok();
 }
 
