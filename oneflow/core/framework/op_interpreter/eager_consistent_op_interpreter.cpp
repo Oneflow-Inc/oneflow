@@ -69,15 +69,15 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
-                               bool current_rank_local_is_valid,
-                               const EagerBoxingLogger& eager_boxing_logger) {
+                               bool current_rank_local_is_valid) {
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
       in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
-  eager_boxing_logger.Log(*JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
+  Global<const EagerBoxingLogger>::Get()->Log(
+      *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
                                                           in_parallel_desc, out_parallel_desc));
@@ -88,8 +88,7 @@ auto* GetBoxingOutput =
     DECORATE(DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta), DisableRecusiveBoxingCall);
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                      TensorTuple* outputs, const OpExprInterpContext& ctx,
-                      const EagerBoxingLogger& eager_boxing_logger) {
+                      TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
@@ -130,8 +129,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     if (input_parallel_desc->parallel_num() != 1
         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
-                                   infered_input_meta->parallel_desc(), parallel_id.has_value(),
-                                   eager_boxing_logger));
+                                   infered_input_meta->parallel_desc(), parallel_id.has_value()));
       boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
@@ -156,15 +154,10 @@ auto* InterpretThenInitConsistentId = DECORATE(&Interpret, NonRecursiveInitConsi
 
 }  // namespace
 
-EagerConsistentInterpreter::EagerConsistentInterpreter()
-    : EagerInterpreter(), eager_boxing_logger_(CachedEagerBoxingLogger()) {}
-
-EagerConsistentInterpreter::~EagerConsistentInterpreter() = default;
-
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
-  return InterpretThenInitConsistentId(op_expr, inputs, outputs, ctx, *eager_boxing_logger_);
+  return InterpretThenInitConsistentId(op_expr, inputs, outputs, ctx);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
@@ -180,8 +173,7 @@ static constexpr auto* RecursiveGetBoxingOutput =
 
 Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_expr,
                                       const TensorTuple& inputs, TensorTuple* outputs,
-                                      const OpExprInterpContext& ctx,
-                                      const EagerBoxingLogger& eager_boxing_logger) {
+                                      const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   const auto& input = inputs.at(0);
@@ -193,9 +185,9 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& out_parallel_desc = JUST(ctx.parallel_desc);
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-  const auto& tensor = JUST(RecursiveGetBoxingOutput(
-      input, out_nd_sbp, out_parallel_desc,
-      in_parallel_id->has_value() || out_parallel_id->has_value(), eager_boxing_logger));
+  const auto& tensor =
+      JUST(RecursiveGetBoxingOutput(input, out_nd_sbp, out_parallel_desc,
+                                    in_parallel_id->has_value() || out_parallel_id->has_value()));
   CHECK_OR_RETURN(tensor);
   if (out_parallel_id->has_value()) {
     const auto& nd_sbp = JUST(tensor->nd_sbp());
@@ -223,7 +215,7 @@ static constexpr auto* ConsistentToConsistent =
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
-  JUST(ConsistentToConsistent(op_expr, inputs, outputs, ctx, *eager_boxing_logger_));
+  JUST(ConsistentToConsistent(op_expr, inputs, outputs, ctx));
   return Maybe<void>::Ok();
 }
 

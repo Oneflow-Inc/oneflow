@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/boxing/boxing_interpreter_status.h"
@@ -43,17 +44,16 @@ class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
   }
 };
 
-std::shared_ptr<const EagerBoxingLogger> CreateEagerBoxingLogger() {
+const EagerBoxingLogger* CreateEagerBoxingLogger() {
   if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
-    return std::shared_ptr<const EagerBoxingLogger>(new NaiveEagerBoxingLogger());
+    return new NaiveEagerBoxingLogger();
   } else {
-    return std::shared_ptr<const EagerBoxingLogger>(new NullEagerBoxingLogger());
+    return new NullEagerBoxingLogger();
   }
 }
 
 }  // namespace
 
-decltype(CachedEagerBoxingLogger) CachedEagerBoxingLogger =
-    DECORATE(&CreateEagerBoxingLogger, ThreadLocal);
+COMMAND(Global<const EagerBoxingLogger>::SetAllocated(CreateEagerBoxingLogger()));
 
 }  // namespace oneflow

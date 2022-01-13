@@ -31,8 +31,6 @@ class EagerBoxingLogger {
   virtual void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const = 0;
 };
 
-extern std::shared_ptr<const EagerBoxingLogger> (*CachedEagerBoxingLogger)();
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_BOXING_EAGER_BOXING_LOGGER_H_

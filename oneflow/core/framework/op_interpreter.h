@@ -27,7 +27,6 @@ namespace oneflow {
 
 class Device;
 class ParallelDesc;
-class EagerBoxingLogger;
 namespace cfg {
 class NdSbp;
 }
@@ -145,12 +144,11 @@ class EagerInterpreter : public OpExprInterpreter {
 
 class EagerConsistentInterpreter : public EagerInterpreter {
  public:
-  EagerConsistentInterpreter();
-  virtual ~EagerConsistentInterpreter();
+  EagerConsistentInterpreter() : EagerInterpreter() {}
+  virtual ~EagerConsistentInterpreter() = default;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
-  std::shared_ptr<const EagerBoxingLogger> eager_boxing_logger_;
 };
 
 class EagerMirroredInterpreter : public EagerInterpreter {
