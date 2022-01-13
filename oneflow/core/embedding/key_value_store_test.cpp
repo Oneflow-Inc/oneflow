@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/embedding/posix_file.h"
 
 namespace oneflow {
 
@@ -28,6 +29,15 @@ namespace {
 
 #ifdef WITH_CUDA
 
+std::string CreateTempDirectory() {
+  const char* tmp_env = getenv("TMPDIR");
+  const char* tmp_dir = tmp_env == nullptr ? "/tmp" : tmp_env;
+  std::string tpl = std::string(tmp_dir) + "/test_kv_XXXXXX";
+  char* path = mkdtemp(const_cast<char*>(tpl.c_str()));
+  PCHECK(path != nullptr);
+  return std::string(path);
+}
+
 bool HasCudaDevice() {
   int device_count = 0;
   if (cudaGetDeviceCount(&device_count) != cudaSuccess) { return false; }
@@ -36,9 +46,11 @@ bool HasCudaDevice() {
 }
 
 void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_embeddings,
-                       size_t embedding_vec_size, size_t num_shards) {
+                       size_t embedding_vec_size) {
   auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
   ep::Stream* stream = device->CreateStream();
+
+  store->SaveSnapshot("init");
 
   uint64_t* keys = nullptr;
   float* values = nullptr;
@@ -65,7 +77,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaMalloc(&missing_indices, batch_size * sizeof(uint32_t)));
   OF_CUDA_CHECK(cudaMalloc(&n_missing, sizeof(uint32_t)));
   for (size_t i = 0; i < num_embeddings; ++i) {
-    uint64_t key = i * num_shards + 3;
+    uint64_t key = i + 1;
     keys_host[i] = key;
     for (size_t j = 0; j < embedding_vec_size; j++) {
       values_host[i * embedding_vec_size + j] = key;
@@ -87,6 +99,11 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
     ASSERT_EQ(*host_n_missing, num_keys);
     store->Put(stream, num_keys, keys + offset, values + offset * embedding_vec_size);
   }
+
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+
+  store->SaveSnapshot("final");
+
   OF_CUDA_CHECK(cudaMemset(values_host, 0, values_size));
   OF_CUDA_CHECK(cudaMemset(values, 0, values_size));
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
@@ -105,6 +122,39 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
       ASSERT_EQ(values_host[i * embedding_vec_size + j], key);
     }
   }
+
+  store->LoadSnapshot("init");
+
+  for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
+    const size_t num_keys = std::min(batch_size, test_embeddings - offset);
+    store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
+               missing_keys, missing_indices);
+    OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    ASSERT_EQ(*host_n_missing, num_keys);
+  }
+
+  store->LoadSnapshot("final");
+
+  OF_CUDA_CHECK(cudaMemset(values_host, 0, values_size));
+  OF_CUDA_CHECK(cudaMemset(values, 0, values_size));
+  for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
+    const size_t num_keys = std::min(batch_size, test_embeddings - offset);
+    store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
+               missing_keys, missing_indices);
+    OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    ASSERT_EQ(*host_n_missing, 0);
+  }
+  OF_CUDA_CHECK(cudaMemcpy(values_host, values, values_size, cudaMemcpyDefault));
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+  for (size_t i = 0; i < test_embeddings; ++i) {
+    uint64_t key = keys_host[i];
+    for (size_t j = 0; j < embedding_vec_size; j++) {
+      ASSERT_EQ(values_host[i * embedding_vec_size + j], key);
+    }
+  }
+
   OF_CUDA_CHECK(cudaDeviceSynchronize());
   OF_CUDA_CHECK(cudaGetLastError());
   OF_CUDA_CHECK(cudaFree(keys));
@@ -125,7 +175,9 @@ TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   Global<ep::DeviceManagerRegistry>::New();
   FixedTableKeyValueStoreOptions options{};
   uint32_t value_length = 128;
-  options.table_options.path = "/tmp/test_db";
+
+  std::string path = CreateTempDirectory();
+  options.table_options.path = path;
   options.table_options.value_size = value_length * sizeof(float);
   options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   options.table_options.block_size = 512;
@@ -133,16 +185,18 @@ TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   options.max_query_length = 128;
 
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(options);
-  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, value_length, 4);
+  TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, value_length);
   store.reset();
+  PosixFile::RecursiveDelete(path);
   Global<ep::DeviceManagerRegistry>::Delete();
 }
 
-TEST(CachedKeyValueStore, CachedKeyValueStore) {
+TEST(CachedKeyValueStore, LRU) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
   FixedTableKeyValueStoreOptions store_options{};
-  store_options.table_options.path = "/tmp/test_db";
+  std::string path = CreateTempDirectory();
+  store_options.table_options.path = path;
   uint32_t value_length = 128;
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
@@ -160,8 +214,38 @@ TEST(CachedKeyValueStore, CachedKeyValueStore) {
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
-  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length, 4);
+  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
   cached_store.reset();
+  PosixFile::RecursiveDelete(path);
+  Global<ep::DeviceManagerRegistry>::Delete();
+}
+
+TEST(CachedKeyValueStore, Full) {
+  if (!HasCudaDevice()) { return; }
+  Global<ep::DeviceManagerRegistry>::New();
+  FixedTableKeyValueStoreOptions store_options{};
+  std::string path = CreateTempDirectory();
+  store_options.table_options.path = path;
+  uint32_t value_length = 128;
+  store_options.table_options.value_size = value_length * sizeof(float);
+  store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
+  store_options.table_options.block_size = 512;
+  store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
+  store_options.max_query_length = 128;
+  std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
+  CacheOptions cache_options{};
+  cache_options.policy = CacheOptions::Policy::kFull;
+  cache_options.value_memory_kind = CacheOptions::MemoryKind::kHost;
+  cache_options.value_size = 512;
+  cache_options.capacity = 1024 * 1024 * 2;
+  cache_options.max_query_length = 128;
+  cache_options.key_size = 8;
+  std::unique_ptr<Cache> cache = NewCache(cache_options);
+  std::unique_ptr<KeyValueStore> cached_store =
+      NewCachedKeyValueStore(std::move(store), std::move(cache));
+  TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
+  cached_store.reset();
+  PosixFile::RecursiveDelete(path);
   Global<ep::DeviceManagerRegistry>::Delete();
 }
 

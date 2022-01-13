@@ -22,7 +22,9 @@ namespace oneflow {
 
 namespace embedding {}  // namespace embedding
 
-EmbeddingMgr::~EmbeddingMgr() = default;
+EmbeddingMgr::~EmbeddingMgr() {
+  for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot("index"); }
+}
 
 embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
@@ -60,6 +62,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   store = NewFixedTableKeyValueStore(options);
   std::unique_ptr<embedding::KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
+  if (cached_store->SnapshotExists("index")) { cached_store->LoadSnapshot("index"); }
   auto pair = key_value_store_map_.emplace(map_key, std::move(cached_store));
   CHECK(pair.second);
   return pair.first->second.get();

@@ -39,8 +39,6 @@ constexpr uint32_t kRingQueueDepth = 128;
 constexpr uint32_t kRingSubmitBatch = 32;
 constexpr uint32_t kAioQueueDepth = 128;
 constexpr uint32_t kChunkNameSuffixLength = 8;
-constexpr char const* kInitSnapshotName = "index";
-constexpr char const* kFinalSnapshotName = "index";
 constexpr char const* kSnapshotFilenamePrefix = "";
 constexpr char const* kValueFilenamePrefix = "value-";
 
@@ -77,6 +75,7 @@ void ListChunkFiles(const std::string& base, const std::string& prefix,
     CHECK_EQ(pos, kChunkNameSuffixLength);
     CHECK(chunks->emplace(chunk_id, base + "/" + std::string(ent->d_name)).second);
   }
+  PCHECK(closedir(dir) == 0);
 }
 
 template<typename Key>
@@ -94,6 +93,7 @@ class KeyIteratorImpl : public FixedTable::KeyIterator {
       count++;
       pos_++;
     }
+    *return_keys = count;
   }
 
  private:
@@ -210,7 +210,7 @@ class FixedTableImpl : public FixedTable {
         value_size_(options.value_size),
         num_blocks_per_chunk_(options.num_blocks_per_chunk),
         block_size_(options.block_size) {
-    PosixFile::CreateDirectoryIfNotExists(options.path, 0755);
+    PosixFile::RecursiveCreateDirectory(options.path, 0755);
     CHECK_GE(block_size_, value_size_);
     values_per_block_ = block_size_ / value_size_;
     engines_.resize(kNumReadThreads);
@@ -230,13 +230,9 @@ class FixedTableImpl : public FixedTable {
     } else {
       physical_table_size_ = 0;
     }
-    if (PosixFile::FileExists(SnapshotFilename(kInitSnapshotName).c_str())) {
-      LoadSnapshotImpl(kInitSnapshotName);
-    }
   }
   ~FixedTableImpl() override {
     for (auto& file : value_files_) { file.Close(); }
-    SaveSnapshotImpl(kFinalSnapshotName);
   }
 
   uint32_t KeySize() const override { return key_size_; }
@@ -252,6 +248,7 @@ class FixedTableImpl : public FixedTable {
   void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) override;
   void Put(uint32_t num_keys, const void* keys, const void* values) override;
   void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) override;
+  bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
 
@@ -274,7 +271,7 @@ class FixedTableImpl : public FixedTable {
   std::vector<uint16_t> offsets_buffer_;
   std::vector<char> blocks_buffer_;
 
-  std::mutex mutex_;
+  std::recursive_mutex mutex_;
   uint64_t physical_table_size_;
   robin_hood::unordered_flat_map<Key, uint64_t> row_id_mapping_;
   std::vector<PosixFile> value_files_;
@@ -288,6 +285,7 @@ uint16_t FixedTableImpl<Key, Engine>::BlockSize() const {
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
                                        uint32_t* missing_indices) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::atomic<uint32_t> atomic_n_missing(0);
 #pragma omp parallel num_threads(kNumReadThreads)
   {
@@ -311,7 +309,7 @@ void FixedTableImpl<Key, Engine>::Test(uint32_t num_keys, const void* keys, uint
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
                                             uint16_t* offsets) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
 #pragma omp parallel num_threads(kNumReadThreads)
   {
     const uint32_t thread_id = omp_get_thread_num();
@@ -346,6 +344,7 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void* values,
                                       uint32_t* n_missing, uint32_t* missing_indices) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
   if (value_size_ == block_size_) {
@@ -375,6 +374,7 @@ void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void*
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
                                             const void* blocks) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   const uint32_t num_blocks = (num_keys + values_per_block_ - 1) / values_per_block_;
   const uint32_t num_padded_keys = num_blocks * values_per_block_;
   const uint64_t start = physical_table_size_;
@@ -412,6 +412,7 @@ void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
 
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const void* values) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
   if (value_size_ == block_size_) {
     blocks_ptr = values;
@@ -436,6 +437,7 @@ void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::WithKeyIterator(
     const std::function<void(KeyIterator* iter)>& fn) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   KeyIteratorImpl<Key> iter(row_id_mapping_);
   fn(&iter);
 }
@@ -452,15 +454,16 @@ std::string FixedTableImpl<Key, Engine>::SnapshotFilename(const std::string& nam
 
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  row_id_mapping_.clear();
+  PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_RDONLY, 0644);
   using Entry = IndexEntry<Key>;
   const size_t size = snapshot_file.Size();
+  if (size == 0) { return; }
   PosixMappedFile mapped_file(std::move(snapshot_file), size, PROT_READ);
   const Entry* entries = static_cast<Entry*>(mapped_file.ptr());
   CHECK_EQ(size % sizeof(Entry), 0);
   size_t n_entries = size / sizeof(Entry);
-  row_id_mapping_.clear();
   row_id_mapping_.reserve(n_entries);
   for (size_t i = 0; i < n_entries; ++i) {
     CHECK(row_id_mapping_.emplace(entries[i].key.data, entries[i].index.data).second);
@@ -469,8 +472,9 @@ void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
 
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
+  if (row_id_mapping_.empty()) { return; }
   using Entry = IndexEntry<Key>;
   const size_t total_size = sizeof(Entry) * row_id_mapping_.size();
   snapshot_file.Truncate(total_size);
@@ -482,6 +486,12 @@ void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
     entries[count].index.data = pair.second;
     count += 1;
   }
+}
+
+template<typename Key, typename Engine>
+bool FixedTableImpl<Key, Engine>::SnapshotExists(const std::string& name) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  return PosixFile::FileExists(SnapshotFilename(name).c_str());
 }
 
 template<typename Key, typename Engine>

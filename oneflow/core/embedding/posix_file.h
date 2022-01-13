@@ -27,6 +27,7 @@ limitations under the License.
 #include <linux/fs.h>
 #include <sys/mman.h>
 #include <libgen.h>
+#include <dirent.h>
 
 namespace oneflow {
 
@@ -74,7 +75,7 @@ class PosixFile final {
 
   static bool FileExists(const char* name) { return access(name, F_OK) == 0; }
 
-  static void CreateDirectoryIfNotExists(const std::string& pathname, mode_t mode) {
+  static void RecursiveCreateDirectory(const std::string& pathname, mode_t mode) {
     while (true) {
       struct stat sb {};
       if (stat(pathname.c_str(), &sb) == 0) {
@@ -85,13 +86,34 @@ class PosixFile final {
         std::vector<char> dirname_input(pathname.size() + 1);
         std::memcpy(dirname_input.data(), pathname.c_str(), pathname.size() + 1);
         const std::string parent = dirname(dirname_input.data());
-        CreateDirectoryIfNotExists(parent, mode);
+        RecursiveCreateDirectory(parent, mode);
         if (mkdir(pathname.c_str(), mode) == 0) {
           return;
         } else {
           PCHECK(errno == EEXIST);
         }
       }
+    }
+  }
+
+  static void RecursiveDelete(const std::string& pathname) {
+    struct stat sb {};
+    if (stat(pathname.c_str(), &sb) == 0) {
+      if (S_ISDIR(sb.st_mode)) {
+        DIR* dir = opendir(pathname.c_str());
+        PCHECK(dir != nullptr);
+        struct dirent* ent = nullptr;
+        while ((ent = readdir(dir)) != nullptr) {
+          if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) { continue; }
+          RecursiveDelete(pathname + "/" + ent->d_name);
+        }
+        PCHECK(closedir(dir) == 0);
+        PCHECK(rmdir(pathname.c_str()) == 0);
+      } else {
+        PCHECK(unlink(pathname.c_str()) == 0);
+      }
+    } else {
+      PCHECK(errno == ENOENT);
     }
   }
 
@@ -107,7 +129,7 @@ class PosixMappedFile final {
   PosixMappedFile(PosixFile&& file, size_t size, int prot) : file_(std::move(file)), ptr_(nullptr) {
     CHECK_NE(file_.fd(), -1);
     void* ptr = mmap(nullptr, size, prot, MAP_SHARED, file_.fd(), 0);
-    CHECK_NE(ptr, MAP_FAILED);
+    PCHECK(ptr != MAP_FAILED);
     ptr_ = ptr;
   }
   PosixMappedFile(PosixMappedFile&& other) noexcept : PosixMappedFile() {

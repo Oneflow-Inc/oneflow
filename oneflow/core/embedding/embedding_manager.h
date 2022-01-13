@@ -35,7 +35,6 @@ class EmbeddingMgr final {
                                              int64_t parallel_id, int64_t parallel_num);
 
  private:
-  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::Cache>> cache_map_;
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::KeyValueStore>>
       key_value_store_map_;
   std::mutex mutex_;

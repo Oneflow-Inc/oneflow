@@ -48,12 +48,14 @@ class IteratorImpl : public KVBaseIterator {
     key_iter_->Next(n_request, host_num_buffer_, host_keys_buffer_);
     OF_CUDA_CHECK(cudaMemcpyAsync(n_result, host_num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
                                   cuda_stream->cuda_stream()));
-    if (*host_num_buffer_ != 0) {
-      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, *host_num_buffer_ * table_->KeySize(),
+    const uint32_t num_keys = *host_num_buffer_;
+    if (num_keys != 0) {
+      table_->Get(num_keys, host_keys_buffer_, host_values_buffer_, host_num_buffer_, nullptr);
+      CHECK_EQ(*host_num_buffer_, 0);
+      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, num_keys * table_->KeySize(),
                                     cudaMemcpyDefault, cuda_stream->cuda_stream()));
-      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_,
-                                    *host_num_buffer_ * table_->ValueSize(), cudaMemcpyDefault,
-                                    cuda_stream->cuda_stream()));
+      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_, num_keys * table_->ValueSize(),
+                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
     }
   }
 
@@ -104,11 +106,9 @@ class KeyValueStoreImpl : public KeyValueStore {
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
-
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
-
+  bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
-
   void SaveSnapshot(const std::string& name) override;
 
  private:
@@ -173,6 +173,7 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) {
+  CudaCurrentDeviceGuard guard(device_index_);
   table_->WithKeyIterator([&](FixedTable::KeyIterator* key_iter) {
     IteratorImpl iter(table_.get(), key_iter, host_query_keys_, host_query_values_,
                       host_n_missing_);
@@ -181,12 +182,19 @@ void KeyValueStoreImpl<Key>::WithIterator(const std::function<void(KVBaseIterato
 }
 
 template<typename Key>
+bool KeyValueStoreImpl<Key>::SnapshotExists(const std::string& name) {
+  return table_->SnapshotExists(name);
+}
+
+template<typename Key>
 void KeyValueStoreImpl<Key>::LoadSnapshot(const std::string& name) {
+  CudaCurrentDeviceGuard guard(device_index_);
   table_->LoadSnapshot(name);
 }
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::SaveSnapshot(const std::string& name) {
+  CudaCurrentDeviceGuard guard(device_index_);
   table_->SaveSnapshot(name);
 }
 

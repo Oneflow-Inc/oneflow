@@ -57,6 +57,7 @@ class FixedTable {
   virtual void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) = 0;
   virtual void Put(uint32_t num_keys, const void* keys, const void* values) = 0;
   virtual void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) = 0;
+  virtual bool SnapshotExists(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
 };
