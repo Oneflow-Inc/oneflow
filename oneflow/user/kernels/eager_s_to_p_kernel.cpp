@@ -147,8 +147,7 @@ size_t InferEagerSToPKernelTmpBufferSize(user_op::InferContext* ctx) {
     BalancedSplitter bs(shape.At(in_split_axis), in_parallel_num);
     shape.Set(in_split_axis, bs.At(0).size());
   }
-  size_t tensor_byte_size = shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
-  return tensor_byte_size;
+  return shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
 }
 
 }  // namespace
