@@ -461,7 +461,7 @@ if(BUILD_CPP_API)
 
   set(LIBONEFLOW_DIR ${PROJECT_BINARY_DIR}/liboneflow_cpp)
 
-  install(DIRECTORY oneflow/api/cpp/ 
+  install(DIRECTORY oneflow/api/cpp/
     COMPONENT oneflow_cpp_all
     DESTINATION include/oneflow
     FILES_MATCHING
@@ -489,28 +489,6 @@ if(BUILD_CPP_API)
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
   )
-
-  if(BUILD_SHARED_LIBS)
-    set(LIBONEFLOW_THIRD_PARTY_DEPENDENCES)
-    list(APPEND LIBONEFLOW_THIRD_PARTY_DEPENDENCES ${GLOG_STATIC_LIBRARIES} ${PROTOBUF_STATIC_LIBRARIES})
-    if(BUILD_CUDA)
-      list(APPEND LIBONEFLOW_THIRD_PARTY_DEPENDENCES ${NCCL_LIBRARIES})
-    endif(BUILD_CUDA)
-
-    foreach (file_path ${LIBONEFLOW_THIRD_PARTY_DEPENDENCES})
-      get_filename_component(resolved_file_path ${file_path} REALPATH)
-      get_filename_component(file_name ${file_path} NAME)
-      get_filename_component(resolved_file_name ${resolved_file_path} NAME)
-      install(FILES ${resolved_file_path}
-        COMPONENT oneflow_cpp_all
-        DESTINATION lib
-      )
-      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${resolved_file_name} ${LIBONEFLOW_DIR}/lib/${file_name})"
-        COMPONENT oneflow_cpp_all
-      )
-    endforeach()
-  endif(BUILD_SHARED_LIBS)
-
   add_custom_target(install_oneflow_cpp
     COMMAND
         "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_all
@@ -525,7 +503,7 @@ if(BUILD_CPP_API)
   set(CPACK_GENERATOR ZIP)
   set(CPACK_PACKAGE_NAME liboneflow)
   # TODO: by Shenghang, unify python and c++ version genenerating and getting
-  set(CPACK_PACKAGE_VERSION 0.7.0) 
+  set(CPACK_PACKAGE_VERSION 0.7.0)
   set(CPACK_INSTALL_CMAKE_PROJECTS ${PROJECT_BINARY_DIR};oneflow;oneflow_cpp_all;/)
   include(CPack)
 endif(BUILD_CPP_API)

@@ -170,6 +170,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
   CACHE PATH "Where to install third party headers and libs")
 
+if(BUILD_CPP_API)
+  set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/third_party")
+endif(BUILD_CPP_API)
+
+
 set(ONEFLOW_PYTHON_DIR "${PROJECT_SOURCE_DIR}/python" CACHE PATH "oneflow python src dir")
 
 if(WIN32)
