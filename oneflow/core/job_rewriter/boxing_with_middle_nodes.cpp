@@ -23,7 +23,10 @@ namespace oneflow {
 Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder) {
   // Initialize boxing collector
   BoxingCollector boxing_collector;
-  boxing_collector.Init(6);
+  // We assemble the boxing table from S(0) to S(5).
+  // Those splitting in higher axes are considered in the customized boxing.
+  constexpr int32_t kRegularMaxSplitAxes = 6;
+  boxing_collector.Init(kRegularMaxSplitAxes);
   std::vector<cfg::NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations
@@ -46,14 +49,15 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
         boxing_collector.AskSbpCombination(producer_nd_sbp, consumer_nd_sbp, logical_blob_desc,
                                            producer.parallel_desc(), node->parallel_desc(), true,
                                            middle_sbps);
-        const auto* lbi_ptr = &lbi;
-        LogicalBlobId middle_node_lbi;
+        // move to the next ibn if no middle nodes needed
+        if (middle_sbps.size() <= 0) { continue; }
+        LogicalBlobId middle_node_lbi = lbi;
         for (int32_t middle_node_id = 0; middle_node_id < middle_sbps.size(); middle_node_id++) {
           // Create the middle operators
           OperatorConf identity_op_conf{};
           identity_op_conf.set_name("System-Boxing-Middle-Identity-" + NewUniqueId());
           IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
-          identity_conf->set_in(GenLogicalBlobName(*lbi_ptr));
+          identity_conf->set_in(GenLogicalBlobName(middle_node_lbi));
           identity_conf->set_out("out");
           job_builder->AddOps(node->parallel_desc().parallel_conf(), {identity_op_conf});
           cfg::NdSbpSignature identity_nd_sbp_signature;
@@ -65,19 +69,15 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
           // Connection for the next middle node
           middle_node_lbi.set_op_name(identity_op_conf.name());
           middle_node_lbi.set_blob_name(identity_conf->out());
-          lbi_ptr = &middle_node_lbi;
-          // Replace input blob with configuration from middle nodes
-          if (middle_node_id == middle_sbps.size() - 1) {
-            // Only update operator configuration once
-            if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
-              op_node2op_conf[node] = node->op().op_conf();
-            }
-            OperatorConf& consumer_op_conf = op_node2op_conf[node];
-            const auto& old_val = ReplaceInputLbnInOpCustomizedConf(
-                &consumer_op_conf, ibn, GenLogicalBlobName(middle_node_lbi));
-            CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
-          }
         }
+        // Replace input blob with configuration from middle nodes
+        if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
+          op_node2op_conf[node] = node->op().op_conf();
+        }
+        OperatorConf& consumer_op_conf = op_node2op_conf[node];
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(
+            &consumer_op_conf, ibn, GenLogicalBlobName(middle_node_lbi));
+        CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
       }
     }
 
