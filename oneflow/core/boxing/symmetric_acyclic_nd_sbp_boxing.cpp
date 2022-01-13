@@ -33,7 +33,8 @@ Maybe<one::OpExpr> MakeToConsistentOpExpr() {
   return op_expr;
 }
 
-static constexpr auto* GetLocalToConsistentOpExpr = DECORATE(&MakeToConsistentOpExpr, ThreadLocal);
+static constexpr auto* GetLocalToConsistentOpExpr =
+    DECORATE(&MakeToConsistentOpExpr, ThreadLocalCopiable);
 
 Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
                                                const Shape& shape,
@@ -58,23 +59,25 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
-          in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+          in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
                                             out_parallel_desc));
 }
 
 }  // namespace
 
-Maybe<void> CheckSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> CheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                             const Shape& logical_shape) {
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
   CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  JUST(CheckIsNdSbpBoxingAcyclicWithDecompose(in, out, logical_shape));
   return Maybe<void>::Ok();
 }
 
-Maybe<one::Tensor> SymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor>& input,
-                                        Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor>& input,
+                                               Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& out_nd_sbp = out->nd_sbp();
   const auto& in_parallel_desc = in->placement();
   const auto& out_parallel_desc = out->placement();
@@ -95,7 +98,7 @@ Maybe<one::Tensor> SymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor>& inpu
   return JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
 }
 
-COMMAND(RegisterBoxingFunction("symmetric-nd-sbp-to-nd-sbp", CheckSymmetricNdSbpBoxing,
-                               &SymmetricNdSbpBoxing));
+COMMAND(RegisterBoxingFunction("symmetric-acyclic-nd-sbp-to-nd-sbp",
+                               CheckSymmetricAcyclicNdSbpBoxing, &SymmetricAcyclicNdSbpBoxing));
 
 }  // namespace oneflow
