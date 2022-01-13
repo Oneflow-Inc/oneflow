@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingCollector {
+class BoxingCollector final{
  public:
   BoxingCollector() = default;
 
@@ -32,8 +32,6 @@ class BoxingCollector {
 
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
-  // Collect Sbp Parallel
-  void CollectUniverse(const cfg::SbpParallel& sbp);
 
   // Construct a boxing collector with given maximum number of axis
   void Init(int32_t max_axis);
@@ -56,6 +54,8 @@ class BoxingCollector {
                                            const std::shared_ptr<Shape>& parallel_hierarchy);
 
  private:
+  // Collect Sbp Parallel
+  void CollectUniverse(const cfg::SbpParallel& sbp);
   // Stores all the possible cfg::SbpParallel.
   HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
