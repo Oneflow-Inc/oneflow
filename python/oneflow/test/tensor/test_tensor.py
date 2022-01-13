@@ -717,7 +717,7 @@ class TestTensor(flow.unittest.TestCase):
         other = 3
         return input.fmod(other)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_fmod_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
@@ -1724,7 +1724,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return torch.cat(res, dim=1)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_tensor_swapaxes(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=3).to(device)
