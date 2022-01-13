@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
@@ -21,6 +22,10 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder) {
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
   // Initialize boxing collector
   BoxingCollector boxing_collector;
   // We assemble the boxing table from S(0) to S(5).
