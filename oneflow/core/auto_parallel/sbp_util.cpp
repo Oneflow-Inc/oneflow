@@ -297,7 +297,9 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
   int32_t out_dim = out_hierarchy->NumAxes();
   // Not supporting n-D sbp with n >= 3
   // TODO: Support it in the future
-  if (in_dim <= 0 || in_dim >= 3 || out_dim <= 0 || out_dim >= 3) { return GetMaxVal<float>(); }
+  if (std::min(in_dim, out_dim) <= 0 || std::max(in_dim, out_dim) >= 3) {
+    return GetMaxVal<float>();
+  }
 
   bool same_nd_sbp = producer_sbp_parallel == consumer_sbp_parallel;
   if (same_nd_sbp && (*in_hierarchy == *out_hierarchy)) { return 0.0; }
