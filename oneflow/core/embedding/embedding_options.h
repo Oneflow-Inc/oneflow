@@ -26,64 +26,58 @@ class EmbeddingOptions final {
   OF_DISALLOW_COPY_AND_MOVE(EmbeddingOptions);
   EmbeddingOptions(std::string json_serialized) {
     auto json_object = nlohmann::json::parse(json_serialized);
-    embedding_name_ = "EmbeddingTest";  // json_object["embedding_name"];
-    // key_type_ = json_object["key_type"];
-    // value_type_ = json_object["value_type"];
-    embedding_size_ = ParseIntegerFromEnv("EMBEDDING_SIZE", 128);  // json_object["embedding_size"];
-    line_size_ = embedding_size_;
-    // l1_cache_policy_ = json_object["l1_cache_policy"];
-    // l2_cache_policy_ = json_object["l2_cache_policy"];
-    cache_memory_budget_mb_ = ParseIntegerFromEnv("CACHE_MEMORY_BUDGET_MB", 0);
-    kv_store_ = GetStringFromEnv("KEY_VALUE_STORE", "");  // json_object["kv_store"];
-    fixed_table_path_ =
-        GetStringFromEnv("BLOCK_BASED_PATH", "");  // json_object["fixed_table_path"];
-    fixed_table_block_size_ = json_object["fixed_table_block_size"];
-    // fixed_table_chunk_size_ = json_object["fixed_table_chunk_size"];
-    num_keys_ = ParseIntegerFromEnv("NUM_KEYS", 0);  // json_object["num_keys"];
-    num_device_keys_ =
-        ParseIntegerFromEnv("NUM_DEVICE_KEYS", 0);  // json_object["num_device_keys"];
-    optimizer_ = json_object["optimizer"];
-    base_learning_rate_ = json_object["base_learning_rate"];
-    if (optimizer_ == "sgd") {
-      // do nothing
-    } else if (optimizer_ == "momentum") {
-      beta_ = json_object["optimizer_conf"]["beta"];
-      line_size_ *= 2;
-    } else if (optimizer_ == "adam") {
-      beta1_ = json_object["optimizer_conf"]["beta1"];
-      beta2_ = json_object["optimizer_conf"]["beta2"];
-      epsilon_ = json_object["optimizer_conf"]["epsilon"];
-      do_bias_correction_ = json_object["optimizer_conf"]["do_bias_correction"];
-      line_size_ *= 3;
+    embedding_name_ = json_object["embedding_name"];
+    embedding_size_ = json_object["embedding_size"];
+    l1_cache_policy_ = json_object["l1_cache"]["policy"];
+    l1_cache_memory_budget_mb_ = json_object["l1_cache"]["cache_memory_budget_mb"];
+    l2_cache_policy_ = json_object["l2_cache"]["policy"];
+    fixed_table_path_ = json_object["fixed_table"]["path"];
+    fixed_table_block_size_ = json_object["fixed_table"]["block_size"];
+    fixed_table_chunk_size_ = json_object["fixed_table"]["chunk_size"];
+
+    optimizer_type_ = json_object["optimizer"]["type"];
+    if (optimizer_type_ == "sgd") {
+      line_size_ = embedding_size_;
+    } else if (optimizer_type_ == "momentum") {
+      beta_ = json_object["optimizer"]["beta"];
+      line_size_ = embedding_size_ * 2;
+    } else if (optimizer_type_ == "adam") {
+      beta1_ = json_object["optimizer"]["beta1"];
+      beta2_ = json_object["optimizer"]["beta2"];
+      epsilon_ = json_object["optimizer"]["epsilon"];
+      do_bias_correction_ = json_object["optimizer"]["do_bias_correction"];
+      line_size_ = embedding_size_ * 3;
     } else {
       UNIMPLEMENTED();
     }
-    warmup_type_ = json_object["warmup_type"];
+    auto learning_rate_schedule_object = json_object["learning_rate_schedule"];
+    learning_rate_ = learning_rate_schedule_object["learning_rate"];
+    warmup_type_ = learning_rate_schedule_object["warmup"]["type"];
     if (warmup_type_ == "linear") {
       warmup_conf_.mutable_linear_conf()->set_warmup_batches(
-          json_object["warmup_conf"]["warmup_batches"]);
+          learning_rate_schedule_object["warmup"]["warmup_batches"]);
       warmup_conf_.mutable_linear_conf()->set_start_multiplier(
-          json_object["warmup_conf"]["start_multiplier"]);
+          learning_rate_schedule_object["warmup"]["start_multiplier"]);
     } else if (warmup_type_ == "constant") {
       warmup_conf_.mutable_constant_conf()->set_warmup_batches(
-          json_object["warmup_conf"]["warmup_batches"]);
+          learning_rate_schedule_object["warmup"]["warmup_batches"]);
       warmup_conf_.mutable_constant_conf()->set_multiplier(
-          json_object["warmup_conf"]["multiplier"]);
+          learning_rate_schedule_object["warmup"]["multiplier"]);
     } else if (warmup_type_ == "none") {
       // do nothing
     } else {
       UNIMPLEMENTED();
     }
-    learning_rate_decay_type_ = json_object["learning_rate_decay_type"];
+    learning_rate_decay_type_ = learning_rate_schedule_object["learning_rate_decay"]["type"];
     if (learning_rate_decay_type_ == "polynomial") {
       learning_rate_decay_conf_.mutable_polynomial_conf()->set_decay_batches(
-          json_object["learning_rate_decay_conf"]["decay_batches"]);
+          learning_rate_schedule_object["learning_rate_decay"]["decay_batches"]);
       learning_rate_decay_conf_.mutable_polynomial_conf()->set_end_learning_rate(
-          json_object["learning_rate_decay_conf"]["end_learning_rate"]);
+          learning_rate_schedule_object["learning_rate_decay"]["end_learning_rate"]);
       learning_rate_decay_conf_.mutable_polynomial_conf()->set_power(
-          json_object["learning_rate_decay_conf"]["power"]);
+          learning_rate_schedule_object["learning_rate_decay"]["power"]);
       learning_rate_decay_conf_.mutable_polynomial_conf()->set_cycle(
-          json_object["learning_rate_decay_conf"]["cycle"]);
+          learning_rate_schedule_object["learning_rate_decay"]["cycle"]);
     } else if (learning_rate_decay_type_ == "none") {
       // do nothing
     } else {
@@ -93,27 +87,22 @@ class EmbeddingOptions final {
   ~EmbeddingOptions() = default;
 
   std::string EmbeddingName() const { return embedding_name_; }
-  DataType KeyType() const { return key_type_; }
-  DataType ValueType() const { return value_type_; }
   int64_t EmbeddingSize() const { return embedding_size_; }
   int64_t LineSize() const { return line_size_; }
   std::string L1CachePolicy() const { return l1_cache_policy_; }
+  int64_t CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
   std::string L2CachePolicy() const { return l2_cache_policy_; }
-  std::string KVStore() const { return kv_store_; }
   std::string FixedTablePath() const { return fixed_table_path_; }
-  int64_t CacheMemoryBudgetMb() const { return cache_memory_budget_mb_; }
   int64_t FixedTableBlockSize() const { return fixed_table_block_size_; }
   int64_t FixedTableChunkSize() const { return fixed_table_chunk_size_; }
-  int64_t NumKeys() const { return num_keys_; }
-  int64_t NumDeviceKeys() const { return num_device_keys_; }
-  std::string Optimizer() const { return optimizer_; }
+  std::string Optimizer() const { return optimizer_type_; }
   float Beta() const { return beta_; }
   float Beta1() const { return beta1_; }
   float Beta2() const { return beta2_; }
   float Epsilon() const { return epsilon_; }
   bool DoBiasCorrection() const { return do_bias_correction_; }
 
-  float BaseLearningRate() const { return base_learning_rate_; }
+  float LearningRate() const { return learning_rate_; }
   std::string WarmupType() const { return warmup_type_; }
   WarmupConf WarmupConfProto() const { return warmup_conf_; }
   std::string LearningRateDecayType() const { return learning_rate_decay_type_; }
@@ -121,21 +110,16 @@ class EmbeddingOptions final {
 
  private:
   std::string embedding_name_;
-  DataType key_type_;
-  DataType value_type_;
   int64_t embedding_size_;
   int64_t line_size_;
   std::string l1_cache_policy_;
+  int64_t l1_cache_memory_budget_mb_;
   std::string l2_cache_policy_;
-  std::string kv_store_;
   std::string fixed_table_path_;
-  int64_t cache_memory_budget_mb_;
   int64_t fixed_table_block_size_;
   int64_t fixed_table_chunk_size_;
-  int64_t num_keys_;
-  int64_t num_device_keys_;
-  std::string optimizer_;
-  float base_learning_rate_;
+  std::string optimizer_type_;
+  float learning_rate_;
   float beta_;
   float beta1_;
   float beta2_;

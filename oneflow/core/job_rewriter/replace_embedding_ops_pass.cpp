@@ -99,7 +99,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     schedule_op_conf.set_name(op_name);
     auto* schedule_conf = schedule_op_conf.mutable_learning_rate_schedule_conf();
     schedule_conf->set_train_step(train_conf.train_step_lbn());
-    schedule_conf->set_learning_rate(embedding_options.BaseLearningRate());
+    schedule_conf->set_learning_rate(embedding_options.LearningRate());
     schedule_conf->set_out("out");
     if (embedding_options.WarmupType() != "none") {
       *schedule_conf->mutable_warmup_conf() = embedding_options.WarmupConfProto();

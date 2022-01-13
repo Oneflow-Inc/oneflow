@@ -25,9 +25,16 @@ import os
 os.environ["DEBUG_SHUFFLE"] = "1"
 os.environ["CACHE_MEMORY_BUDGET_MB"] = "4096"
 os.environ["KEY_VALUE_STORE"] = "block_based"
-os.environ["BLOCK_BASED_PATH"] = "/NVME0/guoran/unittest/"+os.environ["TEST_OPTIMIZER"]
+os.environ["BLOCK_BASED_PATH"] = (
+    "/NVME0/guoran/unittest/" + os.environ["TEST_OPTIMIZER"]
+)
 os.environ["EMBEDDING_SIZE"] = "16"
-print("test optimizer", os.environ["TEST_OPTIMIZER"], "path:", os.environ["BLOCK_BASED_PATH"])
+print(
+    "test optimizer",
+    os.environ["TEST_OPTIMIZER"],
+    "path:",
+    os.environ["BLOCK_BASED_PATH"],
+)
 emb_size = 16
 
 placement = flow.placement("cuda", {0: [0]})

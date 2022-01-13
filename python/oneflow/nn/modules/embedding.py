@@ -26,7 +26,8 @@ import os
 
 
 fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 512))
-optimizer = str(os.environ.get("OPTIMIZER","sgd"))
+optimizer = str(os.environ.get("OPTIMIZER", "sgd"))
+
 
 class OneEmbeddingLookup(Module):
     def __init__(self, options):
@@ -34,24 +35,37 @@ class OneEmbeddingLookup(Module):
         self.dtype = options["dtype"]
         embedding_options = {
             "embedding_name": "EmbeddingTest",
-            "fixed_table_block_size": fixed_table_block_size,
-            "base_learning_rate": 24,
-            "optimizer": optimizer,
-            "optimizer_conf": {
+            "embedding_size": int(os.environ.get("EMBEDDING_SIZE", 128)),
+            "l1_cache": {"policy": "lru", "cache_memory_budget_mb": 8192,},
+            "l2_cache": {"policy": "none",},
+            "fixed_table": {
+                "path": os.environ.get("BLOCK_BASED_PATH"),
+                "block_size": fixed_table_block_size,
+                "chunk_size": 4 * 1024 * 1024,
+            },
+            "initializer": {"type": "uniform", "mean": 0, "std": 1,},
+            "optimizer": {
+                "type": optimizer,
                 "beta": 0.9,
                 "beta1": 0.9,
                 "beta2": 0.999,
                 "epsilon": 1e-8,
                 "do_bias_correction": True,
             },
-            "warmup_type": "linear",
-            "warmup_conf": {"warmup_batches": 2750, "start_multiplier": 0.0},
-            "learning_rate_decay_type": "polynomial",
-            "learning_rate_decay_conf": {
-                "decay_batches": 27772,
-                "end_learning_rate": 0.0,
-                "power": 2.0,
-                "cycle": False,
+            "learning_rate_schedule": {
+                "learning_rate": 24,
+                "learning_rate_decay": {
+                    "type": "polynomial",
+                    "decay_batches": 27772,
+                    "end_learning_rate": 0.0,
+                    "power": 2.0,
+                    "cycle": False,
+                },
+                "warmup": {
+                    "type": "linear",
+                    "warmup_batches": 2750,
+                    "start_multiplier": 0.0,
+                },
             },
         }
         self.embedding_options = json.dumps(embedding_options)
