@@ -261,7 +261,7 @@ class FlattenFunctor {
     int new_end_dim = end_dim;
     if (start_dim < 0) { new_start_dim += x_dim; }
     if (end_dim < 0) { new_end_dim += x_dim; }
-    if (new_start_dim == new_end_dim && !LazyMode::is_enabled()) { return x; }
+    if (new_start_dim == new_end_dim) { return x; }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("start_dim", start_dim));

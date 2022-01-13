@@ -33,18 +33,18 @@ class TestNegativeModule(flow.unittest.TestCase):
         y3 = -x
         return (y1, y2, y3)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_tensor_negative_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         return x.negative()
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_negative_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         z = torch.negative(x)
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_neg_with_random_data(test_case):
         x = random_pytorch_tensor().to(random_device())
         z = torch.neg(x)

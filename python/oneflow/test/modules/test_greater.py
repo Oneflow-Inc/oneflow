@@ -100,7 +100,7 @@ class TestGreater(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=60, auto_backward=False, check_graph=False)
+    @autotest(n=60, auto_backward=False, check_graph=True)
     def test_greater_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
@@ -109,7 +109,7 @@ class TestGreater(flow.unittest.TestCase):
         y = torch.gt(x1, oneof(x2, random().to(int), random().to(float)))
         return y
 
-    @autotest(n=60, auto_backward=False, check_graph=False)
+    @autotest(n=60, auto_backward=False, check_graph=True)
     def test_tensor_greater_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
