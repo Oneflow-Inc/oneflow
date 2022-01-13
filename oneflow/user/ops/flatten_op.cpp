@@ -23,17 +23,13 @@ namespace oneflow {
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
-  const Shape& in_shape = in_tensor_desc.shape();
-
+  const Shape& in_shape = ZeroDimCompatiableShape(in_tensor_desc.shape());
   CHECK_GE_OR_RETURN(start_dim, 0);
-  // NOTE(lixiang): CHECK_LE_OR_RETURN for 0-dim tensor
-  CHECK_LE_OR_RETURN(start_dim, in_shape.NumAxes());
+  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
   const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
-  // NOTE(lixiang): Modify 0 to -1 for 0-dim tensor
-  CHECK_GE_OR_RETURN(true_end_dim, -1);
+  CHECK_GE_OR_RETURN(true_end_dim, 0);
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
-  // NOTE(lixiang): Add 1 for 0-dim tensor
-  CHECK_LE_OR_RETURN(start_dim, true_end_dim + 1);
+  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
 

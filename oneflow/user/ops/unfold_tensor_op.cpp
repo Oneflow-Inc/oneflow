@@ -36,11 +36,10 @@ namespace oneflow {
   const int32_t size = ctx->Attr<int32_t>("size");
   const int32_t step = ctx->Attr<int32_t>("step");
 
-  const Shape& in_shape = ctx->InputShape("x", 0);
+  const Shape& in_shape = ZeroDimCompatiableShape(ctx->InputShape("x", 0));
   const int32_t in_dim = in_shape.NumAxes();
   CHECK_GE_OR_RETURN(dimension, 0);
-  // NOTE(lixiang): remove -1 for 0-dim tensor
-  CHECK_LE_OR_RETURN(dimension, in_dim);
+  CHECK_LE_OR_RETURN(dimension, in_dim - 1);
 
   const int32_t max_size = in_dim == 0 ? 1 : in_shape.At(dimension);
   CHECK_GT_OR_RETURN(size, 0);
