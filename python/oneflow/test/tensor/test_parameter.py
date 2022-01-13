@@ -40,6 +40,12 @@ class TestParameter(flow.unittest.TestCase):
         z.data = y
         return z.grad_fn, z.is_leaf
 
+    @autotest(n=1, check_graph=False)
+    def test_parameter_inplace_modify_data(test_case):
+        x = torch.nn.Parameter(torch.ones(2, 3))
+        x.data.mul_(2)
+        return x
+
     def test_parameter_set_data(test_case):
         a = flow.nn.Parameter(flow.ones(2, 3), False)
         old_id = id(a)
