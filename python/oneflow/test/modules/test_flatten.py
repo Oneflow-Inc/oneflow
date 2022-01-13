@@ -60,6 +60,24 @@ def _test_flatten_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFlattenModule(flow.unittest.TestCase):
+    def test_cast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest(check_graph=True)
+    def test_flatten_module_with_random_data(test_case):
+        m = torch.nn.Flatten(
+            start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor().to(device)
+        y = m(x)
+        return y
 
     @autotest(check_graph=True)
     def test_flatten_with_random_data(test_case):
