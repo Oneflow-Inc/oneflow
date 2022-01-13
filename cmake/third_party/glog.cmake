@@ -1,9 +1,6 @@
 include (ExternalProject)
 
 set(GLOG_INSTALL_DIR ${THIRD_PARTY_DIR}/glog/install)
-if(BUILD_CPP_API)
-  set(GLOG_INSTALL_DIR ${LIBONEFLOW_DIR})
-endif(BUILD_CPP_API)
 set(GLOG_INCLUDE_DIR ${GLOG_INSTALL_DIR}/include)
 set(GLOG_LIBRARY_DIR ${GLOG_INSTALL_DIR}/lib)
 

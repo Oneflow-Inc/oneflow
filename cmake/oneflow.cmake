@@ -459,6 +459,8 @@ endif(BUILD_PYTHON)
 
 if(BUILD_CPP_API)
 
+  set(LIBONEFLOW_DIR ${PROJECT_BINARY_DIR}/liboneflow_cpp)
+
   install(DIRECTORY oneflow/api/cpp/
     COMPONENT oneflow_cpp_all
     DESTINATION include/oneflow
