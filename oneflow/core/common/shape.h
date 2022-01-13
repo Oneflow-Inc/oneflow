@@ -57,6 +57,7 @@ class Shape final {
 
   // Getters and Setters
   bool is_initialized() const { return elem_cnt_.has_value(); }
+  //bool is_0dim() const { return dim_vec_.size() == 0 && CHECK_JUST(elem_cnt_) == 1; }
   const DimVector& dim_vec() const { return dim_vec_; }
   int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_); }
   int64_t At(int64_t index) const;
@@ -88,6 +89,7 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec);
 Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_extend_to);
+Shape CorrectZeroDimShape(const ShapeView& shape);
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec);
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
