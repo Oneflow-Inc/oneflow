@@ -111,6 +111,16 @@ class TestNe(flow.unittest.TestCase):
         y3 = torch.ne(x1, 2.0)
         return (y1, y2, y3)
 
+    @autotest(auto_backward=False)
+    def test_ne_with_0dim_data(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=0).to(device)
+        x2 = random_pytorch_tensor(ndim=0).to(device)
+        y1 = torch.ne(x1, x2)
+        y2 = torch.ne(x1, 2)
+        y3 = torch.ne(x1, 2.0)
+        return (y1, y2, y3)
+
 
 if __name__ == "__main__":
     unittest.main()

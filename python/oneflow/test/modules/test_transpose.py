@@ -96,7 +96,7 @@ class TestTranspose(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_transpose_flow_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)

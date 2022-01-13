@@ -208,6 +208,20 @@ class TestAddModule(flow.unittest.TestCase):
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
 
+    @autotest(check_graph=False)
+    def test_add_with_alpha_0dim(test_case):
+        device = random_device()
+        x1 = random_pytorch_tensor(ndim=0).to(device).mean()
+        x2 = random_pytorch_tensor(ndim=0).to(device).mean()
+        x3 = random_pytorch_tensor(ndim=0).to(device).mean()
+        y = random_pytorch_tensor(ndim=0).to(device)
+        s = random().to(float)
+        alpha = random().to(float)
+        z1 = torch.add(x1, y, alpha=alpha)
+        z2 = torch.add(x2, s, alpha=alpha)
+        z3 = torch.add(s, x3, alpha=alpha)
+        return z1, z2, z3
+
 
 if __name__ == "__main__":
     unittest.main()
