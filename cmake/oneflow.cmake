@@ -469,6 +469,11 @@ if(BUILD_CPP_API)
     PATTERN "tests" EXCLUDE
   )
 
+  install(DIRECTORY ${PROJECT_BINARY_DIR}/third_party_install/
+    COMPONENT oneflow_cpp_all
+    DESTINATION third_party
+  )
+
   install(FILES ${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake
     COMPONENT oneflow_cpp_all
     DESTINATION share
@@ -489,6 +494,7 @@ if(BUILD_CPP_API)
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
   )
+
   add_custom_target(install_oneflow_cpp
     COMMAND
         "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_all
