@@ -184,7 +184,6 @@ def build_graph_state(op_name, state_tensor, state_config):
 
 def build_graph_output(op_name, out):
     assert isinstance(out, Tensor)
-    assert out.is_lazy
 
     output_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
