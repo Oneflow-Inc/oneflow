@@ -88,7 +88,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingPrefetchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("context", 0) = ctx->InputShape("unique_ids", 0);
+  *ctx->OutputShape("context", 0) = ctx->InputShape("num_unique_ids", 0);
   return Maybe<void>::Ok();
 }
 
@@ -106,7 +106,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingPrefetchOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("context", 0) = DataType::kUInt64;
+  *ctx->OutputDType("context", 0) = ctx->InputDType("num_unique_ids", 0);
   return Maybe<void>::Ok();
 }
 
@@ -128,7 +128,6 @@ namespace oneflow {
     UNIMPLEMENTED();
   }
   *ctx->OutputShape("unique_values", 0) = Shape(out_dim_vec);
-  *ctx->OutputShape("out_context", 0) = ctx->InputShape("context", 0);
   return Maybe<void>::Ok();
 }
 
@@ -143,7 +142,6 @@ namespace oneflow {
       .Split(user_op::OpArg("unique_ids", 0), 0)
       .Split(user_op::OpArg("unique_values", 0), 0)
       .Split(user_op::OpArg("embeddings", 0), 0)
-      .Split(user_op::OpArg("out_context", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
@@ -151,7 +149,6 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
   *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("out_context", 0) = ctx->InputDType("context", 0);
   return Maybe<void>::Ok();
 }
 
@@ -246,7 +243,6 @@ namespace oneflow {
   ctx->NewBuilder()
       .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("context", 0), 0)
       .Split(user_op::OpArg("unique_embeddings", 0), 0)
       .Build();
   return Maybe<void>::Ok();

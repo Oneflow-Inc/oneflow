@@ -8907,7 +8907,7 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
     AnyType:$unique_ids
   );
   let output = (outs
-    AnyType:$context
+    AnyType:$context //no practical sense, control lookup run after prefetch.
   );
   let attrs = (ins
     StrAttr:$embedding_options
@@ -8927,8 +8927,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
   );
   let output = (outs
     AnyType:$unique_values,
-    AnyType:$embeddings,
-    AnyType:$out_context
+    AnyType:$embeddings
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
@@ -9012,7 +9011,6 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
   let input = (ins
     AnyType:$num_unique_ids,
     AnyType:$unique_ids,
-    AnyType:$context,
     AnyType:$unique_embeddings
   );
   let attrs = (ins

@@ -230,7 +230,6 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    user_op::Tensor* context = ctx->Tensor4ArgNameAndIndex("context", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = options->EmbeddingSize();
     const int64_t line_size = options->LineSize();
@@ -529,7 +528,6 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(IDX),
@@ -542,16 +540,12 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_EMBEDDING_PUT_KERNEL(idx_dtype)                                      \
-  REGISTER_USER_KERNEL("embedding_put")                                                    \
-      .SetCreateFn<EmbeddingPutKernel<idx_dtype>>()                                        \
-      .SetIsMatchedHob(                                                                    \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
-          && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                  \
-        const user_op::TensorDesc& context = ctx->InputTensorDesc("context", 0);           \
-        return context.shape().elem_cnt() * sizeof(uint64_t);                              \
-      });
+#define REGISTER_CUDA_EMBEDDING_PUT_KERNEL(idx_dtype)     \
+  REGISTER_USER_KERNEL("embedding_put")                   \
+      .SetCreateFn<EmbeddingPutKernel<idx_dtype>>()       \
+      .SetIsMatchedHob(                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA) \
+          && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value));
 
 REGISTER_CUDA_EMBEDDING_PUT_KERNEL(int32_t)
 
