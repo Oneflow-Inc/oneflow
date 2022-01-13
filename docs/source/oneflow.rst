@@ -44,6 +44,7 @@ oneflow
             diag, 
             diagonal,
             movedim,
+            unbind,
             div, 
             dot, 
             eq, 

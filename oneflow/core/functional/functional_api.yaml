@@ -946,6 +946,10 @@
   ]
   bind_python: True
 
+- name: "unbind"
+  signature: "TensorTuple (Tensor input, Int32 dim=0) => Unbind"
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True

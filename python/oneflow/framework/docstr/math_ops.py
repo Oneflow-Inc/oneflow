@@ -1297,6 +1297,39 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.unbind,
+    r"""
+    Removes a tensor dimension.
+    Returns a tuple of all slices along a given dimension, already without it.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.unbind.html#torch.unbind
+
+    Args:
+        input (Tensor): the input tensor.
+        dim  (int): dimension to remove.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5)
+        >>> output = flow.unbind(input)
+        >>> output[0].size()
+        oneflow.Size([4, 5])
+        >>> output[1].size()
+        oneflow.Size([4, 5])
+        >>> output[2].size()
+        oneflow.Size([4, 5])
+    """,
+)
+
+
+add_docstr(
     oneflow.eye,
     """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
 

@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/functional/tensor_index.h"
 
 namespace oneflow {
 namespace one {
@@ -1754,6 +1755,40 @@ class MovedimIntFunctor {
   }
 };
 
+class UnbindFunctor {
+ public:
+  UnbindFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const int32_t& dim) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN((dim>=-ndim)&&(dim<ndim))<< "Dimension out of range (expected to be in range of ["
+                                              <<-ndim<<","<< ndim-1 <<"], but got "<<dim<<")";
+    int32_t pos_dim = dim>=0?dim:dim+ndim;
+    int32_t output_size = input->shape()->At(pos_dim);
+
+    std::shared_ptr<one::Tensor> input_tran;
+    if(pos_dim!=0){
+        std::vector<int32_t> perm(ndim);
+        std::iota(perm.begin(), perm.end(), 0);
+        perm.erase(perm.begin() + pos_dim);
+        perm.insert(perm.begin() , pos_dim);
+        input_tran = JUST(Transpose(input, perm));
+    }
+    
+    TensorTuple output(output_size);
+    for(int64_t i=0; i<output_size; i++){
+      if(pos_dim!=0){
+         output[i] = JUST(functional::TensorGetItem(input_tran, {detail::IndexItem(i)}));
+      }else{
+         output[i] = JUST(functional::TensorGetItem(input, {detail::IndexItem(i)}));
+      }
+    }
+    return output;
+  }
+
+};
+
+
 class ErfinvFunctor {
  public:
   ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
@@ -1886,6 +1921,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
+  m.add_functor<UnbindFunctor>("Unbind");
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
