@@ -216,7 +216,6 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
-
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   cfg::NdSbp reduced_in_nd_sbp;
@@ -231,7 +230,9 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
   int32_t out_dim = out_hierarchy->NumAxes();
   // Not supporting n-D sbp with n >= 3
   // TODO: Support it in the future
-  if (in_dim <= 0 || in_dim >= 3 || out_dim <= 0 || out_dim >= 3) { return GetMaxVal<float>(); }
+  if (std::min(in_dim, out_dim) <= 0 || std::max(in_dim, out_dim) >= 3) {
+    return GetMaxVal<float>();
+  }
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
@@ -282,6 +283,52 @@ Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel
   return GetMaxVal<float>();
 }
 
+// compute copy cost
+Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
+                                         const cfg::NdSbp& consumer_sbp_parallel,
+                                         double logical_blob_size,
+                                         const std::shared_ptr<Shape>& in_hierarchy,
+                                         const std::shared_ptr<Shape>& out_hierarchy) {
+  if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
+    return Error::RuntimeError() << "Illegal sbp parallel has been found.";
+  }
+
+  int32_t in_dim = in_hierarchy->NumAxes();
+  int32_t out_dim = out_hierarchy->NumAxes();
+  // Not supporting n-D sbp with n >= 3
+  // TODO: Support it in the future
+  if (std::min(in_dim, out_dim) <= 0 || std::max(in_dim, out_dim) >= 3) {
+    return GetMaxVal<float>();
+  }
+
+  bool same_nd_sbp = producer_sbp_parallel == consumer_sbp_parallel;
+  if (same_nd_sbp && (*in_hierarchy == *out_hierarchy)) { return 0.0; }
+
+  // Not supporting different hierarchy
+  // TODO: Support it in the future
+  if (in_hierarchy->elem_cnt() != out_hierarchy->elem_cnt()) { return GetMaxVal<float>(); }
+
+  // reduced to 1d sbp
+  if (producer_sbp_parallel.sbp_parallel(0) == producer_sbp_parallel.sbp_parallel(1)
+      && consumer_sbp_parallel.sbp_parallel(0) == consumer_sbp_parallel.sbp_parallel(1)) {
+    return ComputCopyCostBetweenTwoDiffSbpParallel(
+        producer_sbp_parallel.sbp_parallel(0), consumer_sbp_parallel.sbp_parallel(1),
+        logical_blob_size, in_hierarchy->elem_cnt(), true);
+  }
+
+  if (in_dim == 2 && out_dim == 2) {
+    // Not supporting different hierarchy
+    // TODO: Support it in the future
+    if (*in_hierarchy != *out_hierarchy) { return GetMaxVal<float>(); }
+    return ComputCopyCostBetweenTwoNdSbp(producer_sbp_parallel, consumer_sbp_parallel,
+                                         logical_blob_size, in_hierarchy, true);
+  }
+
+  CHECK(false) << "Should not reach here. Something went wrong in ComputCopyCostBetweenNdSbp() in "
+                  "sbp_util.cpp.";
+  return GetMaxVal<float>();
+}
+
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSbp(OpNode* consumer, const std::string& ibn) {
   // is mutable
@@ -293,6 +340,39 @@ bool IsSameSbp(OpNode* consumer, const std::string& ibn) {
   const BlobDesc& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
   return (logical_blob_desc.data_type() == DataType::kOFRecord
           || logical_blob_desc.data_type() == DataType::kTensorBuffer);
+}
+
+// Compute storage per device for given NdSbp
+double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+                     const std::shared_ptr<Shape>& parallel_hierarchy) {
+  if (nd_sbp.sbp_parallel_size() == 1) {
+    double logical_blob_size = logical_shape.elem_cnt();
+    // Checking 1D sbp
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(0);
+    if (sbp_parallel.has_split_parallel()) {
+      const int64_t axis = sbp_parallel.split_parallel().axis();
+      if (axis >= logical_shape.NumAxes()) { return GetMaxVal<float>(); }
+      if (logical_shape.At(axis) < parallel_hierarchy->At(0)) { return GetMaxVal<float>(); }
+      logical_blob_size /= parallel_hierarchy->At(0);
+    }
+    return logical_blob_size;
+  } else {
+    for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+      const auto& sbp_parallel = nd_sbp.sbp_parallel(dim_sbp);
+      if (sbp_parallel.has_split_parallel()) {
+        // Split axis and store result back to logical shape
+        const int64_t axis = sbp_parallel.split_parallel().axis();
+        if (axis >= logical_shape.NumAxes()) { return GetMaxVal<float>(); }
+        // Use completely average split to count the storage
+        if (logical_shape.At(axis) <= 0
+            || (logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) > 0)) {
+          return GetMaxVal<float>();
+        }
+        logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
+      }
+    }
+    return logical_shape.elem_cnt();
+  }
 }
 }  // namespace auto_parallel
 }  // namespace oneflow

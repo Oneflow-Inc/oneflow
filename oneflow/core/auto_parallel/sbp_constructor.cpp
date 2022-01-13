@@ -46,6 +46,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     sbp_collector.CollectUniverse(sbp_graph_);
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
   }
+
   JUST(InitCopyCost(op_graph));
   // TODO:  Set all the sbp signatrure id to be 0 for initialization.
   //        Could revert it back to

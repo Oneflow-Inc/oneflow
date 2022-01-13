@@ -71,6 +71,9 @@ void SetNdSbpSignature(const cfg::SbpSignature& sbp_signature,
 void DfsSetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
                           std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
                           cfg::SbpSignatureList* sbp_sig_list);
+// Judge whether an NdSbp could be applied on a tensor with given logical shape
+Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+                                      const std::shared_ptr<Shape>& parallel_hierarchy);
 
 }  // namespace oneflow
 

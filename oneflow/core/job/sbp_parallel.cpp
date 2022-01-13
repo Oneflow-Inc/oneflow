@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/auto_parallel/sbp_node.h"
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
@@ -271,6 +273,13 @@ void DfsSetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_
       DfsSetNdSbpSignature(nd_sbp_sig, depth + 1, max_depth, nd_sbp_sig_list, sbp_sig_list);
     }
   }
+}
+
+// Judge whether an NdSbp could be applied on a tensor with given logical shape
+// True means this NdSbp is not valid.
+Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+                                      const std::shared_ptr<Shape>& parallel_hierarchy) {
+  return auto_parallel::Storage4NdSbp(nd_sbp, logical_shape, parallel_hierarchy) > cut_cost;
 }
 
 }  // namespace oneflow

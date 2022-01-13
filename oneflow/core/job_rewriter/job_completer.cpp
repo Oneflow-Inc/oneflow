@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
+#include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 
 namespace oneflow {
 
@@ -129,6 +130,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
+  JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
