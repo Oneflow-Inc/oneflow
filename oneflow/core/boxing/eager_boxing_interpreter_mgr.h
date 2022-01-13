@@ -24,7 +24,7 @@ class EagerBoxingInterpreterManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerBoxingInterpreterManager);
   EagerBoxingInterpreterManager() = default;
-  ~EagerBoxingInterpreterManager() = default;
+  virtual ~EagerBoxingInterpreterManager() = default;
 
   Maybe<EagerBoxingInterpreter> GetEagerBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                           Symbol<cfg::NdSbp> out_nd_sbp,
