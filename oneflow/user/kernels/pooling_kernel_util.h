@@ -155,7 +155,7 @@ OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<int64_t, 3
     while (lstart < 0) { lstart += dilation_l; }
 
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
-    int64_t maxindex = lstart;
+    int64_t max_index = lstart;
     int64_t src_idx = 0;
 
     /* equal to -std::numeric_limits<T>::infinity(); */
@@ -166,12 +166,12 @@ OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<int64_t, 3
       T val = src[search_idx];
       if (val > max_value || detail::numerics<T>::isnan(val)) {
         max_value = val;
-        maxindex = idx;
+        max_index = idx;
         src_idx = search_idx;
       }
     }
     dest[num] = src[src_idx];
-    indice_ptr[num] = maxindex;
+    indice_ptr[num] = max_index;
   }
 }
 
@@ -188,10 +188,10 @@ OF_DEVICE_FUNC void Maxpool1dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     const int64_t src_start = (n * n_channel + c) * src_length;
     const int64_t dst_start = (n * n_channel + c) * dst_length;
     const int64_t index = src_start + l;
-    const int64_t maxindex = dst_start + indice_ptr[index];
-    if (maxindex != -1) {
-      /* update gradient, equals to dest[maxindex] += src[index]; */
-      DeviceAdd<T>::Invoke(src + index, dest + maxindex);
+    const int64_t max_index = dst_start + indice_ptr[index];
+    if (max_index != -1) {
+      /* update gradient, equals to dest[max_index] += src[index]; */
+      DeviceAdd<T>::Invoke(src + index, dest + max_index);
     }
   }
 }
@@ -222,7 +222,7 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     while (wstart < 0) { wstart += dilation_w; }
 
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
-    int64_t maxindex = hstart * x_width + wstart;
+    int64_t max_index = hstart * x_width + wstart;
     int64_t src_idx = 0;
 
     /* equal to -std::numeric_limits<T>::infinity(); */
@@ -230,8 +230,8 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
 
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
-        const int64_t tcntr = i * x_width + j;
-        const int64_t search_idx = start_idx + tcntr;
+        const int64_t window_idx = i * x_width + j;
+        const int64_t search_idx = start_idx + window_idx;
         T val = src[search_idx];
         /* NOTE:
         std::isnan(val) only supports a few data types, see:
@@ -245,13 +245,13 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
         */
         if (val > max_value || detail::numerics<T>::isnan(val)) {
           max_value = val;
-          maxindex = tcntr;
+          max_index = window_idx;
           src_idx = search_idx;
         }
       }
     }
     dest[num] = src[src_idx];
-    indice_ptr[num] = maxindex;
+    indice_ptr[num] = max_index;
   }
 }
 
@@ -269,10 +269,10 @@ OF_DEVICE_FUNC void Maxpool2dBackwardComputeCFirst(
     const int64_t dst_start = (n * n_channel + c) * dst_height * dst_width;
     const int64_t index = src_start + h * src_width + w;
 
-    const int64_t maxindex = dst_start + indice_ptr[index];
-    if (maxindex != -1) {
-      /* update gradient, equals to dest[maxindex] += src[index]; */
-      DeviceAdd<T>::Invoke(src + index, dest + maxindex);
+    const int64_t max_index = dst_start + indice_ptr[index];
+    if (max_index != -1) {
+      /* update gradient, equals to dest[max_index] += src[index]; */
+      DeviceAdd<T>::Invoke(src + index, dest + max_index);
     }
   }
 }
@@ -289,10 +289,10 @@ OF_DEVICE_FUNC void Maxpool2dBackwardComputeCLast(
     const int64_t src_start = n * src_height * src_width * n_channel;
     const int64_t dst_start = n * dst_height * dst_width * n_channel;
     const int64_t index = src_start + h * src_width + w;
-    const int64_t maxindex = dst_start + indice_ptr[index];
-    if (maxindex != -1) {
-      /* update gradient, equals to dest[maxindex] += src[index]; */
-      DeviceAdd<T>::Invoke(src + index, dest + maxindex);
+    const int64_t max_index = dst_start + indice_ptr[index];
+    if (max_index != -1) {
+      /* update gradient, equals to dest[max_index] += src[index]; */
+      DeviceAdd<T>::Invoke(src + index, dest + max_index);
     }
   }
 }
@@ -327,19 +327,19 @@ OF_DEVICE_FUNC void Maxpool3dForwardCompute(
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
 
-    int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
+    int64_t max_index = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
 
     T max_value = detail::numeric_limits<T>::lower_bound();
     for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
-          const int64_t tcntr = zi * x_height * x_width + i * x_width + j;
-          const int64_t search_idx = start_idx + tcntr;
+          const int64_t window_idx = zi * x_height * x_width + i * x_width + j;
+          const int64_t search_idx = start_idx + window_idx;
           T val = src[search_idx];
           if (val > max_value || detail::numerics<T>::isnan(val)) {
             max_value = val;
-            maxindex = tcntr;
+            max_index = window_idx;
             src_idx = search_idx;
           }
         }
@@ -347,7 +347,7 @@ OF_DEVICE_FUNC void Maxpool3dForwardCompute(
       /* set output to local max */
       dest[num] = src[src_idx];
       /* store location of max */
-      indice_ptr[num] = maxindex;
+      indice_ptr[num] = max_index;
     }
   }
 }
@@ -367,9 +367,9 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     const int64_t src_start = (n * n_channel + c) * src_time * src_height * src_width;
     const int64_t dst_start = (n * n_channel + c) * dst_time * dst_height * dst_width;
     const int64_t index = src_start + t * src_height * src_width + h * src_width + w;
-    const int64_t maxindex = dst_start + indice_ptr[index];
+    const int64_t max_index = dst_start + indice_ptr[index];
 
-    if (maxindex != -1) { DeviceAdd<T>::Invoke(src + index, dest + maxindex); }
+    if (max_index != -1) { DeviceAdd<T>::Invoke(src + index, dest + max_index); }
   }
 }
 

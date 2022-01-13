@@ -40,8 +40,8 @@ __device__ __inline__ void Maxpool2dForwardComputeCLast(
     const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w) {
+  int64_t n, h, w, c;
   CUDA_1D_KERNEL_LOOP(num, elem_num){
-    int64_t n, h, w, c;
     index_helper.OffsetToNdIndex(num, n, h, w, c);
 
     const int64_t x_start_idx = n * n_channel * x_width * x_height;
@@ -58,26 +58,26 @@ __device__ __inline__ void Maxpool2dForwardComputeCLast(
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
-    int64_t maxindex = hstart * x_width + wstart;
+    int64_t max_index = hstart * x_width + wstart;
     int64_t src_idx = 0;
     /* equal to -std::numeric_limits<T>::infinity(); */
     T max_value = detail::numeric_limits<T>::lower_bound();
 
     for (int64_t i = hstart; i < hend; i++) {
       for (int64_t j = wstart; j < wend; j++) {
-        const int64_t tcntr = i * x_width * n_channel + j * n_channel + c;
-        const int64_t search_idx = x_start_idx + tcntr;
+        const int64_t window_idx = i * x_width * n_channel + j * n_channel + c;
+        const int64_t search_idx = x_start_idx + window_idx;
         T val = src[search_idx];
         if (val > max_value || detail::numerics<T>::isnan(val)) {
           max_value = val;
-          maxindex = tcntr;
+          max_index = window_idx;
           src_idx = search_idx;
         }
       }
     }
     const int64_t out_idx = y_start_idx + h * y_width * n_channel + w * n_channel + c;
     dest[out_idx] = src[src_idx];
-    indice_ptr[out_idx] = maxindex;
+    indice_ptr[out_idx] = max_index;
   }
 }
 
