@@ -37,12 +37,17 @@ class OneEmbeddingLookup(Module):
             "embedding_name": "EmbeddingTest",
             "embedding_size": int(os.environ.get("EMBEDDING_SIZE", 128)),
             "l1_cache": {
-                "policy": "lru",
+                "policy": str(os.environ.get("L1_CACHE_POLICY", "lru")),
                 "cache_memory_budget_mb": int(
-                    os.environ.get("CACHE_MEMORY_BUDGET_MB", 16384)
+                    os.environ.get("L1_CACHE_MEMORY_BUDGET_MB", 16384)
                 ),
             },
-            "l2_cache": {"policy": "none",},
+            "l2_cache": {
+                "policy": str(os.environ.get("L2_CACHE_POLICY", "none")),
+                "cache_memory_budget_mb": int(
+                    os.environ.get("L2_CACHE_MEMORY_BUDGET_MB", 16384)
+                ),
+            },
             "fixed_table": {
                 "path": os.environ.get("BLOCK_BASED_PATH"),
                 "block_size": fixed_table_block_size,

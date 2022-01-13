@@ -31,6 +31,7 @@ class EmbeddingOptions final {
     l1_cache_policy_ = json_object["l1_cache"]["policy"];
     l1_cache_memory_budget_mb_ = json_object["l1_cache"]["cache_memory_budget_mb"];
     l2_cache_policy_ = json_object["l2_cache"]["policy"];
+    l2_cache_memory_budget_mb_ = json_object["l2_cache"]["cache_memory_budget_mb"];
     fixed_table_path_ = json_object["fixed_table"]["path"];
     fixed_table_block_size_ = json_object["fixed_table"]["block_size"];
     fixed_table_chunk_size_ = json_object["fixed_table"]["chunk_size"];
@@ -90,8 +91,9 @@ class EmbeddingOptions final {
   int64_t EmbeddingSize() const { return embedding_size_; }
   int64_t LineSize() const { return line_size_; }
   std::string L1CachePolicy() const { return l1_cache_policy_; }
-  int64_t CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
+  int64_t L1CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
   std::string L2CachePolicy() const { return l2_cache_policy_; }
+  int64_t L2CacheMemoryBudgetMb() const { return l2_cache_memory_budget_mb_; }
   std::string FixedTablePath() const { return fixed_table_path_; }
   int64_t FixedTableBlockSize() const { return fixed_table_block_size_; }
   int64_t FixedTableChunkSize() const { return fixed_table_chunk_size_; }
@@ -115,6 +117,7 @@ class EmbeddingOptions final {
   std::string l1_cache_policy_;
   int64_t l1_cache_memory_budget_mb_;
   std::string l2_cache_policy_;
+  int64_t l2_cache_memory_budget_mb_;
   std::string fixed_table_path_;
   int64_t fixed_table_block_size_;
   int64_t fixed_table_chunk_size_;

@@ -30,21 +30,11 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
     int64_t parallel_num) {
   const std::string& name = embedding_options.EmbeddingName();
+  const uint32_t line_size = embedding_options.LineSize();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) { return it->second.get(); }
-
-  embedding::CacheOptions cache_options{};
-  const uint32_t line_size = embedding_options.LineSize();
-  cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
-  cache_options.policy = embedding::CacheOptions::Policy::kLRU;
-  cache_options.max_query_length = 65536 * 26;
-  cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
-  cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
-  cache_options.capacity =
-      embedding_options.CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
-  std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
 
   std::unique_ptr<embedding::KeyValueStore> store;
   const std::string& path = embedding_options.FixedTablePath();
@@ -60,10 +50,49 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   options.table_options.block_size = embedding_options.FixedTableBlockSize();
   options.table_options.num_blocks_per_chunk = embedding_options.FixedTableChunkSize();
   store = NewFixedTableKeyValueStore(options);
-  std::unique_ptr<embedding::KeyValueStore> cached_store =
-      NewCachedKeyValueStore(std::move(store), std::move(cache));
-  if (cached_store->SnapshotExists("index")) { cached_store->LoadSnapshot("index"); }
-  auto pair = key_value_store_map_.emplace(map_key, std::move(cached_store));
+
+  if (embedding_options.L2CachePolicy() != "none") {
+    embedding::CacheOptions cache_options{};
+    cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+    if (embedding_options.L2CachePolicy() == "lru") {
+      cache_options.policy = embedding::CacheOptions::Policy::kLRU;
+    } else if (embedding_options.L2CachePolicy() == "full") {
+      cache_options.policy = embedding::CacheOptions::Policy::kFull;
+    } else {
+      UNIMPLEMENTED();
+    }
+    cache_options.max_query_length = 65536 * 26;
+    cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
+    cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
+    cache_options.capacity =
+        embedding_options.L2CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
+    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
+    LOG(ERROR) << "add L2 cache: " << embedding_options.L2CachePolicy() << " "
+               << embedding_options.L2CacheMemoryBudgetMb();
+    store = NewCachedKeyValueStore(std::move(store), std::move(cache));
+  }
+  if (embedding_options.L1CachePolicy() != "none") {
+    embedding::CacheOptions cache_options{};
+    cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+    if (embedding_options.L1CachePolicy() == "lru") {
+      cache_options.policy = embedding::CacheOptions::Policy::kLRU;
+    } else if (embedding_options.L1CachePolicy() == "full") {
+      cache_options.policy = embedding::CacheOptions::Policy::kFull;
+    } else {
+      UNIMPLEMENTED();
+    }
+    cache_options.max_query_length = 65536 * 26;
+    cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
+    cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
+    cache_options.capacity =
+        embedding_options.L1CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
+    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
+    LOG(ERROR) << "add L1 cache: " << embedding_options.L1CachePolicy() << " "
+               << embedding_options.L1CacheMemoryBudgetMb();
+    store = NewCachedKeyValueStore(std::move(store), std::move(cache));
+  }
+  if (store->SnapshotExists("index")) { store->LoadSnapshot("index"); }
+  auto pair = key_value_store_map_.emplace(map_key, std::move(store));
   CHECK(pair.second);
   return pair.first->second.get();
 }
