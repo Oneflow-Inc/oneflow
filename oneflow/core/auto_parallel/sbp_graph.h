@@ -615,16 +615,27 @@ bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
   // We found such a strategy
   if (nbh_id == nbh_id2order.size()) { return true; }
   SbpNode<SbpSignature>* sbp_node = NodeList[nbh_id2NodeListId[nbh_id]];
-  // Start from B.
-  for (int32_t sbp_id = sbp_node->Cost.size() - 1; sbp_id >= 0; sbp_id--) {
+  // Use greedy strategy to use the node with minimum cost
+  std::vector<double> in_nbh_cost(sbp_node->Cost.size());
+  for (int32_t sbp_id = 0; sbp_id < sbp_node->Cost.size(); sbp_id++) {
+    sbp_node->FinalSbpSignatureId = sbp_id;
+    in_nbh_cost[sbp_id] =
+        sbp_node->Cost[sbp_id] + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order);
+  }
+  // Sort the cost
+  std::vector<int32_t> order;
+  DecideOrder(in_nbh_cost, order, [&](double i, double j) { return i < j; });
+  // Start from the sbp with the smallest cost
+  for (const auto& sbp_id : order) {
     sbp_node->FinalSbpSignatureId = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
-    if (sbp_node->Cost[sbp_id] + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order)
-        < cut_cost) {
+    if (in_nbh_cost[sbp_id] < cut_cost) {
       if (DfsFindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
         // If we found one strategy, then exist the Dfs.
         return true;
       }
+    } else {
+      return false;
     }
   }
   // Can not find a reasonable strategy with the setting for previous nodes.
