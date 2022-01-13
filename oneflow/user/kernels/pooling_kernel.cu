@@ -41,7 +41,7 @@ __device__ __inline__ void Maxpool2dForwardComputeCLast(
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w) {
   int64_t n, h, w, c;
-  CUDA_1D_KERNEL_LOOP(num, elem_num){
+  CUDA_1D_KERNEL_LOOP(num, elem_num) {
     index_helper.OffsetToNdIndex(num, n, h, w, c);
 
     const int64_t x_start_idx = n * n_channel * x_width * x_height;
