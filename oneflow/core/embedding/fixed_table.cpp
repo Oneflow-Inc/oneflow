@@ -41,6 +41,26 @@ constexpr uint32_t kAioQueueDepth = 128;
 constexpr uint32_t kChunkNameSuffixLength = 8;
 constexpr char const* kSnapshotFilenamePrefix = "";
 constexpr char const* kValueFilenamePrefix = "value-";
+constexpr char const* kLockFilename = "FIXED_TABLE";
+constexpr char const* kKeySizeFilename = "KEY_SIZE";
+constexpr char const* kValueSizeFilename = "VALUE_SIZE";
+constexpr char const* kBlockSizeFilename = "BLOCK_SIZE";
+constexpr char const* kNumBlocksPerChunkFilename = "NUM_BLOCKS_PER_CHUNK";
+
+void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
+  bool exists = PosixFile::FileExists(pathname.c_str());
+  if (init) {
+    CHECK(!exists);
+    std::ofstream ofs(pathname);
+    ofs << expected << std::endl;
+  } else {
+    CHECK(exists);
+    std::ifstream ifs(pathname);
+    int64_t value = 0;
+    ifs >> value;
+    LOG(FATAL) << "Check failed: " << pathname;
+  }
+}
 
 template<typename Key>
 struct IndexEntry {
@@ -211,6 +231,14 @@ class FixedTableImpl : public FixedTable {
         num_blocks_per_chunk_(options.num_blocks_per_chunk),
         block_size_(options.block_size) {
     PosixFile::RecursiveCreateDirectory(options.path, 0755);
+    const std::string lock_filename = options.path + "/" + kLockFilename;
+    const bool init = !PosixFile::FileExists(lock_filename.c_str());
+    lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+    InitOrCheckMetaValue(options.path + "/" + kKeySizeFilename, key_size_, init);
+    InitOrCheckMetaValue(options.path + "/" + kValueSizeFilename, value_size_, init);
+    InitOrCheckMetaValue(options.path + "/" + kBlockSizeFilename, block_size_, init);
+    InitOrCheckMetaValue(options.path + "/" + kNumBlocksPerChunkFilename, num_blocks_per_chunk_,
+                         init);
     CHECK_GE(block_size_, value_size_);
     values_per_block_ = block_size_ / value_size_;
     engines_.resize(kNumReadThreads);
@@ -275,6 +303,7 @@ class FixedTableImpl : public FixedTable {
   uint64_t physical_table_size_;
   robin_hood::unordered_flat_map<Key, uint64_t> row_id_mapping_;
   std::vector<PosixFile> value_files_;
+  PosixFileLockGuard lock_;
 };
 
 template<typename Key, typename Engine>

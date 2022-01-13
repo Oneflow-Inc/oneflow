@@ -28,6 +28,7 @@ limitations under the License.
 #include <sys/mman.h>
 #include <libgen.h>
 #include <dirent.h>
+#include <sys/file.h>
 
 namespace oneflow {
 
@@ -37,6 +38,8 @@ class PosixFile final {
  public:
   OF_DISALLOW_COPY(PosixFile);
   PosixFile() : fd_(-1), size_(0) {}
+  PosixFile(const std::string& pathname, int flags, mode_t mode)
+      : PosixFile(pathname.c_str(), flags, mode) {}
   PosixFile(const char* pathname, int flags, mode_t mode) : PosixFile() {
     fd_ = open(pathname, flags, mode);
     PCHECK(fd_ != -1);
@@ -154,6 +157,47 @@ class PosixMappedFile final {
   }
   PosixFile file_;
   void* ptr_;
+};
+
+class PosixFileLockGuard final {
+ public:
+  OF_DISALLOW_COPY(PosixFileLockGuard);
+  explicit PosixFileLockGuard() : file_() {}
+  explicit PosixFileLockGuard(PosixFile&& file) : file_(std::move(file)) {
+    CHECK_NE(file_.fd(), -1);
+    Lock();
+  }
+  PosixFileLockGuard(PosixFileLockGuard&& other) noexcept { *this = std::move(other); }
+  PosixFileLockGuard& operator=(PosixFileLockGuard&& other) noexcept {
+    UnLock();
+    file_ = std::move(other.file_);
+    return *this;
+  }
+  ~PosixFileLockGuard() { UnLock(); }
+
+ private:
+  void Lock() {
+    if (file_.fd() != -1) {
+      struct flock f {};
+      f.l_type = F_WRLCK;
+      f.l_whence = SEEK_SET;
+      f.l_start = 0;
+      f.l_len = 0;
+      PCHECK(fcntl(file_.fd(), F_SETLK, &f) == 0);
+    }
+  }
+  void UnLock() {
+    if (file_.fd() != -1) {
+      struct flock f {};
+      f.l_type = F_UNLCK;
+      f.l_whence = SEEK_SET;
+      f.l_start = 0;
+      f.l_len = 0;
+      PCHECK(fcntl(file_.fd(), F_SETLK, &f) == 0);
+    }
+  }
+
+  PosixFile file_;
 };
 
 }  // namespace embedding
