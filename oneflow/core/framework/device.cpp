@@ -36,6 +36,14 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
 
+void CheckDeviceType(const std::string& type) {
+  if (Device::type_supported.find(type) == Device::type_supported.end()) {
+    std::string error_msg =
+        "Expected one of cpu, cuda device type at start of device string " + type;
+    throw std::runtime_error(error_msg);
+  }
+}
+
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
@@ -81,6 +89,19 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
+}
+
+/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
+    const std::string& type_or_type_with_device_id) {
+  std::string type;
+  int device_id = -1;
+  JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
+  CheckDeviceType(type);
+  if (device_id == -1) {
+    return Device::New(type);
+  } else {
+    return Device::New(type, device_id);
+  }
 }
 
 Maybe<const std::string&> Device::of_type() const {

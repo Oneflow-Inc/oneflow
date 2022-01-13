@@ -642,124 +642,6 @@ def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     return addmm(input, mat1, mat2, alpha, beta)
 
 
-class Clamp(Module):
-    def __init__(self, min_value=None, max_value=None) -> None:
-        super().__init__()
-        if min_value is not None:
-            floating_min_value = float(min_value)
-            integral_min_value = int(min_value)
-        if max_value is not None:
-            floating_max_value = float(max_value)
-            integral_max_value = int(max_value)
-        if min_value is not None and max_value is not None:
-            self._op = (
-                flow.builtin_op("clip_by_scalar")
-                .Input("x")
-                .Output("y")
-                .Attr("floating_min", floating_min_value)
-                .Attr("integral_min", integral_min_value)
-                .Attr("floating_max", floating_max_value)
-                .Attr("integral_max", integral_max_value)
-                .Build()
-            )
-        elif min_value is not None:
-            self._op = (
-                flow.builtin_op("clip_by_scalar_min")
-                .Input("x")
-                .Output("y")
-                .Attr("floating_min", floating_min_value)
-                .Attr("integral_min", integral_min_value)
-                .Build()
-            )
-        elif max_value is not None:
-            self._op = (
-                flow.builtin_op("clip_by_scalar_max")
-                .Input("x")
-                .Output("y")
-                .Attr("floating_max", floating_max_value)
-                .Attr("integral_max", integral_max_value)
-                .Build()
-            )
-        else:
-            raise ValueError("min_value and max_value cannot be None at the same time")
-
-    def forward(self, x):
-        return self._op(x)[0]
-
-
-def clamp_op(input, min=None, max=None):
-    """
-    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
-    a resulting tensor:
-
-    .. math::
-        y_i = \\begin{cases}
-            \\text{min} & \\text{if } x_i < \\text{min} \\\\
-            x_i & \\text{if } \\text{min} \\leq x_i \\leq \\text{max} \\\\
-            \\text{max} & \\text{if } x_i > \\text{max}
-        \\end{cases}
-
-    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
-    and :attr:`max` must be real numbers, otherwise they should be integers.
-
-    Args:
-        input (Tensor): the input tensor.
-        min (Number): lower-bound of the range to be clamped to. Defaults to None.
-        max (Number): upper-bound of the range to be clamped to. Defaults to None.
-        out (Tensor, optional): the output tensor.
-
-    For example:
-
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=None, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=None)
-        >>> output
-        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-    """
-    return flow._C.clamp(input, min, max)
-
-
-@register_tensor_op("clamp")
-def clamp_op_tensor(tensor, min=None, max=None):
-    """
-    See :func:`oneflow.clamp`
-    """
-    return Clamp(min, max)(tensor)
-
-
-def clip_op(tensor, min=None, max=None):
-    """
-    Alias for :func:`oneflow.clamp`
-    """
-    return Clamp(min, max)(tensor)
-
-
-@register_tensor_op("clip")
-def clip_op_tensor(tensor, min=None, max=None):
-    """
-    See :func:`oneflow.clamp`
-    """
-    return Clamp(min, max)(tensor)
-
-
 @register_tensor_op("cosh")
 def cosh_op(input):
     """
@@ -1015,14 +897,8 @@ class Topk(Module):
         self, k, dim: int = None, largest: bool = True, sorted: bool = True
     ) -> None:
         super().__init__()
-        self._op_topk_last_dim = (
-            flow.builtin_op("top_k")
-            .Input("in")
-            .Output("out")
-            .Attr("k", k)
-            .Attr("sorted", sorted)
-            .Build()
-        )
+        self.k = k
+        self.sorted = sorted
         self.dim = dim
         self.largest = largest
 
@@ -1034,19 +910,19 @@ class Topk(Module):
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             if self.largest:
-                indices = self._op_topk_last_dim(input)[0]
+                indices = flow._C.top_k(input, self.k)
             else:
                 neg_input = flow.mul(input, -1)
-                indices = self._op_topk_last_dim(neg_input)[0]
+                indices = flow._C.top_k(neg_input, self.k)
             return (flow.gather(input, axis, indices), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow._C.transpose(input, perm=perm)
             if self.largest:
-                indices = self._op_topk_last_dim(x)[0]
+                indices = flow._C.top_k(x, self.k)
             else:
                 neg_input = flow.mul(x, -1)
-                indices = self._op_topk_last_dim(neg_input)[0]
+                indices = flow._C.top_k(neg_input, self.k)
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, axis, indices), indices)
 

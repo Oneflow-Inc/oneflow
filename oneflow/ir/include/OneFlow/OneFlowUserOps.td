@@ -115,8 +115,8 @@
 
 def OneFlow_AssignUserOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$ref,
-    AnyType:$value
+    OneFlow_Tensor:$ref,
+    OneFlow_Tensor:$value
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -127,9 +127,9 @@ def OneFlow_AssignUserOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceM
 
 def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$ref,
-    AnyType:$value,
-    AnyType:$condition
+    OneFlow_Tensor:$ref,
+    OneFlow_Tensor:$value,
+    OneFlow_Tensor:$condition
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -140,9 +140,9 @@ def OneFlow_AssignIfOp : OneFlow_BaseOp<"assign_if", [NoGrad, DeclareOpInterface
 
 def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$ref,
-    AnyType:$value,
-    AnyType:$condition
+    OneFlow_Tensor:$ref,
+    OneFlow_Tensor:$value,
+    OneFlow_Tensor:$condition
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -153,8 +153,8 @@ def OneFlow_AssignIfNotOp : OneFlow_BaseOp<"assign_if_not", [NoGrad, DeclareOpIn
 
 def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$ref,
-    AnyType:$value
+    OneFlow_Tensor:$ref,
+    OneFlow_Tensor:$value
   );
   let attrs = (ins
     SI64ArrayAttr:$start,
@@ -178,18 +178,18 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
 
 class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    Optional<AnyType>:$addend,
-    Optional<AnyType>:$moving_mean,
-    Optional<AnyType>:$moving_variance,
-    AnyType:$gamma,
-    AnyType:$beta
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$addend,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
+    OneFlow_Tensor:$gamma,
+    OneFlow_Tensor:$beta
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$reserve_space,
-    Optional<AnyType>:$mean,
-    Optional<AnyType>:$inv_variance
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$reserve_space,
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -218,11 +218,11 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
 
 def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis
@@ -235,11 +235,11 @@ def OneFlow_BiasAddOp : OneFlow_BaseOp<"bias_add", [NoSideEffect, DeclareOpInter
 
 def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$dtype_like
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$dtype_like
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -250,11 +250,11 @@ def OneFlow_CastLikeOp : OneFlow_BaseOp<"cast_like", [NoSideEffect, NoGrad, Decl
 
 def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$alpha
@@ -267,11 +267,11 @@ def OneFlow_CeluGradOp : OneFlow_BaseOp<"celu_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$in
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$diagonal
@@ -284,11 +284,11 @@ def OneFlow_DiagGradOp : OneFlow_BaseOp<"diag_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_DiagonalGradOp : OneFlow_BaseOp<"diagonal_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$in
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$offset
@@ -301,11 +301,11 @@ def OneFlow_DiagonalGradOp : OneFlow_BaseOp<"diagonal_grad", [NoSideEffect, Decl
 
 def OneFlow_DotOp : OneFlow_BaseOp<"dot", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -315,11 +315,11 @@ def OneFlow_DotOp : OneFlow_BaseOp<"dot", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$mask
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale
@@ -333,11 +333,11 @@ def OneFlow_DropoutGradOp : OneFlow_BaseOp<"dropout_grad", [NoSideEffect, Declar
 
 def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -347,11 +347,11 @@ def OneFlow_ElementwiseMaximumOp : OneFlow_BaseOp<"elementwise_maximum", [NoSide
 
 def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -361,11 +361,11 @@ def OneFlow_ElementwiseMinimumOp : OneFlow_BaseOp<"elementwise_minimum", [NoSide
 
 def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$alpha
@@ -378,11 +378,11 @@ def OneFlow_EluGradOp : OneFlow_BaseOp<"elu_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -392,11 +392,11 @@ def OneFlow_FloordivOp : OneFlow_BaseOp<"floordiv", [NoSideEffect, DeclareOpInte
 
 def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -406,11 +406,11 @@ def OneFlow_GeluGradOp : OneFlow_BaseOp<"gelu_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$grid
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$grid
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     StrAttr:$interpolation_mode,
@@ -426,11 +426,11 @@ def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoSideEffect, DeclareO
 
 def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -440,11 +440,11 @@ def OneFlow_HardsigmoidGradOp : OneFlow_BaseOp<"hardsigmoid_grad", [NoSideEffect
 
 def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -454,11 +454,11 @@ def OneFlow_HardswishGradOp : OneFlow_BaseOp<"hardswish_grad", [NoSideEffect, De
 
 def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$l1,
@@ -472,11 +472,11 @@ def OneFlow_L1L2RegularizeGradientOp : OneFlow_BaseOp<"l1_l2_regularize_gradient
 
 def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$alpha
@@ -489,11 +489,11 @@ def OneFlow_LeakyReluGradOp : OneFlow_BaseOp<"leaky_relu_grad", [NoSideEffect, D
 
 def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$mask
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -510,11 +510,11 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareO
 
 def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -524,11 +524,11 @@ def OneFlow_MishGradOp : OneFlow_BaseOp<"mish_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -538,11 +538,11 @@ def OneFlow_MultiplyOp : OneFlow_BaseOp<"multiply", [NoSideEffect, DeclareOpInte
 
 def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$like
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$dim,
@@ -558,11 +558,11 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoSideEffect, DeclareO
 
 def OneFlow_PowOp : OneFlow_BaseOp<"pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -572,11 +572,11 @@ def OneFlow_PowOp : OneFlow_BaseOp<"pow", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$alpha
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$alpha
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -586,11 +586,11 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$dy
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -600,11 +600,11 @@ def OneFlow_ReluGradOp : OneFlow_BaseOp<"relu_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -614,11 +614,11 @@ def OneFlow_SeluGradOp : OneFlow_BaseOp<"selu_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$dy
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -628,11 +628,11 @@ def OneFlow_SigmoidGradOp : OneFlow_BaseOp<"sigmoid_grad", [NoSideEffect, Declar
 
 def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -642,11 +642,11 @@ def OneFlow_SiluGradOp : OneFlow_BaseOp<"silu_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$alpha
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$alpha
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -656,11 +656,11 @@ def OneFlow_TfPreluOp : OneFlow_BaseOp<"tf_prelu", [NoSideEffect, DeclareOpInter
 
 def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dimension,
@@ -675,11 +675,11 @@ def OneFlow_UnfoldTensorGradOp : OneFlow_BaseOp<"unfold_tensor_grad", [NoSideEff
 
 def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -689,11 +689,11 @@ def OneFlow_XdivyOp : OneFlow_BaseOp<"xdivy", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -711,11 +711,11 @@ def OneFlow_XlogyOp : OneFlow_BaseOp<"xlogy", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -725,11 +725,11 @@ def OneFlow_BroadcastAddOp : OneFlow_BaseOp<"broadcast_add", [NoSideEffect, Decl
 
 def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -739,12 +739,12 @@ def OneFlow_BroadcastDivOp : OneFlow_BaseOp<"broadcast_div", [NoSideEffect, Decl
 
 def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$z,
-    AnyType:$dz
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$z,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -754,11 +754,11 @@ def OneFlow_BroadcastDivGradOp : OneFlow_BaseOp<"broadcast_div_grad", [NoSideEff
 
 def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -768,11 +768,11 @@ def OneFlow_BroadcastEqualOp : OneFlow_BaseOp<"broadcast_equal", [NoSideEffect, 
 
 def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -782,11 +782,11 @@ def OneFlow_BroadcastFloorModOp : OneFlow_BaseOp<"broadcast_floor_mod", [NoSideE
 
 def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -796,11 +796,11 @@ def OneFlow_BroadcastFmodOp : OneFlow_BaseOp<"broadcast_fmod", [NoSideEffect, De
 
 def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -810,11 +810,11 @@ def OneFlow_BroadcastGreaterOp : OneFlow_BaseOp<"broadcast_greater", [NoSideEffe
 
 def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -824,11 +824,11 @@ def OneFlow_BroadcastGreaterEqualOp : OneFlow_BaseOp<"broadcast_greater_equal", 
 
 def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -838,11 +838,11 @@ def OneFlow_BroadcastLessOp : OneFlow_BaseOp<"broadcast_less", [NoSideEffect, No
 
 def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -852,11 +852,11 @@ def OneFlow_BroadcastLessEqualOp : OneFlow_BaseOp<"broadcast_less_equal", [NoSid
 
 def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$like
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI32ArrayAttr:$broadcast_axes
@@ -870,11 +870,11 @@ def OneFlow_BroadcastLikeOp : OneFlow_BaseOp<"broadcast_like", [NoSideEffect, De
 
 def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -884,11 +884,11 @@ def OneFlow_BroadcastLogicalAndOp : OneFlow_BaseOp<"broadcast_logical_and", [NoS
 
 def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -898,11 +898,11 @@ def OneFlow_BroadcastLogicalOrOp : OneFlow_BaseOp<"broadcast_logical_or", [NoSid
 
 def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -912,11 +912,11 @@ def OneFlow_BroadcastLogicalXorOp : OneFlow_BaseOp<"broadcast_logical_xor", [NoS
 
 def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -926,11 +926,11 @@ def OneFlow_BroadcastMaximumOp : OneFlow_BaseOp<"broadcast_maximum", [NoSideEffe
 
 def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -940,11 +940,11 @@ def OneFlow_BroadcastMinimumOp : OneFlow_BaseOp<"broadcast_minimum", [NoSideEffe
 
 def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -954,11 +954,11 @@ def OneFlow_BroadcastMulOp : OneFlow_BaseOp<"broadcast_mul", [NoSideEffect, Decl
 
 def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -968,11 +968,11 @@ def OneFlow_BroadcastNotEqualOp : OneFlow_BaseOp<"broadcast_not_equal", [NoSideE
 
 def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -982,13 +982,13 @@ def OneFlow_BroadcastPowOp : OneFlow_BaseOp<"broadcast_pow", [NoSideEffect, Decl
 
 def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$z,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$z,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -998,13 +998,13 @@ def OneFlow_BroadcastPowXGradOp : OneFlow_BaseOp<"broadcast_pow_x_grad", [NoSide
 
 def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$z,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$z,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1014,11 +1014,11 @@ def OneFlow_BroadcastPowYGradOp : OneFlow_BaseOp<"broadcast_pow_y_grad", [NoSide
 
 def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1042,10 +1042,10 @@ def OneFlow_Conv3DOp : OneFlow_ConvolutionBaseOp<"conv3d", [NoSideEffect, AttrSi
 
 def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$bias_diff
+    OneFlow_Tensor:$bias_diff
   );
   let attrs = (ins
     StrAttr:$data_format,
@@ -1060,13 +1060,13 @@ def OneFlow_ConvBiasGradOp : OneFlow_BaseOp<"conv_bias_grad", [NoSideEffect, Dec
 
 def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$filter,
-    AnyType:$x_like,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$filter,
+    OneFlow_Tensor:$x_like,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$num_spatial_dims,
@@ -1086,11 +1086,11 @@ def OneFlow_ConvDataGradOp : OneFlow_BaseOp<"conv_data_grad", [NoSideEffect, Dec
 
 def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$filter_diff
+    OneFlow_Tensor:$filter_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$num_spatial_dims,
@@ -1110,11 +1110,11 @@ def OneFlow_ConvFilterGradOp : OneFlow_BaseOp<"conv_filter_grad", [NoSideEffect,
 
 def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$weight
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$weight
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$filters,
@@ -1135,11 +1135,11 @@ def OneFlow_Deconv1DOp : OneFlow_BaseOp<"deconv1d", [NoSideEffect, DeclareOpInte
 
 def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$weight
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$weight
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$filters,
@@ -1160,11 +1160,11 @@ def OneFlow_Deconv2DOp : OneFlow_BaseOp<"deconv2d", [NoSideEffect, DeclareOpInte
 
 def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$weight
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$weight
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$filters,
@@ -1193,12 +1193,12 @@ def OneFlow_Deconv3DOp : OneFlow_BaseOp<"deconv3d", [NoSideEffect, DeclareOpInte
 
 def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    Optional<AnyType>:$weight
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1209,13 +1209,13 @@ def OneFlow_BinaryCrossEntropyOp : OneFlow_BaseOp<"binary_cross_entropy", [NoSid
 
 def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    Optional<AnyType>:$weight,
-    AnyType:$dy
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1225,13 +1225,13 @@ def OneFlow_BinaryCrossEntropyGradOp : OneFlow_BaseOp<"binary_cross_entropy_grad
 
 def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    Optional<AnyType>:$weight,
-    Optional<AnyType>:$pos_weight
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$pos_weight
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight
@@ -1248,14 +1248,14 @@ def OneFlow_BinaryCrossEntropyWithLogitsOp : OneFlow_BaseOp<"binary_cross_entrop
 
 def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    Optional<AnyType>:$weight,
-    Optional<AnyType>:$pos_weight,
-    AnyType:$dy
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight,
+    Optional<OneFlow_Tensor>:$pos_weight,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_pos_weight
@@ -1271,11 +1271,11 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
 
 def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$loss
+    OneFlow_Tensor:$loss
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1286,12 +1286,12 @@ def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [NoS
 
 def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$loss_diff,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$loss_diff,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$prediction_diff
+    OneFlow_Tensor:$prediction_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1302,11 +1302,11 @@ def OneFlow_SigmoidCrossEntropyGradOp : OneFlow_BaseOp<"sigmoid_cross_entropy_gr
 
 def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -1320,12 +1320,12 @@ def OneFlow_SparseCrossEntropyOp : OneFlow_BaseOp<"sparse_cross_entropy", [NoSid
 
 def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label,
-    AnyType:$dy
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$prediction_diff
+    OneFlow_Tensor:$prediction_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -1338,11 +1338,11 @@ def OneFlow_SparseCrossEntropyGradOp : OneFlow_BaseOp<"sparse_cross_entropy_grad
 
 def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -1356,12 +1356,12 @@ def OneFlow_SparseCrossEntropyMsOp : OneFlow_BaseOp<"sparse_cross_entropy_ms", [
 
 def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label,
-    AnyType:$dy
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$prediction_diff
+    OneFlow_Tensor:$prediction_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -1382,10 +1382,10 @@ def OneFlow_SparseCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_cross_entropy_ms
 
 def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$mark_prefix
@@ -1398,10 +1398,10 @@ def OneFlow_NvtxEndOp : OneFlow_BaseOp<"nvtx_end", [NoSideEffect, DeclareOpInter
 
 def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$mark_prefix
@@ -1422,13 +1422,13 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpI
 
 def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$image,
-    AnyType:$image_id,
-    AnyType:$image_size,
-    AnyType:$gt_bbox,
-    AnyType:$gt_label,
-    AnyType:$gt_segm,
-    AnyType:$gt_segm_index
+    OneFlow_Tensor:$image,
+    OneFlow_Tensor:$image_id,
+    OneFlow_Tensor:$image_size,
+    OneFlow_Tensor:$gt_bbox,
+    OneFlow_Tensor:$gt_label,
+    OneFlow_Tensor:$gt_segm,
+    OneFlow_Tensor:$gt_segm_index
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$session_id,
@@ -1452,7 +1452,7 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, NoGrad, C
 
 def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$data_dir,
@@ -1476,7 +1476,7 @@ def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, N
 
 def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrArrayAttr:$files,
@@ -1496,12 +1496,12 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, NoGra
 
 def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$log_probs,
-    AnyType:$input_lengths
+    OneFlow_Tensor:$log_probs,
+    OneFlow_Tensor:$input_lengths
   );
   let output = (outs
-    AnyType:$decoded,
-    AnyType:$neg_sum_logits
+    OneFlow_Tensor:$decoded,
+    OneFlow_Tensor:$neg_sum_logits
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$merge_repeated
@@ -1514,10 +1514,10 @@ def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEff
 
 def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data_loader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Optional<AnyType>:$iteration
+    Optional<OneFlow_Tensor>:$iteration
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$data_file_prefix,
@@ -1541,10 +1541,10 @@ def OneFlow_MegatronGptMmapDataLoaderOp : OneFlow_BaseOp<"megatron_gpt_mmap_data
 
 def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$name
@@ -1558,8 +1558,8 @@ def OneFlow_OfrecordBytesDecoderOp : OneFlow_BaseOp<"ofrecord_bytes_decoder", [N
 
 def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image_classification_reader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$image,
-    AnyType:$label
+    OneFlow_Tensor:$image,
+    OneFlow_Tensor:$label
   );
   let attrs = (ins
     StrAttr:$data_dir,
@@ -1586,10 +1586,10 @@ def OneFlow_OfrecordImageClassificationReaderOp : OneFlow_BaseOp<"ofrecord_image
 
 def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$name,
@@ -1604,10 +1604,10 @@ def OneFlow_OfrecordImageDecoderOp : OneFlow_BaseOp<"ofrecord_image_decoder", [N
 
 def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_decoder_random_crop", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$name,
@@ -1627,10 +1627,10 @@ def OneFlow_OfrecordImageDecoderRandomCropOp : OneFlow_BaseOp<"ofrecord_image_de
 
 def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$name,
@@ -1648,10 +1648,10 @@ def OneFlow_OfrecordRawDecoderOp : OneFlow_BaseOp<"ofrecord_raw_decoder", [NoSid
 
 def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$key,
@@ -1681,11 +1681,11 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, No
 
 def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$targets,
-    AnyType:$predictions
+    OneFlow_Tensor:$targets,
+    OneFlow_Tensor:$predictions
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$k
@@ -1698,10 +1698,10 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoSideEffect, NoGrad, Declare
 
 def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$iou_threshold,
@@ -1715,12 +1715,12 @@ def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$bbox,
-    AnyType:$image_size,
-    AnyType:$flip_code
+    OneFlow_Tensor:$bbox,
+    OneFlow_Tensor:$image_size,
+    OneFlow_Tensor:$flip_code
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1730,11 +1730,11 @@ def OneFlow_ObjectBboxFlipOp : OneFlow_BaseOp<"object_bbox_flip", [NoSideEffect,
 
 def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$bbox,
-    AnyType:$scale
+    OneFlow_Tensor:$bbox,
+    OneFlow_Tensor:$scale
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1744,12 +1744,12 @@ def OneFlow_ObjectBboxScaleOp : OneFlow_BaseOp<"object_bbox_scale", [NoSideEffec
 
 def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentation_polygon_flip", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$poly,
-    AnyType:$image_size,
-    AnyType:$flip_code
+    OneFlow_Tensor:$poly,
+    OneFlow_Tensor:$image_size,
+    OneFlow_Tensor:$flip_code
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1759,11 +1759,11 @@ def OneFlow_ObjectSegmentationPolygonFlipOp : OneFlow_BaseOp<"object_segmentatio
 
 def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentation_polygon_scale", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$poly,
-    AnyType:$scale
+    OneFlow_Tensor:$poly,
+    OneFlow_Tensor:$scale
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1773,12 +1773,12 @@ def OneFlow_ObjectSegmentationPolygonScaleOp : OneFlow_BaseOp<"object_segmentati
 
 def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentation_polygon_to_mask", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$poly,
-    AnyType:$poly_index,
-    AnyType:$image_size
+    OneFlow_Tensor:$poly,
+    OneFlow_Tensor:$poly_index,
+    OneFlow_Tensor:$image_size
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1788,11 +1788,11 @@ def OneFlow_ObjectSegmentationPolygonToMaskOp : OneFlow_BaseOp<"object_segmentat
 
 def OneFlow_RoiAlignOp : OneFlow_BaseOp<"roi_align", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$rois
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$rois
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$pooled_h,
@@ -1810,12 +1810,12 @@ def OneFlow_RoiAlignOp : OneFlow_BaseOp<"roi_align", [NoSideEffect, DeclareOpInt
 
 def OneFlow_RoiAlignGradOp : OneFlow_BaseOp<"roi_align_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x_like,
-    AnyType:$rois
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x_like,
+    OneFlow_Tensor:$rois
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$pooled_h,
@@ -1832,10 +1832,10 @@ def OneFlow_RoiAlignGradOp : OneFlow_BaseOp<"roi_align_grad", [NoSideEffect, Dec
 
 def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$k,
@@ -1857,10 +1857,10 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, NoGrad, DeclareOpInt
 
 def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
@@ -1878,10 +1878,10 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, NoGrad, 
 
 def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
@@ -1900,10 +1900,10 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffec
 
 def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$parallel_conf
@@ -1918,10 +1918,10 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSi
 
 def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
@@ -1936,10 +1936,10 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSi
 
 def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
@@ -1954,10 +1954,10 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
 
 def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
@@ -1972,10 +1972,10 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffec
 
 def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
@@ -1991,10 +1991,10 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
 
 def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
@@ -2010,10 +2010,10 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, NoG
 
 def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$in_parallel_conf,
@@ -2030,10 +2030,10 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, NoGrad, 
 
 def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
@@ -2051,10 +2051,10 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, NoGrad, 
 
 def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
@@ -2072,10 +2072,10 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, NoGrad, 
 
 def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
@@ -2099,18 +2099,18 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 
 def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    Optional<AnyType>:$addend,
-    Optional<AnyType>:$moving_mean,
-    Optional<AnyType>:$moving_variance,
-    AnyType:$gamma,
-    AnyType:$beta
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$addend,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
+    OneFlow_Tensor:$gamma,
+    OneFlow_Tensor:$beta
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$reserve_space,
-    Optional<AnyType>:$mean,
-    Optional<AnyType>:$inv_variance
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$reserve_space,
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2130,20 +2130,20 @@ def OneFlow_CudnnFusedNormalizationAddReluOp : OneFlow_BaseOp<"cudnn_fused_norma
 
 def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy,
-    AnyType:$mean,
-    AnyType:$inv_variance,
-    AnyType:$gamma,
-    AnyType:$beta,
-    AnyType:$reserve_space,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance,
+    OneFlow_Tensor:$gamma,
+    OneFlow_Tensor:$beta,
+    OneFlow_Tensor:$reserve_space,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$gamma_diff,
-    AnyType:$beta_diff,
-    AnyType:$dx,
-    Optional<AnyType>:$addend_diff
+    OneFlow_Tensor:$gamma_diff,
+    OneFlow_Tensor:$beta_diff,
+    OneFlow_Tensor:$dx,
+    Optional<OneFlow_Tensor>:$addend_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2157,11 +2157,11 @@ def OneFlow_CudnnFusedNormalizationAddReluGradOp : OneFlow_BaseOp<"cudnn_fused_n
 
 def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis
@@ -2174,12 +2174,12 @@ def OneFlow_FusedBiasAddGeluOp : OneFlow_BaseOp<"fused_bias_add_gelu", [NoSideEf
 
 def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b,
-    AnyType:$dy
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis
@@ -2192,13 +2192,13 @@ def OneFlow_FusedBiasAddGeluGradOp : OneFlow_BaseOp<"fused_bias_add_gelu_grad", 
 
 def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b,
-    AnyType:$mask,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    OneFlow_Tensor:$mask,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2213,11 +2213,11 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
 
 def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$scale_by_tensor
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$scale_by_tensor
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale
@@ -2230,11 +2230,11 @@ def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect,
 
 def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$mask
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "1.">:$scale_value,
@@ -2249,13 +2249,13 @@ def OneFlow_FusedScaleMaskSoftmaxOp : OneFlow_BaseOp<"fused_scale_mask_softmax",
 
 def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$mask,
-    AnyType:$dropout_mask
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$dropout_mask
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$softmax_y
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$softmax_y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "1.">:$scale_value,
@@ -2271,13 +2271,13 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutOp : OneFlow_BaseOp<"fused_scale_mask_so
 
 def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_dropout_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$softmax_y,
-    AnyType:$dy,
-    AnyType:$mask,
-    AnyType:$dropout_mask
+    OneFlow_Tensor:$softmax_y,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$dropout_mask
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale_value,
@@ -2291,12 +2291,12 @@ def OneFlow_FusedScaleMaskSoftmaxDropoutGradOp : OneFlow_BaseOp<"fused_scale_mas
 
 def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$dy,
-    AnyType:$mask
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale_value
@@ -2309,10 +2309,10 @@ def OneFlow_FusedScaleMaskSoftmaxGradOp : OneFlow_BaseOp<"fused_scale_mask_softm
 
 def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
@@ -2331,11 +2331,11 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect,
 
 def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$hidden_states
+    OneFlow_Tensor:$hidden_states
   );
   let output = (outs
-    AnyType:$query_mul_key,
-    AnyType:$value
+    OneFlow_Tensor:$query_mul_key,
+    OneFlow_Tensor:$value
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$head_size,
@@ -2349,12 +2349,12 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self
 
 def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$query_mul_key_grad,
-    AnyType:$value_grad,
-    AnyType:$hidden_states
+    OneFlow_Tensor:$query_mul_key_grad,
+    OneFlow_Tensor:$value_grad,
+    OneFlow_Tensor:$hidden_states
   );
   let output = (outs
-    AnyType:$hidden_states_grad
+    OneFlow_Tensor:$hidden_states_grad
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$alpha
@@ -2367,12 +2367,12 @@ def OneFlow_FusedSelfAttentionQueryMulKeyAndValueGradOp : OneFlow_BaseOp<"fused_
 
 def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$mask
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$softmax_y
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$softmax_y
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
@@ -2389,12 +2389,12 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleOp : OneFlow_BaseOp<"fused_tril_scale_
 
 def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_scale_softmax_mask_scale_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$softmax_y,
-    AnyType:$dy,
-    AnyType:$mask
+    OneFlow_Tensor:$softmax_y,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
@@ -2409,20 +2409,20 @@ def OneFlow_FusedTrilScaleSoftmaxMaskScaleGradOp : OneFlow_BaseOp<"fused_tril_sc
 
 def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy,
-    AnyType:$mean,
-    AnyType:$inv_variance,
-    AnyType:$gamma,
-    AnyType:$beta,
-    AnyType:$reserve_space,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance,
+    OneFlow_Tensor:$gamma,
+    OneFlow_Tensor:$beta,
+    OneFlow_Tensor:$reserve_space,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$gamma_diff,
-    AnyType:$beta_diff,
-    AnyType:$dx,
-    Optional<AnyType>:$addend_diff
+    OneFlow_Tensor:$gamma_diff,
+    OneFlow_Tensor:$beta_diff,
+    OneFlow_Tensor:$dx,
+    Optional<OneFlow_Tensor>:$addend_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -2470,10 +2470,10 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpIn
 
 def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2483,10 +2483,10 @@ def OneFlow_AmpWhiteIdentityOp : OneFlow_BaseOp<"amp_white_identity", [NoSideEff
 
 def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2496,10 +2496,10 @@ def OneFlow_IdentityOp : OneFlow_BaseOp<"identity", [NoSideEffect, DeclareOpInte
 
 def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$buffer_size
@@ -2512,10 +2512,10 @@ def OneFlow_IdentityBufferOp : OneFlow_BaseOp<"identity_buffer", [NoSideEffect, 
 
 def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<AnyType>:$in
+    Variadic<OneFlow_Tensor>:$in
   );
   let output = (outs
-    Variadic<AnyType>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -2535,10 +2535,10 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
 
 def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeAttr:$shape,
@@ -2556,10 +2556,10 @@ def OneFlow_ImageBatchAlignOp : OneFlow_BaseOp<"image_batch_align", [NoSideEffec
 
 def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
@@ -2574,11 +2574,11 @@ def OneFlow_ImageDecodeOp : OneFlow_BaseOp<"image_decode", [NoSideEffect, NoGrad
 
 def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$flip_code
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$flip_code
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2588,10 +2588,10 @@ def OneFlow_ImageFlipOp : OneFlow_BaseOp<"image_flip", [NoSideEffect, NoGrad, Cp
 
 def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "10">:$num_attempts,
@@ -2609,12 +2609,12 @@ def OneFlow_ImageRandomCropOp : OneFlow_BaseOp<"image_random_crop", [NoSideEffec
 
 def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_aspect_ratio", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$size,
-    AnyType:$scale
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$size,
+    OneFlow_Tensor:$scale
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$target_size,
@@ -2632,11 +2632,11 @@ def OneFlow_ImageResizeKeepAspectRatioOp : OneFlow_BaseOp<"image_resize_keep_asp
 
 def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$scale
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$scale
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$target_width,
@@ -2662,10 +2662,10 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSi
 
 def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$direction
@@ -2679,10 +2679,10 @@ def OneFlow_ArgSortOp : OneFlow_BaseOp<"arg_sort", [NoSideEffect, NoGrad, Declar
 
 def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2692,11 +2692,11 @@ def OneFlow_ArgmaxOp : OneFlow_BaseOp<"argmax", [NoSideEffect, NoGrad, DeclareOp
 
 def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input
+    OneFlow_Tensor:$input
   );
   let output = (outs
-    AnyType:$output,
-    AnyType:$output_size
+    OneFlow_Tensor:$output,
+    OneFlow_Tensor:$output_size
   );
   let attrs = (ins
     OneFlow_DataType:$dtype
@@ -2709,11 +2709,11 @@ def OneFlow_ArgwhereOp : OneFlow_BaseOp<"argwhere", [NoSideEffect, NoGrad, Decla
 
 def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$indices
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$indices
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2724,11 +2724,11 @@ def OneFlow_BatchGatherOp : OneFlow_BaseOp<"batch_gather", [NoSideEffect, Declar
 
 def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dim
@@ -2742,12 +2742,12 @@ def OneFlow_DimGatherOp : OneFlow_BaseOp<"dim_gather", [NoSideEffect, DeclareOpI
 
 def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index,
-    AnyType:$src
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index,
+    OneFlow_Tensor:$src
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dim
@@ -2761,12 +2761,12 @@ def OneFlow_DimScatterAddOp : OneFlow_BaseOp<"dim_scatter_add", [NoSideEffect, D
 
 def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$like,
-    AnyType:$index,
-    AnyType:$src
+    OneFlow_Tensor:$like,
+    OneFlow_Tensor:$index,
+    OneFlow_Tensor:$src
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dim
@@ -2780,11 +2780,11 @@ def OneFlow_DimScatterAddLikeOp : OneFlow_BaseOp<"dim_scatter_add_like", [NoSide
 
 def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$src_scalar,
@@ -2799,12 +2799,12 @@ def OneFlow_DimScatterAddScalarOp : OneFlow_BaseOp<"dim_scatter_add_scalar", [No
 
 def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index,
-    AnyType:$src
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index,
+    OneFlow_Tensor:$src
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dim
@@ -2818,11 +2818,11 @@ def OneFlow_DimScatterMulOp : OneFlow_BaseOp<"dim_scatter_mul", [NoSideEffect, D
 
 def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$src_scalar,
@@ -2837,12 +2837,12 @@ def OneFlow_DimScatterMulScalarOp : OneFlow_BaseOp<"dim_scatter_mul_scalar", [No
 
 def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index,
-    AnyType:$src
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index,
+    OneFlow_Tensor:$src
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dim
@@ -2856,11 +2856,11 @@ def OneFlow_DimScatterUpdateOp : OneFlow_BaseOp<"dim_scatter_update", [NoSideEff
 
 def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$index
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$index
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$src_scalar,
@@ -2875,11 +2875,11 @@ def OneFlow_DimScatterUpdateScalarOp : OneFlow_BaseOp<"dim_scatter_update_scalar
 
 def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$indices
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$indices
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$axis
@@ -2893,11 +2893,11 @@ def OneFlow_GatherOp : OneFlow_BaseOp<"gather", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$params,
-    AnyType:$indices
+    OneFlow_Tensor:$params,
+    OneFlow_Tensor:$indices
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2908,10 +2908,10 @@ def OneFlow_GatherNdOp : OneFlow_BaseOp<"gather_nd", [NoSideEffect, DeclareOpInt
 
 def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_random_batch_permutation_indices", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$seed
@@ -2924,12 +2924,12 @@ def OneFlow_GenerateRandomBatchPermutationIndicesOp : OneFlow_BaseOp<"generate_r
 
 def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$size,
-    AnyType:$scale
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$size,
+    OneFlow_Tensor:$scale
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$target_size,
@@ -2944,10 +2944,10 @@ def OneFlow_ImageTargetResizeOp : OneFlow_BaseOp<"image_target_resize", [NoSideE
 
 def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$start,
@@ -2962,11 +2962,11 @@ def OneFlow_LogicalSliceOp : OneFlow_BaseOp<"logical_slice", [NoSideEffect, Decl
 
 def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$indices,
-    AnyType:$updates
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$updates
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeAttr:$shape
@@ -2980,12 +2980,12 @@ def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [NoSideEffect, DeclareOpI
 
 def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$like,
-    AnyType:$indices,
-    AnyType:$updates
+    OneFlow_Tensor:$like,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$updates
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2995,10 +2995,10 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [NoSideEffect, D
 
 def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$start,
@@ -3013,13 +3013,13 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$like
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
+    ShapeAttr:$like_shape,
     SI64ArrayAttr:$start,
     SI64ArrayAttr:$stop,
     SI64ArrayAttr:$step
@@ -3033,12 +3033,12 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$params,
-    AnyType:$updates,
-    AnyType:$indices
+    OneFlow_Tensor:$params,
+    OneFlow_Tensor:$updates,
+    OneFlow_Tensor:$indices
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3049,12 +3049,12 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSi
 
 def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$params,
-    AnyType:$updates,
-    AnyType:$indices
+    OneFlow_Tensor:$params,
+    OneFlow_Tensor:$updates,
+    OneFlow_Tensor:$indices
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3065,11 +3065,11 @@ def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update",
 
 def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$data,
-    AnyType:$segment_ids
+    OneFlow_Tensor:$data,
+    OneFlow_Tensor:$segment_ids
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$num_segments
@@ -3083,11 +3083,11 @@ def OneFlow_UnsortedBatchSegmentSumOp : OneFlow_BaseOp<"unsorted_batch_segment_s
 
 def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$data,
-    AnyType:$segment_ids
+    OneFlow_Tensor:$data,
+    OneFlow_Tensor:$segment_ids
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$axis,
@@ -3102,12 +3102,12 @@ def OneFlow_UnsortedSegmentSumOp : OneFlow_BaseOp<"unsorted_segment_sum", [NoSid
 
 def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$data,
-    AnyType:$segment_ids,
-    AnyType:$like
+    OneFlow_Tensor:$data,
+    OneFlow_Tensor:$segment_ids,
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$axis
@@ -3121,12 +3121,12 @@ def OneFlow_UnsortedSegmentSumLikeOp : OneFlow_BaseOp<"unsorted_segment_sum_like
 
 def OneFlow_WhereOp : OneFlow_BaseOp<"where", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$condition,
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$condition,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3137,11 +3137,11 @@ def OneFlow_WhereOp : OneFlow_BaseOp<"where", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$condition,
-    AnyType:$y
+    OneFlow_Tensor:$condition,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -3158,10 +3158,10 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, Dec
 
 def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$condition
+    OneFlow_Tensor:$condition
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_x_int_operand,
@@ -3182,11 +3182,11 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, N
 
 def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$condition,
-    AnyType:$x
+    OneFlow_Tensor:$condition,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -3223,12 +3223,12 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect,
 
 def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$label
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$theta
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$theta
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$m1,
@@ -3245,12 +3245,12 @@ def OneFlow_CombinedMarginLossOp : OneFlow_BaseOp<"combined_margin_loss", [NoSid
 
 def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$label,
-    AnyType:$theta
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$label,
+    OneFlow_Tensor:$theta
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$m1,
@@ -3266,14 +3266,14 @@ def OneFlow_CombinedMarginLossGradOp : OneFlow_BaseOp<"combined_margin_loss_grad
 
 def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$log_probs,
-    AnyType:$targets,
-    AnyType:$input_lengths,
-    AnyType:$target_lengths
+    OneFlow_Tensor:$log_probs,
+    OneFlow_Tensor:$targets,
+    OneFlow_Tensor:$input_lengths,
+    OneFlow_Tensor:$target_lengths
   );
   let output = (outs
-    AnyType:$loss,
-    AnyType:$alpha
+    OneFlow_Tensor:$loss,
+    OneFlow_Tensor:$alpha
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$max_target_length,
@@ -3288,16 +3288,16 @@ def OneFlow_CtcLossOp : OneFlow_BaseOp<"ctc_loss", [NoSideEffect, DeclareOpInter
 
 def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$grad_out,
-    AnyType:$log_probs,
-    AnyType:$targets,
-    AnyType:$input_lengths,
-    AnyType:$target_lengths,
-    AnyType:$loss,
-    AnyType:$alpha
+    OneFlow_Tensor:$grad_out,
+    OneFlow_Tensor:$log_probs,
+    OneFlow_Tensor:$targets,
+    OneFlow_Tensor:$input_lengths,
+    OneFlow_Tensor:$target_lengths,
+    OneFlow_Tensor:$loss,
+    OneFlow_Tensor:$alpha
   );
   let output = (outs
-    AnyType:$grad
+    OneFlow_Tensor:$grad
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$max_target_length,
@@ -3312,9 +3312,9 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, Decla
 
 def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$count_not_finite,
-    AnyType:$loss_scale,
-    AnyType:$good_step_counter
+    OneFlow_Tensor:$count_not_finite,
+    OneFlow_Tensor:$loss_scale,
+    OneFlow_Tensor:$good_step_counter
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "2000">:$increment_period,
@@ -3329,11 +3329,11 @@ def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_sche
 
 def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$log_target
@@ -3347,12 +3347,12 @@ def OneFlow_KlDivLossOp : OneFlow_BaseOp<"kl_div_loss", [NoSideEffect, DeclareOp
 
 def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    AnyType:$dy
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$log_target
@@ -3365,11 +3365,11 @@ def OneFlow_KlDivLossGradOp : OneFlow_BaseOp<"kl_div_loss_grad", [NoSideEffect, 
 
 def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$beta
@@ -3383,12 +3383,12 @@ def OneFlow_SmoothL1LossOp : OneFlow_BaseOp<"smooth_l1_loss", [NoSideEffect, Dec
 
 def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    AnyType:$dy
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$beta
@@ -3402,18 +3402,18 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
 #endif // GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
 // Group: MATH
-// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad
-// Total: 41
+// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, cumsum_grad, erfinv
+// Total: 44
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3423,11 +3423,11 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3437,10 +3437,10 @@ def OneFlow_CeilGradOp : OneFlow_BaseOp<"ceil_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3450,11 +3450,11 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3464,10 +3464,10 @@ def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3477,11 +3477,11 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3491,10 +3491,10 @@ def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     SI32ArrayAttr:$logical_out_shape,
@@ -3508,10 +3508,10 @@ def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [NoSideEffect, DeclareO
 
 def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3521,11 +3521,11 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3535,11 +3535,11 @@ def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3549,12 +3549,12 @@ def OneFlow_FloorGradOp : OneFlow_BaseOp<"floor_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3564,12 +3564,12 @@ def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [NoSideEffect, D
 
 def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3579,10 +3579,10 @@ def OneFlow_FloordivYGradOp : OneFlow_BaseOp<"floordiv_y_grad", [NoSideEffect, D
 
 def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3592,11 +3592,11 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3606,10 +3606,10 @@ def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareO
 
 def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3619,10 +3619,10 @@ def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3632,11 +3632,11 @@ def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3646,11 +3646,11 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_Log2GradOp : OneFlow_BaseOp<"log2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3660,11 +3660,11 @@ def OneFlow_Log2GradOp : OneFlow_BaseOp<"log2_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3674,10 +3674,10 @@ def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3687,11 +3687,11 @@ def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareO
 
 def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3701,11 +3701,11 @@ def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect,
 
 def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3715,11 +3715,11 @@ def OneFlow_NegativeGradOp : OneFlow_BaseOp<"negative_grad", [NoSideEffect, Decl
 
 def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3729,10 +3729,10 @@ def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, 
 
 def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3742,11 +3742,11 @@ def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffec
 
 def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3756,11 +3756,11 @@ def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [No
 
 def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3770,11 +3770,11 @@ def OneFlow_RintGradOp : OneFlow_BaseOp<"rint_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3784,10 +3784,10 @@ def OneFlow_RoundGradOp : OneFlow_BaseOp<"round_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3797,11 +3797,11 @@ def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3811,10 +3811,10 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3824,11 +3824,11 @@ def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpI
 
 def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3838,11 +3838,11 @@ def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, D
 
 def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3852,10 +3852,10 @@ def OneFlow_SignGradOp : OneFlow_BaseOp<"sign_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3865,11 +3865,11 @@ def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [NoSideEffect, DeclareOpInte
 
 def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3879,11 +3879,11 @@ def OneFlow_SoftplusGradOp : OneFlow_BaseOp<"softplus_grad", [NoSideEffect, Decl
 
 def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3893,10 +3893,10 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [NoSideEffect, Decl
 
 def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3906,11 +3906,11 @@ def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3920,10 +3920,10 @@ def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3933,11 +3933,11 @@ def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3947,12 +3947,12 @@ def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareO
 
 def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3962,12 +3962,57 @@ def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [NoSideEffect, Declare
 
 def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CumsumOp : OneFlow_BaseOp<"cumsum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CumsumGradOp : OneFlow_BaseOp<"cumsum_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3985,12 +4030,12 @@ def OneFlow_XlogyYGradOp : OneFlow_BaseOp<"xlogy_y_grad", [NoSideEffect, Declare
 
 def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
@@ -4005,12 +4050,12 @@ def OneFlow_BatchMatmulOp : OneFlow_BaseOp<"batch_matmul", [NoSideEffect, Declar
 
 def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
@@ -4025,12 +4070,12 @@ def OneFlow_BroadcastMatmulOp : OneFlow_BaseOp<"broadcast_matmul", [NoSideEffect
 
 def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$alpha
@@ -4043,13 +4088,13 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
 
 def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$weight,
-    AnyType:$label
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$mapped_label,
-    AnyType:$sampled_label,
-    AnyType:$sampled_weight
+    OneFlow_Tensor:$mapped_label,
+    OneFlow_Tensor:$sampled_label,
+    OneFlow_Tensor:$sampled_weight
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$num_sample,
@@ -4064,12 +4109,12 @@ def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_f
 
 def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distributed_partial_fc_sample_disable_boxing", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$sampled_weight_diff,
-    AnyType:$sampled_label
+    OneFlow_Tensor:$sampled_weight_diff,
+    OneFlow_Tensor:$sampled_label
   );
   let output = (outs
-    AnyType:$boxing_disabled_sampled_weight_diff,
-    AnyType:$boxing_disabled_sampled_label
+    OneFlow_Tensor:$boxing_disabled_sampled_weight_diff,
+    OneFlow_Tensor:$boxing_disabled_sampled_label
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4079,10 +4124,10 @@ def OneFlow_DistributedPartialFcSampleDisableBoxingOp : OneFlow_BaseOp<"distribu
 
 def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4092,11 +4137,11 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4106,12 +4151,12 @@ def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$a,
-    AnyType:$b,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
@@ -4127,19 +4172,19 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
 #endif // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
 // Group: MISC
-// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad
-// Total: 30
+// CategoricalOrdinalEncode, add_n, arange, coin_flip, concat, constant, dropout, elementwise_maximum_backward, elementwise_minimum_backward, empty, eye, grid_sample_grad, multi_count_not_finite, multi_square_sum, nll, nll_grad, pow_x_grad, pow_y_grad, prelu_grad, randperm, recv, send, split_like, ssp_variable_proxy, tf_prelu_grad, uniform, uniform_int, unique_with_counts, xdivy_x_grad, xdivy_y_grad, stack, stack_grad
+// Total: 32
 
 #ifdef GET_ONEFLOW_MISC_OP_DEFINITIONS
 
 def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncode", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$table,
-    AnyType:$size,
-    AnyType:$in
+    OneFlow_Tensor:$table,
+    OneFlow_Tensor:$size,
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$hash_precomputed
@@ -4154,10 +4199,10 @@ def OneFlow_CategoricalOrdinalEncodeOp : OneFlow_BaseOp<"CategoricalOrdinalEncod
 
 def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<AnyType>:$in
+    Variadic<OneFlow_Tensor>:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let hasCanonicalizer = 1;
   let has_check_fn = 1;
@@ -4169,7 +4214,7 @@ def OneFlow_AddNOp : OneFlow_BaseOp<"add_n", [NoSideEffect, DeclareOpInterfaceMe
 
 def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$integer_start,
@@ -4190,7 +4235,7 @@ def OneFlow_ArangeOp : OneFlow_BaseOp<"arange", [NoSideEffect, NoGrad, DeclareOp
 
 def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.5">:$probability,
@@ -4208,10 +4253,10 @@ def OneFlow_CoinFlipOp : OneFlow_BaseOp<"coin_flip", [NoSideEffect, NoGrad, CpuO
 
 def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<AnyType>:$in
+    Variadic<OneFlow_Tensor>:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$axis,
@@ -4226,7 +4271,7 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_value,
@@ -4245,12 +4290,12 @@ def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, Decla
 
 def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$in,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$mask
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$mask
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$rate
@@ -4264,13 +4309,13 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_backward", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dz,
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$dz,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    Optional<AnyType>:$dx,
-    Optional<AnyType>:$dy
+    Optional<OneFlow_Tensor>:$dx,
+    Optional<OneFlow_Tensor>:$dy
   );
   let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
@@ -4283,13 +4328,13 @@ def OneFlow_ElementwiseMaximumBackwardOp : OneFlow_BaseOp<"elementwise_maximum_b
 
 def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_backward", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dz,
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$dz,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    Optional<AnyType>:$dx,
-    Optional<AnyType>:$dy
+    Optional<OneFlow_Tensor>:$dx,
+    Optional<OneFlow_Tensor>:$dy
   );
   let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
@@ -4302,7 +4347,7 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
 
 def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
@@ -4319,7 +4364,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, NoGrad, DeclareOpIn
 
 def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$rows,
@@ -4335,13 +4380,13 @@ def OneFlow_EyeOp : OneFlow_BaseOp<"eye", [NoSideEffect, NoGrad, DeclareOpInterf
 
 def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$doutput,
-    AnyType:$input,
-    AnyType:$grid
+    OneFlow_Tensor:$doutput,
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$grid
   );
   let output = (outs
-    AnyType:$dinput,
-    AnyType:$dgrid
+    OneFlow_Tensor:$dinput,
+    OneFlow_Tensor:$dgrid
   );
   let attrs = (ins
     StrAttr:$interpolation_mode,
@@ -4357,10 +4402,10 @@ def OneFlow_GridSampleGradOp : OneFlow_BaseOp<"grid_sample_grad", [NoSideEffect,
 
 def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<AnyType>:$x
+    Variadic<OneFlow_Tensor>:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -4371,10 +4416,10 @@ def OneFlow_MultiCountNotFiniteOp : OneFlow_BaseOp<"multi_count_not_finite", [No
 
 def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<AnyType>:$x
+    Variadic<OneFlow_Tensor>:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -4385,13 +4430,13 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect,
 
 def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    Optional<AnyType>:$weight
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$total_weight
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$total_weight
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index
@@ -4405,14 +4450,14 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input,
-    AnyType:$target,
-    AnyType:$total_weight,
-    Optional<AnyType>:$weight,
-    AnyType:$dy
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    OneFlow_Tensor:$total_weight,
+    Optional<OneFlow_Tensor>:$weight,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index
@@ -4425,12 +4470,12 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4440,12 +4485,12 @@ def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [NoSideEffect, DeclareOpIn
 
 def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4455,13 +4500,13 @@ def OneFlow_PowYGradOp : OneFlow_BaseOp<"pow_y_grad", [NoSideEffect, DeclareOpIn
 
 def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x,
-    AnyType:$alpha
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$alpha
   );
   let output = (outs
-    AnyType:$dx,
-    AnyType:$alpha_diff
+    OneFlow_Tensor:$dx,
+    OneFlow_Tensor:$alpha_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4471,7 +4516,7 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$n,
@@ -4487,7 +4532,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, NoGrad, Decla
 
 def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$src_process_id,
@@ -4505,7 +4550,7 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, NoGrad, DeclareOpInte
 
 def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$dst_process_id
@@ -4519,11 +4564,11 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInte
 
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    Variadic<AnyType>:$like
+    OneFlow_Tensor:$in,
+    Variadic<OneFlow_Tensor>:$like
   );
   let output = (outs
-    Variadic<AnyType>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$axis
@@ -4538,11 +4583,11 @@ def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpI
 
 def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$var
+    OneFlow_Tensor:$var
   );
   let output = (outs
-    AnyType:$ref,
-    AnyType:$value
+    OneFlow_Tensor:$ref,
+    OneFlow_Tensor:$value
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "1">:$buffer_size
@@ -4556,13 +4601,13 @@ def OneFlow_SspVariableProxyOp : OneFlow_BaseOp<"ssp_variable_proxy", [NoSideEff
 
 def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x,
-    AnyType:$alpha
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$alpha
   );
   let output = (outs
-    AnyType:$dx,
-    AnyType:$alpha_diff
+    OneFlow_Tensor:$dx,
+    OneFlow_Tensor:$alpha_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4572,7 +4617,7 @@ def OneFlow_TfPreluGradOp : OneFlow_BaseOp<"tf_prelu_grad", [NoSideEffect, Decla
 
 def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$from,
@@ -4592,7 +4637,7 @@ def OneFlow_UniformOp : OneFlow_BaseOp<"uniform", [NoSideEffect, NoGrad, Declare
 
 def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$from,
@@ -4612,13 +4657,13 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, NoGrad, 
 
 def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$idx,
-    AnyType:$count,
-    AnyType:$num_unique
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$idx,
+    OneFlow_Tensor:$count,
+    OneFlow_Tensor:$num_unique
   );
   let attrs = (ins
     OneFlow_DataType:$out_idx
@@ -4631,12 +4676,12 @@ def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEff
 
 def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4646,17 +4691,54 @@ def OneFlow_XdivyXGradOp : OneFlow_BaseOp<"xdivy_x_grad", [NoSideEffect, Declare
 
 def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_StackOp : OneFlow_BaseOp<"stack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$axis,
+    DefaultValuedAttr<SI64Attr, "0">:$max_dim_size
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_StackGradOp : OneFlow_BaseOp<"stack_grad", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    Variadic<OneFlow_Tensor>:$like
+  );
+  let output = (outs
+    Variadic<OneFlow_Tensor>:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$axis
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
 }
 
 #endif // GET_ONEFLOW_MISC_OP_DEFINITIONS
@@ -4669,10 +4751,10 @@ def OneFlow_XdivyYGradOp : OneFlow_BaseOp<"xdivy_y_grad", [NoSideEffect, Declare
 
 def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all2all", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis,
@@ -4687,10 +4769,10 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
 
 def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4701,10 +4783,10 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
 
 def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_gather_noncontinuous", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis
@@ -4718,10 +4800,10 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
 
 def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim0_all_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4732,10 +4814,10 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
 
 def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2D_same_dim1_all_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4746,10 +4828,10 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
 
 def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4760,10 +4842,10 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
 
 def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_all_gather_noncontinuous", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis
@@ -4777,10 +4859,10 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
 
 def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4791,10 +4873,10 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
 
 def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4805,10 +4887,10 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
 
 def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
@@ -4831,11 +4913,11 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
 
 def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_normalize_from_tensorbuffer", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    Optional<AnyType>:$mirror
+    OneFlow_Tensor:$in,
+    Optional<OneFlow_Tensor>:$mirror
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
@@ -4856,11 +4938,11 @@ def OneFlow_CropMirrorNormalizeFromTensorbufferOp : OneFlow_BaseOp<"crop_mirror_
 
 def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normalize_from_uint8", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    Optional<AnyType>:$mirror
+    OneFlow_Tensor:$in,
+    Optional<OneFlow_Tensor>:$mirror
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"BGR\"">:$color_space,
@@ -4881,10 +4963,10 @@ def OneFlow_CropMirrorNormalizeFromUint8Op : OneFlow_BaseOp<"crop_mirror_normali
 
 def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     F32ArrayAttr:$std,
@@ -4898,11 +4980,11 @@ def OneFlow_ImageNormalizeOp : OneFlow_BaseOp<"image_normalize", [NoSideEffect, 
 
 def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$square_x_sum
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$square_x_sum
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -4916,12 +4998,12 @@ def OneFlow_L2NormalizeOp : OneFlow_BaseOp<"l2_normalize", [NoSideEffect, Declar
 
 def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$y,
-    AnyType:$square_x_sum
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$square_x_sum
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -4935,15 +5017,15 @@ def OneFlow_L2NormalizeGradOp : OneFlow_BaseOp<"l2_normalize_grad", [NoSideEffec
 
 def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    Optional<AnyType>:$beta,
-    Optional<AnyType>:$gamma
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$beta,
+    Optional<OneFlow_Tensor>:$gamma
   );
   let output = (outs
-    AnyType:$y,
-    AnyType:$mean,
-    AnyType:$inv_variance,
-    Optional<AnyType>:$normalized
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance,
+    Optional<OneFlow_Tensor>:$normalized
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$center,
@@ -4963,14 +5045,14 @@ def OneFlow_LayerNormOp : OneFlow_BaseOp<"layer_norm", [NoSideEffect, AttrSizedO
 
 def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x,
-    AnyType:$mean,
-    AnyType:$inv_variance,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
@@ -4984,15 +5066,15 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoSideEffect, D
 
 def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    Optional<AnyType>:$normalized,
-    Optional<AnyType>:$gamma
+    OneFlow_Tensor:$dy,
+    Optional<OneFlow_Tensor>:$normalized,
+    Optional<OneFlow_Tensor>:$gamma
   );
   let output = (outs
-    Optional<AnyType>:$normalized_diff,
-    Optional<AnyType>:$beta_diff,
-    Optional<AnyType>:$gamma_diff,
-    Optional<AnyType>:$reduce_buf
+    Optional<OneFlow_Tensor>:$normalized_diff,
+    Optional<OneFlow_Tensor>:$beta_diff,
+    Optional<OneFlow_Tensor>:$gamma_diff,
+    Optional<OneFlow_Tensor>:$reduce_buf
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis
@@ -5009,7 +5091,7 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSi
 
 def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$mean,
@@ -5029,17 +5111,17 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, NoGrad, DeclareOp
 
 def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    Optional<AnyType>:$moving_mean,
-    Optional<AnyType>:$moving_variance,
-    AnyType:$gamma,
-    AnyType:$beta,
-    Optional<AnyType>:$_add_to_output
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
+    OneFlow_Tensor:$gamma,
+    OneFlow_Tensor:$beta,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    AnyType:$y,
-    Optional<AnyType>:$mean,
-    Optional<AnyType>:$inv_variance
+    OneFlow_Tensor:$y,
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -5060,16 +5142,16 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, Att
 
 def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy,
-    AnyType:$mean,
-    AnyType:$inv_variance,
-    AnyType:$gamma
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance,
+    OneFlow_Tensor:$gamma
   );
   let output = (outs
-    AnyType:$gamma_diff,
-    AnyType:$beta_diff,
-    AnyType:$dx
+    OneFlow_Tensor:$gamma_diff,
+    OneFlow_Tensor:$beta_diff,
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis,
@@ -5091,13 +5173,13 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
 
 def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff,
-    Optional<AnyType>:$learning_rate,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if,
-    Optional<AnyType>:$train_step,
-    AnyType:$sum
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
+    Optional<OneFlow_Tensor>:$train_step,
+    OneFlow_Tensor:$sum
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$train_step_val,
@@ -5121,10 +5203,10 @@ def OneFlow_AdagradUpdateOp : OneFlow_BaseOp<"adagrad_update", [NoGrad, AttrSize
 
 def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_factor", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$train_step
+    OneFlow_Tensor:$train_step
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.9">:$beta
@@ -5137,16 +5219,16 @@ def OneFlow_AdamBiasCorrectionFactorOp : OneFlow_BaseOp<"adam_bias_correction_fa
 
 def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff,
-    Optional<AnyType>:$learning_rate,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if,
-    Optional<AnyType>:$bias_correction1,
-    Optional<AnyType>:$bias_correction2,
-    AnyType:$m,
-    AnyType:$v,
-    AnyType:$max_v
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
+    Optional<OneFlow_Tensor>:$bias_correction1,
+    Optional<OneFlow_Tensor>:$bias_correction2,
+    OneFlow_Tensor:$m,
+    OneFlow_Tensor:$v,
+    OneFlow_Tensor:$max_v
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5174,15 +5256,15 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoGrad, AttrSizedOpera
 
 def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff_indices,
-    AnyType:$model_diff_values,
-    AnyType:$learning_rate,
-    Optional<AnyType>:$bias_correction1,
-    Optional<AnyType>:$bias_correction2,
-    AnyType:$m,
-    AnyType:$v,
-    AnyType:$max_v
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff_indices,
+    OneFlow_Tensor:$model_diff_values,
+    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$bias_correction1,
+    Optional<OneFlow_Tensor>:$bias_correction2,
+    OneFlow_Tensor:$m,
+    OneFlow_Tensor:$v,
+    OneFlow_Tensor:$max_v
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5205,11 +5287,11 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
 
 def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momentum_update", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff_indices,
-    AnyType:$model_diff_values,
-    AnyType:$learning_rate,
-    AnyType:$momentum
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff_indices,
+    OneFlow_Tensor:$model_diff_values,
+    OneFlow_Tensor:$learning_rate,
+    OneFlow_Tensor:$momentum
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.9">:$beta,
@@ -5224,10 +5306,10 @@ def OneFlow_IndexedSlicesMomentumUpdateOp : OneFlow_BaseOp<"indexed_slices_momen
 
 def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff_indices,
-    AnyType:$model_diff_values,
-    AnyType:$learning_rate
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff_indices,
+    OneFlow_Tensor:$model_diff_values,
+    OneFlow_Tensor:$learning_rate
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay
@@ -5241,15 +5323,15 @@ def OneFlow_IndexedSlicesSgdUpdateOp : OneFlow_BaseOp<"indexed_slices_sgd_update
 
 def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$m,
-    AnyType:$v,
-    AnyType:$beta1_t,
-    AnyType:$beta2_t,
-    AnyType:$model,
-    AnyType:$model_diff,
-    AnyType:$learning_rate,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if
+    OneFlow_Tensor:$m,
+    OneFlow_Tensor:$v,
+    OneFlow_Tensor:$beta1_t,
+    OneFlow_Tensor:$beta2_t,
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$beta1,
@@ -5272,12 +5354,12 @@ def OneFlow_LambUpdateOp : OneFlow_BaseOp<"lamb_update", [NoGrad, AttrSizedOpera
 
 def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff,
-    AnyType:$learning_rate,
-    AnyType:$momentum,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    OneFlow_Tensor:$learning_rate,
+    OneFlow_Tensor:$momentum,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale,
@@ -5300,12 +5382,12 @@ def OneFlow_LarsUpdateOp : OneFlow_BaseOp<"lars_update", [NoGrad, AttrSizedOpera
 
 def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff,
-    AnyType:$momentum,
-    Optional<AnyType>:$learning_rate,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    OneFlow_Tensor:$momentum,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5327,13 +5409,13 @@ def OneFlow_MomentumUpdateOp : OneFlow_BaseOp<"momentum_update", [NoGrad, AttrSi
 
 def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff,
-    Optional<AnyType>:$learning_rate,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if,
-    AnyType:$mean_square,
-    Optional<AnyType>:$mean_gradient
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
+    OneFlow_Tensor:$mean_square,
+    Optional<OneFlow_Tensor>:$mean_gradient
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5357,11 +5439,11 @@ def OneFlow_RmspropUpdateOp : OneFlow_BaseOp<"rmsprop_update", [NoGrad, AttrSize
 
 def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$model,
-    AnyType:$model_diff,
-    Optional<AnyType>:$learning_rate,
-    Optional<AnyType>:$scale_by_tensor,
-    Optional<AnyType>:$skip_if
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5382,11 +5464,11 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoGrad, AttrSizedOperand
 
 def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$update
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$update
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$start,
@@ -5409,10 +5491,10 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMe
 
 def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
@@ -5428,10 +5510,10 @@ def OneFlow_ConstantPad1DOp : OneFlow_BaseOp<"constant_pad1d", [NoSideEffect, De
 
 def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
@@ -5446,10 +5528,10 @@ def OneFlow_ConstantPad1DGradOp : OneFlow_BaseOp<"constant_pad1d_grad", [NoSideE
 
 def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
@@ -5465,10 +5547,10 @@ def OneFlow_ConstantPad2DOp : OneFlow_BaseOp<"constant_pad2d", [NoSideEffect, De
 
 def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
@@ -5483,10 +5565,10 @@ def OneFlow_ConstantPad2DGradOp : OneFlow_BaseOp<"constant_pad2d_grad", [NoSideE
 
 def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
@@ -5502,10 +5584,10 @@ def OneFlow_ConstantPad3DOp : OneFlow_BaseOp<"constant_pad3d", [NoSideEffect, De
 
 def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI64ArrayAttr:$padding,
@@ -5520,10 +5602,10 @@ def OneFlow_ConstantPad3DGradOp : OneFlow_BaseOp<"constant_pad3d_grad", [NoSideE
 
 def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
@@ -5539,10 +5621,10 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
@@ -5558,10 +5640,10 @@ def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$padding
@@ -5575,10 +5657,10 @@ def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect
 
 def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI64ArrayAttr:$padding
@@ -5591,10 +5673,10 @@ def OneFlow_ReflectionPad2DGradOp : OneFlow_BaseOp<"reflection_pad2d_grad", [NoS
 
 def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI64ArrayAttr:$padding
@@ -5608,10 +5690,10 @@ def OneFlow_ReplicationPad2DOp : OneFlow_BaseOp<"replication_pad2d", [NoSideEffe
 
 def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI64ArrayAttr:$padding
@@ -5624,10 +5706,10 @@ def OneFlow_ReplicationPad2DGradOp : OneFlow_BaseOp<"replication_pad2d_grad", [N
 
 def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     StrAttr:$padding,
@@ -5644,11 +5726,11 @@ def OneFlow_SamePaddingOp : OneFlow_BaseOp<"same_padding", [NoSideEffect, Declar
 
 def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x_like,
-    AnyType:$dy
+    OneFlow_Tensor:$x_like,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     StrAttr:$padding,
@@ -5673,10 +5755,10 @@ def OneFlow_SamePaddingGradOp : OneFlow_BaseOp<"same_padding_grad", [NoSideEffec
 
 def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrArrayAttr:$nd_sbp,
@@ -5692,11 +5774,11 @@ def OneFlow_HierarchicalParallelCastOp : OneFlow_BaseOp<"hierarchical_parallel_c
 
 def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parallel_cast_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$like
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -5707,10 +5789,10 @@ def OneFlow_HierarchicalParallelCastLikeOp : OneFlow_BaseOp<"hierarchical_parall
 
 def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$sbp_parallel,
@@ -5801,12 +5883,12 @@ def OneFlow_TfMaxPool3DGradOp : OneFlow_TFPoolGradBaseOp<"tf_max_pool_3d_grad", 
 
 def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$scale,
-    AnyType:$zero_point
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$scale,
+    OneFlow_Tensor:$zero_point
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
@@ -5823,11 +5905,11 @@ def OneFlow_FakeQuantizationOp : OneFlow_BaseOp<"fake_quantization", [NoSideEffe
 
 def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$scale,
-    AnyType:$zero_point
+    OneFlow_Tensor:$scale,
+    OneFlow_Tensor:$zero_point
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
@@ -5845,14 +5927,14 @@ def OneFlow_MinMaxObserverOp : OneFlow_BaseOp<"min_max_observer", [NoSideEffect,
 
 def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_max_observer", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$current_train_step,
-    AnyType:$moving_max,
-    AnyType:$moving_min
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$current_train_step,
+    OneFlow_Tensor:$moving_max,
+    OneFlow_Tensor:$moving_min
   );
   let output = (outs
-    AnyType:$scale,
-    AnyType:$zero_point
+    OneFlow_Tensor:$scale,
+    OneFlow_Tensor:$zero_point
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$training,
@@ -5872,12 +5954,12 @@ def OneFlow_MovingAverageMinMaxObserverOp : OneFlow_BaseOp<"moving_average_min_m
 
 def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$scale,
-    AnyType:$zero_point
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$scale,
+    OneFlow_Tensor:$zero_point
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<StrAttr, "\"google\"">:$quantization_formula,
@@ -5902,13 +5984,13 @@ def OneFlow_QuantizationOp : OneFlow_BaseOp<"quantization", [NoSideEffect, Decla
 
 def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x_indices,
-    AnyType:$x_values
+    OneFlow_Tensor:$x_indices,
+    OneFlow_Tensor:$x_values
   );
   let output = (outs
-    AnyType:$y_indices,
-    AnyType:$y_values,
-    AnyType:$num_unique
+    OneFlow_Tensor:$y_indices,
+    OneFlow_Tensor:$y_values,
+    OneFlow_Tensor:$num_unique
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -5918,10 +6000,10 @@ def OneFlow_IndexedSlicesReduceSumOp : OneFlow_BaseOp<"indexed_slices_reduce_sum
 
 def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input_tensor
+    OneFlow_Tensor:$input_tensor
   );
   let output = (outs
-    AnyType:$output_tensor
+    OneFlow_Tensor:$output_tensor
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -5935,10 +6017,10 @@ def OneFlow_ReduceAllOp : OneFlow_BaseOp<"reduce_all", [NoSideEffect, DeclareOpI
 
 def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input_tensor
+    OneFlow_Tensor:$input_tensor
   );
   let output = (outs
-    AnyType:$output_tensor
+    OneFlow_Tensor:$output_tensor
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -5952,10 +6034,10 @@ def OneFlow_ReduceAnyOp : OneFlow_BaseOp<"reduce_any", [NoSideEffect, DeclareOpI
 
 def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input_tensor
+    OneFlow_Tensor:$input_tensor
   );
   let output = (outs
-    AnyType:$output_tensor
+    OneFlow_Tensor:$output_tensor
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -5969,12 +6051,12 @@ def OneFlow_ReduceMaxOp : OneFlow_BaseOp<"reduce_max", [NoSideEffect, DeclareOpI
 
 def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$mask,
-    AnyType:$count
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$count
   );
   let attrs = (ins
     SI32ArrayAttr:$axis
@@ -5987,12 +6069,12 @@ def OneFlow_ReduceMaxDeviceStageOp : OneFlow_BaseOp<"reduce_max_device_stage", [
 
 def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$out_diff,
-    AnyType:$mask,
-    AnyType:$count
+    OneFlow_Tensor:$out_diff,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$count
   );
   let output = (outs
-    AnyType:$in_diff
+    OneFlow_Tensor:$in_diff
   );
   let attrs = (ins
     SI32ArrayAttr:$axis
@@ -6005,12 +6087,12 @@ def OneFlow_ReduceMaxDeviceStageGradOp : OneFlow_BaseOp<"reduce_max_device_stage
 
 def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$device_count
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$device_count
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$mask
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$mask
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6025,12 +6107,12 @@ def OneFlow_ReduceMaxGlobalStageOp : OneFlow_BaseOp<"reduce_max_global_stage", [
 
 def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$out_diff,
-    AnyType:$mask,
-    AnyType:$device_count
+    OneFlow_Tensor:$out_diff,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$device_count
   );
   let output = (outs
-    AnyType:$in_diff
+    OneFlow_Tensor:$in_diff
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6044,10 +6126,10 @@ def OneFlow_ReduceMaxGlobalStageGradOp : OneFlow_BaseOp<"reduce_max_global_stage
 
 def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input_tensor
+    OneFlow_Tensor:$input_tensor
   );
   let output = (outs
-    AnyType:$output_tensor
+    OneFlow_Tensor:$output_tensor
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6061,12 +6143,12 @@ def OneFlow_ReduceMinOp : OneFlow_BaseOp<"reduce_min", [NoSideEffect, DeclareOpI
 
 def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$mask,
-    AnyType:$count
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$count
   );
   let attrs = (ins
     SI32ArrayAttr:$axis
@@ -6079,12 +6161,12 @@ def OneFlow_ReduceMinDeviceStageOp : OneFlow_BaseOp<"reduce_min_device_stage", [
 
 def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$out_diff,
-    AnyType:$mask,
-    AnyType:$count
+    OneFlow_Tensor:$out_diff,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$count
   );
   let output = (outs
-    AnyType:$in_diff
+    OneFlow_Tensor:$in_diff
   );
   let attrs = (ins
     SI32ArrayAttr:$axis
@@ -6097,12 +6179,12 @@ def OneFlow_ReduceMinDeviceStageGradOp : OneFlow_BaseOp<"reduce_min_device_stage
 
 def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$device_count
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$device_count
   );
   let output = (outs
-    AnyType:$out,
-    AnyType:$mask
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$mask
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6117,12 +6199,12 @@ def OneFlow_ReduceMinGlobalStageOp : OneFlow_BaseOp<"reduce_min_global_stage", [
 
 def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$out_diff,
-    AnyType:$mask,
-    AnyType:$device_count
+    OneFlow_Tensor:$out_diff,
+    OneFlow_Tensor:$mask,
+    OneFlow_Tensor:$device_count
   );
   let output = (outs
-    AnyType:$in_diff
+    OneFlow_Tensor:$in_diff
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6136,10 +6218,10 @@ def OneFlow_ReduceMinGlobalStageGradOp : OneFlow_BaseOp<"reduce_min_global_stage
 
 def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input_tensor
+    OneFlow_Tensor:$input_tensor
   );
   let output = (outs
-    AnyType:$output_tensor
+    OneFlow_Tensor:$output_tensor
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6153,10 +6235,10 @@ def OneFlow_ReduceProdOp : OneFlow_BaseOp<"reduce_prod", [NoSideEffect, DeclareO
 
 def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input_tensor
+    OneFlow_Tensor:$input_tensor
   );
   let output = (outs
-    AnyType:$output_tensor
+    OneFlow_Tensor:$output_tensor
   );
   let attrs = (ins
     SI32ArrayAttr:$axis,
@@ -6170,11 +6252,11 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpI
 
 def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$like
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI32ArrayAttr:$axis
@@ -6196,10 +6278,10 @@ def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, N
 
 def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeAttr:$shape
@@ -6213,11 +6295,11 @@ def OneFlow_ReshapeOp : OneFlow_BaseOp<"reshape", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$like
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6237,10 +6319,10 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, Declar
 
 def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_min,
@@ -6256,11 +6338,11 @@ def OneFlow_ClipByScalarOp : OneFlow_BaseOp<"clip_by_scalar", [NoSideEffect, Dec
 
 def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_min,
@@ -6276,10 +6358,10 @@ def OneFlow_ClipByScalarGradOp : OneFlow_BaseOp<"clip_by_scalar_grad", [NoSideEf
 
 def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_max,
@@ -6293,11 +6375,11 @@ def OneFlow_ClipByScalarMaxOp : OneFlow_BaseOp<"clip_by_scalar_max", [NoSideEffe
 
 def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_max,
@@ -6311,10 +6393,10 @@ def OneFlow_ClipByScalarMaxGradOp : OneFlow_BaseOp<"clip_by_scalar_max_grad", [N
 
 def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_min,
@@ -6328,11 +6410,11 @@ def OneFlow_ClipByScalarMinOp : OneFlow_BaseOp<"clip_by_scalar_min", [NoSideEffe
 
 def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_min,
@@ -6346,10 +6428,10 @@ def OneFlow_ClipByScalarMinGradOp : OneFlow_BaseOp<"clip_by_scalar_min_grad", [N
 
 def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6365,11 +6447,11 @@ def OneFlow_ScalarAddOp : OneFlow_BaseOp<"scalar_add", [NoSideEffect, DeclareOpI
 
 def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$scalar
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$scalar
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6379,11 +6461,11 @@ def OneFlow_ScalarAddByTensorOp : OneFlow_BaseOp<"scalar_add_by_tensor", [NoSide
 
 def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$scalar
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$scalar
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6393,10 +6475,10 @@ def OneFlow_ScalarDivByTensorOp : OneFlow_BaseOp<"scalar_div_by_tensor", [NoSide
 
 def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6412,10 +6494,10 @@ def OneFlow_ScalarFloordivOp : OneFlow_BaseOp<"scalar_floordiv", [NoSideEffect, 
 
 def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6431,10 +6513,10 @@ def OneFlow_ScalarFmodOp : OneFlow_BaseOp<"scalar_fmod", [NoSideEffect, DeclareO
 
 def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6450,10 +6532,10 @@ def OneFlow_ScalarLogicalAndOp : OneFlow_BaseOp<"scalar_logical_and", [NoSideEff
 
 def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6469,10 +6551,10 @@ def OneFlow_ScalarLogicalEqualOp : OneFlow_BaseOp<"scalar_logical_equal", [NoSid
 
 def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6488,10 +6570,10 @@ def OneFlow_ScalarLogicalGreaterOp : OneFlow_BaseOp<"scalar_logical_greater", [N
 
 def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6507,10 +6589,10 @@ def OneFlow_ScalarLogicalGreaterEqualOp : OneFlow_BaseOp<"scalar_logical_greater
 
 def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6526,10 +6608,10 @@ def OneFlow_ScalarLogicalLessOp : OneFlow_BaseOp<"scalar_logical_less", [NoSideE
 
 def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6545,10 +6627,10 @@ def OneFlow_ScalarLogicalLessEqualOp : OneFlow_BaseOp<"scalar_logical_less_equal
 
 def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6564,10 +6646,10 @@ def OneFlow_ScalarLogicalNotEqualOp : OneFlow_BaseOp<"scalar_logical_not_equal",
 
 def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6583,10 +6665,10 @@ def OneFlow_ScalarLogicalOrOp : OneFlow_BaseOp<"scalar_logical_or", [NoSideEffec
 
 def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6602,10 +6684,10 @@ def OneFlow_ScalarLogicalXorOp : OneFlow_BaseOp<"scalar_logical_xor", [NoSideEff
 
 def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6621,11 +6703,11 @@ def OneFlow_ScalarMulOp : OneFlow_BaseOp<"scalar_mul", [NoSideEffect, DeclareOpI
 
 def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$scalar
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$scalar
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6635,10 +6717,10 @@ def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", [NoSide
 
 def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6654,11 +6736,11 @@ def OneFlow_ScalarPowOp : OneFlow_BaseOp<"scalar_pow", [NoSideEffect, DeclareOpI
 
 def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
@@ -6674,11 +6756,11 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, D
 
 def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$scalar
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$scalar
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6696,10 +6778,10 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSide
 
 def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$prob
+    OneFlow_Tensor:$prob
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6709,11 +6791,11 @@ def OneFlow_LogSoftmaxOp : OneFlow_BaseOp<"log_softmax", [NoSideEffect, DeclareO
 
 def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prob,
-    AnyType:$dy
+    OneFlow_Tensor:$prob,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6723,10 +6805,10 @@ def OneFlow_LogSoftmaxGradOp : OneFlow_BaseOp<"log_softmax_grad", [NoSideEffect,
 
 def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6736,12 +6818,12 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$prob,
-    AnyType:$out
+    OneFlow_Tensor:$prob,
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6752,12 +6834,12 @@ def OneFlow_SoftmaxCrossEntropyOp : OneFlow_BaseOp<"softmax_cross_entropy", [NoS
 
 def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$label,
-    AnyType:$prob
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$label,
+    OneFlow_Tensor:$prob
   );
   let output = (outs
-    AnyType:$prediction_diff
+    OneFlow_Tensor:$prediction_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6767,11 +6849,11 @@ def OneFlow_SoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"softmax_cross_entropy_gr
 
 def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$dy
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6781,12 +6863,12 @@ def OneFlow_SoftmaxGradOp : OneFlow_BaseOp<"softmax_grad", [NoSideEffect, Declar
 
 def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$prob,
-    AnyType:$out
+    OneFlow_Tensor:$prob,
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -6800,12 +6882,12 @@ def OneFlow_SparseSoftmaxCrossEntropyOp : OneFlow_BaseOp<"sparse_softmax_cross_e
 
 def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$label,
-    AnyType:$dy,
-    AnyType:$prob
+    OneFlow_Tensor:$label,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$prob
   );
   let output = (outs
-    AnyType:$prediction_diff
+    OneFlow_Tensor:$prediction_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -6818,12 +6900,12 @@ def OneFlow_SparseSoftmaxCrossEntropyGradOp : OneFlow_BaseOp<"sparse_softmax_cro
 
 def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$prediction,
-    AnyType:$label
+    OneFlow_Tensor:$prediction,
+    OneFlow_Tensor:$label
   );
   let output = (outs
-    AnyType:$prob,
-    AnyType:$out
+    OneFlow_Tensor:$prob,
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -6837,12 +6919,12 @@ def OneFlow_SparseSoftmaxCrossEntropyMsOp : OneFlow_BaseOp<"sparse_softmax_cross
 
 def OneFlow_SparseSoftmaxCrossEntropyMsGradOp : OneFlow_BaseOp<"sparse_softmax_cross_entropy_ms_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$label,
-    AnyType:$dy,
-    AnyType:$prob
+    OneFlow_Tensor:$label,
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$prob
   );
   let output = (outs
-    AnyType:$prediction_diff
+    OneFlow_Tensor:$prediction_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth
@@ -6880,9 +6962,9 @@ def OneFlow_FlushSummaryWriterOp : OneFlow_BaseOp<"flush_summary_writer", [NoSid
 
 def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$step,
-    AnyType:$tag
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$step,
+    OneFlow_Tensor:$tag
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6892,9 +6974,9 @@ def OneFlow_SummaryWriteHistogramOp : OneFlow_BaseOp<"summary_write_histogram", 
 
 def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$step,
-    AnyType:$tag
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$step,
+    OneFlow_Tensor:$tag
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6904,8 +6986,8 @@ def OneFlow_SummaryWriteImageOp : OneFlow_BaseOp<"summary_write_image", [NoSideE
 
 def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$step
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$step
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6915,9 +6997,9 @@ def OneFlow_SummaryWritePbOp : OneFlow_BaseOp<"summary_write_pb", [NoSideEffect,
 
 def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in,
-    AnyType:$step,
-    AnyType:$tag
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$step,
+    OneFlow_Tensor:$tag
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -6935,7 +7017,7 @@ def OneFlow_SummaryWriteScalarOp : OneFlow_BaseOp<"summary_write_scalar", [NoSid
 
 def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeAttr:$shape,
@@ -6952,10 +7034,10 @@ def OneFlow_GenTensorBufferOp : OneFlow_BaseOp<"gen_tensor_buffer", [NoSideEffec
 
 def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    Variadic<AnyType>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
     ShapeAttr:$out_shape,
@@ -6972,10 +7054,10 @@ def OneFlow_TensorBufferToListOfTensorsOp : OneFlow_BaseOp<"tensor_buffer_to_lis
 
 def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_list_of_tensors_v2", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    Variadic<AnyType>:$out
+    Variadic<OneFlow_Tensor>:$out
   );
   let attrs = (ins
     ShapeArrayAttr:$out_shapes,
@@ -6992,10 +7074,10 @@ def OneFlow_TensorBufferToListOfTensorsV2Op : OneFlow_BaseOp<"tensor_buffer_to_l
 
 def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeAttr:$instance_shape,
@@ -7009,10 +7091,10 @@ def OneFlow_TensorBufferToTensorOp : OneFlow_BaseOp<"tensor_buffer_to_tensor", [
 
 def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$instance_dims
@@ -7033,10 +7115,10 @@ def OneFlow_TensorToTensorBufferOp : OneFlow_BaseOp<"tensor_to_tensor_buffer", [
 
 def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     OneFlow_DataType:$output_type
@@ -7049,7 +7131,7 @@ def OneFlow_TestDataTypeAttrOp : OneFlow_BaseOp<"TestDataTypeAttr", [NoSideEffec
 
 def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7060,10 +7142,10 @@ def OneFlow_TestDynamicSourceOp : OneFlow_BaseOp<"TestDynamicSource", [NoSideEff
 
 def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"TestListDataTypeAndListShapeAndListStringAttr", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeArrayAttr:$out_shapes,
@@ -7078,11 +7160,11 @@ def OneFlow_TestListDataTypeAndListShapeAndListStringAttrOp : OneFlow_BaseOp<"Te
 
 def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x1,
-    AnyType:$x2
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$x2
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7092,13 +7174,13 @@ def OneFlow_TestMultiInputOp : OneFlow_BaseOp<"TestMultiInput", [NoSideEffect, D
 
 def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x1,
-    AnyType:$x2,
-    AnyType:$y_diff
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$x2,
+    OneFlow_Tensor:$y_diff
   );
   let output = (outs
-    AnyType:$x1_diff,
-    AnyType:$x2_diff
+    OneFlow_Tensor:$x1_diff,
+    OneFlow_Tensor:$x2_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7108,11 +7190,11 @@ def OneFlow_TestMultiInputGradOp : OneFlow_BaseOp<"TestMultiInputGrad", [NoSideE
 
 def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out1,
-    AnyType:$out2
+    OneFlow_Tensor:$out1,
+    OneFlow_Tensor:$out2
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7122,7 +7204,7 @@ def OneFlow_TestMultiOutputOrderOp : OneFlow_BaseOp<"TestMultiOutputOrder", [NoS
 
 def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$seed
@@ -7135,10 +7217,10 @@ def OneFlow_TestRandomSourceOp : OneFlow_BaseOp<"TestRandomSource", [NoSideEffec
 
 def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     ShapeAttr:$shape
@@ -7151,7 +7233,7 @@ def OneFlow_TestReshapeOp : OneFlow_BaseOp<"TestReshape", [NoSideEffect, Declare
 
 def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7161,7 +7243,7 @@ def OneFlow_TestSourceOp : OneFlow_BaseOp<"TestSource", [NoSideEffect, DeclareOp
 
 def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpuFixedOutNum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$out_num
@@ -7174,10 +7256,10 @@ def OneFlow_TestSourceMultiGpuFixedOutNumOp : OneFlow_BaseOp<"TestSourceMultiGpu
 
 def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7187,11 +7269,11 @@ def OneFlow_CcreluOp : OneFlow_BaseOp<"ccrelu", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$dy
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7201,10 +7283,10 @@ def OneFlow_CcreluGradOp : OneFlow_BaseOp<"ccrelu_grad", [NoSideEffect, DeclareO
 
 def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [NoSideEffect, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7214,10 +7296,10 @@ def OneFlow_CpuOnlyReluTestOp : OneFlow_BaseOp<"cpu_only_relu_test", [NoSideEffe
 
 def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_type", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$int1,
@@ -7239,10 +7321,10 @@ def OneFlow_TestUserOpAttrAutoTypeOp : OneFlow_BaseOp<"test_user_op_attr_auto_ty
 
 def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7252,11 +7334,11 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7266,10 +7348,10 @@ def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7279,11 +7361,11 @@ def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7293,10 +7375,10 @@ def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7306,11 +7388,11 @@ def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7320,10 +7402,10 @@ def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7333,11 +7415,11 @@ def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7347,10 +7429,10 @@ def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7360,11 +7442,11 @@ def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
   );
   let output = (outs
-    AnyType:$z
+    OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7374,12 +7456,12 @@ def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7389,12 +7471,12 @@ def OneFlow_Atan2XGradOp : OneFlow_BaseOp<"atan2_x_grad", [NoSideEffect, Declare
 
 def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$y,
-    AnyType:$dz
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dz
   );
   let output = (outs
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7404,11 +7486,11 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [NoSideEffect, Declare
 
 def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7418,10 +7500,10 @@ def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7431,11 +7513,11 @@ def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceM
 
 def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7445,10 +7527,10 @@ def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpI
 
 def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7458,11 +7540,11 @@ def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7472,10 +7554,10 @@ def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7485,11 +7567,11 @@ def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7499,10 +7581,10 @@ def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$min_val,
@@ -7516,11 +7598,11 @@ def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInte
 
 def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$y,
-    AnyType:$dy
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$min_val,
@@ -7534,10 +7616,10 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, Decl
 
 def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7547,11 +7629,11 @@ def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7561,10 +7643,10 @@ def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7574,11 +7656,11 @@ def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7588,10 +7670,10 @@ def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7601,11 +7683,11 @@ def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7615,10 +7697,10 @@ def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInter
 
 def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7628,11 +7710,11 @@ def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7650,10 +7732,10 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_AccOp : OneFlow_BaseOp<"acc", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$max_acc_num
@@ -7667,10 +7749,10 @@ def OneFlow_AccOp : OneFlow_BaseOp<"acc", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$theta
+    OneFlow_Tensor:$theta
   );
   let output = (outs
-    AnyType:$grid
+    OneFlow_Tensor:$grid
   );
   let attrs = (ins
     ShapeAttr:$size,
@@ -7685,10 +7767,10 @@ def OneFlow_AffineGridOp : OneFlow_BaseOp<"affine_grid", [NoSideEffect, DeclareO
 
 def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dgrid
+    OneFlow_Tensor:$dgrid
   );
   let output = (outs
-    AnyType:$dtheta
+    OneFlow_Tensor:$dtheta
   );
   let attrs = (ins
     ShapeAttr:$size,
@@ -7703,10 +7785,10 @@ def OneFlow_AffineGridGradOp : OneFlow_BaseOp<"affine_grid_grad", [NoSideEffect,
 
 def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "-1">:$seed,
@@ -7721,10 +7803,10 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, NoGrad, Cpu
 
 def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     OneFlow_DataType:$dtype
@@ -7737,10 +7819,10 @@ def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input
+    OneFlow_Tensor:$input
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7750,10 +7832,10 @@ def OneFlow_CastToStaticShapeOp : OneFlow_BaseOp<"cast_to_static_shape", [NoSide
 
 def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7764,10 +7846,10 @@ def OneFlow_CastToTickOp : OneFlow_BaseOp<"cast_to_tick", [NoSideEffect, NoGrad,
 
 def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$alpha
@@ -7780,10 +7862,10 @@ def OneFlow_CeluOp : OneFlow_BaseOp<"celu", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$device_type,
@@ -7798,10 +7880,10 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7811,10 +7893,10 @@ def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect,
 
 def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$diagonal
@@ -7827,10 +7909,10 @@ def OneFlow_DiagOp : OneFlow_BaseOp<"diag", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_DiagonalOp : OneFlow_BaseOp<"diagonal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$offset
@@ -7843,10 +7925,10 @@ def OneFlow_DiagonalOp : OneFlow_BaseOp<"diagonal", [NoSideEffect, DeclareOpInte
 
 def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$alpha
@@ -7859,10 +7941,10 @@ def OneFlow_EluOp : OneFlow_BaseOp<"elu", [NoSideEffect, DeclareOpInterfaceMetho
 
 def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     SI32ArrayAttr:$logical_in_shape,
@@ -7876,10 +7958,10 @@ def OneFlow_ExpandOp : OneFlow_BaseOp<"expand", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$axis
@@ -7892,10 +7974,10 @@ def OneFlow_ExpandDimsOp : OneFlow_BaseOp<"expand_dims", [NoSideEffect, DeclareO
 
 def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$start_dim,
@@ -7909,10 +7991,10 @@ def OneFlow_FlattenOp : OneFlow_BaseOp<"flatten", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     SI32ArrayAttr:$dims
@@ -7925,10 +8007,10 @@ def OneFlow_FlipOp : OneFlow_BaseOp<"flip", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     SI32ArrayAttr:$dims
@@ -7941,12 +8023,13 @@ def OneFlow_FlipGradOp : OneFlow_BaseOp<"flip_grad", [NoSideEffect, DeclareOpInt
 
 def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
+    StrAttr:$data_format,
     SI32ArrayAttr:$output_size,
     SI32ArrayAttr:$kernel_size,
     SI32ArrayAttr:$strides,
@@ -7961,10 +8044,10 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7974,10 +8057,10 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -7987,10 +8070,10 @@ def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoSideEffect, Declare
 
 def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8000,10 +8083,10 @@ def OneFlow_HardswishOp : OneFlow_BaseOp<"hardswish", [NoSideEffect, DeclareOpIn
 
 def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$alpha
@@ -8016,10 +8099,10 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
 
 def OneFlow_Log2Op : OneFlow_BaseOp<"log2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8029,10 +8112,10 @@ def OneFlow_Log2Op : OneFlow_BaseOp<"log2", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8042,10 +8125,10 @@ def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, NoGrad, 
 
 def OneFlow_MishOp : OneFlow_BaseOp<"mish", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8055,10 +8138,10 @@ def OneFlow_MishOp : OneFlow_BaseOp<"mish", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$dim,
@@ -8073,10 +8156,10 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$indices
+    OneFlow_Tensor:$indices
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$depth,
@@ -8095,10 +8178,10 @@ def OneFlow_OneHotOp : OneFlow_BaseOp<"one_hot", [NoSideEffect, NoGrad, DeclareO
 
 def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$pack_num
@@ -8112,10 +8195,10 @@ def OneFlow_PackOp : OneFlow_BaseOp<"pack", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$like
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$rate,
@@ -8130,10 +8213,10 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
 
 def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$repeat_num
@@ -8147,10 +8230,10 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_RollOp : OneFlow_BaseOp<"roll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     SI32ArrayAttr:$shifts,
@@ -8164,10 +8247,10 @@ def OneFlow_RollOp : OneFlow_BaseOp<"roll", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8177,10 +8260,10 @@ def OneFlow_SeluOp : OneFlow_BaseOp<"selu", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8190,10 +8273,10 @@ def OneFlow_SigmoidOp : OneFlow_BaseOp<"sigmoid", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8203,10 +8286,10 @@ def OneFlow_SiluOp : OneFlow_BaseOp<"silu", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8216,10 +8299,10 @@ def OneFlow_SoftsignOp : OneFlow_BaseOp<"softsign", [NoSideEffect, DeclareOpInte
 
 def OneFlow_SortOp : OneFlow_BaseOp<"sort", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     StrAttr:$direction
@@ -8233,10 +8316,23 @@ def OneFlow_SortOp : OneFlow_BaseOp<"sort", [NoSideEffect, NoGrad, DeclareOpInte
 
 def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_SqrtSquareSumOp : OneFlow_BaseOp<"sqrt_square_sum", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8246,10 +8342,10 @@ def OneFlow_SquareSumOp : OneFlow_BaseOp<"square_sum", [NoSideEffect, DeclareOpI
 
 def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     SI32ArrayAttr:$axes
@@ -8262,10 +8358,10 @@ def OneFlow_SqueezeOp : OneFlow_BaseOp<"squeeze", [NoSideEffect, DeclareOpInterf
 
 def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$input
+    OneFlow_Tensor:$input
   );
   let output = (outs
-    AnyType:$output
+    OneFlow_Tensor:$output
   );
   let attrs = (ins
     SI32ArrayAttr:$perm
@@ -8278,10 +8374,10 @@ def OneFlow_TransposeOp : OneFlow_BaseOp<"transpose", [NoSideEffect, DeclareOpIn
 
 def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal,
@@ -8297,10 +8393,10 @@ def OneFlow_TrilOp : OneFlow_BaseOp<"tril", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$diagonal
@@ -8313,10 +8409,10 @@ def OneFlow_TriuOp : OneFlow_BaseOp<"triu", [NoSideEffect, DeclareOpInterfaceMet
 
 def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     StrAttr:$data_format,
@@ -8333,10 +8429,10 @@ def OneFlow_UnfoldOp : OneFlow_BaseOp<"unfold", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$dimension,
@@ -8351,10 +8447,10 @@ def OneFlow_UnfoldTensorOp : OneFlow_BaseOp<"unfold_tensor", [NoSideEffect, Decl
 
 def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$in
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$unpack_num
@@ -8368,10 +8464,10 @@ def OneFlow_UnpackOp : OneFlow_BaseOp<"unpack", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$like
+    OneFlow_Tensor:$like
   );
   let output = (outs
-    AnyType:$out
+    OneFlow_Tensor:$out
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8390,10 +8486,10 @@ def OneFlow_ZeroLikeOp : OneFlow_BaseOp<"zero_like", [NoSideEffect, NoGrad, Decl
 
 def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8410,10 +8506,10 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInte
 
 def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8429,11 +8525,11 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideE
 
 def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8449,10 +8545,10 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
 
 def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8468,11 +8564,11 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSid
 
 def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8488,11 +8584,11 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
 
 def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8509,10 +8605,10 @@ def OneFlow_UpsampleGradOp : OneFlow_BaseOp<"upsample_grad", [NoSideEffect, Decl
 
 def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
@@ -8527,11 +8623,11 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEff
 
 def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
@@ -8546,10 +8642,10 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
 
 def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
@@ -8563,11 +8659,11 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
 
 def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
@@ -8581,10 +8677,10 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
 
 def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8599,11 +8695,11 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
 
 def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
@@ -8618,10 +8714,10 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
 
 def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
@@ -8637,11 +8733,11 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
 
 def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
@@ -8657,10 +8753,10 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
 
 def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$x
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$y
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
@@ -8677,11 +8773,11 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
 
 def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$dy,
-    AnyType:$x
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
