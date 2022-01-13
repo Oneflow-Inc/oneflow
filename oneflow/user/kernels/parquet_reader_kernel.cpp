@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/user/data/parquet_util.h"
@@ -721,7 +722,7 @@ class ParquetReaderKernel final : public user_op::OpKernel {
     auto* parquet_reader = static_cast<data::ParquetReader*>(state);
     size_t output_size = ctx->output_size("out");
     // NOTE(zwx): Could use MultiThreadLoop to process output tensors parallelly
-    for (size_t i = 0; i < output_size; ++i) {
+    MultiThreadLoop(output_size, [&](size_t i) {
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       if (out_i->data_type() == DataType::kTensorBuffer) {
         TensorBuffer* out_buffer = out_i->mut_dptr<TensorBuffer>();
@@ -732,7 +733,7 @@ class ParquetReaderKernel final : public user_op::OpKernel {
         size_t nsamples = CHECK_JUST(parquet_reader->GetColumnBatch(i, out_i));
         CHECK_EQ(nsamples, out_i->shape().At(0));
       }
-    }
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
