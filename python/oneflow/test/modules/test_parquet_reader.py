@@ -115,7 +115,7 @@ class MyGraph(flow.nn.Graph):
 def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle):
     parquet_dir = "/dataset/wdl_parquet/train/"
     schema = [
-        {"col_id": 0, "shape": (26,), "dtype": flow.int32},
+        # {"col_id": 0, "shape": (26,), "dtype": flow.int32},
         {"col_id": 1, "shape": (13,), "dtype": flow.float32},
         # {"col_id": 2, "shape": (), "dtype": flow.int32},
         {"col_name": "labels", "shape": (), "dtype": flow.int32},
@@ -153,8 +153,7 @@ def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class ParquetReaderTestCase(oneflow.unittest.TestCase):
-    @unittest.skipIf(True, "")
-    def compare_with_ofrecord(test_case):
+    def test_compare_with_ofrecord(test_case):
         parquet_file = "/dataset/dlrm_parquet/val/part-00000-9aa77b80-babb-496b-908e-457d9f48bb06-c000.snappy.parquet"
         schema = [
             {"col_id": 0, "shape": (), "dtype": flow.double},
@@ -168,20 +167,21 @@ class ParquetReaderTestCase(oneflow.unittest.TestCase):
 
         labels, dense_fields, sparse_fields = parquet_reader()
 
-        ofrecord_file_dir = "/dataset/dlrm_ofrecord"
+        ofrecord_file_dir = "/dataset/dlrm_ofrecord/"
         ofrecord_reader = OFRecordReader(
-            data_dir=ofrecord_file_dir, batch_size=20, shuffle=False, model="val"
+            data_dir=ofrecord_file_dir, batch_size=20, shuffle=False, mode="val"
         )
         labels_, dense_fields_, sparse_fields_ = ofrecord_reader()
 
-        test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy()))
+        test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy().ravel()))
         test_case.assertTrue(np.allclose(dense_fields.numpy(), dense_fields_.numpy()))
         test_case.assertTrue(np.allclose(sparse_fields.numpy(), sparse_fields_.numpy()))
 
     def test_fixed_length_columns_shuffle_determinism(test_case):
-        # _test_fixed_length_columns_shuffle_determinism(test_case, False)
+        _test_fixed_length_columns_shuffle_determinism(test_case, False)
         _test_fixed_length_columns_shuffle_determinism(test_case, True)
 
+    @unittest.skipIf(True, "")
     def test_imagenet(test_case):
         pass
 

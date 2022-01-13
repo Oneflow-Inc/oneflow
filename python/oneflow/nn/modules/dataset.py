@@ -1017,6 +1017,7 @@ class ParquetReader(Module):
     r"""
     TODO: complete doc
     """
+
     def __init__(
         self,
         path: str,
