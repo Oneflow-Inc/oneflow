@@ -21,7 +21,6 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template<DeviceType device_type, typename T>
 class EmptyKernel final : public OpKernel {
  public:
   EmptyKernel() = default;
@@ -29,9 +28,11 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    auto dtype = out->data_type();
+
     // None POD type need check
-    if (!IsPODAndHalfDataType(GetDataType<T>::value)) {
-      const user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (!IsPODAndHalfDataType(dtype)) {
       CHECK(out->shape().NumAxes() > 0 && out->shape().elem_cnt() == 0)
           << "None POD Tensor created by empty op must be 0-Size tensor.";
     }
@@ -39,17 +40,7 @@ class EmptyKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EMPTY_XPU_KERNEL(device, dtype)                                           \
-  REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                 \
-      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
-
-#define REGISTER_EMPTY_KERNEL(device, dtype_pair) \
-  REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
-
-#define TOTAL_DATA_TYPE_SEQ ALL_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, TOTAL_DATA_TYPE_SEQ)
-#undef TOTAL_DATA_TYPE_SEQ
+REGISTER_USER_KERNEL("empty").SetCreateFn<EmptyKernel>().SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace user_op
 }  // namespace oneflow
