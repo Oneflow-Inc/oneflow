@@ -721,7 +721,6 @@ class ParquetReaderKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     auto* parquet_reader = static_cast<data::ParquetReader*>(state);
     size_t output_size = ctx->output_size("out");
-    // NOTE(zwx): Could use MultiThreadLoop to process output tensors parallelly
     MultiThreadLoop(output_size, [&](size_t i) {
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       if (out_i->data_type() == DataType::kTensorBuffer) {
