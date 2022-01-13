@@ -33,15 +33,13 @@ class TestModule(nn.Module):
             flow.sbp.split(2),
             flow.sbp.split(3),
         ]
-        failed_boxing_num = 0
 
         for sbp1 in sbp_1ds:
             for sbp2 in sbp_1ds:
-                x = x.to_consistent(sbp=[sbp1, sbp2])
-
                 for sbp3 in sbp_1ds:
                     for sbp4 in sbp_1ds:
-                        y = x.to_consistent(sbp=[sbp3, sbp4])
+                        x = x.to_consistent(sbp=[sbp1, sbp2])
+                        x = x.to_consistent(sbp=[sbp3, sbp4])
 
         return x
 
@@ -64,10 +62,10 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph = TestGraph(model)
 
         x = flow.zeros(
-            12,
-            12,
-            12,
-            12,
+            4,
+            4,
+            4,
+            4,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
             placement=flow.placement("cuda", {0: range(4)}, (2, 2)),
         )
