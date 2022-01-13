@@ -102,7 +102,7 @@ function(add_copy_headers_target)
 endfunction()
 
 function(use_mirror)
-  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/" 
+  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/"
     CACHE STRING "URL prefix of Aliyun OSS mirror"
   )
   cmake_parse_arguments(PARSED_ARGS
@@ -231,7 +231,7 @@ function(set_compile_options_to_oneflow_target target)
   # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
   target_try_compile_options(${target} -Wno-mismatched-tags)
   target_try_compile_options(${target} -Wno-covered-switch-default)
-
+  set_target_properties(${target} PROPERTIES INSTALL_RPATH "../lib")
   if(BUILD_CUDA)
     if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
       target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
@@ -255,4 +255,3 @@ function(set_compile_options_to_oneflow_target target)
     >)
   endif()
 endfunction()
-
