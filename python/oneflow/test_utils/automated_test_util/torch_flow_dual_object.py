@@ -335,7 +335,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g = TestGraphOfModule()
                                     if verbose:
                                         print("Run graph of module: ", repr(oneflow))
-                                        test_g.debug(2)
+                                        test_g.debug(3)
                                     test_g_res = test_g(*oneflow_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
@@ -379,8 +379,18 @@ def GetDualObject(name, pytorch, oneflow):
                                                     test_g_res = oneflow_res
                                             else:
                                                 pass
+                                            if verbose:
+                                                print("Run graph of function: ", repr(oneflow), ", graph check is intentionally skiped.")
+                                        elif (oneflow.__name__ == "Parameter"):
+                                            # nn.Graph donot deal with Parameter creation.
+                                            test_g_res = oneflow_res
+                                            if verbose:
+                                                print("Run graph of function: ", repr(oneflow), ", graph check is intentionally skiped.")
                                         else:
                                             test_g = TestGraphOfFunctional()
+                                            if verbose:
+                                                print("Run graph of function: ", repr(oneflow))
+                                                test_g.debug(3)
                                             test_g_res = test_g()
                                     except Exception as e:
                                         print_note_fake_program()
@@ -439,6 +449,9 @@ def GetDualObject(name, pytorch, oneflow):
 
                             try:
                                 test_g = TestGraphOfTensorMethod()
+                                if verbose:
+                                    print("Run graph of method: ", repr(oneflow))
+                                    test_g.debug(3)
                                 test_g_res = test_g()
                             except Exception as e:
                                 print_note_fake_program()

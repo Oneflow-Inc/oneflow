@@ -683,6 +683,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       (*outputs)[i] =
           JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     } else {
+      VLOG(2) << "Lazy nn.Graph name " << graph_name << " op name " << new_op_name << " run with inplace.";
       const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
       JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
     }
