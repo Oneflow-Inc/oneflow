@@ -740,6 +740,10 @@
   signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
   bind_python: False
 
+- name: "repeat"
+  signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
+  bind_python: True
+
 - name: "roll"
   signature: "Tensor (Tensor x, Int32List[1] shifts, Int32List[1] dims=None) => Roll"
   bind_python: True

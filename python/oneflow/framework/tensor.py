@@ -767,6 +767,9 @@ def _to(self, *args, **kwargs):
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
+def _repeat(self,repeat_shape):
+    return flow._C.repeat(self,repeat_shape)
+
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
@@ -910,6 +913,7 @@ def RegisterMethods():
     Tensor.roll = _roll
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
+    Tensor.repeat = _repeat
     Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
