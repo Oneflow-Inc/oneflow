@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.repeat,
-        """This operator repeat the input tensor to a larger size along the specified dimensions.
+    """This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
         x (oneflow.Tensor): The input Tensor.
