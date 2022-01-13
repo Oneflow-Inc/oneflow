@@ -38,7 +38,7 @@ Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) 
   return Shape(std::move(dim_vec));
 }
 
-Shape CorrectZeroDimShape(const ShapeView& shape) {
+Shape ZeroDimCompatiableShape(const ShapeView& shape) {
   DimVector dim_vec;
   shape.ToDimVector(&dim_vec);
   if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
