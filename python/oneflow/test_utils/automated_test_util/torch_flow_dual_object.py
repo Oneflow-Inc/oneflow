@@ -689,6 +689,10 @@ def autotest(
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
+    if check_graph == "ValidatedFlase":
+        # check graph is intentionally closed and threre is a validated reason.
+        check_graph = False
+
     def deco(f):
         @functools.wraps(f)
         def new_f(test_case):
