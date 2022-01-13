@@ -51,7 +51,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   const std::string& rank_id = std::to_string(parallel_id);
   embedding::FixedTableKeyValueStoreOptions options{};
   options.table_options.path = path + "/" + std::string(rank_id_suffix_length - rank_id.size(), '0')
-                               + rank_id + "_" + num_rank;
+                               + rank_id + "-" + num_rank;
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
   options.max_query_length = 65536 * 26;
