@@ -106,14 +106,14 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_tensor_sign_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = x.sign()
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_gather_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
@@ -200,7 +200,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=1, check_graph=False)
+    @autotest(n=1, check_graph=True)
     def test_tensor_set_data_autograd_meta(test_case):
         x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
@@ -357,7 +357,7 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_matmul_with_random_data(test_case):
         device = random_device()
         dim0 = random(low=2, high=10).to(int)
@@ -522,7 +522,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy().shape, np_out.shape))
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_tensor_argmax_with_random_data(test_case):
         device = random_device()
         ndim = random(1, 6).to(int)
