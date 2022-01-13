@@ -365,37 +365,42 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor("DispatchParquetReader",
                 [](const std::shared_ptr<OpExpr>& op, const std::string& path,
                    const std::string& schema_json_str, int64_t batch_size, bool shuffle,
-                   int64_t random_seed, int64_t prefetch_buffer_size, bool use_mmap,
+                   bool completely_shuffle, int64_t random_seed, int64_t prefetch_buffer_size,
+                   int64_t read_footprint, bool use_mmap,
                    const Optional<Symbol<Device>>& device) -> Maybe<TensorTuple> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("path", path));
                   JUST(attrs.SetAttr("schema_json_str", schema_json_str));
                   JUST(attrs.SetAttr("batch_size", batch_size));
                   JUST(attrs.SetAttr("shuffle", shuffle));
+                  JUST(attrs.SetAttr("completely_shuffle", completely_shuffle));
                   JUST(attrs.SetAttr("random_seed", random_seed));
                   JUST(attrs.SetAttr("prefetch_buffer_size", prefetch_buffer_size));
+                  JUST(attrs.SetAttr("read_footprint", read_footprint));
                   JUST(attrs.SetAttr("use_mmap", use_mmap));
                   return OpInterpUtil::Dispatch<TensorTuple>(
                       *op, {}, OpExprInterpContext(attrs, JUST(device)));
                 });
-  m.add_functor(
-      "DispatchParquetReader",
-      [](const std::shared_ptr<OpExpr>& op, const std::string& path,
-         const std::string& schema_json_str, int64_t batch_size, bool shuffle, int64_t random_seed,
-         int64_t prefetch_buffer_size, bool use_mmap, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
-        MutableAttrMap attrs;
-        JUST(attrs.SetAttr("path", path));
-        JUST(attrs.SetAttr("schema_json_str", schema_json_str));
-        JUST(attrs.SetAttr("batch_size", batch_size));
-        JUST(attrs.SetAttr("shuffle", shuffle));
-        JUST(attrs.SetAttr("random_seed", random_seed));
-        JUST(attrs.SetAttr("prefetch_buffer_size", prefetch_buffer_size));
-        JUST(attrs.SetAttr("use_mmap", use_mmap));
-        auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
-        return OpInterpUtil::Dispatch<TensorTuple>(*op, {},
-                                                   OpExprInterpContext(attrs, placement, nd_sbp));
-      });
+  m.add_functor("DispatchParquetReader",
+                [](const std::shared_ptr<OpExpr>& op, const std::string& path,
+                   const std::string& schema_json_str, int64_t batch_size, bool shuffle,
+                   bool completely_shuffle, int64_t random_seed, int64_t prefetch_buffer_size,
+                   int64_t read_footprint, bool use_mmap, const Symbol<ParallelDesc>& placement,
+                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
+                  MutableAttrMap attrs;
+                  JUST(attrs.SetAttr("path", path));
+                  JUST(attrs.SetAttr("schema_json_str", schema_json_str));
+                  JUST(attrs.SetAttr("batch_size", batch_size));
+                  JUST(attrs.SetAttr("shuffle", shuffle));
+                  JUST(attrs.SetAttr("completely_shuffle", completely_shuffle));
+                  JUST(attrs.SetAttr("random_seed", random_seed));
+                  JUST(attrs.SetAttr("prefetch_buffer_size", prefetch_buffer_size));
+                  JUST(attrs.SetAttr("read_footprint", read_footprint));
+                  JUST(attrs.SetAttr("use_mmap", use_mmap));
+                  auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+                  return OpInterpUtil::Dispatch<TensorTuple>(
+                      *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+                });
   m.add_functor("DispatchRmspropUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, double scale, float l1, float l2, bool centered,

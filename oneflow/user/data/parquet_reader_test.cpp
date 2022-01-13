@@ -74,7 +74,7 @@ TEST(ParquetReader, read_and_print) {
       "/dataset/wdl_parquet/train/"
       "part-00000-6e6f50b9-75e8-4917-87ae-85351fe65d36-c000.snappy.parquet";
   ASSERT_TRUE(ReadFromParquet(parquet_example_file, {0, 1, 2, 3}, /*memory_map*/ true,
-                              /*format_json*/ false, /*print_values*/ true,
+                              /*format_json*/ false, /*print_values*/ false,
                               /*format_dump*/ true, /*print_key_value_metadata*/ true));
 }
 

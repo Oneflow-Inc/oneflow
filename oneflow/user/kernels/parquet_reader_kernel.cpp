@@ -37,51 +37,139 @@ namespace oneflow {
 namespace {
 
 template<typename DType>
-Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader) {
+Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size_t footprint) {
   using T = typename DType::c_type;
   thread_local std::vector<T> values;
-  CHECK_OR_RETURN(values.empty() || values.size() == 1);
+  thread_local std::vector<int16_t> rep_levels;
+  values.reserve(footprint);
+  rep_levels.reserve(footprint);
+
+  // the first value must be the begin of LIST which repetition level should be 0
+  // since a LIST is a complete sample
+  CHECK_EQ_OR_RETURN(rep_levels.size(), values.size());
+  CHECK_EQ_OR_RETURN(rep_levels.front(), 0);
+  size_t row_read = 0;
+  size_t row_end = 0;
+
+  auto FindRowEnd = [&](size_t start) {
+    for (size_t i = start; i < rep_levels.size(); ++i) {
+      if (i > 0 && rep_levels[i] == 0) {
+        row_end = i;
+        row_read += 1;
+        break;
+      }
+    }
+  };
+  FindRowEnd(0);
 
   auto* typed_col_reader = static_cast<parquet::TypedColumnReader<DType>*>(col_reader);
   int64_t values_read = 0;
-  int16_t def_level = 0;
-  int16_t rep_level = 0;
-  size_t row_read = values.empty() ? 0 : 1;
-  size_t sample_size = values.size();
-
-  do {
-    T value;
-    auto levels_read = typed_col_reader->ReadBatch(1, &def_level, &rep_level, &value, &values_read);
-    CHECK_EQ_OR_RETURN(levels_read, 1);
-    CHECK_EQ_OR_RETURN(values_read, 1);
-    CHECK_OR_RETURN(rep_level == 0 || rep_level == 1);
-    values.push_back(value);
-    if (rep_level == 0) { row_read += 1; }
-    if (row_read <= 1) { sample_size += 1; }
-  } while (typed_col_reader->HasNext() && row_read <= 1);
-
-  CHECK_LE_OR_RETURN(sample_size, values.size());
-  auto sample = std::make_shared<TensorBuffer>();
-  sample->Resize(Shape({static_cast<int64_t>(sample_size)}), GetDataType<T>::value);
-  std::copy(values.begin(), values.begin() + sample_size, sample->mut_data<T>());
-
-  if (row_read > 1) {
-    // The last value which is the beginning of the next row must be kept,
-    // swap it to the front and resize the vector to 1
-    std::swap(values.front(), values.back());
-    values.resize(1);
-  } else {
-    values.resize(0);
+  while (typed_col_reader->HasNext() && row_read == 0) {
+    size_t cursor = values.size();
+    values.resize(values.size() + footprint);
+    rep_levels.resize(rep_levels.size() + footprint);
+    auto levels_read = typed_col_reader->ReadBatch(
+        footprint, /* def_levels */ nullptr, rep_levels.data(), &values[cursor], &values_read);
+    CHECK_EQ_OR_RETURN(values_read, levels_read);
+    CHECK_LE_OR_RETURN(values_read, footprint);
+    if (values_read < footprint) {
+      size_t remain = footprint - values_read;
+      values.resize(values.size() - remain);
+      rep_levels.resize(rep_levels.size() - remain);
+    }
+    FindRowEnd(cursor);
   }
+
+  auto sample = std::make_shared<TensorBuffer>();
+  // all values can't fill a complete sample, return a empty sample
+  if (row_read == 0) { return sample; }
+  sample->Resize(Shape({static_cast<int64_t>(row_end)}), GetDataType<T>::value);
+  std::copy(values.begin(), values.begin() + row_end, sample->mut_data<T>());
+  values.erase(values.begin(), values.begin() + row_end);
+  rep_levels.erase(rep_levels.begin(), rep_levels.begin() + row_end);
   return sample;
 }
 
-Maybe<TensorBuffer> ReadColumnValues(parquet::ColumnReader* col_reader) {
+template<typename DType>
+Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_reader,
+                                                    size_t batch_size, size_t sample_size) {
+  using T = typename DType::c_type;
+  thread_local std::vector<T> values;
+  size_t values_to_read = batch_size * sample_size;
+  values.reserve(values_to_read);
+
+  if (!values.empty()) {
+    CHECK_EQ_OR_RETURN(values.size() % sample_size, 0);
+    values_to_read -= values.size();
+  }
+  size_t cursor = values.size();
+  values.resize(values.size() + values_to_read);
+
+  std::vector<int16_t> rep_levels(values_to_read);
+  int64_t values_read = 0;
+
+  auto* typed_col_reader = static_cast<parquet::TypedColumnReader<DType>*>(col_reader);
+  int64_t levels_read = typed_col_reader->ReadBatch(
+      values_to_read, /* def_levels */ nullptr, rep_levels.data(), &values[cursor], &values_read);
+  // verify read results
+  CHECK_EQ_OR_RETURN(values_read, levels_read);
+  CHECK_LE_OR_RETURN(values_read, values_to_read);
+  CHECK_EQ_OR_RETURN(values_read % sample_size, 0);
+  rep_levels.resize(levels_read);
+  for (size_t i = 0; i < rep_levels.size(); ++i) {
+    // repetition level of the first value of LIST must be 0
+    // repetition levels of other values of LIST must be 1
+    if (i % sample_size == 0) {
+      CHECK_EQ_OR_RETURN(rep_levels[i], 0)
+          << "read unexcepted first value of LIST that dismatch sample size " << sample_size
+          << " at column " << typed_col_reader->descr()->path();
+    } else {
+      CHECK_EQ_OR_RETURN(rep_levels[i], 1)
+          << "read unexcepted end value of LIST that dismatch sample size" << sample_size
+          << " at column " << typed_col_reader->descr()->path();
+    }
+  }
+
+  auto batch = std::make_shared<TensorBuffer>();
+  // not enough batch, return a empty tensor buffer
+  if (values_read < values_to_read) {
+    values.resize(values.size() - (values_to_read - values_read));
+    return batch;
+  }
+  batch->Resize(Shape({static_cast<int64_t>(values.size())}), GetDataType<T>::value);
+  std::copy(values.begin(), values.end(), batch->mut_data<T>());
+  values.resize(0);
+  return batch;
+}
+
+Maybe<TensorBuffer> ReadColumnValues(parquet::ColumnReader* col_reader, size_t footprint) {
   switch (col_reader->type()) {
-#define CASE_ENTRY(type)                           \
-  case type: {                                     \
-    using PhyT = parquet::PhysicalType<type>;      \
-    return ReadColumnValuesImpl<PhyT>(col_reader); \
+#define CASE_ENTRY(type)                                      \
+  case type: {                                                \
+    using PhyT = parquet::PhysicalType<type>;                 \
+    return ReadColumnValuesImpl<PhyT>(col_reader, footprint); \
+  }
+
+    CASE_ENTRY(parquet::Type::INT32)
+    CASE_ENTRY(parquet::Type::INT64)
+    CASE_ENTRY(parquet::Type::FLOAT)
+    CASE_ENTRY(parquet::Type::DOUBLE)
+    // TODO(zwx): to support BYTE_ARRAY and FIXED_LEN_BYTE_ARRAY
+
+#undef CASE_ENTRY
+    default: {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+  }
+}
+
+Maybe<TensorBuffer> ReadColumnFixedLengthValues(parquet::ColumnReader* col_reader,
+                                                size_t batch_size, size_t sample_size) {
+  switch (col_reader->type()) {
+#define CASE_ENTRY(type)                                                               \
+  case type: {                                                                         \
+    using PhyT = parquet::PhysicalType<type>;                                          \
+    return ReadColumnFixedLengthValuesImpl<PhyT>(col_reader, batch_size, sample_size); \
   }
 
     CASE_ENTRY(parquet::Type::INT32)
@@ -215,23 +303,26 @@ class ParquetReader final : public user_op::OpKernelState {
  private:
   Maybe<void> InitParallelInfo(user_op::KernelInitContext* ctx);
   Maybe<void> InitParquetFiles(const std::string& path);
-  Maybe<void> InitSchema(const std::string& schema_json_str);
+  Maybe<void> InitSchema(user_op::KernelInitContext* ctx);
   Maybe<void> InitWorkers(size_t buffer_size);
 
   bool IsClosed() { return is_closed_.load(); }
   size_t NumColumns() { return schema_.col_descs.size(); }
 
   Maybe<bool> ReadColumn(int col);
+  Maybe<bool> ShuffleSamples(int col);
   Maybe<void> NextRowGroup();
   Maybe<void> NextParquetFile();
 
   int64_t rank_;
   size_t world_size_;
   bool shuffle_;
+  bool completely_shuffle_;
   int64_t seed_;
   std::mt19937 rng_;
   bool use_mmap_;
-
+  size_t read_footprint_;
+  size_t batch_size_;
   ParquetColumnSchema schema_;
 
   std::string base_path_;
@@ -247,6 +338,8 @@ class ParquetReader final : public user_op::OpKernelState {
 
   std::vector<std::thread> workers_;
   std::vector<std::unique_ptr<BufferType>> buffers_;
+  std::vector<std::thread> shuffle_workers_;
+  std::vector<std::unique_ptr<BufferType>> shuffle_buffers_;
   std::mutex mutex_;
   std::condition_variable cond_;
   std::atomic_bool is_closed_;
@@ -258,7 +351,9 @@ void ParquetReader::Close() {
   if (!is_closed_.load()) {
     is_closed_.store(true);
     for (auto& buffer : buffers_) { buffer->Close(); }
+    for (auto& shuffle_buffer : shuffle_buffers_) { shuffle_buffer->Close(); }
     for (auto& worker : workers_) { worker.join(); }
+    for (auto& shuffle_worker : shuffle_workers_) { shuffle_worker.join(); }
   }
 }
 
@@ -279,27 +374,26 @@ Maybe<size_t> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
   CHECK_GE_OR_RETURN(col, 0);
   CHECK_LT_OR_RETURN(col, NumColumns());
   CHECK_GT_OR_RETURN(tensor->shape().NumAxes(), 0);
-  size_t batch_size = tensor->shape().At(0);
-  std::vector<std::shared_ptr<TensorBuffer>> batch;
-  batch.reserve(batch_size);
-  buffers_.at(col)->PullMany(&batch, batch_size);
-  char* dptr = static_cast<char*>(tensor->mut_dptr());
-  DataType dtype = tensor->data_type();
-  int64_t sample_size = tensor->shape().Count(1);
-  for (auto& sample : batch) {
-    CHECK_EQ_OR_RETURN(sample->data_type(), dtype)
-        << "The data type of sample read from parquet dismatch the data type of tensor";
-    CHECK_EQ_OR_RETURN(sample->elem_cnt(), sample_size)
-        << "The shape of sample read from parquet dismatch the shape of tensor: "
-        << sample->shape().ToString() << " vs. " << tensor->shape().ToString()
+  CHECK_EQ_OR_RETURN(tensor->shape().At(0), batch_size_);
+
+  std::shared_ptr<TensorBuffer> batch;
+  buffers_.at(col)->Pull(&batch);
+  if (batch) {
+    CHECK_EQ_OR_RETURN(batch->data_type(), tensor->data_type())
+        << "The data type of batch read from parquet dismatch the data type of tensor";
+    CHECK_EQ_OR_RETURN(batch->elem_cnt(), tensor->shape().elem_cnt())
+        << "The shape of batch read from parquet dismatch the shape of tensor: "
+        << batch->shape().ToString() << " vs. " << tensor->shape().ToString()
         << " (tensor shape include batch dimension)";
-    memcpy(dptr, sample->mut_data(), sample->nbytes());
-    dptr += sample->nbytes();
+    memcpy(tensor->mut_dptr(), batch->mut_data(), batch->nbytes());
+    return batch_size_;
   }
-  return batch.size();
+  return 0;
 }
 
 Maybe<bool> ParquetReader::ReadColumn(int col) {
+  // when all col readers finish reading, it's the last finishing reader's due
+  // to move to next row group
   {
     std::unique_lock<std::mutex> lock(mutex_);
     if (--read_keys_ == 0) { read_done_ = true; }
@@ -310,14 +404,53 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
   }
   cond_.notify_all();
 
-  int col_id = schema_.col_descs[col].col_id;
+  const auto& col_desc = schema_.col_descs[col];
+  int col_id = col_desc.col_id;
   CHECK_GE_OR_RETURN(col_id, 0);
   CHECK_LT_OR_RETURN(col_id, row_group_reader_->metadata()->num_columns());
   auto col_reader = row_group_reader_->Column(col_id);
   while (col_reader->HasNext()) {
-    auto sample = JUST(ReadColumnValues(col_reader.get()));
-    if (buffers_.at(col)->Push(std::move(sample)) != BufferType::kSuccess) { return false; }
+    std::shared_ptr<TensorBuffer> sample_or_batch;
+    if (col_desc.is_variadic) {
+      sample_or_batch = JUST(ReadColumnValues(col_reader.get(), read_footprint_));
+    } else {
+      sample_or_batch = JUST(ReadColumnFixedLengthValues(
+          col_reader.get(), completely_shuffle_ ? 1 : batch_size_, col_desc.shape.elem_cnt()));
+    }
+    if (!sample_or_batch) { continue; }
+    if (completely_shuffle_ && !col_desc.is_variadic) {
+      if (shuffle_buffers_.at(col)->Push(std::move(sample_or_batch)) != BufferType::kSuccess) {
+        return false;
+      }
+    } else {
+      if (buffers_.at(col)->Push(std::move(sample_or_batch)) != BufferType::kSuccess) {
+        return false;
+      }
+    }
   }
+  return true;
+}
+
+Maybe<bool> ParquetReader::ShuffleSamples(int col) {
+  const auto& col_desc = schema_.col_descs[col];
+  CHECK_OR_RETURN(!col_desc.is_variadic);
+  int64_t sample_size = col_desc.shape.elem_cnt();
+  std::vector<std::shared_ptr<TensorBuffer>> batch_src;
+  batch_src.reserve(batch_size_);
+  shuffle_buffers_.at(col)->PullMany(&batch_src, batch_size_);
+  auto batch = std::make_shared<TensorBuffer>();
+  batch->Resize(Shape({static_cast<int64_t>(batch_size_), sample_size}), col_desc.dtype);
+  size_t total_bytes = 0;
+  char* dptr = static_cast<char*>(batch->mut_data());
+  for (auto& sample : batch_src) {
+    CHECK_EQ_OR_RETURN(sample->data_type(), batch->data_type());
+    CHECK_EQ_OR_RETURN(sample->elem_cnt(), sample_size);
+    memcpy(dptr, sample->data(), sample->nbytes());
+    dptr += sample->nbytes();
+    total_bytes += sample->nbytes();
+  }
+  CHECK_EQ_OR_RETURN(total_bytes, batch->nbytes());
+  if (buffers_.at(col)->Push(std::move(batch)) != BufferType::kSuccess) { return false; }
   return true;
 }
 
@@ -387,13 +520,33 @@ Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
   read_done_ = false;
   buffers_.reserve(num_cols);
   workers_.reserve(num_cols);
-  for (int i = 0; i < num_cols; ++i) {
-    buffers_.emplace_back(std::make_unique<BufferType>(buffer_size, shuffle_, seed_ + i + 1));
-  }
+  shuffle_buffers_.reserve(num_cols);
+  shuffle_workers_.reserve(num_cols);
+
+  size_t batch_buffer_size =
+      static_cast<size_t>(std::ceil(static_cast<float>(buffer_size) / batch_size_));
+
   for (int col = 0; col < num_cols; ++col) {
+    const auto& col_desc = schema_.col_descs[col];
+    // init output buffer
+    buffers_.emplace_back(std::make_unique<BufferType>(
+        col_desc.is_variadic ? buffer_size : batch_buffer_size, shuffle_, seed_ + col + 1));
+    // init shuffle buffer
+    shuffle_buffers_.emplace_back(
+        std::make_unique<BufferType>(completely_shuffle_ ? buffer_size : batch_buffer_size,
+                                     completely_shuffle_, seed_ - col - 1));
+    // init read workers
     workers_.emplace_back(std::thread([this, col] {
       while (!IsClosed() && CHECK_JUST(ReadColumn(col))) {}
     }));
+    // init shuffle workers
+    if (completely_shuffle_) {
+      shuffle_workers_.emplace_back(std::thread([this, col] {
+        while (!IsClosed() && CHECK_JUST(ShuffleSamples(col))) {}
+      }));
+    } else {
+      shuffle_workers_.emplace_back(std::thread());
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -458,7 +611,8 @@ Maybe<void> ParquetReader::InitParallelInfo(user_op::KernelInitContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
+Maybe<void> ParquetReader::InitSchema(user_op::KernelInitContext* ctx) {
+  const std::string& schema_json_str = ctx->Attr<std::string>("schema_json_str");
   ParseParquetColumnSchemaFromJson(&schema_, schema_json_str);
   int output_index = 0;
   HashSet<int> spec_cols;
@@ -508,6 +662,16 @@ Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
         << out_desc.col_id;
     CHECK_EQ_OR_RETURN(data_type, out_desc.dtype)
         << "The configured column dtype dismatch the type of column in schema";
+    // check batch_size
+    const auto& out_shape = ctx->TensorDesc4ArgNameAndIndex("out", output_index)->shape();
+    CHECK_GE_OR_RETURN(out_shape.NumAxes(), 1);
+    size_t cur_out_batch_size = out_shape.At(0);
+    if (output_index == 0) {
+      batch_size_ = cur_out_batch_size;
+    } else {
+      CHECK_EQ_OR_RETURN(batch_size_, cur_out_batch_size)
+          << "The " << output_index << "th output has different batch size: " << cur_out_batch_size;
+    }
     output_index++;
   }
   return Maybe<void>::Ok();
@@ -515,12 +679,14 @@ Maybe<void> ParquetReader::InitSchema(const std::string& schema_json_str) {
 
 Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
   shuffle_ = ctx->Attr<bool>("shuffle");
+  completely_shuffle_ = ctx->Attr<bool>("completely_shuffle") && shuffle_;
   seed_ = ctx->Attr<int64_t>("random_seed");
   rng_ = std::mt19937(seed_);
   use_mmap_ = ctx->Attr<bool>("use_mmap");
+  read_footprint_ = ctx->Attr<int64_t>("read_footprint");
   JUST(InitParallelInfo(ctx));
   JUST(InitParquetFiles(ctx->Attr<std::string>("path")));
-  JUST(InitSchema(ctx->Attr<std::string>("schema_json_str")));
+  JUST(InitSchema(ctx));
   JUST(InitWorkers(ctx->Attr<int64_t>("prefetch_buffer_size")));
   return Maybe<void>::Ok();
 }
@@ -552,9 +718,6 @@ class ParquetReaderKernel final : public user_op::OpKernel {
         size_t batch_size = out_i->shape().At(0);
         size_t nsamples = CHECK_JUST(parquet_reader->GetColumnBatch(i, out_buffer, batch_size));
         CHECK_EQ(batch_size, nsamples);
-        // TODO(zwx): get tensor shape from column schema and resize tensor buffer
-        // out_buffer->Resize(shape);
-        UNIMPLEMENTED();
       } else {
         size_t nsamples = CHECK_JUST(parquet_reader->GetColumnBatch(i, out_i));
         CHECK_EQ(nsamples, out_i->shape().At(0));

@@ -114,8 +114,8 @@
 
 - name: "dispatch_parquet_reader"
   signature: [
-    "TensorTuple (OpExpr op, String path, String schema_json_str, Int64 batch_size, Bool shuffle, Int64 random_seed, Int64 prefetch_buffer_size, Bool use_mmap, Device device=None) => DispatchParquetReader",
-    "TensorTuple (OpExpr op, String path, String schema_json_str, Int64 batch_size, Bool shuffle, Int64 random_seed, Int64 prefetch_buffer_size, Bool use_mmap, Placement placement, SbpList sbp) => DispatchParquetReader"
+    "TensorTuple (OpExpr op, String path, String schema_json_str, Int64 batch_size, Bool shuffle, Bool completely_shuffle, Int64 random_seed, Int64 prefetch_buffer_size, Int64 read_footprint, Bool use_mmap, Device device=None) => DispatchParquetReader",
+    "TensorTuple (OpExpr op, String path, String schema_json_str, Int64 batch_size, Bool shuffle, Bool completely_shuffle, Int64 random_seed, Int64 prefetch_buffer_size, Int64 read_footprint, Bool use_mmap, Placement placement, SbpList sbp) => DispatchParquetReader"
   ]
   bind_python: True
 

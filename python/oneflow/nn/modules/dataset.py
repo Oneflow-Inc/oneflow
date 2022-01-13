@@ -1014,14 +1014,19 @@ class GPTIndexedBinDataReader(Module):
 
 
 class ParquetReader(Module):
+    r"""
+    TODO: complete doc
+    """
     def __init__(
         self,
         path: str,
         schema: List[Dict],
         batch_size: int,
         shuffle: bool = True,
+        completely_shuffle: bool = False,
         random_seed: Optional[int] = None,
         prefetch_buffer_size: Optional[int] = None,
+        read_footprint: int = 1024,
         use_mmap: bool = True,
         device: Union[flow.device, str, None] = None,
         placement: Optional[flow.placement] = None,
@@ -1033,10 +1038,12 @@ class ParquetReader(Module):
         self.path = path
         self.batch_size = batch_size
         self.prefetch_buffer_size = prefetch_buffer_size or batch_size * 2
+        self.read_footprint = read_footprint
         self.use_mmap = use_mmap
 
         _handle_parquet_schema_args(self, schema)
         _handle_shuffle_args(self, shuffle, random_seed)
+        self.completely_shuffle = completely_shuffle
         _handle_parallel_args(self, device, placement, sbp)
 
         self.op = (
@@ -1051,8 +1058,10 @@ class ParquetReader(Module):
                 schema_json_str=self.schema_json_str,
                 batch_size=self.batch_size,
                 shuffle=self.shuffle,
+                completely_shuffle=self.completely_shuffle,
                 random_seed=self.random_seed,
                 prefetch_buffer_size=self.prefetch_buffer_size,
+                read_footprint=self.read_footprint,
                 use_mmap=self.use_mmap,
                 device=self.device,
             )
@@ -1065,6 +1074,7 @@ class ParquetReader(Module):
                 shuffle=self.shuffle,
                 random_seed=self.random_seed,
                 prefetch_buffer_size=self.prefetch_buffer_size,
+                read_footprint=self.read_footprint,
                 use_mmap=self.use_mmap,
                 placement=self.placement,
                 sbp=self.sbp,
