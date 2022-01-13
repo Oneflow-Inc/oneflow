@@ -469,6 +469,17 @@ if(BUILD_CPP_API)
     PATTERN "tests" EXCLUDE
   )
 
+  install(DIRECTORY ${GLOG_LIBRARY_DIR}/ ${PROTOBUF_LIBRARY_DIR}/ ${NCCL_LIBRARY_DIR}/
+    COMPONENT oneflow_cpp_all
+    DESTINATION lib
+    FILES_MATCHING
+    PATTERN "*.so*"
+    PATTERN "*.a" EXCLUDE
+    PATTERN "libprotobuf-lite.so*" EXCLUDE
+    PATTERN "libprotoc.so*" EXCLUDE
+    PATTERN "cmake" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
+  )
 
   install(FILES ${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake
     COMPONENT oneflow_cpp_all
