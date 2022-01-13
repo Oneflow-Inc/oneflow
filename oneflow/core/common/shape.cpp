@@ -45,7 +45,7 @@ Shape ZeroDimCompatiableShape(const Shape& shape) {
     dim_vec.emplace_back(1);
     return Shape(dim_vec);
   }
-  return Shape(dim_vec);
+  return shape;
 }
 
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec) {
