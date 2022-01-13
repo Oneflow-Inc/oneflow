@@ -43,7 +43,7 @@ class TestVar(flow.unittest.TestCase):
 
     # TODO(): 'var backward' is composed of several other ops,
     # reducemean doesn't support 0-shape for now
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_var_0_size_data_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
