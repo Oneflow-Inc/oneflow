@@ -459,8 +459,6 @@ endif(BUILD_PYTHON)
 
 if(BUILD_CPP_API)
 
-  set(LIBONEFLOW_DIR ${PROJECT_BINARY_DIR}/liboneflow_cpp)
-
   install(DIRECTORY oneflow/api/cpp/
     COMPONENT oneflow_cpp_all
     DESTINATION include/oneflow
@@ -469,10 +467,6 @@ if(BUILD_CPP_API)
     PATTERN "tests" EXCLUDE
   )
 
-  install(DIRECTORY ${PROJECT_BINARY_DIR}/third_party_install/
-    COMPONENT oneflow_cpp_all
-    DESTINATION third_party
-  )
 
   install(FILES ${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake
     COMPONENT oneflow_cpp_all
