@@ -19,6 +19,7 @@
 		"files.insertFinalNewline": true,
 		"files.trimFinalNewlines": true,
 		"files.trimTrailingWhitespace": true,
+		"files.eol": "\n",
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
