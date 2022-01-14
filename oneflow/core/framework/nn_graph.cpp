@@ -208,7 +208,8 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
         CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, tensor).second);
         CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
 
-        // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime valid.
+        // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime
+        // valid.
         Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
             name_, tensor, var_name);
       }
