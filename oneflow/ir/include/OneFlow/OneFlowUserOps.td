@@ -1550,6 +1550,7 @@ def OneFlow_ParquetReaderOp : OneFlow_BaseOp<"parquet_reader", [NoSideEffect, No
     DefaultValuedAttr<BoolAttr, "false">:$shuffle,
     DefaultValuedAttr<BoolAttr, "false">:$completely_shuffle,
     DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<SI64Attr, "512">:$shuffle_buffer_size,
     DefaultValuedAttr<SI64Attr, "1024">:$prefetch_buffer_size,
     DefaultValuedAttr<SI64Attr, "1024">:$read_footprint,
     DefaultValuedAttr<BoolAttr, "true">:$use_mmap,

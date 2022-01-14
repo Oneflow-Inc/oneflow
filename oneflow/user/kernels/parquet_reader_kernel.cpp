@@ -122,12 +122,12 @@ Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_r
     // repetition levels of other values of LIST must be 1
     if (i % sample_size == 0) {
       CHECK_EQ_OR_RETURN(rep_levels[i], 0)
-          << "read unexcepted first value of LIST that dismatch sample size " << sample_size
-          << " at column " << typed_col_reader->descr()->path();
+          << "the number of values in LIST is greater than sample size " << sample_size
+          << " at column " << typed_col_reader->descr()->path()->ToDotString();
     } else {
       CHECK_EQ_OR_RETURN(rep_levels[i], 1)
-          << "read unexcepted end value of LIST that dismatch sample size" << sample_size
-          << " at column " << typed_col_reader->descr()->path();
+          << "the number of values in LIST is less than sample size " << sample_size
+          << " at column " << typed_col_reader->descr()->path()->ToDotString();
     }
   }
 
@@ -217,23 +217,22 @@ class RandomShuffleBuffer final {
  public:
   enum Status { kSuccess = 0, kClosed, kEmpty };
 
-  RandomShuffleBuffer(size_t max_size, bool shuffle, int64_t seed)
-      : max_size_(max_size), shuffle_(shuffle), rng_(seed), is_closed_(false) {}
+  RandomShuffleBuffer(size_t max_size, size_t min_size, int64_t seed)
+      : max_size_(max_size), min_size_(min_size), rng_(seed), is_closed_(false) {
+    CHECK_GT(max_size, min_size);
+  }
   OF_DISALLOW_COPY_AND_MOVE(RandomShuffleBuffer);
   ~RandomShuffleBuffer() = default;
 
-  bool IsClosed() { return is_closed_; }
-  bool IsFull() { return queue_.size() >= max_size_; }
-
   template<typename U>
-  Status Push(U&& item) {
+  Status Push(U&& item, bool random) {
     {
       std::unique_lock<std::mutex> lock(mutex_);
-      cond_.wait(lock, [this]() { return !IsFull() || IsClosed(); });
-      if (IsClosed()) { return kClosed; }
-      CHECK(!IsFull());
+      cond_.wait(lock, [this]() { return queue_.size() < max_size_ || is_closed_; });
+      if (is_closed_) { return kClosed; }
+      CHECK_LT(queue_.size(), max_size_);
       queue_.push_back(std::move(item));
-      if (shuffle_ && queue_.size() > 2) {
+      if (random && queue_.size() >= 2) {
         std::uniform_int_distribution<size_t> dis(0, queue_.size() - 1);
         size_t offset = dis(rng_);
         std::swap(queue_[offset], queue_.back());
@@ -246,9 +245,9 @@ class RandomShuffleBuffer final {
   Status Pull(T* item) {
     {
       std::unique_lock<std::mutex> lock(mutex_);
-      cond_.wait(lock, [this]() { return !queue_.empty() || IsClosed(); });
-      if (IsClosed()) { return kClosed; }
-      CHECK(!queue_.empty());
+      cond_.wait(lock, [=]() { return queue_.size() > min_size_ || is_closed_; });
+      if (is_closed_) { return kClosed; }
+      CHECK_GT(queue_.size(), min_size_);
       *item = std::move(queue_.front());
       queue_.pop_front();
     }
@@ -256,12 +255,13 @@ class RandomShuffleBuffer final {
     return kSuccess;
   }
 
-  Status PullMany(T* item_array, const size_t size) {
+  Status PullMany(T* item_array, size_t size) {
     {
+      size_t min_size = std::max(min_size_ + 1, size);
       std::unique_lock<std::mutex> lock(mutex_);
-      cond_.wait(lock, [this, size]() { return queue_.size() >= size || IsClosed(); });
-      if (IsClosed()) { return kClosed; }
-      CHECK_GE(queue_.size(), size);
+      cond_.wait(lock, [=]() { return queue_.size() >= min_size || is_closed_; });
+      if (is_closed_) { return kClosed; }
+      CHECK_GE(queue_.size(), min_size);
       for (size_t i = 0; i < size; ++i) {
         item_array[i] = std::move(queue_.front());
         queue_.pop_front();
@@ -280,7 +280,7 @@ class RandomShuffleBuffer final {
  private:
   std::deque<T> queue_;
   size_t max_size_;
-  bool shuffle_;
+  size_t min_size_;
   std::mt19937 rng_;
   bool is_closed_;
   std::mutex mutex_;
@@ -307,9 +307,9 @@ class ParquetReader final : public user_op::OpKernelState {
 
  private:
   Maybe<void> InitParallelInfo(user_op::KernelInitContext* ctx);
-  Maybe<void> InitParquetFiles(const std::string& path);
+  Maybe<void> InitParquetFiles(user_op::KernelInitContext* ctx);
   Maybe<void> InitSchema(user_op::KernelInitContext* ctx);
-  Maybe<void> InitWorkers(size_t buffer_size);
+  Maybe<void> InitWorkers(user_op::KernelInitContext* ctx);
 
   bool IsClosed() { return is_closed_.load(); }
   size_t NumColumns() { return schema_.col_descs.size(); }
@@ -318,6 +318,7 @@ class ParquetReader final : public user_op::OpKernelState {
   Maybe<bool> ShuffleSamples(int col);
   Maybe<void> NextRowGroup();
   Maybe<void> NextParquetFile();
+  Maybe<bool> Partition(std::queue<int>* part_indices, size_t total_size, bool do_part);
 
   int64_t rank_;
   size_t world_size_;
@@ -429,11 +430,13 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
     }
     if (!sample_or_batch) { continue; }
     if (completely_shuffle_ && !col_desc.is_variadic) {
-      if (shuffle_buffers_[col]->Push(std::move(sample_or_batch)) != BufferType::kSuccess) {
+      if (shuffle_buffers_[col]->Push(std::move(sample_or_batch), true) != BufferType::kSuccess) {
         return false;
       }
     } else {
-      if (buffers_[col]->Push(std::move(sample_or_batch)) != BufferType::kSuccess) { return false; }
+      if (buffers_[col]->Push(std::move(sample_or_batch), shuffle_) != BufferType::kSuccess) {
+        return false;
+      }
     }
   }
   return true;
@@ -460,7 +463,7 @@ Maybe<bool> ParquetReader::ShuffleSamples(int col) {
     total_bytes += sample->nbytes();
   }
   CHECK_EQ_OR_RETURN(total_bytes, batch->nbytes());
-  if (buffers_[col]->Push(std::move(batch)) != BufferType::kSuccess) { return false; }
+  if (buffers_[col]->Push(std::move(batch), true) != BufferType::kSuccess) { return false; }
   return true;
 }
 
@@ -468,22 +471,11 @@ Maybe<void> ParquetReader::NextRowGroup() {
   CHECK_OR_RETURN(!row_group_reader_);
   if (row_group_part_indices_.empty()) {
     JUST(NextParquetFile());
-    std::vector<int> row_group_indices;
-    row_group_indices.resize(file_reader_->metadata()->num_row_groups(), 0);
-    std::iota(row_group_indices.begin(), row_group_indices.end(), 0);
-    if (shuffle_) { std::shuffle(row_group_indices.begin(), row_group_indices.end(), rng_); }
-    if (parquet_files_.size() == 1 && world_size_ > 1) {
-      // need partition row groups
-      CHECK_GE_OR_RETURN(row_group_indices.size(), world_size_)
-          << "There are only " << row_group_indices.size() << " row groups in parquet file of "
-          << parquet_files_[0] << " that can't be partitioned by " << world_size_;
-      size_t part_size = row_group_indices.size() / world_size_;
-      for (size_t i = rank_ * part_size; i < (rank_ + 1) * part_size; ++i) {
-        row_group_part_indices_.push(row_group_indices[i]);
-      }
-    } else {
-      for (int index : row_group_indices) { row_group_part_indices_.push(index); }
-    }
+    int num_row_groups = file_reader_->metadata()->num_row_groups();
+    CHECK_OR_RETURN(
+        JUST(Partition(&row_group_part_indices_, num_row_groups, parquet_files_.size() == 1)))
+        << "There are only " << num_row_groups << " row groups in parquet file of "
+        << parquet_files_[0] << " that can't be partitioned by " << world_size_;
   }
   row_group_reader_ = file_reader_->RowGroup(row_group_part_indices_.front());
   row_group_part_indices_.pop();
@@ -500,20 +492,10 @@ Maybe<void> ParquetReader::NextParquetFile() {
   }
 
   if (parquet_file_part_indices_.empty()) {
-    std::vector<int> parquet_file_indices;
-    parquet_file_indices.resize(parquet_files_.size(), 0);
-    if (shuffle_) { std::shuffle(parquet_file_indices.begin(), parquet_file_indices.end(), rng_); }
-    if (world_size_ > 1) {
-      CHECK_GE_OR_RETURN(parquet_files_.size(), world_size_)
-          << "There are only " << parquet_files_.size() << " parquet files in " << base_path_
-          << " that can't be partitioned by " << world_size_;
-      size_t part_size = parquet_file_indices.size() / world_size_;
-      for (size_t i = rank_ * part_size; i < (rank_ + 1) * part_size; ++i) {
-        parquet_file_part_indices_.push(parquet_file_indices[i]);
-      }
-    } else {
-      for (int index : parquet_file_indices) { parquet_file_part_indices_.push(index); }
-    }
+    CHECK_OR_RETURN(JUST(
+        Partition(&parquet_file_part_indices_, parquet_files_.size(), parquet_files_.size() > 1)))
+        << "There are only " << parquet_files_.size() << " parquet files in " << base_path_
+        << " that can't be partitioned by " << world_size_;
   }
 
   int file_index = parquet_file_part_indices_.front();
@@ -524,7 +506,25 @@ Maybe<void> ParquetReader::NextParquetFile() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
+Maybe<bool> ParquetReader::Partition(std::queue<int>* part_indices, size_t total_size,
+                                     bool need_do_part) {
+  std::vector<int> indices;
+  indices.resize(total_size, 0);
+  std::iota(indices.begin(), indices.end(), 0);
+  if (shuffle_) { std::shuffle(indices.begin(), indices.end(), rng_); }
+  if (need_do_part && world_size_ > 1) {
+    if (total_size < world_size_) { return false; }
+    size_t part_size = total_size / world_size_;
+    for (size_t i = rank_ * part_size; i < (rank_ + 1) * part_size; ++i) {
+      part_indices->push(indices.at(i));
+    }
+  } else {
+    for (int index : indices) { part_indices->push(index); }
+  }
+  return true;
+}
+
+Maybe<void> ParquetReader::InitWorkers(user_op::KernelInitContext* ctx) {
   size_t num_cols = NumColumns();
   read_keys_ = num_cols;
   read_done_ = false;
@@ -534,19 +534,20 @@ Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
   shuffle_buffers_.reserve(num_cols);
   shuffle_workers_.reserve(num_cols);
 
-  size_t batch_buffer_size =
-      static_cast<size_t>(std::ceil(static_cast<float>(buffer_size) / batch_size_));
+  size_t prefetch_bz = ctx->Attr<int64_t>("prefetch_buffer_size");
+  size_t shuffle_bz = ctx->Attr<int64_t>("shuffle_buffer_size");
   for (int col = 0; col < num_cols; ++col) {
     const auto& col_desc = schema_.col_descs[col];
     // init output buffer
-    auto buffer = std::make_unique<BufferType>(
-        col_desc.is_variadic ? buffer_size : batch_buffer_size, shuffle_, seed_ + col + 1);
-    buffers_.push_back(std::move(buffer));
+    size_t max_size = col_desc.is_variadic ? prefetch_bz * batch_size_ : prefetch_bz;
+    max_size = std::max(max_size, shuffle_bz + 1);
+    int64_t seed = seed_ + (rank_ * num_cols + col) * 2;
+    buffers_.emplace_back(std::make_unique<BufferType>(max_size, shuffle_bz, seed));
     // init shuffle buffer
-    auto shuffle_buffer =
-        std::make_unique<BufferType>(completely_shuffle_ ? buffer_size : batch_buffer_size,
-                                     completely_shuffle_, seed_ + num_cols + col + 1);
-    shuffle_buffers_.push_back(std::move(shuffle_buffer));
+    size_t s_min_size = shuffle_bz * batch_size_;
+    size_t s_max_size = std::max(prefetch_bz * batch_size_, s_min_size + 1);
+    int64_t s_seed = seed + 1;
+    shuffle_buffers_.emplace_back(std::make_unique<BufferType>(s_max_size, s_min_size, s_seed));
     // init read workers
     workers_.emplace_back(std::thread([this, col] {
       while (!IsClosed() && CHECK_JUST(ReadColumn(col))) {}
@@ -563,9 +564,9 @@ Maybe<void> ParquetReader::InitWorkers(size_t buffer_size) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParquetReader::InitParquetFiles(const std::string& path) {
+Maybe<void> ParquetReader::InitParquetFiles(user_op::KernelInitContext* ctx) {
   // Find all parquet files
-  base_path_ = path;
+  base_path_ = ctx->Attr<std::string>("path");
   local_fs_ = std::make_shared<arrow::fs::LocalFileSystem>();
   auto result = local_fs_->GetFileInfo(base_path_);
   CHECK_OR_RETURN(result.ok()) << "ParquetReader can't open " << base_path_;
@@ -697,9 +698,9 @@ Maybe<void> ParquetReader::Init(user_op::KernelInitContext* ctx) {
   use_mmap_ = ctx->Attr<bool>("use_mmap");
   read_footprint_ = ctx->Attr<int64_t>("read_footprint");
   JUST(InitParallelInfo(ctx));
-  JUST(InitParquetFiles(ctx->Attr<std::string>("path")));
+  JUST(InitParquetFiles(ctx));
   JUST(InitSchema(ctx));
-  JUST(InitWorkers(ctx->Attr<int64_t>("prefetch_buffer_size")));
+  JUST(InitWorkers(ctx));
   return Maybe<void>::Ok();
 }
 

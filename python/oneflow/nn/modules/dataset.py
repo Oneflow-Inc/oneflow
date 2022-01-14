@@ -1026,6 +1026,7 @@ class ParquetReader(Module):
         shuffle: bool = True,
         completely_shuffle: bool = False,
         random_seed: Optional[int] = None,
+        shuffle_buffer_size: Optional[int] = None,
         prefetch_buffer_size: Optional[int] = None,
         read_footprint: int = 1024,
         use_mmap: bool = True,
@@ -1038,14 +1039,23 @@ class ParquetReader(Module):
         assert isinstance(path, str)
         self.path = path
         self.batch_size = batch_size
-        self.prefetch_buffer_size = prefetch_buffer_size or batch_size * 2
         self.read_footprint = read_footprint
         self.use_mmap = use_mmap
 
         _handle_parquet_schema_args(self, schema)
         _handle_shuffle_args(self, shuffle, random_seed)
-        self.completely_shuffle = completely_shuffle
         _handle_parallel_args(self, device, placement, sbp)
+
+        self.completely_shuffle = completely_shuffle and self.shuffle
+
+        if self.shuffle:
+            self.shuffle_buffer_size = shuffle_buffer_size or 10
+            self.prefetch_buffer_size = (
+                prefetch_buffer_size or self.shuffle_buffer_size * 2
+            )
+        else:
+            self.shuffle_buffer_size = 0
+            self.prefetch_buffer_size = prefetch_buffer_size or 4
 
         self.op = (
             flow.stateful_op("parquet_reader").Output("out", self.num_columns).Build()
@@ -1061,6 +1071,7 @@ class ParquetReader(Module):
                 shuffle=self.shuffle,
                 completely_shuffle=self.completely_shuffle,
                 random_seed=self.random_seed,
+                shuffle_buffer_size=self.shuffle_buffer_size,
                 prefetch_buffer_size=self.prefetch_buffer_size,
                 read_footprint=self.read_footprint,
                 use_mmap=self.use_mmap,
@@ -1073,7 +1084,9 @@ class ParquetReader(Module):
                 schema_json_str=self.schema_json_str,
                 batch_size=self.batch_size,
                 shuffle=self.shuffle,
+                completely_shuffle=self.completely_shuffle,
                 random_seed=self.random_seed,
+                shuffle_buffer_size=self.shuffle_buffer_size,
                 prefetch_buffer_size=self.prefetch_buffer_size,
                 read_footprint=self.read_footprint,
                 use_mmap=self.use_mmap,

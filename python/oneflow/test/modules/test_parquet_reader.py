@@ -29,6 +29,7 @@ def make_parquet_reader(
     shuffle=True,
     completely_shuffle=False,
     random_seed=12345,
+    shuffle_buffer_size=None,
     prefetch_buffer_size=None,
     read_footprint=1024,
     use_mmap=True,
@@ -43,6 +44,7 @@ def make_parquet_reader(
         shuffle=shuffle,
         completely_shuffle=completely_shuffle,
         random_seed=random_seed,
+        shuffle_buffer_size=shuffle_buffer_size,
         prefetch_buffer_size=prefetch_buffer_size,
         read_footprint=read_footprint,
         use_mmap=use_mmap,
@@ -113,37 +115,52 @@ class MyGraph(flow.nn.Graph):
 
 
 def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle):
-    parquet_dir = "/dataset/wdl_parquet/train/"
+    parquet_dir = "/dataset/wdl_parquet/train"
     schema = [
-        # {"col_id": 0, "shape": (26,), "dtype": flow.int32},
+        {"col_id": 0, "shape": (26,), "dtype": flow.int32},
         {"col_id": 1, "shape": (13,), "dtype": flow.float32},
-        # {"col_id": 2, "shape": (), "dtype": flow.int32},
         {"col_name": "labels", "shape": (), "dtype": flow.int32},
-        # {"col_id": 3, "shape": (2,), "dtype": flow.int32},
+        {"col_id": 3, "shape": (2,), "dtype": flow.int32},
     ]
+    batch_size = 16
+    shuffle_buffer_size = 10
+    prefetch_buffer_size = 10
 
     reader = make_parquet_reader(
         parquet_dir,
         copy.deepcopy(schema),
-        batch_size=256,
+        batch_size=batch_size,
         shuffle=True,
         completely_shuffle=completely_shuffle,
         random_seed=12345,
+        shuffle_buffer_size=shuffle_buffer_size,
+        prefetch_buffer_size=prefetch_buffer_size,
     )
-    results = reader()
 
     reader_ = make_parquet_reader(
         parquet_dir,
         schema,
-        batch_size=256,
+        batch_size=batch_size,
         shuffle=True,
         completely_shuffle=completely_shuffle,
         random_seed=12345,
+        shuffle_buffer_size=shuffle_buffer_size,
+        prefetch_buffer_size=prefetch_buffer_size,
     )
-    results_ = reader_()
 
-    for (data, data_) in zip(results, results_):
-        test_case.assertTrue(np.allclose(data.numpy(), data_.numpy()))
+    iter_num = 10
+    for i in range(iter_num):
+        results = reader()
+        datas = [r.numpy() for r in results]
+
+        results_ = reader_()
+        datas_ = [r.numpy() for r in results_]
+
+        for (data, data_) in zip(datas, datas_):
+            test_case.assertTrue(
+                np.allclose(data, data_),
+                f"{data}\n**** vs. ****\n{data_}\ndiff:\n{data - data_}",
+            )
 
 
 @unittest.skipIf(
@@ -156,24 +173,25 @@ class ParquetReaderTestCase(oneflow.unittest.TestCase):
     def test_compare_with_ofrecord(test_case):
         parquet_file = "/dataset/dlrm_parquet/val/part-00000-9aa77b80-babb-496b-908e-457d9f48bb06-c000.snappy.parquet"
         schema = [
-            {"col_id": 0, "shape": (), "dtype": flow.double},
+            {"col_id": 0, "shape": (1,), "dtype": flow.double},
             {"col_id": 1, "shape": (13,), "dtype": flow.double},
             {"col_id": 2, "shape": (26,), "dtype": flow.int32},
         ]
+        batch_size = 20
 
         parquet_reader = make_parquet_reader(
-            parquet_file, schema, batch_size=20, shuffle=False
+            parquet_file, schema, batch_size=batch_size, shuffle=False
         )
 
         labels, dense_fields, sparse_fields = parquet_reader()
 
         ofrecord_file_dir = "/dataset/dlrm_ofrecord/"
         ofrecord_reader = OFRecordReader(
-            data_dir=ofrecord_file_dir, batch_size=20, shuffle=False, mode="val"
+            data_dir=ofrecord_file_dir, batch_size=batch_size, shuffle=False, mode="val"
         )
         labels_, dense_fields_, sparse_fields_ = ofrecord_reader()
 
-        test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy().ravel()))
+        test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy()))
         test_case.assertTrue(np.allclose(dense_fields.numpy(), dense_fields_.numpy()))
         test_case.assertTrue(np.allclose(sparse_fields.numpy(), sparse_fields_.numpy()))
 
@@ -193,7 +211,53 @@ class ParquetReaderTestCase(oneflow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class DistributedParquetReaderTestCase(oneflow.unittest.TestCase):
-    pass
+    def test_compare_consistent_with_ddp(test_case):
+        parquet_dir = "/dataset/dlrm_parquet/train"
+        schema = [
+            {"col_id": 0, "shape": (), "dtype": flow.double},
+            {"col_id": 1, "shape": (13,), "dtype": flow.double},
+            {"col_id": 2, "shape": (26,), "dtype": flow.int32},
+        ]
+        batch_size = 8
+        shuffle_buffer_size = 8
+        prefetch_buffer_size = 8
+
+        consistent_reader = make_parquet_reader(
+            path=parquet_dir,
+            schema=copy.deepcopy(schema),
+            batch_size=batch_size * 2,
+            shuffle=True,
+            random_seed=12345,
+            shuffle_buffer_size=shuffle_buffer_size,
+            prefetch_buffer_size=prefetch_buffer_size,
+            placement=flow.env.all_device_placement("cpu"),
+            sbp=flow.sbp.split(0),
+        )
+
+        ddp_reader = make_parquet_reader(
+            parquet_dir,
+            schema,
+            batch_size=batch_size,
+            shuffle=True,
+            random_seed=12345,
+            shuffle_buffer_size=shuffle_buffer_size,
+            prefetch_buffer_size=prefetch_buffer_size,
+        )
+
+        iter_num = 10
+        for i in range(iter_num):
+            results = consistent_reader()
+            datas = [r.to_local().numpy() for r in results]
+
+            results_ = ddp_reader()
+            datas_ = [r.numpy() for r in results_]
+
+            for j, (data, data_) in enumerate(zip(datas, datas_)):
+                test_case.assertTrue(
+                    np.allclose(data, data_),
+                    f"## rank: {flow.env.get_rank()}, iter: {i}, out: {j} ##"
+                    f"\n{data}\n**** vs. ****\n{data_}\ndiff:\n{data - data_}",
+                )
 
 
 if __name__ == "__main__":
