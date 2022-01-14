@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -118,12 +119,17 @@ class EagerSToBOpKernelCache final : public user_op::OpKernelCache {
 
 size_t InferEagerSToBKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  const Shape& shape = ctx->Attr<Shape>("shape");
+  Shape shape = ctx->Attr<Shape>("shape");
+  const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
   const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
   Symbol<ParallelDesc> in_parallel_desc = CHECK_JUST(TxtStringToPlacement(in_parallel_conf_txt));
   int64_t in_parallel_num = in_parallel_desc->parallel_num();
-  size_t tensor_byte_size =
-      shape.elem_cnt() / in_parallel_num * GetSizeOfDataType(in_tensor.data_type());
+  if (in_parallel_num > 1) {
+    CHECK_LT(in_split_axis, shape.NumAxes());
+    BalancedSplitter bs(shape.At(in_split_axis), in_parallel_num);
+    shape.Set(in_split_axis, bs.At(0).size());
+  }
+  size_t tensor_byte_size = shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
   return tensor_byte_size;
 }
 
