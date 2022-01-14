@@ -225,15 +225,24 @@ class TestLrScheduler(flow.unittest.TestCase):
         
         def polynomial_lr_step(base_lr, end_lr, step, decay_steps, power, cycle):
             if cycle:
+                if step == 0:
+                    step = 1
                 decay_steps = decay_steps * math.ceil(step / decay_steps)
             step = min(step, decay_steps)
             return (base_lr - end_lr) * (1 - step / decay_steps) ** power + end_lr
         
         decay_steps = 100
-        end_learning_rate = 1e-4
+        end_learning_rate = 1e-5
         power = 2
-        cycle = False
+        cycle = True
         poly_decay_lr = flow.optim.lr_scheduler.PolynomialLR(optimizer, decay_steps, end_learning_rate, power, cycle)
+        # step(0) will be invoked in LrScheduler.__init__ 
+        new_lr = polynomial_lr_step(
+                TestLrScheduler.base_lr, end_learning_rate, 0, decay_steps, power, cycle 
+            )
+        test_case.assertAlmostEqual(
+                poly_decay_lr.get_last_lr()[0], new_lr, places=4
+            )
         for i in range(1, 21):
             poly_decay_lr.step()
             new_lr = polynomial_lr_step(
