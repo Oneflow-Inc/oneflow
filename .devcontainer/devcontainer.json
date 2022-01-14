@@ -1,0 +1,43 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.209.6/containers/cpp
+{
+	"name": "oneflow-devel",
+	"build": {
+		"dockerfile": "Dockerfile",
+		// Update 'VARIANT' to pick an version: llvm12 llvm13 cuda11.1
+		"args": {
+			"VARIANT": "llvm13"
+		}
+	},
+	// Add '"--gpus", "all"' if running a CUDA image
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined"
+	],
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+		"files.trimTrailingWhitespace": true,
+		"files.eol": "\n",
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"llvm-vs-code-extensions.vscode-clangd",
+		"ms-vscode.cmake-tools"
+	],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "gcc -v",
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "root",
+	// "Dev container features" is not ready. Adding features will lead to failure on running AMD64 on ARM
+	// https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview
+	// "features": {
+	// 	"git": "os-provided",
+	// 	"sshd": "os-provided",
+	// 	"python": "os-provided"
+	// }
+}
