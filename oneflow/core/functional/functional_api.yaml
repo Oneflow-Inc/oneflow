@@ -1762,7 +1762,7 @@
   bind_python: True
 
 - name: "normalize"
-  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12) => Normalize"
+  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12, Bool use_l2_norm_kernel=True) => Normalize"
   bind_python: True
 
 - name: "l2_normalize"
