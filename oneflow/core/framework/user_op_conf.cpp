@@ -278,17 +278,11 @@ Maybe<void> CheckArgDefIsValidInUserOpConf(
     if (arg_name2lbns.find(arg.name()) != arg_name2lbns.end()) {
       arg_blob_num = arg_name2lbns.at(arg.name()).s_size();
     }
-    if (arg_blob_num != arg.num()) {
-      if (arg_blob_num == 0) {
-        CHECK_OR_RETURN(arg.is_optional())
-            << " op_name: " << op_name << " op_type_name: " << op_type_name
-            << " arg name: " << arg.name() << " in OpDef must have blob in op_conf";
-      } else {
-        CHECK_OR_RETURN(arg_blob_num > arg.num() && arg.num_as_min())
-            << " op_name: " << op_name << " op_type_name: " << op_type_name
-            << " arg name: " << arg.name() << " has blob num: " << arg_blob_num
-            << " in op_conf does not meet its constraints in OpDef";
-      }
+    if (arg_blob_num == 0) {
+      CHECK_OR_RETURN(arg.is_optional())
+          << " op_name: " << op_name << " op_type_name: " << op_type_name
+          << " arg name: " << arg.name() << " in OpDef must have blob in op_conf: \n"
+          << op_conf.DebugString();
     }
     op_def_arg_names.insert(arg.name());
   }
@@ -358,24 +352,6 @@ Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorCo
   return AddAttrDefaultValueAndCheckValid(op_def, user_conf, error_msg_prefix);
 }
 
-Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf* op_conf) {
-  UserOpConf* user_conf = op_conf->mutable_user_conf();
-  // add default output arg and lbn
-  for (const auto& output_arg : op_def.output()) {
-    if (user_conf->output().find(output_arg.name()) == user_conf->output().end()
-        && (!output_arg.is_optional()) && (!output_arg.num_as_min())) {
-      for (int32_t i = 0; i < output_arg.num(); ++i) {
-        std::string lbn = GenLogicalBlobName(op_conf->name(), GenRepeatedBn(output_arg.name(), i));
-        (*(user_conf->mutable_output()))[output_arg.name()].add_s(lbn);
-        CHECK_EQ_OR_RETURN(i + 1, user_conf->output().at(output_arg.name()).s_size());
-      }
-      user_conf->add_output_order(output_arg.name());
-      CHECK_EQ_OR_RETURN(user_conf->output().size(), user_conf->output_order().size());
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name) {
   const user_op::OpRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
@@ -397,7 +373,6 @@ Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf) 
   const UserOpDef& op_def = val->op_def;
 
   JUST(AddAttrDefaultValueAndCheckValid(op_def, &ret));
-  JUST(AddUserOpConfOutputDefaultArg(op_def, &ret));
   // check input and output valid
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->input(), op_def.input()));
   JUST(CheckArgDefIsValidInUserOpConf(op_conf, user_conf->output(), op_def.output()));
