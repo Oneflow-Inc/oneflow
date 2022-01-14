@@ -21,7 +21,6 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-// l1(gpu) l2(cpu) l3(ssd)
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<EmbeddingMgr, std::shared_ptr<EmbeddingMgr>>(m, "OneEmbeddingManager")
       .def(py::init([]() { return std::make_shared<EmbeddingMgr>(); }))
