@@ -28,35 +28,28 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_add_with_alpha(test_case, placement, sbp):
-    try:
-        x1 = (
-            random_pytorch_tensor(2, 8, 8)
-            .to_consistent(placement=placement, sbp=sbp)
-            .mean()
-        )
-        x2 = (
-            random_pytorch_tensor(2, 8, 8)
-            .to_consistent(placement=placement, sbp=sbp)
-            .mean()
-        )
-        x3 = (
-            random_pytorch_tensor(2, 8, 8)
-            .to_consistent(placement=placement, sbp=sbp)
-            .mean()
-        )
-        y = random_pytorch_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
-        s = random().to(float)
-        alpha = random().to(float)
-        z1 = torch.add(x1, y, alpha=alpha)
-        z2 = torch.add(x2, s, alpha=alpha)
-        z3 = torch.add(s, x3, alpha=alpha)
-        return z1, z2, z3
-    except Exception as e:
-        print(
-            "Failed to apply add operation on x and y with (placement: %s, sbp: %s)"
-            % (placement.value(), sbp.value()),
-        )
-        print(str(e))
+    x1 = (
+        random_pytorch_tensor(2, 8, 8)
+        .to_consistent(placement=placement, sbp=sbp)
+        .mean()
+    )
+    x2 = (
+        random_pytorch_tensor(2, 8, 8)
+        .to_consistent(placement=placement, sbp=sbp)
+        .mean()
+    )
+    x3 = (
+        random_pytorch_tensor(2, 8, 8)
+        .to_consistent(placement=placement, sbp=sbp)
+        .mean()
+    )
+    y = random_pytorch_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
+    s = random().to(float)
+    alpha = random().to(float)
+    z1 = torch.add(x1, y, alpha=alpha)
+    z2 = torch.add(x2, s, alpha=alpha)
+    z3 = torch.add(s, x3, alpha=alpha)
+    return z1, z2, z3
 
 
 class TestAddModule(flow.unittest.TestCase):
