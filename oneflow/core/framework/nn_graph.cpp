@@ -299,15 +299,17 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     Blob* var_blob = nullptr;
     if (tensor->is_consistent()) {
       cfg::NdSbpSignature var_nd_sbp_signature =
-          cfg::NdSbpSignature(plan_.job_id2op_attribute_ref_table().at(job_id)
-                                  .op_name2op_attribute().at(var_name).nd_sbp_signature());
+          cfg::NdSbpSignature(plan_.job_id2op_attribute_ref_table()
+                                  .at(job_id)
+                                  .op_name2op_attribute()
+                                  .at(var_name)
+                                  .nd_sbp_signature());
       cfg::NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
       if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
-        LOG(INFO) << "Graph with name " << name_
-                  << " variable with name `" << var_name << "` change its' sbp from "
-                  << NdSbpParallelToString(*JUST(tensor->nd_sbp())) << " to "
-                  << NdSbpParallelToString(optimized_nd_sbp)
+        LOG(INFO) << "Graph with name " << name_ << " variable with name `" << var_name
+                  << "` change its' sbp from " << NdSbpParallelToString(*JUST(tensor->nd_sbp()))
+                  << " to " << NdSbpParallelToString(optimized_nd_sbp)
                   << " after compile optimization.";
         std::vector<Symbol<cfg::SbpParallel>> optimized_sbp_parallels;
         for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
