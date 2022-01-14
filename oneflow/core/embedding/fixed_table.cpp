@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/fixed_table.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/channel.h"
 #include "oneflow/core/embedding/posix_file.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include <omp.h>
 #include <robin_hood.h>
 #include <fcntl.h>
@@ -34,7 +37,7 @@ namespace embedding {
 
 namespace {
 
-constexpr uint32_t kNumReadThreads = 4;
+constexpr uint32_t kNumWorkerThreads = 4;
 constexpr uint32_t kRingQueueDepth = 128;
 constexpr uint32_t kRingSubmitBatch = 32;
 constexpr uint32_t kAioQueueDepth = 128;
@@ -46,6 +49,7 @@ constexpr char const* kKeySizeFilename = "KEY_SIZE";
 constexpr char const* kValueSizeFilename = "VALUE_SIZE";
 constexpr char const* kPhysicalBlockSizeFilename = "PHYSICAL_BLOCK_SIZE";
 constexpr char const* kNumBlocksPerChunkFilename = "NUM_BLOCKS_PER_CHUNK";
+constexpr size_t kParallelForStride = 256;
 
 void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
   bool exists = PosixFile::FileExists(pathname.c_str());
@@ -220,6 +224,60 @@ class AioEngine final {
   std::vector<struct io_event> events_;
 };
 
+constexpr size_t kCacheLineSize = 64;
+
+template<typename Engine>
+using ForRange = std::function<void(Engine* engine, size_t start, size_t end)>;
+
+template<typename Engine>
+struct ParallelForTask {
+  ParallelForTask(size_t num_workers, size_t total, const ForRange<Engine>* for_range)
+      : counter(0), total(total), for_range(for_range), bc(num_workers) {}
+  union alignas(kCacheLineSize) {
+    std::atomic<size_t> counter;
+  };
+  size_t total;
+  const ForRange<Engine>* for_range;
+  BlockingCounter bc;
+};
+
+template<typename Engine>
+class Worker final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Worker);
+  Worker() { thread_ = std::thread(&Worker<Engine>::PullTask, this); }
+  ~Worker() {
+    Shutdown();
+    thread_.join();
+  }
+
+  void Schedule(ParallelForTask<Engine>* task) { tasks_.Send(task); }
+
+  void Shutdown() { tasks_.Close(); }
+
+ private:
+  void PullTask() {
+    while (true) {
+      ParallelForTask<Engine>* task = nullptr;
+      const ChannelStatus status = tasks_.Receive(&task);
+      if (status == ChannelStatus::kChannelStatusErrorClosed) { break; }
+      CHECK_EQ(status, ChannelStatus::kChannelStatusSuccess);
+      while (true) {
+        const size_t start = task->counter.fetch_add(kParallelForStride, std::memory_order_relaxed);
+        if (start >= task->total) { break; }
+        const size_t next_start = start + kParallelForStride;
+        const size_t end = std::min(next_start, task->total);
+        (*task->for_range)(&engine_, start, end);
+      }
+      engine_.WaitUntilDone();
+      task->bc.Decrease();
+    }
+  }
+  Channel<ParallelForTask<Engine>*> tasks_;
+  Engine engine_;
+  std::thread thread_;
+};
+
 template<typename Key, typename Engine>
 class FixedTableImpl : public FixedTable {
  public:
@@ -243,8 +301,10 @@ class FixedTableImpl : public FixedTable {
                               ? options.physical_block_size
                               : RoundUp(value_size_, options.physical_block_size);
     values_per_block_ = logical_block_size_ / value_size_;
-    engines_.resize(kNumReadThreads);
-    for (uint32_t tid = 0; tid < kNumReadThreads; ++tid) { engines_.at(tid).reset(new Engine); }
+    workers_.resize(kNumWorkerThreads);
+    for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) {
+      workers_.at(tid).reset(new Worker<Engine>);
+    }
     std::unordered_map<uint64_t, std::string> chunks;
     ListChunkFiles(path_, kValueFilenamePrefix, &chunks);
     for (auto& chunk : chunks) {
@@ -262,6 +322,7 @@ class FixedTableImpl : public FixedTable {
     }
   }
   ~FixedTableImpl() override {
+    for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) { workers_.at(tid)->Shutdown(); }
     for (auto& file : value_files_) { file.Close(); }
   }
 
@@ -287,6 +348,7 @@ class FixedTableImpl : public FixedTable {
   std::string SnapshotFilename(const std::string& name) const;
   void LoadSnapshotImpl(const std::string& name);
   void SaveSnapshotImpl(const std::string& name);
+  void ParallelFor(size_t total, const ForRange<Engine>& for_range);
 
   std::string path_;
   uint32_t key_size_;
@@ -296,7 +358,7 @@ class FixedTableImpl : public FixedTable {
 
   uint32_t values_per_block_;
 
-  std::vector<std::unique_ptr<Engine>> engines_;
+  std::vector<std::unique_ptr<Worker<Engine>>> workers_;
 
   std::vector<uint16_t> offsets_buffer_;
   std::vector<char> blocks_buffer_;
@@ -318,14 +380,8 @@ void FixedTableImpl<Key, Engine>::Test(uint32_t num_keys, const void* keys, uint
                                        uint32_t* missing_indices) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::atomic<uint32_t> atomic_n_missing(0);
-#pragma omp parallel num_threads(kNumReadThreads)
-  {
-    const uint32_t thread_id = omp_get_thread_num();
-    const uint32_t num_threads = omp_get_num_threads();
-    const uint32_t keys_per_thread = (num_keys + num_threads - 1) / num_threads;
-    const uint32_t start_i = thread_id * keys_per_thread;
-    const uint32_t end_i = std::min(start_i + keys_per_thread, num_keys);
-    for (uint64_t i = start_i; i < end_i; ++i) {
+  ParallelFor(num_keys, [&](Engine* engine, size_t start, size_t end) {
+    for (uint64_t i = start; i < end; ++i) {
       const Key key = static_cast<const Key*>(keys)[i];
       auto it = row_id_mapping_.find(key);
       if (it == row_id_mapping_.end()) {
@@ -333,7 +389,7 @@ void FixedTableImpl<Key, Engine>::Test(uint32_t num_keys, const void* keys, uint
         missing_indices[index] = i;
       }
     }
-  }
+  });
   *n_missing = atomic_n_missing.load(std::memory_order_relaxed);
 }
 
@@ -341,15 +397,8 @@ template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
                                             uint16_t* offsets) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-#pragma omp parallel num_threads(kNumReadThreads)
-  {
-    const uint32_t thread_id = omp_get_thread_num();
-    const uint32_t num_threads = omp_get_num_threads();
-    auto& engine = *engines_.at(thread_id);
-    const uint32_t keys_per_thread = (num_keys + num_threads - 1) / num_threads;
-    const uint32_t start_i = thread_id * keys_per_thread;
-    const uint32_t end_i = std::min(start_i + keys_per_thread, num_keys);
-    for (uint64_t i = start_i; i < end_i; ++i) {
+  ParallelFor(num_keys, [&](Engine* engine, size_t start, size_t end) {
+    for (uint64_t i = start; i < end; ++i) {
       const Key key = static_cast<const Key*>(keys)[i];
       auto it = row_id_mapping_.find(key);
       if (it == row_id_mapping_.end()) {
@@ -364,12 +413,11 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
         const uint64_t block_offset = block_in_chunk * logical_block_size_;
         PosixFile& file = value_files_.at(chunk_id);
         offsets[i] = offset_in_block;
-        engine.AsyncPread(file.fd(), static_cast<char*>(blocks) + i * logical_block_size_,
-                          logical_block_size_, block_offset);
+        engine->AsyncPread(file.fd(), static_cast<char*>(blocks) + i * logical_block_size_,
+                           logical_block_size_, block_offset);
       }
     }
-    engine.WaitUntilDone();
-  }
+  });
 }
 
 template<typename Key, typename Engine>
@@ -536,6 +584,13 @@ void FixedTableImpl<Key, Engine>::LoadSnapshot(const std::string& name) {
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
   SaveSnapshotImpl(name);
+}
+
+template<typename Key, typename Engine>
+void FixedTableImpl<Key, Engine>::ParallelFor(size_t total, const ForRange<Engine>& for_range) {
+  ParallelForTask<Engine> task(kNumWorkerThreads, total, &for_range);
+  for (size_t i = 0; i < kNumWorkerThreads; ++i) { workers_.at(i)->Schedule(&task); }
+  task.bc.WaitUntilCntEqualZero();
 }
 
 template<typename Engine>
