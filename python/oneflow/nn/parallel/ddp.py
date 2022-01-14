@@ -63,14 +63,49 @@ def DistributedDataParallel(
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
         for state in ddp_state_for_reversed_params.values():
             state[0], state[1] = False, False
-        if isinstance(output, tuple):
-            output = flow._C.select_top_n(
+        if isinstance(output, (tuple, list)):
+            if isinstance(output[0], dict):
+                # For List[Dict[Tensor]] return type.
+                out_key_list = []
+                out_val_list = []
+                for out in output:
+                    out_keys = list(out.keys())
+                    out_values = list(out.values())
+                    out_key_list.append(out_keys)
+                    out_val_list.extend(out_values)
+                out_values = flow._C.select_top_n(
+                    convert_to_tensor_tuple(
+                        [*out_val_list, *ddp_state_for_reversed_params.keys()]
+                    ),
+                    n=len(out_val_list),
+                )
+                output = []
+                for i, keys in enumerate(out_key_list):
+                    output.append(
+                        dict(zip(keys, out_values[i * len(keys) : (i + 1) * len(keys)]))
+                    )
+                return output
+            else:
+                # For List[Tensor] return type.
+                output = flow._C.select_top_n(
+                    convert_to_tensor_tuple(
+                        [*output, *ddp_state_for_reversed_params.keys()]
+                    ),
+                    n=len(output),
+                )
+        elif isinstance(output, dict):
+            # For Dict[Tensor] return type.
+            out_keys = list(output.keys())
+            out_values = list(output.values())
+            out_values = flow._C.select_top_n(
                 convert_to_tensor_tuple(
-                    [*output, *ddp_state_for_reversed_params.keys()]
+                    [*out_values, *ddp_state_for_reversed_params.keys()]
                 ),
-                n=len(output),
+                n=len(out_values),
             )
+            return dict(zip(out_keys, out_values))
         else:
+            # For Tensor return type.
             output = flow._C.select_top_n(
                 convert_to_tensor_tuple(
                     [output, *ddp_state_for_reversed_params.keys()]
