@@ -87,13 +87,14 @@ void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT
   });
 }
 
-Maybe<void> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                    const Shape& logical_shape) const {
+Maybe<BoxingInterpreterStatus> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in,
+                                                       Symbol<PlacedNdSbp> out,
+                                                       const Shape& logical_shape) const {
   const auto& Checker =
       JUST_MSG(MapAt(*MutName2BoxingChecker(), boxing_name_),
                std::stringstream() << "boxing checker not found. checker_name: " << boxing_name_);
   JUST(Checker(in, out, logical_shape));
-  return Maybe<void>::Ok();
+  return MakeBoxingInterpreterStatus(boxing_name_, in, out);
 }
 
 Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
@@ -102,12 +103,13 @@ Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> i
   return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(boxing_name_, in, out, logical_shape);
 }
 
-Maybe<void> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                              const Shape& logical_shape) const {
+Maybe<BoxingInterpreterStatus> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in,
+                                                                 Symbol<PlacedNdSbp> out,
+                                                                 const Shape& logical_shape) const {
   const auto& middle = JUST((*boxing_dividor_)(in, out));
-  JUST(lhs_conquer_->Check(in, middle, logical_shape));
-  JUST(rhs_conquer_->Check(middle, out, logical_shape));
-  return Maybe<void>::Ok();
+  const auto& lhs_status = JUST(lhs_conquer_->Check(in, middle, logical_shape));
+  const auto& rhs_status = JUST(rhs_conquer_->Check(middle, out, logical_shape));
+  return MakeComposedBoxingInterpreterStatus(lhs_status, rhs_status);
 }
 
 Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
@@ -127,9 +129,10 @@ Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
   return boxing_function;
 }
 
-Maybe<void> OrBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                const Shape& logical_shape) const {
-  if (lhs_boxing_->Check(in, out, logical_shape).IsOk()) { return Maybe<void>::Ok(); }
+Maybe<BoxingInterpreterStatus> OrBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                                   const Shape& logical_shape) const {
+  const auto& lhs_status = TRY(lhs_boxing_->Check(in, out, logical_shape));
+  if (lhs_status.IsOk()) { return lhs_status; }
   return rhs_boxing_->Check(in, out, logical_shape);
 }
 
