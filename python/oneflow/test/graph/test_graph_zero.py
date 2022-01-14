@@ -46,12 +46,15 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 if zero_stage == 1:
                     print("zero stage 1 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_split_min_size(1)
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
+                if zero_stage == 2:
+                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
                     flow.boxing.nccl.enable_use_compute_stream(True)
                 if zero_stage == 3:
                     print("zero stage 3 optimization")
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_split_min_size(1)
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
                     flow.boxing.nccl.enable_use_compute_stream(True)
                     flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
@@ -77,14 +80,13 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
 
         def one_train_iter():
             out = linear_t_g(x)
-        
+
         def one_eval_iter():
             out = linear_e_g(x)
 
         for i in range(iter_num):
             one_train_iter()
 
-        print("==========", linear_t_g._optimization_conf_proto)
         # After pass rewrite in training graph, parameters' sbp has been
         # changed from flow.sbp.broadcast to flow.sbp.split(0)
         test_case.assertEqual(linear.weight.sbp[0], S0)
@@ -104,10 +106,10 @@ class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
     def test_linear_train_graph_with_zero_1(test_case):
         _test_linear_train_graph_with_zero(test_case, 1)
 
-    def _test_linear_train_graph_with_zero_2(test_case):
+    def test_linear_train_graph_with_zero_2(test_case):
         _test_linear_train_graph_with_zero(test_case, 2)
 
-    def _test_linear_train_graph_with_zero_3(test_case):
+    def test_linear_train_graph_with_zero_3(test_case):
         _test_linear_train_graph_with_zero(test_case, 3)
 
 

@@ -110,7 +110,14 @@ class GraphConfig(object):
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
 
-    def set_zero_redundancy_optimizer_split_min_size(self, value):
+    def set_zero_redundancy_optimizer_min_size_after_split(self, value):
+        """Set the min size of optimizer state/grad/parameter after split.
+
+        Args:
+            value (int): min size value.
+        """
+        assert isinstance(value, int)
+        assert value >= 1
         self.proto.set_optimizer_placement_optimization_threshold(value)
 
     def enable_xla_jit(self, value=True):
