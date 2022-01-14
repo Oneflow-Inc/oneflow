@@ -251,7 +251,6 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  LazyMode::Guard lazy_mode_enabled_guard(true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
