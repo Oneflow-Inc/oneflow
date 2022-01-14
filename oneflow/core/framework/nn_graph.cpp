@@ -281,37 +281,42 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   NewRuntimeBuffers();
 
-  JUST(GetVariableRealBlobAfterCompilePass());
+  JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::GetVariableRealBlobAfterCompilePass() {
+Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   JUST(vm::CurrentRankSync());
+  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
+  auto job_id = job_ctx->job_id();
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
     if (tensor->is_consistent()) {
-      cfg::NdSbpSignature nd_sbp_signature = cfg::NdSbpSignature(
-          job_.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(var_name));
-      cfg::NdSbp job_nd_sbp = nd_sbp_signature.bn_in_op2nd_sbp().at("out");
+      cfg::NdSbpSignature var_nd_sbp_signature =
+          cfg::NdSbpSignature(plan_.job_id2op_attribute_ref_table().at(job_id)
+                                  .op_name2op_attribute().at(var_name).nd_sbp_signature());
+      cfg::NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
-      if (*JUST(tensor->nd_sbp()) != job_nd_sbp) {
-        LOG(INFO) << "Variable with name `" << var_name << "` change sbp from "
+      if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
+        LOG(INFO) << "Graph with name " << name_
+                  << " variable with name `" << var_name << "` change its' sbp from "
                   << NdSbpParallelToString(*JUST(tensor->nd_sbp())) << " to "
-                  << NdSbpParallelToString(job_nd_sbp);
-        std::vector<Symbol<cfg::SbpParallel>> job_sbp_parallels;
-        for (int i = 0; i < job_nd_sbp.sbp_parallel_size(); ++i) {
-          job_sbp_parallels.emplace_back(job_nd_sbp.sbp_parallel(i));
+                  << NdSbpParallelToString(optimized_nd_sbp)
+                  << " after compile optimization.";
+        std::vector<Symbol<cfg::SbpParallel>> optimized_sbp_parallels;
+        for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
+          optimized_sbp_parallels.emplace_back(optimized_nd_sbp.sbp_parallel(i));
         }
         {
           auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
           const auto& new_tensor = JUST(one::functional::ToConsistent(
-              tensor, JUST(tensor->parallel_desc()), job_sbp_parallels, {}));
+              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {}));
           JUST(vm::CurrentRankSync());
           // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
           tensor->set_data(new_tensor);
