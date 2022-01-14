@@ -165,22 +165,18 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         # x in ouput changed
         # So nn.Graph simulate inplace in nn.Graph.build().
         test_case.assertTrue(
-            np.allclose(ret_eager_out.numpy(), np_x*2, atol=1e-4, rtol=1e-4)
+            np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
         )
         # x has not changed
         # So nn.Graph inplace will not change free eager tensor.
-        test_case.assertTrue(
-            np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4)
-        )
+        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
 
         # Run second time
         ret_eager_out = g_return_eager()
         test_case.assertTrue(
-            np.allclose(ret_eager_out.numpy(), np_x*2, atol=1e-4, rtol=1e-4)
+            np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
         )
-        test_case.assertTrue(
-            np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4)
-        )
+        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

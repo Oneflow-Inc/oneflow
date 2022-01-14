@@ -380,16 +380,27 @@ def GetDualObject(name, pytorch, oneflow):
                                             else:
                                                 pass
                                             if verbose:
-                                                print("Run graph of function: ", repr(oneflow), ", graph check is intentionally skiped.")
-                                        elif (oneflow.__name__ == "Parameter"):
+                                                print(
+                                                    "Run graph of function: ",
+                                                    repr(oneflow),
+                                                    ", graph check is intentionally skiped.",
+                                                )
+                                        elif oneflow.__name__ == "Parameter":
                                             # nn.Graph donot deal with Parameter creation.
                                             test_g_res = oneflow_res
                                             if verbose:
-                                                print("Run graph of function: ", repr(oneflow), ", graph check is intentionally skiped.")
+                                                print(
+                                                    "Run graph of function: ",
+                                                    repr(oneflow),
+                                                    ", graph check is intentionally skiped.",
+                                                )
                                         else:
                                             test_g = TestGraphOfFunctional()
                                             if verbose:
-                                                print("Run graph of function: ", repr(oneflow))
+                                                print(
+                                                    "Run graph of function: ",
+                                                    repr(oneflow),
+                                                )
                                                 test_g.debug(3)
                                             test_g_res = test_g()
                                     except Exception as e:
