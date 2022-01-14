@@ -99,7 +99,7 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
                 placement=out_placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
             )
             test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr,),)
-        except flow._oneflow_internal.exception.UnimplementedException:
+        except flow._oneflow_internal.exception.BoxingNotSupportedException:
             failed_boxing.append(elem)
 
     if flow.env.get_rank() == 0:
@@ -181,8 +181,6 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
             )
             test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
         except flow._oneflow_internal.exception.BoxingNotSupportedException:
-            failed_boxing.append((elem, in_device, out_device))
-        except flow._oneflow_internal.exception.UnimplementedException:
             failed_boxing.append((elem, in_device, out_device))
 
     if flow.env.get_rank() == 0:
