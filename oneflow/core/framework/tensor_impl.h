@@ -166,6 +166,8 @@ class ConsistentTensorImpl : public TensorImpl {
     return Maybe<void>::Ok();
   }
 
+  virtual Maybe<ConsistentTensorImpl> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
  protected:
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
@@ -254,6 +256,8 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return true; }
+
+  Maybe<ConsistentTensorImpl> detach() const override;
 };
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -276,6 +280,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                                               Symbol<Device> device,
                                               const Optional<int64_t>& parallel_id,
                                               bool requires_grad, bool is_leaf);
+
+  Maybe<ConsistentTensorImpl> detach() const override;
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,
