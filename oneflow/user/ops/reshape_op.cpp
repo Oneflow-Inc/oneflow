@@ -110,7 +110,8 @@ namespace oneflow {
       << " input shape is : " << in_shape.ToString()
       << " , output shape is : " << out_shape->ToString() << " , output logical shape is "
       << logical_shape.ToString()
-      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString();
+      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
+      << " op_loc: " << ctx->op_loc();
   return Maybe<void>::Ok();
 }
 

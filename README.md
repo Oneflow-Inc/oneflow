@@ -9,10 +9,26 @@
 
 ## Latest News
 
-- Version 0.5.0 is out!
-  - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
-  - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5.0)
+- Version 0.6.0 is out!
+  - Improved consistent mode support.
+  - More performant eager execution.
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.6.0)
+
+## Publication
+
+- [OneFlow: Redesign the Distributed Deep Learning Framework from Scratch](https://arxiv.org/abs/2110.15032)
+- Bibtex Citation
+
+  ```
+  @misc{yuan2021oneflow,
+        title={OneFlow: Redesign the Distributed Deep Learning Framework from Scratch},
+        author={Jinhui Yuan and Xinqi Li and Cheng Cheng and Juncheng Liu and Ran Guo and Shenghang Cai and Chi Yao and Fei Yang and Xiaodong Yi and Chuan Wu and Haoran Zhang and Jie Zhao},
+        year={2021},
+        eprint={2110.15032},
+        archivePrefix={arXiv},
+        primaryClass={cs.DC}
+  }
+  ```
 
 ## Install OneFlow
 
@@ -36,24 +52,24 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.5.0+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.6.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/cu102
+  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu102
   ```
 
 - To install other available builds for different variants:
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.6.0+[PLATFORM]
     ```
   - Nightly
     ```
-    python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
+    python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
     ```
   - All available `[PLATFORM]`:
     | Platform |CUDA Driver Version| Supported GPUs |
@@ -224,7 +240,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Getting Started
 
-- Please refer to [QUICKSTART](https://docs.oneflow.org/en/master/basics/01_quickstart.html) 
+- Please refer to [QUICKSTART](https://docs.oneflow.org/en/master/basics/01_quickstart.html)
 - 中文版请参见 [快速上手](https://docs.oneflow.org/master/basics/01_quickstart.html)
 
 ## Documentation

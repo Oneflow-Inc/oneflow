@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -100,6 +101,7 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                        const AttrMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
@@ -155,7 +157,9 @@ class UserOpExprInferContext : public user_op::InferContext {
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
-        tensor_meta4output_index_(TensorMeta4OutputIndex) {}
+        tensor_meta4output_index_(TensorMeta4OutputIndex) {
+    loc_ = DispatchFrame::get_str();
+  }
   virtual ~UserOpExprInferContext() override = default;
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
@@ -259,6 +263,7 @@ class UserOpExprInferContext : public user_op::InferContext {
   const std::string& op_name() const override { return user_op_expr_->op_name(); }
   const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
   const std::string& device_tag() const override { return device_tag_; }
+  const std::string& op_loc() const override { return loc_; }
 
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
@@ -270,6 +275,7 @@ class UserOpExprInferContext : public user_op::InferContext {
   const std::string& device_tag_;
   const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
   const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
+  std::string loc_;
 };
 
 class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
@@ -489,6 +495,7 @@ Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_con
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_input_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -502,6 +509,7 @@ Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_
                                                                const AttrMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_feed_variable_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -516,6 +524,7 @@ Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_c
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_fetch_output_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -529,6 +538,7 @@ Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
     OperatorConf* op_conf, const AttrMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   auto* proto = op_conf->mutable_image_decoder_random_crop_resize_conf();
   proto->set_target_width(JUST(attrs.GetAttr<int64_t>("target_width")));
   proto->set_target_height(JUST(attrs.GetAttr<int64_t>("target_height")));
@@ -556,6 +566,7 @@ Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -570,6 +581,7 @@ Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* o
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -584,6 +596,7 @@ Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf*
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -626,6 +639,7 @@ Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* 
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_split_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -641,6 +655,7 @@ Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* 
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -656,6 +671,7 @@ Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(OperatorConf*
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
@@ -671,6 +687,7 @@ Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_add_conf()) = op_proto_;
+  *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
