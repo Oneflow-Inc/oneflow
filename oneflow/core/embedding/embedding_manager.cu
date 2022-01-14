@@ -97,4 +97,8 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   return pair.first->second.get();
 }
 
+void EmbeddingMgr::SaveSnapshot(const std::string& name){
+  for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot(name); }
+}
+
 }  // namespace oneflow
