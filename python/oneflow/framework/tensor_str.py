@@ -16,12 +16,15 @@ limitations under the License.
 """
 This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
-import os
+
 import math
 import numpy as np
 from typing import Optional
 
 import oneflow as flow
+from oneflow.framework.tensor_str_util import slice_wrapper
+from oneflow.framework.tensor_str_util import _autoset_linewidth
+from oneflow.framework.tensor_str_util import _try_convert_to_local_tensor
 
 
 class __PrinterOptions(object):
@@ -88,7 +91,7 @@ def set_printoptions(
             PRINT_OPTS.linewidth = 80
         elif profile == "full":
             PRINT_OPTS.precision = 4
-            PRINT_OPTS.threshold = inf
+            PRINT_OPTS.threshold = math.inf
             PRINT_OPTS.edgeitems = 3
             PRINT_OPTS.linewidth = 80
 
@@ -103,26 +106,6 @@ def set_printoptions(
     PRINT_OPTS.sci_mode = sci_mode
     if profile is not None or linewidth is not None:
         PRINT_OPTS.autoset_linewidth = False
-
-
-def _autoset_linewidth():
-    # os.terminal_size(columns, lines),
-    # columns represents width of the terminal window in characters
-    # and lines represents height of the terminal window in characters.
-    try:
-        linewidth = os.get_terminal_size()[0]
-    except OSError:
-        linewidth = 80
-    return linewidth
-
-
-def _try_convert_to_local_tensor(tensor):
-    if tensor.is_consistent:
-        tensor = tensor.to_consistent(
-            placement=flow.env.all_device_placement(tensor.placement.device_type),
-            sbp=flow.sbp.broadcast,
-        ).to_local()
-    return tensor
 
 
 class _Formatter(object):
@@ -233,10 +216,10 @@ def _vector_str(self, indent, summarize, formatter1):
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         left_values = _try_convert_to_local_tensor(
-            self[: PRINT_OPTS.edgeitems]
+            slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1])
         ).tolist()
         right_values = _try_convert_to_local_tensor(
-            self[-PRINT_OPTS.edgeitems :]
+            slice_wrapper(self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
         ).tolist()
         data = (
             [_val_formatter(val) for val in left_values]
@@ -266,18 +249,30 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         slices = (
             [
-                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+                _tensor_str_with_formatter(
+                    slice_wrapper(self, [i, i + 1, 1]),
+                    indent + 1,
+                    summarize,
+                    formatter1,
+                )
                 for i in range(0, PRINT_OPTS.edgeitems)
             ]
             + ["..."]
             + [
-                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+                _tensor_str_with_formatter(
+                    slice_wrapper(self, [i, i + 1, 1]),
+                    indent + 1,
+                    summarize,
+                    formatter1,
+                )
                 for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
             ]
         )
     else:
         slices = [
-            _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+            _tensor_str_with_formatter(
+                slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+            )
             for i in range(0, self.size(0))
         ]
 
@@ -290,10 +285,8 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # TODO: not support nd sbp tensor and s0 tensor for now
-    if self.is_consistent and (
-        len(self.placement.hierarchy) > 1 or self.sbp == (flow.sbp.split(0),)
-    ):
+    # TODO: not support nd sbp tensor for now
+    if self.is_consistent and len(self.placement.hierarchy) > 1:
         return "[...]"
 
     with flow.no_grad():
@@ -323,18 +316,31 @@ def get_summarized_data(self):
     if dim == 1:
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
             return flow.cat(
-                (self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :])
+                (
+                    slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1]),
+                    slice_wrapper(
+                        self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
+                    ),
+                )
             )
         else:
             return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
+        start = [
+            slice_wrapper(self, [i, i + 1, 1]) for i in range(0, PRINT_OPTS.edgeitems)
+        ]
         end = [
-            self[i] for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+            slice_wrapper(self, [i, i + 1, 1])
+            for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
         ]
         return flow.stack([get_summarized_data(x) for x in (start + end)])
     else:
-        return flow.stack([get_summarized_data(x) for x in self])
+        return flow.stack(
+            [
+                get_summarized_data(slice_wrapper(self, [i, i + 1, 1]))
+                for i in range(len(self))
+            ]
+        )
 
 
 def _gen_tensor_str_template(tensor, is_meta):
