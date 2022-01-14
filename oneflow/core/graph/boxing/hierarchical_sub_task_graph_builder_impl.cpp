@@ -176,7 +176,6 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
     *reduced_in_nd_sbp = in_nd_sbp;
     *reduced_out_nd_sbp = out_nd_sbp;
   } else if (in_hierarchy_axes != out_hierarchy_axes) {
-    // prune hierarchy
     ParallelDesc pruned_in_parallel_desc = in_parallel_desc;
     ParallelDesc pruned_out_parallel_desc = out_parallel_desc;
     cfg::NdSbp pruned_in_nd_sbp;
