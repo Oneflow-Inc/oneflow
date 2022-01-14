@@ -149,85 +149,10 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
+JpegReturnType JpegDecodeRandomCropResize(const unsigned char* data, size_t length,
                                  RandomCropGenerator* crop_generator, unsigned char* workspace,
                                  size_t workspace_size, unsigned char* dst, int target_width,
                                  int target_height) {
-  // struct jpeg_decompress_struct cinfo = {};
-  // struct jpeg_error_mgr jerr = {};
-  // int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
-  // cinfo.err = jpeg_std_error(&jerr);
-
-  // jpeg_create_decompress(&cinfo);
-  // if (cinfo.err->msg_code != 0) { return JpegReturnType::kError; }
-
-  // jpeg_mem_src(&cinfo, data, length);
-  // if (cinfo.err->msg_code != 0) {
-  //   jpeg_destroy_decompress(&cinfo);
-  //   return JpegReturnType::kError;
-  // }
-
-  // rc = jpeg_read_header(&cinfo, TRUE);
-  // if (rc != 1) {
-  //   jpeg_destroy_decompress(&cinfo);
-  //   return JpegReturnType::kError;
-  // }
-
-  // jpeg_start_decompress(&cinfo);
-  // int width = cinfo.output_width;
-  // int height = cinfo.output_height;
-  // int pixel_size = cinfo.output_components;
-
-  // unsigned char* crop_buf = nullptr;
-  // std::vector<unsigned char> tmp_buf;
-  // if (width * height * pixel_size > workspace_size) {
-  //   tmp_buf.resize(width * height * pixel_size);
-  //   crop_buf = tmp_buf.data();
-  // } else {
-  //   crop_buf = workspace;
-  // }
-
-  // if (crop_generator) {
-  //   GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
-  // } else {
-  //   crop_x = 0;
-  //   crop_y = 0;
-  //   crop_w = width;
-  //   crop_h = height;
-  // }
-
-  // unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
-
-  // jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
-  // int row_stride = u_crop_w * pixel_size;
-  // if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) {
-  //   jpeg_destroy_decompress(&cinfo);
-  //   return JpegReturnType::kError;
-  // }
-
-  // while (cinfo.output_scanline < u_crop_y + u_crop_h) {
-  //   unsigned char* buffer_array[1];
-  //   buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
-  //   jpeg_read_scanlines(&cinfo, buffer_array, 1);
-  // }
-
-  // jpeg_skip_scanlines(&cinfo, cinfo.output_height - u_crop_y - u_crop_h);
-  // jpeg_finish_decompress(&cinfo);
-  // jpeg_destroy_decompress(&cinfo);
-
-  // cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
-  // cv::Rect roi;
-  // cv::Mat cropped;
-
-  // if (u_crop_w != crop_w) {
-  //   roi.x = u_crop_w - crop_w;
-  //   roi.y = 0;
-  //   roi.width = crop_w;
-  //   roi.height = crop_h;
-  //   image(roi).copyTo(cropped);
-  // } else {
-  //   cropped = image;
-  // }
   cv::Mat image_mat;
   JpegDecoder jpeg_decode;
   if (jpeg_decode.PartialDecode((const unsigned char*)(data), length, crop_generator,
@@ -241,7 +166,7 @@ JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
   return JpegReturnType::kOk;
 }
 
-void OpencvPartialDecode(const unsigned char* data, size_t length,
+void OpencvDecodeRandomCropResize(const unsigned char* data, size_t length,
                          RandomCropGenerator* crop_generator, unsigned char* dst, int target_width,
                          int target_height) {
   cv::Mat image =
@@ -266,13 +191,13 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              unsigned char* workspace, size_t workspace_size,
                                              unsigned char* dst, int target_width,
                                              int target_height) {
-  if (JpegPartialDecode(data, length, crop_generator, workspace, workspace_size, dst, target_width,
+  if (JpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst, target_width,
                         target_height)
       == JpegReturnType::kOk) {
     return;
   }
 
-  OpencvPartialDecode(data, length, crop_generator, dst, target_width, target_height);
+  OpencvDecodeRandomCropResize(data, length, crop_generator, dst, target_width, target_height);
 }
 
 template<>
