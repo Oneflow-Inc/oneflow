@@ -1823,6 +1823,60 @@ class TensorSplitIntFunctor {
   }
 };
 
+class HsplitIntFunctor {
+ public:
+  HsplitIntFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, 
+                                const int32_t& indices_or_sections) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(ndim>=1)<<"torch.hsplit requires a tensor with at least 1 dimension, but got a tensor with "<<ndim <<" dimensions!";
+    CHECK_OR_RETURN(indices_or_sections>0) << "indices_or_sections must greater than 0";
+    int32_t dim = (ndim == 1) ? 0 : 1;
+    CHECK_OR_RETURN(input->shape()->At(dim)% indices_or_sections == 0) << "torch.hsplit attempted to split along dimension " << dim 
+                    <<", but the size of the dimension " << input->shape()->At(dim) <<
+                     " is not divisible by the split_size " <<indices_or_sections<< "!";
+    return TensorSplitInt(input, indices_or_sections, dim);
+  }
+};
+
+class HsplitVecFunctor {
+ public:
+  HsplitVecFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, 
+                                const std::vector<int32_t>& indices_or_sections) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(ndim>=1)<<"torch.hsplit requires a tensor with at least 1 dimension, but got a tensor with "<<ndim <<" dimensions!";
+    int32_t dim = (ndim == 1) ? 0 : 1;
+    return TensorSplitVec(input, indices_or_sections, dim);
+  }
+};
+
+class VsplitIntFunctor {
+ public:
+  VsplitIntFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, 
+                                const int32_t& indices_or_sections) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(ndim>=2)<<"torch.vsplit requires a tensor with at least 2 dimension, but got a tensor with "<<ndim <<" dimensions!";
+    CHECK_OR_RETURN(indices_or_sections>0) << "indices_or_sections must greater than 0";
+    CHECK_OR_RETURN(input->shape()->At(0)% indices_or_sections == 0) << "torch.vsplit attempted to split along dimension " << 0 
+                    <<", but the size of the dimension " << input->shape()->At(0) <<
+                     " is not divisible by the split_size " <<indices_or_sections<< "!";
+    return TensorSplitInt(input, indices_or_sections, 0);
+  }
+};
+
+class VsplitVecFunctor {
+ public:
+  VsplitVecFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, 
+                                const std::vector<int32_t>& indices_or_sections) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN(ndim>=2)<<"torch.vsplit requires a tensor with at least 1 dimension, but got a tensor with "<<ndim <<" dimensions!";
+    return TensorSplitVec(input, indices_or_sections, 0);
+  }
+};
+
 class ErfinvFunctor {
  public:
   ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
@@ -1957,6 +2011,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MovedimIntFunctor>("MovedimInt");
   m.add_functor<TensorSplitVecFunctor>("TensorSplitVec");
   m.add_functor<TensorSplitIntFunctor>("TensorSplitInt");
+  m.add_functor<HsplitIntFunctor>("HsplitInt");
+  m.add_functor<HsplitVecFunctor>("HsplitVec");
+  m.add_functor<VsplitIntFunctor>("VsplitInt");
+  m.add_functor<VsplitVecFunctor>("VsplitVec");
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");

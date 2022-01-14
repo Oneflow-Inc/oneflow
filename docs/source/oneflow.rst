@@ -45,6 +45,8 @@ oneflow
             diagonal,
             movedim,
             tensor_split,
+            hsplit,
+            vsplit,
             div, 
             dot, 
             eq, 
