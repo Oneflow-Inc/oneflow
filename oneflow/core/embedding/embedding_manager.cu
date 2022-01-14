@@ -97,8 +97,15 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   return pair.first->second.get();
 }
 
-void EmbeddingMgr::SaveSnapshot(const std::string& name){
-  for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot(name); }
+void EmbeddingMgr::SaveSnapshot(const std::string embedding_name, const int64_t parallel_id,
+                                const std::string snapshot_name) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  auto it = key_value_store_map_.find(map_key);
+  if (it != key_value_store_map_.end()) {
+    it->second->SaveSnapshot(snapshot_name);
+  } else {
+    LOG(ERROR) << "Can not find this embedding ! \n";
+  }
 }
 
 }  // namespace oneflow

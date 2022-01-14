@@ -33,7 +33,9 @@ class EmbeddingMgr final {
 
   embedding::KeyValueStore* GetKeyValueStore(const embedding::EmbeddingOptions& options,
                                              int64_t parallel_id, int64_t parallel_num);
- void SaveSnapshot(const std::string& name); 
+  void SaveSnapshot(const std::string embedding_name, const int64_t parallel_id,
+                    const std::string snapshot_name);
+
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::KeyValueStore>>
       key_value_store_map_;
