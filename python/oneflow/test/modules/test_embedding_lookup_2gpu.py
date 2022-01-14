@@ -19,6 +19,10 @@ limitations under the License.
 import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
+import os
+
+os.environ["L1_CACHE_MEMORY_BUDGET_MB"] = "4096"
+os.environ["BLOCK_BASED_PATH"] = "/NVME0/guoran/unittest/test"
 
 placement = flow.placement("cuda", {0: [0, 1]})
 batch_size = 65536
