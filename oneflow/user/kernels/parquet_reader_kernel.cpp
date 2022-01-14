@@ -70,7 +70,7 @@ Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size
     values.resize(values.size() + footprint);
     rep_levels.resize(rep_levels.size() + footprint);
     auto levels_read = typed_col_reader->ReadBatch(
-        footprint, /* def_levels */ nullptr, rep_levels.data(), &values[cursor], &values_read);
+        footprint, /* def_levels */ nullptr, &rep_levels[cursor], &values[cursor], &values_read);
     CHECK_EQ_OR_RETURN(values_read, levels_read);
     CHECK_LE_OR_RETURN(values_read, footprint);
     if (values_read < footprint) {
@@ -81,9 +81,10 @@ Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size
     FindRowEnd(cursor);
   }
 
-  auto sample = std::make_shared<TensorBuffer>();
+  std::shared_ptr<TensorBuffer> sample;
   // all values can't fill a complete sample, return a empty sample
   if (row_read == 0) { return sample; }
+  sample.reset(new TensorBuffer());
   sample->Resize(Shape({static_cast<int64_t>(row_end)}), GetDataType<T>::value);
   std::copy(values.begin(), values.begin() + row_end, sample->mut_data<T>());
   values.erase(values.begin(), values.begin() + row_end);
@@ -96,27 +97,35 @@ Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_r
                                                     size_t batch_size, size_t sample_size) {
   using T = typename DType::c_type;
   thread_local std::vector<T> values;
+  thread_local std::vector<int16_t> rep_levels;
   size_t values_to_read = batch_size * sample_size;
   values.reserve(values_to_read);
+  rep_levels.reserve(values_to_read);
 
-  if (!values.empty()) {
-    CHECK_EQ_OR_RETURN(values.size() % sample_size, 0);
-    values_to_read -= values.size();
-  }
+  CHECK_EQ_OR_RETURN(values.size(), rep_levels.size());
+  if (!values.empty()) { values_to_read -= values.size(); }
   size_t cursor = values.size();
   values.resize(values.size() + values_to_read);
-
-  std::vector<int16_t> rep_levels(values_to_read);
-  int64_t values_read = 0;
+  rep_levels.resize(rep_levels.size() + values_to_read);
 
   auto* typed_col_reader = static_cast<parquet::TypedColumnReader<DType>*>(col_reader);
+  int64_t values_read = 0;
   int64_t levels_read = typed_col_reader->ReadBatch(
-      values_to_read, /* def_levels */ nullptr, rep_levels.data(), &values[cursor], &values_read);
-  // verify read results
+      values_to_read, /* def_levels */ nullptr, &rep_levels[cursor], &values[cursor], &values_read);
   CHECK_EQ_OR_RETURN(values_read, levels_read);
   CHECK_LE_OR_RETURN(values_read, values_to_read);
-  CHECK_EQ_OR_RETURN(values_read % sample_size, 0);
-  rep_levels.resize(levels_read);
+
+  std::shared_ptr<TensorBuffer> batch;
+  // not enough batch, return empty
+  if (values_read < values_to_read) {
+    size_t remain = values_to_read - values_read;
+    values.resize(values.size() - remain);
+    rep_levels.resize(rep_levels.size() - remain);
+    return batch;
+  }
+
+  CHECK_EQ_OR_RETURN(values.size() % sample_size, 0);
+  // verify repetition levels
   for (size_t i = 0; i < rep_levels.size(); ++i) {
     // repetition level of the first value of LIST must be 0
     // repetition levels of other values of LIST must be 1
@@ -131,15 +140,11 @@ Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_r
     }
   }
 
-  auto batch = std::make_shared<TensorBuffer>();
-  // not enough batch, return a empty tensor buffer
-  if (values_read < values_to_read) {
-    values.resize(values.size() - (values_to_read - values_read));
-    return batch;
-  }
+  batch.reset(new TensorBuffer());
   batch->Resize(Shape({static_cast<int64_t>(values.size())}), GetDataType<T>::value);
   std::copy(values.begin(), values.end(), batch->mut_data<T>());
   values.resize(0);
+  rep_levels.resize(0);
   return batch;
 }
 
@@ -186,7 +191,7 @@ Maybe<TensorBuffer> ReadColumnFixedLengthValues(parquet::ColumnReader* col_reade
   }
 }
 
-DataType ParquetPhysicalTypeToDataType(parquet::Type::type type) {
+DataType ParquetTypeToDataType(parquet::Type::type type) {
   switch (type) {
     case parquet::Type::INT32: {
       return DataType::kInt32;
@@ -429,6 +434,7 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
           col_reader.get(), completely_shuffle_ ? 1 : batch_size_, col_desc.shape.elem_cnt()));
     }
     if (!sample_or_batch) { continue; }
+    CHECK_OR_RETURN(sample_or_batch->data_type() != DataType::kInvalidDataType);
     if (completely_shuffle_ && !col_desc.is_variadic) {
       if (shuffle_buffers_[col]->Push(std::move(sample_or_batch), true) != BufferType::kSuccess) {
         return false;
@@ -477,6 +483,7 @@ Maybe<void> ParquetReader::NextRowGroup() {
         << "There are only " << num_row_groups << " row groups in parquet file of "
         << parquet_files_[0] << " that can't be partitioned by " << world_size_;
   }
+  LOG(INFO) << "ParquetReader::NextRowGroup: " << row_group_part_indices_.front();
   row_group_reader_ = file_reader_->RowGroup(row_group_part_indices_.front());
   row_group_part_indices_.pop();
   return Maybe<void>::Ok();
@@ -503,6 +510,7 @@ Maybe<void> ParquetReader::NextParquetFile() {
   file_reader_ = parquet::ParquetFileReader::OpenFile(parquet_files_[file_index], use_mmap_);
   CHECK_OR_RETURN(file_reader_->metadata()->schema()->Equals(*file_meta_->schema()))
       << "The schema of " << parquet_files_[file_index] << " dismatch";
+  LOG(INFO) << "ParquetReader::NextParquetFile: " << parquet_files_[file_index];
   return Maybe<void>::Ok();
 }
 
@@ -669,7 +677,7 @@ Maybe<void> ParquetReader::InitSchema(user_op::KernelInitContext* ctx) {
                                       "type or LIST type from column";
     }
     // check data type
-    DataType data_type = ParquetPhysicalTypeToDataType(col_desc->physical_type());
+    DataType data_type = ParquetTypeToDataType(col_desc->physical_type());
     CHECK_NE_OR_RETURN(data_type, DataType::kInvalidDataType)
         << "Unsupported parquet physical type " << col_desc->physical_type() << " for column "
         << out_desc.col_id;
