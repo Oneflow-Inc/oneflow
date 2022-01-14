@@ -37,9 +37,10 @@ namespace oneflow {
 
 namespace {
 
-template<typename DType>
-Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size_t footprint) {
-  using T = typename DType::c_type;
+template<typename PType>
+Maybe<bool> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size_t footprint,
+                                 std::shared_ptr<TensorBuffer>& sample) {
+  using T = typename PType::c_type;
   thread_local std::vector<T> values;
   thread_local std::vector<int16_t> rep_levels;
   values.reserve(footprint);
@@ -63,7 +64,7 @@ Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size
   };
   FindRowEnd(0);
 
-  auto* typed_col_reader = static_cast<parquet::TypedColumnReader<DType>*>(col_reader);
+  auto* typed_col_reader = static_cast<parquet::TypedColumnReader<PType>*>(col_reader);
   int64_t values_read = 0;
   while (typed_col_reader->HasNext() && row_read == 0) {
     size_t cursor = values.size();
@@ -81,21 +82,23 @@ Maybe<TensorBuffer> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size
     FindRowEnd(cursor);
   }
 
-  std::shared_ptr<TensorBuffer> sample;
-  // all values can't fill a complete sample, return a empty sample
-  if (row_read == 0) { return sample; }
+  // all values can't fill a complete sample
+  if (row_read == 0) { return false; }
+
+  CHECK_OR_RETURN(!sample);
   sample.reset(new TensorBuffer());
   sample->Resize(Shape({static_cast<int64_t>(row_end)}), GetDataType<T>::value);
   std::copy(values.begin(), values.begin() + row_end, sample->mut_data<T>());
   values.erase(values.begin(), values.begin() + row_end);
   rep_levels.erase(rep_levels.begin(), rep_levels.begin() + row_end);
-  return sample;
+  return true;
 }
 
-template<typename DType>
-Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_reader,
-                                                    size_t batch_size, size_t sample_size) {
-  using T = typename DType::c_type;
+template<typename PType>
+Maybe<bool> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_reader, size_t batch_size,
+                                            size_t sample_size,
+                                            std::shared_ptr<TensorBuffer>& batch) {
+  using T = typename PType::c_type;
   thread_local std::vector<T> values;
   thread_local std::vector<int16_t> rep_levels;
   size_t values_to_read = batch_size * sample_size;
@@ -108,20 +111,19 @@ Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_r
   values.resize(values.size() + values_to_read);
   rep_levels.resize(rep_levels.size() + values_to_read);
 
-  auto* typed_col_reader = static_cast<parquet::TypedColumnReader<DType>*>(col_reader);
+  auto* typed_col_reader = static_cast<parquet::TypedColumnReader<PType>*>(col_reader);
   int64_t values_read = 0;
   int64_t levels_read = typed_col_reader->ReadBatch(
       values_to_read, /* def_levels */ nullptr, &rep_levels[cursor], &values[cursor], &values_read);
   CHECK_EQ_OR_RETURN(values_read, levels_read);
   CHECK_LE_OR_RETURN(values_read, values_to_read);
 
-  std::shared_ptr<TensorBuffer> batch;
-  // not enough batch, return empty
+  // not enough batch, return false
   if (values_read < values_to_read) {
     size_t remain = values_to_read - values_read;
     values.resize(values.size() - remain);
     rep_levels.resize(rep_levels.size() - remain);
-    return batch;
+    return false;
   }
 
   CHECK_EQ_OR_RETURN(values.size() % sample_size, 0);
@@ -140,20 +142,22 @@ Maybe<TensorBuffer> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_r
     }
   }
 
+  CHECK_OR_RETURN(!batch);
   batch.reset(new TensorBuffer());
   batch->Resize(Shape({static_cast<int64_t>(values.size())}), GetDataType<T>::value);
   std::copy(values.begin(), values.end(), batch->mut_data<T>());
   values.resize(0);
   rep_levels.resize(0);
-  return batch;
+  return true;
 }
 
-Maybe<TensorBuffer> ReadColumnValues(parquet::ColumnReader* col_reader, size_t footprint) {
+Maybe<bool> ReadColumnValues(parquet::ColumnReader* col_reader, size_t footprint,
+                             std::shared_ptr<TensorBuffer>& sample) {
   switch (col_reader->type()) {
-#define CASE_ENTRY(type)                                      \
-  case type: {                                                \
-    using PhyT = parquet::PhysicalType<type>;                 \
-    return ReadColumnValuesImpl<PhyT>(col_reader, footprint); \
+#define CASE_ENTRY(type)                                              \
+  case type: {                                                        \
+    using PhyT = parquet::PhysicalType<type>;                         \
+    return ReadColumnValuesImpl<PhyT>(col_reader, footprint, sample); \
   }
 
     CASE_ENTRY(parquet::Type::INT32)
@@ -169,13 +173,13 @@ Maybe<TensorBuffer> ReadColumnValues(parquet::ColumnReader* col_reader, size_t f
   }
 }
 
-Maybe<TensorBuffer> ReadColumnFixedLengthValues(parquet::ColumnReader* col_reader,
-                                                size_t batch_size, size_t sample_size) {
+Maybe<bool> ReadColumnFixedLengthValues(parquet::ColumnReader* col_reader, size_t batch_size,
+                                        size_t sample_size, std::shared_ptr<TensorBuffer>& batch) {
   switch (col_reader->type()) {
-#define CASE_ENTRY(type)                                                               \
-  case type: {                                                                         \
-    using PhyT = parquet::PhysicalType<type>;                                          \
-    return ReadColumnFixedLengthValuesImpl<PhyT>(col_reader, batch_size, sample_size); \
+#define CASE_ENTRY(type)                                                                      \
+  case type: {                                                                                \
+    using PhyT = parquet::PhysicalType<type>;                                                 \
+    return ReadColumnFixedLengthValuesImpl<PhyT>(col_reader, batch_size, sample_size, batch); \
   }
 
     CASE_ENTRY(parquet::Type::INT32)
@@ -427,14 +431,15 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
   auto col_reader = row_group_reader_->Column(col_id);
   while (col_reader->HasNext()) {
     std::shared_ptr<TensorBuffer> sample_or_batch;
+    bool read_done = false;
     if (col_desc.is_variadic) {
-      sample_or_batch = JUST(ReadColumnValues(col_reader.get(), read_footprint_));
+      read_done = JUST(ReadColumnValues(col_reader.get(), read_footprint_, sample_or_batch));
     } else {
-      sample_or_batch = JUST(ReadColumnFixedLengthValues(
-          col_reader.get(), completely_shuffle_ ? 1 : batch_size_, col_desc.shape.elem_cnt()));
+      size_t bz = completely_shuffle_ ? 1 : batch_size_;
+      read_done = JUST(ReadColumnFixedLengthValues(col_reader.get(), bz, col_desc.shape.elem_cnt(),
+                                                   sample_or_batch));
     }
-    if (!sample_or_batch) { continue; }
-    CHECK_OR_RETURN(sample_or_batch->data_type() != DataType::kInvalidDataType);
+    if (!read_done) { continue; }
     if (completely_shuffle_ && !col_desc.is_variadic) {
       if (shuffle_buffers_[col]->Push(std::move(sample_or_batch), true) != BufferType::kSuccess) {
         return false;
