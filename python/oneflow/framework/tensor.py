@@ -768,7 +768,7 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
-def _repeat(self, sizes):
+def _repeat(self, *sizes):
     return flow._C.repeat(self, sizes)
 
 
