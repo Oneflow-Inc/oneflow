@@ -355,16 +355,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-  if (!input_tensor->is_lazy()) {
-    const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-    if (input_lbn.empty()) {
-      // This output tensor is a new free eager tensor, so treat it as a new variable op output.
-      JUST(AddFreeEagerTensorToVariableOp(input_tensor));
-    }
-    // Else, this eager output tensor has already been treated as an output of a variable op
-    // or an inplace op, so do nothing.
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  // Lazy tensor must has lbn.
+  // Eager tensor may has lbn if it has already been treated as an output of a variable op
+  // or an output of an inplace op.
+  if (input_lbn.empty()) {
+    CHECK_OR_RETURN(input_tensor->is_eager());
+    // This output tensor is a new free eager tensor, so treat it as a new variable op output.
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
-  const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
