@@ -768,8 +768,8 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
-def _repeat(self, repeat_shape):
-    return flow._C.repeat(self, repeat_shape)
+def _repeat(self, sizes):
+    return flow._C.repeat(self, sizes)
 
 
 def RegisterMethods():
