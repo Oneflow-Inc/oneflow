@@ -1073,7 +1073,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                         " workers is no longer possible. Please increase the"
                         " limit using `ulimit -n` in the shell or change the"
                         " sharing strategy by calling"
-                        " `torch.multiprocessing.set_sharing_strategy('file_system')`"
+                        " `flow.multiprocessing.set_sharing_strategy('file_system')`"
                         " at the beginning of your code"
                     ) from None
             raise
