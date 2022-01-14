@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-class TestMovedim(flow.unittest.TestCase):
+class TestUnbind(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_unbind(test_case):
         device = random_device()
