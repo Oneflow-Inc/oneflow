@@ -1664,23 +1664,22 @@ class L2NormalizeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
                            const float& epsilon) const {
     const auto ndims = input->shape()->NumAxes();
+    const auto final_dim = ndims - 1;
+
     auto axis_ = axis >= 0 ? axis : axis + ndims;
     CHECK_GE_OR_RETURN(axis_, 0) << "Axis should >=0 but axis is " << axis_ << " now.";
-    CHECK_LT_OR_RETURN(axis_, ndims)
+    CHECK_LE_OR_RETURN(axis_, final_dim)
         << "Axis should <" << ndims << " but axis is " << axis_ << " now.";
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<int32_t>("axis", final_dim));
 
-    if (axis_ == 0 || axis == ndims - 1) {
-      JUST(attrs.SetAttr<int32_t>("axis", axis_));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-    }
+    if (axis_ == final_dim) { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs); }
 
-    JUST(attrs.SetAttr<int32_t>("axis", 0));
     std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
     for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
-    std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
+    std::swap(input_perm[final_dim], input_perm[static_cast<size_t>(axis_)]);
 
     const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
