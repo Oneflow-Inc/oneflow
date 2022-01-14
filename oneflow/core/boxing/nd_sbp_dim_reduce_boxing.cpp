@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/functional/functional.h"
@@ -86,6 +87,9 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           reduced_in->nd_sbp(), reduced_out->nd_sbp(), reduced_in->placement(),
           reduced_out->placement(), *tensor->shape()));
+  Global<const EagerBoxingLogger>::Get()->Log(
+      *JUST(boxing_interpreter->boxing_interpreter_status()),
+      /* prefix */ "\t\tInternal boxing of nd-sbp-dim-reduce, ");
   std::shared_ptr<one::Tensor> reduced_out_tensor = JUST(
       boxing_interpreter->Interpret(reduced_in_tensor, reduced_in->nd_sbp(), reduced_out->nd_sbp(),
                                     reduced_in->placement(), reduced_out->placement()));
