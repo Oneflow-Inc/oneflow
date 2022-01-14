@@ -22,8 +22,7 @@ public:
 
     JpegReturnType PartialDecode(const unsigned char* data, size_t length,
                                  RandomCropGenerator* random_crop_gen, unsigned char* workspace,
-                                 size_t workspace_size, const std::string& color_space, 
-                                 cv::Mat &out);
+                                 size_t workspace_size, cv::Mat &out);
 
 private:
 

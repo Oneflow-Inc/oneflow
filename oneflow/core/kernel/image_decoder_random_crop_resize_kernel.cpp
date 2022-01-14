@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/user/image/random_crop_generator.h"
+#include "oneflow/user/image/jpeg_decoder.h"
 #include <opencv2/opencv.hpp>
 #include <jpeglib.h>
 
@@ -148,93 +149,95 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-enum class JpegReturnType {
-  kOk = 0,
-  kError = 1,
-};
-
 JpegReturnType JpegPartialDecode(const unsigned char* data, size_t length,
                                  RandomCropGenerator* crop_generator, unsigned char* workspace,
                                  size_t workspace_size, unsigned char* dst, int target_width,
                                  int target_height) {
-  struct jpeg_decompress_struct cinfo = {};
-  struct jpeg_error_mgr jerr = {};
-  int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
-  cinfo.err = jpeg_std_error(&jerr);
+  // struct jpeg_decompress_struct cinfo = {};
+  // struct jpeg_error_mgr jerr = {};
+  // int crop_x = 0, crop_y = 0, crop_w = 0, crop_h = 0, rc = 0;
+  // cinfo.err = jpeg_std_error(&jerr);
 
-  jpeg_create_decompress(&cinfo);
-  if (cinfo.err->msg_code != 0) { return JpegReturnType::kError; }
+  // jpeg_create_decompress(&cinfo);
+  // if (cinfo.err->msg_code != 0) { return JpegReturnType::kError; }
 
-  jpeg_mem_src(&cinfo, data, length);
-  if (cinfo.err->msg_code != 0) {
-    jpeg_destroy_decompress(&cinfo);
+  // jpeg_mem_src(&cinfo, data, length);
+  // if (cinfo.err->msg_code != 0) {
+  //   jpeg_destroy_decompress(&cinfo);
+  //   return JpegReturnType::kError;
+  // }
+
+  // rc = jpeg_read_header(&cinfo, TRUE);
+  // if (rc != 1) {
+  //   jpeg_destroy_decompress(&cinfo);
+  //   return JpegReturnType::kError;
+  // }
+
+  // jpeg_start_decompress(&cinfo);
+  // int width = cinfo.output_width;
+  // int height = cinfo.output_height;
+  // int pixel_size = cinfo.output_components;
+
+  // unsigned char* crop_buf = nullptr;
+  // std::vector<unsigned char> tmp_buf;
+  // if (width * height * pixel_size > workspace_size) {
+  //   tmp_buf.resize(width * height * pixel_size);
+  //   crop_buf = tmp_buf.data();
+  // } else {
+  //   crop_buf = workspace;
+  // }
+
+  // if (crop_generator) {
+  //   GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
+  // } else {
+  //   crop_x = 0;
+  //   crop_y = 0;
+  //   crop_w = width;
+  //   crop_h = height;
+  // }
+
+  // unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
+
+  // jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
+  // int row_stride = u_crop_w * pixel_size;
+  // if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) {
+  //   jpeg_destroy_decompress(&cinfo);
+  //   return JpegReturnType::kError;
+  // }
+
+  // while (cinfo.output_scanline < u_crop_y + u_crop_h) {
+  //   unsigned char* buffer_array[1];
+  //   buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
+  //   jpeg_read_scanlines(&cinfo, buffer_array, 1);
+  // }
+
+  // jpeg_skip_scanlines(&cinfo, cinfo.output_height - u_crop_y - u_crop_h);
+  // jpeg_finish_decompress(&cinfo);
+  // jpeg_destroy_decompress(&cinfo);
+
+  // cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
+  // cv::Rect roi;
+  // cv::Mat cropped;
+
+  // if (u_crop_w != crop_w) {
+  //   roi.x = u_crop_w - crop_w;
+  //   roi.y = 0;
+  //   roi.width = crop_w;
+  //   roi.height = crop_h;
+  //   image(roi).copyTo(cropped);
+  // } else {
+  //   cropped = image;
+  // }
+  cv::Mat image_mat;
+  JpegDecoder jpeg_decode;
+  if (jpeg_decode.PartialDecode((const unsigned char*)(data), length, crop_generator,
+                        workspace, workspace_size, image_mat)
+      != JpegReturnType::kOk) {
     return JpegReturnType::kError;
-  }
-
-  rc = jpeg_read_header(&cinfo, TRUE);
-  if (rc != 1) {
-    jpeg_destroy_decompress(&cinfo);
-    return JpegReturnType::kError;
-  }
-
-  jpeg_start_decompress(&cinfo);
-  int width = cinfo.output_width;
-  int height = cinfo.output_height;
-  int pixel_size = cinfo.output_components;
-
-  unsigned char* crop_buf = nullptr;
-  std::vector<unsigned char> tmp_buf;
-  if (width * height * pixel_size > workspace_size) {
-    tmp_buf.resize(width * height * pixel_size);
-    crop_buf = tmp_buf.data();
-  } else {
-    crop_buf = workspace;
-  }
-
-  if (crop_generator) {
-    GenerateRandomCropRoi(crop_generator, width, height, &crop_x, &crop_y, &crop_w, &crop_h);
-  } else {
-    crop_x = 0;
-    crop_y = 0;
-    crop_w = width;
-    crop_h = height;
-  }
-
-  unsigned int u_crop_x = crop_x, u_crop_y = crop_y, u_crop_w = crop_w, u_crop_h = crop_h;
-
-  jpeg_crop_scanline(&cinfo, &u_crop_x, &u_crop_w);
-  int row_stride = u_crop_w * pixel_size;
-  if (jpeg_skip_scanlines(&cinfo, u_crop_y) != u_crop_y) {
-    jpeg_destroy_decompress(&cinfo);
-    return JpegReturnType::kError;
-  }
-
-  while (cinfo.output_scanline < u_crop_y + u_crop_h) {
-    unsigned char* buffer_array[1];
-    buffer_array[0] = crop_buf + (cinfo.output_scanline - u_crop_y) * row_stride;
-    jpeg_read_scanlines(&cinfo, buffer_array, 1);
-  }
-
-  jpeg_skip_scanlines(&cinfo, cinfo.output_height - u_crop_y - u_crop_h);
-  jpeg_finish_decompress(&cinfo);
-  jpeg_destroy_decompress(&cinfo);
-
-  cv::Mat image(u_crop_h, u_crop_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
-  cv::Rect roi;
-  cv::Mat cropped;
-
-  if (u_crop_w != crop_w) {
-    roi.x = u_crop_w - crop_w;
-    roi.y = 0;
-    roi.width = crop_w;
-    roi.height = crop_h;
-    image(roi).copyTo(cropped);
-  } else {
-    cropped = image;
   }
 
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
-  cv::resize(cropped, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
+  cv::resize(image_mat, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
   return JpegReturnType::kOk;
 }
 

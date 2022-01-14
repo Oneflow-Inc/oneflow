@@ -13,8 +13,7 @@ JpegDecoder::~JpegDecoder()
 
 JpegReturnType JpegDecoder::PartialDecode(const unsigned char* data, size_t length,
                                  RandomCropGenerator* random_crop_gen, unsigned char* workspace,
-                                 size_t workspace_size, const std::string& color_space, 
-                                 cv::Mat &out_mat) {
+                                 size_t workspace_size, cv::Mat &out_mat) {
 
   cinfo_.err = jpeg_std_error(&jerr_);
   jpeg_create_decompress(&cinfo_);

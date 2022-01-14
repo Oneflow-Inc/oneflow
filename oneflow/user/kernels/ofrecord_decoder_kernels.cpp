@@ -211,7 +211,7 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   JpegDecoder jpeg_decode;
   
   if (jpeg_decode.PartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
-                        nullptr, 0, color_space, image_mat)
+                        nullptr, 0, image_mat)
       == JpegReturnType::kOk) {
     // convert color space 
     // jpeg decode output RGB
