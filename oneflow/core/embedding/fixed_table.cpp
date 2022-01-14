@@ -538,20 +538,8 @@ void FixedTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
   SaveSnapshotImpl(name);
 }
 
-}  // namespace
-
-std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
-  CHECK(!options.path.empty());
-  CHECK_GT(options.value_size, 0);
-  CHECK_GT(options.num_blocks_per_chunk, 0);
-  CHECK_GT(options.physical_block_size, 0);
-  CHECK_GT(options.key_size, 0);
-#ifdef WITH_LIBURING
-  using Engine = RingEngine;
-#else
-  using Engine = AioEngine;
-#endif  // WITH_LIBURING
-
+template<typename Engine>
+std::unique_ptr<FixedTable> DispatchKeyType(const FixedTableOptions& options) {
   if (options.key_size == 4) {
     return std::unique_ptr<FixedTable>(new FixedTableImpl<uint32_t, Engine>(options));
   } else if (options.key_size == 8) {
@@ -560,6 +548,31 @@ std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
     UNIMPLEMENTED();
     return nullptr;
   }
+}
+
+std::unique_ptr<FixedTable> DispatchEngine(const FixedTableOptions& options) {
+#ifdef WITH_LIBURING
+  struct io_uring ring {};
+  if (io_uring_queue_init(1, &ring, 0) == 0) {
+    io_uring_queue_exit(&ring);
+    return DispatchKeyType<RingEngine>(options);
+  } else {
+    return DispatchKeyType<AioEngine>(options);
+  }
+#else
+  return DispatchKeyType<AioEngine>(options);
+#endif
+}
+
+}  // namespace
+
+std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
+  CHECK(!options.path.empty());
+  CHECK_GT(options.value_size, 0);
+  CHECK_GT(options.num_blocks_per_chunk, 0);
+  CHECK_GT(options.physical_block_size, 0);
+  CHECK_GT(options.key_size, 0);
+  return DispatchEngine(options);
 }
 
 }  // namespace embedding

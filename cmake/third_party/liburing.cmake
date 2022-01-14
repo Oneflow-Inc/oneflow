@@ -30,9 +30,9 @@ ExternalProject_Add(liburing
   URL_HASH MD5=${LIBURING_URL_HASH}
   UPDATE_COMMAND ""
   CONFIGURE_COMMAND cd ${LIBURING_SOURCE_DIR}/src/liburing/ && ./configure --prefix=${LIBURING_INSTALL}
-  BUILD_COMMAND cd ${LIBURING_SOURCE_DIR}/src/liburing/ && make -j${PROC_NUM} CFLAGS=${LIBURING_CFLAGS}
+  BUILD_COMMAND cd ${LIBURING_SOURCE_DIR}/src/liburing/ && make -j${PROC_NUM} CFLAGS=${LIBURING_CFLAGS} install
   BUILD_BYPRODUCTS ${LIBURING_STATIC_LIBRARIES}
-  INSTALL_COMMAND  cd ${LIBURING_SOURCE_DIR}/src/liburing/ && make install
+  INSTALL_COMMAND  ""
 )
 
 endif(THIRD_PARTY)
