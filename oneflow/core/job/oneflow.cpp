@@ -915,6 +915,8 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defin
 Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   std::vector<std::shared_ptr<Job>> jobs(job_confs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(job_confs.Get(i))); }
+  // These checks donot work in nn.Graph API because there is only on job compile each time.
+  // And nn.Graph Support training and evaluation share the same variable.
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
   HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
