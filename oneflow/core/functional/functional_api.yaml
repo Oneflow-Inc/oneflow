@@ -946,6 +946,13 @@
   ]
   bind_python: True
 
+- name: "tensor_split"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections, Int32 dim) => TensorSplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections, Int32 dim) => TensorSplitVec",
+  ]
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
