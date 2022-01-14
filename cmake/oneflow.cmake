@@ -210,7 +210,7 @@ include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj PUBLIC glog::glog)
+target_link_libraries(of_functional_obj glog::glog)
 add_dependencies(of_functional_obj of_cfgobj)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
@@ -227,7 +227,7 @@ if(BUILD_PYTHON)
   oneflow_add_library(of_functional_tensor_obj STATIC
       ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS}
       ${FUNCTIONAL_OPS_GENERATED_SRCS} ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj PUBLIC glog::glog)
+  target_link_libraries(of_functional_tensor_obj glog::glog)
   add_dependencies(of_functional_tensor_obj of_cfgobj)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
