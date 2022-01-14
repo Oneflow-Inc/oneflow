@@ -46,12 +46,12 @@ def _test_eager_boxing_normal_1d_exhaustive_testing(
                 np_arr,
                 dtype=flow.float32,
                 placement=in_placement,
-                sbp=[elem[0]],
+                sbp=elem[0],
                 requires_grad=False,
             )
-            y = x.to_consistent(placement=out_placement, sbp=[elem[1]])
+            y = x.to_consistent(placement=out_placement, sbp=elem[1])
 
-            z = y.to_consistent(placement=out_placement, sbp=[flow.sbp.broadcast])
+            z = y.to_consistent(placement=out_placement, sbp=flow.sbp.broadcast)
             if flow.env.get_rank() in out_device_list:
                 test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
         except flow._oneflow_internal.exception.BoxingNotSupportedException:
@@ -129,12 +129,12 @@ def _test_eager_boxing_1d_special_split_axis(
                 np_arr,
                 dtype=flow.float32,
                 placement=in_placement,
-                sbp=[elem[0]],
+                sbp=elem[0],
                 requires_grad=False,
             )
-            y = x.to_consistent(placement=out_placement, sbp=[elem[1]])
+            y = x.to_consistent(placement=out_placement, sbp=elem[1])
 
-            z = y.to_consistent(placement=out_placement, sbp=[flow.sbp.broadcast])
+            z = y.to_consistent(placement=out_placement, sbp=flow.sbp.broadcast)
             if flow.env.get_rank() in out_device_list:
                 test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
         except flow._oneflow_internal.exception.BoxingNotSupportedException:
