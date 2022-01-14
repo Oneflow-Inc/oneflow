@@ -41,6 +41,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ccl/ccl.h"
 
 namespace oneflow {
@@ -226,7 +227,15 @@ Maybe<Tensor> ConsistentToConsistent(
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-  const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
+  std::shared_ptr<one::OpExpr> op;
+  if (unlikely(!LazyMode::is_enabled()
+               && JUST(x->parallel_desc())->hierarchy()->NumAxes()
+                      != parallel_desc->hierarchy()->NumAxes()
+               && grad_sbp_parallels.size() == 0)) {
+    op = JUST(GetConsistentToConsistentOpExpr(*JUST(GetSbpList(JUST(x->nd_sbp())))));
+  } else {
+    op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
+  }
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
