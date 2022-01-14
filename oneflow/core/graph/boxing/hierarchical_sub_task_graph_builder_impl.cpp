@@ -90,6 +90,53 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
   *reduced_out_parallel_desc = ParallelDesc(reduced_out_parallel_conf);
 }
 
+void PruneParallelDimWithValEqualOne(const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
+                                     ParallelDesc* pruned_parallel_desc,
+                                     cfg::NdSbp* pruned_nd_sbp) {
+  const auto& hierarchy = parallel_desc.hierarchy();
+  DimVector pruned_hierarchy;
+  FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
+    if (hierarchy->At(i) != 1) {
+      pruned_hierarchy.emplace_back(hierarchy->At(i));
+      *pruned_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
+    }
+  }
+  ParallelConf pruned_parallel_conf = parallel_desc.parallel_conf();
+  Shape(pruned_hierarchy).ToProto(pruned_parallel_conf.mutable_hierarchy());
+  *pruned_parallel_desc = ParallelDesc(pruned_parallel_conf);
+}
+
+void CollaborativePruneParallelDimWithValEqualOne(
+    const ParallelDesc& in_parallel_desc, const ParallelDesc& out_parallel_desc,
+    const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+    ParallelDesc* pruned_in_parallel_desc, ParallelDesc* pruned_out_parallel_desc,
+    cfg::NdSbp* pruned_in_nd_sbp, cfg::NdSbp* pruned_out_nd_sbp) {
+  const auto& in_hierarchy = in_parallel_desc.hierarchy();
+  const auto& out_hierarchy = out_parallel_desc.hierarchy();
+  CHECK_EQ(in_hierarchy->NumAxes(), out_hierarchy->NumAxes());
+
+  DimVector pruned_in_hierarchy;
+  DimVector pruned_out_hierarchy;
+
+  FOR_RANGE(int64_t, i, 0, in_hierarchy->NumAxes()) {
+    if (in_hierarchy->At(i) != 1 || out_hierarchy->At(i) != 1) {
+      pruned_in_hierarchy.emplace_back(in_hierarchy->At(i));
+      *pruned_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(i);
+
+      pruned_out_hierarchy.emplace_back(out_hierarchy->At(i));
+      *pruned_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(i);
+    }
+  }
+
+  ParallelConf pruned_in_parallel_conf = in_parallel_desc.parallel_conf();
+  Shape(pruned_in_hierarchy).ToProto(pruned_in_parallel_conf.mutable_hierarchy());
+  *pruned_in_parallel_desc = ParallelDesc(pruned_in_parallel_conf);
+
+  ParallelConf pruned_out_parallel_conf = out_parallel_desc.parallel_conf();
+  Shape(pruned_out_hierarchy).ToProto(pruned_out_parallel_conf.mutable_hierarchy());
+  *pruned_out_parallel_desc = ParallelDesc(pruned_out_parallel_conf);
+}
+
 std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
@@ -129,12 +176,30 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
     *reduced_in_nd_sbp = in_nd_sbp;
     *reduced_out_nd_sbp = out_nd_sbp;
   } else if (in_hierarchy_axes != out_hierarchy_axes) {
-    ParallelDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp);
-    ParallelDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp);
+    // prune hierarchy
+    ParallelDesc pruned_in_parallel_desc = in_parallel_desc;
+    ParallelDesc pruned_out_parallel_desc = out_parallel_desc;
+    cfg::NdSbp pruned_in_nd_sbp;
+    cfg::NdSbp pruned_out_nd_sbp;
+    PruneParallelDimWithValEqualOne(in_parallel_desc, in_nd_sbp, &pruned_in_parallel_desc,
+                                    &pruned_in_nd_sbp);
+    PruneParallelDimWithValEqualOne(out_parallel_desc, out_nd_sbp, &pruned_out_parallel_desc,
+                                    &pruned_out_nd_sbp);
+    ParallelDimReduce(pruned_in_parallel_desc, pruned_in_nd_sbp, reduced_in_parallel_desc,
+                      reduced_in_nd_sbp);
+    ParallelDimReduce(pruned_out_parallel_desc, pruned_out_nd_sbp, reduced_out_parallel_desc,
+                      reduced_out_nd_sbp);
   } else {
-    CollaborativeParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
-                                   reduced_in_parallel_desc, reduced_out_parallel_desc,
-                                   reduced_in_nd_sbp, reduced_out_nd_sbp);
+    ParallelDesc pruned_in_parallel_desc = in_parallel_desc;
+    ParallelDesc pruned_out_parallel_desc = out_parallel_desc;
+    cfg::NdSbp pruned_in_nd_sbp;
+    cfg::NdSbp pruned_out_nd_sbp;
+    CollaborativePruneParallelDimWithValEqualOne(
+        in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp, &pruned_in_parallel_desc,
+        &pruned_out_parallel_desc, &pruned_in_nd_sbp, &pruned_out_nd_sbp);
+    CollaborativeParallelDimReduce(
+        pruned_in_parallel_desc, pruned_out_parallel_desc, pruned_in_nd_sbp, pruned_out_nd_sbp,
+        reduced_in_parallel_desc, reduced_out_parallel_desc, reduced_in_nd_sbp, reduced_out_nd_sbp);
   }
 }
 
