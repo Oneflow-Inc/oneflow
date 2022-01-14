@@ -1026,8 +1026,8 @@ class ParquetReader(Module):
         shuffle: bool = True,
         completely_shuffle: bool = False,
         random_seed: Optional[int] = None,
-        shuffle_buffer_size: Optional[int] = None,
-        prefetch_buffer_size: Optional[int] = None,
+        shuffle_buffer_size: int = 32,
+        prefetch_buffer_size: int = 4,
         read_footprint: int = 1024,
         use_mmap: bool = True,
         device: Union[flow.device, str, None] = None,
@@ -1039,23 +1039,16 @@ class ParquetReader(Module):
         assert isinstance(path, str)
         self.path = path
         self.batch_size = batch_size
-        self.read_footprint = read_footprint
-        self.use_mmap = use_mmap
 
         _handle_parquet_schema_args(self, schema)
         _handle_shuffle_args(self, shuffle, random_seed)
         _handle_parallel_args(self, device, placement, sbp)
 
         self.completely_shuffle = completely_shuffle and self.shuffle
-
-        if self.shuffle:
-            self.shuffle_buffer_size = shuffle_buffer_size or 10
-            self.prefetch_buffer_size = (
-                prefetch_buffer_size or self.shuffle_buffer_size * 2
-            )
-        else:
-            self.shuffle_buffer_size = 0
-            self.prefetch_buffer_size = prefetch_buffer_size or 4
+        self.shuffle_buffer_size = shuffle_buffer_size
+        self.prefetch_buffer_size = prefetch_buffer_size
+        self.read_footprint = read_footprint
+        self.use_mmap = use_mmap
 
         self.op = (
             flow.stateful_op("parquet_reader").Output("out", self.num_columns).Build()

@@ -31,7 +31,9 @@ class Buffer final {
 
   BufferStatus Push(const T& item);
   BufferStatus Pull(T* item);
+  BufferStatus PullMany(T* item_array, size_t size);
   BufferStatus TryReceive(T* item);
+
   void Close();
 
  private:
@@ -60,6 +62,21 @@ BufferStatus Buffer<T>::Pull(T* item) {
   *item = queue_.front();
   queue_.pop();
   if (queue_.size() < max_len_) { cond_.notify_all(); }
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+BufferStatus Buffer<T>::PullMany(T* item_array, size_t size) {
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    cond_.wait(lock, [=]() { return queue_.size() >= size || is_closed_; });
+    if (is_closed_) { return kBufferStatusErrorClosed; }
+    for (size_t i = 0; i < size; ++i) {
+      item_array[i] = std::move(queue_.front());
+      queue_.pop();
+    }
+  }
+  cond_.notify_all();
   return kBufferStatusSuccess;
 }
 

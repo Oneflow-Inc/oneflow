@@ -29,8 +29,8 @@ def make_parquet_reader(
     shuffle=True,
     completely_shuffle=False,
     random_seed=12345,
-    shuffle_buffer_size=None,
-    prefetch_buffer_size=None,
+    shuffle_buffer_size=32,
+    prefetch_buffer_size=4,
     read_footprint=1024,
     use_mmap=True,
     device=None,
@@ -123,8 +123,6 @@ def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle
         {"col_id": 3, "shape": (2,), "dtype": flow.int32},
     ]
     batch_size = 16
-    shuffle_buffer_size = 10
-    prefetch_buffer_size = 10
 
     reader = make_parquet_reader(
         parquet_dir,
@@ -133,8 +131,6 @@ def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle
         shuffle=True,
         completely_shuffle=completely_shuffle,
         random_seed=12345,
-        shuffle_buffer_size=shuffle_buffer_size,
-        prefetch_buffer_size=prefetch_buffer_size,
     )
 
     reader_ = make_parquet_reader(
@@ -144,8 +140,6 @@ def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle
         shuffle=True,
         completely_shuffle=completely_shuffle,
         random_seed=12345,
-        shuffle_buffer_size=shuffle_buffer_size,
-        prefetch_buffer_size=prefetch_buffer_size,
     )
 
     iter_num = 10
@@ -171,29 +165,39 @@ def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle
 @flow.unittest.skip_unless_1n1d()
 class ParquetReaderTestCase(oneflow.unittest.TestCase):
     def test_compare_with_ofrecord(test_case):
-        parquet_file = "/dataset/dlrm_parquet/val/part-00000-9aa77b80-babb-496b-908e-457d9f48bb06-c000.snappy.parquet"
+        parquet_file = "/dataset/dlrm_parquet/train"
         schema = [
             {"col_id": 0, "shape": (1,), "dtype": flow.double},
             {"col_id": 1, "shape": (13,), "dtype": flow.double},
             {"col_id": 2, "shape": (26,), "dtype": flow.int32},
         ]
-        batch_size = 20
+        batch_size = 32
 
         parquet_reader = make_parquet_reader(
             parquet_file, schema, batch_size=batch_size, shuffle=False
         )
 
-        labels, dense_fields, sparse_fields = parquet_reader()
-
         ofrecord_file_dir = "/dataset/dlrm_ofrecord/"
         ofrecord_reader = OFRecordReader(
-            data_dir=ofrecord_file_dir, batch_size=batch_size, shuffle=False, mode="val"
+            data_dir=ofrecord_file_dir,
+            batch_size=batch_size,
+            shuffle=False,
+            mode="train",
         )
-        labels_, dense_fields_, sparse_fields_ = ofrecord_reader()
 
-        test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy()))
-        test_case.assertTrue(np.allclose(dense_fields.numpy(), dense_fields_.numpy()))
-        test_case.assertTrue(np.allclose(sparse_fields.numpy(), sparse_fields_.numpy()))
+        iter_num = 1000
+        for i in range(iter_num):
+            # print(f"## {i}")
+            labels, dense_fields, sparse_fields = parquet_reader()
+            labels_, dense_fields_, sparse_fields_ = ofrecord_reader()
+
+            test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy()))
+            test_case.assertTrue(
+                np.allclose(dense_fields.numpy(), dense_fields_.numpy())
+            )
+            test_case.assertTrue(
+                np.allclose(sparse_fields.numpy(), sparse_fields_.numpy())
+            )
 
     def test_fixed_length_columns_shuffle_determinism(test_case):
         _test_fixed_length_columns_shuffle_determinism(test_case, False)
@@ -218,9 +222,7 @@ class DistributedParquetReaderTestCase(oneflow.unittest.TestCase):
             {"col_id": 1, "shape": (13,), "dtype": flow.double},
             {"col_id": 2, "shape": (26,), "dtype": flow.int32},
         ]
-        batch_size = 8
-        shuffle_buffer_size = 8
-        prefetch_buffer_size = 8
+        batch_size = 32
 
         consistent_reader = make_parquet_reader(
             path=parquet_dir,
@@ -228,8 +230,6 @@ class DistributedParquetReaderTestCase(oneflow.unittest.TestCase):
             batch_size=batch_size * 2,
             shuffle=True,
             random_seed=12345,
-            shuffle_buffer_size=shuffle_buffer_size,
-            prefetch_buffer_size=prefetch_buffer_size,
             placement=flow.env.all_device_placement("cpu"),
             sbp=flow.sbp.split(0),
         )
@@ -240,8 +240,6 @@ class DistributedParquetReaderTestCase(oneflow.unittest.TestCase):
             batch_size=batch_size,
             shuffle=True,
             random_seed=12345,
-            shuffle_buffer_size=shuffle_buffer_size,
-            prefetch_buffer_size=prefetch_buffer_size,
         )
 
         iter_num = 10
