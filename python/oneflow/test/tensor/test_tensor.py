@@ -899,6 +899,20 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4).to(device)
         y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
+    
+    @autotest(check_graph=True)
+    def test_t_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=random(1, 2)).to(device)
+        y = x.t()
+        return y
+
+    @autotest(check_graph=True)
+    def test_T_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=random(1, 4)).to(device)
+        y = x.T
+        return y
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_where(test_case):
