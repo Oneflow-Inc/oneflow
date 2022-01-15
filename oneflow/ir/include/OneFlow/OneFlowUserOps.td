@@ -1480,18 +1480,19 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, NoGra
   );
   let attrs = (ins
     StrArrayAttr:$files,
-    DefaultValuedAttr<SI32Attr, "0">:$batch_size,
-    DefaultValuedAttr<BoolAttr, "false">:$random_shuffle,
+    SI64Attr:$batch_size,
+    DefaultValuedAttr<BoolAttr, "true">:$random_shuffle,
     DefaultValuedAttr<StrAttr, "\"instance\"">:$shuffle_mode,
-    DefaultValuedAttr<SI64Attr, "-1">:$seed,
-    DefaultValuedAttr<SI32Attr, "1024">:$shuffle_buffer_size,
+    DefaultValuedAttr<SI64Attr, "1024">:$shuffle_buffer_size,
     DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
-    DefaultValuedAttr<BoolAttr, "true">:$verify_example
+    DefaultValuedAttr<SI64Attr, "-1">:$seed,
+    DefaultValuedAttr<BoolAttr, "true">:$verify_example,
+    StrArrayAttr:$nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
 }
 
 def OneFlow_CtcGreedyDecoderOp : OneFlow_BaseOp<"ctc_greedy_decoder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

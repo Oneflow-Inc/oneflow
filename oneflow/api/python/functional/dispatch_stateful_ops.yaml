@@ -105,6 +105,13 @@
   signature: "Tensor (OpExpr op, Tensor input, String name) => DispatchOfrecordBytesDecoder"
   bind_python: True
 
+- name: "dispatch_onerec_reader"
+  signature: [
+    "Tensor (StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int64 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Device device=None) => DispatchOneRecReader",
+    "Tensor (StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int64 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => DispatchOneRecReader",
+  ]
+  bind_python: True
+
 - name: "dispatch_megatron_gpt_mmap_data_loader"
   signature: [
       "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length=1, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Device device=None) => DispatchMegatronGptMmapDataLoader",

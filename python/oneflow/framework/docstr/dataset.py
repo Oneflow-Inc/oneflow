@@ -16,52 +16,52 @@ limitations under the License.
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
-add_docstr(
-    oneflow.read_onerec,
-    r"""
-    read_onerec(files:List[str], batch_size:int, random_shuffle:bool, shuffle_mode:str, shuffle_buffer_size=1024, shuffle_after_epoch=False, verify_example=True, placement=None, sbp=None) -> Tensor 
+# add_docstr(
+#     oneflow.read_onerec,
+#     r"""
+#     read_onerec(files:List[str], batch_size:int, random_shuffle:bool, shuffle_mode:str, shuffle_buffer_size=1024, shuffle_after_epoch=False, verify_example=True, placement=None, sbp=None) -> Tensor 
     
-    Read OneRec format dataset into a Tensor which then can be decode by decode_onerec API.
+#     Read OneRec format dataset into a Tensor which then can be decode by decode_onerec API.
 
-    Args:      
-        files: (List[str]): The file list to be read from filesystem       
-        batch_size(int): batch size
-        random_shuffle(bool): shuffle or not
-        shuffle_mode(str): can be "batch" or "instance"
-        shuffle_buffer_size(int): shuffle buffer size, default to 1024
-        shuffle_after_epoch(bool): if shuffle after each epoch
-        verify_example(bool): if verify example, defaults to True
-        placement(Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the tensor is stored on.
-        sbp(Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a consistent tensor, specify the SBP of the tensor.
+#     Args:      
+#         files: (List[str]): The file list to be read from filesystem       
+#         batch_size(int): batch size
+#         random_shuffle(bool): shuffle or not
+#         shuffle_mode(str): can be "batch" or "instance"
+#         shuffle_buffer_size(int): shuffle buffer size, default to 1024
+#         shuffle_after_epoch(bool): if shuffle after each epoch
+#         verify_example(bool): if verify example, defaults to True
+#         placement(Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the tensor is stored on.
+#         sbp(Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a consistent tensor, specify the SBP of the tensor.
     
         
-    For example:
+#     For example:
 
-    .. code-block:: python
+#     .. code-block:: python
 
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        readdata_1 = flow.read_onerec(files, 10, True, "batch")
+#         import oneflow as flow
+#         files = ['file01.onerec', 'file02.onerec']
+#         readdata_1 = flow.read_onerec(files, 10, True, "batch")
       
-        # decode readdata_1 ... 
+#         # decode readdata_1 ... 
 
-    .. code-block:: python
+#     .. code-block:: python
 
-        import oneflow as flow
-        files = ['file01.onerec', 'file02.onerec']
-        readdata_2 = flow.read_onerec(
-            files,
-            batch_size=10,
-            random_shuffle=True,
-            shuffle_mode="batch",
-            placement=flow.placement("cpu", {0: [0]}),
-            sbp=[flow.sbp.split(0)],
-        )    
+#         import oneflow as flow
+#         files = ['file01.onerec', 'file02.onerec']
+#         readdata_2 = flow.read_onerec(
+#             files,
+#             batch_size=10,
+#             random_shuffle=True,
+#             shuffle_mode="batch",
+#             placement=flow.placement("cpu", {0: [0]}),
+#             sbp=[flow.sbp.split(0)],
+#         )    
       
-        # decode readdata_2 ... 
+#         # decode readdata_2 ... 
 
-    """,
-)
+#     """,
+# )
 
 add_docstr(
     oneflow.decode_onerec,
