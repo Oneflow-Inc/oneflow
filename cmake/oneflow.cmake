@@ -533,6 +533,7 @@ if(BUILD_CPP_API)
 
   string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
   set(CPACK_GENERATOR ZIP)
+  set(CPACK_PACKAGE_DIRECTORY ${PROJECT_BINARY_DIR}/cpack)
   set(CPACK_PACKAGE_NAME liboneflow)
   # TODO: by Shenghang, unify python and c++ version genenerating and getting
   set(CPACK_PACKAGE_VERSION 0.7.0)
