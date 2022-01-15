@@ -24,32 +24,6 @@ import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.unittest
 
 
-class SubModule(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = flow.nn.Conv2d(1, 1, 5)
-        self.relu = flow.nn.ReLU()
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.relu(x)
-        return x
-
-
-class CustomModule(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer = SubModule()
-        self.fc1 = flow.nn.Linear(36, 4)
-        self.register_buffer("dummy_buff", flow.Tensor(1, 4))
-
-    def forward(self, x):
-        x = self.layer(x)
-        x = oneflow._C.flatten(x, 1)
-        x = self.fc1(x) + self.dummy_buff
-        return x
-
-
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphWithSysConf(flow.unittest.TestCase):
@@ -78,8 +52,6 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         class CustomGraphSysConf(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.m = CustomModule()
-
                 # amp
                 self.config.enable_amp(True)
                 grad_scaler = flow.amp.GradScaler(
@@ -98,7 +70,6 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
                 self.config.enable_cudnn_conv_heuristic_search_algo(False)
 
             def build(self, x):
-                x = self.m(x)
                 return x
 
         g = CustomGraphSysConf()
