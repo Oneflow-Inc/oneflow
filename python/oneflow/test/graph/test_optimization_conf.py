@@ -69,6 +69,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
                 self.config.set_zero_redundancy_optimizer_mode("distributed_split")
                 self.config.enable_cudnn_conv_heuristic_search_algo(False)
 
+
             def build(self, x):
                 return x
 
@@ -77,6 +78,10 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         print("optimization conf: \n", g._optimization_conf_proto)
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
+        flow.boxing.nccl.enable_use_compute_stream(False)
+        print("optimization conf after session init: \n", g._optimization_conf_proto)
+        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
+        print("optimization conf after session init 2: \n", g._optimization_conf_proto)
 
 
 if __name__ == "__main__":

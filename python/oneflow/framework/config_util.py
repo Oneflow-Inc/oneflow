@@ -348,11 +348,6 @@ def api_nccl_use_compute_stream(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    return enable_if.unique([nccl_use_compute_stream, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_use_compute_stream(val=False):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     if sess.status_ == sess.Status.INITED:
@@ -559,5 +554,4 @@ def nccl_enable_mixed_fusion(val):
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
-    print("Nothing happened because the session is running")
-    return False
+    raise NotImplementedError("This action donot working because session is initialized.")
