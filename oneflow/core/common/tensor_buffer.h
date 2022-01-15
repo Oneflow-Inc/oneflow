@@ -162,10 +162,8 @@ class TensorBufferPool final {
   void Allocate(ItemT& item, const Shape& shape, DataType dtype);
   void Deallocate(ItemT& item);
 
-  void AddPoolSizeByBase(size_t base);
-  void SetPoolSizeByBase(size_t base);
-  void SetPoolSize(size_t pool_size);
-  void SetThreadLocalCacheSize(size_t thread_local_cache_size);
+  void IncreasePoolSizeByBase(size_t base);
+  void DecreasePoolSizeByBase(size_t base);
 
  private:
   static std::unique_ptr<TensorBufferPool>& GetPtr() {

@@ -20,23 +20,23 @@ namespace oneflow {
 
 namespace detail {
 
-static constexpr float kDefaultGrowthFactor = 1.0f;
-static constexpr float kDefaultShrinkFactor = 0.7f;
+static constexpr double kDefaultGrowthFactor = 1.0f;
+static constexpr double kDefaultShrinkFactor = 0.7f;
 static constexpr size_t kDefaultTensorBufferAlignedSize = 1024;
 
-size_t GetTensorBufferAlignedSize(size_t origin_size, float factor) {
+size_t GetTensorBufferAlignedSize(size_t origin_size, double factor) {
   size_t aligned_size =
       ParseIntegerFromEnv("ONEFLOW_TENSOR_BUFFER_ALIGNED_SIZE", kDefaultTensorBufferAlignedSize);
   return RoundUp(static_cast<size_t>(origin_size * factor), aligned_size);
 }
 
 size_t GetTensorBufferGrowthSize(size_t origin_size) {
-  float factor = ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_GROWTH_FACTOR", kDefaultGrowthFactor);
+  double factor = ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_GROWTH_FACTOR", kDefaultGrowthFactor);
   return GetTensorBufferAlignedSize(origin_size, factor);
 }
 
 size_t GetTensorBufferShrinkSize(size_t origin_size) {
-  float factor = ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_SHRINK_FACTOR", kDefaultShrinkFactor);
+  double factor = ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_SHRINK_FACTOR", kDefaultShrinkFactor);
   return GetTensorBufferAlignedSize(origin_size, factor);
 }
 
@@ -190,11 +190,11 @@ void TensorBuffer::Swap(TensorBuffer& other) { std::swap(impl_, other.impl_); }
 namespace {
 
 constexpr size_t kDefaultPoolSizeBase = 64;
-constexpr float kDefaultPoolSizeFactor = 2.0f;
+constexpr double kDefaultPoolSizeFactor = 2.0;
 constexpr size_t kDefaultThreadLocalCacheSize = 64;
 
 size_t GetTensorBufferPoolSize(size_t base = kDefaultPoolSizeBase) {
-  float factor =
+  double factor =
       ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_POOL_SIZE_FACTOR", kDefaultPoolSizeFactor);
   return static_cast<size_t>(std::ceil(base * factor));
 }
@@ -210,7 +210,6 @@ size_t GetTensorBufferPoolThreadLocalCacheSize() {
 TensorBufferPool::TensorBufferPool()
     : thread_local_cache_size_(GetTensorBufferPoolThreadLocalCacheSize()),
       pool_size_(GetTensorBufferPoolSize()) {
-  if (thread_local_cache_size_ > pool_size_) { thread_local_cache_size_ = pool_size_; }
   auto& thread_local_cache = ThreadLocalCache();
   thread_local_cache.reserve(thread_local_cache_size_);
   global_free_list_.reserve(pool_size_);
@@ -262,36 +261,18 @@ void TensorBufferPool::Deallocate(ItemT& item) {
   if (item) { item.reset(); }
 }
 
-void TensorBufferPool::AddPoolSizeByBase(size_t base) {
-  size_t pool_size = GetTensorBufferPoolSize(base) + pool_size_;
-  SetPoolSize(pool_size);
+void TensorBufferPool::IncreasePoolSizeByBase(size_t base) {
+  std::unique_lock<std::mutex> lck(mtx_);
+  pool_size_ += GetTensorBufferPoolSize(base);
+  if (pool_size_ > global_free_list_.capacity()) { global_free_list_.reserve(pool_size_); }
+  if (pool_size_ < global_free_list_.size()) { global_free_list_.resize(pool_size_); }
 }
 
-void TensorBufferPool::SetPoolSizeByBase(size_t base) {
-  size_t pool_size = GetTensorBufferPoolSize(base);
-  SetPoolSize(pool_size);
-}
-
-void TensorBufferPool::SetPoolSize(size_t pool_size) {
-  {
-    std::unique_lock<std::mutex> lck(mtx_);
-    pool_size_ = pool_size;
-    if (pool_size_ > global_free_list_.capacity()) { global_free_list_.reserve(pool_size_); }
-    if (pool_size_ < global_free_list_.size()) { global_free_list_.resize(pool_size_); }
-  }
-  if (thread_local_cache_size_ > pool_size_) { SetThreadLocalCacheSize(pool_size_); }
-}
-
-void TensorBufferPool::SetThreadLocalCacheSize(size_t thread_local_cache_size) {
-  thread_local_cache_size = std::min(thread_local_cache_size, pool_size_);
-  thread_local_cache_size_ = thread_local_cache_size;
-  auto& thread_local_cache = ThreadLocalCache();
-  if (thread_local_cache_size_ > thread_local_cache.capacity()) {
-    thread_local_cache.reserve(thread_local_cache_size_);
-  }
-  if (thread_local_cache_size_ < thread_local_cache.size()) {
-    thread_local_cache.resize(thread_local_cache_size_);
-  }
+void TensorBufferPool::DecreasePoolSizeByBase(size_t base) {
+  std::unique_lock<std::mutex> lck(mtx_);
+  pool_size_ -= GetTensorBufferPoolSize(base);
+  if (pool_size_ > global_free_list_.capacity()) { global_free_list_.reserve(pool_size_); }
+  if (pool_size_ < global_free_list_.size()) { global_free_list_.resize(pool_size_); }
 }
 
 }  // namespace oneflow

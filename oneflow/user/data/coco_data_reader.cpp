@@ -27,8 +27,8 @@ namespace oneflow {
 namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
-  size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
-  if (auto* pool = TensorBufferPool::TryGet()) { pool->AddPoolSizeByBase(batch_size); }
+  batch_size_ = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+  if (auto* pool = TensorBufferPool::TryGet()) { pool->IncreasePoolSizeByBase(batch_size_); }
 
   std::shared_ptr<const COCOMeta> meta(new COCOMeta(
       ctx->Attr<int64_t>("session_id"), ctx->Attr<std::string>("annotation_file"),
@@ -56,13 +56,17 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
     auto GetGroupId = [](const COCOImage& sample) {
       return static_cast<int64_t>(sample.height / sample.width);
     };
-    loader_.reset(new GroupBatchDataset<COCOImage>(batch_size, GetGroupId, std::move(loader_)));
+    loader_.reset(new GroupBatchDataset<COCOImage>(batch_size_, GetGroupId, std::move(loader_)));
   } else {
-    loader_.reset(new BatchDataset<COCOImage>(batch_size, std::move(loader_)));
+    loader_.reset(new BatchDataset<COCOImage>(batch_size_, std::move(loader_)));
   }
 
   parser_.reset(new COCOParser(meta));
   StartLoadThread();
+}
+
+COCODataReader::~COCODataReader() {
+  if (auto* pool = TensorBufferPool::TryGet()) { pool->DecreasePoolSizeByBase(batch_size_); }
 }
 
 COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
