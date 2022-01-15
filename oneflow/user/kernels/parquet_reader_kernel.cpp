@@ -274,6 +274,7 @@ class ParquetReader final : public user_op::OpKernelState {
   std::vector<std::thread> workers_;
   std::vector<std::unique_ptr<Buffer<std::shared_ptr<TensorBuffer>>>> prefetch_buffers_;
   std::vector<std::vector<std::shared_ptr<TensorBuffer>>> shuffle_buffers_;
+  std::vector<std::mt19937> col_gens_;
 
   std::mutex mutex_;
   std::condition_variable cond_;
@@ -388,7 +389,7 @@ Maybe<bool> ParquetReader::Shuffle(int col, std::shared_ptr<TensorBuffer>& sampl
   }
 
   std::uniform_int_distribution<size_t> dis(0, shuffle_buffer.size() - 1);
-  size_t offset = dis(rng_);
+  size_t offset = dis(col_gens_[col]);
   std::swap(shuffle_buffer[offset], sample_or_batch);
   return true;
 }
@@ -402,7 +403,7 @@ Maybe<bool> ParquetReader::ShuffleAndBatch(int col, std::shared_ptr<TensorBuffer
     return false;
   } else if (shuffle_buffer.size() < buffer_size + batch_size_) {
     std::uniform_int_distribution<size_t> dis(0, buffer_size - 1);
-    size_t offset = dis(rng_);
+    size_t offset = dis(col_gens_[col]);
     std::swap(shuffle_buffer[offset], sample);
     shuffle_buffer.push_back(std::move(sample));
     return false;
@@ -511,6 +512,9 @@ Maybe<void> ParquetReader::InitWorkers(user_op::KernelInitContext* ctx) {
     workers_.emplace_back(std::thread([this, col] {
       while (!IsClosed() && CHECK_JUST(ReadColumn(col))) {}
     }));
+    // init generators
+    int64_t sub_seed = seed_ + 1 + rank_ * num_cols + col;
+    col_gens_.emplace_back(sub_seed);
   }
   return Maybe<void>::Ok();
 }
