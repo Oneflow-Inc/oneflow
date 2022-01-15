@@ -48,12 +48,14 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
   int64_t src = JUST(tensor_placement->MachineId4ParallelId(0));
   int64_t dst = JUST(out->placement()->MachineId4ParallelId(0));
 
-  if (GlobalProcessCtx::Rank() == src) {
-    JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
-  }
-  if (GlobalProcessCtx::Rank() == dst) {
-    local_tensor = JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
-                                              JUST(local_tensor->device()), NullOpt));
+  if (src != dst) {
+    if (GlobalProcessCtx::Rank() == src) {
+      JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
+    }
+    if (GlobalProcessCtx::Rank() == dst) {
+      local_tensor = JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
+                                                JUST(local_tensor->device()), NullOpt));
+    }
   }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
                                                  *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
