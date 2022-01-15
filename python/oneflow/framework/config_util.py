@@ -364,14 +364,14 @@ def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    return enable_if.unique([disable_group_boxing_by_dst_parallel, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def disable_group_boxing_by_dst_parallel(val=False):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
+    if sess.status_ == sess.Status.INITED:
+        reso_config = resource_util.Resource()
+        reso_config.disable_group_boxing_by_dst_parallel = val
+        sess.update_resource_eagerly(reso_config)
+    else:
+        sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
 
 
 def api_nccl_num_streams(val: int) -> None:
