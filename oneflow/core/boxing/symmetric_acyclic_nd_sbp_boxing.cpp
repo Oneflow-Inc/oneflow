@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
@@ -60,6 +61,9 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
   const auto& boxing_interpreter =
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
+  Global<const EagerBoxingLogger>::Get()->Log(
+      *JUST(boxing_interpreter->boxing_interpreter_status()),
+      /* prefix */ "\t\tInternal boxing of symmetric-acyclic-nd-sbp-to-nd-sbp, ");
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
                                             out_parallel_desc));
 }
