@@ -11,6 +11,7 @@ set(CMAKE_C_COMPILER_LAUNCHER ccache CACHE STRING "")
 set(CMAKE_CXX_COMPILER_LAUNCHER ccache CACHE STRING "")
 set(CMAKE_CUDA_COMPILER_LAUNCHER ccache CACHE STRING "")
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "")
+set(BUILD_HWLOC OFF CACHE BOOL "")
 # uncomment these when necessary, otherwise it is for the demonstration purpose
 
 # set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda CACHE STRING "")
