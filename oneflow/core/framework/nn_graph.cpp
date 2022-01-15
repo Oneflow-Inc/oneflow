@@ -308,9 +308,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
       if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
         LOG(INFO) << "Graph with name " << name_ << " variable with name `" << var_name
-                  << "` changes its' sbp from " << NdSbpParallelToString(*JUST(tensor->nd_sbp()))
-                  << " to " << NdSbpParallelToString(optimized_nd_sbp)
-                  << " after compile optimization.";
+                  << "` changes its' sbp from " << NdSbpToString(*JUST(tensor->nd_sbp())) << " to "
+                  << NdSbpToString(optimized_nd_sbp) << " after compile optimization.";
         std::vector<Symbol<cfg::SbpParallel>> optimized_sbp_parallels;
         for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
           optimized_sbp_parallels.emplace_back(optimized_nd_sbp.sbp_parallel(i));

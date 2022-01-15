@@ -183,22 +183,6 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return SbpToString(sbp_parallel);
 }
 
-std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel) {
-  std::string sbp_str = "";
-  if (nd_sbp_parallel.sbp_parallel_size() == 1) {
-    return SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
-  } else if (nd_sbp_parallel.sbp_parallel_size() > 1) {
-    std::string sbp_str = "(" + SbpParallelToString(nd_sbp_parallel.sbp_parallel(0));
-    for (int32_t k = 1; k < nd_sbp_parallel.sbp_parallel_size(); k++) {
-      sbp_str += ", " + SbpParallelToString(nd_sbp_parallel.sbp_parallel(k));
-    }
-    sbp_str += ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return sbp_str;
-}
-
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                                   cfg::NdSbpSignature* nd_sbp_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
