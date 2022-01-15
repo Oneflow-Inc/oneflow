@@ -68,13 +68,11 @@ class TestEye(flow.unittest.TestCase):
         x.pytorch.requires_grad = True
         return x
 
-    @autotest(check_graph=True)
-    def test_eye_with_0_size_random_data(test_case):
-        n = random(low=0, high=5).to(int)
-        m = random(low=0, high=5).to(int)
+    @autotest(check_graph=True, auto_backward=False)
+    def test_eye_with_random_data(test_case):
+        n = random(low=0, high=1).to(int)
+        m = random(low=0, high=2).to(int)
         x = torch.eye(n=n, m=m, device=random_device())
-        x.oneflow.requires_grad = True
-        x.pytorch.requires_grad = True
         return x
 
 

@@ -548,7 +548,8 @@ add_docstr(
     """
     Tensor.numpy() → numpy.ndarray
 
-    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to self tensor will be reflected in the ndarray and vice versa.
+    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to
+     self tensor will be reflected in the ndarray and vice versa.
     """,
 )
 
