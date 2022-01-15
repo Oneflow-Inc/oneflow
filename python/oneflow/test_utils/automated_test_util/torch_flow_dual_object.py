@@ -330,23 +330,36 @@ def GetDualObject(name, pytorch, oneflow):
                                         copy_arg = copy.deepcopy(arg)
                                         graph_train_args.append(copy_arg)
                                     graph_train_oneflow = copy.deepcopy(oneflow)
-                                    of_sgd = flow.optim.SGD(graph_train_oneflow.parameters(), lr=0.001, momentum=0.9)
-                                    graph_train_parameters_len = len(oneflow._parameters)
+                                    of_sgd = flow.optim.SGD(
+                                        graph_train_oneflow.parameters(),
+                                        lr=0.001,
+                                        momentum=0.9,
+                                    )
+                                    graph_train_parameters_len = len(
+                                        oneflow._parameters
+                                    )
+
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
                                             self.test_module = graph_train_oneflow
-                                            if global_backward and graph_train_parameters_len:
+                                            if (
+                                                global_backward
+                                                and graph_train_parameters_len
+                                            ):
                                                 self.add_optimizer(of_sgd)
 
                                         def build(self, *args):
                                             res = self.test_module(*args)
                                             forward_res = res
-                                            if global_backward and graph_train_parameters_len:
+                                            if (
+                                                global_backward
+                                                and graph_train_parameters_len
+                                            ):
                                                 res = res.sum()
                                                 res.backward()
                                             return forward_res
-                                    
+
                                     test_g = TestGraphOfModule()
                                     if verbose:
                                         print("Run graph of module: ", repr(oneflow))
@@ -768,7 +781,7 @@ def autotest(
                 for x in dual_objects_to_test:
                     if check_allclose:
                         test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
-                
+
                 if verbose:
                     print(f"{f.__name__} test eager passed.")
 
