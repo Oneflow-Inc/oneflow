@@ -56,6 +56,7 @@ class MultiClientSession(object):
         self.status_ = self.Status.CLOSED
 
     def AddCGraph(self, graph):
+        self._check_status(self.Status.INITED)
         oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
 
     @property
