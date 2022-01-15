@@ -17,6 +17,7 @@ import os
 import traceback
 
 import oneflow._oneflow_internal
+import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
@@ -354,7 +355,12 @@ def api_nccl_use_compute_stream(val: bool = False) -> None:
 def nccl_use_compute_stream(val=False):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.resource.nccl_use_compute_stream = val
+    if sess.status_ == sess.Status.INITED:
+        reso_config = resource_util.Resource()
+        reso_config.nccl_use_compute_stream = val
+        sess.update_resource_eagerly(reso_config)
+    else:
+        sess.config_proto.resource.nccl_use_compute_stream = val
 
 
 def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
