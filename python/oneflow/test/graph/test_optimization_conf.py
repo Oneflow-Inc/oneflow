@@ -82,6 +82,9 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
         flow.boxing.nccl.enable_use_compute_stream(False)
         test_case.assertTrue(not g._optimization_conf_proto.nccl_use_compute_stream)
+        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
+        test_case.assertTrue(not g._optimization_conf_proto.disable_group_boxing_by_dst_parallel)
+
         print("optimization conf after session init: \n", g._optimization_conf_proto)
 
 

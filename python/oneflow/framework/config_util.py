@@ -22,6 +22,14 @@ import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
 
+def _set_attr_to_resource(attr_name, attr_value):
+    sess = session_ctx.GetDefaultSession()
+    if sess.status_ == sess.Status.INITED:
+        reso_config = resource_util.Resource()
+        setattr(reso_config, attr_name, attr_value)
+        sess.update_resource_eagerly(reso_config)
+    else:
+        setattr(sess.config_proto.resource, attr_name, attr_value)
 
 def api_load_library(val: str) -> None:
     """Load necessary library for job
@@ -348,14 +356,8 @@ def api_nccl_use_compute_stream(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    if sess.status_ == sess.Status.INITED:
-        reso_config = resource_util.Resource()
-        reso_config.nccl_use_compute_stream = val
-        sess.update_resource_eagerly(reso_config)
-    else:
-        sess.config_proto.resource.nccl_use_compute_stream = val
+    _set_attr_to_resource("nccl_use_compute_stream", val)
 
 
 def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
@@ -364,14 +366,8 @@ def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    if sess.status_ == sess.Status.INITED:
-        reso_config = resource_util.Resource()
-        reso_config.disable_group_boxing_by_dst_parallel = val
-        sess.update_resource_eagerly(reso_config)
-    else:
-        sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
+    _set_attr_to_resource("disable_group_boxing_by_dst_parallel", val)
 
 
 def api_nccl_num_streams(val: int) -> None:
