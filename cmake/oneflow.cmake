@@ -536,7 +536,7 @@ if(BUILD_CPP_API)
   set(CPACK_PACKAGE_DIRECTORY ${PROJECT_BINARY_DIR}/cpack)
   set(CPACK_PACKAGE_NAME liboneflow)
   # TODO: by Shenghang, unify python and c++ version genenerating and getting
-  set(CPACK_PACKAGE_VERSION 0.7.0)
+  set(CPACK_PACKAGE_VERSION ${ONEFLOW_CURRENT_VERSION})
   set(CPACK_INSTALL_CMAKE_PROJECTS ${PROJECT_BINARY_DIR};oneflow;oneflow_cpp_all;/)
   include(CPack)
 endif(BUILD_CPP_API)
