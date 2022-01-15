@@ -71,7 +71,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     start = RegulateSliceStart(start, dim_size);
     stop = RegulateSliceStop(stop, dim_size);
     if (step > 0) {
-      CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
+      CHECK_LE_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
                                          ", otherwise empty result will be outputted.";
     } else {
       CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
