@@ -205,14 +205,29 @@ __launch_bounds__(kBlockSize) __global__
 
 template<>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool2dForward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
+    void DoCUDAMaxPool2dForwardCFirst(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                 int64_t elem_num, const float16* src, float16* dest,
                                 int64_t* indice_ptr, int32_t padding_h, int32_t padding_w,
                                 int64_t n_batch, int64_t n_channel, int64_t x_height,
                                 int64_t x_width, int64_t y_height, int64_t y_width,
                                 int32_t kernel_size_h, int32_t kernel_size_w, int32_t stride_h,
                                 int32_t stride_w, int32_t dilation_h, int32_t dilation_w) {
-  Maxpool2dForwardCompute<half>(
+  Maxpool2dForwardComputeCFirst<half>(
+      index_helper, elem_num, reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest),
+      indice_ptr, padding_h, padding_w, n_batch, n_channel, x_height, x_width, y_height, y_width,
+      kernel_size_h, kernel_size_w, stride_h, stride_w, dilation_h, dilation_w);
+};
+
+template<>
+__launch_bounds__(kBlockSize) __global__
+    void DoCUDAMaxPool2dForwardCLast(const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                                int64_t elem_num, const float16* src, float16* dest,
+                                int64_t* indice_ptr, int32_t padding_h, int32_t padding_w,
+                                int64_t n_batch, int64_t n_channel, int64_t x_height,
+                                int64_t x_width, int64_t y_height, int64_t y_width,
+                                int32_t kernel_size_h, int32_t kernel_size_w, int32_t stride_h,
+                                int32_t stride_w, int32_t dilation_h, int32_t dilation_w) {
+  Maxpool2dForwardComputeCLast<half>(
       index_helper, elem_num, reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest),
       indice_ptr, padding_h, padding_w, n_batch, n_channel, x_height, x_width, y_height, y_width,
       kernel_size_h, kernel_size_w, stride_h, stride_w, dilation_h, dilation_w);
@@ -250,13 +265,26 @@ __launch_bounds__(kBlockSize) __global__
 
 template<>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool2dBackward(const NdIndexOffsetHelper<int64_t, 4> index_helper,
+    void DoCUDAMaxPool2dBackwardCFirst(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                  const int64_t elem_num, const float16* src, float16* dest,
                                  const int64_t* indice_ptr, const int64_t n_batch,
                                  const int64_t n_channel, const int64_t src_height,
                                  const int64_t src_width, const int64_t dst_height,
                                  const int64_t dst_width) {
-  Maxpool2dBackwardCompute<half>(index_helper, elem_num, reinterpret_cast<const half*>(src),
+  Maxpool2dBackwardComputeCFirst<half>(index_helper, elem_num, reinterpret_cast<const half*>(src),
+                                 reinterpret_cast<half*>(dest), indice_ptr, n_batch, n_channel,
+                                 src_height, src_width, dst_height, dst_width);
+};
+
+template<>
+__launch_bounds__(kBlockSize) __global__
+    void DoCUDAMaxPool2dBackwardCLast(const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                                 const int64_t elem_num, const float16* src, float16* dest,
+                                 const int64_t* indice_ptr, const int64_t n_batch,
+                                 const int64_t n_channel, const int64_t src_height,
+                                 const int64_t src_width, const int64_t dst_height,
+                                 const int64_t dst_width) {
+  Maxpool2dBackwardComputeCLast<half>(index_helper, elem_num, reinterpret_cast<const half*>(src),
                                  reinterpret_cast<half*>(dest), indice_ptr, n_batch, n_channel,
                                  src_height, src_width, dst_height, dst_width);
 };
