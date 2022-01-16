@@ -26,8 +26,8 @@ namespace oneflow {
 
 namespace data {
 
-inline Maybe<void> InitDataSourceDistributedInfo(user_op::KernelInitContext* ctx, size_t& world_size,
-                                          int64_t& rank) {
+inline Maybe<void> InitDataSourceDistributedInfo(user_op::KernelInitContext* ctx,
+                                                 size_t& world_size, int64_t& rank) {
   auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
   if (nd_sbp_str_vec.empty() && JUST(IsMultiClient())) {
     world_size = GlobalProcessCtx::WorldSize();

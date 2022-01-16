@@ -77,7 +77,9 @@ def ensure_dataset():
 class TestOneRecOpsModule(flow.unittest.TestCase):
     def test_read_decode(test_case):
         files = [ensure_dataset()]
-        onerec_reader = flow.nn.OneRecReader(files, batch_size=10, shuffle=True, shuffle_mode="batch")
+        onerec_reader = flow.nn.OneRecReader(
+            files, batch_size=10, shuffle=True, shuffle_mode="batch"
+        )
         readdata = onerec_reader()
         labels = flow.decode_onerec(
             readdata, key="labels", dtype=flow.int32, shape=(1,)
