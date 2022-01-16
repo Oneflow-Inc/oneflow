@@ -111,8 +111,10 @@ template<typename T, typename U>
 T dynamic_cast_with_check(U* ptr) {
   CHECK_NOTNULL(ptr);
   T ret = dynamic_cast<T>(ptr);
-  CHECK_NE(ret, nullptr) << "dynamic_cast failed, real type " << typeid(*ptr).name()
-                         << ", target type " << typeid(T).name();
+  if (ret == nullptr) {
+    LOG(FATAL) << "dynamic_cast failed, real type " << typeid(*ptr).name() << ", target type "
+               << typeid(T).name();
+  }
   return ret;
 }
 
