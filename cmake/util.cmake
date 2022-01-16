@@ -259,3 +259,20 @@ function(set_compile_options_to_oneflow_target target)
     >)
   endif()
 endfunction()
+
+function(checkDirAndAppendSlash)
+set(singleValues DIR;OUTPUT)
+set(prefix ARG)
+cmake_parse_arguments(
+  PARSE_ARGV 0
+  ${prefix}
+  "${noValues}" "${singleValues}" "${multiValues}"
+)
+
+if("${${prefix}_DIR}" STREQUAL "")
+  message(FATAL_ERROR "emtpy path found: ${${prefix}_DIR}")
+else()
+  set(${${prefix}_OUTPUT} "${${prefix}_DIR}/" PARENT_SCOPE)
+endif()
+
+endfunction()
