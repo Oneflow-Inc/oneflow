@@ -40,7 +40,7 @@ inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
 }  // namespace
 
 DtrCudaAllocator::DtrCudaAllocator(int64_t device_id)
-    : Allocator(), device_id_(device_id), total_memory_bytes_(0), recycle_piece_list_(nullptr) {
+    : Allocator(), device_id_(device_id), total_memory_bytes_(0) {
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
@@ -80,24 +80,12 @@ void DtrCudaAllocator::RemovePieceFromBin(Piece* piece) {
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::AllocatePiece() {
-  if (recycle_piece_list_) {
-    Piece* ret = recycle_piece_list_;
-    recycle_piece_list_ = recycle_piece_list_->next;
-    return ret;
-  } else {
-    pieces_.emplace_back(new Piece());
-    return pieces_.at(pieces_.size() - 1).get();
-  }
+  Piece* piece = new Piece();
+  return piece;
 }
 
 void DtrCudaAllocator::DeallocatePiece(Piece* piece) {
-  piece->ptr = nullptr;
-  piece->size = 0;
-  piece->bin_num = kInvalidBinNum;
-  CHECK(piece->is_free);
-  piece->prev = nullptr;
-  piece->next = recycle_piece_list_;
-  recycle_piece_list_ = piece;
+  free(piece);
 }
 
 void DtrCudaAllocator::MarkPiece(Piece* piece) {

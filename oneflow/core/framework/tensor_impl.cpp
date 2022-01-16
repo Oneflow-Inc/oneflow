@@ -194,7 +194,6 @@ class EvictTrigger {
 
   ~EvictTrigger() {
     CHECK(releaser_hook_);
-    if (oneflow::DTRDebugEnabled()) { std::cout << "EvictTrigger::~EvictTrigger()" << std::endl; }
     if (!IsShuttingDown()) { (*releaser_hook_)(); }
   }
 

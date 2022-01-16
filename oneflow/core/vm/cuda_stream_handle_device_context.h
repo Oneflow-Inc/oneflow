@@ -30,6 +30,8 @@ namespace vm {
 
 #ifdef WITH_CUDA
 
+COMMAND(Global<DtrCudaAllocator>::SetAllocated(new DtrCudaAllocator(0)));
+
 class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEventProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandleDeviceCtx);
@@ -40,10 +42,9 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
         cuda_handler_(new CudaStreamHandle(nullptr)),
-        cuda_allocator_(new ThreadSafeAllocator(std::unique_ptr<Allocator>(
-            (std::getenv("OF_DTR") != nullptr)
-                ? static_cast<Allocator*>(new DtrCudaAllocator(device_id))
-                : new CudaAllocator(device_id)))),
+        cuda_allocator_(new ThreadSafeAllocator((std::getenv("OF_DTR") != nullptr)
+                    ? static_cast<Allocator*>(Global<DtrCudaAllocator>::Get())
+                    : new CudaAllocator(device_id))),
         device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }

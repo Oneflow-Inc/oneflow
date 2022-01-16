@@ -107,11 +107,20 @@ COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("gpu.Releas
 
 void TempInstructionType::Infer(vm::Instruction* instruction) const { UNIMPLEMENTED(); }
 
+template<typename T, typename U>
+T dynamic_cast_with_check(U* ptr) {
+  CHECK_NOTNULL(ptr);
+  T ret = dynamic_cast<T>(ptr);
+  CHECK_NE(ret, nullptr) << "dynamic_cast failed, real type " << typeid(*ptr).name()
+                         << ", target type " << typeid(T).name();
+  return ret;
+}
+
 void TempInstructionType::Compute(vm::Instruction* instruction) const {
-  auto* allocator = CHECK_NOTNULL(dynamic_cast<vm::DtrCudaAllocator*>(
-      CHECK_NOTNULL(dynamic_cast<vm::ThreadSafeAllocator*>(
-                        instruction->stream().device_ctx()->mut_allocator()))
-          ->backend_allocator()));
+  auto* allocator = dynamic_cast_with_check<vm::DtrCudaAllocator*>(
+      dynamic_cast_with_check<vm::ThreadSafeAllocator*>(
+          instruction->stream().device_ctx()->mut_allocator())
+          ->backend_allocator());
   allocator->DisplayAllPieces();
 }
 COMMAND(vm::RegisterInstructionType<TempInstructionType>("Temp"));
