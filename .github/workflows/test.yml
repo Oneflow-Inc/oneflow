@@ -536,7 +536,7 @@ jobs:
         run: |
           unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip
       - name: Exe test
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && (matrix.device == 'cpu' || matrix.device == 'cuda') }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
         timeout-minutes: 10
         run: |
           chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
