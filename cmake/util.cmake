@@ -269,7 +269,7 @@ cmake_parse_arguments(
   "${noValues}" "${singleValues}" "${multiValues}"
 )
 
-if("${${prefix}_DIR}" STREQUAL "")
+if("${${prefix}_DIR}" STREQUAL "" OR "${${prefix}_DIR}" STREQUAL "/")
   message(FATAL_ERROR "emtpy path found: ${${prefix}_DIR}")
 else()
   set(${${prefix}_OUTPUT} "${${prefix}_DIR}/" PARENT_SCOPE)
