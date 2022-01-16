@@ -44,7 +44,7 @@ class TestFmodModule(flow.unittest.TestCase):
         other = random_pytorch_tensor(ndim=0).to(device)
         return torch.fmod(input, other)
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_flow_fmod_broadcast_with_random_data(test_case):
         device = random_device()
         dim1 = random().to(int)
