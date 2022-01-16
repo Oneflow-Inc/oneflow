@@ -805,7 +805,7 @@ class COCOReader(Module):
         super().__init__()
 
         _handle_shuffle_args(self, shuffle, random_seed)
-        _handle_parallel_args(self, device, placement, sbp)
+        _handle_distributed_args(self, device, placement, sbp)
 
         self.annotation_file = annotation_file
         self.image_dir = image_dir
@@ -960,7 +960,7 @@ class OneRecReader(Module):
         super().__init__()
 
         _handle_shuffle_args(self, shuffle, random_seed)
-        _handle_parallel_args(self, device, placement, sbp)
+        _handle_distributed_args(self, device, placement, sbp)
 
         self.files = files
         self.batch_size = batch_size
@@ -969,12 +969,12 @@ class OneRecReader(Module):
         self.shuffle_after_epoch = shuffle_after_epoch
         self.verify_example = verify_example
 
-        self.op_expr = flow.stateful_op("OneRecReader").Output("out").Build()
+        self.op = flow.stateful_op("OneRecReader").Output("out").Build()
 
     def forward(self):
         if self.placement is None:
             output = _C.dispatch_onerec_reader(
-                self.op_expr,
+                self.op,
                 files=self.files,
                 batch_size=self.batch_size,
                 random_shuffle=self.shuffle,
@@ -987,7 +987,7 @@ class OneRecReader(Module):
             )
         else:
             output = _C.dispatch_onerec_reader(
-                self.op_expr,
+                self.op,
                 files=self.files,
                 batch_size=self.batch_size,
                 random_shuffle=self.shuffle,
@@ -1021,7 +1021,7 @@ class GPTIndexedBinDataReader(Module):
         super().__init__()
 
         _handle_shuffle_args(self, shuffle, random_seed)
-        _handle_parallel_args(self, device, placement, sbp)
+        _handle_distributed_args(self, device, placement, sbp)
 
         self.data_file_prefix = data_file_prefix
         self.batch_size = batch_size
@@ -1083,7 +1083,7 @@ class GPTIndexedBinDataReader(Module):
         return output
 
 
-def _handle_parallel_args(module, device, placement, sbp):
+def _handle_distributed_args(module, device, placement, sbp):
     module.placement = placement
     if placement is None:
         module.device = device or flow.device("cpu")
@@ -1092,6 +1092,8 @@ def _handle_parallel_args(module, device, placement, sbp):
             raise ValueError(
                 "The 'device' and 'placement' arguments can't be specified at the same time."
             )
+
+        module.device = None
 
         if isinstance(sbp, (tuple, list)):
             for sbp_item in sbp:

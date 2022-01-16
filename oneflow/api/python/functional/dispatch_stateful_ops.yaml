@@ -107,8 +107,8 @@
 
 - name: "dispatch_onerec_reader"
   signature: [
-    "Tensor (StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int64 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Device device=None) => DispatchOneRecReader",
-    "Tensor (StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int64 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => DispatchOneRecReader",
+    "Tensor (OpExpr op, StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Device device=None) => DispatchOneRecReader",
+    "Tensor (OpExpr op, StringList files, Int64 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool verify_example=True, Placement placement, SbpList sbp) => DispatchOneRecReader",
   ]
   bind_python: True
 

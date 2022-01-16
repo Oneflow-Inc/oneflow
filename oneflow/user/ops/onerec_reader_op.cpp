@@ -20,7 +20,7 @@ namespace oneflow {
 
 /*static*/ Maybe<void> OneRecReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  int32_t batch_size = ctx->Attr<int32_t>("batch_size");
+  int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   *out_tensor->mut_shape() = Shape({batch_size});
   return Maybe<void>::Ok();
 }

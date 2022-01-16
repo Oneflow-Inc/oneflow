@@ -325,14 +325,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "DispatchOneRecReader",
       [](const std::shared_ptr<OpExpr>& op, const std::vector<std::string>& files,
          const int64_t batch_size, const bool random_shuffle, const std::string& shuffle_mode,
-         const int64_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
+         const int32_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
          const bool verify_example, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
         JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
         JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
         JUST(attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode));
-        JUST(attrs.SetAttr<int64_t>("shuffle_buffer_size", shuffle_buffer_size));
+        JUST(attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size));
         JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
         JUST(attrs.SetAttr<int64_t>("seed", random_seed));
         JUST(attrs.SetAttr<bool>("verify_example", verify_example));
@@ -342,7 +342,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "DispatchOneRecReader",
       [](const std::shared_ptr<OpExpr>& op, const std::vector<std::string>& files,
          const int64_t batch_size, const bool random_shuffle, const std::string& shuffle_mode,
-         const int64_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
+         const int32_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
          const bool verify_example, const Symbol<ParallelDesc>& placement,
          const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
@@ -350,7 +350,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
         JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
         JUST(attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode));
-        JUST(attrs.SetAttr<int64_t>("shuffle_buffer_size", shuffle_buffer_size));
+        JUST(attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size));
         JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
         JUST(attrs.SetAttr<int64_t>("seed", random_seed));
         JUST(attrs.SetAttr<bool>("verify_example", verify_example));

@@ -1483,7 +1483,7 @@ def OneFlow_OneRecReaderOp : OneFlow_BaseOp<"OneRecReader", [NoSideEffect, NoGra
     SI64Attr:$batch_size,
     DefaultValuedAttr<BoolAttr, "true">:$random_shuffle,
     DefaultValuedAttr<StrAttr, "\"instance\"">:$shuffle_mode,
-    DefaultValuedAttr<SI64Attr, "1024">:$shuffle_buffer_size,
+    DefaultValuedAttr<SI32Attr, "1024">:$shuffle_buffer_size,
     DefaultValuedAttr<BoolAttr, "false">:$shuffle_after_epoch,
     DefaultValuedAttr<SI64Attr, "-1">:$seed,
     DefaultValuedAttr<BoolAttr, "true">:$verify_example,
