@@ -778,7 +778,7 @@ jobs:
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build ccache libomp-12-dev
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build ccache
       - name: Download OneFlow custom clang-tidy
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
