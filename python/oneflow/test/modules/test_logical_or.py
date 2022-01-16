@@ -85,14 +85,6 @@ class TestLogicalOrModule(flow.unittest.TestCase):
         y = torch.logical_or(x1, x2)
         return y
 
-    @autotest(n=10, auto_backward=False, check_graph=True)
-    def test_logical_or_with_0dim_data(test_case):
-        device = random_device()
-        x1 = random_pytorch_tensor(ndim=0).to(device)
-        x2 = random_pytorch_tensor(ndim=0).to(device)
-        y = torch.logical_or(x1, x2)
-        return y
-
 
 if __name__ == "__main__":
     unittest.main()
