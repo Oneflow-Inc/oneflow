@@ -346,7 +346,10 @@ def GetDualObject(name, pytorch, oneflow):
                                             if (
                                                 global_backward
                                                 and graph_train_parameters_len
-                                                and isinstance(oneflow, flow.nn.GroupNorm)==False
+                                                and isinstance(
+                                                    oneflow, flow.nn.GroupNorm
+                                                )
+                                                == False
                                             ):
                                                 self.add_optimizer(of_sgd)
 
@@ -356,7 +359,10 @@ def GetDualObject(name, pytorch, oneflow):
                                             if (
                                                 global_backward
                                                 and graph_train_parameters_len
-                                                and isinstance(oneflow, flow.nn.GroupNorm)==False
+                                                and isinstance(
+                                                    oneflow, flow.nn.GroupNorm
+                                                )
+                                                == False
                                             ):
                                                 res = res.sum()
                                                 res.backward()
