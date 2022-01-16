@@ -281,7 +281,7 @@ class random_tensor(generator):
         dtype=float,
     ):
         if ndim is None:
-            ndim = random(0, 6)
+            ndim = random(1, 6)
         if dim0 is None:
             dim0 = random(1, 8)
         if dim1 is None:
