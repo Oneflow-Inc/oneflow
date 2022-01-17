@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_FIXED_TABLE_H_
-#define ONEFLOW_EMBEDDING_FIXED_TABLE_H_
+#ifndef ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_
+#define ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_
 
 #include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/common/data_type.h"
@@ -48,10 +48,8 @@ class FixedTable {
 
   virtual uint32_t KeySize() const = 0;
   virtual uint32_t ValueSize() const = 0;
-  virtual uint16_t LogicalBlockSize() const = 0;
-  virtual void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
-                    uint32_t* missing_indices) = 0;
-  virtual void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint16_t* offsets) = 0;
+  virtual uint32_t LogicalBlockSize() const = 0;
+  virtual void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint32_t* offsets) = 0;
   virtual void Get(uint32_t num_keys, const void* keys, void* values, uint32_t* n_missing,
                    uint32_t* missing_indices) = 0;
   virtual void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) = 0;
@@ -68,4 +66,4 @@ std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_FIXED_TABLE_H_
+#endif  // ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_

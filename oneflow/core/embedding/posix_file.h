@@ -60,8 +60,10 @@ class PosixFile final {
 
   int fd() { return fd_; }
 
+  bool IsOpen() { return fd_ != -1; }
+
   void Close() {
-    if (fd_ != -1) {
+    if (IsOpen()) {
       PCHECK(close(fd_) == 0);
       fd_ = -1;
     }
@@ -70,13 +72,17 @@ class PosixFile final {
   size_t Size() { return size_; }
 
   void Truncate(size_t new_size) {
-    CHECK_NE(fd_, -1);
+    CHECK(IsOpen());
     if (new_size == size_) { return; }
     PCHECK(ftruncate(fd_, new_size) == 0);
     size_ = new_size;
   }
 
-  static bool FileExists(const char* name) { return access(name, F_OK) == 0; }
+  static bool FileExists(const std::string& pathname) {
+    return access(pathname.c_str(), F_OK) == 0;
+  }
+
+  static std::string JoinPath(const std::string& a, const std::string& b) { return a + "/" + b; }
 
   static void RecursiveCreateDirectory(const std::string& pathname, mode_t mode) {
     while (true) {

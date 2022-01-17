@@ -15,14 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/fixed_table.h"
 #include "oneflow/core/common/util.h"
+
+#ifdef __linux__
+
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/embedding/posix_file.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include <omp.h>
 #include <robin_hood.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <dirent.h>
 #include <sys/syscall.h>
 #include <linux/aio_abi.h>
@@ -31,9 +32,13 @@ limitations under the License.
 #include <liburing.h>
 #endif  // WITH_LIBURING
 
+#endif  // __linux__
+
 namespace oneflow {
 
 namespace embedding {
+
+#ifdef __linux__
 
 namespace {
 
@@ -42,17 +47,32 @@ constexpr uint32_t kRingQueueDepth = 128;
 constexpr uint32_t kRingSubmitBatch = 32;
 constexpr uint32_t kAioQueueDepth = 128;
 constexpr uint32_t kChunkNameSuffixLength = 8;
-constexpr char const* kSnapshotFilenamePrefix = "";
-constexpr char const* kValueFilenamePrefix = "value-";
-constexpr char const* kLockFilename = "FIXED_TABLE";
-constexpr char const* kKeySizeFilename = "KEY_SIZE";
-constexpr char const* kValueSizeFilename = "VALUE_SIZE";
-constexpr char const* kPhysicalBlockSizeFilename = "PHYSICAL_BLOCK_SIZE";
-constexpr char const* kNumBlocksPerChunkFilename = "NUM_BLOCKS_PER_CHUNK";
+constexpr char const* kKeyFileNamePrefix = "key-";
+constexpr char const* kIndexFileNamePrefix = "index-";
+constexpr char const* kValueFileNamePrefix = "value-";
+constexpr char const* kLockFileName = "FIXED_TABLE";
+constexpr char const* kKeySizeFileName = "KEY_SIZE";
+constexpr char const* kValueSizeFileName = "VALUE_SIZE";
+constexpr char const* kPhysicalBlockSizeFileName = "PHYSICAL_BLOCK_SIZE";
+constexpr char const* kNumBlocksPerChunkFileName = "NUM_BLOCKS_PER_CHUNK";
+constexpr char const* kKeysDirName = "keys";
+constexpr char const* kValuesDirName = "values";
+constexpr char const* kSnapshotsDirName = "snapshots";
+constexpr char const* kSnapshotListFileName = "LIST";
 constexpr size_t kParallelForStride = 256;
 
+template<typename T>
+T* BytesOffset(T* ptr, size_t bytes) {
+  return reinterpret_cast<T*>(
+      const_cast<unsigned char*>((reinterpret_cast<const unsigned char*>(ptr) + bytes)));
+}
+
+void MemcpyOffset(void* dst, size_t dst_off, const void* src, size_t src_off, size_t n) {
+  std::memcpy(BytesOffset(dst, dst_off), BytesOffset(src, src_off), n);
+}
+
 void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
-  bool exists = PosixFile::FileExists(pathname.c_str());
+  bool exists = PosixFile::FileExists(pathname);
   if (init) {
     CHECK(!exists);
     std::ofstream ofs(pathname);
@@ -66,24 +86,23 @@ void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool in
   }
 }
 
-template<typename Key>
-struct IndexEntry {
-  static constexpr size_t align_size = std::max(sizeof(Key), sizeof(uint64_t));
-  union {
-    typename std::aligned_storage<align_size, align_size>::type pad;
-    Key data;
-  } key;
-  union {
-    typename std::aligned_storage<align_size, align_size>::type pad;
-    uint64_t data;
-  } index;
-};
-
 std::string GetChunkName(uint64_t chunk_id) {
   const std::string chunk_name_wo_leading_zero = std::to_string(chunk_id);
   CHECK_LE(chunk_name_wo_leading_zero.size(), kChunkNameSuffixLength);
   return std::string(kChunkNameSuffixLength - chunk_name_wo_leading_zero.size(), '0')
          + chunk_name_wo_leading_zero;
+}
+
+uint64_t GetChunkId(const std::string& chunk_name) {
+  size_t pos = 0;
+  const uint64_t chunk_id = std::stoull(chunk_name, &pos, 10);
+  CHECK_EQ(pos, kChunkNameSuffixLength);
+  return chunk_id;
+}
+
+uint64_t GetChunkId(const std::string& filename, const std::string& prefix) {
+  CHECK_EQ(filename.compare(0, prefix.size(), prefix), 0);
+  return GetChunkId(filename.substr(prefix.size()));
 }
 
 void ListChunkFiles(const std::string& base, const std::string& prefix,
@@ -94,13 +113,37 @@ void ListChunkFiles(const std::string& base, const std::string& prefix,
   while ((ent = readdir(dir)) != nullptr) {
     if (strlen(ent->d_name) != prefix.size() + kChunkNameSuffixLength) { continue; }
     if (strncmp(ent->d_name, prefix.c_str(), prefix.size()) != 0) { continue; }
-    size_t pos = 0;
-    const uint64_t chunk_id = std::stoull(ent->d_name + prefix.size(), &pos, 10);
-    CHECK_EQ(pos, kChunkNameSuffixLength);
-    CHECK(chunks->emplace(chunk_id, base + "/" + std::string(ent->d_name)).second);
+    const uint64_t chunk_id = GetChunkId(ent->d_name + prefix.size());
+    CHECK(chunks->emplace(chunk_id, PosixFile::JoinPath(base, ent->d_name)).second);
   }
   PCHECK(closedir(dir) == 0);
 }
+
+uint32_t GetLogicalBlockSize(uint32_t physical_block_size, uint32_t value_size) {
+  return physical_block_size >= value_size ? physical_block_size
+                                           : RoundUp(value_size, physical_block_size);
+}
+
+class AlignedBuffer final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AlignedBuffer);
+  explicit AlignedBuffer(size_t alignment) : alignment_(alignment), size_(0) {}
+  ~AlignedBuffer() = default;
+
+  void Resize(size_t new_size) {
+    if (new_size > size_) {
+      ptr_.reset(static_cast<char*>(aligned_alloc(alignment_, new_size)));
+      size_ = new_size;
+    }
+  }
+
+  void* ptr() { return ptr_.get(); }
+
+ private:
+  size_t alignment_;
+  size_t size_;
+  std::unique_ptr<char> ptr_;
+};
 
 template<typename Key>
 class KeyIteratorImpl : public FixedTable::KeyIterator {
@@ -282,58 +325,15 @@ template<typename Key, typename Engine>
 class FixedTableImpl : public FixedTable {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FixedTableImpl);
-  explicit FixedTableImpl(const FixedTableOptions& options)
-      : path_(options.path),
-        key_size_(options.key_size),
-        value_size_(options.value_size),
-        num_blocks_per_chunk_(options.num_blocks_per_chunk) {
-    PosixFile::RecursiveCreateDirectory(options.path, 0755);
-    const std::string lock_filename = options.path + "/" + kLockFilename;
-    const bool init = !PosixFile::FileExists(lock_filename.c_str());
-    lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
-    InitOrCheckMetaValue(options.path + "/" + kKeySizeFilename, key_size_, init);
-    InitOrCheckMetaValue(options.path + "/" + kValueSizeFilename, value_size_, init);
-    InitOrCheckMetaValue(options.path + "/" + kPhysicalBlockSizeFilename,
-                         options.physical_block_size, init);
-    InitOrCheckMetaValue(options.path + "/" + kNumBlocksPerChunkFilename, num_blocks_per_chunk_,
-                         init);
-    logical_block_size_ = options.physical_block_size >= value_size_
-                              ? options.physical_block_size
-                              : RoundUp(value_size_, options.physical_block_size);
-    values_per_block_ = logical_block_size_ / value_size_;
-    workers_.resize(kNumWorkerThreads);
-    for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) {
-      workers_.at(tid).reset(new Worker<Engine>);
-    }
-    std::unordered_map<uint64_t, std::string> chunks;
-    ListChunkFiles(path_, kValueFilenamePrefix, &chunks);
-    for (auto& chunk : chunks) {
-      if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
-      CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
-      PosixFile value_file(chunk.second.c_str(), O_RDWR | O_DIRECT, 0644);
-      value_files_.at(chunk.first) = std::move(value_file);
-    }
-    if (!value_files_.empty()) {
-      physical_table_size_ = ((value_files_.size() - 1) * num_blocks_per_chunk_
-                              + value_files_.back().Size() / logical_block_size_)
-                             * values_per_block_;
-    } else {
-      physical_table_size_ = 0;
-    }
-  }
-  ~FixedTableImpl() override {
-    for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) { workers_.at(tid)->Shutdown(); }
-    for (auto& file : value_files_) { file.Close(); }
-  }
+  explicit FixedTableImpl(const FixedTableOptions& options);
+  ~FixedTableImpl() override;
 
   uint32_t KeySize() const override { return key_size_; }
 
   uint32_t ValueSize() const override { return value_size_; }
 
-  uint16_t LogicalBlockSize() const override;
-  void Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
-            uint32_t* missing_indices) override;
-  void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint16_t* offsets) override;
+  uint32_t LogicalBlockSize() const override;
+  void GetBlocks(uint32_t num_keys, const void* keys, void* blocks, uint32_t* offsets) override;
   void Get(uint32_t num_keys, const void* keys, void* values, uint32_t* n_missing,
            uint32_t* missing_indices) override;
   void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) override;
@@ -344,58 +344,102 @@ class FixedTableImpl : public FixedTable {
   void SaveSnapshot(const std::string& name) override;
 
  private:
-  std::string ValueFileName(uint64_t chunk_id) const;
-  std::string SnapshotFilename(const std::string& name) const;
+  std::string KeyFilePath(uint64_t chunk_id) const;
+  std::string ValueFilePath(uint64_t chunk_id) const;
+  std::string IndexFilePath(const std::string& name, uint64_t chunk_id) const;
+  std::string SnapshotDirPath(const std::string& name) const;
+  std::string SnapshotListFilePath(const std::string& name) const;
   void LoadSnapshotImpl(const std::string& name);
   void SaveSnapshotImpl(const std::string& name);
   void ParallelFor(size_t total, const ForRange<Engine>& for_range);
 
-  std::string path_;
+  std::string root_dir_;
+  std::string keys_dir_;
+  std::string values_dir_;
+  std::string snapshots_dir_;
   uint32_t key_size_;
   uint32_t value_size_;
   uint64_t num_blocks_per_chunk_;
-  uint16_t logical_block_size_;
-
-  uint32_t values_per_block_;
+  uint64_t num_values_per_chunk_;
+  uint32_t num_values_per_block_;
+  uint32_t logical_block_size_;
 
   std::vector<std::unique_ptr<Worker<Engine>>> workers_;
 
-  std::vector<uint16_t> offsets_buffer_;
-  std::vector<char> blocks_buffer_;
+  std::vector<uint32_t> offsets_buffer_;
+  AlignedBuffer blocks_buffer_;
 
   std::recursive_mutex mutex_;
   uint64_t physical_table_size_;
   robin_hood::unordered_flat_map<Key, uint64_t> row_id_mapping_;
   std::vector<PosixFile> value_files_;
+  PosixFile writable_key_file_;
+  uint64_t writable_key_file_chunk_id_;
   PosixFileLockGuard lock_;
 };
 
 template<typename Key, typename Engine>
-uint16_t FixedTableImpl<Key, Engine>::LogicalBlockSize() const {
+FixedTableImpl<Key, Engine>::FixedTableImpl(const FixedTableOptions& options)
+    : root_dir_(options.path),
+      key_size_(options.key_size),
+      value_size_(options.value_size),
+      num_blocks_per_chunk_(options.num_blocks_per_chunk),
+      blocks_buffer_(options.physical_block_size),
+      writable_key_file_chunk_id_(-1) {
+  PosixFile::RecursiveCreateDirectory(options.path, 0755);
+  const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
+  const bool init = !PosixFile::FileExists(lock_filename);
+  lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kKeySizeFileName), key_size_, init);
+  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kValueSizeFileName), value_size_, init);
+  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kPhysicalBlockSizeFileName),
+                       options.physical_block_size, init);
+  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kNumBlocksPerChunkFileName),
+                       num_blocks_per_chunk_, init);
+  keys_dir_ = PosixFile::JoinPath(options.path, kKeysDirName);
+  values_dir_ = PosixFile::JoinPath(options.path, kValuesDirName);
+  snapshots_dir_ = PosixFile::JoinPath(options.path, kSnapshotsDirName);
+  if (init) {
+    PosixFile::RecursiveCreateDirectory(keys_dir_, 0755);
+    PosixFile::RecursiveCreateDirectory(values_dir_, 0755);
+  }
+  logical_block_size_ = GetLogicalBlockSize(options.physical_block_size, value_size_);
+  num_values_per_block_ = logical_block_size_ / value_size_;
+  num_values_per_chunk_ = num_values_per_block_ * num_blocks_per_chunk_;
+  workers_.resize(kNumWorkerThreads);
+  for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) {
+    workers_.at(tid).reset(new Worker<Engine>);
+  }
+  std::unordered_map<uint64_t, std::string> chunks;
+  ListChunkFiles(values_dir_, kValueFileNamePrefix, &chunks);
+  for (auto& chunk : chunks) {
+    if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
+    CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
+    PosixFile value_file(chunk.second, O_RDWR | O_DIRECT, 0644);
+    value_files_.at(chunk.first) = std::move(value_file);
+  }
+  if (!value_files_.empty()) {
+    physical_table_size_ = ((value_files_.size() - 1) * num_blocks_per_chunk_
+                            + value_files_.back().Size() / logical_block_size_)
+                           * num_values_per_block_;
+  } else {
+    physical_table_size_ = 0;
+  }
+}
+
+template<typename Key, typename Engine>
+FixedTableImpl<Key, Engine>::~FixedTableImpl() {
+  for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) { workers_.at(tid)->Shutdown(); }
+}
+
+template<typename Key, typename Engine>
+uint32_t FixedTableImpl<Key, Engine>::LogicalBlockSize() const {
   return logical_block_size_;
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::Test(uint32_t num_keys, const void* keys, uint32_t* n_missing,
-                                       uint32_t* missing_indices) {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  std::atomic<uint32_t> atomic_n_missing(0);
-  ParallelFor(num_keys, [&](Engine* engine, size_t start, size_t end) {
-    for (uint64_t i = start; i < end; ++i) {
-      const Key key = static_cast<const Key*>(keys)[i];
-      auto it = row_id_mapping_.find(key);
-      if (it == row_id_mapping_.end()) {
-        const uint32_t index = atomic_n_missing.fetch_add(1, std::memory_order_relaxed);
-        missing_indices[index] = i;
-      }
-    }
-  });
-  *n_missing = atomic_n_missing.load(std::memory_order_relaxed);
-}
-
-template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
-                                            uint16_t* offsets) {
+                                            uint32_t* offsets) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   ParallelFor(num_keys, [&](Engine* engine, size_t start, size_t end) {
     for (uint64_t i = start; i < end; ++i) {
@@ -405,15 +449,15 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
         offsets[i] = logical_block_size_;
       } else {
         const uint64_t id = it->second;
-        const uint64_t block_id = id / values_per_block_;
-        const uint16_t id_in_block = id - block_id * values_per_block_;
-        const uint64_t offset_in_block = id_in_block * value_size_;
+        const uint64_t block_id = id / num_values_per_block_;
+        const uint32_t id_in_block = id - block_id * num_values_per_block_;
+        const uint32_t offset_in_block = id_in_block * value_size_;
         const uint64_t chunk_id = block_id / num_blocks_per_chunk_;
         const uint64_t block_in_chunk = block_id - chunk_id * num_blocks_per_chunk_;
         const uint64_t block_offset = block_in_chunk * logical_block_size_;
         PosixFile& file = value_files_.at(chunk_id);
         offsets[i] = offset_in_block;
-        engine->AsyncPread(file.fd(), static_cast<char*>(blocks) + i * logical_block_size_,
+        engine->AsyncPread(file.fd(), BytesOffset(blocks, i * logical_block_size_),
                            logical_block_size_, block_offset);
       }
     }
@@ -429,10 +473,8 @@ void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void*
   if (value_size_ == logical_block_size_) {
     blocks_ptr = values;
   } else {
-    blocks_buffer_.resize((num_keys + 1) * logical_block_size_);
-    blocks_ptr = blocks_buffer_.data()
-                 + (logical_block_size_
-                    - reinterpret_cast<uintptr_t>(blocks_buffer_.data()) % logical_block_size_);
+    blocks_buffer_.Resize(num_keys * logical_block_size_);
+    blocks_ptr = blocks_buffer_.ptr();
   }
   GetBlocks(num_keys, keys, blocks_ptr, offsets_buffer_.data());
   uint32_t missing_count = 0;
@@ -442,10 +484,8 @@ void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void*
       missing_count += 1;
     } else {
       if (value_size_ != logical_block_size_) {
-        std::memcpy(
-            static_cast<char*>(values) + i * value_size_,
-            static_cast<char*>(blocks_ptr) + (i * logical_block_size_) + offsets_buffer_.at(i),
-            value_size_);
+        MemcpyOffset(values, i * value_size_, blocks_ptr,
+                     (i * logical_block_size_) + offsets_buffer_[i], value_size_);
       }
     }
   }
@@ -456,38 +496,50 @@ template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
                                             const void* blocks) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  const uint32_t num_blocks = (num_keys + values_per_block_ - 1) / values_per_block_;
-  const uint32_t num_padded_keys = num_blocks * values_per_block_;
-  const uint64_t start = physical_table_size_;
+  const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
+  const uint32_t num_padded_keys = num_blocks * num_values_per_block_;
+  const uint64_t start_index = physical_table_size_;
   physical_table_size_ += num_padded_keys;
-  CHECK_EQ(start % values_per_block_, 0);
-  const uint64_t start_block_id = start / values_per_block_;
+  CHECK_EQ(start_index % num_values_per_block_, 0);
+  const uint64_t start_block_id = start_index / num_values_per_block_;
   for (uint64_t i = 0; i < num_keys; ++i) {
-    row_id_mapping_[static_cast<const Key*>(keys)[i]] = start + i;
+    row_id_mapping_[static_cast<const Key*>(keys)[i]] = start_index + i;
   }
-  uint64_t write_blocks = 0;
-  while (write_blocks < num_blocks) {
-    const uint64_t batch_start_block_id = start_block_id + write_blocks;
+  uint64_t written_blocks = 0;
+  const uint64_t block_keys_size = num_values_per_block_ * sizeof(Key);
+  while (written_blocks < num_blocks) {
+    const uint64_t batch_start_block_id = start_block_id + written_blocks;
     const uint64_t batch_chunk_id = batch_start_block_id / num_blocks_per_chunk_;
     if (batch_chunk_id == value_files_.size()) {
-      value_files_.emplace_back(ValueFileName(batch_chunk_id).c_str(), O_CREAT | O_RDWR | O_DIRECT,
-                                0644);
+      value_files_.emplace_back(ValueFilePath(batch_chunk_id), O_CREAT | O_RDWR | O_DIRECT, 0644);
     } else {
       CHECK_LE(batch_chunk_id, value_files_.size());
     }
-    PosixFile& file = value_files_.at(batch_chunk_id);
-    const uint64_t block_in_chunk = batch_start_block_id - batch_chunk_id * num_blocks_per_chunk_;
+    if ((!writable_key_file_.IsOpen()) || writable_key_file_chunk_id_ != batch_chunk_id) {
+      writable_key_file_ = PosixFile(KeyFilePath(batch_chunk_id), O_CREAT | O_RDWR, 0644);
+    }
+    PosixFile& value_file = value_files_.at(batch_chunk_id);
+    const uint64_t block_id_in_chunk =
+        batch_start_block_id - batch_chunk_id * num_blocks_per_chunk_;
     const uint64_t blocks_to_write =
-        std::min(num_blocks - write_blocks,
+        std::min(num_blocks - written_blocks,
                  (batch_chunk_id + 1) * num_blocks_per_chunk_ - batch_start_block_id);
-    const uint64_t bytes_to_write = blocks_to_write * logical_block_size_;
-    const uint64_t offset_in_chunk = block_in_chunk * logical_block_size_;
-    CHECK_LE(file.Size(), offset_in_chunk);
-    file.Truncate(offset_in_chunk + bytes_to_write);
-    PCHECK(pwrite(file.fd(), static_cast<const char*>(blocks) + write_blocks * logical_block_size_,
-                  bytes_to_write, offset_in_chunk)
-           == bytes_to_write);
-    write_blocks += blocks_to_write;
+    const uint64_t values_bytes = blocks_to_write * logical_block_size_;
+    const uint64_t values_offset_in_file = block_id_in_chunk * logical_block_size_;
+    CHECK_LE(value_file.Size(), values_offset_in_file);
+    value_file.Truncate(values_offset_in_file + values_bytes);
+    PCHECK(pwrite(value_file.fd(), BytesOffset(blocks, written_blocks * logical_block_size_),
+                  values_bytes, values_offset_in_file)
+           == values_bytes);
+    const uint64_t keys_offset_in_file = block_id_in_chunk * block_keys_size;
+    writable_key_file_.Truncate(keys_offset_in_file + blocks_to_write * block_keys_size);
+    const uint64_t keys_bytes = std::min(num_keys - written_blocks * num_values_per_block_,
+                                         blocks_to_write * num_values_per_block_)
+                                * sizeof(Key);
+    PCHECK(pwrite(writable_key_file_.fd(), BytesOffset(keys, written_blocks * block_keys_size),
+                  keys_bytes, keys_offset_in_file)
+           == keys_bytes);
+    written_blocks += blocks_to_write;
   }
 }
 
@@ -498,20 +550,17 @@ void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const
   if (value_size_ == logical_block_size_) {
     blocks_ptr = values;
   } else {
-    const uint32_t num_blocks = (num_keys + values_per_block_ - 1) / values_per_block_;
-    blocks_buffer_.resize((num_blocks + 1) * logical_block_size_);
-    void* blocks_buffer_ptr =
-        blocks_buffer_.data()
-        + (logical_block_size_
-           - reinterpret_cast<uintptr_t>(blocks_buffer_.data()) % logical_block_size_);
-    for (uint32_t i = 0; i < num_keys; i += values_per_block_) {
-      const uint32_t block_id = i / values_per_block_;
-      const uint32_t copy_size =
-          (num_keys - i) < values_per_block_ ? (num_keys - i) * value_size_ : logical_block_size_;
-      std::memcpy(static_cast<char*>(blocks_buffer_ptr) + block_id * logical_block_size_,
-                  static_cast<const char*>(values) + i * value_size_, copy_size);
+    const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
+    blocks_buffer_.Resize(num_blocks * logical_block_size_);
+    for (uint32_t i = 0; i < num_keys; i += num_values_per_block_) {
+      const uint32_t block_id = i / num_values_per_block_;
+      const uint32_t copy_size = (num_keys - i) < num_values_per_block_
+                                     ? (num_keys - i) * value_size_
+                                     : logical_block_size_;
+      MemcpyOffset(blocks_buffer_.ptr(), block_id * logical_block_size_, values, i * value_size_,
+                   copy_size);
     }
-    blocks_ptr = blocks_buffer_ptr;
+    blocks_ptr = blocks_buffer_.ptr();
   }
   PutBlocks(num_keys, keys, blocks_ptr);
 }
@@ -525,55 +574,98 @@ void FixedTableImpl<Key, Engine>::WithKeyIterator(
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::ValueFileName(uint64_t chunk_id) const {
-  return path_ + "/" + kValueFilenamePrefix + GetChunkName(chunk_id);
+std::string FixedTableImpl<Key, Engine>::KeyFilePath(uint64_t chunk_id) const {
+  return PosixFile::JoinPath(keys_dir_, kKeyFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::SnapshotFilename(const std::string& name) const {
-  return path_ + "/" + kSnapshotFilenamePrefix + name;
+std::string FixedTableImpl<Key, Engine>::ValueFilePath(uint64_t chunk_id) const {
+  return PosixFile::JoinPath(values_dir_, kValueFileNamePrefix + GetChunkName(chunk_id));
+}
+
+template<typename Key, typename Engine>
+std::string FixedTableImpl<Key, Engine>::IndexFilePath(const std::string& name,
+                                                       uint64_t chunk_id) const {
+  return PosixFile::JoinPath(SnapshotDirPath(name), kIndexFileNamePrefix + GetChunkName(chunk_id));
+}
+
+template<typename Key, typename Engine>
+std::string FixedTableImpl<Key, Engine>::SnapshotDirPath(const std::string& name) const {
+  return PosixFile::JoinPath(snapshots_dir_, name);
+}
+
+template<typename Key, typename Engine>
+std::string FixedTableImpl<Key, Engine>::SnapshotListFilePath(const std::string& name) const {
+  return PosixFile::JoinPath(SnapshotDirPath(name), kSnapshotListFileName);
 }
 
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
+  const std::string snapshot_base = SnapshotDirPath(name);
+  const std::string snapshot_list = SnapshotListFilePath(name);
   row_id_mapping_.clear();
-  PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_RDONLY, 0644);
-  using Entry = IndexEntry<Key>;
-  const size_t size = snapshot_file.Size();
-  if (size == 0) { return; }
-  PosixMappedFile mapped_file(std::move(snapshot_file), size, PROT_READ);
-  const Entry* entries = static_cast<Entry*>(mapped_file.ptr());
-  CHECK_EQ(size % sizeof(Entry), 0);
-  size_t n_entries = size / sizeof(Entry);
-  row_id_mapping_.reserve(n_entries);
-  for (size_t i = 0; i < n_entries; ++i) {
-    CHECK(row_id_mapping_.emplace(entries[i].key.data, entries[i].index.data).second);
+  std::ifstream list_if(snapshot_list);
+  std::string index_filename;
+  while (std::getline(list_if, index_filename)) {
+    const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
+    PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
+    const size_t index_file_size = index_file.Size();
+    CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+    if (index_file_size == 0) { return; }
+    const size_t n_entries = index_file_size / sizeof(uint64_t);
+    PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ);
+    PosixFile key_file(KeyFilePath(chunk_id), O_RDONLY, 0644);
+    PosixMappedFile mapped_key(std::move(key_file), key_file.Size(), PROT_READ);
+    const uint64_t* indices = static_cast<const uint64_t*>(mapped_index.ptr());
+    const Key* keys = static_cast<const Key*>(mapped_key.ptr());
+    const uint64_t chunk_start_index = chunk_id * num_values_per_chunk_;
+    row_id_mapping_.reserve(row_id_mapping_.size() + n_entries);
+    for (size_t i = 0; i < n_entries; ++i) {
+      CHECK(row_id_mapping_.emplace(keys[indices[i] - chunk_start_index], indices[i]).second);
+    }
   }
 }
 
 template<typename Key, typename Engine>
 void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  PosixFile snapshot_file(SnapshotFilename(name).c_str(), O_CREAT | O_RDWR, 0644);
+  PosixFile::RecursiveCreateDirectory(SnapshotDirPath(name), 0755);
+  std::ofstream list_ofs(SnapshotListFilePath(name));
   if (row_id_mapping_.empty()) { return; }
-  using Entry = IndexEntry<Key>;
-  const size_t total_size = sizeof(Entry) * row_id_mapping_.size();
-  snapshot_file.Truncate(total_size);
-  PosixMappedFile mapped_file(std::move(snapshot_file), total_size, PROT_READ | PROT_WRITE);
-  Entry* entries = static_cast<Entry*>(mapped_file.ptr());
-  size_t count = 0;
+  std::vector<PosixMappedFile> index_files(value_files_.size());
+  std::vector<uint64_t> counters(value_files_.size());
+  const uint64_t max_index_file_size = num_values_per_chunk_ * sizeof(uint64_t);
   for (const auto& pair : row_id_mapping_) {
-    entries[count].key.data = pair.first;
-    entries[count].index.data = pair.second;
+    const uint64_t chunk_id = pair.second / num_values_per_chunk_;
+    CHECK(chunk_id < value_files_.size());
+    if (index_files[chunk_id].ptr() == nullptr) {
+      PosixFile snapshot_file(IndexFilePath(name, chunk_id), O_CREAT | O_RDWR, 0644);
+      snapshot_file.Truncate(max_index_file_size);
+      index_files[chunk_id] =
+          PosixMappedFile(std::move(snapshot_file), max_index_file_size, PROT_READ | PROT_WRITE);
+    }
+    uint64_t* indices = static_cast<uint64_t*>(index_files[chunk_id].ptr());
+    uint64_t& count = counters[chunk_id];
+    CHECK_LT(count, num_values_per_chunk_);
+    indices[count] = pair.second;
     count += 1;
+  }
+  for (size_t i = 0; i < value_files_.size(); ++i) {
+    const uint64_t count = counters[i];
+    if (count > 0) {
+      index_files[i].file().Truncate(count * sizeof(uint64_t));
+      list_ofs << kIndexFileNamePrefix + GetChunkName(i) << std::endl;
+    } else {
+      CHECK(index_files[i].ptr() == nullptr);
+    }
   }
 }
 
 template<typename Key, typename Engine>
 bool FixedTableImpl<Key, Engine>::SnapshotExists(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  return PosixFile::FileExists(SnapshotFilename(name).c_str());
+  return PosixFile::FileExists(SnapshotListFilePath(name));
 }
 
 template<typename Key, typename Engine>
@@ -605,11 +697,24 @@ std::unique_ptr<FixedTable> DispatchKeyType(const FixedTableOptions& options) {
   }
 }
 
-std::unique_ptr<FixedTable> DispatchEngine(const FixedTableOptions& options) {
+bool IsRingIOSupported() {
 #ifdef WITH_LIBURING
   struct io_uring ring {};
   if (io_uring_queue_init(1, &ring, 0) == 0) {
     io_uring_queue_exit(&ring);
+    return true;
+  } else {
+    return false;
+  }
+#else
+  return false;
+#endif
+}
+
+std::unique_ptr<FixedTable> DispatchEngine(const FixedTableOptions& options) {
+#ifdef WITH_LIBURING
+  static bool ring_io_supported = IsRingIOSupported();
+  if (ring_io_supported) {
     return DispatchKeyType<RingEngine>(options);
   } else {
     return DispatchKeyType<AioEngine>(options);
@@ -621,13 +726,20 @@ std::unique_ptr<FixedTable> DispatchEngine(const FixedTableOptions& options) {
 
 }  // namespace
 
+#endif  // __linux__
+
 std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
+#ifdef __linux__
   CHECK(!options.path.empty());
   CHECK_GT(options.value_size, 0);
   CHECK_GT(options.num_blocks_per_chunk, 0);
   CHECK_GT(options.physical_block_size, 0);
   CHECK_GT(options.key_size, 0);
   return DispatchEngine(options);
+#else
+  UNIMPLEMENTED();
+  return nullptr;
+#endif  // __linux__
 }
 
 }  // namespace embedding
