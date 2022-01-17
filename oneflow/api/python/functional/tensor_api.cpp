@@ -246,17 +246,14 @@ class LocalTensorSharedNumpyDataFunctor {
     auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, data_type, device, strides, 0);
 
     // Build TensorBuffer
-    const auto& Free = [obj](char* dptr) {
-      py::gil_scoped_acquire gil;
-      Py_DECREF(obj);
-    };
     Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
     auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
-    tensor_data->set_blob_dptr(
-        std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
-        array_size_in_bytes);
+    tensor_data->set_blob_dptr((char *)data_ptr, array_size_in_bytes, [obj](char* dptr) {
+      py::gil_scoped_acquire gil;
+      Py_DECREF(obj);
+    });
 
     // Build TensorStorage: decrease ndarray reference count before releasing
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
