@@ -17,12 +17,14 @@ else()
       elseif("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL ".so")
         set(ONEDNN_LIBRARY_NAMES libdnnl.so)
         set(DNNL_LIBRARY_TYPE SHARED)
+        set(DNNL_LIBRARY_RPATH ON)
       else()
         message(FATAL_ERROR "${CMAKE_SHARED_LIBRARY_SUFFIX} not support for onednn")
       endif()
     else()
       set(ONEDNN_LIBRARY_NAMES libdnnl.a )
       set(DNNL_LIBRARY_TYPE STATIC)
+      set(DNNL_LIBRARY_RPATH OFF)
     endif()
 endif()
 
@@ -30,11 +32,17 @@ foreach(LIBRARY_NAME ${ONEDNN_LIBRARY_NAMES})
     list(APPEND ONEDNN_STATIC_LIBRARIES ${ONEDNN_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
+if (WITH_CPU_THREADING_RUNTIME STREQUAL "TBB") 
+  set(ONEDNN_CPU_RUNTIME TBB)
+  set(ONEDNN_DEPENDS install-tbb)
+else()
+  set(ONEDNN_CPU_RUNTIME OMP)
+endif()
 
 if(THIRD_PARTY)
-
 ExternalProject_Add(onednn
     PREFIX onednn
+    DEPENDS ${ONEDNN_DEPENDS}
     URL ${ONEDNN_URL}
     URL_MD5 c60ea96acbaccec053be7e3fa81c6184
     UPDATE_COMMAND ""
@@ -55,7 +63,10 @@ ExternalProject_Add(onednn
         -DDNNL_BUILD_EXAMPLES:BOOL=OFF
         -DDNNL_BUILD_TESTS:BOOL=OFF
         -DDNNL_LIBRARY_TYPE:STRING=${DNNL_LIBRARY_TYPE}
-        -DDNNL_CPU_RUNTIME:STRING=OMP
+        -DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=${DNNL_LIBRARY_RPATH}
+        -DCMAKE_INSTALL_RPATH:STRING=${ONETBB_INSTALL_DIR}
+        -DDNNL_CPU_RUNTIME:STRING=${ONEDNN_CPU_RUNTIME}
+        -DTBBROOT:STRING=${ONETBB_INSTALL_DIR}
 )
 
 endif(THIRD_PARTY)
