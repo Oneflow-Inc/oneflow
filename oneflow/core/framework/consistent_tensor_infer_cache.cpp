@@ -88,9 +88,7 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
   auto* map = nd_sbp_signature->mutable_bn_in_op2nd_sbp();
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& constaint = input_consistent_tensor_metas_.at(i).consumer_nd_sbp_constraint();
-    if (constaint.has_value()) {
-      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint);
-    }
+    if (constaint.has_value()) { (*map)[input_arg_tuple.indexed_bns().at(i)] = *JUST(constaint); }
   }
   return Maybe<void>::Ok();
 }

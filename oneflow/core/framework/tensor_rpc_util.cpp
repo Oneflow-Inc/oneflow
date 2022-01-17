@@ -119,14 +119,14 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, consumer_nd_sbp_constraint_symbol_id);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, tensor_transport_token);
 FLAT_MSG_END(FlatTensorConsistency);
-// clang-format off
+// clang-format on
 
 CheckConsistencyAsyncTransportCtx::~CheckConsistencyAsyncTransportCtx() {}
 
 Maybe<void> CheckConsistencyAsyncTransportCtx::PrepareSendBufferAndCallback(
     int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
-  const auto& tensor_consistency =
-      JUST(FlatTensorConsistency::New(tensor_meta_, consumer_nd_sbp_constraint_, tensor_transport_token_));
+  const auto& tensor_consistency = JUST(FlatTensorConsistency::New(
+      tensor_meta_, consumer_nd_sbp_constraint_, tensor_transport_token_));
   *buffer = tensor_consistency.get();
   *size = sizeof(FlatTensorConsistency);
   *Callback = [tensor_consistency] {};
@@ -145,8 +145,8 @@ Maybe<void> CheckConsistencyAsyncTransportCtx::PrepareRecvBufferAndCallback(
 
 Maybe<void> CheckConsistencyAsyncTransportCtx::Check() const {
   if (!flat_tensor_consistency_) { return Maybe<void>::Ok(); }
-  JUST(flat_tensor_consistency_->Check(
-      tensor_meta_, consumer_nd_sbp_constraint_, tensor_transport_token_));
+  JUST(flat_tensor_consistency_->Check(tensor_meta_, consumer_nd_sbp_constraint_,
+                                       tensor_transport_token_));
   return Maybe<void>::Ok();
 }
 
@@ -155,7 +155,8 @@ int64_t* MutThreadLocalTensorMetaCheckDepth() {
   return &depth;
 }
 
-Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor) {
+Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
+    const one::Tensor& tensor) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckTensorConsistency));
@@ -163,7 +164,7 @@ Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const 
   const auto& constaint = JUST(tensor.consumer_nd_sbp_constraint());
   const TransportToken& tensor_transport_token = JUST(tensor.transport_token());
   const auto& ctx = std::make_shared<CheckConsistencyAsyncTransportCtx>(
-    transport_token, tensor_meta, constaint, tensor_transport_token);
+      transport_token, tensor_meta, constaint, tensor_transport_token);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
   return ctx;
@@ -180,5 +181,5 @@ Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
   return Callback();
 }
 
-}
+}  // namespace private_details
 }  // namespace oneflow

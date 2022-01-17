@@ -73,6 +73,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
 Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     const OpNode* start, const std::function<bool(const OpNode*)>& IsAllowed,
     std::vector<const OpNode*>* out) {
+  // Find sequence like: vairable -> cast_fp32_to_fp16
   if (!start->op().op_conf().has_variable_conf()) { return Maybe<void>::Ok(); }
   const ParallelDesc& pd = start->parallel_desc();
   if (pd.device_type() != DeviceType::kCUDA) { return Maybe<void>::Ok(); }
@@ -100,22 +101,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
   return Maybe<void>::Ok();
 }
 
-void ForEachOutNodeConsumingLbi(
-    const OpNode* node, const LogicalBlobId& lbi,
-    const std::function<void(const OpNode* out_node, const std::string& ibn)>& Handler) {
-  node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
-    for (const std::string& ibn : out_node->op().input_bns()) {
-      if (out_node->op().BnInOp2Lbi(ibn) == lbi) { Handler(out_node, ibn); }
-    }
-  });
-}
-
-void ForEachOutNodeConsumingSoleOut(
-    const OpNode* node,
-    const std::function<void(const OpNode* out_node, const std::string& ibn)>& Handler) {
-  ForEachOutNodeConsumingLbi(node, node->op().BnInOp2Lbi(node->op().SoleObn()), Handler);
-}
-
 void SetBroadcastParallel4OpNodeIbn(JobBuilder* builder, const OpNode* node,
                                     const std::string& ibn) {
   OpBlobArg op_blob_arg;
@@ -127,10 +112,15 @@ void SetBroadcastParallel4OpNodeIbn(JobBuilder* builder, const OpNode* node,
 }
 
 void SetBroadcastParallel4Consumers(JobBuilder* builder, const SequencePtr& sequence) {
-  ForEachOutNodeConsumingSoleOut(sequence->GetLastNode(),
-                                 [&](const OpNode* out_node, const std::string& ibn) {
-                                   SetBroadcastParallel4OpNodeIbn(builder, out_node, ibn);
-                                 });
+  const OpNode* node = sequence->GetLastNode();
+  const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
+  node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+    for (const std::string& ibn : out_node->op().input_bns()) {
+      if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+        SetBroadcastParallel4OpNodeIbn(builder, out_node, ibn);
+      }
+    }
+  });
 }
 
 std::function<int64_t(const OpNode*)> MakeGetterOpNode2TopoOrder(const OpGraph& op_graph) {
@@ -158,6 +148,7 @@ void ForEachDataParallelNodeSequence(const OpGraph& op_graph,
   auto OpNode2Order = MakeGetterOpNode2TopoOrder(op_graph);
   op_graph.ForEachNode([&](const OpNode* node) {
     std::vector<const OpNode*> nodes;
+    // Find sequence like: vairable -> cast_fp32_to_fp16
     CHECK_JUST(GetDataParallelVariableAndNaiveSuccNode(node, IsAllowed, &nodes));
     if (nodes.empty()) { return; }
     const int64_t order = GetMinConsumerOrder(op_graph, nodes.back(), OpNode2Order);
@@ -178,6 +169,7 @@ void ForEachParallelSortedNodeSequence(
     const std::function<bool(const SequencePtr&, const SequencePtr&)>& Comp,
     const std::function<void(const ParallelDesc&, std::vector<SequencePtr>&&)>& Handler) {
   HashMap<ParallelDesc, std::vector<SequencePtr>> parallel_desc2sequences;
+  // Find sequence like: vairable -> cast_fp32_to_fp16
   ForEachDataParallelNodeSequence(op_graph, IsAllowed, [&](SequencePtr&& sequence) {
     parallel_desc2sequences[sequence->parallel_desc()].emplace_back(std::move(sequence));
   });
@@ -236,6 +228,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     if (n->op().op_conf().has_variable_conf()) {
       const Shape shape(n->op().op_conf().variable_conf().shape());
       const int64_t parallel_num = n->parallel_desc().parallel_num();
+      // Parameter needs to be able to evenly splited and one slice size >= threshold
       return shape.At(0) % parallel_num == 0 && shape.elem_cnt() >= threshold * parallel_num;
     } else {
       return IsS0SignatureSupported(n);
@@ -243,6 +236,10 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
   };
   const auto PlacementSequencesAsSplitParallel = [&](const ParallelDesc& pd,
                                                      std::vector<SequencePtr>&& sorted_sequences) {
+    // For all sorted sequnence, set the variable op in the sequence to S(0)
+    // and add ctrl edge to control the exectuion order between variable ops.
+    // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
+    // consume the fp16 variable and the optimizer consume the fp32 variable.
     for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
@@ -255,6 +252,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
         new_var_op_conf.add_ctrl_in_op_name(prev_op_name);
       }
       builder->MutOpsOnlyOnce({new_var_op_conf});
+      // Set consumers to consum this variable op's cast op's output as Broadcast.
       SetBroadcastParallel4Consumers(builder, sorted_sequences.at(i));
     }
   };
