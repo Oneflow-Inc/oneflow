@@ -96,6 +96,7 @@ from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import sigmoid
 from oneflow._C import tanh
+from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softsign

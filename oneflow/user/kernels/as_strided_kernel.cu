@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <cstdint>
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/consistency_check.h"
@@ -30,34 +31,45 @@ namespace {
 
 constexpr size_t NUM_DIM = 8;
 
+template<size_t num_dims, typename IndexType>
+struct AsStridedParams {
+  NdIndexOffsetHelper<IndexType, num_dims> destIndexOffsetHelper;
+  int64_t dest_dims[num_dims];
+  int32_t stride[num_dims];
+  int32_t dest_num_dims;
+  int32_t storage_offset;
+  int32_t input_num;
+  int32_t output_num;
+};
+
 template<typename T>
-__global__ void AsStrided_kernel(const T* input_buf, T* output_buf, const int64_t* dest_dims, const int32_t* stride,
-                const int32_t dest_num_dims, const int32_t storage_offset, const int32_t input_num, const int32_t output_num) {
-  NdIndexOffsetHelper<int64_t,NUM_DIM> destIndexOffsetHelper(dest_dims, dest_num_dims);
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, output_num) {
+__global__ void AsStrided_kernel(const T* input_buf, T* output_buf, AsStridedParams<NUM_DIM, int64_t> params) {
+  const int64_t* dest_dims = reinterpret_cast<const int64_t*>(params.dest_dims);
+  const int32_t* stride = reinterpret_cast<const int32_t*>(params.stride);
+  
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, params.output_num) {
      int64_t dst_index[NUM_DIM];
-     destIndexOffsetHelper.OffsetToNdIndex(i, dst_index, dest_num_dims);
-     int32_t index_in_input = storage_offset;
-     FOR_RANGE(int64_t, j, 0, dest_num_dims){
-        index_in_input += dst_index[0];
-        //index_in_input+=dst_index[j]*stride[j];
+     params.destIndexOffsetHelper.OffsetToNdIndex(i, dst_index, params.dest_num_dims);
+     int32_t index_in_input = params.storage_offset;
+     FOR_RANGE(int64_t, j, 0, params.dest_num_dims){
+        index_in_input+=dst_index[j]*stride[j];
      }
      output_buf[i] = input_buf[index_in_input];
   }
 }
 
 template<typename T>
-__global__ void AsStridedGrad_kernel(const T* dy_buf, T* dx_buf, const int64_t* dy_dims, const int32_t* stride,
-                const int32_t dy_num_dims, const int32_t storage_offset, const int32_t dx_num, const int32_t dy_num) {
-    NdIndexOffsetHelper<int64_t,NUM_DIM> destIndexOffsetHelper(dy_dims, dy_num_dims);
-    CUDA_1D_KERNEL_LOOP_T(int64_t, i, dy_num) {
+__global__ void AsStridedGrad_kernel(const T* dy_buf, T* dx_buf, AsStridedParams<NUM_DIM, int64_t> params) {
+    const int64_t* dest_dims = reinterpret_cast<const int64_t*>(params.dest_dims);
+    const int32_t* stride = reinterpret_cast<const int32_t*>(params.stride);
+    CUDA_1D_KERNEL_LOOP_T(int64_t, i, params.output_num) {
         int64_t dy_index[NUM_DIM];
-        destIndexOffsetHelper.OffsetToNdIndex(i, dy_index,dy_num_dims);
-        int32_t index_in_dx = storage_offset;
-        FOR_RANGE(int64_t, j, 0, dy_num_dims){
+        params.destIndexOffsetHelper.OffsetToNdIndex(i, dy_index, params.dest_num_dims);
+        int32_t index_in_dx = params.storage_offset;
+        FOR_RANGE(int64_t, j, 0, params.dest_num_dims){
             index_in_dx+=dy_index[j]*stride[j];
         }
-        dx_buf[index_in_dx] += dy_buf[i];
+        cuda::atomic::Add(dx_buf + index_in_dx, dy_buf[i]);
     }
 }
 
@@ -65,9 +77,20 @@ template<typename T>
 struct AsStridedFunctor final {
 void operator()(ep::Stream* stream, const T* input_buf, T* output_buf, const int64_t* dest_dims, const int32_t* stride,
                 const int32_t dest_num_dims, const int32_t storage_offset, const int32_t input_num, const int32_t output_num) {
+    NdIndexOffsetHelper<int64_t, NUM_DIM> destIndexOffsetHelper(dest_dims, dest_num_dims);
+    AsStridedParams<NUM_DIM, int64_t> params;
+    params.destIndexOffsetHelper = destIndexOffsetHelper;
+    FOR_RANGE(size_t, i, 0, dest_num_dims){
+      params.dest_dims[i] = dest_dims[i];
+      params.stride[i] = stride[i];
+    }
+    params.dest_num_dims = dest_num_dims;
+    params.storage_offset = storage_offset;
+    params.input_num = input_num;
+    params.output_num = output_num;
+
     AsStrided_kernel<T><<<BlocksNum4ThreadsNum(output_num), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(input_buf, output_buf, dest_dims, stride,
-           dest_num_dims, storage_offset, input_num, output_num);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(input_buf, output_buf, params);
 }
 };
 
@@ -75,9 +98,20 @@ template<typename T>
 struct AsStridedGradFunctor final {
  void operator()(ep::Stream* stream, const T* dy_buf, T* dx_buf, const int64_t* dy_dims, const int32_t* stride,
                 const int32_t dy_num_dims, const int32_t storage_offset, const int32_t dx_num, const int32_t dy_num) {
+    NdIndexOffsetHelper<int64_t, NUM_DIM> dyIndexOffsetHelper(dy_dims, dy_num_dims);
+    AsStridedParams<NUM_DIM, int64_t> params;
+    params.destIndexOffsetHelper = dyIndexOffsetHelper;
+    FOR_RANGE(size_t, i, 0, dy_num_dims){
+      params.dest_dims[i] = dy_dims[i];
+      params.stride[i] = stride[i];
+    }
+    params.dest_num_dims = dy_num_dims;
+    params.storage_offset = storage_offset;
+    params.input_num = dx_num;
+    params.output_num = dy_num;
+
     AsStridedGrad_kernel<T><<<BlocksNum4ThreadsNum(dy_num), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(dy_buf, dx_buf, dy_dims, stride,
-                dy_num_dims, storage_offset, dx_num, dy_num);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(dy_buf, dx_buf, params);
 }
 };
 
@@ -101,7 +135,7 @@ class GpuAsStridedKernel final : public user_op::OpKernel {
     const int64_t *dest_dims = output->shape().ptr();
     const size_t input_num = input->shape().Count(0);
     const size_t output_num = output->shape().Count(0);
-
+    
     AsStridedFunctor<T>()(ctx->stream(), input->dptr<T>(), output->mut_dptr<T>(), dest_dims, stride.data(), dest_num_dims, storage_offset,
                           input_num, output_num);
   }
@@ -127,7 +161,7 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
     const size_t dx_num = dx->shape().Count(0);
     const size_t dy_num = dy->shape().Count(0);
     
-    Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr(), 0, dx->shape().Count(0) * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx->mut_dptr(), 0, dx->shape().Count(0) * sizeof(T));
     
     AsStridedGradFunctor<T>()(ctx->stream(), dy->dptr<T>(), dx->mut_dptr<T>(), dy_dims, stride.data(), dy_num_dims, storage_offset,
                           dx_num, dy_num);
@@ -152,11 +186,9 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)       \
           && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));            
 
+REGISTER_GPUASSTRIDED_KERNEL(half);
 REGISTER_GPUASSTRIDED_KERNEL(float);
 REGISTER_GPUASSTRIDED_KERNEL(double);
-REGISTER_GPUASSTRIDED_KERNEL(int8_t);
-REGISTER_GPUASSTRIDED_KERNEL(int32_t);
-REGISTER_GPUASSTRIDED_KERNEL(int64_t);
 
 #undef  REGISTER_GPUASSTRIDED_KERNEL
 
