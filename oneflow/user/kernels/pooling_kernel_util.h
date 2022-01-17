@@ -36,7 +36,7 @@ namespace oneflow {
 #define POOLING_DATA_TYPE_CPU_SEQ POOLING_DATA_TYPE_SEQ
 
 #define POOLING_DATA_TYPE_CUDA_SEQ \
-  POOLING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+  POOLING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
