@@ -57,13 +57,18 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
    * The viewed tensor shared memory with input tensor, and both of
    * them are memory contiguous, but has different shapes/strides.
    */
-  Stride target_strides(target_shape);
+  Stride target_stride(target_shape);
+  return BasicView(input, target_shape, target_stride, storage_offset);
+}
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset) {
   storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
-      std::make_shared<Stride>(target_strides), storage_offset);
+      std::make_shared<Stride>(target_stride), storage_offset);
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
@@ -127,6 +132,62 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
             });
     TensorTuple outputs{output};
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::reshape_backward", backward_fn,
+                                                            {input}, &outputs));
+  }
+  return output;
+}
+
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
+                    const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
+  // std::cout << "view::Slice" << std::endl;
+  if (!(input->is_eager() && input->is_local())) {
+    return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
+                                 << (input->is_lazy() ? "lazy" : "consistent");
+  }
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
+  const int64_t ndim = starts.size();
+  if (ndim != shape->NumAxes()) {
+    return Error::RuntimeError() << "view::Slice(): starts size is expected " << shape->NumAxes()
+                                 << ", but got " << ndim;
+  }
+  if (ends.size() != ndim || steps.size() != ndim) {
+    return Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
+                                 << " size is not equal to start.";
+  }
+  DimVector target_dims(ndim);
+  StrideVector target_strides(ndim);
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  for (int i = 0; i < ndim; ++i) {
+    int64_t step = std::min(steps.at(i), shape->At(i));
+    if (step < 0) { return Error::RuntimeError() << "Step must be greater than zero."; }
+    int64_t start = std::min(starts.at(i), shape->At(i));
+    int64_t end = std::min(ends.at(i), shape->At(i));
+    if (start < 0) { start += shape->At(i); }
+    if (start < 0) start = 0;
+    if (end < 0) { end += shape->At(i); }
+    if (end < start) end = start;
+    int64_t length = start == end ? 0 : (end - start + step - 1) / step;
+    target_dims[i] = length;
+    target_strides[i] = step * strides->At(i);
+    storage_offset += start * strides->At(i);
+  }
+
+  auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
+  if (input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
+              in_grads->at(0) = JUST(functional::SliceGrad(
+                  out_grads.at(0), Shape(input->shape()->dim_vec()), starts, ends, steps));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::slice_backward", backward_fn,
                                                             {input}, &outputs));
   }
   return output;

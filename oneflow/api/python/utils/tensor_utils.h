@@ -146,6 +146,7 @@ Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);
 
 Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook);
+Maybe<void> RegisterTensorPostHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook);
 
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 

@@ -57,7 +57,12 @@ Maybe<TensorArg> TensorImpl::current_grad() const {
 }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
+  if (!has_autograd_meta()) {
+    std::cout << "set_acc_grad: requires_grad is " << requires_grad() << ", is_leaf is " << is_leaf()
+              << std::endl;
+    const auto& autograd_meta = NewAutogradMeta(requires_grad(), is_leaf());
+    this->set_autograd_meta(autograd_meta);
+  }
   return autograd_meta_->set_acc_grad(grad);
 }
 
@@ -128,7 +133,6 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_obj
         mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
-  eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
   return Maybe<void>::Ok();
 }
 

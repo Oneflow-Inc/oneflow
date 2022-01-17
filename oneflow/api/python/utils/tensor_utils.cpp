@@ -116,6 +116,14 @@ Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self,
   return Maybe<void>::Ok();
 }
 
+// TODO(jianhao): rename it
+Maybe<void> RegisterTensorPostHook(const std::shared_ptr<Tensor>& self,
+                               const AutogradMeta::Hook& hook) {
+  if (!self->grad_fn_node()) { JUST(AddAccumulateFunctionNode(self)); }
+  self->mut_autograd_meta()->add_post_hook(hook);
+  return Maybe<void>::Ok();
+}
+
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
   const auto& nd_sbp = JUST(tensor.nd_sbp());
   const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());

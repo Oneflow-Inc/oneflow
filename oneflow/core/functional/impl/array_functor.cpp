@@ -1004,6 +1004,12 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      // TODO: view support 0-dim tensor
+      if (!(x->shape()->NumAxes() < 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::Slice(x, start, stop, step);
+      }
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
@@ -1749,15 +1755,16 @@ class TensorGetItemFunctor {
       end[i] = slice.end();
       step[i] = slice.step();
     }
-    bool is_identity = [&]() {
-      if (target_shape.NumAxes() == 0) { return false; }
-      for (int i = 0; i < ndims; ++i) {
-        if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
-          return false;
-        }
-      }
-      return true;
-    }();
+    // bool is_identity = [&]() {
+    //   if (target_shape.NumAxes() == 0) { return false; }
+    //   for (int i = 0; i < ndims; ++i) {
+    //     if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+    //       return false;
+    //     }
+    //   }
+    //   return true;
+    // }();
+    const bool is_identity = false;
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
       result = expand_input;

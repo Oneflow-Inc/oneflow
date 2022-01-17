@@ -88,6 +88,9 @@ class AddFunctor {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
+      // std::cout << "inplace add" << std::endl;
+      // std::cout << "input_cast dptr: " << input_cast.get() << std::endl;
+      // std::cout << "input dptr: " << input.get() << std::endl;
       JUST(CheckInplaceCastValid(input, input_cast));
       JUST(CheckInplaceValid(input));
       JUST(CheckShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
@@ -96,6 +99,7 @@ class AddFunctor {
       JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
       return outputs->at(0);
     }
+    // std::cout << "no inplace add" << std::endl;
     return OpInterpUtil::Dispatch<Tensor>(*op, input_vec);
   }
 

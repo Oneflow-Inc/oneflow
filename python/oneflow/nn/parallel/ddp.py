@@ -19,29 +19,59 @@ import oneflow as flow
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
-def allreduce_fn(ddp_state_for_reversed_params, param):
+def grad_setting_fn(module, param):
+    def grad_setting(grad):
+        if param.grad is None:
+            start = module._param_grad_start[param]
+            param.grad = module._all_grad[start : start + param.numel()].view(param.shape)
+        return grad
+    return grad_setting
+
+
+def allreduce_fn(module, param):
+    ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
+    buckets = module._buckets
+    bucket_tensors = module._bucket_tensors
     def allreduce(grad):
+        # import pdb; pdb.set_trace()
+        # print('hook')
         ddp_state_for_reversed_params[param][0] = True
-        ret = None
-        for cur_param, (ready, deleted) in ddp_state_for_reversed_params.items():
+        for index, bucket in enumerate(buckets):
+            # print('bucket:')
+            # print(bucket)
+            deleted = all(ddp_state_for_reversed_params[x][1] for x in bucket)
             if deleted:
                 continue
-            if ready:
-                ddp_state_for_reversed_params[cur_param][1] = True
-                if cur_param is param:
-                    ret = flow._C.local_all_reduce(grad)
-                else:
-                    cur_param.grad = flow._C.local_all_reduce(cur_param.grad)
+
+            assert not any(ddp_state_for_reversed_params[x][1] for x in bucket)
+
+            all_params_in_bucket_ready = all(
+                ddp_state_for_reversed_params[x][0] for x in bucket
+            )
+            # print([ddp_state_for_reversed_params[x][0] for x in bucket])
+            # for x in bucket:
+                # print(f'x.grad={x.grad}')
+                # print(f'grad={grad}')
+            if all_params_in_bucket_ready:
+                for x in bucket:
+                    ddp_state_for_reversed_params[x][1] = True
+                # print(f'all_grad={module._all_grad}')
+                # print(f'allreduce {index}')
+                # print(f'bucket_tensors[{index}]: {bucket_tensors[index]}')
+                flow._C.local_all_reduce(bucket_tensors[index], inplace=True)
+                # print(f'bucket_tensors[{index}]: {bucket_tensors[index]}')
             else:
                 break
-        return ret
 
     return allreduce
 
 
 def DistributedDataParallel(
-    module: "flow.nn.Module", *, broadcast_buffers: bool = True
+    module: "flow.nn.Module", *, broadcast_buffers: bool = True, bucket_size: int = 15
 ):
+    print(f'bucket_size={bucket_size}')
+    assert all(x.dtype == flow.float32 for x in module.parameters())
+
     world_size = flow.env.get_world_size()
     with flow.no_grad():
         for x in module.parameters():
@@ -51,13 +81,44 @@ def DistributedDataParallel(
             # after flow._C.broadcast
             x.requires_grad_(requires_grad)
 
+    # module._bucket_indexes = {}
+    all_grad_size = sum([x.numel() for x in module.parameters()])
+    if all_grad_size > 0:
+        device = list(module.parameters())[0].device
+        assert all(x.device == device for x in module.parameters())
+        module._all_grad = flow.zeros(all_grad_size, dtype=flow.float32, device=device)
+    reversed_param_list = list(reversed(list(module.parameters())))
+    module._param_grad_start = {}
+    bytes = 0
+    with flow.no_grad():
+        for i, x in enumerate(reversed_param_list):
+            assert x.is_leaf
+            module._param_grad_start[x] = bytes
+            # x.grad = module._all_grad[bytes : bytes + x.numel()]
+            bytes += x.numel()
+    module._buckets = [reversed_param_list[i : i + bucket_size] for i in range(0, len(reversed_param_list), bucket_size)]
+    # print(f'len of buckets: {len(module._buckets)}')
+    # print(f'buckets: {module._buckets}')
+    # print(f'reversed_param_list: {reversed_param_list}')
+    assert bytes == all_grad_size
+
+    bucket_start_byte = 0
+    bucket_size = 0
+    module._bucket_tensors = []
+    for b in module._buckets:
+        bucket_size = sum([x.numel() for x in b])
+        module._bucket_tensors.append(module._all_grad[bucket_start_byte:bucket_start_byte + bucket_size])
+        bucket_start_byte += bucket_size
+    assert bucket_start_byte == all_grad_size
+
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
         param.register_hook(lambda grad: grad / world_size)
-        param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param))
+        param.register_hook(grad_setting_fn(module, param))
+        param._register_post_hook(allreduce_fn(module, param))
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
@@ -126,3 +187,4 @@ def DistributedDataParallel(
         module.register_forward_pre_hook(pre_forward_hook)
 
     return module
+
