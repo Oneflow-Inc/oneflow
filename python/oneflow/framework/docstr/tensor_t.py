@@ -35,26 +35,14 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x = flow.randn()
-        >>> x
-        tensor(-0.2048, dtype=oneflow.float32)
-        >>> flow.t(x)
-        tensor(-0.2048, dtype=oneflow.float32)
-        >>> x = flow.randn(3)
-        >>> x
-        tensor([ 0.5034, -0.4999,  0.2721], dtype=oneflow.float32)
-        >>> flow.t(x)
-        tensor([ 0.5034, -0.4999,  0.2721], dtype=oneflow.float32)
-        >>> x = flow.randn(2,3)
-        >>> x
-        tensor([[ 0.1939,  0.6988,  1.0040],
-                [-0.2530, -1.5002,  0.1415]], dtype=oneflow.float32)
-        >>> y = flow.t(x)
-        >>> y
-        tensor([[ 0.1939, -0.2530],
-                [ 0.6988, -1.5002],
-                [ 1.0040,  0.1415]], dtype=oneflow.float32)
-        >>> y.shape
+        >>> x = flow.tensor(np.random.randn(), dtype=flow.float32)
+        >>> flow.t(x).shape
+        oneflow.Size([])
+        >>> x = flow.tensor(np.random.randn(3), dtype=flow.float32)
+        >>> flow.t(x).shape
+        oneflow.Size([3])
+        >>> x = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
+        >>> flow.t(x).shape
         oneflow.Size([3, 2])
     
     """,

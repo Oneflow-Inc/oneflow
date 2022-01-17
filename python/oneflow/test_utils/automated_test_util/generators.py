@@ -326,16 +326,17 @@ class random_tensor(generator):
         high = self.high.value()
         dtype = self.dtype.value()
         shape = rng.integers(low=1, high=8, size=ndim)
-        if dim0 is not None:
-            shape[0] = dim0
-        if ndim >= 2:
-            shape[1] = dim1
-        if ndim >= 3:
-            shape[2] = dim2
-        if ndim >= 4:
-            shape[3] = dim3
-        if ndim == 5:
-            shape[4] = dim4
+        if not (ndim == 0):
+            if dim0 is not None:
+                shape[0] = dim0
+            if ndim >= 2:
+                shape[1] = dim1
+            if ndim >= 3:
+                shape[2] = dim2
+            if ndim >= 4:
+                shape[3] = dim3
+            if ndim == 5:
+                shape[4] = dim4
         if dtype == float:
             np_arr = rng.uniform(low=low, high=high, size=shape)
             return torch.Tensor(np_arr)
