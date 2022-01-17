@@ -205,6 +205,9 @@ class Operator {
       cfg::SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(sbp_sig_list);
   }
+  virtual Maybe<void> GetNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
   virtual Maybe<void> InferSbpSignature(
       cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -280,6 +283,14 @@ class Operator {
       const cfg::SbpSignatureList& total_sbp_sig_list,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* valid_sbp_sig_list) const;
+  // TODO(wyg): 1d and nd sbp use this function to filter and check
+  Maybe<void> FilterNdSbpSignatureListByLogicalShape(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
+  Maybe<void> GreedilyFindMinCopyCostNdSbp(
+      cfg::NdSbpSignature* nd_sbp_signature,
+      const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
+      const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;

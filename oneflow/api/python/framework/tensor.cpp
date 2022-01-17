@@ -49,6 +49,18 @@ const Symbol<DType>* GetTensorDType(const Tensor& tensor) {
   return &CHECK_JUST(DType::Get(tensor.dtype()->data_type()));
 }
 
+py::array ApiEagerTensorToNumpy(const py::handle& py_tensor) {
+  const std::shared_ptr<Tensor> tensor = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
+  DataType data_type = tensor->dtype()->data_type();
+  switch (data_type) {
+#define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
+  case of_type: return EagerTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+    default:
+      return Maybe<py::array>(Error::UnimplementedError() << "not support datatype").GetOrThrow();
+  }
+}
+
 void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
   return EagerMirroredTensorZeros(tensor).GetOrThrow();
 }
@@ -198,6 +210,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<one::Tensor>& tensor) {
              return CheckMetaConsistency(tensor).GetOrThrow();
            })
+      .def("to_numpy", &ApiEagerTensorToNumpy, py::return_value_policy::move)
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
