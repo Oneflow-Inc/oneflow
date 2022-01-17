@@ -19,13 +19,15 @@ limitations under the License.
 #include <unistd.h>
 #include <sys/types.h>
 
-#if WITH_CPU_THREADING_RUNTIME == OMP
+#define OF_RUNTIME_OMP 1u
+#define OF_RUNTIME_TBB 2u
+
+#if WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
 #include <omp.h>
-#else if WITH_CPU_THREADING_RUNTIME == TBB
+#elif WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
 #endif
-
 namespace oneflow {
 namespace ep {
 namespace primitive {
@@ -36,7 +38,7 @@ template<typename F>
 void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size_t nthr) {
   if (begin >= end) { return; }
 
-#if WITH_CPU_THREADING_RUNTIME == OMP
+#if WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
 
   if (grain_size > 0) { nthr = std::min(nthr, divup((end - begin), grain_size)); }
 #pragma omp parallel num_threads(nthr)
@@ -49,8 +51,13 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
     if (begin_tid < end) { func(begin_tid, end_tid); }
   }
 
-#else if WITH_CPU_THREADING_RUNTIME == TBB
-
+#elif WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+  int64_t chunk_size = divup((end - begin), nthr);
+  chunk_size = std::max(grain_size, chunk_size);
+  tbb::parallel_for(tbb::blocked_range<int64_t>(begin, end, chunk_size),
+    [f](const tbb::blocked_range<int64_t>& r) {
+        f(r.begin(), r.end());
+    }, tbb::static_partitioner{});
 #else
   func(begin, end);
 #endif
