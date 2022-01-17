@@ -181,9 +181,20 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
+      intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
       stream->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction_ptr));
+      MoveInstructionMsgToGarbageMsgList(std::move(instr_msg));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
+  }
+}
+
+void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
+    intrusive::shared_ptr<InstructionMsg>&& instr_msg) {
+  local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
+  static constexpr int kWindowSize = 10;
+  if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) {
+    garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
   }
 }
 
@@ -659,7 +670,15 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
       return Maybe<void>::Ok();
     }));
   }
-  bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  bool old_list_empty = false;
+  static thread_local InstructionMsgList garbage_instr_msg_list;
+  {
+    std::unique_lock<std::mutex> lock(pending_and_complete_msg_mutex_);
+    old_list_empty = mut_pending_msg_list()->ThreadUnsafeMoveFrom(&new_instr_msg_list);
+    garbage_msg_list_.ThreadUnsafeMoveTo(&garbage_instr_msg_list);
+  }
+  garbage_instr_msg_list.PopFront();
+  if (unlikely(garbage_instr_msg_list.size())) { garbage_instr_msg_list.PopFront(); }
   OF_PROFILER_RANGE_POP();
   return old_list_empty;
 }

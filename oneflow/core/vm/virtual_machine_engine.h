@@ -127,6 +127,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions();
+  void MoveInstructionMsgToGarbageMsgList(intrusive::shared_ptr<InstructionMsg>&& instr_msg);
   void HandlePending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionMsgList* /*out*/ pending_instr_msgs);
@@ -195,8 +196,11 @@ class VirtualMachineEngine final : public intrusive::Base {
         stream_type_id2stream_rt_desc_(),
         id2logical_object_(),
         delete_logical_object_list_(),
-        pending_msg_list_(),
+        pending_and_complete_msg_mutex_(),
+        pending_msg_list_(&pending_and_complete_msg_mutex_),
         local_pending_msg_list_(),
+        garbage_msg_list_(&pending_and_complete_msg_mutex_),
+        local_garbage_msg_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         barrier_instruction_list_() {}
@@ -212,8 +216,11 @@ class VirtualMachineEngine final : public intrusive::Base {
   StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
   Id2LogicalObject id2logical_object_;
   LogicalObjectDeleteList delete_logical_object_list_;
+  std::mutex pending_and_complete_msg_mutex_;
   InstructionMsgMutexedList pending_msg_list_;
   InstructionMsgList local_pending_msg_list_;
+  InstructionMsgMutexedList garbage_msg_list_;
+  InstructionMsgList local_garbage_msg_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   BarrierInstructionList barrier_instruction_list_;
