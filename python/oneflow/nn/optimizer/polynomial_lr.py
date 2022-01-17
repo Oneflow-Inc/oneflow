@@ -20,34 +20,47 @@ from .lr_scheduler import LrScheduler
 
 
 class PolynomialLR(LrScheduler):
-    """This operator creates a polynomial decayed learning rate scheduler.
+    r"""
+    This operator creates a polynomial decayed learning rate scheduler.
     The learning rate will be updated as follows:
+
     If cycle is `True`, the equation is:
+
     .. math::
-        & decay\\_batch = decay\\_batch*ceil(\\frac{current\\_batch}{decay\\_batch})
-        & learning\\_rate = (base\\_lr-end\\_lr)*(1-\\frac{current\\_batch}{decay\\_batch})^{pow}+end\\_lr
+        \begin{aligned}
+           & decay\_batch = decay\_batch*ceil(\frac{current\_batch}{decay\_batch}) \\
+           & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+        \end{aligned}
+
     If cycle is `False`, the equation is:
+
     .. math::
-        & decay\\_batch = min(decay\\_batch, current\\_batch)
-        & learning\\_rate = (base\\_lr-end\\_lr)*(1-\\frac{current\\_batch}{decay\\_batch})^{pow}+end\\_lr
+        \begin{aligned}
+           & decay\_batch = min(decay\_batch, current\_batch) \\
+           & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+        \end{aligned}
+
     Args:
         optimizer (Optimizer): Wrapper optimizer.
         steps (int): The decayed steps.
         end_learning_rate (float, optional): The final learning rate. Defaults to 0.0001.
         power (float, optional): The power of polynomial. Defaults to 1.0.
         cycle (bool, optional): If cycle is true, the scheduler will decay the learning rate every decay steps. Defaults to False.
+
     For example:
-        .. code-block:: python
-            import oneflow as flow
-           
-            ... 
-            polynomial_scheduler = flow.optimizer.lr_scheduler.PolynomialScheduler(optimizer,
-                                                                           steps=5,
-                                                                           end_learning_rate=0.00001,
-                                                                           power=2)
-            for epoch in range(num_epoch):
-                train(...)
-                polynomial_scheduler.step()
+
+    .. code-block:: python
+
+        import oneflow as flow
+       
+        ... 
+        polynomial_scheduler = flow.optim.lr_scheduler.PolynomialLR(
+            optimizer, steps=5, end_learning_rate=0.00001, power=2
+            )
+
+        for epoch in range(num_epoch):
+            train(...)
+            polynomial_scheduler.step()
     """
 
     def __init__(
