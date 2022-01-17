@@ -258,7 +258,7 @@ jobs:
       - uses: Oneflow-Inc/get-oneflow@remove-single-client
         name: Build manylinux cu101_xla
         id: build-xla
-        if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit && needs.changed_files.outputs.should_run_single_client_tests == '1' }}
+        if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
