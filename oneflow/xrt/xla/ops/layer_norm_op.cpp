@@ -172,6 +172,9 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
   while (begin_params_axis < 0) { begin_params_axis += output_shape.NumAxes(); }
   std::vector<long long> batch_dims(begin_params_axis);
   std::iota(batch_dims.begin(), batch_dims.end(), 0);
+  int norm_dims_size = output_shape.NumAxes() - begin_params_axis;
+  std::vector<long long> norm_dims(norm_dims_size);
+  std::iota(norm_dims.begin(), norm_dims.end(), begin_params_axis);
 
   xla::XlaBuilder* builder = ctx->builder();
   DataType data_type = ctx->InputType("dy_0");
@@ -184,12 +187,9 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
   xla::XlaOp mean = ctx->Input("mean_0");
   xla::XlaOp inv_variance = ctx->Input("inv_variance_0");
   if (ctx->HasOutput("gamma_diff_0")) {
-    Shape mean_shape = ctx->InputShape("mean_0");
-    int64_t instance_num = mean_shape.elem_cnt();
-    x = Reshape(x, Shape({instance_num, output_shape.elem_cnt() / instance_num}));
-    xla::XlaOp norm =
-        xla::Mul(xla::Sub(x, mean, {0} /*broadcast dim*/), inv_variance, {0} /*broadcast dim*/);
-    xla::XlaOp gamma_grad = Reshape(norm, output_shape) * output_grad;
+    xla::XlaOp gamma_grad = xla::Mul(xla::Sub(x, mean, norm_dims /*broadcast dim*/), inv_variance,
+                                     norm_dims /*broadcast dim*/)
+                            * output_grad;
     gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func, batch_dims);
     ctx->SetOutput("gamma_diff_0", gamma_grad);
   }

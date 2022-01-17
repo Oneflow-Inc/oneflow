@@ -139,7 +139,7 @@ constexpr int block_dim_x = 32;
 constexpr int block_dim_y = 32 / num_per_block;
 
 template<typename T, typename ComputeType>
-__global__ void LayerNormParamGrad(int rows, int cols, int norm_size, const T* __restrict__ dy,
+__global__ void LayerNormParamGrad(int rows, int cols, const T* __restrict__ dy,
                                    const T* __restrict__ x, const ComputeType* __restrict__ mean,
                                    const ComputeType* __restrict__ inv_var,
                                    T* __restrict__ tmp_gamma_diff, T* __restrict__ tmp_beta_diff) {
@@ -160,11 +160,10 @@ __global__ void LayerNormParamGrad(int rows, int cols, int norm_size, const T* _
         int row_id = i + index * blockDim.y;
         if (row_id < rows) {
           int offset = row_id * cols + col_id;
-          int instance_offset = offset / norm_size;
           const ComputeType dy_val = static_cast<ComputeType>(dy[offset]);
           const ComputeType x_val = static_cast<ComputeType>(x[offset]);
-          const ComputeType mean_val = mean[instance_offset];
-          const ComputeType inv_var_val = inv_var[instance_offset];
+          const ComputeType mean_val = mean[row_id];
+          const ComputeType inv_var_val = inv_var[row_id];
           dgamma_sum[index] += dy_val * (x_val - mean_val) * inv_var_val;
           dbeta_sum[index] += dy_val;
         }
@@ -195,10 +194,10 @@ __global__ void LayerNormParamGrad(int rows, int cols, int norm_size, const T* _
 }
 
 template<typename T>
-int GetGirdDimY(const int64_t num_channels, const int64_t params_size) {
+int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  const int grid_dim_x = (params_size + tile_size - 1) / tile_size;
-  const int max_grid_dim_y = (num_channels + tile_size - 1) / tile_size;
+  const int grid_dim_x = (norm_size + tile_size - 1) / tile_size;
+  const int max_grid_dim_y = (num_instances + tile_size - 1) / tile_size;
   const int block_size = block_dim_x * block_dim_y;
   int max_active_blocks = 0;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -399,18 +398,13 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
-    const int64_t num_channels = dy->shape().Count(0, begin_params_axis);
-    const int64_t params_size = dy->shape().Count(begin_params_axis);
-
     const int64_t num_instances = mean->shape().elem_cnt();
     const int64_t norm_size = x->shape().elem_cnt() / num_instances;
-
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const DataType data_type = dy->data_type();
-    const int grid_dim_x = (params_size + tile_size - 1) / tile_size;
-    const int grid_dim_y = GetGirdDimY<T>(num_channels, params_size);
-    const size_t tmp_gamma_diff_size = grid_dim_y * params_size * sizeof(T);
+    const int grid_dim_x = (norm_size + tile_size - 1) / tile_size;
+    const int grid_dim_y = GetGirdDimY<T>(num_instances, norm_size);
+    const size_t tmp_gamma_diff_size = grid_dim_y * norm_size * sizeof(T);
     T* tmp_gamma_diff_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     T* tmp_beta_diff_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + tmp_gamma_diff_size);
     T* reduce_buf_ptr =
@@ -418,10 +412,9 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
     using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
     LayerNormParamGrad<T, ComputeType><<<dim3(grid_dim_x, grid_dim_y), dim3(32, 32 / num_per_block),
                                          0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        num_channels, params_size, norm_size, dy->dptr<T>(), x->dptr<T>(),
-        mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), tmp_gamma_diff_ptr,
-        tmp_beta_diff_ptr);
-    const int32_t m = params_size;
+        num_instances, norm_size, dy->dptr<T>(), x->dptr<T>(), mean->dptr<ComputeType>(),
+        inv_variance->dptr<ComputeType>(), tmp_gamma_diff_ptr, tmp_beta_diff_ptr);
+    const int32_t m = norm_size;
     const int32_t n = 1;
     const int32_t k = grid_dim_y;
     std::unique_ptr<ep::primitive::Fill> fill =
@@ -447,21 +440,21 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
   };
 };
 
-#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("layer_norm_param_grad")                                               \
-      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))       \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
-        const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");            \
-        const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);                         \
-        const bool has_beta_diff = ctx->has_output("beta_diff", 0);                           \
-        const auto& dy = ctx->InputTensorDesc("dy", 0);                                       \
-        const int64_t num_channels = dy.shape().Count(0, begin_params_axis);                  \
-        const int64_t params_size = dy.shape().Count(begin_params_axis);                      \
-        const int grid_dim_y = GetGirdDimY<dtype>(num_channels, params_size);                 \
-        size_t tmp_buffer_size = (2 * grid_dim_y * params_size + grid_dim_y) * sizeof(dtype); \
-        return tmp_buffer_size;                                                               \
+#define REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("layer_norm_param_grad")                                             \
+      .SetCreateFn<LayerNormParamGradGpuKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");          \
+        const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);                       \
+        const bool has_beta_diff = ctx->has_output("beta_diff", 0);                         \
+        const auto& dy = ctx->InputTensorDesc("dy", 0);                                     \
+        const int64_t num_instances = dy.shape().Count(0, begin_params_axis);               \
+        const int64_t norm_size = dy.shape().Count(begin_params_axis);                      \
+        const int grid_dim_y = GetGirdDimY<dtype>(num_instances, norm_size);                \
+        size_t tmp_buffer_size = (2 * grid_dim_y * norm_size + grid_dim_y) * sizeof(dtype); \
+        return tmp_buffer_size;                                                             \
       });
 
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
