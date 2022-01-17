@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
-#include <iostream>
 
 namespace oneflow {
 namespace one {
@@ -46,8 +45,6 @@ class AddNFunctor {
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, bool inplace) const {
-    std::cout<< "AddNFunctor..." <<std::endl;
-    CHECK_GE_OR_RETURN(inputs.size(), 2);
     TensorTuple outputs;
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
