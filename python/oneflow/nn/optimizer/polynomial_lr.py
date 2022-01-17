@@ -70,8 +70,8 @@ class PolynomialLR(LrScheduler):
         end_learning_rate: float = 0.0001,
         power: float = 1.0,
         cycle: bool = False,
-        last_step=-1,
-        verbose=False,
+        last_step: int = -1,
+        verbose: bool = False,
     ):
         assert steps > 0, f"steps must greater than zero, but got {steps}"
         self.max_decay_steps = steps
