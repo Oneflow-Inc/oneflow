@@ -25,7 +25,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<EmbeddingMgr, std::shared_ptr<EmbeddingMgr>>(m, "OneEmbeddingManager")
       .def(py::init([]() { return std::make_shared<EmbeddingMgr>(); }))
       .def("get_key_value_store", &EmbeddingMgr::GetKeyValueStore)
-      .def("save_snapshot", &EmbeddingMgr::SaveSnapshot);
+      .def("save_snapshot", &EmbeddingMgr::SaveSnapshot)
+      .def("load_snapshot", &EmbeddingMgr::LoadSnapshot);
 }
 
 }  // namespace oneflow

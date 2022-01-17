@@ -97,14 +97,30 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   return pair.first->second.get();
 }
 
-void EmbeddingMgr::SaveSnapshot(const std::string embedding_name, const int64_t parallel_id,
-                                const std::string snapshot_name) {
+void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                                const std::string& snapshot_name) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) {
     it->second->SaveSnapshot(snapshot_name);
   } else {
-    LOG(ERROR) << "Can not find this embedding ! \n";
+    LOG(ERROR) << "Can not find this embedding: " << embedding_name << "-" << parallel_id;
+  }
+}
+
+void EmbeddingMgr::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                                const std::string& snapshot_name) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  auto it = key_value_store_map_.find(map_key);
+  if (it != key_value_store_map_.end()) {
+    if (it->second->SnapshotExists(snapshot_name)) {
+      it->second->LoadSnapshot(snapshot_name);
+    } else {
+      LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << parallel_id
+                 << " but no corresponding snapshot. ";
+    }
+  } else {
+    LOG(ERROR) << "Can not find the embedding: " << embedding_name << "-" << parallel_id;
   }
 }
 
