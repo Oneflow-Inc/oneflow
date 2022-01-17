@@ -145,9 +145,7 @@ size_t InferEagerBToSKernelTmpBufferSize(user_op::InferContext* ctx) {
   if (out_parallel_num > 1) {
     CHECK_LT(out_split_axis, shape.NumAxes());
     BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
-    const auto& opt_parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-    int64_t parallel_id = opt_parallel_id->value_or(0);
-    shape.Set(out_split_axis, bs.At(parallel_id).size());
+    shape.Set(out_split_axis, bs.At(0).size());
   }
   size_t tensor_byte_size = shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
   return tensor_byte_size;

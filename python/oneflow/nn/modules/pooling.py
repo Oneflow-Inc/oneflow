@@ -218,9 +218,9 @@ class MaxPool2d(Module):
         import oneflow as flow 
         import numpy as np
 
-        of_maxpool2d = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
+        m = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
         x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        y = of_maxpool2d(x)
+        y = m(x)
         y.shape 
         oneflow.Size([1, 4, 4, 4])
 
@@ -238,69 +238,31 @@ class MaxPool2d(Module):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+        self.return_indices = return_indices
         self.ceil_mode = ceil_mode
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.data_format = "NHWC"
             self.channel_pos = "channels_last"
-            padding = _pair(padding)
-            if len(padding) == 2:
-                if self.data_format == "NCHW":
-                    padding = (0, 0, padding[0], padding[1])
-                elif self.data_format == "NHWC":
-                    padding = (0, padding[0], padding[1], 0)
-                else:
-                    raise ValueError("error padding param!")
-            self.padding = padding
-            self.padding_type, pads_list = calc_pool_padding(
-                padding, get_dhw_offset(self.channel_pos), 2
-            )
-            self.padding_before = [pad[0] for pad in pads_list]
-            self.padding_after = [pad[1] for pad in pads_list]
-            if return_indices == True:
-                raise ValueError(
-                    "MaxPool2d with NHWC data format don't support return indices for now."
-                )
-            if dilation != 1:
-                raise ValueError(
-                    "MaxPool2d with NHWC data format only support dilation == 1 for now."
-                )
-            self.dilation = _pair(dilation)
-
         else:
-            self.data_format = "NCHW"
             self.channel_pos = "channels_first"
-            self.padding = _pair(padding)
-            self.dilation = _pair(dilation)
-            self.return_indices = return_indices
 
     def forward(self, x):
-        if self.data_format == "NCHW":
-            y, indice = flow._C.max_pool2d(
-                x,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                return_indices=True,
-                ceil_mode=self.ceil_mode,
-                data_format=self.channel_pos,
-            )
-            if self.return_indices:
-                return y, indice
-            else:
-                return y
+        y, indice = flow._C.max_pool2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
+        )
+        if self.return_indices:
+            return y, indice
         else:
-            return flow._C.max_pool2d_nhwc(
-                x,
-                kernel_size=self.kernel_size,
-                stride=self.stride,
-                padding=self.padding_type,
-                padding_before=self.padding_before,
-                padding_after=self.padding_after,
-                data_format=self.channel_pos,
-                ceil_mode=self.ceil_mode,
-            )
+            return y
 
     def extra_repr(self) -> str:
         return "kernel_size={}, stride={}, padding={}, dilation={}".format(
