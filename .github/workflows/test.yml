@@ -158,7 +158,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@remove-single-client
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -204,7 +204,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@remove-single-client
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -218,7 +218,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow@remove-single-client
         name: Build manylinux cpu only
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -239,7 +239,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow@remove-single-client
         name: Build manylinux cu102
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -262,7 +262,7 @@ jobs:
             3.7
       - name: Upload bin
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-clang-12
+        uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -273,7 +273,7 @@ jobs:
           dst-dir: bin
       - name: Upload liboneflow_cpp library
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-clang-12
+        uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -284,7 +284,7 @@ jobs:
           dst-dir: liboneflow_cpp/lib
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-clang-12
+        uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -310,7 +310,7 @@ jobs:
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@remove-single-client
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -320,7 +320,7 @@ jobs:
           digest-type: build
           mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
       - name: Build with Clang
-        uses: Oneflow-Inc/get-oneflow@support-clang-12
+        uses: Oneflow-Inc/get-oneflow@remove-single-client
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/llvm/cuda-75-clang.cmake
@@ -355,7 +355,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@remove-single-client
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -397,7 +397,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@remove-single-client
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -413,7 +413,7 @@ jobs:
           exit 1
       - name: Download wheel, binary and liboneflow_cpp lib
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-clang-12
+        uses: Oneflow-Inc/get-oneflow/digest/download@remove-single-client
         id: download-digest
         timeout-minutes: 10
         with:
@@ -665,7 +665,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-clang-12
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@remove-single-client
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
