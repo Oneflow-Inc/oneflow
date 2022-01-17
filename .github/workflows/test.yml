@@ -1,14 +1,12 @@
 name: Build and Test CI
 on:
+  push:
+    branches:
+        - remove-single-client
   pull_request:
     types: [review_requested]
     branches:
       - "*"
-  workflow_dispatch:
-    inputs:
-      placeholder:
-        description: "placeholder, no effect"
-        required: false
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
