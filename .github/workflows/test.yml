@@ -1,8 +1,5 @@
 name: Build and Test CI
 on:
-  push:
-    branches:
-        - remove-single-client
   pull_request:
     types: [review_requested]
     branches:
