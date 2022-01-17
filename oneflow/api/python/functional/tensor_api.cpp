@@ -31,8 +31,6 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -252,13 +250,16 @@ class LocalTensorSharedNumpyDataFunctor {
     void* data_ptr = PyArray_DATA(array);
     auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
-    tensor_data->set_blob_dptr(
-        static_cast<char*>(data_ptr), array_size_in_bytes, [obj](char* dptr) {
-          CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-            Py_DECREF(obj);
-            return Maybe<void>::Ok();
-          }));
-        });
+    tensor_data->set_blob_dptr(static_cast<char*>(data_ptr), array_size_in_bytes,
+                               [obj](char* dptr) {
+                                 auto Release = [&]() { Py_DECREF(obj); };
+                                 if (!PyGILState_Check()) {
+                                   py::gil_scoped_acquire acquire;
+                                   Release();
+                                 } else {
+                                   Release();
+                                 }
+                               });
 
     // Build TensorStorage: decrease ndarray reference count before releasing
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
