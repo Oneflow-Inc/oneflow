@@ -254,9 +254,7 @@ class LocalTensorSharedNumpyDataFunctor {
     void* data_ptr = PyArray_DATA(array);
     auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
-    tensor_data->set_blob_dptr(
-        std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
-        array_size_in_bytes);
+    tensor_data->set_blob_dptr(static_cast<char*>(data_ptr), array_size_in_bytes, Free);
 
     // Build TensorStorage: decrease ndarray reference count before releasing
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
