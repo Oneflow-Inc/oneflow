@@ -2533,13 +2533,14 @@ class RepeatFunctor {
     std::vector<int32_t> expand_shape_vec;
     std::vector<int32_t> output_reshape_vec;
 
-    int32_t diff = repeat_shape.NumAxes() - input_shape.NumAxes();
-    CHECK_GE_OR_RETURN(diff, 0) << "RuntimeError: Number of dimensions of repeat dims can not be "
-                                   "smaller than number of dimensions of tensor";
+    int32_t numaxes_diff = repeat_shape.NumAxes() - input_shape.NumAxes();
+    CHECK_GE_OR_RETURN(numaxes_diff, 0)
+        << "RuntimeError: Number of dimensions of repeat dims can not be "
+           "smaller than number of dimensions of tensor";
 
     for (int32_t i = repeat_shape.NumAxes() - 1; i >= 0; i--) {
-      if (i >= diff) {
-        int32_t input_shape_val = input_shape.At(i - diff);
+      if (i >= numaxes_diff) {
+        int32_t input_shape_val = input_shape.At(i - numaxes_diff);
         int32_t repeat_shape_val = repeat_shape.At(i);
         if (repeat_shape_val > 1) {
           if (input_shape_val > 1) {

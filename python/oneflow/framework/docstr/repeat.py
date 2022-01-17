@@ -19,13 +19,13 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.repeat,
     """
-    oneflow.repeat(x, *sizes)
+    oneflow.repeat(input, sizes)
 
     This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
-        *size (flow.Size or int): The number of times to repeat this tensor along each dimension
+        input (oneflow.Tensor): The input Tensor.
+        sizes (flow.Shape or List): The number of times to repeat this tensor along each dimension.
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -36,13 +36,14 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x = np.array([[[[0, 1]],
-        ...               [[2, 3]],
-        ...               [[4, 5]]]]).astype(np.int32)
-
-        >>> input = flow.Tensor(x)
+        >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
         >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
-        oneflow.Size([1, 3, 2, 4])
+        oneflow.Size([5, 3, 12, 8])
+
+        >>> out = input.repeat(2, 1, 1, 2, 2)
+        >>> out.shape
+        oneflow.Size([2, 5, 3, 12, 8])
     """,
 )
