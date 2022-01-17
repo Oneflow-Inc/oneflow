@@ -57,11 +57,6 @@ class TensorStorage {
     blob_dptr_ = nullptr;
   }
 
-  void Free() {
-    CHECK_NOTNULL(blob_dptr_);
-    TryFree();
-  }
-
   const Optional<Symbol<Device>>& producer_op_device() const { return producer_op_device_; }
   Maybe<void> init_producer_op_device(Symbol<Device> producer_op_device) {
     CHECK_OR_RETURN(!producer_op_device_.has_value());
@@ -111,7 +106,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
-    tensor_storage_->Free();
+    tensor_storage_->TryFree();
     return Maybe<void>::Ok();
   }
 
