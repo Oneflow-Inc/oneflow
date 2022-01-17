@@ -1888,7 +1888,7 @@
   bind_python: True
 
 - name: "embedding_lookup_placeholder"
-  signature: "Tensor (Tensor ids, DataType dtype, String embedding_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor ids, Tensor slots, DataType dtype, String embedding_options) => OneEmbeddingLookup"
   bind_python: True
   
 - name: "tensor_buffer_to_tensor"

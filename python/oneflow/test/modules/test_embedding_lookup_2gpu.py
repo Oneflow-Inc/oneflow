@@ -21,7 +21,7 @@ import numpy as np
 import oneflow.nn as nn
 import os
 
-os.environ["L1_CACHE_MEMORY_BUDGET_MB"] = "4096"
+os.environ["L1_CACHE_MEMORY_BUDGET_MB"] = "128"
 os.environ["BLOCK_BASED_PATH"] = "/NVME0/guoran/unittest/test"
 
 placement = flow.placement("cuda", {0: [0, 1]})
@@ -42,8 +42,17 @@ class SyntheticDataLoader(nn.Module):
             sbp=flow.sbp.broadcast,
             dtype=flow.int64,
         )
+        slots = flow.randint(
+            0,
+            26,
+            (batch_size, 26),
+            placement=placement,
+            sbp=flow.sbp.broadcast,
+            dtype=flow.int32,
+        )
         split_ids = ids.to_consistent(placement, flow.sbp.split(0))
-        return split_ids
+        split_slots = slots.to_consistent(placement, flow.sbp.split(0))
+        return split_ids, split_slots
 
 
 class MatMul(flow.nn.Module):
@@ -89,8 +98,8 @@ class TrainGraph(flow.nn.Graph):
         )
 
     def build(self,):
-        ids = self.data_loader()
-        embedding = self.embedding_lookup(ids)
+        ids, slots = self.data_loader()
+        embedding = self.embedding_lookup(ids, slots)
         loss = embedding.reshape(batch_size, -1)
         print(loss.shape)
         loss = self.dense1(loss)
@@ -102,4 +111,5 @@ class TrainGraph(flow.nn.Graph):
 graph = TrainGraph()
 for i in range(20):
     loss = graph()
+    print(loss)
 print(loss)

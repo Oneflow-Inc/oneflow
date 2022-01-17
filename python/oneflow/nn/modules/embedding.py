@@ -52,12 +52,14 @@ class OneEmbeddingLookup(Module):
                 "cache_memory_budget_mb": int(
                     os.environ.get("L1_CACHE_MEMORY_BUDGET_MB", 16384)
                 ),
+                "device": "device",
             },
             "l2_cache": {
                 "policy": str(os.environ.get("L2_CACHE_POLICY", "none")),
                 "cache_memory_budget_mb": int(
                     os.environ.get("L2_CACHE_MEMORY_BUDGET_MB", 16384)
                 ),
+                "device": "host",
             },
             "fixed_table": {
                 "path": block_based_path,
@@ -91,7 +93,7 @@ class OneEmbeddingLookup(Module):
         }
         self.embedding_options = json.dumps(embedding_options)
 
-    def forward(self, ids):
+    def forward(self, ids, slots):
         return flow._C.embedding_lookup_placeholder(
-            ids, self.dtype, self.embedding_options,
+            ids, slots, self.dtype, self.embedding_options,
         )

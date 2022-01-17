@@ -29,6 +29,11 @@ namespace oneflow {
 
 namespace {
 
+template<typename IDX>
+struct InitParam {
+  IDX slot_size_array[26];
+};
+
 template<typename T, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
                                 const float* learning_rate, const int64_t* skip_if,
@@ -100,22 +105,24 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
   }
 }
 
-template<typename T, typename K>
+template<typename T, typename K, typename IDX>
 __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int64_t line_size,
-                                const int64_t embedding_size, const uint32_t* num_missing_keys,
+                                const int64_t embedding_size, InitParam<IDX> param,
+                                const IDX* slots, const uint32_t* num_missing_keys,
                                 const K* missing_keys, const uint32_t* missing_indices, T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   for (int row = blockIdx.x; row < *num_missing_keys; row += gridDim.x) {
     const uint32_t index = missing_indices[row];
+    const int32_t slot_idx = slots[index];
+    const double scale =
+        sqrt(static_cast<double>(1) / static_cast<double>(param.slot_size_array[slot_idx]));
     for (int col = threadIdx.x; col < line_size; col += blockDim.x) {
       const int64_t offset = index * line_size + col;
       T value = 0;
-      if (col < embedding_size) {
-        value = (curand_uniform(&state) - 0.5) * 0.1;  // [-0.05, 0.05]
-      }
+      if (col < embedding_size) { value = (curand_uniform(&state) - 0.5) * 2 * scale; }
       values[offset] = value;
     }
   }
@@ -230,6 +237,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
+    const user_op::Tensor* slots = ctx->Tensor4ArgNameAndIndex("slots", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = options->EmbeddingSize();
     const int64_t line_size = options->LineSize();
@@ -244,14 +252,22 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     store->Get(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
                buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
                buffer_manager.StoreMissingIndicesPtr());
+
+    std::vector<int32_t> slot_size_array{
+        227605432, 39060,     17295,    7424,      20265,  3,     7122, 1543, 63,
+        130229467, 3067956,   405282,   10,        2209,   11938, 155,  4,    976,
+        14,        292775614, 40790948, 187188510, 590152, 12973, 108,  36};
+    InitParam<IDX> init_param;
+    for (int32_t i = 0; i < 26; ++i) { init_param.slot_size_array[i] = slot_size_array.at(i); }
     // init values
     const int64_t grid_size = BlocksNum4ThreadsNum(num_keys);
     uint64_t inc_offset = num_keys / grid_size + 1;
-    InitValueKernel<T, K>
+    InitValueKernel<T, K, IDX>
         <<<grid_size, line_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, line_size, embedding_size,
-            buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-            buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
+            seed, cuda_gen_state, inc_offset, line_size, embedding_size, init_param,
+            slots->dptr<IDX>(), buffer_manager.NumStoreMissingPtr(),
+            buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
+            buffer_manager.StoreValuesPtr());
     store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

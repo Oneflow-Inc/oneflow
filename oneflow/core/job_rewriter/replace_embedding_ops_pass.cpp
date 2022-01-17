@@ -139,6 +139,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder,
       embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
           .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique_ids", 0))
           .Input("unique_ids", unique_ids_lbn)
+          .Input("slots", id_shuffle_op.output("cur_rank_slots", 0))
           .Output("context")
           .Attr<std::string>("embedding_options",
                              embedding_op.attr<std::string>("embedding_options"))
@@ -396,10 +397,12 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     user_op::UserOpConfWrapper id_shuffle_op =
         id_shuffle_op_builder.OpTypeName("id_shuffle")
             .Input("ids", embedding_op.input("ids", 0))
+            .Input("slots", embedding_op.input("slots", 0))
             .Output("num_unique_ids")
             .Output("ids_reverse_idx")
             .Output("cur_rank_num_unique_ids")
             .Output("cur_rank_unique_ids")
+            .Output("cur_rank_slots")
             .Output("cur_rank_reverse_idx")
             .Output("num_unique_ids_matrix")
             .Output("partition_index")
