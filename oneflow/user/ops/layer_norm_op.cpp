@@ -68,7 +68,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const int64_t begin_norm_axis =
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_norm_axis"));
   if (begin_norm_axis != begin_params_axis) {
-    return Error::RuntimeError() << "begin_norm_axis must equal to begin_params_axis, but got " << begin_norm_axis << " vs " << begin_params_axis;
+    return Error::RuntimeError() << "begin_norm_axis must equal to begin_params_axis, but got "
+                                 << begin_norm_axis << " vs " << begin_params_axis;
   }
   *mean->mut_shape() = InferBnParamShape(x.shape(), begin_norm_axis);
   *inv_variance = *mean;
@@ -148,7 +149,11 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   for (int i = 0; i < begin_norm_axis; ++i) {
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Broadcast(broadcast_args).Build();
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), i)
+        .Split(ctx->outputs(), i)
+        .Broadcast(broadcast_args)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
