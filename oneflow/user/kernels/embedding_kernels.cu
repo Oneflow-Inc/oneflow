@@ -226,7 +226,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
     embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetOrCreateKeyValueStore(
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
@@ -291,7 +291,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetOrCreateKeyValueStore(
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
@@ -523,7 +523,7 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetOrCreateKeyValueStore(
         *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);

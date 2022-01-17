@@ -26,7 +26,7 @@ EmbeddingMgr::~EmbeddingMgr() {
   for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot("index"); }
 }
 
-embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
+embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
     const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
     int64_t parallel_num) {
   const std::string& name = embedding_options.EmbeddingName();
@@ -95,6 +95,84 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
   CHECK(pair.second);
   return pair.first->second.get();
+}
+
+embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& embedding_name,
+                                                         int64_t parallel_id,
+                                                         int64_t parallel_num) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = key_value_store_map_.find(map_key);
+  return it->second.get();
+}
+
+void EmbeddingMgr::CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_options,
+                                       int64_t parallel_id, int64_t parallel_num,
+                                       uint64_t cuda_device_id) {
+  // This function is used in Python, so it need to set CudaDeviceId manually.
+  OF_CUDA_CHECK(cudaSetDevice(cuda_device_id));
+  const std::string& name = embedding_options.EmbeddingName();
+  const uint32_t line_size = embedding_options.LineSize();
+
+  std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
+
+  std::unique_ptr<embedding::KeyValueStore> store;
+  const std::string& path = embedding_options.FixedTablePath();
+  const std::string& num_rank = std::to_string(parallel_num);
+  const int32_t rank_id_suffix_length = num_rank.size();
+  const std::string& rank_id = std::to_string(parallel_id);
+  embedding::FixedTableKeyValueStoreOptions options{};
+  options.table_options.path = path + "/" + std::string(rank_id_suffix_length - rank_id.size(), '0')
+                               + rank_id + "-" + num_rank;
+  options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
+  options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
+  options.max_query_length = 65536 * 26;
+  options.table_options.physical_block_size = embedding_options.FixedTableBlockSize();
+  options.table_options.num_blocks_per_chunk = embedding_options.FixedTableChunkSize();
+  store = NewFixedTableKeyValueStore(options);
+
+  if (embedding_options.L2CachePolicy() != "none") {
+    embedding::CacheOptions cache_options{};
+    cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+    if (embedding_options.L2CachePolicy() == "lru") {
+      cache_options.policy = embedding::CacheOptions::Policy::kLRU;
+    } else if (embedding_options.L2CachePolicy() == "full") {
+      cache_options.policy = embedding::CacheOptions::Policy::kFull;
+    } else {
+      UNIMPLEMENTED();
+    }
+    cache_options.max_query_length = 65536 * 26;
+    cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
+    cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
+    cache_options.capacity =
+        embedding_options.L2CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
+    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
+    LOG(ERROR) << "add L2 cache: " << embedding_options.L2CachePolicy() << " "
+               << embedding_options.L2CacheMemoryBudgetMb();
+    store = NewCachedKeyValueStore(std::move(store), std::move(cache));
+  }
+  if (embedding_options.L1CachePolicy() != "none") {
+    embedding::CacheOptions cache_options{};
+    cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+    if (embedding_options.L1CachePolicy() == "lru") {
+      cache_options.policy = embedding::CacheOptions::Policy::kLRU;
+    } else if (embedding_options.L1CachePolicy() == "full") {
+      cache_options.policy = embedding::CacheOptions::Policy::kFull;
+    } else {
+      UNIMPLEMENTED();
+    }
+    cache_options.max_query_length = 65536 * 26;
+    cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
+    cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
+    cache_options.capacity =
+        embedding_options.L1CacheMemoryBudgetMb() * 1024 * 1024 / cache_options.value_size;
+    std::unique_ptr<embedding::Cache> cache = embedding::NewCache(cache_options);
+    LOG(ERROR) << "add L1 cache: " << embedding_options.L1CachePolicy() << " "
+               << embedding_options.L1CacheMemoryBudgetMb();
+    store = NewCachedKeyValueStore(std::move(store), std::move(cache));
+  }
+  auto pair = key_value_store_map_.emplace(map_key, std::move(store));
+  if (!pair.second) { LOG(ERROR) << "Create Embedding failed!"; }
 }
 
 void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
