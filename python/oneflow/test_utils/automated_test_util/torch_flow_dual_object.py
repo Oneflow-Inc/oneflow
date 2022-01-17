@@ -716,12 +716,12 @@ def autotest(
     def deco(f):
         @functools.wraps(f)
         def new_f(test_case, *args, **kwargs):
-            count = n
-            loop_limit = count * 20
-            loop = 0
-            while count > 0:
+            successful_runs_needed = n
+            loop_limit = successful_runs_needed * 20
+            current_run = 0
+            while successful_runs_needed > 0:
                 clear_note_fake_program()
-                if loop > loop_limit:
+                if current_run > loop_limit:
                     raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
@@ -744,7 +744,7 @@ def autotest(
                     if verbose:
                         print(f"{f.__name__}")
                         print(e)
-                    loop += 1
+                    current_run += 1
                     continue
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
@@ -795,8 +795,8 @@ def autotest(
                 if verbose and check_graph:
                     print(f"{f.__name__} test graph passed.")
 
-                count -= 1
-                loop += 1
+                successful_runs_needed -= 1
+                current_run += 1
 
         return new_f
 
