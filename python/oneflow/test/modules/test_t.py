@@ -31,7 +31,7 @@ class TestTransposeAllDimFunction(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_t_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(0, 2)).to(device)
+        x = random_pytorch_tensor(ndim=constant(2).to(int), dim0=random(0, 64), dim1=random(0, 64)).to(device)
         y = torch.t(x)
         return y
 

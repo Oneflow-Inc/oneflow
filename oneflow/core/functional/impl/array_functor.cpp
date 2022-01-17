@@ -2527,7 +2527,7 @@ class TransposeAllDimPropertyFunctor {
  public:
   TransposeAllDimPropertyFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    const int64_t ndim = x->shape()->NumAxes();
+    const int64_t ndim = x->ndim();
     std::vector<int32_t> permute;
     permute.resize(ndim);
     std::iota(permute.begin(), permute.end(), 0);
@@ -2540,9 +2540,9 @@ class TransposeAllDimFunctionFunctor {
  public:
   TransposeAllDimFunctionFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    const int64_t ndim = x->shape()->NumAxes();
+    const int64_t ndim = x->ndim();
     CHECK_OR_RETURN(ndim <= 2)
-        << "RuntimeError: t() expects a tensor with <= 2 dimensions, but self is " 
+        << "RuntimeError: t() expects a tensor with <= 2 dimensions, but input tensor is " 
         << ndim << "D";
     std::vector<int32_t> permute;
     permute.resize(ndim);
