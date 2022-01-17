@@ -34,22 +34,15 @@ void ParallelDimReduce(const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_s
                        ParallelDesc* reduced_parallel_desc, cfg::NdSbp* reduced_nd_sbp) {
   const auto& hierarchy = parallel_desc.hierarchy();
   DimVector reduced_hierarchy;
-  int64_t id = 0;
-  for (; id < hierarchy->NumAxes(); ++id) {
-    if (hierarchy->At(id) != 1) {
-      reduced_hierarchy.emplace_back(hierarchy->At(id));
-      *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(id);
-      break;
-    }
-  }
-  ++id;
-  for (; id < hierarchy->NumAxes(); ++id) {
-    if (hierarchy->At(id) != 1) {
-      if (nd_sbp.sbp_parallel(id) == nd_sbp.sbp_parallel(id - 1)) {
-        reduced_hierarchy.back() *= hierarchy->At(id);
+  FOR_RANGE(int64_t, i, 1, hierarchy->NumAxes()) {
+    if (hierarchy->At(i) != 1) {
+      if (reduced_hierarchy.empty()
+          || (nd_sbp.sbp_parallel(i)
+              != reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1))) {
+        reduced_hierarchy.emplace_back(hierarchy->At(i));
+        *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
       } else {
-        reduced_hierarchy.emplace_back(hierarchy->At(id));
-        *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(id);
+        reduced_hierarchy.back() *= hierarchy->At(i);
       }
     }
   }
@@ -74,30 +67,22 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
 
   DimVector reduced_in_hierarchy;
   DimVector reduced_out_hierarchy;
-  int64_t id = 0;
-  for (; id < in_hierarchy->NumAxes(); ++id) {
-    if (in_hierarchy->At(id) != 1 || out_hierarchy->At(id) != 1) {
-      reduced_in_hierarchy.emplace_back(in_hierarchy->At(id));
-      *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(id);
+  FOR_RANGE(int64_t, i, 1, in_hierarchy->NumAxes()) {
+    if (in_hierarchy->At(i) != 1 || out_hierarchy->At(i) != 1) {
+      if (reduced_in_hierarchy.empty()
+          || (in_nd_sbp.sbp_parallel(i)
+                  != reduced_in_nd_sbp->sbp_parallel(reduced_in_nd_sbp->sbp_parallel_size() - 1)
+              || out_nd_sbp.sbp_parallel(i)
+                     != reduced_out_nd_sbp->sbp_parallel(reduced_out_nd_sbp->sbp_parallel_size()
+                                                         - 1))) {
+        reduced_in_hierarchy.emplace_back(in_hierarchy->At(i));
+        *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(i);
 
-      reduced_out_hierarchy.emplace_back(out_hierarchy->At(id));
-      *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(id);
-      break;
-    }
-  }
-  ++id;
-  for (; id < in_hierarchy->NumAxes(); ++id) {
-    if (in_hierarchy->At(id) != 1 || out_hierarchy->At(id) != 1) {
-      if ((in_nd_sbp.sbp_parallel(id) == in_nd_sbp.sbp_parallel(id - 1))
-          && (out_nd_sbp.sbp_parallel(id) == out_nd_sbp.sbp_parallel(id - 1))) {
-        reduced_in_hierarchy.back() *= in_hierarchy->At(id);
-        reduced_out_hierarchy.back() *= out_hierarchy->At(id);
+        reduced_out_hierarchy.emplace_back(out_hierarchy->At(i));
+        *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(i);
       } else {
-        reduced_in_hierarchy.emplace_back(in_hierarchy->At(id));
-        *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(id);
-
-        reduced_out_hierarchy.emplace_back(out_hierarchy->At(id));
-        *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(id);
+        reduced_in_hierarchy.back() *= in_hierarchy->At(i);
+        reduced_out_hierarchy.back() *= out_hierarchy->At(i);
       }
     }
   }
