@@ -354,7 +354,7 @@ if (BUILD_CPP_API)
   file(GLOB_RECURSE of_cpp_api_files
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
-  oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
+  oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
   set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
   target_link_libraries(oneflow_cpp PRIVATE ${of_libs} of_api_common ${oneflow_third_party_libs})
 endif()
@@ -386,7 +386,8 @@ if(BUILD_TESTING)
   if (BUILD_CPP_API)
     file(GLOB_RECURSE cpp_api_test_files ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/tests/*.cpp)
     oneflow_add_test(oneflow_cpp_api_testexe SRCS ${cpp_api_test_files} TEST_NAME oneflow_cpp_api_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs} -lpthread)
+    find_package(Threads REQUIRED)
+    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs} Threads::Threads)
   endif()
 endif()
 
