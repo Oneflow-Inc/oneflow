@@ -221,6 +221,22 @@ void DTRTensorPool::merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::
 
   parent_y->set_compute_time(parent_y->compute_time() + parent_x->compute_time());
   parent_x->set_parent(parent_y);
+
+  y->reset_pesudo_node();
+  x->reset_pesudo_node();
+}
+
+void DTRTensorPool::pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
+  auto pesudo_x = x->pesudo_node();
+  auto pesudo_y = y->pesudo_node();
+  auto&& pesudo_parent_x = find_father(pesudo_x);
+  auto&& pesudo_parent_y = find_father(pesudo_y);
+  if (pesudo_parent_x.get() == pesudo_parent_y.get()) { return; }
+
+  pesudo_parent_y->set_compute_time(pesudo_parent_y->compute_time() + pesudo_parent_x->compute_time());
+  pesudo_parent_x->set_parent(pesudo_parent_y);
+  pesudo_parent_y->add_cnt();
+  pesudo_parent_x->set_cnt(pesudo_parent_y->cnt());
 }
 
 std::shared_ptr<vm::DisjNode> DTRTensorPool::find_father(std::shared_ptr<vm::DisjNode>& x) {
@@ -238,6 +254,17 @@ void DTRTensorPool::update_after_compute(vm::DTREagerBlobObject* obj) {
   auto&& fa = find_father(obj->node);
   fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
   obj->reset_node(obj->compute_time());
+  obj->reset_pesudo_node();
+}
+
+int DTRTensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
+  // split start_tensor from the chain
+  auto&& pesudo_node = obj->node->pesudo_node();
+  auto&& fa = find_father(pesudo_node);
+  fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
+  fa->reduce_cnt();
+  obj->reset_pesudo_node();
+  return fa->cnt();
 }
 
 Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
@@ -257,6 +284,29 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       if (!dtr_blob_object->is_in_memory()) { merge(obj->node, dtr_blob_object->node); }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj) {
+  // include new end_tensor in the chain
+  auto* operand = obj->compute_op();
+  const auto& inputs = operand->inputs();
+  const auto& outputs = operand->outputs();
+  for (int i = 0; i < inputs.size(); ++i) {
+    if (auto tmp = inputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory()) { pesudo_merge(dtr_blob_object->node, obj->node); }
+    }
+  }
+
+  for (int i = 0; i < outputs.size(); ++i) {
+    if (auto tmp = outputs[i].lock()) {
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory()) { pesudo_merge(obj->node, dtr_blob_object->node); }
     }
   }
   return Maybe<void>::Ok();

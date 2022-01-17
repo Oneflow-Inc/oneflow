@@ -155,6 +155,8 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
   could_evict_ = (input_size() > 0) && could_evict_;
 
   node = std::make_shared<DisjNode>(0);
+  auto pesudo_node = std::make_shared<DisjNode>(0);
+  node->set_pesudo_node(pesudo_node);     // might induce some problems
 
   return Maybe<void>::Ok();
 }
@@ -328,8 +330,7 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
   return cost + compute_time_;
 }
 
-Maybe<double> DTREagerBlobObject::cost() const {
-  const auto& heuristic = Global<DTRConfig>::Get()->heuristic;
+Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
 
   const double time_since_last_access =
       heuristic == "size" ? 1 : Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
@@ -373,6 +374,12 @@ Maybe<double> DTREagerBlobObject::cost() const {
   } else {
     return Error::InvalidValueError("");
   }
+}
+
+Maybe<double> DTREagerBlobObject::cost() const {
+  const auto& heuristic = Global<DTRConfig>::Get()->heuristic;
+  const double cost = CHECK_JUST(this->cost(heuristic));
+  return cost;
 }
 
 void DTREagerBlobObject::set_compute_time(double val) {
@@ -486,6 +493,19 @@ bool DTREagerBlobObject::is_evictable() const {
   // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul")
   // { return false; }
   return could_evict_;
+}
+
+void DTREagerBlobObject::reset_pesudo_node() {
+  node->reset_pesudo_node();
+}
+
+void DisjNode::reset_pesudo_node() {
+  pesudo_node_->set_compute_time(compute_time_);
+  if (parent_ != nullptr) {
+    auto&& p = parent_->pesudo_node();
+    pesudo_node_->set_parent(p);
+  }
+  pesudo_node_->set_cnt(1);
 }
 
 }  // namespace vm

@@ -55,10 +55,13 @@ struct DTRTensorPool {
   Maybe<void> display2();
   void add_recompute_times() { num_recomputation_++; }
   void merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y);
+  void pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y);
   std::shared_ptr<vm::DisjNode> find_father(std::shared_ptr<vm::DisjNode>& x);
   void inc_num_eviction();
   void update_after_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
+  int update_after_pesudo_compute(vm::DTREagerBlobObject* dtr_blob_object);
+  Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object);
 
   // TODO: Implementation of disjoint-set data structure
 

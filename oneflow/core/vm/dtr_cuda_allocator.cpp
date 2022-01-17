@@ -236,9 +236,20 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-double get_cost(const vm::DTREagerBlobObject* ebo) {
+double get_cost(const vm::DTREagerBlobObject* ebo, int coeff) {
   if (ebo == nullptr) { return 0.; }
-  const double cost = CHECK_JUST(ebo->cost());
+  const std::string cost_type = "eq_compute_time_and_last_access";
+  double cost = CHECK_JUST(ebo->cost(cost_type));
+  if (std::getenv("OF_DTR_NO_EE") == nullptr) {
+    CHECK(!isinf(cost));
+    CHECK(!isnan(cost));
+    return cost;
+  }
+  // const double cost = CHECK_JUST(ebo->cost());
+  if (coeff < 0) {
+    coeff = ebo->pesudo_cnt();
+  }
+  cost = cost * coeff;
   CHECK(!isinf(cost));
   CHECK(!isnan(cost));
   return cost;
@@ -255,7 +266,8 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
   auto min_end = start;
   while (end != ptr2piece_.end()) {
     if (total_size < size) {
-      const auto* end_tensor = end->second->tensor;
+      auto* end_tensor = end->second->tensor;
+      // const auto* end_tensor = end->second->tensor;
       if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
         if (oneflow::DTRDebugEnabled()) {
           LOG(INFO) << "skip tensor: " << end_tensor
@@ -271,7 +283,11 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         continue;
       }
       total_size += end->second->size;
-      cost += get_cost(end_tensor);
+      // end_tensor is fakely evicted, update_after_pesudo_evict
+      if (end_tensor != nullptr) {
+        Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor);
+      }
+      cost += get_cost(end_tensor, -1);
       end++;
 
       if (oneflow::DTRDebugEnabled()) {
@@ -286,9 +302,15 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         min_end = end;
         if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "record, min_cost: " << min_cost; }
       }
-      const auto* start_tensor = start->second->tensor;
+      auto* start_tensor = start->second->tensor;
+      // const auto* start_tensor = start->second->tensor;
       total_size -= start->second->size;
-      cost -= get_cost(start_tensor);
+      // start_tensor is back in the pool, update_after_pesudo_compute
+      int coeff = -1;
+      if (start_tensor != nullptr) {
+        coeff = Global<one::DTRTensorPool>::Get()->update_after_pesudo_compute(start_tensor);
+      }
+      cost -= get_cost(start_tensor, coeff);
       if (oneflow::DTRDebugEnabled()) {
         LOG(INFO) << "move start, compute op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
@@ -308,7 +330,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
   for (auto* piece : pieces_to_be_evicted) {
     if (oneflow::DTRDebugEnabled()) {
       LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
-                << ", cost: " << get_cost(piece->tensor) << ", compute op: "
+                << ", cost: " << get_cost(piece->tensor, -1) << ", compute op: "
                 << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no tensor");
     }
     size2 += piece->size;

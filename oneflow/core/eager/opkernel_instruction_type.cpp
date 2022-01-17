@@ -513,6 +513,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           CHECK_OR_RETURN(object->is_in_memory());
           object->set_compute_time(compute_time);
           CHECK_GT_OR_RETURN(object->compute_time(), 0);
+          object->reset_pesudo_node();
           Global<one::DTRTensorPool>::Get()->update_after_compute(object.get());
           return Maybe<void>::Ok();
         }));
