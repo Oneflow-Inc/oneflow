@@ -172,9 +172,6 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
   while (begin_params_axis < 0) { begin_params_axis += output_shape.NumAxes(); }
   std::vector<long long> batch_dims(begin_params_axis);
   std::iota(batch_dims.begin(), batch_dims.end(), 0);
-  int norm_dims_size = output_shape.NumAxes() - begin_params_axis;
-  std::vector<long long> norm_dims(norm_dims_size);
-  std::iota(norm_dims.begin(), norm_dims.end(), begin_params_axis);
 
   xla::XlaBuilder* builder = ctx->builder();
   DataType data_type = ctx->InputType("dy_0");
@@ -187,8 +184,9 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
   xla::XlaOp mean = ctx->Input("mean_0");
   xla::XlaOp inv_variance = ctx->Input("inv_variance_0");
   if (ctx->HasOutput("gamma_diff_0")) {
-    xla::XlaOp gamma_grad = xla::Mul(xla::Sub(x, mean, norm_dims /*broadcast dim*/), inv_variance,
-                                     norm_dims /*broadcast dim*/)
+    // begin_params_axis is assumed equal to begin_norm_axis
+    xla::XlaOp gamma_grad = xla::Mul(xla::Sub(x, mean, batch_dims /*broadcast dim*/), inv_variance,
+                                     batch_dims /*broadcast dim*/)
                             * output_grad;
     gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func, batch_dims);
     ctx->SetOutput("gamma_diff_0", gamma_grad);

@@ -67,6 +67,9 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   }
   const int64_t begin_norm_axis =
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_norm_axis"));
+  if (begin_norm_axis != begin_params_axis) {
+    return Error::RuntimeError() << "begin_norm_axis must equal to begin_params_axis, but got " << begin_norm_axis << " vs " << begin_params_axis;
+  }
   *mean->mut_shape() = InferBnParamShape(x.shape(), begin_norm_axis);
   *inv_variance = *mean;
   return Maybe<void>::Ok();
@@ -139,9 +142,13 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 }
 
 /* static */ Maybe<void> LayerNormGradOp::GetSbp(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  if (ctx->user_op_conf().has_input("gamma", 0)) {
+    broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
+  }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   for (int i = 0; i < begin_norm_axis; ++i) {
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Broadcast(broadcast_args).Build();
   }
   return Maybe<void>::Ok();
 }

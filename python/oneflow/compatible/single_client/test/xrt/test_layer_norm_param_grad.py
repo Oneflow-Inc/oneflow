@@ -89,7 +89,7 @@ class TestLayerNormParamGrad(unittest.TestCase):
         x = np.ones(shape, dtype=dtype)
         if params_axis < 0:
             params_axis += len(shape)
-        mean_shape = shape[params_axis:]
+        mean_shape = shape[:params_axis]
         if len(mean_shape) == 0:
             mean_shape = [1]
         mean = np.ones(mean_shape, dtype=dtype)
@@ -101,7 +101,7 @@ class TestLayerNormParamGrad(unittest.TestCase):
         x = np.random.random(shape).astype(dtype)
         if params_axis < 0:
             params_axis += len(shape)
-        mean_shape = shape[params_axis:]
+        mean_shape = shape[:params_axis]
         if len(mean_shape) == 0:
             mean_shape = [1]
         mean = np.random.random(mean_shape).astype(dtype)
