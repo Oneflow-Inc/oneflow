@@ -13,14 +13,9 @@ FetchContent_Declare(
   URL_HASH MD5=${glog_URL_HASH}
 )
 
-# make a function to intro a scope for variables
-function(FetchContent_Glog)
-  set(WITH_GFLAGS OFF)
-  set(BUILD_SHARED_LIBS OFF)
-  FetchContent_MakeAvailable(glog)
-endfunction()
-
-FetchContent_Glog()
+set(WITH_GFLAGS OFF CACHE BOOL "")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+FetchContent_MakeAvailable(glog)
 
 # just for tensorflow, DO NOT USE IN OTHER PLACE
 FetchContent_GetProperties(glog)
