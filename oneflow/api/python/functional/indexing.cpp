@@ -25,8 +25,6 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -175,10 +173,13 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         JUST(tensor->AsMirroredTensor()),
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-          CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-            JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
-            return Maybe<void>::Ok();
-          }));
+          auto Call = [&]() { CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob())); };
+          if (!PyGILState_Check()) {
+            py::gil_scoped_acquire acquire;
+            Call();
+          } else {
+            Call();
+          }
         },
         "mut");
   }));
