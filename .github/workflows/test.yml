@@ -534,7 +534,7 @@ jobs:
       - name: Unzip packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
         run: |
-          unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip
+          unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d ${{ steps.download-digest.outputs.entry-dir }}/cpack/
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
         timeout-minutes: 10
