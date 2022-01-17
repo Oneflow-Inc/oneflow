@@ -20,7 +20,7 @@
 
 #### Placeholder
 
-### 3. Hard-deprecations
+### 3. Deprecations
 
 #### Single client
 
