@@ -101,6 +101,10 @@ void PruneParallelDimWithValEqualOne(const ParallelDesc& parallel_desc, const cf
       *pruned_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
     }
   }
+  if (pruned_hierarchy.empty()) {
+    pruned_hierarchy.emplace_back(hierarchy->At(0));
+    *pruned_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(0);
+  }
   ParallelConf pruned_parallel_conf = parallel_desc.parallel_conf();
   Shape(pruned_hierarchy).ToProto(pruned_parallel_conf.mutable_hierarchy());
   *pruned_parallel_desc = ParallelDesc(pruned_parallel_conf);
@@ -126,6 +130,13 @@ void CollaborativePruneParallelDimWithValEqualOne(
       pruned_out_hierarchy.emplace_back(out_hierarchy->At(i));
       *pruned_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(i);
     }
+  }
+  if (pruned_in_hierarchy.empty()) {
+    pruned_in_hierarchy.emplace_back(in_hierarchy->At(0));
+    *pruned_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
+
+    pruned_out_hierarchy.emplace_back(out_hierarchy->At(0));
+    *pruned_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
   }
 
   ParallelConf pruned_in_parallel_conf = in_parallel_desc.parallel_conf();
