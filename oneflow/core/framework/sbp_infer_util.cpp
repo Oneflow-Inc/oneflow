@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -58,6 +60,14 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
                                                   const ParallelDesc& consumer_parallel_desc) {
   if (!(CheckSbpParallel(producer_sbp_parallel) && CheckSbpParallel(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
+  }
+
+  // Not supporting S->P for lazy boxing now.
+  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+    if (consumer_sbp_parallel.has_partial_sum_parallel()
+        && producer_sbp_parallel.has_split_parallel()) {
+      return kUnsupportedBoxing;
+    }
   }
 
   if (producer_parallel_desc == consumer_parallel_desc) {
