@@ -398,7 +398,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     }
     OF_NCCL_CHECK(ncclGroupEnd());
 
-    hash_capacity = num_ids * parallel_num;
+    hash_capacity = num_ids;
     UniqueKeys(ctx->stream(), recv_offset, hash_capacity, received_unique_ids, received_slots,
                cur_rank_num_unique_ids->mut_dptr<IDX>(), cur_rank_reverse_idx->mut_dptr<IDX>(),
                cur_rank_unique_ids->mut_dptr<K>(), cur_rank_slots->mut_dptr<IDX>(),
