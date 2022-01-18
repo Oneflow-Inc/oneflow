@@ -29,7 +29,7 @@ class PolynomialLR(LrScheduler):
     .. math::
         \begin{aligned}
            & decay\_batch = decay\_batch*ceil(\frac{current\_batch}{decay\_batch}) \\
-           & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+           & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{power}+end\_lr
         \end{aligned}
 
     If cycle is `False`, the equation is:
@@ -37,7 +37,7 @@ class PolynomialLR(LrScheduler):
     .. math::
         \begin{aligned}
            & decay\_batch = min(decay\_batch, current\_batch) \\
-           & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+           & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{power}+end\_lr
         \end{aligned}
 
     Args:
@@ -45,7 +45,7 @@ class PolynomialLR(LrScheduler):
         steps (int): The decayed steps.
         end_learning_rate (float, optional): The final learning rate. Defaults to 0.0001.
         power (float, optional): The power of polynomial. Defaults to 1.0.
-        cycle (bool, optional): If cycle is true, the scheduler will decay the learning rate every decay steps. Defaults to False.
+        cycle (bool, optional): If cycle is True, the scheduler will decay the learning rate every decay steps. Defaults to False.
 
     For example:
 
