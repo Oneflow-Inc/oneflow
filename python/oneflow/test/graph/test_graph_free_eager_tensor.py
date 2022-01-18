@@ -115,6 +115,69 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
             np.allclose(mul_out.numpy(), np_x * np_y, atol=1e-4, rtol=1e-4)
         )
 
+    def test_graph_return_free_eager_tensor(test_case):
+        np_x = np.random.randn(5, 3)
+        x = flow.tensor(np_x, dtype=flow.float32)
+
+        class GraphReturnEager(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self):
+                # Return free eager tensor
+                return x
+
+        g_return_eager = GraphReturnEager()
+
+        # Run first time
+        ret_eager_out = g_return_eager()
+        test_case.assertTrue(
+            np.allclose(ret_eager_out.numpy(), np_x, atol=1e-4, rtol=1e-4)
+        )
+
+        # Run second time
+        ret_eager_out1 = g_return_eager()
+        test_case.assertTrue(
+            np.allclose(ret_eager_out1.numpy(), np_x, atol=1e-4, rtol=1e-4)
+        )
+
+    def test_graph_return_inplace_free_eager_tensor(test_case):
+        np_x = np.random.randn(5, 3)
+        x = flow.tensor(np_x, dtype=flow.float32)
+
+        class GraphInplaceReturnEager(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self):
+                # x is free eager tensor
+                # mul_ is inplace scalar mul
+                # Input and output of mul_ are both tensor x
+                # After lazy interpretr, tensor x's name will be the ouput lbn of mul_
+                x.mul_(2)
+                # Here will return the output of mul_
+                return x
+
+        g_return_eager = GraphInplaceReturnEager()
+
+        # Run first time
+        ret_eager_out = g_return_eager()
+        # x in ouput changed
+        # So nn.Graph simulate inplace in nn.Graph.build().
+        test_case.assertTrue(
+            np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
+        )
+        # x has not changed
+        # So nn.Graph inplace will not change free eager tensor.
+        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
+
+        # Run second time
+        ret_eager_out = g_return_eager()
+        test_case.assertTrue(
+            np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()

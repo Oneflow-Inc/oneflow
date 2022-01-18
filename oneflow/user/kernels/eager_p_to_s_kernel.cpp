@@ -81,7 +81,7 @@ class EagerPToSOpKernelCache final : public user_op::OpKernelCache {
         CHECK_JUST(TxtStringToPlacement(out_parallel_conf_txt));
     int64_t out_parallel_num = out_parallel_desc->parallel_num();
     int64_t in_parallel_num = in_parallel_desc->parallel_num();
-    elem_cnt_of_this_chunk_ = shape.elem_cnt() / out_parallel_num;
+    elem_cnt_of_this_chunk_ = 0;
     for (int64_t out_parallel_id = 0; out_parallel_id < out_parallel_num; ++out_parallel_id) {
       int64_t dst = CHECK_JUST(out_parallel_desc->MachineId4ParallelId(out_parallel_id));
       const TensorSliceView& out_slice = GetTensorSliceView4ParallelId(
@@ -126,9 +126,7 @@ size_t InferEagerPToSKernelTmpBufferSize(user_op::InferContext* ctx) {
   if (out_parallel_num > 1) {
     CHECK_LT(out_split_axis, shape.NumAxes());
     BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
-    const auto& opt_parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-    int64_t parallel_id = opt_parallel_id->value_or(0);
-    shape.Set(out_split_axis, bs.At(parallel_id).size());
+    shape.Set(out_split_axis, bs.At(0).size());
   }
   size_t tensor_byte_size = shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
   return tensor_byte_size;

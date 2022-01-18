@@ -17,6 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import copy
 
 from test_util import GenArgList
 from optimizer_test_util import clip_grad_norm_np
@@ -90,7 +91,7 @@ def compare_with_numpy_rmsprop(
         )
         rmsprop_x = rmsprop_graph(mask_tensor)
 
-        of_res_list.append(simp_module.param0.numpy())
+        of_res_list.append(copy.copy(simp_module.param0.numpy()))
 
     np_res_list = []
 
@@ -195,7 +196,7 @@ def compare_with_numpy_rmsprop_clip_grad(
         )
         rmsprop_x = rmsprop_graph(mask_tensor)
 
-        of_res_list.append(simp_module.param0.numpy())
+        of_res_list.append(copy.copy(simp_module.param0.numpy()))
 
     np_res_list = []
 
