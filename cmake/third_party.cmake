@@ -130,14 +130,10 @@ endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
 set(oneflow_test_libs
-    ${GOOGLETEST_STATIC_LIBRARIES}
-    ${GOOGLEMOCK_STATIC_LIBRARIES}
+    gtest_main
 )
 
-
 set(oneflow_third_party_libs
-    ${GOOGLETEST_STATIC_LIBRARIES}
-    ${GOOGLEMOCK_STATIC_LIBRARIES}
     protobuf_imported
     ${GRPC_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
@@ -172,7 +168,6 @@ endif()
 
 set(oneflow_third_party_dependencies
   protobuf
-  googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -201,8 +196,6 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ZLIB_INCLUDE_DIR}
-    ${GOOGLETEST_INCLUDE_DIR}
-    ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
     ${LIBJPEG_INCLUDE_DIR}

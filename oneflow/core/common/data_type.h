@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
+#include <cfloat>
 #include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
