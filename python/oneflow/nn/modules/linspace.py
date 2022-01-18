@@ -60,6 +60,8 @@ def linspace_op(
         tensor([ 3.0000,  4.7500,  6.5000,  8.2500, 10.0000], dtype=oneflow.float32)
 
     """
+    if start == end:
+        return flow.full((steps,), start * 1.0)
     step = 1.0
     if steps == 0:
         end = start
