@@ -168,16 +168,16 @@ class Operator {
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const;
+  virtual Maybe<void> GetNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
   virtual Maybe<double> GetComputeComplexity(
       cfg::NdSbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const;
-  virtual Maybe<void> GetNdSbpSignatureList(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
   Maybe<void> GetValidNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
 
   void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
@@ -215,9 +215,6 @@ class Operator {
       cfg::SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(sbp_sig_list);
   }
-  virtual Maybe<void> GetNdSbpSignatureList(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
   virtual Maybe<void> InferSbpSignature(
       cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -296,7 +293,7 @@ class Operator {
   // TODO(wyg): 1d and nd sbp use this function to filter and check
   Maybe<void> FilterNdSbpSignatureListByLogicalShape(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
   Maybe<void> GreedilyFindMinCopyCostNdSbp(
       cfg::NdSbpSignature* nd_sbp_signature,
       const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,

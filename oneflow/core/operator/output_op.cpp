@@ -103,10 +103,10 @@ Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) cons
 
 Maybe<void> OutputOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const {
   cfg::NdSbpSignature nd_sbp_signature;
   JUST(InferOutputOpNdSbpSignature(&nd_sbp_signature, parallel_desc, op_conf()));
-  nd_sbp_sig_list.emplace_back(nd_sbp_signature);
+  nd_sbp_sig_list->emplace_back(nd_sbp_signature);
   return Maybe<void>::Ok();
 }
 

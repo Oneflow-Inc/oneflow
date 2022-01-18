@@ -896,11 +896,11 @@ Maybe<void> UserOp::InferNdSbpSignature(
 
 Maybe<void> UserOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const {
   if (val_->get_nd_sbp_list_fn) {
     cfg::NdSbpSignature empty_sbp_signature;
     UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
-        this, LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list);
+        this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
     return val_->get_nd_sbp_list_fn(&user_op_get_nd_sbp_list_context);
   } else {
     JUST(Operator::GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
