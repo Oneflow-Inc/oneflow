@@ -899,11 +899,13 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4).to(device)
         y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
-    
+
     @autotest(check_graph=True)
     def test_t_tensor_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=constant(2).to(int), dim0=random(0, 64), dim1=random(0, 64)).to(device)
+        x = random_pytorch_tensor(
+            ndim=constant(2).to(int), dim0=random(0, 64), dim1=random(0, 64)
+        ).to(device)
         y = x.t()
         return y
 
