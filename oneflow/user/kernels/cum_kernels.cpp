@@ -186,7 +186,7 @@ void cumprod_backward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* 
       std::vector<size_t> first_zero(down_space, space);
       for (size_t j = 0; j < space; j++) {
         auto* tmp_cumsum_zeros_number_ptr = cumsum_zeros_number_ptr + j * down_space;
-        for (auto k = 0; k < down_space; k++) {
+        for (size_t k = 0; k < down_space; k++) {
           if (tmp_cumsum_zeros_number_ptr[k] == 1 && first_zero[k] == space) { first_zero[k] = j; }
         }
       }
