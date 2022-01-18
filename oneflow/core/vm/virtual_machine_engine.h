@@ -91,6 +91,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
   InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
   InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
+  InstructionMsgMutexedList* mut_garbage_msg_list() { return &garbage_msg_list_; }
   StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() {
     return &stream_type_id2stream_rt_desc_;
   }
@@ -103,8 +104,11 @@ class VirtualMachineEngine final : public intrusive::Base {
   // Returns true if old pending_instruction_list is empty
   Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
   void Schedule();
+  void Callback();
+  void ScheduleEnd();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
+  bool CallbackEmpty() const;
   Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
   MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
   const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
@@ -128,6 +132,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseFinishedInstructions();
   void MoveInstructionMsgToGarbageMsgList(intrusive::shared_ptr<InstructionMsg>&& instr_msg);
+  void MoveToGarbageMsgListAndNotifyGC();
   void HandlePending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionMsgList* /*out*/ pending_instr_msgs);
@@ -196,10 +201,11 @@ class VirtualMachineEngine final : public intrusive::Base {
         stream_type_id2stream_rt_desc_(),
         id2logical_object_(),
         delete_logical_object_list_(),
-        pending_and_complete_msg_mutex_(),
-        pending_msg_list_(&pending_and_complete_msg_mutex_),
+        pending_msg_mutex_(),
+        pending_msg_list_(&pending_msg_mutex_),
         local_pending_msg_list_(),
-        garbage_msg_list_(&pending_and_complete_msg_mutex_),
+        callback_msg_mutex_(),
+        garbage_msg_list_(&callback_msg_mutex_),
         local_garbage_msg_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
@@ -216,9 +222,10 @@ class VirtualMachineEngine final : public intrusive::Base {
   StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
   Id2LogicalObject id2logical_object_;
   LogicalObjectDeleteList delete_logical_object_list_;
-  std::mutex pending_and_complete_msg_mutex_;
+  std::mutex pending_msg_mutex_;
   InstructionMsgMutexedList pending_msg_list_;
   InstructionMsgList local_pending_msg_list_;
+  std::mutex callback_msg_mutex_;
   InstructionMsgMutexedList garbage_msg_list_;
   InstructionMsgList local_garbage_msg_list_;
   ReadyInstructionList ready_instruction_list_;
