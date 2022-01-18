@@ -321,11 +321,11 @@ def GetDualObject(name, pytorch, oneflow):
                             graph_args = []
                             for arg in oneflow_args:
                                 if flow.is_tensor(arg):
-                                    copy_arg=arg.clone()
-                                else: 
+                                    copy_arg = arg.clone()
+                                else:
                                     copy_arg = copy.deepcopy(arg)
                                 graph_args.append(copy_arg)
-                            graph_kwargs=copy.deepcopy(oneflow_kwargs)         
+                            graph_kwargs = copy.deepcopy(oneflow_kwargs)
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
@@ -365,9 +365,7 @@ def GetDualObject(name, pytorch, oneflow):
                                             super().__init__()
 
                                         def build(self):
-                                            return oneflow(
-                                                *graph_args, **graph_kwargs
-                                            )
+                                            return oneflow(*graph_args, **graph_kwargs)
 
                                     try:
                                         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
@@ -458,11 +456,11 @@ def GetDualObject(name, pytorch, oneflow):
                         tensor_graph_args = []
                         for arg in oneflow_args:
                             if flow.is_tensor(arg):
-                                copy_arg=arg.clone()
-                            else: 
+                                copy_arg = arg.clone()
+                            else:
                                 copy_arg = copy.deepcopy(arg)
                             tensor_graph_args.append(copy_arg)
-                        tensor_graph_kwargs=copy.deepcopy(oneflow_kwargs)         
+                        tensor_graph_kwargs = copy.deepcopy(oneflow_kwargs)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
 

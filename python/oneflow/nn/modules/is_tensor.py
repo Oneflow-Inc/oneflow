@@ -16,6 +16,7 @@ limitations under the License.
 
 import oneflow as flow
 
+
 def is_tensor_op(obj):
     r"""
     is_tensor(input) -> (bool)
@@ -39,4 +40,4 @@ def is_tensor_op(obj):
         True
 
     """
-    return isinstance(obj,flow.Tensor)
+    return isinstance(obj, flow.Tensor)
