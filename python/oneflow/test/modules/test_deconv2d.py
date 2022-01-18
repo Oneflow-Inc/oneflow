@@ -891,29 +891,29 @@ class TestDeconv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30)
-    def test_deconv2d_group_with_random_data(test_case):
-        channels = 720  # lcm(1, 2, 3, 4, 5, 6)
-        m = torch.nn.ConvTranspose2d(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=random(1, 4),
-            stride=random() | nothing(),
-            padding=random(1, 3).to(int) | nothing(),
-            dilation=random(1, 5) | nothing(),
-            groups=random(1, 7),
-            padding_mode=constant("zeros") | nothing(),
-        )
-        m.train(random())
+    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    # @autotest(n=30)
+    # def test_deconv2d_group_with_random_data(test_case):
+    #     channels = 720  # lcm(1, 2, 3, 4, 5, 6)
+    #     m = torch.nn.ConvTranspose2d(
+    #         in_channels=channels,
+    #         out_channels=channels,
+    #         kernel_size=random(1, 4),
+    #         stride=random() | nothing(),
+    #         padding=random(1, 3).to(int) | nothing(),
+    #         dilation=random(1, 5) | nothing(),
+    #         groups=random(1, 7),
+    #         padding_mode=constant("zeros") | nothing(),
+    #     )
+    #     m.train(random())
 
-        device = random_device()
-        m.to(device)
-        m.pytorch.to("cuda")
-        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
-        x.pytorch = x.pytorch.to("cuda")
-        y = m(x)
-        return y
+    #     device = random_device()
+    #     m.to(device)
+    #     m.pytorch.to("cuda")
+    #     x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+    #     x.pytorch = x.pytorch.to("cuda")
+    #     y = m(x)
+    #     return y
 
 
 if __name__ == "__main__":
