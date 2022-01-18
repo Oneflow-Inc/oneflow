@@ -11,6 +11,7 @@ log/
 *plan
 core.*
 *.pyc
+*.txt
 *.ipynb
 /.vscode
 /.idea

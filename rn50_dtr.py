@@ -17,6 +17,13 @@ import resnet50_model
 # 1: only reuse the memory block with exactly the same size
 # 2: reuse the memory block with the same size or larger
 
+# os.environ["OF_DTR"] = "1"
+# os.environ["OF_DTR_THRESHOLD"] = "3500mb"
+# os.environ["OF_DTR_DEBUG"] = "0"
+# os.environ["OF_DTR_LR"] = "1"
+# os.environ["OF_DTR_BS"] = "80"
+# os.environ["OF_ITERS"] = "40"
+
 dtr_enabled = os.getenv("OF_DTR", "0") != "0"
 
 batch_size = int(os.environ["OF_DTR_BS"])
@@ -25,6 +32,7 @@ if dtr_enabled:
     threshold = os.environ["OF_DTR_THRESHOLD"]
     debug_level = int(os.getenv("OF_DTR_DEBUG", "0"))
     left_right = os.getenv("OF_DTR_LR", None) is not None
+    o_one = os.getenv("OF_DTR_O_ONE", None) is None
 else:
     if any([os.getenv(x) is not None for x in ["OF_DTR_NO_EE", "OF_DTR_THRESHOLD", "OF_DTR_DEBUG", "OF_DTR_LR"]]):
         print("warning! dtr is not enabled but dtr related env var is set")
@@ -32,6 +40,7 @@ else:
     threshold = "NaN"
     debug_level = "NaN"
     left_right = "invalid"
+    o_one = False
 
 # run forward, backward and update parameters
 WARMUP_ITERS = 2
@@ -41,7 +50,7 @@ memory_policy = 2
 heuristic = "eq_compute_time_and_last_access"
 
 if dtr_enabled:
-    print(f'dtr_enabled: {dtr_enabled}, threshold: {threshold}, batch size: {batch_size}, eager eviction: {dtr_ee_enabled}, left and right: {left_right}, debug_level: {debug_level}, heuristic: {heuristic}')
+    print(f'dtr_enabled: {dtr_enabled}, threshold: {threshold}, batch size: {batch_size}, eager eviction: {dtr_ee_enabled}, left and right: {left_right}, debug_level: {debug_level}, heuristic: {heuristic}, o_one: {o_one}')
 else:
     print(f'dtr_enabled: {dtr_enabled}')
 
@@ -65,7 +74,7 @@ def display():
 # init model
 # model = resnet50_model.resnet50(norm_layer=nn.Identity)
 model = resnet50_model.resnet50()
-model.load_state_dict(flow.load('/tmp/abcde'))
+# model.load_state_dict(flow.load('/tmp/abcde'))
 # flow.save(model.state_dict(), '/tmp/abcde')
 
 criterion = nn.CrossEntropyLoss()

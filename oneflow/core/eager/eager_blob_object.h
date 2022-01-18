@@ -129,26 +129,36 @@ class EagerBlobObject : public BlobObject {
 
 class DisjNode {
  public:
-  DisjNode(double time) : compute_time_(time), parent_(nullptr) {}
+  DisjNode(double time) : compute_time_(time), parent_(nullptr), pesudo_node_(nullptr), cnt_(1) {}
 
   bool is_root() { return !bool(parent_); }
 
   void set_parent(std::shared_ptr<DisjNode>& parent) { parent_ = parent; }
+  void set_pesudo_node(std::shared_ptr<DisjNode>& pesudo_node) { pesudo_node_ = pesudo_node; }
   void set_compute_time(double new_time) {
     compute_time_ = new_time;
   }
 
+  void set_cnt(int cnt) { cnt_ = cnt; }
+  void add_cnt() { cnt_++; }
+  void reduce_cnt() { cnt_--; }
+
   double compute_time() { return compute_time_; }
   std::shared_ptr<DisjNode> parent() { return parent_; }
+  std::shared_ptr<DisjNode> pesudo_node() { return pesudo_node_; }
+  int cnt() { return cnt_; }
 
   void reset(double t) {
     compute_time_ = t;
     parent_.reset();
   }
+  void reset_pesudo_node();
 
  private:
   double compute_time_;
   std::shared_ptr<DisjNode> parent_;
+  std::shared_ptr<DisjNode> pesudo_node_;
+  int cnt_;
 };
 
 class DTREagerBlobObject final : public EagerBlobObject {
@@ -219,11 +229,20 @@ class DTREagerBlobObject final : public EagerBlobObject {
 
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost() const;
+  Maybe<double> cost(const std::string& heuristic) const;
   Maybe<double> reverse_cost() const;
 
   std::shared_ptr<DisjNode> node;
   void reset_node(double t) {
     node->reset(t);
+  }
+
+  void reset_pesudo_node();
+
+  const int pesudo_cnt() const {
+    auto&& pesudo_ = node->pesudo_node();
+    int cnt = pesudo_->cnt();
+    return cnt;
   }
 
  private:
