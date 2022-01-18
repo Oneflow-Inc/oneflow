@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/tensor_buffer.h"
@@ -93,13 +92,22 @@ Maybe<bool> ReadColumnValuesImpl(parquet::ColumnReader* col_reader, size_t footp
 template<typename PType>
 Maybe<bool> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_reader, size_t batch_size,
                                             size_t sample_size,
-                                            std::shared_ptr<TensorBuffer>& batch) {
+                                            std::shared_ptr<TensorBuffer>& batch,
+                                            bool reset_values_read) {
   using T = typename PType::c_type;
+  thread_local size_t total_values_read = 0;
   thread_local std::vector<T> values;
   thread_local std::vector<int16_t> rep_levels;
+
+  if (reset_values_read) { total_values_read = 0; }
+
   size_t values_to_read = batch_size * sample_size;
   values.reserve(values_to_read);
   rep_levels.reserve(values_to_read);
+
+  LOG(INFO) << "prev parquet::ColumnReader::ReadBatch column: "
+            << col_reader->descr()->path()->ToDotString() << ", values_to_read: " << values_to_read
+            << ", values_stored: " << values.size();
 
   CHECK_EQ_OR_RETURN(values.size(), rep_levels.size());
   if (!values.empty()) { values_to_read -= values.size(); }
@@ -113,6 +121,10 @@ Maybe<bool> ReadColumnFixedLengthValuesImpl(parquet::ColumnReader* col_reader, s
       values_to_read, /* def_levels */ nullptr, &rep_levels[cursor], &values[cursor], &values_read);
   CHECK_EQ_OR_RETURN(values_read, levels_read);
   CHECK_LE_OR_RETURN(values_read, values_to_read);
+  total_values_read += values_read;
+  LOG(INFO) << "post parquet::ColumnReader::ReadBatch column: "
+            << col_reader->descr()->path()->ToDotString() << ", values_to_read: " << values_to_read
+            << ", values_read: " << values_read << ", total_values_read: " << total_values_read;
 
   // not enough batch, return false
   if (values_read < values_to_read) {
@@ -170,12 +182,14 @@ Maybe<bool> ReadColumnValues(parquet::ColumnReader* col_reader, size_t footprint
 }
 
 Maybe<bool> ReadColumnFixedLengthValues(parquet::ColumnReader* col_reader, size_t batch_size,
-                                        size_t sample_size, std::shared_ptr<TensorBuffer>& batch) {
+                                        size_t sample_size, std::shared_ptr<TensorBuffer>& batch,
+                                        bool reset_values_read) {
   switch (col_reader->type()) {
-#define CASE_ENTRY(type)                                                                      \
-  case type: {                                                                                \
-    using PhyT = parquet::PhysicalType<type>;                                                 \
-    return ReadColumnFixedLengthValuesImpl<PhyT>(col_reader, batch_size, sample_size, batch); \
+#define CASE_ENTRY(type)                                                                     \
+  case type: {                                                                               \
+    using PhyT = parquet::PhysicalType<type>;                                                \
+    return ReadColumnFixedLengthValuesImpl<PhyT>(col_reader, batch_size, sample_size, batch, \
+                                                 reset_values_read);                         \
   }
 
     CASE_ENTRY(parquet::Type::INT32)
@@ -349,6 +363,7 @@ Maybe<void> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
 Maybe<bool> ParquetReader::ReadColumn(int col) {
   // when all col readers finish reading, it's the last finishing reader's due
   // to move to next row group
+  thread_local bool new_row_group = false;
   {
     std::unique_lock<std::mutex> lock(mutex_);
     if (--read_keys_ == 0) { read_done_ = true; }
@@ -356,6 +371,7 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
     cond_.wait(lock, [this]() { return read_done_ || IsClosed(); });
     if (!row_group_reader_) { JUST(NextRowGroup()); }
     if (++read_keys_ == workers_.size()) { read_done_ = false; }
+    new_row_group = true;
   }
   cond_.notify_all();
 
@@ -373,7 +389,8 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
     } else {
       size_t bz = completely_shuffle_ ? 1 : batch_size_;
       read_done = JUST(ReadColumnFixedLengthValues(col_reader.get(), bz, col_desc.shape.elem_cnt(),
-                                                   sample_or_batch));
+                                                   sample_or_batch, new_row_group));
+      new_row_group = false;
     }
     if (!read_done) { continue; }
     if (!JUST(Cache(col, sample_or_batch))) { return false; }
@@ -534,8 +551,9 @@ Maybe<void> ParquetReader::NextRowGroup() {
         << "There are only " << num_row_groups << " row groups in parquet file of "
         << parquet_files_[0] << " that can't be partitioned by " << world_size_;
   }
-  LOG(INFO) << "ParquetReader::NextRowGroup: " << row_group_part_indices_.front();
   row_group_reader_ = file_reader_->RowGroup(row_group_part_indices_.front());
+  LOG(INFO) << "ParquetReader::NextRowGroup: " << row_group_part_indices_.front()
+            << " has number of rows: " << row_group_reader_->metadata()->num_rows();
   row_group_part_indices_.pop();
   return Maybe<void>::Ok();
 }
