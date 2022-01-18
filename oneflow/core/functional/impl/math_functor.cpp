@@ -45,6 +45,7 @@ class AddNFunctor {
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, bool inplace) const {
+    CHECK_GE_OR_RETURN(inputs.size(), 2);
     TensorTuple outputs;
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
