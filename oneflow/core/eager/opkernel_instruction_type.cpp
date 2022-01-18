@@ -564,37 +564,6 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
             Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.erase(dtr_blob_object);
             JUST(dtr_blob_object->evict());
           }
-          // if (Global<one::DTRTensorPool>::Get()->reference_nums_.count(dtr_blob_object) > 0) {
-          //   // if (oneflow::DTRDebugEnabled()) {
-          //   //   LOG(INFO) << operand->shared_opkernel()->op_type_name()
-          //   //             << ": decrease reference num of " << dtr_blob_object << " from "
-          //   //             << Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object]
-          //   //             << " to "
-          //   //             << Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object]
-          //   - 1;
-          //   // }
-          //   // Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object]--;
-          //   if (Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object] == 0) {
-          //     Global<one::DTRTensorPool>::Get()->reference_nums_.erase(dtr_blob_object);
-          //     if (Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.count(
-          //             dtr_blob_object)
-          //         > 0) {
-          //       if (oneflow::DTRDebugEnabled()) {
-          //         LOG(INFO) << "going to evict " << dtr_blob_object
-          //                   << " in recomputation, whose dptr is " <<
-          //                   dtr_blob_object->blob().dptr()
-          //                   << ", compute op: " << dtr_blob_object->compute_op_type_name()
-          //                   << ", size: " << dtr_blob_object->blob().ByteSizeOfBlobBody()
-          //                   << ", is in memory: " << dtr_blob_object->is_in_memory() <<
-          //                   std::endl;
-          //       }
-          //       Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.erase(dtr_blob_object);
-          //       JUST(dtr_blob_object->evict());
-          //     }
-          //   }
-          // } else {
-          //   LOG(INFO) << "def";
-          // }
           return Maybe<void>::Ok();
         }));
     LOG(INFO) << "unpin input end";
