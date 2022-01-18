@@ -170,7 +170,7 @@ class ModuleBlock(Block):
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
-        self._print(0, 1, self._shallow_repr())
+        self.__print(0, 1, self._shallow_repr())
 
         for idx, arg in enumerate(args):
             meta_repr_str = (
@@ -190,11 +190,11 @@ class ModuleBlock(Block):
                 in_str = "[WARNING]" + in_str
             self._args_repr.append(in_str)
 
-            self._print(0, 1, in_str)
+            self.__print(0, 1, in_str)
 
             def _print_state(d):
                 for (_, n) in d.items():
-                    self._print(0, 1, n._shallow_repr())
+                    self.__print(0, 1, n._shallow_repr())
 
             _print_state(self._parameters)
             _print_state(self._buffers)
@@ -230,7 +230,7 @@ class ModuleBlock(Block):
                 out_str = "[WARNING]" + out_str
 
             self._outs_repr.append(out_str)
-            self._print(0, 1, out_str)
+            self.__print(0, 1, out_str)
 
         return result
 
@@ -321,13 +321,13 @@ class ModuleBlock(Block):
                     )
                     if is_tensor:
                         seq_args.append(mapping_tensor(arg[i]))
-                        self._print(
+                        self.__print(
                             0,
                             1,
                             f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
                         )
                     else:
-                        self._print(
+                        self.__print(
                             0,
                             0,
                             f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
@@ -340,7 +340,7 @@ class ModuleBlock(Block):
                 )
                 assert is_tensor
                 mapped_args.append(mapping_tensor(arg))
-                self._print(
+                self.__print(
                     0,
                     1,
                     f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
@@ -351,7 +351,7 @@ class ModuleBlock(Block):
                 )
                 assert not is_tensor
                 mapped_args.append(arg)
-                self._print(
+                self.__print(
                     0,
                     0,
                     f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.",
@@ -451,11 +451,11 @@ class ModuleBlock(Block):
             if name in modules:
                 return modules[name]
         # support get parameter
-        p_state = self._get_from_states(name, "_parameters")
+        p_state = self.__get_from_states(name, "_parameters")
         if p_state is not None:
             return p_state
         # support get buffer
-        b_state = self._get_from_states(name, "_buffers")
+        b_state = self.__get_from_states(name, "_buffers")
         if b_state is not None:
             return b_state
         # support none parameter or buffer
@@ -479,7 +479,7 @@ class ModuleBlock(Block):
             )
         )
 
-    def _get_from_states(self, name, states_name):
+    def __get_from_states(self, name, states_name):
         if states_name not in self.__dict__:
             return None
 
@@ -547,7 +547,7 @@ class ModuleBlock(Block):
         )
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)
@@ -691,7 +691,7 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
         assert isinstance(idx, int)
         idx = self._get_abs_string_index(idx)
         key = str(idx)
-        p_state = self._get_from_states(key, "_parameters")
+        p_state = self.__get_from_states(key, "_parameters")
         if p_state is not None:
             return p_state
         else:
@@ -709,7 +709,7 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         self._is_executing_forward = True
 
     def __getitem__(self, key: str):
-        p_state = self._get_from_states(key, "_parameters")
+        p_state = self.__get_from_states(key, "_parameters")
         if p_state is not None:
             return p_state
         else:

@@ -235,7 +235,7 @@ class Graph(object):
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         r"""Call nn.Graph subclass instance to run your customized graph.
 
         Call your customized graph after the instantiation:
@@ -255,9 +255,9 @@ class Graph(object):
         Donot override this function.
         """
         if not self._is_compiled:
-            self._compile(*args)
+            self._compile(*args, **kwargs)
 
-        return self._run(*args)
+        return self.__run(*args, **kwargs)
 
     @property
     def name(self):
@@ -373,7 +373,7 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)
@@ -396,7 +396,7 @@ class Graph(object):
     @property
     def _graph_proto(self):
         if not self._is_compiled:
-            self._print(
+            self.__print(
                 2,
                 0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
@@ -407,7 +407,7 @@ class Graph(object):
     @property
     def _full_graph_proto(self):
         if not self._is_compiled:
-            self._print(
+            self.__print(
                 2,
                 0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's full graph proto is None."
@@ -492,10 +492,10 @@ class Graph(object):
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
-    def _compile(self, *args):
+    def _compile(self, *args, **kwargs):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph.")
+            self.__print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
@@ -503,9 +503,9 @@ class Graph(object):
             with graph_build_util.GLogScopeContext(
                 self._debug_min_s_level, self._debug_max_v_level
             ):
-                eager_outputs = self._build_graph(*args)
+                eager_outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
-            self._print(
+            self.__print(
                 0,
                 0,
                 self._shallow_repr()
@@ -515,7 +515,7 @@ class Graph(object):
                 + "\n",
             )
         except:
-            self._print(
+            self.__print(
                 2,
                 0,
                 "[ERROR]"
@@ -527,13 +527,13 @@ class Graph(object):
 
         # Complie graph to execution plan and init Runtime
         try:
-            self._print(
+            self.__print(
                 0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
             compile_and_init_end = time.perf_counter()
-            self._print(
+            self.__print(
                 0,
                 0,
                 self._shallow_repr()
@@ -548,7 +548,7 @@ class Graph(object):
                 + "\n",
             )
         except:
-            self._print(
+            self.__print(
                 2,
                 0,
                 "[ERROR]"
@@ -561,7 +561,7 @@ class Graph(object):
         self._is_compiled = True
         return eager_outputs
 
-    def _build_graph(self, *args):
+    def __build_graph(self, *args, **kwargs):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
 
@@ -571,14 +571,14 @@ class Graph(object):
         self._generate_config_proto()
 
         # Deal with parameter and buffer
-        self._print(
+        self.__print(
             0,
             1,
             self._shallow_repr()
             + " start building graph builders of parameters and buffers.",
         )
         self._create_states_builder()
-        self._print(
+        self.__print(
             0,
             1,
             self._shallow_repr()
@@ -587,19 +587,19 @@ class Graph(object):
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
-            self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
-            arg_op_names, lazy_args, self._args_repr, _ = self._build_io(
+            self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
+            arg_op_names, lazy_args, self._args_repr, _ = self.__build_io(
                 "input", graph_build_util.build_graph_input_arg, *args
             )
-            self._print(0, 1, self._shallow_repr() + " end building graph inputs.")
+            self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
-            self._print(0, 1, self._shallow_repr() + " start building graph modules.")
+            self.__print(0, 1, self._shallow_repr() + " start building graph modules.")
             outputs = self.build(*lazy_args)
-            self._print(0, 1, self._shallow_repr() + " end building graph modules.")
+            self.__print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
-            self._print(0, 1, self._shallow_repr() + " start building graph outputs.")
+            self.__print(0, 1, self._shallow_repr() + " start building graph outputs.")
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
                     outputs = ()
@@ -611,14 +611,14 @@ class Graph(object):
                 self._eager_outputs,
                 self._outs_repr,
                 out2name,
-            ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
+            ) = self.__build_io("output", graph_build_util.build_graph_output, *outputs)
 
-            self._print(0, 1, self._shallow_repr() + " end building graph outputs.")
+            self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
 
-            self._print(
+            self.__print(
                 0,
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
@@ -627,19 +627,19 @@ class Graph(object):
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
-            self._print(
+            self.__print(
                 0, 1, self._shallow_repr() + " end building graph with compile passes."
             )
 
             # Re-build outputs accoring to full graph and outputs buffer config.
-            self._print(
+            self.__print(
                 0,
                 1,
                 self._shallow_repr()
                 + " start re-building graph outputs for optimizatioin.",
             )
-            self._rebuild_outputs(out2name)
-            self._print(
+            self.__rebuild_outputs(out2name)
+            self.__print(
                 0,
                 1,
                 self._shallow_repr()
@@ -648,7 +648,7 @@ class Graph(object):
 
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
-                arg_op_names, convert_to_tensor_tuple(self._flatten_io("input", *args))
+                arg_op_names, convert_to_tensor_tuple(self.__flatten_io("input", *args))
             )
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
@@ -659,7 +659,7 @@ class Graph(object):
 
         return seq_to_func_return(self._eager_outputs_buffer[0])
 
-    def _rebuild_outputs(self, out2name=None):
+    def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
         #   Lazy build output eager tensors.
         #
@@ -696,12 +696,12 @@ class Graph(object):
             )
             return tensor_tuple
 
-        self._eager_outputs = self._mapping_io(
+        self._eager_outputs = self.__mapping_io(
             "output", build_real_output, *self._eager_outputs
         )
 
         self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
-            self._flatten_io("output", *self._eager_outputs)
+            self.__flatten_io("output", *self._eager_outputs)
         )
         self._eager_outputs_buffer = [
             self._eager_outputs,
@@ -712,15 +712,15 @@ class Graph(object):
 
         # Make outputs buffer
         for i in range(self._outputs_buffer_size - 1):
-            outputs_buffer_item = self._empty_like_io("output", *self._eager_outputs)
+            outputs_buffer_item = self.__empty_like_io("output", *self._eager_outputs)
             self._eager_outputs_buffer.append(outputs_buffer_item)
             outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
-                self._flatten_io("output", *outputs_buffer_item)
+                self.__flatten_io("output", *outputs_buffer_item)
             )
             self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
-        self._check_outputs_buffer()
+        self.__check_outputs_buffer()
 
-    def _check_outputs_buffer(self):
+    def __check_outputs_buffer(self):
         has_len = len(self._outputs_tensor_tuple_buffer)
         assert (
             has_len == self._outputs_buffer_size
@@ -742,9 +742,9 @@ class Graph(object):
                     item, "graph_ouputs_buffer_" + str(b_idx) + "_" + str(i_idx)
                 )
 
-    def _run(self, *args):
+    def __run(self, *args, **kwargs):
         try:
-            flattened_eager_args = self._flatten_io("input", *args)
+            flattened_eager_args = self.__flatten_io("input", *args)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                 self._cur_index_of_ouputs_buffer
             ]
@@ -762,7 +762,7 @@ class Graph(object):
             if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
                 self._cur_index_of_ouputs_buffer = 0
         except:
-            self._print(
+            self.__print(
                 2,
                 0,
                 "[ERROR]"
@@ -773,7 +773,7 @@ class Graph(object):
             raise
 
         # Copy outputs from buffer
-        eager_outputs = self._copy_io("output", *eager_outputs)
+        eager_outputs = self.__copy_io("output", *eager_outputs)
 
         # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
         # "critical_section".
@@ -784,7 +784,7 @@ class Graph(object):
         )
         return seq_to_func_return(eager_outputs)
 
-    def _build_io(self, io_type, build_func, *args):
+    def __build_io(self, io_type, build_func, *args):
         assert io_type in ("input", "output")
         io_type_upper = io_type.upper()
         build_args = []
@@ -802,17 +802,17 @@ class Graph(object):
                 build_arg = None
 
             args_repr.append(repr_str)
-            self._print(0, 1, repr_str)
+            self.__print(0, 1, repr_str)
             return build_arg
 
         for idx, arg in enumerate(args):
             if isinstance(arg, Tensor) or arg is None:
                 if arg is None:
-                    name, repr_str = self._io_item_check_and_gen(
+                    name, repr_str = self.__io_item_check_and_gen(
                         arg, None, io_type, idx
                     )
                 else:
-                    name, repr_str = self._io_item_check_and_gen(
+                    name, repr_str = self.__io_item_check_and_gen(
                         arg, Tensor, io_type, idx
                     )
                 build_args.append(build_tensor_or_none(arg, name, repr_str))
@@ -822,17 +822,17 @@ class Graph(object):
                 else:
                     seq_args = list()
                 for i in range(len(arg)):
-                    name, repr_str = self._io_item_check_and_gen(
+                    name, repr_str = self.__io_item_check_and_gen(
                         arg[i], Tensor, io_type, idx, i
                     )
                     seq_args.append(build_tensor_or_none(arg[i], name, repr_str))
                 build_args.append(seq_args)
             else:
-                self._io_item_check_and_gen(arg, Tensor, io_type, idx)
+                self.__io_item_check_and_gen(arg, Tensor, io_type, idx)
 
         return op_names, build_args, args_repr, tensor2op_name
 
-    def _mapping_io(self, io_type, func, *args):
+    def __mapping_io(self, io_type, func, *args):
         assert io_type in ("input", "output")
         io_type_upper = io_type.upper()
         mapped_args = []
@@ -857,11 +857,11 @@ class Graph(object):
                     seq_args.append(mapping_tensor_or_none(arg[i]))
                 mapped_args.append(seq_args)
             else:
-                self._io_item_check(arg, None, io_type, idx)
+                self.__io_item_check(arg, None, io_type, idx)
 
         return mapped_args
 
-    def _empty_like_io(self, io_type, *args):
+    def __empty_like_io(self, io_type, *args):
         def func(t):
             shape = t.shape
             dtype = t.dtype
@@ -876,17 +876,17 @@ class Graph(object):
 
             return eager_out
 
-        return self._mapping_io(io_type, func, *args)
+        return self.__mapping_io(io_type, func, *args)
 
-    def _copy_io(self, io_type, *args):
+    def __copy_io(self, io_type, *args):
         def func(tensor):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 build_arg = tensor.to(copy=True)
                 return build_arg
 
-        return self._mapping_io(io_type, func, *args)
+        return self.__mapping_io(io_type, func, *args)
 
-    def _flatten_io(self, io_type, *args):
+    def __flatten_io(self, io_type, *args):
         assert isinstance(args, tuple)
         flattened_args = []
         for idx, arg in enumerate(args):
@@ -894,13 +894,13 @@ class Graph(object):
                 flattened_args.append(arg)
             elif isinstance(arg, (TensorTuple, list)):
                 for i in range(len(arg)):
-                    self._io_item_check(arg[i], Tensor, io_type, idx, i)
+                    self.__io_item_check(arg[i], Tensor, io_type, idx, i)
                     flattened_args.append(arg[i])
             else:
-                self._io_item_check(arg, None, io_type, idx)
+                self.__io_item_check(arg, None, io_type, idx)
         return flattened_args
 
-    def _io_item_check(self, item, expect_type, io_type, idx, second_idx=None):
+    def __io_item_check(self, item, expect_type, io_type, idx, second_idx=None):
         if expect_type is None and item is None:
             return
         elif expect_type is not None and isinstance(item, expect_type):
@@ -919,12 +919,12 @@ class Graph(object):
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            self._print(2, 0, repr_str)
+            self.__print(2, 0, repr_str)
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
-    def _io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
+    def __io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
         assert io_type in ("input", "output")
         name = (
             "_"
@@ -966,7 +966,7 @@ class Graph(object):
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            self._print(2, 0, repr_str)
+            self.__print(2, 0, repr_str)
             raise NotImplementedError(
                 "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )

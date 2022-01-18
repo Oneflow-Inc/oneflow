@@ -26,7 +26,7 @@ from oneflow.framework.tensor import Tensor, TensorTuple
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestGraphCheck(flow.unittest.TestCase):
+class TestGraphIOCheck(flow.unittest.TestCase):
     def test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
