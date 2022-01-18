@@ -2542,9 +2542,9 @@ class TransposeAllDimFunctionFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     const int64_t ndim = x->ndim();
     CHECK_OR_RETURN(ndim <= 2)
-        << "RuntimeError: t() expects a tensor with <= 2 dimensions, but input tensor is " 
-        << ndim << "D";
-    if(ndim == 0 || ndim == 1){return x;}
+        << "RuntimeError: t() expects a tensor with <= 2 dimensions, but input tensor is " << ndim
+        << "D";
+    if (ndim == 0 || ndim == 1) { return x; }
     return Transpose2dim(x, 0, 1);
   }
 };
