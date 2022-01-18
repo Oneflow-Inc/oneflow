@@ -96,9 +96,10 @@ size_t GetUniqueKeysWorkspace(const int64_t num_ids, const int64_t capacity) {
 template<typename K, typename IDX>
 void UniqueKeys(ep::Stream* stream, const int64_t num_ids, const int64_t capacity, const K* ids,
                 const IDX* column_ids, IDX* num_unique_ids, IDX* reverse_index, K* unique_ids,
-                IDX* unique_column_ids, char* workspace) {
+                IDX* unique_column_ids, char* workspace, size_t workspace_size) {
   size_t hash_table_keys_size = GetCudaAlignedSize(capacity * sizeof(K));
   size_t hash_table_vals_size = GetCudaAlignedSize(capacity * sizeof(IDX));
+  CHECK_GE(workspace_size, hash_table_keys_size + hash_table_vals_size);
   K* table_keys = reinterpret_cast<K*>(workspace);
   IDX* table_vals = reinterpret_cast<IDX*>(workspace + hash_table_keys_size);
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
@@ -112,8 +113,7 @@ void UniqueKeys(ep::Stream* stream, const int64_t num_ids, const int64_t capacit
   fill_primitive->Launch(stream, table_vals, Scalar(-1), capacity);
   cudaMemsetAsync(num_unique_ids, 0, sizeof(IDX), cuda_stream);
 
-  UniqueIds<K, IDX><<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
-                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  UniqueIds<K, IDX><<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
       capacity, empty_key, empty_val, num_ids, ids, column_ids, table_keys, table_vals,
       num_unique_ids, unique_ids, unique_column_ids, reverse_index);
 }
