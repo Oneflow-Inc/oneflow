@@ -161,9 +161,11 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
-  if (TRY(main_boxing_expr->Check(in, out, logical_shape)).IsOk()) {
+  const auto& status = TRY(main_boxing_expr->Check(in, out, logical_shape));
+  if (status.IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out, logical_shape));
-    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
+    return std::shared_ptr<EagerBoxingInterpreter>(
+        new NaiveEagerBoxingInterpreter(boxing_func, JUST(status)));
   }
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
@@ -183,8 +185,8 @@ Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInter
     Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc,
     const Shape& logical_shape) const {
-  return CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc,
-                                    logical_shape);
+  return JUST(CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc,
+                                         logical_shape));
 }
 
 COMMAND(Global<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));
