@@ -157,5 +157,6 @@ oneflow
             read_onerec,
             from_numpy,
             cumsum,
+            cumprod,
 
 .. autofunction:: oneflow.relu
