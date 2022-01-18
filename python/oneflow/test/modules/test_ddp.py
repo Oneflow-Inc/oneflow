@@ -163,6 +163,10 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.backward()
 
+        print(f'm.w.grad: {m.w.grad}')
+        print(f'm.used_only_in_rank0.grad: {m.used_only_in_rank0.grad}')
+        print(f'm.unused_in_all_ranks.grad: {m.unused_in_all_ranks.grad}')
+
         test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([2])))
         test_case.assertTrue(
             np_allclose_with_shape(m.used_only_in_rank0.grad.numpy(), np.array([0.5]))
