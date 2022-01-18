@@ -782,3 +782,10 @@ add_docstr(
     Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.repeat,
+    """
+    See :func:`oneflow.repeat`
+    """,
+)

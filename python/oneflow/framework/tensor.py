@@ -745,6 +745,10 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
+def _repeat(self, *sizes):
+    return flow._C.repeat(self, sizes)
+
+  
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -904,6 +908,7 @@ def RegisterMethods():
     Tensor.roll = _roll
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
+    Tensor.repeat = _repeat
     Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes

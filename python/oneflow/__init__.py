@@ -94,6 +94,7 @@ from oneflow._C import logical_xor
 from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
+from oneflow._C import repeat
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import silu
@@ -340,7 +341,6 @@ from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.reduce_ops import all_op as all
 from oneflow.nn.modules.reduce_ops import any_op as any
-from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
