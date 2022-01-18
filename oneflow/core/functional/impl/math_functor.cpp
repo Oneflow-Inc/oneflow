@@ -1822,6 +1822,52 @@ class CumsumGradFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
+class CumProdFunctor {
+ public:
+  CumProdFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumprod").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    auto ndim = input->ndim();
+    if (dim < 0) { dim += ndim; }
+    CHECK_OR_RETURN(dim >= 0 && dim < ndim)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+        << ndim << " ) but got " << dim;
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CumProdGradFunctor {
+ public:
+  CumProdGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cumprod_grad")
+                         .Input("dy")
+                         .Input("output")
+                         .Input("input")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
+    // No need to check dim validation here, while CumProbFunctor handled already
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -1893,6 +1939,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
+  m.add_functor<CumProdFunctor>("CumProd");
+  m.add_functor<CumProdGradFunctor>("CumProdGrad");
 };
 
 }  // namespace functional

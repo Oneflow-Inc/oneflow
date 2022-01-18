@@ -60,5 +60,48 @@ class CumsumGrad : public OpExprGradFunction<CumsumCaptureState> {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cumsum", CumsumGrad);
 
+struct CumProdCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
+  int64_t dim = 0;
+};
+
+class CumProdGrad : public OpExprGradFunction<CumProdCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(CumProdCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->dim = JUST(composed_attrs.GetAttr<int64_t>("dim"));
+    ctx->SaveTensorForBackward(outputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const CumProdCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      in_grads->at(0) = JUST(functional::CumProdGrad(out_grads.at(0), ctx->SavedTensors().at(0),
+                                                     ctx->SavedTensors().at(1), ctx->dim));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("cumprod", CumProdGrad);
 }  // namespace one
 }  // namespace oneflow

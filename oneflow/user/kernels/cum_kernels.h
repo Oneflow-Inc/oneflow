@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +12,23 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import unittest
-from collections import OrderedDict
+*/
+#ifndef ONEFLOW_USER_KERNELS_CUM_KERNELS_H_
+#define ONEFLOW_USER_KERNELS_CUM_KERNELS_H_
+#include "oneflow/core/common/data_type.h"
 
-import oneflow as flow
-import oneflow.unittest
+namespace oneflow {
+namespace {
+template<typename T>
+struct BinaryAdd {
+  OF_DEVICE_FUNC void operator()(T* a, T* b) { *a += *b; }
+};
 
-from oneflow.test_utils.automated_test_util import *
+template<typename T>
+struct BinaryProd {
+  OF_DEVICE_FUNC void operator()(T* a, T* b) { *a *= *b; }
+};
+}  // namespace
+}  // namespace oneflow
 
-
-@flow.unittest.skip_unless_1n1d()
-class TestCumsum(flow.unittest.TestCase):
-    @autotest(n=30, check_graph=True)
-    def test_cumsum(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        dim = random(0, x.ndim.pytorch).to(int)
-        z = torch.cumsum(x, dim)
-        return z
-
-
-if __name__ == "__main__":
-    unittest.main()
+#endif  // ONEFLOW_USER_KERNELS_CUM_KERNELS_H_

@@ -1914,3 +1914,11 @@
 - name: "cumsum_grad"
   signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
   bind_python: False 
+
+- name: "cumprod"
+  signature: "Tensor (Tensor input, Int64 dim) => CumProd"
+  bind_python: True
+
+- name: "cumprod_grad"
+  signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumProdGrad"
+  bind_python: False
