@@ -144,7 +144,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
-      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+      CHECK(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     }
     JUST(vm_->Receive(instr_list));
