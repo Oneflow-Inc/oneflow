@@ -2544,11 +2544,8 @@ class TransposeAllDimFunctionFunctor {
     CHECK_OR_RETURN(ndim <= 2)
         << "RuntimeError: t() expects a tensor with <= 2 dimensions, but input tensor is " 
         << ndim << "D";
-    std::vector<int32_t> permute;
-    permute.resize(ndim);
-    std::iota(permute.begin(), permute.end(), 0);
-    std::reverse(permute.begin(), permute.end());
-    return Transpose(x, permute);
+    if(ndim == 0 || ndim == 1){return x;}
+    return Transpose2dim(x, 0, 1);
   }
 };
 
