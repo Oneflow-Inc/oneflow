@@ -14,15 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/*static*/ Maybe<void> SoftmaxOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes() - 1) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), axis)
+        .Split(user_op::OpArg("out", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SoftmaxOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
 
 // Logically computation cost of pool op is the product of output data amount and pool kernal data
 // amount. After adding sbp, we just divide it by parallel number if output data is splitted because
 // splitting input and using partial sum for output is not a valid sbp for this op for now.
-Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+/*static*/ Maybe<double> SoftmaxOp::GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx) {
   double logical_computation_cost = ctx->Shape4ArgNameAndIndex("in", 0)->elem_cnt() * 10;
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
   const auto& nd_sbp_in = ctx->NdSbp4ArgNameAndIndex("in", 0);
@@ -34,57 +55,35 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   return logical_computation_cost;
 }
 
-REGISTER_USER_OP("softmax")
-    .Input("in")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes() - 1) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), axis)
-            .Split(user_op::OpArg("out", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetComputeComplexityFn(GetComputationCostFn);
+/*static*/ Maybe<void> SoftmaxGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+  FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 1) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("y", 0), axis)
+        .Split(user_op::OpArg("dy", 0), axis)
+        .Split(user_op::OpArg("dx", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& y_shape = ctx->InputShape("y", 0);
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  CHECK_OR_RETURN(dy_shape == y_shape);
+  *dx_shape = dy_shape;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SoftmaxGradOp::InferDataType(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("softmax_grad")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& y_shape = ctx->InputShape("y", 0);
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK_OR_RETURN(dy_shape == y_shape);
-      *dx_shape = dy_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 1) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("y", 0), axis)
-            .Split(user_op::OpArg("dy", 0), axis)
-            .Split(user_op::OpArg("dx", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    });
+namespace {
 
 REGISTER_USER_OP_GRAD("softmax").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {

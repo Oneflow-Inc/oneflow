@@ -22,38 +22,10 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
-// check whether the sbp_parallel is legal
-bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel);
-// check whether the nd_sbp is legal
-bool CheckNdSbp(const cfg::NdSbp& nd_sbp);
-
-// compute copy cost
-Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
-                                                  const cfg::SbpParallel& consumer_sbp_parallel,
-                                                  const BlobDesc& logical_blob_desc,
-                                                  const ParallelDesc& producer_parallel_desc,
-                                                  const ParallelDesc& consumer_parallel_desc,
-                                                  bool is_same_sbp, bool allow_cpu2gpu);
-Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                         const cfg::NdSbp& consumer_sbp_parallel,
-                                         const BlobDesc& logical_blob_desc,
-                                         const ParallelDesc& producer_parallel_desc,
-                                         const ParallelDesc& consumer_parallel_desc,
-                                         bool is_same_sbp, bool allow_cpu2gpu);
-// compute copy cost
-Maybe<double> ComputCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                         const cfg::NdSbp& consumer_sbp_parallel,
-                                         double logical_blob_size,
-                                         const std::shared_ptr<Shape>& in_hierarchy,
-                                         const std::shared_ptr<Shape>& out_hierarchy);
-
 // Judge whether we need the same SBP for both producer and consumer
 bool IsSameSbp(OpNode* consumer, const std::string& ibn);
 
-// Compute storage for given NdSbp
-double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
-                     const std::shared_ptr<Shape>& parallel_hierarchy);
-
 }  // namespace auto_parallel
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_UTIL_H_

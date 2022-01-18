@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -182,17 +182,7 @@ bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sb
 }
 
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
-  std::string sbp_str = "";
-  if (sbp_parallel.has_broadcast_parallel()) {
-    sbp_str = "B";
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    sbp_str = "P";
-  } else if (sbp_parallel.has_split_parallel()) {
-    sbp_str = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return sbp_str;
+  return SbpToString(sbp_parallel);
 }
 
 std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel) {
@@ -246,40 +236,46 @@ void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
   }
 }
 
-void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size) {
-  for (auto& pair : *nd_sbp_sig.mutable_bn_in_op2nd_sbp()) {
-    if (pair.second.sbp_parallel_size() > size) { pair.second.clear_sbp_parallel(); }
-    while (pair.second.sbp_parallel_size() < size) { pair.second.add_sbp_parallel(); }
-  }
-}
+Maybe<std::string> NdSbpSignatureListAsString(
+    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list, const PbRpf<std::string>& inputs,
+    const PbRpf<std::string>& outputs) {
+  std::ostringstream ss;
+  if (nd_sbp_sig_list.empty()) { return ss.str(); }
 
-void SetNdSbpSignature(const cfg::SbpSignature& sbp_signature,
-                       cfg::NdSbpSignature* nd_sbp_signature, int32_t sbp_axis) {
-  for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
-    *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[pair.first].mutable_sbp_parallel(sbp_axis)) =
-        pair.second;
-  }
-}
-
-void DfsSetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
-                          std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
-                          cfg::SbpSignatureList* sbp_sig_list) {
-  CHECK(depth <= max_depth) << "Wrong Dfs while setting ND-Sbp signature";
-  if (depth == max_depth) {
-    nd_sbp_sig_list.push_back(nd_sbp_sig);
-  } else if (depth < max_depth) {
-    for (int32_t i = 0; i < sbp_sig_list->sbp_signature_size(); i++) {
-      SetNdSbpSignature(sbp_sig_list->sbp_signature(i), &nd_sbp_sig, depth);
-      DfsSetNdSbpSignature(nd_sbp_sig, depth + 1, max_depth, nd_sbp_sig_list, sbp_sig_list);
+  auto WalkIO =
+      [&](const std::function<Maybe<std::string>(const std::string&)>& bn_handler) -> Maybe<void> {
+    ss << "(";
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      ss << *JUST(bn_handler(inputs[i]));
+      if (i != inputs.size() - 1) { ss << ", "; }
     }
-  }
-}
+    ss << ") -> (";
+    for (size_t i = 0; i < outputs.size(); ++i) {
+      ss << *JUST(bn_handler(outputs[i]));
+      if (i != outputs.size() - 1) { ss << ", "; }
+    }
+    ss << ")";
+    return Maybe<void>::Ok();
+  };
 
-// Judge whether an NdSbp could be applied on a tensor with given logical shape
-// True means this NdSbp is not valid.
-Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
-                                      const std::shared_ptr<Shape>& parallel_hierarchy) {
-  return auto_parallel::Storage4NdSbp(nd_sbp, logical_shape, parallel_hierarchy) > cut_cost;
+  JUST(WalkIO([](const std::string& bn) -> Maybe<std::string> { return bn; }));
+  ss << ": ";
+
+  ss << "[\n";
+  for (const auto& nd_sbp_sig : nd_sbp_sig_list) {
+    ss << "\t";
+    JUST(WalkIO([&](const std::string& bn) -> Maybe<std::string> {
+      auto it = nd_sbp_sig.bn_in_op2nd_sbp().find(bn);
+      if (it == nd_sbp_sig.bn_in_op2nd_sbp().end()) {
+        return Error::RuntimeError()
+               << "can't find " << bn << "in NdSbpSignature: " << nd_sbp_sig.DebugString();
+      }
+      return NdSbpToString(it->second);
+    }));
+    ss << ",\n";
+  }
+  ss << "]";
+  return ss.str();
 }
 
 }  // namespace oneflow

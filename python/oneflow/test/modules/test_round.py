@@ -26,7 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestRound(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_round_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

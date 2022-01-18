@@ -341,7 +341,7 @@ class TestGroupNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(rtol=1e-03, atol=1e-03, check_graph=False)
+    @autotest(rtol=1e-03, atol=1e-03, check_graph=True)
     def test_group_norm_with_random_data(test_case):
         channels = random(5, 20)
         m = torch.nn.GroupNorm(

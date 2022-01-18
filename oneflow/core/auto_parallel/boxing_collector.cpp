@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "boxing_collector.h"
+#include "oneflow/core/auto_parallel/boxing_collector.h"
+#include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
-#include "sbp_node.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "sbp_util.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -89,7 +91,8 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   // To be noted that the performance of this function are all the same with different hierarchy
   Shape hierarchy44({4, 4});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
-  double logical_blob_size = 1024.0;
+  auto in_parallel_desc = JUST(ParallelDesc::New("cpu", {"0", "1"}, in_hierarchy));
+  BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Store the origin transfer cost information
   int32_t n = nd_sbp_lists.size();
   minimum_copy_cost.resize(n);
@@ -98,8 +101,11 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
     minimum_copy_cost[i].resize(n);
     middle_nodes[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      minimum_copy_cost[i][j] = JUST(auto_parallel::ComputCopyCostBetweenNdSbp(
-          nd_sbp_lists[i], nd_sbp_lists[j], logical_blob_size, in_hierarchy, in_hierarchy));
+      // Get copy cost in lazy mode
+      LazyMode::Guard enable_lazy_mode(true);
+      minimum_copy_cost[i][j] = JUST(ComputeCopyCostBetweenNdSbp(
+          nd_sbp_lists[i], nd_sbp_lists[j], blob_desc, *in_parallel_desc, *in_parallel_desc,
+          /*is_same_sbp=*/false));
     }
   }
 
@@ -127,7 +133,7 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
 
     for (int32_t i = 0; i < n; i++) {
       for (int32_t j = 0; j < n; j++) {
-        if (minimum_copy_cost[i][j] < cut_cost) { continue; }
+        if (minimum_copy_cost[i][j] < GetValidMaxCopyCost()) { continue; }
         // Compute the smallest transfer cost
         // k is the middle node, i -> k -> j
         for (int32_t k = 0; k < n; k++) {
@@ -138,7 +144,7 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
           }
         }
         // If the minimum copy cost remians infinity, adding one middle node does not make it.
-        if (minimum_copy_cost[i][j] > cut_cost) { continue; }
+        if (minimum_copy_cost[i][j] > GetValidMaxCopyCost()) { continue; }
         // Find those middle nodes
         for (int32_t k = 0; k < n; k++) {
           if (NotMiddleNode(i, j, k, middle_node_num_ik)) { continue; }
@@ -187,7 +193,7 @@ void BoxingCollector::PrintBoxingTables() {
     for (int32_t i = 0; i < n; i++) {
       std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
       for (int32_t j = 0; j < n; j++) {
-        if (minimum_copy_cost[i][j] > cut_cost) {
+        if (minimum_copy_cost[i][j] > GetValidMaxCopyCost()) {
           std::cout << "X\t";
         } else {
           std::cout << minimum_copy_cost[i][j] << "\t";
@@ -210,7 +216,7 @@ void BoxingCollector::PrintBoxingTables() {
     for (int32_t i = 0; i < n; i++) {
       std::cout << NdSbpParallelToString(nd_sbp_lists[i]) << "\t";
       for (int32_t j = 0; j < n; j++) {
-        if (minimum_copy_cost[i][j] > cut_cost) {
+        if (minimum_copy_cost[i][j] > GetValidMaxCopyCost()) {
           std::cout << "X";
         } else if (middle_nodes[i][j].size() > 0) {
           for (int32_t k = 0; k < middle_nodes[i][j].size(); k++) {
@@ -254,10 +260,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   // Dealing with 1D sbp
   if (parallel_hierarchy->NumAxes() == 1) {
     CHECK_OR_RETURN(
-        JUST(auto_parallel::ComputCopyCostBetweenTwoSbpParallel(
-            sbp_producer.sbp_parallel(0), sbp_consumer.sbp_parallel(0), logical_blob_desc,
-            producer_parallel_desc, consumer_parallel_desc, false, true))
-        < cut_cost)
+        JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
+                                         producer_parallel_desc, consumer_parallel_desc, false))
+        < GetValidMaxCopyCost())
         << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
         << NdSbpParallelToString(sbp_consumer) << " for 1D sbp";
     return Maybe<void>::Ok();
@@ -272,22 +277,21 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
     int32_t i = it_producer->second;
     int32_t j = it_consumer->second;
     // Such combination can not be support with limited middle nodes
-    CHECK(minimum_copy_cost[i][j] < cut_cost)
+    CHECK(minimum_copy_cost[i][j] < GetValidMaxCopyCost())
         << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
         << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
     // Current design can deal with such combination. Do not need to insert middle nodes
     if (middle_nodes[i][j].size() == 0) { return Maybe<void>::Ok(); }
     // Find a list of middle nodes with minimum storage
     int32_t min_k = -1;
-    double min_cost = cut_cost;
+    double min_cost = GetValidMaxCopyCost();
     for (int32_t k = 0; k < middle_nodes[i][j].size(); k++) {
       double curr_cost = 0.0;
       for (int32_t middle_sbp_id : middle_nodes[i][j][k]) {
         Shape logical_shape = logical_blob_desc.shape();
         // Storage4NdSbp would modify logical_shape2 as well
-        curr_cost += auto_parallel::Storage4NdSbp(nd_sbp_lists[middle_sbp_id], logical_shape,
-                                                  parallel_hierarchy);
-        if (curr_cost > cut_cost) { break; }
+        curr_cost += Storage4NdSbp(nd_sbp_lists[middle_sbp_id], logical_shape, *parallel_hierarchy);
+        if (curr_cost > GetValidMaxCopyCost()) { break; }
       }
       // store k if renew minimum cost
       if (curr_cost < min_cost) {
@@ -315,7 +319,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   customized_boxing_collector.CollectUniverse(logical_blob_desc.shape().NumAxes());
   customized_boxing_collector.GenerateNdSbpList();
   // Filter out unsuitable middle nodes before computing minimum cost.
-  customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc, parallel_hierarchy);
+  customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_hierarchy);
   customized_boxing_collector.GenerateCombination(5);
   JUST(customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
                                                      producer_parallel_desc, consumer_parallel_desc,
@@ -324,8 +328,8 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
 }
 
 // Filter nd sbp from nd_sbp_lists with given logical shape
-Maybe<void> BoxingCollector::FilterNdSbpList4LogicalShape(
-    const BlobDesc& logical_blob_desc, const std::shared_ptr<Shape>& parallel_hierarchy) {
+Maybe<void> BoxingCollector::FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
+                                                          const Shape& parallel_hierarchy) {
   for (int32_t middle_sbp_id = nd_sbp_lists.size() - 1; middle_sbp_id >= 0; middle_sbp_id--) {
     Shape logical_shape = logical_blob_desc.shape();
     if (JUST(FilterNdSbpByLogicalShape(nd_sbp_lists[middle_sbp_id], logical_shape,

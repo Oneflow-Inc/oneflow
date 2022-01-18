@@ -87,7 +87,7 @@ class TestAutograd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
+    @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
     def test_accumulate_grad(test_case):
         device = random_device()
         ndim = random(1, 4).to(int)

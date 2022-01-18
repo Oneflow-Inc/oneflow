@@ -73,6 +73,8 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     if (user_op_conf.has_input("_add_to_output", 0)) { return false; }
     return true;
   };
+
+  // Save all op's ctrl in op name in a set.
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
@@ -113,6 +115,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     } else {
       return;
     }
+    // Make a new_add_to_op to fuse add_n into this op.
     OperatorConf new_add_to_op_conf = add_to_node->op().op_conf();
     *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
          .mutable_s()
@@ -124,6 +127,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
         op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
       }
+      // Make add_n op's consumer to consume the new_add_to_op
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
           OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
@@ -133,6 +137,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
         }
       }
     }
+    // Add the add_n op to removing list
     delete_ops.emplace_back(op_conf);
   });
   job_builder->DelOps(delete_ops);

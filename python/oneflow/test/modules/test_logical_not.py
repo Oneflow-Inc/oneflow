@@ -51,7 +51,7 @@ class TestLogicalNotModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=10, auto_backward=False, check_graph=False)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_logical_not_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape

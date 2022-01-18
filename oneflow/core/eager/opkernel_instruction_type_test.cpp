@@ -210,7 +210,6 @@ TEST(OpkernelInstructionType, call_opkernel) {
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
-  int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
   int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t tmp_buffer_id = vm::TestUtil::NewStringSymbol(&list, "tmp_buffer_0");
   int64_t test_source_id = 0;
@@ -245,28 +244,30 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     op_conf->set_name("ccrelu_op_name");
     auto* user_conf = op_conf->mutable_user_conf();
     user_conf->set_op_type_name("ccrelu");
-    (*user_conf->mutable_input())["in"].add_s("ccrelu_op_name/in_0");
-    (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
+    (*user_conf->mutable_input())["x"].add_s("ccrelu_op_name/x_0");
+    (*user_conf->mutable_output())["y"].add_s("ccrelu_op_name/y_0");
     ccrelu_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, "gpu");
   }
   int64_t y = 0;
+  int64_t x_id = vm::TestUtil::NewStringSymbol(&list, "x_0");
+  int64_t y_id = vm::TestUtil::NewStringSymbol(&list, "y_0");
   {
     int64_t y_parallel_desc_id = 0;
     y = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
     int64_t tmp_buffer = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
     int64_t op_node_signature_id =
-        NewOpNodeSignature(&list, {"in_0"}, {x_parallel_desc_id}, {"out_0", "tmp_buffer_0"},
+        NewOpNodeSignature(&list, {"x_0"}, {x_parallel_desc_id}, {"y_0", "tmp_buffer_0"},
                            {y_parallel_desc_id, y_parallel_desc_id});
     list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
                          ->add_parallel_desc(y_parallel_desc_id)
                          ->add_mut_operand(ccrelu_id)
                          ->add_symbol_operand(op_node_signature_id)
                          ->add_separator()
-                         ->add_symbol_operand(in_id)
+                         ->add_symbol_operand(x_id)
                          ->add_const_operand(x)
                          ->add_separator()
                          ->add_separator()
-                         ->add_symbol_operand(out_id)
+                         ->add_symbol_operand(y_id)
                          ->add_symbol_operand(tmp_buffer_id)
                          ->add_mut_operand(y)
                          ->add_mut_operand(tmp_buffer)
@@ -365,22 +366,23 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_symbol_operand(out_id)
                        ->add_mut_operand(x)
                        ->add_separator());
-  int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
+  int64_t x_id = vm::TestUtil::NewStringSymbol(&list, "x_0");
+  int64_t y_id = vm::TestUtil::NewStringSymbol(&list, "y_0");
   int64_t ccrelu_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->set_name("ccrelu_op_name");
     auto* user_conf = op_conf->mutable_user_conf();
     user_conf->set_op_type_name("ccrelu");
-    (*user_conf->mutable_input())["in"].add_s("ccrelu_op_name/in_0");
-    (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
+    (*user_conf->mutable_input())["x"].add_s("ccrelu_op_name/x_0");
+    (*user_conf->mutable_output())["y"].add_s("ccrelu_op_name/y_0");
     ccrelu_id = NewOpConfSymbol(&list, op_conf);
   }
   int64_t y_parallel_desc_id = 0;
   int64_t y = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
   int64_t tmp_buffer = vm::TestUtil::NewObject(&list, "gpu", "0:0", &y_parallel_desc_id);
   op_node_signature_id =
-      NewOpNodeSignature(&list, {"in_0"}, {parallel_desc_id}, {"out_0", "tmp_buffer_0"},
+      NewOpNodeSignature(&list, {"x_0"}, {parallel_desc_id}, {"y_0", "tmp_buffer_0"},
                          {y_parallel_desc_id, y_parallel_desc_id});
   list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(y_parallel_desc_id)
@@ -389,11 +391,11 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
                        ->add_symbol_operand(op_node_signature_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_separator()
-                       ->add_symbol_operand(in_id)
+                       ->add_symbol_operand(x_id)
                        ->add_const_operand(x)
                        ->add_separator()
                        ->add_separator()
-                       ->add_symbol_operand(out_id)
+                       ->add_symbol_operand(y_id)
                        ->add_symbol_operand(tmp_buffer_id)
                        ->add_mut_operand(y)
                        ->add_mut_operand(tmp_buffer)

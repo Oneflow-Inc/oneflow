@@ -22,12 +22,14 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -55,7 +57,7 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
   std::string ret = "shape=" + tensor->shape()->ToString() + ", dtype=" + tensor->dtype()->name();
   if (tensor->is_consistent()) {
     ret += ", placement=" + *JUST(PlacementToString(JUST(tensor->parallel_desc())));
-    ret += ", nd_sbp=" + *JUST(NdSbpToString(JUST(tensor->nd_sbp())));
+    ret += ", nd_sbp=" + NdSbpToString(JUST(tensor->nd_sbp()));
   } else {
     ret += ", device=" + JUST(tensor->device())->ToString();
   }
@@ -81,9 +83,9 @@ Maybe<void> NNGraph::Close() {
   return Maybe<void>::Ok();
 }
 
-const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_op_names_; }
+const std::vector<std::string>& NNGraph::inputs_op_names() const { return inputs_op_names_; }
 
-const std::vector<std::string>& NNGraph::outputs_op_names() const { return output_op_names_; }
+const std::vector<std::string>& NNGraph::outputs_op_names() const { return outputs_op_names_; }
 
 const std::vector<bool>& NNGraph::inputs_valid() const { return input_tensors_valid_; }
 
@@ -100,14 +102,14 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
 
 Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
-    const std::vector<std::string>& input_op_names,
+    const std::vector<std::string>& inputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
-  CHECK_EQ_OR_RETURN(input_op_names.size(), input_tensors.size());
-  CHECK_OR_RETURN(input_op_names_.empty())
+  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size());
+  CHECK_OR_RETURN(inputs_op_names_.empty())
       << " The input tensors of nn.Graph " << name_ << " are register repeatedly.";
   CHECK_OR_RETURN(input_tensors_valid_.empty());
   CHECK_OR_RETURN(inputs_tensor_meta_str_.empty());
-  input_op_names_.assign(input_op_names.begin(), input_op_names.end());
+  inputs_op_names_.assign(inputs_op_names.begin(), inputs_op_names.end());
   input_tensors_valid_.reserve(input_tensors.size());
   inputs_tensor_meta_str_.reserve(input_tensors.size());
   for (const auto& input_tensor : input_tensors) {
@@ -119,14 +121,14 @@ Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
 }
 
 Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
-    const std::vector<std::string>& output_op_names,
+    const std::vector<std::string>& outputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& output_tensors) {
-  CHECK_EQ_OR_RETURN(output_op_names.size(), output_tensors.size());
-  CHECK_OR_RETURN(output_op_names_.empty())
+  CHECK_EQ_OR_RETURN(outputs_op_names.size(), output_tensors.size());
+  CHECK_OR_RETURN(outputs_op_names_.empty())
       << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
   CHECK_OR_RETURN(output_tensors_valid_.empty());
   CHECK_OR_RETURN(outputs_tensor_meta_str_.empty());
-  output_op_names_.assign(output_op_names.begin(), output_op_names.end());
+  outputs_op_names_.assign(outputs_op_names.begin(), outputs_op_names.end());
   output_tensors_valid_.reserve(output_tensors.size());
   outputs_tensor_meta_str_.reserve(output_tensors.size());
   for (const auto& output_tensor : output_tensors) {
@@ -170,8 +172,6 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 
 Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
   JUST(vm::CurrentRankSync());
-  // NOTE(chengcheng): New EagerTensor need set LazyMode false.
-  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
@@ -200,15 +200,19 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       } else {
         OF_UNIMPLEMENTED();
       }
-      std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
-          blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
-      CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, tensor).second);
-      CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
+      {
+        // NOTE(chengcheng): New EagerTensor need set LazyMode false.
+        auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+        std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
+            blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+        CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, tensor).second);
+        CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
 
-      // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime valid.
-      Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-          name_, tensor, var_name);
-
+        // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime
+        // valid.
+        Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+            name_, tensor, var_name);
+      }
       VLOG(2) << "Lazy nn.Graph name " << name_ << " op : \n"
               << variable_op.op_conf().DebugString()
               << " created in JobPass, nn.Graph will new EagerTensor for this variable.\n";
@@ -233,6 +237,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
   JUST(CreateAndRegisterNewVariableOpInJobPass());
+
+  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
+  one::TensorNameScope::Global()->Clear();
 
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
@@ -274,47 +281,50 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   NewRuntimeBuffers();
 
-  JUST(DumpToVariable2BlobMap());
+  JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::DumpToVariable2BlobMap() {
+Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   JUST(vm::CurrentRankSync());
+  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
+  auto job_id = job_ctx->job_id();
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
-    // Check sbp whether same or not and allow auto_parallel to change sbp.
     if (tensor->is_consistent()) {
-      cfg::NdSbpSignature nd_sbp_signature = cfg::NdSbpSignature(
-          job_.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(var_name));
-      cfg::NdSbp job_nd_sbp = nd_sbp_signature.bn_in_op2nd_sbp().at("out");
-      if (*JUST(tensor->nd_sbp()) == job_nd_sbp) {
-        const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-      } else {
-        CHECK_OR_RETURN(job_.job_conf().enable_auto_parallel())
-            << "Only change sbp when enable auto_parallel.";
-        LOG(INFO) << "Variable with name `" << var_name << "` change sbp from "
-                  << NdSbpParallelToString(*JUST(tensor->nd_sbp())) << " to "
-                  << NdSbpParallelToString(job_nd_sbp);
-        std::vector<Symbol<cfg::SbpParallel>> job_sbp_parallels;
-        for (int i = 0; i < job_nd_sbp.sbp_parallel_size(); ++i) {
-          job_sbp_parallels.emplace_back(job_nd_sbp.sbp_parallel(i));
+      cfg::NdSbpSignature var_nd_sbp_signature =
+          cfg::NdSbpSignature(plan_.job_id2op_attribute_ref_table()
+                                  .at(job_id)
+                                  .op_name2op_attribute()
+                                  .at(var_name)
+                                  .nd_sbp_signature());
+      cfg::NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
+      // Change variable tensor's impl with new sbp when job pass has changed their sbp.
+      if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
+        LOG(INFO) << "Graph with name " << name_ << " variable with name `" << var_name
+                  << "` changes its' sbp from " << NdSbpToString(*JUST(tensor->nd_sbp())) << " to "
+                  << NdSbpToString(optimized_nd_sbp) << " after compile optimization.";
+        std::vector<Symbol<cfg::SbpParallel>> optimized_sbp_parallels;
+        for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
+          optimized_sbp_parallels.emplace_back(optimized_nd_sbp.sbp_parallel(i));
         }
-        const auto& new_tensor = JUST(one::functional::ToConsistent(
-            tensor, JUST(tensor->parallel_desc()), job_sbp_parallels, {}));
-        JUST(vm::CurrentRankSync());
-        // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
-        variable_op_name2tensor_.at(var_name)->set_data(new_tensor);
-        const std::shared_ptr<one::MirroredTensor> local_var =
-            JUST(new_tensor->cur_rank_phy_tensor());
-        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+        {
+          auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+          const auto& new_tensor = JUST(one::functional::ToConsistent(
+              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {}));
+          JUST(vm::CurrentRankSync());
+          // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
+          JUST(tensor->set_data(new_tensor));
+        }
       }
+      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
     } else {
       var_blob = JUST(tensor->eager_blob_object())->mut_blob();
     }
@@ -324,34 +334,50 @@ Maybe<void> NNGraph::DumpToVariable2BlobMap() {
 }
 
 void NNGraph::NewRuntimeBuffers() {
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   // NOTE(chengcheng):
-  //   The BufferSize for each Buffer:
-  //   1. SourceTick and CallbackNotifier is job_conf.concurrency_width by user (default = 128)
-  //     in Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
-  //   2. Input/Output Buffer is 2 because this is the minimum size of pipeline async launch job.
+  //   1. The BufferSize comes from job_conf.concurrency_width configured by user (default = 128)
+  //   2. In Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
   size_t concurrency_width = job_.job_conf().concurrency_width();
-  buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
-  buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
-  for (const std::string& input_op_name : input_op_names_) {
-    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), concurrency_width);
+  {
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
+    buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   }
-  for (const std::string& output_op_name : output_op_names_) {
-    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), concurrency_width);
+  {
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+    buffer_mgr->NewBuffer(GetInputCriticalSectionWaitBufferName(name_), concurrency_width);
+    buffer_mgr->NewBuffer(GetInputCriticalSectionCallbackBufferName(name_), concurrency_width);
+    buffer_mgr->NewBuffer(GetOutputCriticalSectionWaitBufferName(name_), concurrency_width);
+    buffer_mgr->NewBuffer(GetOutputCriticalSectionCallbackBufferName(name_), concurrency_width);
+    for (const std::string& input_op_name : inputs_op_names_) {
+      buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), concurrency_width);
+    }
+    for (const std::string& output_op_name : outputs_op_names_) {
+      buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), concurrency_width);
+    }
   }
 }
 
 void NNGraph::CloseRuntimeBuffers() {
   if (runtime_inited_) {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-    for (const std::string& output_op_name : output_op_names_) {
-      buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
+    {
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+      for (const std::string& output_op_name : outputs_op_names_) {
+        buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
+      }
+      for (const std::string& input_op_name : inputs_op_names_) {
+        buffer_mgr->Get(GetInputBufferName(name_, input_op_name))->Close();
+      }
+      buffer_mgr->Get(GetOutputCriticalSectionCallbackBufferName(name_))->Close();
+      buffer_mgr->Get(GetOutputCriticalSectionWaitBufferName(name_))->Close();
+      buffer_mgr->Get(GetInputCriticalSectionCallbackBufferName(name_))->Close();
+      buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
     }
-    for (const std::string& input_op_name : input_op_names_) {
-      buffer_mgr->Get(GetInputBufferName(name_, input_op_name))->Close();
+    {
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
+      buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
     }
-    buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
-    buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
   }
 }
 

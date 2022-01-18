@@ -215,7 +215,7 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
       /* i1 */   {i1,  i1,  f4,  f8,  i1,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i1,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp4,  cp16},
       /* i4 */   {i4,  i4,  f4,  f8,  i4,  i4,  i8,  i4,  iv,  f2,  iv,  bf,  i4,  i4,  i8,  i16, iv,   i4,  i16,  iv,   cp4,  cp16},
       /* i8 */   {i8,  i8,  f4,  f8,  i8,  i8,  i8,  i8,  iv,  f2,  iv,  bf,  i8,  i8,  i8,  i16, iv,   i8,  i16,  iv,   cp4,  cp16},
-      /* u1 */   {c1,  c1,  f4,  f8,  i2,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  u1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
+      /* u1 */   {u1,  c1,  f4,  f8,  i2,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  u1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
       /* re */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},
       /* f2 */   {f2,  f2,  f4,  f8,  f2,  f2,  f2,  f2,  iv,  f2,  iv,  bf,  f2,  f2,  f2,  f2,  iv,   f2,  f2,   iv,   cp4,  cp16},
       /* bu */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  bu,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},

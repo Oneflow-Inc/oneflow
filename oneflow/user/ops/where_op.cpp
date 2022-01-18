@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -239,7 +240,7 @@ Maybe<void> GetWhereXYScalarSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifierFn,
                                    const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
   cond_arg_modifier->set_requires_grad(false);
@@ -248,101 +249,109 @@ Maybe<void> GetWhereInputArgModify(user_op::GetInputArgModifier GetInputArgModif
 
 }  // namespace
 
-REGISTER_USER_OP("where")
-    .Input("condition")
-    .Input("x")
-    .Input("y")
-    .Output("out")
-    .SetTensorDescInferFn(InferWhereTensorDesc)
-    .SetInputArgModifyFn(GetWhereInputArgModify)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      const DataType& x_dtype = ctx->InputDType("x", 0);
-      CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
-      *ctx->OutputDType("out", 0) = x_dtype;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetWhereSbpSignatures);
+/*static*/ Maybe<void> WhereOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetWhereSbpSignatures(ctx);
+}
+/*static*/ Maybe<void> WhereOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferWhereTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  const DataType& x_dtype = ctx->InputDType("x", 0);
+  CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
+  *ctx->OutputDType("out", 0) = x_dtype;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& f,
+                                               const user_op::UserOpConfWrapper& conf) {
+  return GetWhereInputArgModify(f, conf);
+}
 
-REGISTER_USER_OP("where_scalar_x")
-    .Input("condition")
-    .Input("y")
-    .Output("out")
-    .Attr<bool>("has_int_operand")
-    .Attr<bool>("has_float_operand")
-    .Attr<int64_t>("int_operand")
-    .Attr<double>("float_operand")
-    .SetTensorDescInferFn(InferWhereXScalarTensorDesc)
-    .SetInputArgModifyFn(GetWhereInputArgModify)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      const DataType& y_dtype = ctx->InputDType("y", 0);
-      if (ctx->Attr<bool>("has_int_operand")) {
-        CHECK_EQ_OR_RETURN(y_dtype, GetDataType<int64_t>::value)
-            << "expected scalar type " << GetDataType<int64_t>::value << "but found " << y_dtype;
-      } else if (ctx->Attr<bool>("has_float_operand")) {
-        CHECK_EQ_OR_RETURN(y_dtype, GetDataType<double>::value)
-            << "expected scalar type " << GetDataType<double>::value << "but found " << y_dtype;
-      }
-      *ctx->OutputDType("out", 0) = y_dtype;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetWhereXScalarSbpSignatures);
+/*static*/ Maybe<void> WhereScalarXOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetWhereXScalarSbpSignatures(ctx);
+}
+/*static*/ Maybe<void> WhereScalarXOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferWhereXScalarTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereScalarXOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereScalarXOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  const DataType& y_dtype = ctx->InputDType("y", 0);
+  if (ctx->Attr<bool>("has_int_operand")) {
+    CHECK_EQ_OR_RETURN(y_dtype, GetDataType<int64_t>::value)
+        << "expected scalar type " << GetDataType<int64_t>::value << "but found " << y_dtype;
+  } else if (ctx->Attr<bool>("has_float_operand")) {
+    CHECK_EQ_OR_RETURN(y_dtype, GetDataType<double>::value)
+        << "expected scalar type " << GetDataType<double>::value << "but found " << y_dtype;
+  }
+  *ctx->OutputDType("out", 0) = y_dtype;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(const GetInputArgModifier& f,
+                                                      const user_op::UserOpConfWrapper& conf) {
+  return GetWhereInputArgModify(f, conf);
+}
 
-REGISTER_USER_OP("where_scalar_y")
-    .Input("condition")
-    .Input("x")
-    .Output("out")
-    .Attr<bool>("has_int_operand")
-    .Attr<bool>("has_float_operand")
-    .Attr<int64_t>("int_operand")
-    .Attr<double>("float_operand")
-    .SetTensorDescInferFn(InferWhereYScalarTensorDesc)
-    .SetInputArgModifyFn(GetWhereInputArgModify)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      const DataType& x_dtype = ctx->InputDType("x", 0);
-      if (ctx->Attr<bool>("has_int_operand")) {
-        CHECK_EQ_OR_RETURN(x_dtype, GetDataType<int64_t>::value)
-            << "expected scalar type " << x_dtype << "but found " << GetDataType<int64_t>::value;
-      } else if (ctx->Attr<bool>("has_float_operand")) {
-        CHECK_EQ_OR_RETURN(x_dtype, GetDataType<double>::value)
-            << "expected scalar type " << x_dtype << "but found " << GetDataType<double>::value;
-      }
-      *ctx->OutputDType("out", 0) = x_dtype;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetWhereYScalarSbpSignatures);
+/*static*/ Maybe<void> WhereScalarYOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetWhereYScalarSbpSignatures(ctx);
+}
+/*static*/ Maybe<void> WhereScalarYOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferWhereYScalarTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereScalarYOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereScalarYOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  const DataType& x_dtype = ctx->InputDType("x", 0);
+  if (ctx->Attr<bool>("has_int_operand")) {
+    CHECK_EQ_OR_RETURN(x_dtype, GetDataType<int64_t>::value)
+        << "expected scalar type " << x_dtype << "but found " << GetDataType<int64_t>::value;
+  } else if (ctx->Attr<bool>("has_float_operand")) {
+    CHECK_EQ_OR_RETURN(x_dtype, GetDataType<double>::value)
+        << "expected scalar type " << x_dtype << "but found " << GetDataType<double>::value;
+  }
+  *ctx->OutputDType("out", 0) = x_dtype;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(const GetInputArgModifier& f,
+                                                      const user_op::UserOpConfWrapper& conf) {
+  return GetWhereInputArgModify(f, conf);
+}
 
-REGISTER_NO_GRAD_USER_OP("where_scalar_xy")
-    .Input("condition")
-    .Output("out")
-    .Attr<bool>("has_x_int_operand")
-    .Attr<bool>("has_x_float_operand")
-    .Attr<bool>("has_y_int_operand")
-    .Attr<bool>("has_y_float_operand")
-    .Attr<int64_t>("x_int_operand")
-    .Attr<double>("x_float_operand")
-    .Attr<int64_t>("y_int_operand")
-    .Attr<double>("y_float_operand")
-    .SetTensorDescInferFn(InferWhereXYScalarTensorDesc)
-    .SetInputArgModifyFn(GetWhereInputArgModify)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType& cond_dtype = ctx->InputDType("condition", 0);
-      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
-        *ctx->OutputDType("out", 0) = GetDataType<int64_t>::value;
-      } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-        *ctx->OutputDType("out", 0) = GetDataType<double>::value;
-      } else {
-        UNIMPLEMENTED();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetWhereXYScalarSbpSignatures);
+/*static*/ Maybe<void> WhereScalarXyOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetWhereXYScalarSbpSignatures(ctx);
+}
+/*static*/ Maybe<void> WhereScalarXyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferWhereXYScalarTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereScalarXyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> WhereScalarXyOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
+    *ctx->OutputDType("out", 0) = GetDataType<int64_t>::value;
+  } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
+    *ctx->OutputDType("out", 0) = GetDataType<double>::value;
+  } else {
+    UNIMPLEMENTED();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> WhereScalarXyOp::ModifyInputArg(const GetInputArgModifier& f,
+                                                       const user_op::UserOpConfWrapper& conf) {
+  return GetWhereInputArgModify(f, conf);
+}
 
 REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn(
     [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {

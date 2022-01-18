@@ -29,7 +29,9 @@ class LazyMode {
   static bool is_enabled();
   class Guard {
    public:
-    Guard(bool enabled) : prev_mode_(LazyMode::is_enabled()) { LazyMode::set_enabled(enabled); }
+    explicit Guard(bool enabled) : prev_mode_(LazyMode::is_enabled()) {
+      LazyMode::set_enabled(enabled);
+    }
     ~Guard() { LazyMode::set_enabled(prev_mode_); }
 
    private:

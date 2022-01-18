@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 
 namespace oneflow {
@@ -173,7 +174,10 @@ Maybe<void> OpGraph::Init(const Job& job) {
   ForEachNode([](OpNode* node) { node->InitLbi2SourceNode(); });
   InferBlobLastUsed();
   InferTimeShape();
-  JUST(InferLogicalBlobDesc(job));
+  {
+    LazyMode::Guard enable_lazy_mode_guard(true);
+    JUST(InferLogicalBlobDesc(job));
+  }
   return Maybe<void>::Ok();
 }
 

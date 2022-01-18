@@ -57,24 +57,15 @@ std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel);
 
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                                   cfg::NdSbpSignature* nd_sbp_signature);
+
 template<typename NdSbpSignatureT>
 void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
                                   cfg::SbpSignature* sbp_signature);
 void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
                                      const cfg::NdSbpSignature& nd_sbp_sig);
-
-void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size);
-
-void SetNdSbpSignature(const cfg::SbpSignature& sbp_signature,
-                       cfg::NdSbpSignature* nd_sbp_signature, int32_t sbp_axis);
-
-void DfsSetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t max_depth,
-                          std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list,
-                          cfg::SbpSignatureList* sbp_sig_list);
-// Judge whether an NdSbp could be applied on a tensor with given logical shape
-Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
-                                      const std::shared_ptr<Shape>& parallel_hierarchy);
-
+Maybe<std::string> NdSbpSignatureListAsString(
+    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list, const PbRpf<std::string>& inputs,
+    const PbRpf<std::string>& outputs);
 }  // namespace oneflow
 
 namespace std {

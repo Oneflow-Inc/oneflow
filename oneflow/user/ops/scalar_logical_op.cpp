@@ -14,42 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-#define REGISTER_SCALAR_LOGICAL_OP(op_name)                                           \
-  REGISTER_NO_GRAD_USER_OP(op_name)                                                   \
-      .Input("in")                                                                    \
-      .Output("out")                                                                  \
-      .Attr<bool>("has_int_operand")                                                  \
-      .Attr<bool>("has_float_operand")                                                \
-      .Attr<int64_t>("int_operand")                                                   \
-      .Attr<double>("float_operand")                                                  \
-      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {           \
-        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                       \
-        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);               \
-        return Maybe<void>::Ok();                                                     \
-      })                                                                              \
-      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                      \
-        const user_op::TensorDesc& in_tensor =                                        \
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);                     \
-        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                       \
-          ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build(); \
-        }                                                                             \
-        return Maybe<void>::Ok();                                                     \
-      })                                                                              \
-      .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
-        *ctx->OutputDType("out", 0) = DataType::kInt8;                                \
-        return Maybe<void>::Ok();                                                     \
-      });
+#define IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(name)                                                  \
+  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                            \
+    const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0); \
+    FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                                      \
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();                \
+    }                                                                                            \
+    return Maybe<void>::Ok();                                                                    \
+  }                                                                                              \
+  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {          \
+    *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                                      \
+    *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                              \
+    return Maybe<void>::Ok();                                                                    \
+  }                                                                                              \
+  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {         \
+    return InferLogicalTensorDesc(ctx);                                                          \
+  }                                                                                              \
+  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                   \
+    *ctx->OutputDType("out", 0) = DataType::kInt8;                                               \
+    return Maybe<void>::Ok();                                                                    \
+  }
 
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_equal");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_not_equal");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater_equal");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less_equal");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_and");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_or");
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_xor");
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalEqual);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalNotEqual);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalGreater);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalGreaterEqual);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalLess);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalLessEqual);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalAnd);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalOr);
+IMPLEMENT_SCALAR_LOGICAL_OP_FUNCS(ScalarLogicalXor);
+
 }  // namespace oneflow

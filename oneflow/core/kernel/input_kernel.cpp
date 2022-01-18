@@ -16,8 +16,8 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/common/multi_client.h"
-#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -36,14 +36,14 @@ class InputKernel final : public Kernel {
       CHECK(this->op_conf().input_conf().has_job_name());
       const auto& job_name = this->op_conf().input_conf().job_name();
       const auto& op_name = this->op_conf().name();
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
-      std::shared_ptr<JobInstance> job_instance;
-      BufferStatus buffer_status = buffer->TryReceive(&job_instance);
+      std::shared_ptr<CriticalSectionInstance> critical_section_instance;
+      BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
       CHECK_NE(buffer_status, kBufferStatusEmpty);
       if (buffer_status == kBufferStatusSuccess) {
         OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
-        job_instance->PushBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
+        critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
       }
     }
   }

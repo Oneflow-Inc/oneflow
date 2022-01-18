@@ -28,7 +28,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestReciprocalModule(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_reciprocal_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(

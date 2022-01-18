@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_repeat_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
         sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))

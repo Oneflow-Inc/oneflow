@@ -25,20 +25,26 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestParameter(flow.unittest.TestCase):
-    @autotest(n=1)
+    @autotest(n=1, check_graph=False)
     def test_parameter_grad_fn_none(test_case):
         x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
         z = torch.nn.Parameter(y)
         return z.grad_fn
 
-    @autotest(n=1)
+    @autotest(n=1, check_graph=False)
     def test_parameter_set_data_autograd_meta(test_case):
         x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
         z = torch.nn.Parameter(x)
         z.data = y
         return z.grad_fn, z.is_leaf
+
+    @autotest(n=1, check_graph=False)
+    def test_parameter_inplace_modify_data(test_case):
+        x = torch.nn.Parameter(torch.ones(2, 3))
+        x.data.mul_(2)
+        return x
 
     def test_parameter_set_data(test_case):
         a = flow.nn.Parameter(flow.ones(2, 3), False)

@@ -14,12 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> InferRoiAlignTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> RoiAlignOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("rois", 0), 0)
+      .Split(user_op::OpArg("y", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RoiAlignOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& rois_shape = ctx->InputShape("rois", 0);
   const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
@@ -33,8 +40,34 @@ Maybe<void> InferRoiAlignTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
   return Maybe<void>::Ok();
 }
+/*static*/ Maybe<void> RoiAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> RoiAlignOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
+                                                  const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* roi_modifier = GetInputArgModifierFn("rois", 0);
+  CHECK(roi_modifier != nullptr);
+  roi_modifier->set_requires_grad(false);
+  user_op::InputArgModifier* feat_modifier = GetInputArgModifierFn("x", 0);
+  CHECK(feat_modifier != nullptr);
+  feat_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
 
-Maybe<void> InferRoiAlignGradTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> RoiAlignGradOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("x_like", 0), 0)
+      .Split(user_op::OpArg("rois", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RoiAlignGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const Shape& x_like_shape = ctx->InputShape("x_like", 0);
   const Shape& rois_shape = ctx->InputShape("rois", 0);
@@ -51,47 +84,16 @@ Maybe<void> InferRoiAlignGradTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("dx", 0) = x_like_shape;
   return Maybe<void>::Ok();
 }
-
-Maybe<void> InferRoiAlignDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-  return Maybe<void>::Ok();
+/*static*/ Maybe<void> RoiAlignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
 }
-
-Maybe<void> InferRoiAlignGradDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> RoiAlignGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x_like", 0));
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RoiAlignSbpFn(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("rois", 0), 0)
-      .Split(user_op::OpArg("y", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RoiAlignGradSbpFn(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x_like", 0), 0)
-      .Split(user_op::OpArg("rois", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RoiAlignArgModifier(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const user_op::UserOpConfWrapper&) {
-  user_op::InputArgModifier* roi_modifier = GetInputArgModifierFn("rois", 0);
-  CHECK(roi_modifier != nullptr);
-  roi_modifier->set_requires_grad(false);
-  user_op::InputArgModifier* feat_modifier = GetInputArgModifierFn("x", 0);
-  CHECK(feat_modifier != nullptr);
-  feat_modifier->set_requires_grad(true);
-  return Maybe<void>::Ok();
-}
+namespace {
 
 Maybe<void> GenerateBackwardOpConf4RoiAlign(const user_op::UserOpWrapper& op,
                                             const user_op::AddOpFn& AddOp) {
@@ -116,34 +118,6 @@ Maybe<void> GenerateBackwardOpConf4RoiAlign(const user_op::UserOpWrapper& op,
 }
 
 }  // namespace
-
-REGISTER_USER_OP("roi_align")
-    .Input("x")
-    .Input("rois")
-    .Output("y")
-    .Attr<int32_t>("pooled_h")
-    .Attr<int32_t>("pooled_w")
-    .Attr<float>("spatial_scale")
-    .Attr<int32_t>("sampling_ratio")
-    .Attr<bool>("aligned")
-    .SetTensorDescInferFn(InferRoiAlignTensorDesc)
-    .SetDataTypeInferFn(InferRoiAlignDataType)
-    .SetGetSbpFn(RoiAlignSbpFn)
-    .SetInputArgModifyFn(RoiAlignArgModifier);
-
-REGISTER_USER_OP("roi_align_grad")
-    .Input("dy")
-    .Input("x_like")
-    .Input("rois")
-    .Output("dx")
-    .Attr<int32_t>("pooled_h")
-    .Attr<int32_t>("pooled_w")
-    .Attr<float>("spatial_scale")
-    .Attr<int32_t>("sampling_ratio")
-    .Attr<bool>("aligned")
-    .SetTensorDescInferFn(InferRoiAlignGradTensorDesc)
-    .SetDataTypeInferFn(InferRoiAlignGradDataType)
-    .SetGetSbpFn(RoiAlignGradSbpFn);
 
 REGISTER_USER_OP_GRAD("roi_align").SetGenBackwardOpConfFn(GenerateBackwardOpConf4RoiAlign);
 

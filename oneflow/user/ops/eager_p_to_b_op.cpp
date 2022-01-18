@@ -19,30 +19,34 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-
 // Can only be called in mirrored
-REGISTER_NO_GRAD_USER_OP("eager_p_to_b")
-    .Input("in")
-    .Output("out")
-    .Attr<std::string>("in_parallel_conf")
-    .Attr<std::string>("out_parallel_conf")
-    .Attr<Shape>("shape")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
-      return Maybe<void>::Ok();
-    })
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_s_to_b op doesn't support consistent tensor!";
-    })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_s_to_b op doesn't support consistent tensor!";
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> EagerPToBOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> EagerPToBOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> EagerPToBOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::TypeError() << "eager_s_to_b op doesn't support consistent tensor!";
+}
+
+/* static */ Maybe<void> EagerPToBOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  return Error::TypeError() << "eager_s_to_b op doesn't support consistent tensor!";
+}
+
+/* static */ Maybe<void> EagerPToBOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Device>> EagerPToBOp::InferDevice(user_op::DeviceInferContext* ctx) {
+  return DeviceInferFn<&SyncLaunched>(ctx);
+}
 
 }  // namespace oneflow

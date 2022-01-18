@@ -163,7 +163,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
           CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
           CHECK_GE(current_chunk_offset, 0);
           // CHECK_GT(mem_block->mem_size(), 0); NOTE(chengcheng): has mem block mem size = 0
-          CHECK_GT(chunk->mem_size(), 0);
+          CHECK_GE(chunk->mem_size(), 0);
           mem_block->set_chunk_id(chunk->chunk_id());
           mem_block->set_chunk_offset(current_chunk_offset);
           current_chunk_offset += mem_block->mem_size();
@@ -260,9 +260,9 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     if (is_variable_regst) {
       CHECK(!var_name.empty());
       CHECK_EQ(regst_desc->register_num(), 1);
-      // TODO(chengcheng, wyg): some wrong with these checks in auto_parallel
-      // CHECK_EQ(regst_desc->min_register_num(), 1);
-      // CHECK_EQ(regst_desc->max_register_num(), 1);
+      CHECK_EQ(regst_desc->min_register_num(), 1);
+      // NOTE(xuxiaoyu): this check cannot pass when open ZeRO
+      // CHECK_EQ(regst_desc->max_register_num(), 1) << var_name;
       regst_desc->set_variable_op_name(var_name);
     }
 

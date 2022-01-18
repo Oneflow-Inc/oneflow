@@ -43,6 +43,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
     final {
  public:
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
+  Maybe(T&& data) : data_or_error_(std::make_shared<T>(std::move(data))) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
   Maybe(std::shared_ptr<T>&& data) : data_or_error_(std::move(data)) {}

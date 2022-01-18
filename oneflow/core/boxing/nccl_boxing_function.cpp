@@ -49,7 +49,8 @@ bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
   return sbp_parallel->has_split_parallel();
 }
 
-Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                            const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllPartialSumNdSbp(in->nd_sbp()));
@@ -60,35 +61,42 @@ Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclP2B = DECORATE(&RawCheckNcclP2B, ThreadLocal);
+static constexpr auto* CheckNcclP2B = DECORATE(&RawCheckNcclP2B, ThreadLocalCopiable);
 
-Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                            const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllPartialSumNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(IsAllSplitNdSbp(out->nd_sbp(), 0));
 
+  CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
+
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocal);
+static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocalCopiable);
 
-Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                            const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllSplitNdSbp(in->nd_sbp(), 0));
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
 
+  CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
+
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocal);
+static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocalCopiable);
 
-Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                            const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -97,12 +105,17 @@ Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_NE_OR_RETURN(in->nd_sbp()->sbp_parallel(0).split_parallel().axis(),
                      out->nd_sbp()->sbp_parallel(0).split_parallel().axis());
 
+  int64_t in_split_axis = in->nd_sbp()->sbp_parallel(0).split_parallel().axis();
+  int64_t out_split_axis = out->nd_sbp()->sbp_parallel(0).split_parallel().axis();
+  CHECK_OR_RETURN(logical_shape.At(in_split_axis) % in->placement()->parallel_num() == 0);
+  CHECK_OR_RETURN(logical_shape.At(out_split_axis) % in->placement()->parallel_num() == 0);
+
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclS2S = DECORATE(&RawCheckNcclS2S, ThreadLocal);
+static constexpr auto* CheckNcclS2S = DECORATE(&RawCheckNcclS2S, ThreadLocalCopiable);
 
 }  // namespace
 
