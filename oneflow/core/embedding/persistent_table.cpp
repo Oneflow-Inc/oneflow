@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/fixed_table.h"
+#include "oneflow/core/embedding/persistent_table.h"
 #include "oneflow/core/common/util.h"
 
 #ifdef __linux__
@@ -50,7 +50,7 @@ constexpr uint32_t kChunkNameSuffixLength = 12;
 constexpr char const* kKeyFileNamePrefix = "key-";
 constexpr char const* kIndexFileNamePrefix = "index-";
 constexpr char const* kValueFileNamePrefix = "value-";
-constexpr char const* kLockFileName = "FIXED_TABLE";
+constexpr char const* kLockFileName = "LOCK";
 constexpr char const* kKeySizeFileName = "KEY_SIZE";
 constexpr char const* kValueSizeFileName = "VALUE_SIZE";
 constexpr char const* kPhysicalBlockSizeFileName = "PHYSICAL_BLOCK_SIZE";
@@ -146,7 +146,7 @@ class AlignedBuffer final {
 };
 
 template<typename Key>
-class KeyIteratorImpl : public FixedTable::KeyIterator {
+class KeyIteratorImpl : public PersistentTable::KeyIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyIteratorImpl);
   explicit KeyIteratorImpl(const robin_hood::unordered_flat_map<Key, uint64_t>& map)
@@ -322,11 +322,11 @@ class Worker final {
 };
 
 template<typename Key, typename Engine>
-class FixedTableImpl : public FixedTable {
+class PersistentTableImpl : public PersistentTable {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FixedTableImpl);
-  explicit FixedTableImpl(const FixedTableOptions& options);
-  ~FixedTableImpl() override;
+  OF_DISALLOW_COPY_AND_MOVE(PersistentTableImpl);
+  explicit PersistentTableImpl(const PersistentTableOptions& options);
+  ~PersistentTableImpl() override;
 
   uint32_t KeySize() const override { return key_size_; }
 
@@ -379,7 +379,7 @@ class FixedTableImpl : public FixedTable {
 };
 
 template<typename Key, typename Engine>
-FixedTableImpl<Key, Engine>::FixedTableImpl(const FixedTableOptions& options)
+PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptions& options)
     : root_dir_(options.path),
       key_size_(options.key_size),
       value_size_(options.value_size),
@@ -430,18 +430,18 @@ FixedTableImpl<Key, Engine>::FixedTableImpl(const FixedTableOptions& options)
 }
 
 template<typename Key, typename Engine>
-FixedTableImpl<Key, Engine>::~FixedTableImpl() {
+PersistentTableImpl<Key, Engine>::~PersistentTableImpl() {
   for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) { workers_.at(tid)->Shutdown(); }
 }
 
 template<typename Key, typename Engine>
-uint32_t FixedTableImpl<Key, Engine>::LogicalBlockSize() const {
+uint32_t PersistentTableImpl<Key, Engine>::LogicalBlockSize() const {
   return logical_block_size_;
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
-                                            uint32_t* offsets) {
+void PersistentTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys, void* blocks,
+                                                 uint32_t* offsets) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   ParallelFor(num_keys, [&](Engine* engine, size_t start, size_t end) {
     for (uint64_t i = start; i < end; ++i) {
@@ -467,8 +467,8 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void* values,
-                                      uint32_t* n_missing, uint32_t* missing_indices) {
+void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void* values,
+                                           uint32_t* n_missing, uint32_t* missing_indices) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
@@ -495,8 +495,8 @@ void FixedTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void*
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
-                                            const void* blocks) {
+void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
+                                                 const void* blocks) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
   const uint32_t num_padded_keys = num_blocks * num_values_per_block_;
@@ -546,7 +546,8 @@ void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const void* values) {
+void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
+                                           const void* values) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
   if (value_size_ == logical_block_size_) {
@@ -568,7 +569,7 @@ void FixedTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys, const
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::WithKeyIterator(
+void PersistentTableImpl<Key, Engine>::WithKeyIterator(
     const std::function<void(KeyIterator* iter)>& fn) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   KeyIteratorImpl<Key> iter(row_id_mapping_);
@@ -576,33 +577,33 @@ void FixedTableImpl<Key, Engine>::WithKeyIterator(
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::KeyFilePath(uint64_t chunk_id) const {
+std::string PersistentTableImpl<Key, Engine>::KeyFilePath(uint64_t chunk_id) const {
   return PosixFile::JoinPath(keys_dir_, kKeyFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::ValueFilePath(uint64_t chunk_id) const {
+std::string PersistentTableImpl<Key, Engine>::ValueFilePath(uint64_t chunk_id) const {
   return PosixFile::JoinPath(values_dir_, kValueFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::IndexFilePath(const std::string& name,
-                                                       uint64_t chunk_id) const {
+std::string PersistentTableImpl<Key, Engine>::IndexFilePath(const std::string& name,
+                                                            uint64_t chunk_id) const {
   return PosixFile::JoinPath(SnapshotDirPath(name), kIndexFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::SnapshotDirPath(const std::string& name) const {
+std::string PersistentTableImpl<Key, Engine>::SnapshotDirPath(const std::string& name) const {
   return PosixFile::JoinPath(snapshots_dir_, name);
 }
 
 template<typename Key, typename Engine>
-std::string FixedTableImpl<Key, Engine>::SnapshotListFilePath(const std::string& name) const {
+std::string PersistentTableImpl<Key, Engine>::SnapshotListFilePath(const std::string& name) const {
   return PosixFile::JoinPath(SnapshotDirPath(name), kSnapshotListFileName);
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
+void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const std::string snapshot_base = SnapshotDirPath(name);
   const std::string snapshot_list = SnapshotListFilePath(name);
@@ -630,7 +631,7 @@ void FixedTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name) {
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
+void PersistentTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   PosixFile::RecursiveCreateDirectory(SnapshotDirPath(name), 0755);
   std::ofstream list_ofs(SnapshotListFilePath(name));
@@ -665,34 +666,35 @@ void FixedTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
 }
 
 template<typename Key, typename Engine>
-bool FixedTableImpl<Key, Engine>::SnapshotExists(const std::string& name) {
+bool PersistentTableImpl<Key, Engine>::SnapshotExists(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   return PosixFile::FileExists(SnapshotListFilePath(name));
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::LoadSnapshot(const std::string& name) {
+void PersistentTableImpl<Key, Engine>::LoadSnapshot(const std::string& name) {
   LoadSnapshotImpl(name);
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
+void PersistentTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
   SaveSnapshotImpl(name);
 }
 
 template<typename Key, typename Engine>
-void FixedTableImpl<Key, Engine>::ParallelFor(size_t total, const ForRange<Engine>& for_range) {
+void PersistentTableImpl<Key, Engine>::ParallelFor(size_t total,
+                                                   const ForRange<Engine>& for_range) {
   ParallelForTask<Engine> task(kNumWorkerThreads, total, &for_range);
   for (size_t i = 0; i < kNumWorkerThreads; ++i) { workers_.at(i)->Schedule(&task); }
   task.bc.WaitUntilCntEqualZero();
 }
 
 template<typename Engine>
-std::unique_ptr<FixedTable> DispatchKeyType(const FixedTableOptions& options) {
+std::unique_ptr<PersistentTable> DispatchKeyType(const PersistentTableOptions& options) {
   if (options.key_size == 4) {
-    return std::unique_ptr<FixedTable>(new FixedTableImpl<uint32_t, Engine>(options));
+    return std::unique_ptr<PersistentTable>(new PersistentTableImpl<uint32_t, Engine>(options));
   } else if (options.key_size == 8) {
-    return std::unique_ptr<FixedTable>(new FixedTableImpl<uint64_t, Engine>(options));
+    return std::unique_ptr<PersistentTable>(new PersistentTableImpl<uint64_t, Engine>(options));
   } else {
     UNIMPLEMENTED();
     return nullptr;
@@ -713,7 +715,7 @@ bool IsRingIOSupported() {
 #endif
 }
 
-std::unique_ptr<FixedTable> DispatchEngine(const FixedTableOptions& options) {
+std::unique_ptr<PersistentTable> DispatchEngine(const PersistentTableOptions& options) {
 #ifdef WITH_LIBURING
   static bool ring_io_supported = IsRingIOSupported();
   if (ring_io_supported) {
@@ -730,7 +732,7 @@ std::unique_ptr<FixedTable> DispatchEngine(const FixedTableOptions& options) {
 
 #endif  // __linux__
 
-std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
+std::unique_ptr<PersistentTable> NewPersistentTable(const PersistentTableOptions& options) {
 #ifdef __linux__
   CHECK(!options.path.empty());
   CHECK_GT(options.value_size, 0);
