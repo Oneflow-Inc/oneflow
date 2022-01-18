@@ -1379,6 +1379,38 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.addcmul,
+    r"""
+    Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
+    by the scalar value and add it to input.
+        
+    Args:
+        input (Tensor): the input tensor.
+        tensor1 (Tensor): the tensor to be multiplied.
+        tensor2 (Tensor): the tensor to be multiplied.
+    
+    Keyword args:
+        value (Number, optional): multiplier for tensor1 * tensor2.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.rand(2,3,4)
+        >>> tensor1 = flow.rand(2,3,4)
+        >>> tensor2 = flow.rand(2,3,4)
+        >>> out = flow.addcmul(input,tensor1,tensor2,value=2)
+        >>> out.size()
+        oneflow.Size([2, 3, 4])
+    """,
+)
+
+add_docstr(
     oneflow.eye,
     """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
 
