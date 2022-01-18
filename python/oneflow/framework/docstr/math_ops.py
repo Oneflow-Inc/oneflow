@@ -1383,6 +1383,9 @@ add_docstr(
     r"""
     Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
     by the scalar value and add it to input.
+    
+    .. math::
+        \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i
         
     Args:
         input (Tensor): the input tensor.
