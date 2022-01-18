@@ -18,7 +18,6 @@ limitations under the License.
 
 #ifdef __linux__
 
-#include "oneflow/core/common/util.h"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,7 +35,6 @@ namespace embedding {
 
 class PosixFile final {
  public:
-  OF_DISALLOW_COPY(PosixFile);
   PosixFile() : fd_(-1), size_(0) {}
   PosixFile(const std::string& pathname, int flags, mode_t mode)
       : PosixFile(pathname.c_str(), flags, mode) {}
@@ -48,6 +46,9 @@ class PosixFile final {
     size_ = sb.st_size;
   }
   PosixFile(PosixFile&& other) noexcept : PosixFile() { *this = std::move(other); }
+  PosixFile(const PosixFile&) = delete;
+  ~PosixFile() { Close(); }
+
   PosixFile& operator=(PosixFile&& other) noexcept {
     this->Close();
     fd_ = other.fd_;
@@ -56,7 +57,7 @@ class PosixFile final {
     other.size_ = 0;
     return *this;
   }
-  ~PosixFile() { Close(); }
+  PosixFile& operator=(const PosixFile&) = delete;
 
   int fd() { return fd_; }
 
@@ -133,7 +134,6 @@ class PosixFile final {
 
 class PosixMappedFile final {
  public:
-  OF_DISALLOW_COPY(PosixMappedFile);
   PosixMappedFile() : file_(), ptr_(nullptr) {}
   PosixMappedFile(PosixFile&& file, size_t size, int prot) : file_(std::move(file)), ptr_(nullptr) {
     CHECK_NE(file_.fd(), -1);
@@ -144,6 +144,9 @@ class PosixMappedFile final {
   PosixMappedFile(PosixMappedFile&& other) noexcept : PosixMappedFile() {
     *this = std::move(other);
   }
+  PosixMappedFile(const PosixMappedFile&) = delete;
+  ~PosixMappedFile() { Unmap(); }
+
   PosixMappedFile& operator=(PosixMappedFile&& other) noexcept {
     Unmap();
     this->file_ = std::move(other.file_);
@@ -151,7 +154,7 @@ class PosixMappedFile final {
     other.ptr_ = nullptr;
     return *this;
   }
-  ~PosixMappedFile() { Unmap(); }
+  PosixMappedFile& operator=(const PosixMappedFile&) = delete;
 
   void* ptr() { return ptr_; }
 

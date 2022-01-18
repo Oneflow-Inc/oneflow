@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_
 
 #include "oneflow/core/embedding/key_value_store.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -27,7 +26,7 @@ struct FixedTableOptions {
   std::string path;
   uint32_t key_size = 0;
   uint32_t value_size = 0;
-  uint64_t num_blocks_per_chunk = 4 * 1024 * 1024;
+  uint64_t target_chunk_size_mb = 4 * 1024;
   uint16_t physical_block_size = 4096;
 };
 

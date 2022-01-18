@@ -46,7 +46,7 @@ constexpr uint32_t kNumWorkerThreads = 4;
 constexpr uint32_t kRingQueueDepth = 128;
 constexpr uint32_t kRingSubmitBatch = 32;
 constexpr uint32_t kAioQueueDepth = 128;
-constexpr uint32_t kChunkNameSuffixLength = 8;
+constexpr uint32_t kChunkNameSuffixLength = 12;
 constexpr char const* kKeyFileNamePrefix = "key-";
 constexpr char const* kIndexFileNamePrefix = "index-";
 constexpr char const* kValueFileNamePrefix = "value-";
@@ -54,7 +54,7 @@ constexpr char const* kLockFileName = "FIXED_TABLE";
 constexpr char const* kKeySizeFileName = "KEY_SIZE";
 constexpr char const* kValueSizeFileName = "VALUE_SIZE";
 constexpr char const* kPhysicalBlockSizeFileName = "PHYSICAL_BLOCK_SIZE";
-constexpr char const* kNumBlocksPerChunkFileName = "NUM_BLOCKS_PER_CHUNK";
+constexpr char const* kNumLogicalBlocksPerChunkFileName = "NUM_LOGICAL_BLOCKS_PER_CHUNK";
 constexpr char const* kKeysDirName = "keys";
 constexpr char const* kValuesDirName = "values";
 constexpr char const* kSnapshotsDirName = "snapshots";
@@ -359,7 +359,7 @@ class FixedTableImpl : public FixedTable {
   std::string snapshots_dir_;
   uint32_t key_size_;
   uint32_t value_size_;
-  uint64_t num_blocks_per_chunk_;
+  uint64_t num_logical_blocks_per_chunk_;
   uint64_t num_values_per_chunk_;
   uint32_t num_values_per_block_;
   uint32_t logical_block_size_;
@@ -383,19 +383,24 @@ FixedTableImpl<Key, Engine>::FixedTableImpl(const FixedTableOptions& options)
     : root_dir_(options.path),
       key_size_(options.key_size),
       value_size_(options.value_size),
-      num_blocks_per_chunk_(options.num_blocks_per_chunk),
       blocks_buffer_(options.physical_block_size),
       writable_key_file_chunk_id_(-1) {
   PosixFile::RecursiveCreateDirectory(options.path, 0755);
   const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
   const bool init = !PosixFile::FileExists(lock_filename);
   lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
+  logical_block_size_ = GetLogicalBlockSize(options.physical_block_size, value_size_);
+  const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
+  CHECK_GE(target_chunk_size, logical_block_size_);
+  num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
+  num_values_per_block_ = logical_block_size_ / value_size_;
+  num_values_per_chunk_ = num_values_per_block_ * num_logical_blocks_per_chunk_;
   InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kKeySizeFileName), key_size_, init);
   InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kValueSizeFileName), value_size_, init);
   InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kPhysicalBlockSizeFileName),
                        options.physical_block_size, init);
-  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kNumBlocksPerChunkFileName),
-                       num_blocks_per_chunk_, init);
+  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kNumLogicalBlocksPerChunkFileName),
+                       num_logical_blocks_per_chunk_, init);
   keys_dir_ = PosixFile::JoinPath(options.path, kKeysDirName);
   values_dir_ = PosixFile::JoinPath(options.path, kValuesDirName);
   snapshots_dir_ = PosixFile::JoinPath(options.path, kSnapshotsDirName);
@@ -403,9 +408,6 @@ FixedTableImpl<Key, Engine>::FixedTableImpl(const FixedTableOptions& options)
     PosixFile::RecursiveCreateDirectory(keys_dir_, 0755);
     PosixFile::RecursiveCreateDirectory(values_dir_, 0755);
   }
-  logical_block_size_ = GetLogicalBlockSize(options.physical_block_size, value_size_);
-  num_values_per_block_ = logical_block_size_ / value_size_;
-  num_values_per_chunk_ = num_values_per_block_ * num_blocks_per_chunk_;
   workers_.resize(kNumWorkerThreads);
   for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) {
     workers_.at(tid).reset(new Worker<Engine>);
@@ -419,7 +421,7 @@ FixedTableImpl<Key, Engine>::FixedTableImpl(const FixedTableOptions& options)
     value_files_.at(chunk.first) = std::move(value_file);
   }
   if (!value_files_.empty()) {
-    physical_table_size_ = ((value_files_.size() - 1) * num_blocks_per_chunk_
+    physical_table_size_ = ((value_files_.size() - 1) * num_logical_blocks_per_chunk_
                             + value_files_.back().Size() / logical_block_size_)
                            * num_values_per_block_;
   } else {
@@ -452,8 +454,8 @@ void FixedTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* keys,
         const uint64_t block_id = id / num_values_per_block_;
         const uint32_t id_in_block = id - block_id * num_values_per_block_;
         const uint32_t offset_in_block = id_in_block * value_size_;
-        const uint64_t chunk_id = block_id / num_blocks_per_chunk_;
-        const uint64_t block_in_chunk = block_id - chunk_id * num_blocks_per_chunk_;
+        const uint64_t chunk_id = block_id / num_logical_blocks_per_chunk_;
+        const uint64_t block_in_chunk = block_id - chunk_id * num_logical_blocks_per_chunk_;
         const uint64_t block_offset = block_in_chunk * logical_block_size_;
         PosixFile& file = value_files_.at(chunk_id);
         offsets[i] = offset_in_block;
@@ -509,7 +511,7 @@ void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
   const uint64_t block_keys_size = num_values_per_block_ * sizeof(Key);
   while (written_blocks < num_blocks) {
     const uint64_t batch_start_block_id = start_block_id + written_blocks;
-    const uint64_t batch_chunk_id = batch_start_block_id / num_blocks_per_chunk_;
+    const uint64_t batch_chunk_id = batch_start_block_id / num_logical_blocks_per_chunk_;
     if (batch_chunk_id == value_files_.size()) {
       value_files_.emplace_back(ValueFilePath(batch_chunk_id), O_CREAT | O_RDWR | O_DIRECT, 0644);
     } else {
@@ -520,10 +522,10 @@ void FixedTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
     }
     PosixFile& value_file = value_files_.at(batch_chunk_id);
     const uint64_t block_id_in_chunk =
-        batch_start_block_id - batch_chunk_id * num_blocks_per_chunk_;
+        batch_start_block_id - batch_chunk_id * num_logical_blocks_per_chunk_;
     const uint64_t blocks_to_write =
         std::min(num_blocks - written_blocks,
-                 (batch_chunk_id + 1) * num_blocks_per_chunk_ - batch_start_block_id);
+                 (batch_chunk_id + 1) * num_logical_blocks_per_chunk_ - batch_start_block_id);
     const uint64_t values_bytes = blocks_to_write * logical_block_size_;
     const uint64_t values_offset_in_file = block_id_in_chunk * logical_block_size_;
     CHECK_LE(value_file.Size(), values_offset_in_file);
@@ -732,7 +734,7 @@ std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options) {
 #ifdef __linux__
   CHECK(!options.path.empty());
   CHECK_GT(options.value_size, 0);
-  CHECK_GT(options.num_blocks_per_chunk, 0);
+  CHECK_GT(options.target_chunk_size_mb, 0);
   CHECK_GT(options.physical_block_size, 0);
   CHECK_GT(options.key_size, 0);
   return DispatchEngine(options);

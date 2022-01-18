@@ -93,7 +93,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, num_keys);
@@ -109,7 +109,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, 0);
@@ -128,7 +128,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, num_keys);
@@ -141,7 +141,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, 0);
@@ -181,7 +181,6 @@ TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   options.table_options.value_size = value_length * sizeof(float);
   options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   options.table_options.physical_block_size = 512;
-  options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   options.max_query_length = 128;
 
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(options);
@@ -201,7 +200,6 @@ TEST(CachedKeyValueStore, LRU) {
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   store_options.table_options.physical_block_size = 512;
-  store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
   CacheOptions cache_options{};
@@ -230,7 +228,6 @@ TEST(CachedKeyValueStore, Full) {
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   store_options.table_options.physical_block_size = 512;
-  store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
   store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
   CacheOptions cache_options{};

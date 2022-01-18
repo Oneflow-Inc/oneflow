@@ -85,9 +85,6 @@ class KeyValueStoreImpl : public KeyValueStore {
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&host_n_missing_),
                                           sizeof(uint32_t)));
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
-                                          reinterpret_cast<void**>(&host_missing_keys_),
-                                          key_size_ * max_query_length_));
-    OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
                                           reinterpret_cast<void**>(&host_missing_indices_),
                                           sizeof(uint32_t) * max_query_length_));
   }
@@ -104,7 +101,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint32_t MaxQueryLength() const override { return GetMaxVal<int32_t>(); }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
+           uint32_t* n_missing, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
   bool SnapshotExists(const std::string& name) override;
@@ -119,7 +116,6 @@ class KeyValueStoreImpl : public KeyValueStore {
   Key* host_query_keys_{};
   uint8_t* host_query_values_{};
   uint32_t* host_n_missing_{};
-  Key* host_missing_keys_{};
   uint32_t* host_missing_indices_{};
 
   std::mutex mutex_;
@@ -128,8 +124,7 @@ class KeyValueStoreImpl : public KeyValueStore {
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                 void* values, uint32_t* n_missing, void* missing_keys,
-                                 uint32_t* missing_indices) {
+                                 void* values, uint32_t* n_missing, uint32_t* missing_indices) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
@@ -149,8 +144,6 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
                                 cudaMemcpyDefault, cuda_stream->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(n_missing, host_n_missing_, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(missing_keys, host_missing_keys_, (*host_n_missing_) * key_size_,
-                                cudaMemcpyDefault, cuda_stream->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(missing_indices, host_missing_indices_,
                                 (*host_n_missing_) * sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
