@@ -139,7 +139,7 @@ class TestL2Normalize(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFunctionalNormalize(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest()
     def test_functional_normalize(test_case):
         device = random_device()
         ndim = random(low=2)
