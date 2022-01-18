@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/cum_kernels.h"
 
 namespace oneflow {
@@ -131,24 +132,21 @@ class GpuCumKernel final : public user_op::OpKernel {
     const auto* in_ptr = in->dptr<T>();
     auto* out_ptr = out->mut_dptr<T>();
 
-    // take cumsum's abbreviation as `cs`
-    // data partition: cs_up_space|cs_space|cs_down_space
-    auto cs_up_space = elem_cnt / in->shape().Count(dim);
-    auto cs_space = in->shape().At(dim);
-    auto cs_down_space = in->shape().Count(dim + 1);
-    auto thread_num = cs_up_space * cs_down_space;
+    // data partition: up_space|space|down_space
+    auto up_space = elem_cnt / in->shape().Count(dim);
+    auto space = in->shape().At(dim);
+    auto down_space = in->shape().Count(dim + 1);
+    auto thread_num = up_space * down_space;
 
-    if (cs_space == 1) { return; }
-
-    if (cs_up_space == 1) {
+    if (up_space == 1) {
       RUN_CUDA_KERNEL((CumsumForwardGpuUpSpaceIs1<T, BinaryFunc>), ctx->stream(), thread_num,
-                      in_ptr, out_ptr, cs_space, cs_down_space);
-    } else if (cs_down_space == 1) {
+                      in_ptr, out_ptr, space, down_space);
+    } else if (down_space == 1) {
       RUN_CUDA_KERNEL((CumsumForwardGpuDownSpaceIs1<T, BinaryFunc>), ctx->stream(), thread_num,
-                      in_ptr, out_ptr, cs_up_space, cs_space);
+                      in_ptr, out_ptr, up_space, space);
     } else {
       RUN_CUDA_KERNEL((CumsumForwardGpu<T, BinaryFunc>), ctx->stream(), thread_num, in_ptr, out_ptr,
-                      cs_up_space, cs_space, cs_down_space);
+                      up_space, space, down_space);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -300,13 +298,17 @@ class GpuCumProdGradKernel final : public user_op::OpKernel {
     const auto* dy_ptr = dy->dptr<T>();
     auto* dx_ptr = dx->mut_dptr<T>();
 
+    // data partition: up_space|space|down_space
     auto dim = ctx->Attr<int64_t>("dim");
     auto up_space = elem_cnt / dx->shape().Count(dim);
     auto space = dx->shape().At(dim);
     auto down_space = dx->shape().Count(dim + 1);
     size_t thread_num = up_space * down_space;
 
-    if (space == 1) { return; }
+    if (space == 1) {
+      Memcpy<DeviceType::kCUDA>(ctx->stream(), dx_ptr, dy_ptr, elem_cnt * sizeof(T));
+      return;
+    }
     ep::CudaLaunchConfig config{};
     ctx->stream()->As<ep::CudaStream>()->InitLaunchConfigWithWaves(
         &config, thread_num, /*DefaultBlockSize*/ 256, /*max_wave*/ 1);

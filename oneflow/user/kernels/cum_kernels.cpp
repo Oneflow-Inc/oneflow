@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/cum_kernels.h"
 namespace oneflow {
 
@@ -73,11 +74,10 @@ class CpuCumKernel final : public user_op::OpKernel {
     const auto* in_ptr = in->dptr<T>();
     auto* out_ptr = out->mut_dptr<T>();
 
-    // data partition: cs_up_space|cs_space|cs_down_space
+    // data partition: up_space|space|down_space
     auto up_space = elem_cnt / in->shape().Count(dim);
     auto space = in->shape().At(dim);
     auto down_space = in->shape().Count(dim + 1);
-    if (space == 1) { return; }
 
     cum_forward<T, BinaryFunc>(in_ptr, out_ptr, up_space, space, down_space, elem_cnt);
   }
@@ -120,6 +120,7 @@ class CpuCumsumGradKernel final : public user_op::OpKernel {
     const auto* dy_ptr = dy->dptr<T>();
     auto* dx_ptr = dx->mut_dptr<T>();
 
+    // take cumsum's abbreviation as `cs`
     // data partition: cs_up_space|cs_space|cs_down_space
     auto cs_up_space = elem_cnt / dx->shape().Count(dim);
     auto cs_space = dx->shape().At(dim);
@@ -239,23 +240,24 @@ class CpuCumProdGradKernel final : public user_op::OpKernel {
     const auto* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t dy_elem_cnt = dy->shape().elem_cnt();
-    const int64_t input_elem_cnt = dx->shape().elem_cnt();
-    CHECK_EQ(dy_elem_cnt, input_elem_cnt);
+    const int64_t elem_cnt = dy->shape().elem_cnt();
+    if (elem_cnt == 0) { return; }
 
     const auto* output_ptr = output->dptr<T>();
     const auto* input_ptr = input->dptr<T>();
     const auto* dy_ptr = dy->dptr<T>();
     auto* dx_ptr = dx->mut_dptr<T>();
 
-    // data partition: cs_up_space|cs_space|cs_down_space
+    // data partition: up_space|space|down_space
     auto dim = ctx->Attr<int64_t>("dim");
-    auto up_space = dy_elem_cnt / dx->shape().Count(dim);
+    auto up_space = elem_cnt / dx->shape().Count(dim);
     auto space = dx->shape().At(dim);
     auto down_space = dx->shape().Count(dim + 1);
-    if (space == 1 || dy_elem_cnt == 0) { return; }
-    cumprod_backward(dy_ptr, dx_ptr, output_ptr, input_ptr, up_space, space, down_space,
-                     dy_elem_cnt);
+    if (space == 1) {
+      Memcpy<DeviceType::kCPU>(ctx->stream(), dx_ptr, dy_ptr, elem_cnt * sizeof(T));
+      return;
+    }
+    cumprod_backward(dy_ptr, dx_ptr, output_ptr, input_ptr, up_space, space, down_space, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
