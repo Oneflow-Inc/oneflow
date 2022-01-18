@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/user/kernels/cum_kernels.h"
 
 namespace oneflow {
-
+#ifdef WITH_CUDA
 namespace {
 
 // total thread number: cs_up_space * cs_down_space
@@ -330,4 +330,5 @@ class GpuCumProdGradKernel final : public user_op::OpKernel {
 REGISTER_CUDA_CUMPROD_GRAD_KERNEL(float)
 REGISTER_CUDA_CUMPROD_GRAD_KERNEL(double)
 #undef REGISTER_CUDA_CUMPROD_GRAD_KERNEL
+#endif
 }  // namespace oneflow
