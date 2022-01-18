@@ -62,13 +62,15 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     CHECK_EQ_OR_RETURN(beta.shape(), param_shape);
   }
   if (scale) {
-    user_op::TensorDesc* normalized = ctx->OutputTensorDesc("normalized", 0);
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
     CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
-    *normalized = x;
   }
   const int64_t begin_norm_axis =
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_norm_axis"));
+  if (begin_norm_axis != begin_params_axis) {
+    return Error::RuntimeError() << "begin_norm_axis must equal to begin_params_axis, but got "
+                                 << begin_norm_axis << " vs " << begin_params_axis;
+  }
   *mean->mut_shape() = InferBnParamShape(x.shape(), begin_norm_axis);
   *inv_variance = *mean;
   return Maybe<void>::Ok();
@@ -141,9 +143,17 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 }
 
 /* static */ Maybe<void> LayerNormGradOp::GetSbp(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  if (ctx->user_op_conf().has_input("gamma", 0)) {
+    broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
+  }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   for (int i = 0; i < begin_norm_axis; ++i) {
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), i)
+        .Split(ctx->outputs(), i)
+        .Broadcast(broadcast_args)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -183,11 +193,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool has_beta_diff = has_tensor("beta_diff");
   const bool has_gamma_diff = has_tensor("gamma_diff");
   const bool has_gamma = has_tensor("gamma");
-  const bool has_normalized_diff = has_tensor("normalized_diff");
-  if (has_beta_diff || has_gamma_diff) {
-    user_op::TensorDesc* reduce_buf = ctx->OutputTensorDesc("reduce_buf", 0);
-    *reduce_buf = dy;
-  }
   CHECK_GE_OR_RETURN(begin_params_axis, 1);
   CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes());
   DimVector param_shape_dim_vec;
@@ -202,10 +207,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
     *gamma_diff->mut_shape() = param_shape;
-  }
-  if (has_normalized_diff) {
-    user_op::TensorDesc* normalized_diff = ctx->OutputTensorDesc("normalized_diff", 0);
-    *normalized_diff = dy;
   }
   if (has_gamma) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
@@ -253,8 +254,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   }
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
-    const user_op::TensorDesc& normalized = ctx->InputTensorDesc("normalized", 0);
-    CHECK_EQ_OR_RETURN(normalized.data_type(), normalized.data_type());
     *gamma_diff->mut_data_type() = dy.data_type();
   }
   if (has_gamma) {
@@ -273,28 +272,21 @@ REGISTER_USER_OP_GRAD("layer_norm")
       const bool has_gamma = scale;
       const bool has_beta_diff = has_beta && op.NeedGenGradTensor4OpInput("beta", 0);
       const bool has_gamma_diff = has_gamma && op.NeedGenGradTensor4OpInput("gamma", 0);
-      const bool need_scale_out_diff = has_gamma && op.NeedGenGradTensor4OpInput("x", 0);
       const Shape& x_shape = op.TensorDesc4ArgNameAndIndex("x", 0).shape();
       const int64_t begin_norm_axis =
           ShiftNegativeAxisIfNeed(x_shape, op.attr<int64_t>("begin_norm_axis"));
       const int64_t begin_params_axis =
           ShiftNegativeAxisIfNeed(x_shape, op.attr<int64_t>("begin_params_axis"));
-      std::string dy = op.GetGradTensorWithOpOutput("y", 0);
-      if (has_beta_diff || has_gamma_diff || need_scale_out_diff) {
+      if (has_beta_diff || has_gamma_diff) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_param_grad");
         auto grad_op_builder = builder.Op("layer_norm_param_grad")
                                    .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+                                   .Input("x", op.input("x", 0))
+                                   .Input("mean", op.output("mean", 0))
+                                   .Input("inv_variance", op.output("inv_variance", 0))
                                    .Attr("begin_params_axis", begin_params_axis);
         if (has_beta_diff) { grad_op_builder.Output("beta_diff"); }
-        if (has_gamma_diff || need_scale_out_diff) {
-          grad_op_builder.Input("gamma", op.input("gamma", 0));
-        }
-        if (has_gamma_diff) {
-          grad_op_builder.Input("normalized", op.output("normalized", 0));
-          grad_op_builder.Output("gamma_diff");
-        }
-        if (need_scale_out_diff) { grad_op_builder.Output("normalized_diff"); }
-        if (has_beta_diff || has_gamma_diff) { grad_op_builder.Output("reduce_buf"); }
+        if (has_gamma_diff) { grad_op_builder.Output("gamma_diff"); }
         auto grad_op = grad_op_builder.Build();
         if (has_beta_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
@@ -302,21 +294,22 @@ REGISTER_USER_OP_GRAD("layer_norm")
         if (has_gamma_diff) {
           op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
         }
-        if (need_scale_out_diff) { dy = grad_op.output("normalized_diff", 0); }
         AddOp(grad_op);
       }
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("layer_norm_grad")
-                .Input("x", op.input("x", 0))
-                .Input("dy", dy)
-                .Input("mean", op.output("mean", 0))
-                .Input("inv_variance", op.output("inv_variance", 0))
-                .Output("dx")
-                .Attr("begin_norm_axis", begin_norm_axis)
-                .Attr("epsilon", op.attr<double>("epsilon"))
-                .Build();
+        builder.Op("layer_norm_grad")
+            .Input("x", op.input("x", 0))
+            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+            .Input("mean", op.output("mean", 0))
+            .Input("inv_variance", op.output("inv_variance", 0))
+            .Output("dx")
+            .Attr("begin_norm_axis", begin_norm_axis)
+            .Attr("epsilon", op.attr<double>("epsilon"));
+        if (op.user_op_conf().has_input("gamma", 0)) {
+          builder.Input("gamma", op.input("gamma", 0));
+        }
+        user_op::UserOpConfWrapper grad_op = builder.Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
