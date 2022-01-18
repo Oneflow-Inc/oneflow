@@ -335,9 +335,10 @@ def GetDualObject(name, pytorch, oneflow):
                                         lr=0.001,
                                         momentum=0.9,
                                     )
-                                    graph_train_parameters_len = len(
-                                        oneflow._parameters
-                                    )
+                                    graph_train_parameters_len = 0
+                                    for param in oneflow._parameters.values():
+                                        if param is not None:
+                                            graph_train_parameters_len += 1
 
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
@@ -346,7 +347,6 @@ def GetDualObject(name, pytorch, oneflow):
                                             if (
                                                 global_backward
                                                 and graph_train_parameters_len
-                                                and isinstance(oneflow, flow.nn.GroupNorm)==False
                                             ):
                                                 self.add_optimizer(of_sgd)
 
@@ -356,7 +356,6 @@ def GetDualObject(name, pytorch, oneflow):
                                             if (
                                                 global_backward
                                                 and graph_train_parameters_len
-                                                and isinstance(oneflow, flow.nn.GroupNorm)==False
                                             ):
                                                 res = res.sum()
                                                 res.backward()
