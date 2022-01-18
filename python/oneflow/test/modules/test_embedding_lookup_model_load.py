@@ -23,7 +23,7 @@ import oneflow.nn as nn
 import os
 
 os.environ["DEBUG_SHUFFLE"] = "1"
-os.environ["CACHE_MEMORY_BUDGET_MB"] = "4096"
+os.environ["L1_CACHE_MEMORY_BUDGET_MB"] = "4096"
 os.environ["KEY_VALUE_STORE"] = "block_based"
 os.environ["BLOCK_BASED_PATH"] = (
     "/NVME0/guoran/unittest/" + os.environ["TEST_OPTIMIZER"]

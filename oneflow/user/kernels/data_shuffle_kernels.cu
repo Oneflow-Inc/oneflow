@@ -328,11 +328,12 @@ class IdShuffleKernel final : public user_op::OpKernel {
     void* workspace_ptr = buffer_manager.WorkspacePtr();
     size_t workspace_size = buffer_manager.WorkspaceBytes();
 
+    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.TotalBufferSize());
     int64_t hash_capacity = num_ids;
     UniqueKeys(ctx->stream(), num_ids, hash_capacity, ids->dptr<K>(), slots->dptr<IDX>(),
                num_unique_ids->mut_dptr<IDX>(), ids_reverse_idx->mut_dptr<IDX>(),
                buffer_manager.UniqueIdsPtr(), buffer_manager.UniqueSlotsPtr(),
-               reinterpret_cast<char*>(workspace_ptr));
+               reinterpret_cast<char*>(workspace_ptr), buffer_manager.WorkspaceBytes());
     // partition
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_ids, num_unique_ids->mut_dptr(), sizeof(IDX),
                                   cudaMemcpyDefault, cuda_stream));
@@ -398,11 +399,11 @@ class IdShuffleKernel final : public user_op::OpKernel {
     }
     OF_NCCL_CHECK(ncclGroupEnd());
 
-    hash_capacity = num_ids;
+    hash_capacity = num_ids * parallel_num;
     UniqueKeys(ctx->stream(), recv_offset, hash_capacity, received_unique_ids, received_slots,
                cur_rank_num_unique_ids->mut_dptr<IDX>(), cur_rank_reverse_idx->mut_dptr<IDX>(),
                cur_rank_unique_ids->mut_dptr<K>(), cur_rank_slots->mut_dptr<IDX>(),
-               reinterpret_cast<char*>(workspace_ptr));
+               reinterpret_cast<char*>(workspace_ptr), buffer_manager.WorkspaceBytes());
     if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) { DebugIdShuffle<K, IDX>(ctx); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
