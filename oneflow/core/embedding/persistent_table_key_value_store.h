@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
-#define ONEFLOW_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
+#ifndef ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
+#define ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
 
 #include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/embedding/persistent_table.h"
@@ -36,4 +36,4 @@ std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
+#endif  // ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
