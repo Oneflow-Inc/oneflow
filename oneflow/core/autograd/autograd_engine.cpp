@@ -55,13 +55,11 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     //
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
-    // std::cout << "add" << std::endl;
     // FIXME(jianhao): add a flag to control inplace accumulate grad.
     const auto& output = JUST(
         functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1, /*inplace=*/true));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
-    // std::cout << "set" << std::endl;
     JUST(autograd_meta->set_acc_grad(current_grad));
   }
   for (const auto& hook : autograd_meta->post_hooks()) { hook(autograd_meta->acc_grad()); }
@@ -144,8 +142,6 @@ Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
 
 Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
   for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
-    // std::cout << "is_leaf: " << out->is_leaf() << ", requires_grad: " << out->requires_grad() <<
-    // std::endl;
     if (out->is_leaf() && out->requires_grad()) {
       JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
     }
@@ -315,8 +311,6 @@ GraphFunctionNode::GraphFunctionNode(
         NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
     outputs.at(i)->set_autograd_meta(autograd_meta);
     output_meta_data_.at(i) = outputs.at(i)->mut_autograd_meta();
-    // std::cout << "autograd_meta is_leaf: " << outputs.at(i)->mut_autograd_meta()->is_leaf() <<
-    // std::endl;
     output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
   }
 
