@@ -569,10 +569,11 @@ class DualObject:
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
             oneflow.load_state_dict(state_dict, strict=False)
-            oneflow = oneflow.to_consistent(
-                placement=flow.env.all_device_placement("cpu"),
-                sbp=[flow.sbp.broadcast,],
-            )
+            if is_consistent():
+                oneflow = oneflow.to_consistent(
+                    placement=flow.env.all_device_placement("cpu"),
+                    sbp=[flow.sbp.broadcast,],
+                )
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
