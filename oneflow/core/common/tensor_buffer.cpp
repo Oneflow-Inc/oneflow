@@ -118,7 +118,7 @@ void TensorBufferImpl::Swap(TensorBufferImpl* other) {
 }  // namespace detail
 
 TensorBuffer::~TensorBuffer() {
-  if (auto* pool = TensorBufferPool::TryGet()) { pool->Deallocate(impl_); }
+  if (auto* pool = TensorBufferPool::TryGet()) { pool->Deallocate(&impl_); }
 }
 
 TensorBuffer::TensorBuffer(const Shape& shape, DataType dtype) { Allocate(shape, dtype); }
@@ -131,7 +131,7 @@ TensorBuffer& TensorBuffer::operator=(TensorBuffer&& other) noexcept {
 void TensorBuffer::Allocate(const Shape& shape, DataType dtype) {
   CHECK(!is_allocated());
   if (auto* pool = TensorBufferPool::TryGet()) {
-    pool->Allocate(impl_, shape, dtype);
+    pool->Allocate(&impl_, shape, dtype);
   } else {
     impl_.reset(new detail::TensorBufferImpl(shape, dtype));
   }
@@ -215,16 +215,16 @@ TensorBufferPool::TensorBufferPool()
   global_free_list_.reserve(pool_size_);
 }
 
-void TensorBufferPool::Allocate(ItemT& item, const Shape& shape, DataType dtype) {
-  CHECK(!item) << "TensorBuffer is already allocated";
+void TensorBufferPool::Allocate(ItemT* item, const Shape& shape, DataType dtype) {
+  CHECK(!(*item)) << "TensorBuffer is already allocated";
   auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache.empty() && thread_local_cache_size_ > 0) {
     std::unique_lock<std::mutex> lck(mtx_);
     if (!global_free_list_.empty()) {
-      // fetch tensor buffer from global free list to fill thread local cache
-      auto begin = global_free_list_.size() >= thread_local_cache_size_
-                       ? (global_free_list_.end() - thread_local_cache_size_)
-                       : global_free_list_.begin();
+      // fetch half of thread_local_cache_size of tensor buffers from global free list
+      size_t fetches = thread_local_cache_size_ / 2;
+      auto begin = global_free_list_.size() >= fetches ? (global_free_list_.end() - fetches)
+                                                       : global_free_list_.begin();
       for (auto it = begin; it < global_free_list_.end(); ++it) {
         thread_local_cache.push_back(std::move(*it));
       }
@@ -233,32 +233,36 @@ void TensorBufferPool::Allocate(ItemT& item, const Shape& shape, DataType dtype)
   }
 
   if (thread_local_cache.empty()) {
-    item.reset(new detail::TensorBufferImpl(shape, dtype));
+    item->reset(new detail::TensorBufferImpl(shape, dtype));
   } else {
-    item = std::move(thread_local_cache.back());
+    *item = std::move(thread_local_cache.back());
     thread_local_cache.pop_back();
-    CHECK(item);
-    item->Reset(shape, dtype);
+    (*item)->Reset(shape, dtype);
   }
 }
 
-void TensorBufferPool::Deallocate(ItemT& item) {
-  if (!item) { return; }
+void TensorBufferPool::Deallocate(ItemT* item) {
+  if (!(*item)) { return; }
   auto& thread_local_cache = ThreadLocalCache();
   if (thread_local_cache.size() < thread_local_cache_size_) {
-    thread_local_cache.push_back(std::move(item));
+    thread_local_cache.push_back(std::move(*item));
   } else {
     std::unique_lock<std::mutex> lck(mtx_);
-    if (global_free_list_.size() < pool_size_) { global_free_list_.push_back(std::move(item)); }
-    // release half of tensor buffers in thread local cache back to global free list
     size_t releases = thread_local_cache.size() / 2;
-    while (global_free_list_.size() < pool_size_ && releases > 0) {
-      global_free_list_.push_back(std::move(thread_local_cache.back()));
-      thread_local_cache.pop_back();
-      releases--;
+    if (global_free_list_.size() < pool_size_) {
+      global_free_list_.push_back(std::move(*item));
+      // release half of tensor buffers in thread local cache back to global free list
+      while (global_free_list_.size() < pool_size_ && releases > 0) {
+        global_free_list_.push_back(std::move(thread_local_cache.back()));
+        thread_local_cache.pop_back();
+        releases--;
+      }
+    } else {
+      // global free list is also full, release half of thread local cache
+      thread_local_cache.resize(thread_local_cache.size() - releases);
     }
   }
-  if (item) { item.reset(); }
+  if (*item) { item->reset(); }
 }
 
 void TensorBufferPool::IncreasePoolSizeByBase(size_t base) {
@@ -270,7 +274,10 @@ void TensorBufferPool::IncreasePoolSizeByBase(size_t base) {
 
 void TensorBufferPool::DecreasePoolSizeByBase(size_t base) {
   std::unique_lock<std::mutex> lck(mtx_);
-  pool_size_ -= GetTensorBufferPoolSize(base);
+  size_t dec = GetTensorBufferPoolSize(base);
+  CHECK_GE(pool_size_, dec) << "pool_size " << pool_size_ << " decreased by " << dec
+                            << " would be negative";
+  pool_size_ -= dec;
   if (pool_size_ > global_free_list_.capacity()) { global_free_list_.reserve(pool_size_); }
   if (pool_size_ < global_free_list_.size()) { global_free_list_.resize(pool_size_); }
 }

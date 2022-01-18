@@ -159,8 +159,8 @@ class TensorBufferPool final {
   ~TensorBufferPool() = default;
   OF_DISALLOW_COPY_AND_MOVE(TensorBufferPool);
 
-  void Allocate(ItemT& item, const Shape& shape, DataType dtype);
-  void Deallocate(ItemT& item);
+  void Allocate(ItemT* item, const Shape& shape, DataType dtype);
+  void Deallocate(ItemT* item);
 
   void IncreasePoolSizeByBase(size_t base);
   void DecreasePoolSizeByBase(size_t base);
