@@ -261,9 +261,9 @@ target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
 
 set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools" CACHE STRING "dir to put binary for debugging and development")
 
-set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/e8b98a5216dbfdaa31f7016955f9586cef94a626.zip" CACHE STRING "")
+set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/782eced561492c74f7b4409d6ee7eee84a1647c7.zip" CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "8bc33a1d14d040f20fba33a0f11bf30a" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "f4e060a35d76d22c686ec3e45e69140d" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if (WITH_MLIR)
