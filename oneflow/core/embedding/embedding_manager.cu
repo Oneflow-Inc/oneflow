@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/embedding_manager.h"
-#include "oneflow/core/embedding/fixed_table_key_value_store.h"
+#include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
 
@@ -41,15 +41,15 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   const std::string& num_rank = std::to_string(parallel_num);
   const int32_t rank_id_suffix_length = num_rank.size();
   const std::string& rank_id = std::to_string(parallel_id);
-  embedding::FixedTableKeyValueStoreOptions options{};
+  embedding::PersistentTableKeyValueStoreOptions options{};
   options.table_options.path = path + "/" + std::string(rank_id_suffix_length - rank_id.size(), '0')
                                + rank_id + "-" + num_rank;
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
   options.max_query_length = 65536 * 26;
   options.table_options.physical_block_size = embedding_options.FixedTableBlockSize();
-  options.table_options.num_blocks_per_chunk = embedding_options.FixedTableChunkSize();
-  store = NewFixedTableKeyValueStore(options);
+  options.table_options.target_chunk_size_mb = 4 * 1024;
+  store = NewPersistentTableKeyValueStore(options);
 
   if (embedding_options.L2CachePolicy() != "none") {
     embedding::CacheOptions cache_options{};

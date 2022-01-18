@@ -13,29 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_
-#define ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_
+#ifndef ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_H_
+#define ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_H_
 
 #include "oneflow/core/embedding/key_value_store.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
 namespace embedding {
 
-struct FixedTableOptions {
+struct PersistentTableOptions {
   std::string path;
   uint32_t key_size = 0;
   uint32_t value_size = 0;
-  uint64_t num_blocks_per_chunk = 4 * 1024 * 1024;
+  uint64_t target_chunk_size_mb = 4 * 1024;
   uint16_t physical_block_size = 4096;
 };
 
-class FixedTable {
+class PersistentTable {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FixedTable);
-  FixedTable() = default;
-  virtual ~FixedTable() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PersistentTable);
+  PersistentTable() = default;
+  virtual ~PersistentTable() = default;
 
   class KeyIterator {
    public:
@@ -60,10 +59,10 @@ class FixedTable {
   virtual void SaveSnapshot(const std::string& name) = 0;
 };
 
-std::unique_ptr<FixedTable> NewFixedTable(const FixedTableOptions& options);
+std::unique_ptr<PersistentTable> NewPersistentTable(const PersistentTableOptions& options);
 
 }  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EMBEDDING_FIXED_TABLE_H_
+#endif  // ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_H_

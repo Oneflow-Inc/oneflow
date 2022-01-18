@@ -250,8 +250,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_keys = *host_num_keys;
     store->Get(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
-               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-               buffer_manager.StoreMissingIndicesPtr());
+               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingIndicesPtr());
 
     std::vector<int32_t> slot_size_array{
         227605432, 39060,     17295,    7424,      20265,  3,     7122, 1543, 63,
@@ -326,8 +325,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
 
     store->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_values->mut_dptr(),
-               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-               buffer_manager.StoreMissingIndicesPtr());
+               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingIndicesPtr());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumStoreMissingPtr(),
                                   sizeof(uint32_t), cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));

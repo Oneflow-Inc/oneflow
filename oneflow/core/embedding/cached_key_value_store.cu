@@ -77,7 +77,7 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
+           uint32_t* n_missing, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
@@ -116,12 +116,12 @@ void CacheKeyValueStoreImpl<Key, Elem>::WithIterator(
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                            void* values, uint32_t* n_missing, void* missing_keys,
+                                            void* values, uint32_t* n_missing,
                                             uint32_t* missing_indices) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   if (cache_->Policy() == CacheOptions::Policy::kFull) {
-    cache_->Get(stream, num_keys, keys, values, n_missing, missing_keys, missing_indices);
+    cache_->Get(stream, num_keys, keys, values, n_missing, keys_buffer_, missing_indices);
     return;
   } else {
     cache_->Get(stream, num_keys, keys, values, num_buffer_, keys_buffer_, indices_buffer0_);
@@ -135,8 +135,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     return;
   }
-  store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, missing_keys,
-              indices_buffer1_);
+  store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, indices_buffer1_);
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, n_missing, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());

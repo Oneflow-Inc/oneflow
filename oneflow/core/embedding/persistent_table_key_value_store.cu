@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/fixed_table_key_value_store.h"
+#include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/embedding/fixed_table.h"
+#include "oneflow/core/embedding/persistent_table.h"
 #include <omp.h>
 #include <robin_hood.h>
 #include <fcntl.h>
@@ -32,7 +32,7 @@ namespace {
 class IteratorImpl : public KVBaseIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IteratorImpl);
-  explicit IteratorImpl(FixedTable* table, FixedTable::KeyIterator* key_iter,
+  explicit IteratorImpl(PersistentTable* table, PersistentTable::KeyIterator* key_iter,
                         void* host_keys_buffer, void* host_values_buffer, uint32_t* host_num_buffer)
       : table_(table),
         key_iter_(key_iter),
@@ -60,8 +60,8 @@ class IteratorImpl : public KVBaseIterator {
   }
 
  private:
-  FixedTable* table_;
-  FixedTable::KeyIterator* key_iter_;
+  PersistentTable* table_;
+  PersistentTable::KeyIterator* key_iter_;
   void* host_keys_buffer_;
   void* host_values_buffer_;
   uint32_t* host_num_buffer_;
@@ -71,12 +71,12 @@ template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreImpl);
-  explicit KeyValueStoreImpl(const FixedTableKeyValueStoreOptions& options)
+  explicit KeyValueStoreImpl(const PersistentTableKeyValueStoreOptions& options)
       : device_index_(-1), max_query_length_(options.max_query_length) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     key_size_ = options.table_options.key_size;
     value_size_ = options.table_options.value_size;
-    table_ = NewFixedTable(options.table_options);
+    table_ = NewPersistentTable(options.table_options);
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(
         device_index_, reinterpret_cast<void**>(&host_query_keys_), key_size_ * max_query_length_));
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
@@ -84,9 +84,6 @@ class KeyValueStoreImpl : public KeyValueStore {
                                           value_size_ * max_query_length_));
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&host_n_missing_),
                                           sizeof(uint32_t)));
-    OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
-                                          reinterpret_cast<void**>(&host_missing_keys_),
-                                          key_size_ * max_query_length_));
     OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
                                           reinterpret_cast<void**>(&host_missing_indices_),
                                           sizeof(uint32_t) * max_query_length_));
@@ -104,7 +101,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   uint32_t MaxQueryLength() const override { return GetMaxVal<int32_t>(); }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
+           uint32_t* n_missing, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
   bool SnapshotExists(const std::string& name) override;
@@ -119,17 +116,15 @@ class KeyValueStoreImpl : public KeyValueStore {
   Key* host_query_keys_{};
   uint8_t* host_query_values_{};
   uint32_t* host_n_missing_{};
-  Key* host_missing_keys_{};
   uint32_t* host_missing_indices_{};
 
   std::mutex mutex_;
-  std::unique_ptr<FixedTable> table_;
+  std::unique_ptr<PersistentTable> table_;
 };
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                 void* values, uint32_t* n_missing, void* missing_keys,
-                                 uint32_t* missing_indices) {
+                                 void* values, uint32_t* n_missing, uint32_t* missing_indices) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
@@ -149,8 +144,6 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const vo
                                 cudaMemcpyDefault, cuda_stream->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(n_missing, host_n_missing_, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(missing_keys, host_missing_keys_, (*host_n_missing_) * key_size_,
-                                cudaMemcpyDefault, cuda_stream->cuda_stream()));
   OF_CUDA_CHECK(cudaMemcpyAsync(missing_indices, host_missing_indices_,
                                 (*host_n_missing_) * sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
@@ -174,7 +167,7 @@ void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const vo
 template<typename Key>
 void KeyValueStoreImpl<Key>::WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) {
   CudaCurrentDeviceGuard guard(device_index_);
-  table_->WithKeyIterator([&](FixedTable::KeyIterator* key_iter) {
+  table_->WithKeyIterator([&](PersistentTable::KeyIterator* key_iter) {
     IteratorImpl iter(table_.get(), key_iter, host_query_keys_, host_query_values_,
                       host_n_missing_);
     fn(&iter);
@@ -200,8 +193,8 @@ void KeyValueStoreImpl<Key>::SaveSnapshot(const std::string& name) {
 
 }  // namespace
 
-std::unique_ptr<KeyValueStore> NewFixedTableKeyValueStore(
-    const FixedTableKeyValueStoreOptions& options) {
+std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
+    const PersistentTableKeyValueStoreOptions& options) {
   return std::unique_ptr<KeyValueStore>(new KeyValueStoreImpl<uint64_t>(options));
 }
 
