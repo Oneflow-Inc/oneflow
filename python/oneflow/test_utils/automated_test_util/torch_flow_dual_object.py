@@ -325,7 +325,12 @@ def GetDualObject(name, pytorch, oneflow):
                                 else:
                                     copy_arg = copy.deepcopy(arg)
                                 graph_args.append(copy_arg)
-                            graph_kwargs = copy.deepcopy(oneflow_kwargs)
+                            graph_kwargs={}
+                            for key,value in oneflow_kwargs.items():
+                                if flow.is_tensor(value):
+                                    graph_kwargs[key]=value.clone().detach()
+                                else:
+                                    graph_kwargs[key]=copy.deepcopy(value)
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
@@ -461,7 +466,12 @@ def GetDualObject(name, pytorch, oneflow):
                             else:
                                 copy_arg = copy.deepcopy(arg)
                             tensor_graph_args.append(copy_arg)
-                        tensor_graph_kwargs = copy.deepcopy(oneflow_kwargs)
+                        tensor_graph_kwargs={}
+                        for key,value in oneflow_kwargs.items():
+                            if flow.is_tensor(value):
+                                tensor_graph_kwargs[key]=value.clone().detach()
+                            else:
+                                tensor_graph_kwargs[key]=copy.deepcopy(value)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
 
