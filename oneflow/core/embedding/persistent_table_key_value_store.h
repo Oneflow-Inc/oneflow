@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/embedding/key_value_store.h"
 #include "oneflow/core/embedding/persistent_table.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 

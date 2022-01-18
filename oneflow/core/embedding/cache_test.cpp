@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/embedding/lru_cache.h"
 #include "oneflow/core/embedding/full_cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
@@ -205,7 +205,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
   device->DestroyStream(stream);
 }
 
-TEST(Cache, CudaLruCache) {
+TEST(Cache, LruCache) {
   if (!HasCudaDevice()) { return; }
 
   CacheOptions options{};
@@ -220,6 +220,7 @@ TEST(Cache, CudaLruCache) {
   std::unique_ptr<Cache> cache(NewCache(options));
   TestCache(cache.get(), line_size);
 }
+
 TEST(Cache, FullCache) {
   if (!HasCudaDevice()) { return; }
 

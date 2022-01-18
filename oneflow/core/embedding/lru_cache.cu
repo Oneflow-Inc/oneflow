@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/embedding/lru_cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <cub/cub.cuh>
 #include "oneflow/core/embedding/hash_functions.cuh"
@@ -37,7 +37,7 @@ ep::CudaLaunchConfig GetLaunchConfig(uint32_t n_keys) {
 }
 
 template<typename Key, typename Elem>
-struct CudaLruCacheContext {
+struct LruCacheContext {
   Key* keys;
   Elem* lines;
   uint8_t* lru_queue;
@@ -55,14 +55,14 @@ __global__ void InitCacheSetMutex(uint32_t n_set,
 }
 
 template<typename Key, typename Elem>
-void ClearCudaLruCacheContext(CudaLruCacheContext<Key, Elem>* ctx) {
+void ClearLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, ctx->n_set * kWarpSize * sizeof(Key)));
   OF_CUDA_CHECK(cudaMemset(ctx->lru_queue, 0, ctx->n_set * kWarpSize * sizeof(uint8_t)));
   InitCacheSetMutex<<<(ctx->n_set - 1 + 256) / 256, 256>>>(ctx->n_set, ctx->mutex);
 }
 
 template<typename Key, typename Elem>
-void InitCudaLruCacheContext(const CacheOptions& options, CudaLruCacheContext<Key, Elem>* ctx) {
+void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>* ctx) {
   const size_t key_size_per_set = kWarpSize * sizeof(Key);
   const uint32_t line_size = options.value_size / sizeof(Elem);
   const size_t lines_size_per_set = kWarpSize * line_size * sizeof(Elem);
@@ -85,11 +85,11 @@ void InitCudaLruCacheContext(const CacheOptions& options, CudaLruCacheContext<Ke
   OF_CUDA_CHECK(
       cudaMalloc(&(ctx->query_indices_buffer), options.max_query_length * sizeof(uint32_t)));
   OF_CUDA_CHECK(cudaMalloc(&(ctx->query_keys_buffer), options.max_query_length * sizeof(Key)));
-  ClearCudaLruCacheContext(ctx);
+  ClearLruCacheContext(ctx);
 }
 
 template<typename Key, typename Elem>
-void DestroyCudaLruCacheContext(CudaLruCacheContext<Key, Elem>* ctx) {
+void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaFree(ctx->keys));
   OF_CUDA_CHECK(cudaFree(ctx->lines));
   OF_CUDA_CHECK(cudaFree(ctx->lru_queue));
@@ -115,7 +115,7 @@ struct ThreadContext {
 
 template<typename Key, typename Elem>
 struct SetContext {
-  __device__ SetContext(const CudaLruCacheContext<Key, Elem>& ctx, uint32_t set_id) {
+  __device__ SetContext(const LruCacheContext<Key, Elem>& ctx, uint32_t set_id) {
     keys = ctx.keys + set_id * kWarpSize;
     lines = ctx.lines + set_id * kWarpSize * ctx.line_size;
     lru_queue = ctx.lru_queue + set_id * kWarpSize;
@@ -132,15 +132,15 @@ struct SetContext {
     }
   }
 
-  __device__ void Read(const CudaLruCacheContext<Key, Elem>& cache_ctx,
-                       const ThreadContext& thread_ctx, int way, Elem* line) {
+  __device__ void Read(const LruCacheContext<Key, Elem>& cache_ctx, const ThreadContext& thread_ctx,
+                       int way, Elem* line) {
     const Elem* from_line = lines + way * cache_ctx.line_size;
     for (int i = thread_ctx.lane_id; i < cache_ctx.line_size; i += kWarpSize) {
       line[i] = from_line[i];
     }
   }
 
-  __device__ int InsertWithoutEvicting(const CudaLruCacheContext<Key, Elem>& cache_ctx,
+  __device__ int InsertWithoutEvicting(const LruCacheContext<Key, Elem>& cache_ctx,
                                        const ThreadContext& thread_ctx, Key key) {
     int lru_way_idx = -1;
     int insert_way = -1;
@@ -161,7 +161,7 @@ struct SetContext {
       if (valid_mask != kFullMask) {
         lru_way_idx = lru_queue[thread_ctx.lane_id];
         insert_way = __popc(static_cast<int>(valid_mask));
-        lru_way_idx = __shfl_up_sync(__activemask(), lru_way_idx, 1);
+        lru_way_idx = __shfl_up_sync(kFullMask, lru_way_idx, 1);
         if (thread_ctx.lane_id == 0) {
           lru_way_idx = insert_way;
           keys[insert_way] = key;
@@ -173,7 +173,7 @@ struct SetContext {
     return insert_way;
   }
 
-  __device__ void Evict(const CudaLruCacheContext<Key, Elem>& cache_ctx,
+  __device__ void Evict(const LruCacheContext<Key, Elem>& cache_ctx,
                         const ThreadContext& thread_ctx, Key key, int* way, Key* evicted_key) {
     int lru_way_idx = lru_queue[thread_ctx.lane_id];
     const Key lane_key = keys[thread_ctx.lane_id];
@@ -191,7 +191,7 @@ struct SetContext {
     *way = insert_way;
   }
 
-  __device__ void Write(const CudaLruCacheContext<Key, Elem>& cache_ctx,
+  __device__ void Write(const LruCacheContext<Key, Elem>& cache_ctx,
                         const ThreadContext& thread_ctx, int way, const Elem* line) {
     Elem* to_line = lines + way * cache_ctx.line_size;
     for (int i = thread_ctx.lane_id; i < cache_ctx.line_size; i += kWarpSize) {
@@ -221,14 +221,14 @@ __device__ Elem Zero() {
 }
 
 template<>
-__device__ uint4 Zero<uint4>() {
-  return uint4{0, 0, 0, 0};
+__device__ ulonglong2 Zero<ulonglong2>() {
+  return ulonglong2{0, 0};
 }
 
 template<typename Key, typename Elem, bool test_only>
-__global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys,
-                          const Key* keys, Elem* values, uint32_t* n_missing_keys,
-                          Key* missing_keys, uint32_t* missing_indices) {
+__global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys, const Key* keys,
+                          Elem* values, uint32_t* n_missing_keys, Key* missing_keys,
+                          uint32_t* missing_indices) {
   ThreadContext thread_ctx{};
   __shared__ Key block_keys[kNumWarpPerBlock][kWarpSize];
   __shared__ size_t block_set_ids[kNumWarpPerBlock][kWarpSize];
@@ -287,10 +287,9 @@ __global__ void GetKernel(CudaLruCacheContext<Key, Elem> cache_ctx, uint32_t num
 }
 
 template<typename Key, typename Elem>
-__global__ void PutWithoutEvictingKernel(CudaLruCacheContext<Key, Elem> cache_ctx,
-                                         uint32_t num_keys, const Key* keys, const Elem* values,
-                                         uint32_t* n_missing, Key* missing_keys,
-                                         uint32_t* missing_indices) {
+__global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys,
+                                         const Key* keys, const Elem* values, uint32_t* n_missing,
+                                         Key* missing_keys, uint32_t* missing_indices) {
   ThreadContext thread_ctx{};
   __shared__ Key block_keys[kNumWarpPerBlock][kWarpSize];
   __shared__ size_t block_set_ids[kNumWarpPerBlock][kWarpSize];
@@ -344,7 +343,7 @@ __global__ void PutWithoutEvictingKernel(CudaLruCacheContext<Key, Elem> cache_ct
 }
 
 template<typename Key, typename Elem>
-__global__ void EvictKernel(CudaLruCacheContext<Key, Elem> cache_ctx, const Key* keys,
+__global__ void EvictKernel(LruCacheContext<Key, Elem> cache_ctx, const Key* keys,
                             const uint32_t* indices, const Elem* values, const uint32_t* n_evict,
                             Key* evicted_keys, Elem* evicted_values) {
   ThreadContext thread_ctx{};
@@ -383,7 +382,7 @@ __global__ void EvictKernel(CudaLruCacheContext<Key, Elem> cache_ctx, const Key*
 }
 
 template<typename Key, typename Elem>
-__global__ void DumpKernel(CudaLruCacheContext<Key, Elem> cache_ctx, size_t start_key_index,
+__global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_key_index,
                            size_t end_key_index, uint32_t* n_dumped, Key* keys, Elem* values) {
   ThreadContext thread_ctx{};
   __shared__ Key warp_keys[kNumWarpPerBlock][kWarpSize];
@@ -418,17 +417,17 @@ __global__ void DumpKernel(CudaLruCacheContext<Key, Elem> cache_ctx, size_t star
 }
 
 template<typename Key, typename Elem>
-class CudaLruCache : public Cache {
+class LruCache : public Cache {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaLruCache);
-  explicit CudaLruCache(const CacheOptions& options)
+  OF_DISALLOW_COPY_AND_MOVE(LruCache);
+  explicit LruCache(const CacheOptions& options)
       : device_index_{}, max_query_length_(options.max_query_length) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    InitCudaLruCacheContext(options, &ctx_);
+    InitLruCacheContext(options, &ctx_);
   }
-  ~CudaLruCache() override {
+  ~LruCache() override {
     CudaCurrentDeviceGuard guard(device_index_);
-    DestroyCudaLruCacheContext(&ctx_);
+    DestroyLruCacheContext(&ctx_);
   }
 
   uint32_t KeySize() const override { return sizeof(Key); }
@@ -486,26 +485,26 @@ class CudaLruCache : public Cache {
         static_cast<Elem*>(values));
   }
 
-  void Clear() override { ClearCudaLruCacheContext<Key, Elem>(&ctx_); }
+  void Clear() override { ClearLruCacheContext<Key, Elem>(&ctx_); }
 
  private:
   int device_index_;
   uint32_t max_query_length_;
-  CudaLruCacheContext<Key, Elem> ctx_;
+  LruCacheContext<Key, Elem> ctx_;
 };
 
 template<typename Key>
 std::unique_ptr<Cache> DispatchValueType(const CacheOptions& options) {
-  if (options.value_size % sizeof(uint4) == 0) {
-    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint4>(options));
+  if (options.value_size % sizeof(ulonglong2) == 0) {
+    return std::unique_ptr<Cache>(new LruCache<Key, ulonglong2>(options));
   } else if (options.value_size % sizeof(uint64_t) == 0) {
-    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint64_t>(options));
+    return std::unique_ptr<Cache>(new LruCache<Key, uint64_t>(options));
   } else if (options.value_size % sizeof(uint32_t) == 0) {
-    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint32_t>(options));
+    return std::unique_ptr<Cache>(new LruCache<Key, uint32_t>(options));
   } else if (options.value_size % sizeof(uint16_t) == 0) {
-    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint16_t>(options));
+    return std::unique_ptr<Cache>(new LruCache<Key, uint16_t>(options));
   } else {
-    return std::unique_ptr<Cache>(new CudaLruCache<Key, uint8_t>(options));
+    return std::unique_ptr<Cache>(new LruCache<Key, uint8_t>(options));
   }
 }
 
@@ -522,8 +521,8 @@ std::unique_ptr<Cache> DispatchKeyType(const CacheOptions& options) {
 
 }  // namespace
 
-std::unique_ptr<Cache> NewCudaLruCache(const CacheOptions& options) {
-  return std::unique_ptr<Cache>(new CudaLruCache<int64_t, float>(options));
+std::unique_ptr<Cache> NewLruCache(const CacheOptions& options) {
+  return std::unique_ptr<Cache>(new LruCache<int64_t, float>(options));
 }
 
 }  // namespace embedding

@@ -15,9 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/embedding/full_cache.h"
-#include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/embedding/lru_cache.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/embedding/hash_functions.cuh"
 
 namespace oneflow {
 
@@ -79,7 +78,7 @@ std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
   CHECK_GT(options.max_query_length, 0);
   CHECK_GT(options.capacity, 0);
   if (options.policy == CacheOptions::Policy::kLRU) {
-    return NewCudaLruCache(options);
+    return NewLruCache(options);
   } else if (options.policy == CacheOptions::Policy::kFull) {
     return NewFullCache(options);
   } else {

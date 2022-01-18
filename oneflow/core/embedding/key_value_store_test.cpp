@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
-#include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"

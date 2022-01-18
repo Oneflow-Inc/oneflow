@@ -175,8 +175,8 @@ __device__ Elem Zero() {
 }
 
 template<>
-__device__ uint4 Zero<uint4>() {
-  return uint4{0, 0, 0, 0};
+__device__ ulonglong2 Zero<ulonglong2>() {
+  return ulonglong2{0, 0};
 }
 
 template<typename Key, typename Elem, bool return_value>
@@ -418,8 +418,8 @@ void CacheImpl<Key, Elem>::Clear() {
 
 template<typename Key>
 std::unique_ptr<Cache> DispatchValueType(const CacheOptions& options) {
-  if (options.value_size % sizeof(uint4) == 0) {
-    return std::unique_ptr<Cache>(new CacheImpl<Key, uint4>(options));
+  if (options.value_size % sizeof(ulonglong2) == 0) {
+    return std::unique_ptr<Cache>(new CacheImpl<Key, ulonglong2>(options));
   } else if (options.value_size % sizeof(uint64_t) == 0) {
     return std::unique_ptr<Cache>(new CacheImpl<Key, uint64_t>(options));
   } else if (options.value_size % sizeof(uint32_t) == 0) {
