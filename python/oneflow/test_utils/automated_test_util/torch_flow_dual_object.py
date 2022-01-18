@@ -321,7 +321,7 @@ def GetDualObject(name, pytorch, oneflow):
                             graph_args = []
                             for arg in oneflow_args:
                                 if flow.is_tensor(arg):
-                                    copy_arg = arg.clone()
+                                    copy_arg = arg.clone().detach()
                                 else:
                                     copy_arg = copy.deepcopy(arg)
                                 graph_args.append(copy_arg)
@@ -345,6 +345,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     if verbose:
                                         print("Run graph of module: ", repr(oneflow))
                                         test_g.debug(3)
+                                    # When testing module methods, kwargs are not considered.
                                     test_g_res = test_g(*graph_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
@@ -456,7 +457,7 @@ def GetDualObject(name, pytorch, oneflow):
                         tensor_graph_args = []
                         for arg in oneflow_args:
                             if flow.is_tensor(arg):
-                                copy_arg = arg.clone()
+                                copy_arg = arg.clone().detach()
                             else:
                                 copy_arg = copy.deepcopy(arg)
                             tensor_graph_args.append(copy_arg)
