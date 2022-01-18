@@ -87,6 +87,7 @@ class generator:
 
     def _init(self):
         self._value = None
+        self._has_value = False
         for x in self.children:
             x._init()
 
