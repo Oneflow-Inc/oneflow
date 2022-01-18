@@ -364,8 +364,8 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g = TestGraphOfModule()
                                     if verbose:
                                         print("Run graph of module: ", repr(oneflow))
-                                        test_g.debug(2)
-                                    test_g_res = test_g(*graph_train_args)
+                                        test_g.debug(3)
+                                    test_g_res = test_g(*oneflow_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
                                 # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
@@ -408,8 +408,29 @@ def GetDualObject(name, pytorch, oneflow):
                                                     test_g_res = oneflow_res
                                             else:
                                                 pass
+                                            if verbose:
+                                                print(
+                                                    "Run graph of function: ",
+                                                    repr(oneflow),
+                                                    ", graph check is intentionally skiped.",
+                                                )
+                                        elif oneflow.__name__ == "Parameter":
+                                            # nn.Graph donot deal with Parameter creation.
+                                            test_g_res = oneflow_res
+                                            if verbose:
+                                                print(
+                                                    "Run graph of function: ",
+                                                    repr(oneflow),
+                                                    ", graph check is intentionally skiped.",
+                                                )
                                         else:
                                             test_g = TestGraphOfFunctional()
+                                            if verbose:
+                                                print(
+                                                    "Run graph of function: ",
+                                                    repr(oneflow),
+                                                )
+                                                test_g.debug(3)
                                             test_g_res = test_g()
                                     except Exception as e:
                                         print_note_fake_program()
@@ -468,6 +489,9 @@ def GetDualObject(name, pytorch, oneflow):
 
                             try:
                                 test_g = TestGraphOfTensorMethod()
+                                if verbose:
+                                    print("Run graph of method: ", repr(oneflow))
+                                    test_g.debug(3)
                                 test_g_res = test_g()
                             except Exception as e:
                                 print_note_fake_program()
@@ -704,6 +728,10 @@ def autotest(
     check_allclose=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+
+    if check_graph == "ValidatedFlase":
+        # check graph is intentionally closed and threre is a validated reason.
+        check_graph = False
 
     def deco(f):
         @functools.wraps(f)
