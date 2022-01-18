@@ -748,7 +748,7 @@ def _gather(self, dim, index):
 def _repeat(self, *sizes):
     return flow._C.repeat(self, sizes)
 
-  
+
 def _numpy(self):
     assert (
         not self.is_lazy
