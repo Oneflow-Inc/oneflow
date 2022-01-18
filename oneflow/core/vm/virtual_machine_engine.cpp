@@ -192,10 +192,12 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
 void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
     intrusive::shared_ptr<InstructionMsg>&& instr_msg) {
   local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
-  static constexpr int kWindowSize = 10;
-  if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) {
-    garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
-  }
+  static constexpr int kWindowSize = 32;
+  if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) { MoveToGarbageMsgListAndNotifyGC(); }
+}
+
+void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
+  garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
 }
 
 void VirtualMachineEngine::RunInstructionsInAdvance(InstructionMsg* instr_msg) {
@@ -670,15 +672,7 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
       return Maybe<void>::Ok();
     }));
   }
-  bool old_list_empty = false;
-  static thread_local InstructionMsgList garbage_instr_msg_list;
-  {
-    std::unique_lock<std::mutex> lock(pending_and_complete_msg_mutex_);
-    old_list_empty = mut_pending_msg_list()->ThreadUnsafeMoveFrom(&new_instr_msg_list);
-    garbage_msg_list_.ThreadUnsafeMoveTo(&garbage_instr_msg_list);
-  }
-  garbage_instr_msg_list.PopFront();
-  if (unlikely(garbage_instr_msg_list.size())) { garbage_instr_msg_list.PopFront(); }
+  bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
   OF_PROFILER_RANGE_POP();
   return old_list_empty;
 }
@@ -821,6 +815,13 @@ void VirtualMachineEngine::Schedule() {
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }
 
+void VirtualMachineEngine::Callback() {
+  InstructionMsgList garbage_msg_list;
+  mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
+}
+
+void VirtualMachineEngine::ScheduleEnd() { MoveToGarbageMsgListAndNotifyGC(); }
+
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
   return local_pending_msg_list().empty() && active_stream_list().empty()
          && flying_instruction_cnt() == 0;
@@ -830,6 +831,8 @@ bool VirtualMachineEngine::Empty() const {
   // hook and size will be check in pending_msg_list().empty().
   return pending_msg_list().empty() && ThreadUnsafeEmpty();
 }
+
+bool VirtualMachineEngine::CallbackEmpty() const { return garbage_msg_list_.empty(); }
 
 }  // namespace vm
 }  // namespace oneflow
