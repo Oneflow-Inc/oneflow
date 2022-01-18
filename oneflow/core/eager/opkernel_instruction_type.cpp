@@ -742,18 +742,6 @@ Maybe<void> IncReferenceNumOfRecomputedTensor(
         dtr_blob_object->pin();
         LOG(INFO) << dtr_blob_object << " in memory? " << dtr_blob_object->is_in_memory();
         if (!dtr_blob_object->is_in_memory()) {
-          // if (oneflow::DTRDebugEnabled()) {
-          //   LOG(INFO) << operand->shared_opkernel()->op_type_name() << ": increase reference num
-          //   of
-          //   "
-          //             << dtr_blob_object << " from "
-          //             << Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object] << "
-          //             to "
-          //             << Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object] + 1;
-          // }
-          //
-          // Global<one::DTRTensorPool>::Get()->reference_nums_[dtr_blob_object]++;
-
           const auto local_call_op = DTROp2LocalCallOp(dtr_blob_object->compute_op());
           CHECK_NOTNULL_OR_RETURN(local_call_op);
 
@@ -798,7 +786,6 @@ inline Maybe<void> LocalCallOpKernelUtil::ComputeInstruction(vm::Instruction* in
     auto operand =
         JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
 
-    CHECK_OR_RETURN(Global<one::DTRTensorPool>::Get()->reference_nums_.empty());
     CHECK_OR_RETURN(Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.empty());
     if (oneflow::DTRDebugLevel() >= 1) {
       LOG(INFO) << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
