@@ -39,9 +39,6 @@ struct DTRTensorPool {
     if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
-  void set_current_op_type_name(std::string op_type_name);
-  const std::string& current_op_type_name();
-
   void set_total_memory(size_t mem);
   size_t get_total_memory();
 

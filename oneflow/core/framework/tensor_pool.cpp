@@ -50,14 +50,6 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
 }
 }  // namespace
 
-void DTRTensorPool::set_current_op_type_name(std::string op_type_name) {
-  current_op_type_name_ = std::move(op_type_name);
-}
-
-const std::string& DTRTensorPool::current_op_type_name() {
-  return current_op_type_name_;
-}
-
 void DTRTensorPool::inc_num_eviction() { num_eviction_++; }
 
 Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {

@@ -169,23 +169,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
           piece->bin_num = kInvalidBinNum;
           piece->is_free = false;
         } else if (piece->size > aligned_size) {
-          const std::string& name = Global<one::DTRTensorPool>::Get()->current_op_type_name();
-          const bool choose_left = [&]() {
-            if (std::getenv("OF_DTR_NLR") != nullptr) {
-              std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
-                                                               "conv_filter_grad"};
-              if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
-                  != high_compute_cost_names.cend()) {
-                return true;
-              }
-              return false;
-
-            } else {
-              return left_;
-            }
-          }();
-          if (choose_left) {
-            if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "left: " << name; }
+          if (left_) {
             piece->bin_num = kInvalidBinNum;
             piece->is_free = false;
 
