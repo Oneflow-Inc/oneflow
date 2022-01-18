@@ -34,7 +34,7 @@ void ParallelDimReduce(const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_s
                        ParallelDesc* reduced_parallel_desc, cfg::NdSbp* reduced_nd_sbp) {
   const auto& hierarchy = parallel_desc.hierarchy();
   DimVector reduced_hierarchy;
-  FOR_RANGE(int64_t, i, 1, hierarchy->NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
     if (hierarchy->At(i) != 1) {
       if (reduced_nd_sbp->sbp_parallel().empty()
           || (nd_sbp.sbp_parallel(i)
@@ -67,7 +67,7 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
 
   DimVector reduced_in_hierarchy;
   DimVector reduced_out_hierarchy;
-  FOR_RANGE(int64_t, i, 1, in_hierarchy->NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, in_hierarchy->NumAxes()) {
     if (in_hierarchy->At(i) != 1 || out_hierarchy->At(i) != 1) {
       if (reduced_in_nd_sbp->sbp_parallel().empty()
           || (in_nd_sbp.sbp_parallel(i)
