@@ -17,68 +17,65 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_UNIQUE_KEY_H_
 #define ONEFLOW_USER_KERNELS_UNIQUE_KEY_H_
 #include "oneflow/core/ep/include/primitive/fill.h"
+#include "oneflow/core/embedding/hash_functions.cuh"
 
 namespace oneflow {
 
 namespace {
 
-template<typename K, typename IDX>
-__global__ void dump_kernel(const K* d_key, const IDX* d_key2, const IDX* keys, K* unique_keys,
-                            IDX* unique_keys2, IDX* table2unique_offset, IDX* counter,
-                            const size_t offset, const size_t search_length, const K empty_key) {
-  const size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  K read_key;
-  IDX read_val;
-  bool valid_slot = false;
-  // Each thread gather the key and value from slot assigned to them.
-  if (idx < search_length) {
-    read_key = keys[offset + idx];
-    if (read_key != empty_key) {
-      valid_slot = true;
-      K old_count = atomicAdd(counter, 1);
-      unique_keys[old_count] = d_key[read_key];
-      unique_keys2[old_count] = d_key2[read_key];
-      table2unique_offset[idx] = old_count;
-    }
-  }
+using CuInt64T = unsigned long long int;
+
+__device__ __inline__ int32_t AtomicCAS(int32_t* address, int32_t compare, int32_t val) {
+  return atomicCAS(address, compare, val);
 }
 
-template<typename IDX>
-__global__ void gather(int64_t n, IDX* index, IDX* values, IDX* out) {
-  const int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < n) { out[idx] = values[index[idx]]; }
+__device__ __inline__ int64_t AtomicCAS(int64_t* address, int64_t compare, int64_t val) {
+  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
+  return static_cast<int64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
+                                        static_cast<CuInt64T>(compare),
+                                        static_cast<CuInt64T>(val)));
 }
 
-// template <typename K, typename IDX, typename hasher>
+__device__ __inline__ int32_t AtomicAdd(int32_t* address, int32_t val) {
+  return atomicAdd(address, val);
+}
+
+__device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
+  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
+  return static_cast<int64_t>(
+      atomicAdd(reinterpret_cast<CuInt64T*>(address), static_cast<CuInt64T>(val)));
+}
+
+// ref from
+// https://github.com/NVIDIA-Merlin/HugeCTR/blob/master/HugeCTR/src/inference/unique_op/unique_op.cu
+
 template<typename K, typename IDX>
-__global__ void get_insert_kernel(const K* d_key, IDX* reverse_index, const size_t len, IDX* keys,
-                                  const size_t capacity, const IDX empty_key) {
-  const int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < len) {
-    // K target_key = d_key[idx];
-    // save id's index in hash table instead of id
-    IDX target_key = idx;
-    // size_t hash_index = hasher::hash(d_key[idx]) % capacity;
-    size_t hash_index = d_key[idx] % capacity;
-    size_t counter = 0;
+__global__ void UniqueIds(const int64_t capacity, const K empty_key, const IDX empty_val,
+                          const int32_t num_ids, const K* ids, const IDX* column_ids, K* table_keys,
+                          IDX* table_vals, IDX* num_unique_ids, K* unique_ids,
+                          IDX* unique_column_ids, IDX* reverse_index) {
+  CUDA_1D_KERNEL_LOOP(i, num_ids) {
+    K target_key = ids[i];
+    int64_t hash_index = XXH64()(target_key) % capacity;
+    int64_t counter = 0;
     while (true) {
-      // Have searched all the slot in the hashtable, but all slots in the hashtable are occupied by
-      // other keys
       if (counter >= capacity) {
         printf("counter >= capacity\n");
         // assert(false && "error: unique op fails: hashtable is full");
       }
-      // Try to set the key for the current slot to target key
-      const IDX old_key = atomicCAS(keys + hash_index, empty_key, target_key);
+      const K old_key = AtomicCAS(table_keys + hash_index, empty_key, target_key);
+      volatile IDX& target_val_pos = table_vals[hash_index];
       if (empty_key == old_key) {
-        reverse_index[idx] = hash_index;
+        IDX unique_pos = AtomicAdd(num_unique_ids, 1);
+        reverse_index[i] = unique_pos;
+        target_val_pos = unique_pos;
+        unique_ids[unique_pos] = target_key;
+        unique_column_ids[unique_pos] = column_ids[i];
         break;
-      } else if (d_key[target_key] == d_key[old_key]) {
-        if (target_key < old_key) {
-          // when same key, use lower index in hash table
-          atomicCAS(keys + hash_index, old_key, target_key);
-        }
-        reverse_index[idx] = hash_index;
+      } else if (target_key == old_key) {
+        while (target_val_pos == empty_val)
+          ;
+        reverse_index[i] = target_val_pos;
         break;
       }
       counter++;
@@ -86,46 +83,39 @@ __global__ void get_insert_kernel(const K* d_key, IDX* reverse_index, const size
     }
   }
 }
+
 }  // namespace
 
 template<typename K, typename IDX>
 size_t GetUniqueKeysWorkspace(const int64_t num_ids, const int64_t capacity) {
-  size_t hash_table_size = GetCudaAlignedSize(capacity * sizeof(IDX));
-  size_t d_reverse_index_size = GetCudaAlignedSize(num_ids * sizeof(IDX));
-  size_t table2unique_offset_size = GetCudaAlignedSize(capacity * sizeof(IDX));
-  return hash_table_size + d_reverse_index_size + table2unique_offset_size;
+  size_t hash_table_keys_size = GetCudaAlignedSize(capacity * sizeof(K));
+  size_t hash_table_vals_size = GetCudaAlignedSize(capacity * sizeof(IDX));
+  return hash_table_keys_size + hash_table_vals_size;
 }
 
 template<typename K, typename IDX>
 void UniqueKeys(ep::Stream* stream, const int64_t num_ids, const int64_t capacity, const K* ids,
-                const IDX* slots, IDX* num_unique_ids, IDX* reverse_index, K* unique_ids,
-                IDX* unique_slots, char* workspace) {
-  size_t hash_table_size = GetCudaAlignedSize(capacity * sizeof(IDX));
-  size_t d_reverse_index_size = GetCudaAlignedSize(num_ids * sizeof(IDX));
-  size_t table2unique_offset_size = GetCudaAlignedSize(capacity * sizeof(IDX));
-  IDX* table_key = reinterpret_cast<IDX*>(workspace);
-  IDX* d_reverse_index = reinterpret_cast<IDX*>(workspace + hash_table_size);
-  IDX* table2unique_offset =
-      reinterpret_cast<IDX*>(workspace + hash_table_size + d_reverse_index_size);
-  IDX empty_key = -1;
+                const IDX* column_ids, IDX* num_unique_ids, IDX* reverse_index, K* unique_ids,
+                IDX* unique_column_ids, char* workspace) {
+  size_t hash_table_keys_size = GetCudaAlignedSize(capacity * sizeof(K));
+  size_t hash_table_vals_size = GetCudaAlignedSize(capacity * sizeof(IDX));
+  K* table_keys = reinterpret_cast<K*>(workspace);
+  IDX* table_vals = reinterpret_cast<IDX*>(workspace + hash_table_keys_size);
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  K empty_key = 0;
+  IDX empty_val = -1;
+  cudaMemsetAsync(table_keys, 0, capacity * sizeof(K), cuda_stream);
   std::unique_ptr<ep::primitive::Fill> fill_primitive =
       ep::primitive::NewPrimitive<ep::primitive::FillFactory>(DeviceType::kCUDA,
                                                               GetDataType<IDX>::value);
   CHECK(fill_primitive);
-  fill_primitive->Launch(stream, table_key, Scalar(-1), capacity);
-  cudaMemset(num_unique_ids, 0, sizeof(IDX));
-  int32_t BLOCK_SIZE_ = 256;
-  get_insert_kernel<K, IDX><<<(num_ids - 1) / BLOCK_SIZE_ + 1, BLOCK_SIZE_, 0,
-                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      ids, d_reverse_index, num_ids, table_key, capacity, empty_key);
-  // Launch dump kernel
-  dump_kernel<K, IDX><<<(capacity - 1) / BLOCK_SIZE_ + 1, BLOCK_SIZE_, 0,
-                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      ids, slots, table_key, unique_ids, unique_slots, table2unique_offset, num_unique_ids, 0,
-      capacity, empty_key);
-  gather<IDX><<<(capacity - 1) / BLOCK_SIZE_ + 1, BLOCK_SIZE_, 0,
-                stream->As<ep::CudaStream>()->cuda_stream()>>>(capacity, d_reverse_index,
-                                                               table2unique_offset, reverse_index);
+  fill_primitive->Launch(stream, table_vals, Scalar(-1), capacity);
+  cudaMemsetAsync(num_unique_ids, 0, sizeof(IDX), cuda_stream);
+
+  UniqueIds<K, IDX><<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
+                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      capacity, empty_key, empty_val, num_ids, ids, column_ids, table_keys, table_vals,
+      num_unique_ids, unique_ids, unique_column_ids, reverse_index);
 }
 
 }  // namespace oneflow
