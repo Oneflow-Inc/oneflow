@@ -296,7 +296,6 @@ class LayerNormAffineFunctor {
                          .Output("y")
                          .Output("mean")
                          .Output("inv_variance")
-                         .Output("normalized")
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1663,21 +1662,27 @@ class L2NormalizeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
                            const float& epsilon) const {
+    const auto ndims = input->shape()->NumAxes();
+    const auto final_dim = ndims - 1;
+
+    auto axis_ = axis >= 0 ? axis : axis + ndims;
+    CHECK_GE_OR_RETURN(axis_, 0) << "Axis should >=0 but axis is " << axis_ << " now.";
+    CHECK_LE_OR_RETURN(axis_, final_dim)
+        << "Axis should <" << ndims << " but axis is " << axis_ << " now.";
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", 0));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<int32_t>("axis", final_dim));
 
-    if (axis != 0) {
-      std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
-      for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
-      std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
+    if (axis_ == final_dim) { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs); }
 
-      const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
-      return functional::Transpose(result->at(0), input_perm);
-    }
+    std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+    for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
+    std::swap(input_perm[final_dim], input_perm[static_cast<size_t>(axis_)]);
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
+    return functional::Transpose(result->at(0), input_perm);
   }
 
  private:
@@ -1687,7 +1692,11 @@ class L2NormalizeFunctor {
 class NormalizeFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
-                           const int32_t& dim, const float& eps) const {
+                           const int32_t& dim, const float& eps,
+                           const bool& use_l2_norm_kernel) const {
+    if (use_l2_norm_kernel && (std::fabs(p - 2.0f) < std::numeric_limits<float>::min())) {
+      return functional::L2Normalize(input, dim, eps);
+    }
     return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
                                           const int32_t&)>(
                [](const auto& x, const float& p, const int32_t& dim) -> Maybe<Tensor> {
