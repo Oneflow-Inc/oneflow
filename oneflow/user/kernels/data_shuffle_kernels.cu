@@ -163,10 +163,8 @@ class IdShuffleTmpBufferManager final {
   IdShuffleTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num)
       : ptr_(ptr) {
     int64_t unique_workspace_bytes = 0;
-    // UniqueKernelUtil<DeviceType::kCUDA, K, IDX>::GetUniqueWorkspaceSizeInBytes(
-    //    nullptr, parallel_num * num_ids, &unique_workspace_bytes);
-    workspace_bytes_ = GetUniqueKeysWorkspace<K, IDX>(
-        parallel_num * num_ids, num_ids);  // GetCudaAlignedSize(unique_workspace_bytes);
+    workspace_bytes_ =
+        GetUniqueKeysWorkspace<K, IDX>(parallel_num * num_ids, parallel_num * num_ids);
     const size_t unique_ids_bytes = GetCudaAlignedSize(num_ids * sizeof(K));
     const size_t partitioned_unique_ids_bytes =
         GetCudaAlignedSize(parallel_num * num_ids * sizeof(K));
