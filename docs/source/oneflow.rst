@@ -148,6 +148,7 @@ oneflow
             zeros, 
             zeros_like,
             is_nonzero,
+            is_tensor,
             no_grad,
             grad_enable,
             inference_mode,
