@@ -391,7 +391,6 @@ from . import (
     amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
-import oneflow.utils.vision
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
