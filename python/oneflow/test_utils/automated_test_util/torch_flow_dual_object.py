@@ -779,6 +779,8 @@ def autotest(
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
                     for x in res:
+                        if x is None:
+                            continue
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
