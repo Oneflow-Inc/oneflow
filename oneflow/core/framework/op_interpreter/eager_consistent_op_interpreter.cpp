@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
 
 namespace oneflow {
 namespace one {
@@ -75,6 +76,8 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg:
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
       in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
+  Global<const EagerBoxingLogger>::Get()->Log(
+      *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
                                                           in_parallel_desc, out_parallel_desc));
