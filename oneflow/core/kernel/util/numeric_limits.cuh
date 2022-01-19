@@ -18,7 +18,6 @@ limitations under the License.
 #include <limits.h>
 #include <math.h>
 #include <float.h>
-#include <cuda_fp16.h>
 #include <half.hpp>
 
 #include "oneflow/core/device/cuda_util.h"
