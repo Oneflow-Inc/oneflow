@@ -248,7 +248,9 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
-        elif annotation == NoneType:
+        elif annotation is None:
+            val = None
+        elif annotation is NoneType:
             val = None
         else:
             raise NotImplementedError(
@@ -358,6 +360,22 @@ class random_device(generator):
             return "cpu"
         else:
             return random_util.choice(["cuda", "cpu"])
+
+
+class cpu_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(["cpu"])
+
+
+class gpu_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(["cuda"])
 
 
 def test_against_pytorch(
@@ -647,6 +665,8 @@ __all__ = [
     "random_tensor",
     "random_bool",
     "random_device",
+    "cpu_device",
+    "gpu_device",
     "random",
     "random_or_nothing",
     "oneof",

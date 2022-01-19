@@ -112,16 +112,17 @@ def rand_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> x = flow.rand(3,3)
+        >>> x = flow.rand(3,3) # construct local tensor
         >>> x.shape
         oneflow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0: [0]})
         >>> sbp = flow.sbp.broadcast
-        >>> x = flow.rand(3, 3, placement=placement, sbp=sbp)
+        >>> x = flow.rand(3, 3, placement=placement, sbp=sbp) # construct consistent tensor
         >>> x.is_consistent
         True
+
 
     """
     assert out is None, "out not supported yet"
@@ -225,14 +226,14 @@ def randn_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> x = flow.randn(3,3)
+        >>> x = flow.randn(3,3) # construct local tensor
         >>> x.shape
         oneflow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0:[0]})
         >>> sbp = flow.sbp.broadcast
-        >>> x = flow.randn(3,3,placement=placement,sbp=sbp)
+        >>> x = flow.randn(3,3,placement=placement,sbp=sbp) # construct consistent tensor
         >>> x.is_consistent
         True
 
@@ -351,10 +352,17 @@ def randint_op(
         >>> import oneflow as flow
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
-        >>> flow.randint(0, 5, (3,3), generator=generator)
+        >>> y = flow.randint(0, 5, (3,3), generator=generator) # construct local tensor
+        >>> y
         tensor([[2, 2, 3],
                 [4, 3, 4],
                 [2, 4, 2]], dtype=oneflow.int64)
+        >>> y.is_consistent
+        False
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.randint(0, 5, (3,3), generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
+        >>> y.is_consistent
+        True
 
     """
     assert out is None, "out not supported yet"
@@ -466,8 +474,16 @@ def randperm_op(
         >>> import oneflow as flow
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
-        >>> flow.randperm(5, generator=generator)
+        >>> y = flow.randperm(5, generator=generator) # construct local tensor
+        >>> y
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
+        >>> y.is_consistent
+        False
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.randperm(5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
+        >>> y.is_consistent
+        True
+
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"

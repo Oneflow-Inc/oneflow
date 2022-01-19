@@ -238,7 +238,7 @@ __global__ void CtcLossGradGpu(
 }  // namespace
 
 template<typename T, typename IDX>
-struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
+struct CtcLossKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
@@ -272,13 +272,13 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
   }
 };
 
-#define INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU(device_type_v, log_probs_dtype_pair,          \
-                                             input_lengths_dtype_pair)                     \
+#define INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CUDA(device_type_v, log_probs_dtype_pair,         \
+                                              input_lengths_dtype_pair)                    \
   template struct CtcLossKernelUtil<device_type_v, OF_PP_PAIR_FIRST(log_probs_dtype_pair), \
                                     OF_PP_PAIR_FIRST(input_lengths_dtype_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CUDA, (DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-#undef INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU
+#undef INSTANTIATE_CTC_LOSS_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

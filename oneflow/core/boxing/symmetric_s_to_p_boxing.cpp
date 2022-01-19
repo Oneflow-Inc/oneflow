@@ -39,7 +39,8 @@ bool RawIsPartialSumSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
 static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
-                                          Symbol<cfg::SbpParallel> src_sbp) {
+                                          Symbol<cfg::SbpParallel> src_sbp,
+                                          const Shape& logical_shape) {
   return one::OpBuilder("eager_symmetric_s_to_p", *JUST(UniqueStr("eager_symmetric_s_to_p")))
       .Input("in")
       .Output("out")
@@ -51,7 +52,8 @@ Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
 static constexpr auto* CachedEagerSymmetricSToPOpExpr =
     DECORATE(&EagerSymmetricSToP, ThreadLocalCopiable);
 
-Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -62,7 +64,7 @@ Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricSToP = DECORATE(&RawCheckSymmetricSToP, ThreadLocal);
+static constexpr auto* CheckSymmetricSToP = DECORATE(&RawCheckSymmetricSToP, ThreadLocalCopiable);
 
 }  // namespace
 
@@ -73,8 +75,8 @@ Maybe<one::Tensor> SymmetricSToP(const std::shared_ptr<one::Tensor>& tensor, Sym
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  std::shared_ptr<one::OpExpr> op_expr = JUST(
-      CachedEagerSymmetricSToPOpExpr(tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0))));
+  std::shared_ptr<one::OpExpr> op_expr = JUST(CachedEagerSymmetricSToPOpExpr(
+      tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0)), *tensor->shape()));
 
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
 }

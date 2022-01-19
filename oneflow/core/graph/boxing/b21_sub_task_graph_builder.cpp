@@ -36,9 +36,9 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
       if (i == nearest_in_parallel_id) {
         TaskNode* proxy =
             ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, out_parallel_id);
-        sorted_out_tasks->push_back(proxy);
+        sorted_out_tasks->emplace_back(proxy);
       } else {
-        sorted_ctrl_tasks->at(0).push_back(in_node);
+        sorted_ctrl_tasks->at(0).emplace_back(in_node);
       }
     }
     return TRY(BuildSubTskGphBuilderStatus("B21SubTskGphBuilder", ""));

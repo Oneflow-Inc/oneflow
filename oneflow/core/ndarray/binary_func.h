@@ -38,8 +38,14 @@ namespace oneflow {
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_BINARY_FUNC_NAME_SEQ)
 
 #define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)
+#define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
+#define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ)
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -137,12 +143,13 @@ template<typename T>
 struct BinaryFuncPow final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
 #if defined(__CUDACC__)
-    return pow(x, y);
+    return powf(x, y);
 #else
     return std::pow(x, y);
 #endif
   }
 };
+
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
 
 template<>
@@ -161,7 +168,7 @@ struct BinaryFuncPow<double> final {
 template<>
 struct BinaryFuncPow<float> final {
   static __device__ __forceinline__ float Invoke(const float x, const float y) {
-    return __powf(x, y);
+    return powf(x, y);
   }
 };
 
@@ -169,7 +176,7 @@ template<>
 struct BinaryFuncPow<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-    return __float2half(__powf(__half2float(x), __half2float(y)));
+    return __float2half(powf(__half2float(x), __half2float(y)));
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -242,9 +249,7 @@ struct BinaryFuncAND final {
 };
 template<typename T>
 struct BinaryFuncAll final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncAND<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncAND<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
@@ -254,9 +259,7 @@ struct BinaryFuncOR final {
 };
 template<typename T>
 struct BinaryFuncAny final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
-    return BinaryFuncOR<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return BinaryFuncOR<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncOR);
 

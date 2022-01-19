@@ -50,7 +50,7 @@ class MemcpyFactoryImpl : public MemcpyFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, MemcpyFactory, MemcpyFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemcpyFactory, MemcpyFactoryImpl);
 
 }  // namespace
 

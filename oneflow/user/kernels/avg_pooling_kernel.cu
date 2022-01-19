@@ -123,7 +123,7 @@ __launch_bounds__(kBlockSize) __global__ void DoCUDAAvgPool3dBackward(
 };
 
 template<typename T>
-struct AvgPoolingKernelUtil<DeviceType::kGPU, T> {
+struct AvgPoolingKernelUtil<DeviceType::kCUDA, T> {
   static void Avgpool1dForward(ep::Stream* stream,
                                const NdIndexOffsetHelper<int64_t, 3>& index_helper,
                                const int64_t elem_num, const T* src, T* dest,
@@ -205,7 +205,7 @@ struct AvgPoolingKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_AVG_POOLING_KERNEL_UTIL, (DeviceType::kGPU),
-                                 AVG_POOLING_DATA_TYPE_GPU_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_AVG_POOLING_KERNEL_UTIL, (DeviceType::kCUDA),
+                                 AVG_POOLING_DATA_TYPE_CUDA_SEQ);
 
 }  // namespace oneflow

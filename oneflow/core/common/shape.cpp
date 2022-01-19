@@ -122,7 +122,6 @@ void Shape::Set(int64_t index, int64_t val) {
   CHECK_GE(index, 0);
   CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
                                    << " > num_axes: " << this->NumAxes();
-  CHECK_GE(val, 0);
   dim_vec_.at(index) = val;
   UpdateElemCnt();
 }
@@ -162,7 +161,7 @@ Shape Shape::RemoveOnes(const AxisVector& axis_vec) const {
   const AxisVector& axis_vec_shifted = ShiftNegativeAxisVec(axis_vec);
   for (int64_t i = 0; i < this->dim_vec().size(); i++) {
     if (std::find(axis_vec_shifted.begin(), axis_vec_shifted.end(), i) == axis_vec_shifted.end()) {
-      dim_vec.push_back(this->dim_vec().at(i));
+      dim_vec.emplace_back(this->dim_vec().at(i));
     } else {
       CHECK_EQ(this->dim_vec().at(i), 1);
     }
@@ -181,7 +180,7 @@ AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
   CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
   for (int64_t i = 0; i < NumAxes(); i++) {
     if (this->dim_vec().at(i) != broadcast_shape.dim_vec().at(i) && this->dim_vec().at(i) == 1) {
-      broadcast_axis_vec.push_back(i);
+      broadcast_axis_vec.emplace_back(i);
     } else {
       CHECK_EQ(this->dim_vec().at(i), broadcast_shape.dim_vec().at(i));
     }
@@ -204,7 +203,7 @@ Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   if (start_dim > ndims) { start_dim = ndims; }
   if (end_dim > ndims) { end_dim = ndims; }
   DimVector dim_vec;
-  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { dim_vec.push_back(this->At(i)); }
+  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { dim_vec.emplace_back(this->At(i)); }
   return std::make_shared<Shape>(dim_vec);
 }
 

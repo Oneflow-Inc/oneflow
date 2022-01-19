@@ -111,7 +111,7 @@ __global__ void CtcGreedyDecodeGpu(int64_t* decoded_ptr, T* neg_sum_logits_ptr,
 }
 
 template<typename T>
-struct CTCGreedyDecoderFunctor<DeviceType::kGPU, T> final {
+struct CTCGreedyDecoderFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
                   const bool merge_repeated, const int64_t max_input_length,
@@ -140,7 +140,7 @@ struct CTCGreedyDecoderFunctor<DeviceType::kGPU, T> final {
 
 }  // namespace
 
-REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, float);
-REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, double);
+REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kCUDA, float);
+REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kCUDA, double);
 
 }  // namespace oneflow

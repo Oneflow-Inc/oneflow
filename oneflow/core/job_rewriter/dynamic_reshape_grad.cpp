@@ -31,7 +31,7 @@ void GenerateBackwardOpConf4DynamicReshape(
     reshape_like_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reshape_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     reshape_like_op_conf->set_y("y");
-    op_confs->push_back(reverse_reshape_op);
+    op_confs->emplace_back(reverse_reshape_op);
     DiffLbi4BnInOp("in")->set_op_name(reverse_reshape_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("y");
   }

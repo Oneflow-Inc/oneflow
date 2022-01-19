@@ -27,8 +27,8 @@ namespace oneflow {
   FLOATING_DATA_TYPE_SEQ          \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define PADDING_DATA_TYPE_GPU_SEQ \
-  FLOAT16_DATA_TYPE_SEQ           \
+#define PADDING_DATA_TYPE_CUDA_SEQ \
+  FLOAT16_DATA_TYPE_SEQ            \
   PADDING_DATA_TYPE_CPU_SEQ
 
 namespace user_op {

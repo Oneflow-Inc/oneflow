@@ -94,8 +94,14 @@ class Dropout(_DropoutNd):
             generator = flow.Generator()
         self.generator = generator
 
-    def forward(self, x):
-        return flow._C.dropout(x, self.p, self.training, self.generator)
+    def forward(self, x, addend=None):
+        return flow._C.dropout(
+            x,
+            addend if addend is not None else None,
+            self.p,
+            self.training,
+            self.generator,
+        )
 
 
 if __name__ == "__main__":

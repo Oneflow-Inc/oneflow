@@ -93,10 +93,10 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
-  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
   const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
   tensor_storage_->set_releaser_hook(
-      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
+      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
           if (eager_blob_object->last_used_device().has_value()) {
@@ -120,12 +120,12 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_obj
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
 
   if (tensor_storage_) {
-    auto tensor_buffer = tensor_storage_->buffer();
+    auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
-                                                               tensor_buffer, dep_object);
+                                                               tensor_storage, dep_object);
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
+        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
@@ -211,6 +211,11 @@ size_t ConsistentTensorMeta::CalcHashValue() const {
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
+Maybe<ConsistentTensorImpl> LazyConsistentTensorImpl::detach() const {
+  auto detached_impl = std::make_shared<LazyConsistentTensorImpl>(tensor_meta_, false, true);
+  return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
+}
+
 EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf,
     const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor)
@@ -270,6 +275,14 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
   return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
+}
+
+Maybe<ConsistentTensorImpl> EagerConsistentTensorImpl::detach() const {
+  auto detached_impl = JUST(EagerConsistentTensorImpl::New(tensor_meta_, false, true));
+  detached_impl->cur_rank_phy_tensor_ = cur_rank_phy_tensor_;
+  detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
+  detached_impl->transport_token_ = transport_token_;
+  return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
 }
 
 }  // namespace one

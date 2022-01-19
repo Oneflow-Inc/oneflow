@@ -163,7 +163,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
           CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
           CHECK_GE(current_chunk_offset, 0);
           // CHECK_GT(mem_block->mem_size(), 0); NOTE(chengcheng): has mem block mem size = 0
-          CHECK_GT(chunk->mem_size(), 0);
+          CHECK_GE(chunk->mem_size(), 0);
           mem_block->set_chunk_id(chunk->chunk_id());
           mem_block->set_chunk_offset(current_chunk_offset);
           current_chunk_offset += mem_block->mem_size();
@@ -177,7 +177,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     }
 
     for (const ChunkProto* exist_chunk : exist_chunks) {
-      all_chunks.push_back(*exist_chunk);
+      all_chunks.emplace_back(*exist_chunk);
       CHECK(unique_chunk_ids.insert(exist_chunk->chunk_id()).second);
     }
 
@@ -207,7 +207,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
         ++remain_block_it;
       }
 
-      all_chunks.push_back(new_chunk);
+      all_chunks.emplace_back(new_chunk);
       CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
 
       Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
@@ -261,7 +261,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       CHECK(!var_name.empty());
       CHECK_EQ(regst_desc->register_num(), 1);
       CHECK_EQ(regst_desc->min_register_num(), 1);
-      CHECK_EQ(regst_desc->max_register_num(), 1);
+      // NOTE(xuxiaoyu): this check cannot pass when open ZeRO
+      // CHECK_EQ(regst_desc->max_register_num(), 1) << var_name;
       regst_desc->set_variable_op_name(var_name);
     }
 
@@ -450,23 +451,23 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
                                       const std::string& pass_tag) {
     if (task_proto.task_type() == TaskType::kCopyCommNet) {
-      copy_comm_net_node_list.push_back(node_def);
+      copy_comm_net_node_list.emplace_back(node_def);
       return;
     }
     if (pass_tag == kNoPassTag) {
       const StreamId stream_id = PlanUtil::GetStreamId(task_proto);
-      if (stream_id.device_id().device_type() == DeviceType::kGPU) {
+      if (stream_id.device_id().device_type() == DeviceType::kCUDA) {
         machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
                                              [stream_id.device_id().device_index()]
-                                                 .push_back(node_def);
+                                                 .emplace_back(node_def);
         machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       } else {
-        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].push_back(
+        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].emplace_back(
             node_def);
         machine_id2host_node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       }
     } else if (pass_tag == kMainOp) {
-      main_node_list.push_back(node_def);
+      main_node_list.emplace_back(node_def);
     } else {
       UNIMPLEMENTED();
     }
@@ -496,7 +497,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       for (int64_t consumer_task_id : regst.consumer_task_id()) {
-        task_id2producer_task_ids[consumer_task_id].push_back(task_proto.task_id());
+        task_id2producer_task_ids[consumer_task_id].emplace_back(task_proto.task_id());
       }
     }
   }
@@ -782,7 +783,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
         if (all_visited.count(node_on_in_edge) != 0) { return; }
         in_cnt += 1;
       });
-      if (in_cnt == 0) { src_nodes.push_back(node); }
+      if (in_cnt == 0) { src_nodes.emplace_back(node); }
     });
     if (src_nodes.empty()) { break; }
     auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
@@ -813,7 +814,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
                                     [&](const PlanTaskNode* node) {
                                       visited.insert(node);
                                       if (IsCollectiveBoxingNode(node)) {
-                                        collective_boxing_nodes.push_back(node);
+                                        collective_boxing_nodes.emplace_back(node);
                                       }
                                     });
     if (collective_boxing_nodes.empty()) { break; }

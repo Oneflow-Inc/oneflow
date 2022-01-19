@@ -74,7 +74,7 @@ class RpcClient {
   CtrlService::Stub* GetStubAt(int64_t i) { return stubs_[i].get(); };
   size_t GetStubSize() { return stubs_.size(); };
   void ReserveStubsOfSize(int64_t n) { stubs_.reserve(n); };
-  void AddStub(std::unique_ptr<CtrlService::Stub> s) { stubs_.push_back(std::move(s)); };
+  void AddStub(std::unique_ptr<CtrlService::Stub> s) { stubs_.emplace_back(std::move(s)); };
 
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
   std::mutex done_names_mtx_;

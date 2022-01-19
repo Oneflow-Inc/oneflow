@@ -55,7 +55,7 @@ __global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, cons
 }  // namespace
 
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
-struct UnfoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
+struct UnfoldKernelUtil<DeviceType::kCUDA, T, INDEX_T, NDIM, SDIM> {
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
   static void Forward(ep::Stream* stream, const UnfoldParams<INDEX_T, NDIM, SDIM>* params,
                       const T* input_ptr, T* output_ptr) {
@@ -64,7 +64,7 @@ struct UnfoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
            stream->As<ep::CudaStream>()->cuda_stream()>>>(*params, input_ptr, output_ptr);
   }
 };
-INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 }  // namespace user_op
 }  // namespace oneflow
 #endif  // WITH_CUDA

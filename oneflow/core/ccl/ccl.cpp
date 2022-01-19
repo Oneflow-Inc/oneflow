@@ -499,8 +499,8 @@ Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dty
 
 #ifdef WITH_CUDA
 template<>
-Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
-                                   ep::Stream* stream) {
+Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
+                                    ep::Stream* stream) {
 #if NCCL_VERSION_CODE >= 2700
   CHECK_OR_RETURN(IsPODDataType(dtype));
   const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(dst);
@@ -538,8 +538,8 @@ Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, i
 
 #ifdef WITH_CUDA
 template<>
-Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
-                                   ep::Stream* stream) {
+Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
+                                    ep::Stream* stream) {
 #if NCCL_VERSION_CODE >= 2700
   CHECK_OR_RETURN(IsPODDataType(dtype));
   const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(src);

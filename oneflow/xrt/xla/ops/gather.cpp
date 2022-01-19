@@ -91,7 +91,7 @@ xla::XlaOp GenericGatherGrad(
   auto new_updates = updates;
   std::vector<long long> expected_updates_dims(indices_dims.begin(), indices_dims.end());
   for (int64_t dim = num_index_dims; dim < buffer_rank; ++dim) {
-    expected_updates_dims.push_back(buffer_shape.dimensions(dim));
+    expected_updates_dims.emplace_back(buffer_shape.dimensions(dim));
   }
   int64_t expected_updates_rank = expected_updates_dims.size();
   if (updates_rank == 0 && expected_updates_rank != 0) {

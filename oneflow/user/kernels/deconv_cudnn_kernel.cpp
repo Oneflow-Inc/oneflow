@@ -140,7 +140,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
 #define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                                              \
   REGISTER_USER_KERNEL(#op_name)                                                                   \
       .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \

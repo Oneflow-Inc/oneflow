@@ -18,14 +18,14 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace {
 
-const int SPLIT_AXIS_FOR_BROADCAST = -1;
+const int SPLIT_AXIS_FOR_NON_SPLIT = -1;
 
 // [start, end)
 int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t step) {
@@ -218,7 +218,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 const bool from_large_to_small) {
   const user_op::Tensor* large = from_large_to_small ? src : dst;
   const user_op::Tensor* small = from_large_to_small ? dst : src;
-  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_BROADCAST) {
+  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_NON_SPLIT) {
     CHECK_EQ(large->shape().At(slice_ctx.split_axis), slice_ctx.upper - slice_ctx.lower);
   }
 
@@ -230,9 +230,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   const int64_t ndim = start_attr.size();
   for (int i = 0; i < ndim; i++) {
     const int64_t dim_size = large->shape().At(i);
-    positive_start_vec.push_back(RegulateSliceStart(
+    positive_start_vec.emplace_back(RegulateSliceStart(
         start_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
-    positive_stop_vec.push_back(RegulateSliceStop(
+    positive_stop_vec.emplace_back(RegulateSliceStop(
         stop_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
   }
   SliceParams large_slice_param;
@@ -278,11 +278,11 @@ DEFINE_STATIC_SWITCH_FUNC(
                             ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
-std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,
+std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheContext* ctx,
                                                          const std::string& large_tensor_name) {
   if (ctx->parallel_ctx().parallel_num() == 1) {
-    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
-    return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+    // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   }
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
   if (in_sbp.has_split_parallel()) {
@@ -292,12 +292,11 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     const int64_t split_dim_size = in_logical_desc->shape().At(split_axis);
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<OpKernelStateWrapper<SliceContext>>(
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel()) {
-    return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+  } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   } else {
-    // TODO(jianhao): support partialsum
     UNIMPLEMENTED();
   }
 }
@@ -308,25 +307,30 @@ class LogicalSliceKernel final : public user_op::OpKernel {
   LogicalSliceKernel() = default;
   ~LogicalSliceKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
     const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
     const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       if (x_sbp.has_split_parallel()) {
         CHECK(y_sbp.has_partial_sum_parallel());
-      } else {
+      } else if (x_sbp.has_broadcast_parallel()) {
         CHECK(y_sbp.has_broadcast_parallel());
+      } else {
+        CHECK(x_sbp.has_partial_sum_parallel());
+        CHECK(y_sbp.has_partial_sum_parallel());
       }
     }
-    return CreateSliceState(ctx, "x");
+    return CreateSliceCache(ctx, "x");
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const SliceContext& slice_ctx = dynamic_cast<OpKernelStateWrapper<SliceContext>*>(state)->Get();
+    const SliceContext& slice_ctx =
+        dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     if (y_tensor->mem_case().has_host_mem()) {
       memset(y_tensor->mut_dptr(), 0,
              y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
@@ -352,20 +356,22 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   LogicalSliceAssignKernel() = default;
   ~LogicalSliceAssignKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
       CHECK(value_sbp.has_broadcast_parallel());
     }
-    return CreateSliceState(ctx, "ref");
+    return CreateSliceCache(ctx, "ref");
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    const SliceContext& slice_ctx = dynamic_cast<OpKernelStateWrapper<SliceContext>*>(state)->Get();
+    const SliceContext& slice_ctx =
+        dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
                      value_tensor, ref_tensor, slice_ctx, false);
   }
@@ -412,6 +418,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
       });
 
 #define REGISTER_SLICE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_SLICE_KERNELS(device, bool)             \
   REGISTER_SLICE_KERNELS(device, float)            \
   REGISTER_SLICE_KERNELS(device, double)           \
   REGISTER_SLICE_KERNELS(device, int32_t)          \
@@ -421,8 +428,8 @@ class SliceUpdateKernel final : public user_op::OpKernel {
 
 REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
-REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
+REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
 #define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \

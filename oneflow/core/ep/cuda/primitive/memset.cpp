@@ -47,7 +47,7 @@ class MemsetFactoryImpl : public MemsetFactory {
   std::unique_ptr<Memset> New() override { return std::unique_ptr<Memset>(new MemsetImpl()); }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, MemsetFactory, MemsetFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MemsetFactory, MemsetFactoryImpl);
 
 }  // namespace
 

@@ -24,6 +24,7 @@ Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::Sha
 GetDeviceTagAndMachineDeviceIdsAndHierarchy(
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   std::vector<std::string> machine_device_ids;
+  machine_device_ids.reserve(parallel_conf->device_name().size());
   for (const std::string& device_name : parallel_conf->device_name()) {
     machine_device_ids.emplace_back(device_name);
   }

@@ -63,7 +63,7 @@ __global__ void DoCUDAConstantPad3dGrad(const IN_T* src, IN_T* dest,
 };
 
 template<typename IN_T>
-struct ConstantPad1dFunctor<DeviceType::kGPU, IN_T> final {
+struct ConstantPad1dFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
@@ -80,7 +80,7 @@ struct ConstantPad1dFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad1dFunctor<DeviceType::kGPU, float16>::operator()(
+void ConstantPad1dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
     const ShapeView& y_shape, const std::vector<int64_t>& padding, float16 constant_value) {
@@ -94,7 +94,7 @@ void ConstantPad1dFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 template<typename IN_T>
-struct ConstantPad3dFunctor<DeviceType::kGPU, IN_T> final {
+struct ConstantPad3dFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
@@ -114,7 +114,7 @@ struct ConstantPad3dFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad3dFunctor<DeviceType::kGPU, float16>::operator()(
+void ConstantPad3dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
     const ShapeView& y_shape, const std::vector<int64_t>& padding, float16 constant_value) {
@@ -131,7 +131,7 @@ void ConstantPad3dFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 template<typename IN_T>
-struct ConstantPad1dGradFunctor<DeviceType::kGPU, IN_T> final {
+struct ConstantPad1dGradFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
@@ -147,7 +147,7 @@ struct ConstantPad1dGradFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad1dGradFunctor<DeviceType::kGPU, float16>::operator()(
+void ConstantPad1dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& dy_shape,
     const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
@@ -160,7 +160,7 @@ void ConstantPad1dGradFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 template<typename IN_T>
-struct ConstantPad3dGradFunctor<DeviceType::kGPU, IN_T> final {
+struct ConstantPad3dGradFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
@@ -179,7 +179,7 @@ struct ConstantPad3dGradFunctor<DeviceType::kGPU, IN_T> final {
 
 // float16 implementation
 template<>
-void ConstantPad3dGradFunctor<DeviceType::kGPU, float16>::operator()(
+void ConstantPad3dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
     const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
@@ -196,10 +196,12 @@ void ConstantPad3dGradFunctor<DeviceType::kGPU, float16>::operator()(
 }
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONSTANT_PAD_GRAD_FUNCTOR,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), PADDING_DATA_TYPE_GPU_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 PADDING_DATA_TYPE_CUDA_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

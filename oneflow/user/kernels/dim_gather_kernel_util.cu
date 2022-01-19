@@ -31,7 +31,7 @@ __global__ void DoCUDADimGather(const DimOpIndexNdHelper<IDX_T> input_nd_helper,
 }
 
 template<typename IDX_T, typename IN_T>
-struct DimGatherFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
+struct DimGatherFunctor<DeviceType::kCUDA, IN_T, IDX_T> final {
   void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
@@ -42,7 +42,7 @@ struct DimGatherFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
 
 // float16 special case of DimGatherFunctor template
 template<typename IDX_T>
-struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
+struct DimGatherFunctor<DeviceType::kCUDA, float16, IDX_T> final {
   void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const float16* input, float16* output) {
@@ -52,8 +52,8 @@ struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_GATHER_FUNCTOR, (DeviceType::kGPU),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ, INDEX_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_GATHER_FUNCTOR, (DeviceType::kCUDA),
+                                 DIM_GATHER_SCATTER_DATA_TYPE_CUDA_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

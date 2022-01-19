@@ -40,14 +40,14 @@ TEST(Channel, 30sender40receiver) {
   std::vector<std::vector<int>> visits;
   for (int i = 0; i < receiver_num; ++i) {
     std::vector<int> visit_i;
-    for (int j = 0; j < range_num; j++) { visit_i.push_back(0); }
-    visits.push_back(visit_i);
+    for (int j = 0; j < range_num; j++) { visit_i.emplace_back(0); }
+    visits.emplace_back(visit_i);
   }
   for (int i = 0; i < sender_num; ++i) {
-    senders.push_back(std::thread(CallFromSenderThread, &channel, Range(0, range_num)));
+    senders.emplace_back(CallFromSenderThread, &channel, Range(0, range_num));
   }
   for (int i = 0; i < receiver_num; ++i) {
-    receivers.push_back(std::thread(CallFromReceiverThread, &visits[i], &channel));
+    receivers.emplace_back(CallFromReceiverThread, &visits[i], &channel);
   }
   for (std::thread& this_thread : senders) { this_thread.join(); }
   channel.Close();

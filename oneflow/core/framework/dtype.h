@@ -25,6 +25,7 @@ namespace oneflow {
 
 #define DTYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(InvalidDataType) \
+  OF_PP_MAKE_TUPLE_SEQ(Bool)            \
   OF_PP_MAKE_TUPLE_SEQ(Char)            \
   OF_PP_MAKE_TUPLE_SEQ(Float16)         \
   OF_PP_MAKE_TUPLE_SEQ(Float)           \
@@ -35,7 +36,16 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(UInt8)           \
   OF_PP_MAKE_TUPLE_SEQ(OFRecord)        \
   OF_PP_MAKE_TUPLE_SEQ(TensorBuffer)    \
-  OF_PP_MAKE_TUPLE_SEQ(BFloat16)
+  OF_PP_MAKE_TUPLE_SEQ(BFloat16)        \
+  OF_PP_MAKE_TUPLE_SEQ(UInt16)          \
+  OF_PP_MAKE_TUPLE_SEQ(UInt32)          \
+  OF_PP_MAKE_TUPLE_SEQ(UInt64)          \
+  OF_PP_MAKE_TUPLE_SEQ(UInt128)         \
+  OF_PP_MAKE_TUPLE_SEQ(Int16)           \
+  OF_PP_MAKE_TUPLE_SEQ(Int128)          \
+  OF_PP_MAKE_TUPLE_SEQ(Complex32)       \
+  OF_PP_MAKE_TUPLE_SEQ(Complex64)       \
+  OF_PP_MAKE_TUPLE_SEQ(Complex128)
 
 class DType final {
  public:
@@ -54,7 +64,7 @@ class DType final {
   Maybe<size_t> bytes() const;
 
   static Maybe<const Symbol<DType>&> Get(DataType);
-  static const int priority_order[DataType::kMaxDataType];
+  static const int priority_order[DataType_ARRAYSIZE];
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) static const Symbol<DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)

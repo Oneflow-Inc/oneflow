@@ -67,8 +67,8 @@ class TestFlattenModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False)
-    def test_against_pytorch(test_case):
+    @autotest(check_graph=True)
+    def test_flatten_module_with_random_data(test_case):
         m = torch.nn.Flatten(
             start_dim=random(1, 6) | nothing(), end_dim=random(1, 6) | nothing()
         )
@@ -79,11 +79,12 @@ class TestFlattenModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False)
-    def test_tensor_against_pytorch(test_case):
+    @autotest(check_graph=True)
+    def test_flatten_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = x.flatten(
+        y = torch.flatten(
+            x,
             start_dim=random(1, 6).to(int) | nothing(),
             end_dim=random(1, 6).to(int) | nothing(),
         )

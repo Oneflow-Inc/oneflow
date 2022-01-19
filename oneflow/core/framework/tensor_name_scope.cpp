@@ -42,5 +42,10 @@ void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::s
   tensor_names_[key] = name;
 }
 
+void TensorNameScope::Clear() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  tensor_names_.clear();
+}
+
 }  // namespace one
 }  // namespace oneflow

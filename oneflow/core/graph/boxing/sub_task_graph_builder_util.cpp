@@ -19,9 +19,9 @@ limitations under the License.
 
 namespace oneflow {
 
-bool SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc) {
+bool SubTskGphBuilderUtil::IsDeviceTypeCPUOrCUDA(const ParallelDesc& parallel_desc) {
   return parallel_desc.device_type() == DeviceType::kCPU
-         || parallel_desc.device_type() == DeviceType::kGPU;
+         || parallel_desc.device_type() == DeviceType::kCUDA;
 }
 
 bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
@@ -34,9 +34,9 @@ bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
   }
 }
 
-bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs) {
+bool SubTskGphBuilderUtil::IsOnSameCUDADevice(const TaskNode* lhs, const TaskNode* rhs) {
   return lhs->stream_id().device_id() == rhs->stream_id().device_id()
-         && lhs->stream_id().device_id().device_type() == DeviceType::kGPU;
+         && lhs->stream_id().device_id().device_type() == DeviceType::kCUDA;
 }
 
 bool SubTskGphBuilderUtil::IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {

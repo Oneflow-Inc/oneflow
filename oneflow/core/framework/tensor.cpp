@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
-#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -96,12 +95,29 @@ Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const
 }
 
 bool ConsistentTensor::is_cuda() const {
-  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
+  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCUDA;
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {
-  std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
-  return t;
+  std::shared_ptr<Tensor> tensor = std::make_shared<ConsistentTensor>(JUST(impl_->detach()));
+  return tensor;
+}
+
+Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
+  CHECK_OR_RETURN(this->is_leaf())
+      << "Only leaf tensor's data can be set, because non-leaf tensor's data has been captured in "
+         "the backward graph in autograd.";
+  const auto& consistent_tensor =
+      std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor);
+  JUST(WithConsistencyChecked(consistent_tensor,
+                              [&]() -> Maybe<void> { return Maybe<void>::Ok(); }));
+
+  bool old_requires_grad = requires_grad();
+  impl_ = consistent_tensor->impl_;
+  JUST(set_requires_grad(old_requires_grad));
+  grad_fn_node_ = nullptr;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one

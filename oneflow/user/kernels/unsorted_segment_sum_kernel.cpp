@@ -40,10 +40,10 @@ void CheckNdSbp(const Shape& hierarchy, int64_t sum_axis, const cfg::NdSbp& segm
   }
 }
 
-class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelState {
+class UnsortedSegmentSumOpKernelCache final : public user_op::OpKernelCache {
  public:
-  UnsortedSegmentSumOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~UnsortedSegmentSumOpKernelState() override = default;
+  UnsortedSegmentSumOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~UnsortedSegmentSumOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -53,8 +53,8 @@ class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelState {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
-    user_op::KernelInitContext* ctx) {
+std::shared_ptr<user_op::OpKernelCache> CreateUnsortedSegmentSumOpKernelCache(
+    user_op::KernelCacheContext* ctx) {
   if (ctx->parallel_ctx().parallel_num() > 1) {
     const auto axis = ctx->Attr<int64_t>("axis");
     const cfg::NdSbp& out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -64,10 +64,10 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
     TensorSliceView view = GetTensorSliceView4ParallelId(
         hierarchy, out_nd_sbp, out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-    return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
+    return std::make_shared<UnsortedSegmentSumOpKernelCache>(view.At(axis).begin(),
                                                              view.At(axis).end());
   } else {
-    return std::shared_ptr<OpKernelState>(nullptr);
+    return nullptr;
   }
 }
 
@@ -79,13 +79,14 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
   UnsortedSegmentSumKernel() = default;
   ~UnsortedSegmentSumKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateUnsortedSegmentSumOpKernelState(ctx);
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateUnsortedSegmentSumOpKernelCache(ctx);
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");
@@ -97,11 +98,11 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
 
     int64_t offset = 0;
-    if (state != nullptr) {
-      auto* sum_state = dynamic_cast<UnsortedSegmentSumOpKernelState*>(state);
-      CHECK_NOTNULL(sum_state);
-      CHECK_EQ(out->shape().At(axis), sum_state->upper() - sum_state->lower());
-      offset = sum_state->lower();
+    if (cache != nullptr) {
+      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
+      CHECK_NOTNULL(sum_cache);
+      CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
+      offset = sum_cache->lower();
     }
 
     if (num_segment_ids != 0) {
@@ -143,13 +144,14 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   UnsortedSegmentSumHalfKernel() = default;
   ~UnsortedSegmentSumHalfKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateUnsortedSegmentSumOpKernelState(ctx);
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateUnsortedSegmentSumOpKernelCache(ctx);
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");
@@ -159,17 +161,17 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<DeviceType::kGPU>(ctx->stream(), tmp_buf->mut_dptr(), 0,
-                             out->shape().elem_cnt() * sizeof(float));
+    Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf->mut_dptr(), 0,
+                              out->shape().elem_cnt() * sizeof(float));
     int64_t offset = 0;
-    if (state != nullptr) {
-      auto* sum_state = dynamic_cast<UnsortedSegmentSumOpKernelState*>(state);
-      CHECK_NOTNULL(sum_state);
-      CHECK_EQ(out->shape().At(axis), sum_state->upper() - sum_state->lower());
-      offset = sum_state->lower();
+    if (cache != nullptr) {
+      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
+      CHECK_NOTNULL(sum_cache);
+      CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
+      offset = sum_cache->lower();
     }
 
-    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float, K, float16>::UnsortedSegmentSum(
+    UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16>::UnsortedSegmentSum(
         ctx->stream(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
 
@@ -186,7 +188,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_type)                                                             \
       .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
       .SetIsMatchedHob(                                                                         \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                        \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
           && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
           && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \

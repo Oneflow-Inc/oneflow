@@ -26,6 +26,7 @@ namespace oneflow {
 
 Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
   std::vector<WorkerProcessInfo> worker_process_info_list;
+  worker_process_info_list.reserve(world_size());
   if (rank() == 0) {
     WorkerProcessInfo worker_process_info;
     {
@@ -33,14 +34,14 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       worker_process_info.set_port(port);
       JUST(SetCurrentHostByMaster(&worker_process_info));
     }
-    worker_process_info_list.push_back(worker_process_info);
+    worker_process_info_list.emplace_back(worker_process_info);
     for (int64_t world_rank = 1; world_rank < world_size(); ++world_rank) {
       std::string key = std::string("GetWorkerProcessInfo") + std::to_string(world_rank);
       WorkerProcessInfo cur_work_process_info;
       mut_bootstrap_client()->PullMasterKV(key, &cur_work_process_info);
       CHECK_EQ_OR_RETURN(world_rank, worker_process_info_list.size());
       CHECK_EQ_OR_RETURN(world_rank, cur_work_process_info.rank());
-      worker_process_info_list.push_back(cur_work_process_info);
+      worker_process_info_list.emplace_back(cur_work_process_info);
     }
   } else {
     std::string key = std::string("GetWorkerProcessInfo") + std::to_string(rank());

@@ -126,8 +126,8 @@ void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
   const auto* ptr = dynamic_cast<const vm::TensorViewOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  OfBlob input_ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
-  OfBlob view_ofblob(device_ctx, ptr->view_eager_blob_object()->mut_blob());
+  OfBlob input_ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
+  OfBlob view_ofblob(device_ctx->stream(), ptr->view_eager_blob_object()->mut_blob());
 
   void* input_ptr = input_ofblob.mut_blob()->mut_dptr();
   view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
@@ -141,7 +141,7 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
+  OfBlob ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 

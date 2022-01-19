@@ -47,7 +47,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
 }  // namespace
 
 template<typename T>
-void NormalDistribution<DeviceType::kGPU, T>::operator()(
+void NormalDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
@@ -59,11 +59,11 @@ void NormalDistribution<DeviceType::kGPU, T>::operator()(
       curand_states, elem_cnt, dptr, mean_, std_);
 }
 
-#define INITIATE_GPU_NORMAL_DISTRIBUTION(T, typeproto)               \
-  template void NormalDistribution<DeviceType::kGPU, T>::operator()( \
-      ep::Stream* stream, const int64_t elem_cnt, T* dptr,           \
+#define INITIATE_CUDA_NORMAL_DISTRIBUTION(T, typeproto)               \
+  template void NormalDistribution<DeviceType::kCUDA, T>::operator()( \
+      ep::Stream* stream, const int64_t elem_cnt, T* dptr,            \
       const std::shared_ptr<one::Generator>& generator) const;
 
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_NORMAL_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_NORMAL_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

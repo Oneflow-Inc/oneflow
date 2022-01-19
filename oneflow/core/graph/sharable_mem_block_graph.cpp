@@ -87,7 +87,7 @@ void SharableMemBlockGraph::ForEachSourceNodeGroup(
     const std::function<void(const std::vector<const SharableMemBlockNode*>&)>& Handler) const {
   HashMap<int64_t, std::vector<const SharableMemBlockNode*>> group_key2source_nodes;
   for (const SharableMemBlockNode* source : source_nodes()) {
-    group_key2source_nodes[GroupBy(source)].push_back(source);
+    group_key2source_nodes[GroupBy(source)].emplace_back(source);
   }
   for (const auto& pair : group_key2source_nodes) {
     if (pair.second.size() > 1) { Handler(pair.second); }

@@ -23,4 +23,4 @@ void release();
 
 }  // namespace oneflow_api
 
-#endif  // ONEFLOW_API_CPP_ENV_H_
+#endif  // !ONEFLOW_API_CPP_ENV_H_

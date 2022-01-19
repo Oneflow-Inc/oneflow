@@ -97,12 +97,12 @@ void InitMemoryChains(Plan* plan,
     const StreamId stream_id = PlanUtil::GetStreamId(*task);
     int64_t machine_id = task->machine_id();
     DeviceType device_type = stream_id.device_id().device_type();
-    if (device_type != DeviceType::kGPU) { continue; }
+    if (device_type != DeviceType::kCUDA) { continue; }
     int64_t device_id = stream_id.device_id().device_index();
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
     MemoryChain* mem_chain =
         &((*device2chain2mem_chain)[device_unique_id][task->task_set_info().chain_id()]);
-    mem_chain->sorted_tasks.push_back(task);
+    mem_chain->sorted_tasks.emplace_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_case().has_device_cuda_mem()
@@ -229,8 +229,9 @@ void GenMemChainTasksAndRegsts(
     if (device_chain_pair.second.empty()) { continue; }
     // sort
     std::vector<MemoryChain*> mem_chains;
+    mem_chains.reserve(device_chain_pair.second.size());
     std::vector<MemoryChain*> merged_chains;
-    for (auto& pair : device_chain_pair.second) { mem_chains.push_back(&pair.second); }
+    for (auto& pair : device_chain_pair.second) { mem_chains.emplace_back(&pair.second); }
     std::sort(mem_chains.begin(), mem_chains.end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
       int64_t lhs_order_in_graph = lhs->sorted_tasks.front()->task_set_info().order_in_graph();
       int64_t rhs_order_in_graph = rhs->sorted_tasks.front()->task_set_info().order_in_graph();
@@ -240,7 +241,7 @@ void GenMemChainTasksAndRegsts(
     if (enable_mem_chain_merge) {
       for (MemoryChain* mem_chain : mem_chains) {
         if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
-          merged_chains.push_back(mem_chain);
+          merged_chains.emplace_back(mem_chain);
         }
       }
     } else {
@@ -279,11 +280,12 @@ void GenMemChainTasksAndRegsts(
       for (int64_t consumer : regst->consumer_task_id()) { consumer_task_ids.insert(consumer); }
     }
     std::vector<TaskProto*> sink_tasks;
+    sink_tasks.reserve(consumer_task_ids.size());
     for (int64_t src_task_id : consumer_task_ids) {
       auto it = task_id2proto.find(src_task_id);
       CHECK(it != task_id2proto.end());
       if (!IsReachableToAnyOtherTask(it->second, consumer_task_ids)) {
-        sink_tasks.push_back(it->second);
+        sink_tasks.emplace_back(it->second);
       }
     }
 
@@ -381,8 +383,8 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
       CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, std::vector<RegstDescProto*>())
                 .second);
       for (RegstDescProto* remain_regst : remain_regsts) {
-        regst2mutual_exclusion_regsts->at(alloc_regst).push_back(remain_regst);
-        regst2mutual_exclusion_regsts->at(remain_regst).push_back(alloc_regst);
+        regst2mutual_exclusion_regsts->at(alloc_regst).emplace_back(remain_regst);
+        regst2mutual_exclusion_regsts->at(remain_regst).emplace_back(alloc_regst);
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
     }
@@ -407,7 +409,7 @@ class MemBlockBuffer final {
     start_piece.begin = 0;
     start_piece.end = size;
     start_piece.is_free = true;
-    piece_list_.push_back(start_piece);
+    piece_list_.emplace_back(start_piece);
   };
   ~MemBlockBuffer() = default;
 
@@ -442,7 +444,7 @@ class MemBlockBuffer final {
 };
 
 void MemBlockBuffer::Occupy(int64_t begin, int64_t end) {
-  CHECK(begin < end && end <= buffer_size_);
+  CHECK(begin <= end && end <= buffer_size_);
   for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
     if (it->end <= begin) { continue; }
     if (end <= it->begin) { break; }
@@ -514,7 +516,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     }
     int64_t offset = -1;
     buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
-    CHECK(offset >= 0 && offset < buffer_size);
+    CHECK(offset >= 0 && offset <= buffer_size);
     CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
   }
   result->mem_block_size = buffer_size;
@@ -524,9 +526,10 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
+  order.reserve(regst2mutual_exclusion_regsts.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
   for (const auto& pair : regst2mutual_exclusion_regsts) {
-    order.push_back(pair.first);
+    order.emplace_back(pair.first);
     CHECK(regst_desc2size.emplace(pair.first, RtRegstDesc(*pair.first).TotalMainByteSize4AllRegst())
               .second);
   }
@@ -541,9 +544,10 @@ void MemReusedAlgorithm_MutualExclusionFirstAlgo(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
+  order.reserve(regst2mutual_exclusion_regsts.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
   for (const auto& pair : regst2mutual_exclusion_regsts) {
-    order.push_back(pair.first);
+    order.emplace_back(pair.first);
     CHECK(regst_desc2size.emplace(pair.first, RtRegstDesc(*pair.first).TotalMainByteSize4AllRegst())
               .second);
   }
@@ -562,7 +566,7 @@ class BfcAllocator final {
     start_piece.begin = 0;
     start_piece.end = size;
     start_piece.is_free = true;
-    piece_list_.push_back(start_piece);
+    piece_list_.emplace_back(start_piece);
   };
   ~BfcAllocator() = default;
 
@@ -626,7 +630,7 @@ int64_t BfcAllocator::AllocateRaw(int64_t size) {
       new_piece.begin = last_it->end;
       new_piece.end = buffer_size_;
       new_piece.is_free = false;
-      piece_list_.push_back(new_piece);
+      piece_list_.emplace_back(new_piece);
       CHECK(offset2occupied_piece_.emplace(offset, std::prev(piece_list_.end())).second);
     }
   } else {

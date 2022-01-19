@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
 
@@ -34,7 +34,8 @@ class UnpackKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_GT(in->shape().NumAxes(), 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

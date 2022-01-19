@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
-#include <iostream>
-#include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
-#include "llvm/ADT/STLExtras.h"
+
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -51,13 +49,21 @@ limitations under the License.
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
-using namespace mlir;
-using namespace mlir::oneflow;
+#include "llvm/ADT/STLExtras.h"
+
+#include <iostream>
+#include <string>
+
+namespace mlir {
+
+namespace oneflow {
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
-  auto parent_func_op = op->getParentOfType<FuncOp>();
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) { return failure(); }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) { return failure(); }
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
@@ -78,13 +84,24 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
   auto first_op = *ops.begin();
-  auto parent_func_op = first_op->getParentOfType<FuncOp>();
+  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) {
+    emitError(loc) << "null parent oneflow::Job " << *first_op;
+    return nullptr;
+  }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) {
+    emitError(loc) << "null ModuleOp " << *first_op;
+    return nullptr;
+  }
   SymbolTable symbol_table(parent_module_op);
   OpBuilder::InsertionGuard guard(rewriter);
   Block::iterator insertPt(parent_func_op->getNextNode());
   rewriter.setInsertionPointToStart(&parent_module_op.body().getBlocks().back());
-  assert(!parent_func_op->hasAttr("llvm.emit_c_interface"));
+  if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
+    emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
+    return nullptr;
+  }
   auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.body().emplaceBlock();
@@ -97,8 +114,11 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto op : ops) { nb.clone(*op, mapping); }
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<ReturnOp>(loc, mapped_results);
-  assert(!symbol_table.lookup(func_name));
+  rewriter.create<mlir::ReturnOp>(loc, mapped_results);
+  if (symbol_table.lookup(func_name)) {
+    emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
+    return nullptr;
+  }
   return function;
 }
 
@@ -108,38 +128,17 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
                                                op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
-  attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-  attributes.set("device_tag", op_to_replace_adaptor.device_tag());
-  attributes.set("device_name", op_to_replace_adaptor.device_name());
-  attributes.set("hierarchy", op_to_replace_adaptor.hierarchy());
-  using LBNVec = SmallVector<StringRef, 8>;
-  using LBNSegVec = SmallVector<int32_t, 8>;
-
-  LBNVec input_lbn_segment_keys;
-  LBNSegVec input_lbn_segment_sizes;
-  input_lbn_segment_keys.push_back("in");
-  input_lbn_segment_sizes.push_back(input_size);
-
-  attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
-  attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
-
-  attributes.set("op_name", rewriter.getStringAttr(op_name));
-
-  LBNVec output_lbns;
-  LBNVec output_lbn_segment_keys;
-  LBNSegVec output_lbn_segment_sizes;
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 op_to_replace_adaptor.device_tag());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 op_to_replace_adaptor.device_name());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                 op_to_replace_adaptor.hierarchy());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(op_name));
   // TODO: use functions in oneflow to genearated bn
-  SmallString<64> output_lbn_storage;
-  for (size_t i = 0; i < output_size; i++) {
-    output_lbns.push_back(
-        (op_name + "/" + "out_" + std::to_string(i)).toStringRef(output_lbn_storage));
-    output_lbn_segment_keys.push_back("out");
-    output_lbn_segment_sizes.push_back(output_size);
-  }
-  attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
-  attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
-  attributes.set("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
-  attributes.set("scope_symbol_id", op_to_replace_adaptor.scope_symbol_id());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                 op_to_replace_adaptor.scope_symbol_id());
   return attributes;
 }
 
@@ -153,7 +152,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       auto op_name =
           (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
       SmallVector<::mlir::Value, 2> operands;
-      operands.push_back(cast_op.x());
+      operands.push_back(cast_op.in());
       operands.push_back(mul_op.scalar());
       SmallVector<::mlir::Value, 1> results;
       results.push_back(mul_op.y());
@@ -162,6 +161,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       SmallVector<Operation*, 4> ops = {cast_op, mul_op};
       auto function =
           GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
+      assert(function);
       auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(), function, attributes, operands);
       assert(DumpAssembly(rewriter, created).succeeded());
       cast_op->dropAllUses();
@@ -171,6 +171,10 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   }
   return {};
 }
+
+}  // namespace oneflow
+
+}  // namespace mlir
 
 #include "OneFlow/OneFlowPatterns.cpp.inc"
 
@@ -235,7 +239,6 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
-  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());

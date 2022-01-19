@@ -44,7 +44,7 @@ class TestConstantModule(flow.unittest.TestCase):
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_zeros_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.zeros(random().to(int)).to(device)
@@ -57,7 +57,7 @@ class TestConstantModule(flow.unittest.TestCase):
         ).to(device)
         return y1, y2, y3, y4
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_ones_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.ones(random().to(int)).to(device)
@@ -68,21 +68,21 @@ class TestConstantModule(flow.unittest.TestCase):
         ).to(device)
         return y1, y2, y3, y4
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_zeros_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.zeros_like(x)
         return y
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_ones_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.ones_like(x)
         return y
 
-    @autotest(auto_backward=True)
+    @autotest(auto_backward=True, check_graph=True)
     def test_flow_new_ones_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

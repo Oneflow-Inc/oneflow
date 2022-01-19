@@ -18,70 +18,42 @@ limitations under the License.
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/FunctionSupport.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/OpImplementation.h"
-
+#include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/OneFlowInterfaces.h.inc"
+#include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/OneFlowEnums.h.inc"
+#include "OneFlow/OneFlowOpTraits.h"
 
 namespace mlir {
 
 class FuncOp;
 
-namespace OpTrait {
-
-namespace impl {
-OpFoldResult foldIdempotentOfIdenticalPlacement(Operation* op);
-OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op);
-}  // namespace impl
-
-template<typename ConcreteType>
-class IsIdempotentOfIdenticalPlacement
-    : public TraitBase<ConcreteType, IsIdempotentOfIdenticalPlacement> {
- public:
-  static LogicalResult verifyTrait(Operation* op) {
-    static_assert(ConcreteType::template hasTrait<OneResult>(),
-                  "expected operation to produce one result");
-    static_assert(ConcreteType::template hasTrait<OneOperand>(),
-                  "expected operation to take one operand");
-    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
-                  "expected operation to preserve type");
-    return impl::verifyIsIdempotent(op);
+template<typename T>
+inline std::string GetOpTypeName(T op) {
+  std::string op_type_name = op->getName().stripDialect().str();
+  if (op->template hasTrait<OpTrait::IsAlternative>()) {
+    op_type_name =
+        op->template getAttrOfType<StringAttr>(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
+            .str();
   }
-
-  static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
-    assert(op->hasAttr("device_name"));
-    return impl::foldIdempotentOfIdenticalPlacement(op);
+  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    op_type_name = alternative_name.getOriginalOpTypeName();
   }
-};
-
-template<typename ConcreteType>
-class IsInvolutionOfIdenticalPlacement
-    : public TraitBase<ConcreteType, IsInvolutionOfIdenticalPlacement> {
- public:
-  static LogicalResult verifyTrait(Operation* op) {
-    static_assert(ConcreteType::template hasTrait<OneResult>(),
-                  "expected operation to produce one result");
-    static_assert(ConcreteType::template hasTrait<OneOperand>(),
-                  "expected operation to take one operand");
-    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
-                  "expected operation to preserve type");
-    return impl::verifyIsInvolution(op);
-  }
-
-  static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
-    assert(op->hasAttr("device_name"));
-    return impl::foldInvolutionOfIdenticalPlacement(op);
-  }
-};
-
-}  // namespace OpTrait
+  return op_type_name;
+}
 
 }  // namespace mlir
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
+#define GET_OP_CLASSES
+#include "OneFlow/OneFlow.gen_ops.h.inc"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_

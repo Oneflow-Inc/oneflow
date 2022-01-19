@@ -43,7 +43,8 @@ class COCOReaderKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* reader = dynamic_cast<COCOReaderWrapper*>(state);
     reader->Read(ctx);
   }

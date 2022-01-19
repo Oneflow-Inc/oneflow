@@ -72,7 +72,7 @@ TEST(GetSelectedParallelIds, 2d_broadcast_broadcast) {
   Shape hierarchy_shape(DimVector{parallel_size, parallel_size});
   std::vector<int> axis2is_selected{true, true};
   std::vector<int64_t> expected{};
-  for (int i = 0; i < parallel_size * parallel_size; ++i) { expected.push_back(i); }
+  for (int i = 0; i < parallel_size * parallel_size; ++i) { expected.emplace_back(i); }
   for (int i = 0; i < parallel_size * parallel_size; ++i) {
     const auto& broadcast_parallel_ids =
         CHECK_JUST(private_details::GetSelectedParallelIds(hierarchy_shape, axis2is_selected, i));
@@ -99,7 +99,7 @@ TEST(GetSelectedParallelIds, 2d_broadcast_nonbroadcast) {
   for (int i = 0; i < parallel_size; ++i) {
     for (int j = 0; j < parallel_size; ++j) {
       std::vector<int64_t> expected{};
-      for (int k = 0; k < parallel_size; ++k) { expected.push_back(k * parallel_size + j); }
+      for (int k = 0; k < parallel_size; ++k) { expected.emplace_back(k * parallel_size + j); }
       int64_t parallel_id = i * parallel_size + j;
       const auto& broadcast_parallel_ids = CHECK_JUST(
           private_details::GetSelectedParallelIds(hierarchy_shape, axis2is_selected, parallel_id));
@@ -114,7 +114,7 @@ TEST(GetSelectedParallelIds, 2d_nonbroadcast_broadcast) {
   std::vector<int> axis2is_selected{false, true};
   for (int i = 0; i < parallel_size; ++i) {
     std::vector<int64_t> expected{};
-    for (int j = 0; j < parallel_size; ++j) { expected.push_back(i * parallel_size + j); }
+    for (int j = 0; j < parallel_size; ++j) { expected.emplace_back(i * parallel_size + j); }
     for (int j = 0; j < parallel_size; ++j) {
       int64_t parallel_id = i * parallel_size + j;
       const auto& broadcast_parallel_ids = CHECK_JUST(

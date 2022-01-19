@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 class TestNarrow(flow.unittest.TestCase):
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_narrow_start_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
@@ -33,7 +33,7 @@ class TestNarrow(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
         return torch.narrow(x, dim=rand_dim, start=2, length=1)
 
-    @autotest()
+    @autotest(check_graph=False)
     def test_flow_narrow_length_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)

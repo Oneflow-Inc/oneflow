@@ -35,15 +35,15 @@ KU_IF_METHOD InitializeWithConf(ep::Stream* stream, const InitializerConf& initi
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
-  void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
+  void KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
 #define KU_INTEGRAL_METHOD \
   template<typename T>     \
-  void KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>::
+  void KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsIntegral<T>::value>::type>::
 
-#define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                \
-  template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kGPU, type_cpp>>; \
-  template struct KernelUtil<DeviceType::kGPU, type_cpp>;
+#define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                                 \
+  template struct GpuKernelUtilIf<type_cpp, KernelUtil<DeviceType::kCUDA, type_cpp>>; \
+  template struct KernelUtil<DeviceType::kCUDA, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

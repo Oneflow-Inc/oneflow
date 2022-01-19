@@ -121,7 +121,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -302,7 +302,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
-      sorted_comp_tasks->push_back(comp_task_node);
+      sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }
 }
@@ -541,48 +541,6 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
   }
 }
 
-void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
-  if (!CHECK_JUST(IsMultiClient())) { return; }
-  HashMap<int64_t, TaskNode*> rank_id2src_tick;
-  HashMap<int64_t, TaskNode*> rank_id2dst_tick;
-  HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;
-
-  ForEachNode([&](TaskNode* node) {
-    if (node->GetTaskType() == TaskType::kSrcSubsetTick) {
-      CHECK(rank_id2src_tick.emplace(node->machine_id(), node).second);
-    } else if (node->GetTaskType() == TaskType::kDstSubsetTick) {
-      CHECK(rank_id2dst_tick.emplace(node->machine_id(), node).second);
-    } else if (node->GetTaskType() == TaskType::kNormalForward) {
-      auto* forward_node = reinterpret_cast<NormalForwardCompTaskNode*>(node);
-      CHECK(forward_node);
-      if (forward_node->op()->op_conf().has_input_conf()
-          || forward_node->op()->op_conf().has_output_conf()) {
-        CHECK(rank_id2input_output_nodes[node->machine_id()].insert(node).second);
-      }
-    }
-  });
-
-  auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
-    std::string ctrl_regst_name;
-    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
-    TaskEdge* edge = NewEdge();
-    Connect<TaskNode>(src, edge, dst);
-    src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
-  };
-
-  for (auto& pair : rank_id2src_tick) {
-    int64_t rank_id = pair.first;
-    TaskNode* src = pair.second;
-    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(src, io_task); }
-  }
-
-  for (auto& pair : rank_id2dst_tick) {
-    int64_t rank_id = pair.first;
-    TaskNode* dst = pair.second;
-    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(io_task, dst); }
-  }
-}
-
 void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->EraseUninitializedShapeProducedBlob(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
@@ -731,7 +689,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kGPU) { return; }
+    if (task_node->device_type() != DeviceType::kCUDA) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });

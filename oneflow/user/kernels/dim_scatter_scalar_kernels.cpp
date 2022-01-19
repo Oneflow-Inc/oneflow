@@ -45,8 +45,7 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     } else if (like_tensor) {
       Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
-      std::cerr << "Unimplemented Error" << std::endl;
-      throw Error::UnimplementedError();  // TODO: Remove throw Error.
+      UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
     }
 
     const int ndim = out_tensor->shape().NumAxes();
@@ -89,10 +88,10 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
   REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_add_scalar, DeviceType::kCPU, dtype_pair, itype_pair, \
                                 AddScalarFunctor);
 
-#define REGISTER_SCATTER_SCALAR_GPU_KERNELS(dtype_pair, itype_pair)                               \
-  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_update_scalar, DeviceType::kGPU, dtype_pair,          \
-                                itype_pair, UpdateScalarFunctor);                                 \
-  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_add_scalar, DeviceType::kGPU, dtype_pair, itype_pair, \
+#define REGISTER_SCATTER_SCALAR_CUDA_KERNELS(dtype_pair, itype_pair)                               \
+  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_update_scalar, DeviceType::kCUDA, dtype_pair,          \
+                                itype_pair, UpdateScalarFunctor);                                  \
+  REGISTER_SCATTERSCALAR_KERNEL(dim_scatter_add_scalar, DeviceType::kCUDA, dtype_pair, itype_pair, \
                                 AddScalarFunctor);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CPU_KERNELS,
@@ -100,7 +99,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CPU_KERNELS,
                                  INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_GPU_KERNELS,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CUDA_KERNELS,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA

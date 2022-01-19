@@ -15,15 +15,17 @@ limitations under the License.
 """
 
 import math
+import random
+import tempfile
 import unittest
 from collections import OrderedDict
-from test_util import GenArgDict
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.nn.parameter import Parameter
 import torch
-import random
+from oneflow.nn.parameter import Parameter
+
+from test_util import GenArgDict
 
 
 def compare_with_troch_reduce_lr(
@@ -228,6 +230,44 @@ class TestLrScheduler(flow.unittest.TestCase):
         arg_dict["eps"] = [1e-5, 1e-8]
         for arg in GenArgDict(arg_dict):
             compare_with_troch_reduce_lr(test_case, **arg)
+
+    def test_warmup_scheduler_save_and_load(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+
+        optimizer = flow.optim.SGD([param])
+        cosine_scheduler = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
+        lr_scheduler = flow.optim.lr_scheduler.WarmUpLR(
+            cosine_scheduler, warmup_factor=0.1, warmup_iters=5, warmup_method="linear",
+        )
+        for _ in range(random.randint(1, 10)):
+            lr_scheduler.step()
+        # save
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save(lr_scheduler.state_dict(), save_dir)
+            state_dict = flow.load(save_dir)
+
+        # load
+        param2 = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer2 = flow.optim.SGD([param])
+        cosine_scheduler2 = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 50)
+        lr_scheduler2 = flow.optim.lr_scheduler.WarmUpLR(
+            cosine_scheduler2,
+            warmup_factor=0.5,
+            warmup_iters=10,
+            warmup_method="linear",
+        )
+        lr_scheduler2.load_state_dict(state_dict)
+
+        # compare warm up scheduler
+        for attr in ["warmup_iters", "warmup_factor", "warmup_method", "last_step"]:
+            test_case.assertEqual(
+                getattr(lr_scheduler, attr), getattr(lr_scheduler2, attr)
+            )
+        # compare cosine_annealing_lr
+        for attr in ["T_max", "eta_min", "last_step"]:
+            test_case.assertEqual(
+                getattr(cosine_scheduler, attr), getattr(cosine_scheduler2, attr)
+            )
 
 
 if __name__ == "__main__":

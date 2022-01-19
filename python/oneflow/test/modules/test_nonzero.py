@@ -57,7 +57,7 @@ class TestNonzero(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_nonzero_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(device)

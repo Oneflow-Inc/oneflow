@@ -24,7 +24,7 @@ namespace {
 template<typename T>
 __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32_t d,
                                    const T epsilon, const T* in, T* square_x_sum, T* out) {
-  using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
+  using BlockReduce = cub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
@@ -54,7 +54,7 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
     const T inv_norm = rsqrt(fmaxf(square_x_sum[i], epsilon));
     const int32_t offset = (i / d) * d * c + (i % d);
     if (square_x_sum[i] >= epsilon) {
-      using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
+      using BlockReduce = cub::BlockReduce<T, ep::CudaStream::kDefaultBlockSize>;
       __shared__ typename BlockReduce::TempStorage temp_storage_prod_sum;
 
       T y_dy_prod_sum = GetZeroVal<T>();
@@ -106,13 +106,13 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("l2_normalize")                                \
-      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_L2_NORMALIZE_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("l2_normalize")                                 \
+      .SetCreateFn<GpuL2NormalizeKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_L2_NORMALIZE_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
 
 template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
@@ -138,12 +138,12 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
-  REGISTER_USER_KERNEL("l2_normalize_grad")                           \
-      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU) \
+#define REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(dtype)                  \
+  REGISTER_USER_KERNEL("l2_normalize_grad")                            \
+      .SetCreateFn<GpuL2NormalizeGradKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_L2_NORMALIZE_GRAD_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(float)
 
 }  // namespace oneflow

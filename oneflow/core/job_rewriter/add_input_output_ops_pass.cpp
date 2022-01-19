@@ -108,6 +108,7 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   }
 
   std::vector<std::string> drop_op_names;
+  drop_op_names.reserve(op_graph.node_num());
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     if (keep_op_names.find(op_name) == keep_op_names.end()) { drop_op_names.emplace_back(op_name); }

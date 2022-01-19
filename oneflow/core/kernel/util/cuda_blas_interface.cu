@@ -111,22 +111,22 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 
 }  // namespace
 
-void BlasIf<DeviceType::kGPU>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const float* a,
-                                      const float* b, const double beta, float* c) {
+void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                       const int k, const double alpha, const float* a,
+                                       const float* b, const double beta, float* c) {
   Gemm<float>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
-void BlasIf<DeviceType::kGPU>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const double* a,
-                                      const double* b, const double beta, double* c) {
+void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                       const int k, const double alpha, const double* a,
+                                       const double* b, const double beta, double* c) {
   Gemm<double>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
-void BlasIf<DeviceType::kGPU>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const float16* a,
-                                      const float16* b, const double beta, float16* c) {
+void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                       const int k, const double alpha, const float16* a,
+                                       const float16* b, const double beta, float16* c) {
   Gemm<half>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
              reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), beta,
              reinterpret_cast<half*>(c));

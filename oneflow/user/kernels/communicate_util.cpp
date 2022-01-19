@@ -66,11 +66,11 @@ template Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, Dat
 template Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
                                             ep::Stream* stream);
 
-#if defined(WITH_CUDA) && HAS_GPU_SEND_RECV
-template Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype,
-                                            int64_t dst, ep::Stream* stream);
+#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
+template Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, DataType dtype,
+                                             int64_t dst, ep::Stream* stream);
 
-template Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
-                                            ep::Stream* stream);
+template Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype,
+                                             int64_t src, ep::Stream* stream);
 #endif
 }  // namespace oneflow

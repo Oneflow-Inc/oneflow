@@ -84,7 +84,7 @@ class CopyNdFactoryImpl : public CopyNdFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, CopyNdFactory, CopyNdFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, CopyNdFactory, CopyNdFactoryImpl);
 
 }  // namespace
 

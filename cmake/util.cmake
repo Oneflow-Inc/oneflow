@@ -102,40 +102,44 @@ function(add_copy_headers_target)
 endfunction()
 
 function(use_mirror)
-  cmake_parse_arguments(
-    PARSED_ARGS
-    ""
-    "VARIABLE;URL"
-    ""
-    ${ARGN}
+  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/"
+    CACHE STRING "URL prefix of Aliyun OSS mirror"
   )
-  if(NOT PARSED_ARGS_VARIABLE)
-    message(FATAL_ERROR "VARIABLE required")
-  endif(NOT PARSED_ARGS_VARIABLE)
-  if(NOT PARSED_ARGS_URL)
-    message(FATAL_ERROR "url required")
-  endif(NOT PARSED_ARGS_URL)
-  set(UTIL_PYTHON_EXECUTABLE "python3" CACHE STRING "Python executable to run util")
-  if(Python3_EXECUTABLE)
-    set(UTIL_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-  endif(Python3_EXECUTABLE)
+  cmake_parse_arguments(PARSED_ARGS
+    "" "VARIABLE;URL" "" ${ARGN}
+  )
+
+  if((NOT PARSED_ARGS_VARIABLE) OR (NOT PARSED_ARGS_URL))
+    message(FATAL_ERROR "VARIABLE or URL required")
+  endif()
+
+  if(PARSED_ARGS_URL MATCHES "file://")
+    set(${PARSED_ARGS_VARIABLE} ${PARSED_ARGS_URL} PARENT_SCOPE)
+    return()
+  endif()
   if(DEFINED THIRD_PARTY_MIRROR)
     if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
-      execute_process(
-        COMMAND ${UTIL_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL}
-        OUTPUT_VARIABLE temp_url
-        ERROR_VARIABLE err
-        RESULT_VARIABLE ret_code)
-      if (NOT (ret_code EQUAL "0"))
-        message(FATAL_ERROR "Fail to convert mirror url ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py. URL: ${PARSED_ARGS_URL}. Error: ${err}. Output: ${temp_url}")
-      else()
-        set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
+      if(NOT PARSED_ARGS_URL MATCHES "^https://")
+        message(FATAL_ERROR "URL should start with 'https://'")
       endif()
+      string(REPLACE "https://" ${ALIYUN_URL_PREFIX} MIRRORED_URL ${PARSED_ARGS_URL})
+      set(${PARSED_ARGS_VARIABLE} ${MIRRORED_URL} PARENT_SCOPE)
+      message(NOTICE "-- fetch ${PARSED_ARGS_VARIABLE} using aliyun mirror ${MIRRORED_URL}")
     elseif(NOT THIRD_PARTY_MIRROR STREQUAL "")
-      message(FATAL_ERROR "Invalid key for third party mirror.")
+      message(FATAL_ERROR "invalid key for third party mirror")
     endif()
   endif()
 endfunction()
+
+macro(set_mirror_url variable url)
+  set(${variable} ${url} ${ARGN})
+  use_mirror(VARIABLE ${variable} URL ${url})
+endmacro()
+
+macro(set_mirror_url_with_hash variable url hash)
+  set_mirror_url(${variable} ${url} ${ARGN})
+  set(${variable}_HASH ${hash} ${ARGN})
+endmacro()
 
 function(check_cxx11_abi OUTPUT_VAR)
   execute_process(
@@ -158,4 +162,100 @@ function(check_cxx11_abi OUTPUT_VAR)
   execute_process(
     COMMAND rm ${CMAKE_CURRENT_BINARY_DIR}/temp ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp)
   set(${OUTPUT_VAR} ${CXX11_ABI_AVAILABLE} PARENT_SCOPE)
+endfunction()
+
+include(CheckCXXCompilerFlag)
+
+function(target_try_compile_option target flag)
+  # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
+  # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
+  string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
+  string(REGEX REPLACE "[-=]" "_" varName CXX_FLAG${checkedFlag})
+  # Avoid double checks. A compiler will not magically support a flag it did not before
+  if(NOT DEFINED ${varName}_SUPPORTED)
+    check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
+  endif()
+  if (${varName}_SUPPORTED)
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${flag}>)
+    if(BUILD_CUDA)
+      if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
+          "${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${flag}>)
+      endif()
+    endif()
+  endif ()
+endfunction()
+
+function(target_try_compile_options target)
+  foreach(flag ${ARGN})
+    target_try_compile_option(${target} ${flag})
+  endforeach()
+endfunction()
+
+function(target_treat_warnings_as_errors target)
+  if (TREAT_WARNINGS_AS_ERRORS)
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror>)
+    if(BUILD_CUDA)
+      # Only pass flags when cuda compiler is Clang because cmake handles -Xcompiler incorrectly
+      if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+        target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Werror>)
+      endif()
+    endif()
+
+    # TODO: remove it while fixing all deprecated call
+    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
+
+    # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
+    target_try_compile_options(${target}
+      -Wno-error=unused-const-variable
+      -Wno-error=unused-variable
+      -Wno-error=unused-local-typedefs
+      -Wno-error=unused-private-field
+      -Wno-error=unused-lambda-capture
+    )
+
+    # there is some strict-overflow warnings in oneflow/user/kernels/ctc_loss_kernel_util.cpp for unknown reason, disable them for now
+    target_try_compile_options(${target} -Wno-error=strict-overflow)
+
+    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
+
+    # disable for pointer operations of intrusive linked lists
+    target_try_compile_options(${target} -Wno-error=array-bounds)
+
+    target_try_compile_options(${target} -Wno-error=comment)
+
+    # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
+    target_try_compile_options(${target} -Wno-error=attributes)
+  endif()
+endfunction()
+
+function(set_compile_options_to_oneflow_target target)
+  target_treat_warnings_as_errors(${target})
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
+  # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+  target_try_compile_options(${target} -Wno-mismatched-tags)
+  target_try_compile_options(${target} -Wno-covered-switch-default)
+
+  if(BUILD_CUDA)
+    if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
+      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+        -Xcompiler -Werror=return-type;
+        -Wno-deprecated-gpu-targets;
+        -Werror cross-execution-space-call;
+        -Xcudafe --diag_suppress=declared_but_not_referenced;
+      >)
+    elseif("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "Clang")
+      target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+        -Werror=return-type;
+        # Suppress warning from cub library -- marking as system header seems not working for .cuh files
+        -Wno-pass-failed;
+      >)
+    else()
+      message(FATAL_ERROR "Unknown CUDA compiler ${CMAKE_CUDA_COMPILER_ID}")
+    endif()
+    # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
+    target_compile_definitions(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+      THRUST_IGNORE_CUB_VERSION_CHECK;
+    >)
+  endif()
 endfunction()

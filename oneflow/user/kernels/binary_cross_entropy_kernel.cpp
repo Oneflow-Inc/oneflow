@@ -36,22 +36,20 @@ void ComputeBinaryCrossEntropyOut(int64_t elem_cnt, const T* input, const T* tar
     if (weight != nullptr) { out[i] *= weight[i]; }
   }
 }
+
 template<typename T>
 void ComputeBinaryCrossEntropyGradOut(int64_t elem_cnt, const T* input, const T* target,
-                                      const T* dy, T* dx, const T* weight,
-                                      const ReductionType reduction_type) {
+                                      const T* dy, T* dx, const T* weight) {
   const T eps = static_cast<T>(1e-12);
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     T input_val = input[i];
     T target_val = target[i];
-    T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    T dy_val = dy[i];
     dx[i] = dy_val * (input_val - target_val)
             / (std::max((static_cast<T>(1.0) - input_val) * input_val, eps));
     if (weight != nullptr) { dx[i] *= weight[i]; }
-    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; }
   }
 }
-
 template<typename T>
 class BinaryCrossEntropyKernel final : public user_op::OpKernel {
  public:
@@ -64,22 +62,16 @@ class BinaryCrossEntropyKernel final : public user_op::OpKernel {
     const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const int64_t elem_cnt = input_blob->shape().elem_cnt();
 
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
-    T* tmp_out = reduction == ReductionType::kNone ? nullptr : tmp_buffer_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
 
-    ComputeBinaryCrossEntropyOut(elem_cnt, input, target,
-                                 reduction == ReductionType::kNone ? out : tmp_out, weight);
-
-    ApplyLossReductionIfNeed<DeviceType::kCPU, T>(ctx->stream(), elem_cnt, tmp_out, out, reduction);
+    ComputeBinaryCrossEntropyOut(elem_cnt, input, target, out, weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -97,7 +89,6 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const ReductionType reduction = GetReductionType(ctx->Attr<std::string>("reduction"));
 
     const int64_t elem_cnt = input_blob->shape().elem_cnt();
 
@@ -107,7 +98,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
     T* dx = dx_blob->mut_dptr<T>();
     const T* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    ComputeBinaryCrossEntropyGradOut(elem_cnt, input, target, dy, dx, weight, reduction);
+    ComputeBinaryCrossEntropyGradOut(elem_cnt, input, target, dy, dx, weight);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -120,8 +111,7 @@ class BinaryCrossEntropyGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
                        && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))   \
-      .SetInferTmpSizeFn(loss::GenDefaultInferTmpSizeFn<dtype>());
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("binary_cross_entropy_grad")                                        \

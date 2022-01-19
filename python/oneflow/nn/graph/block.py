@@ -203,7 +203,10 @@ class ModuleBlock(Block):
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         # result = self._origin.__class__.__call__(self, *args)
-        result = self.__block_forward(*args)
+        with graph_build_util.GLogScopeContext(
+            self._debug_min_s_level, self._debug_max_v_level
+        ):
+            result = self.__block_forward(*args)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -455,6 +458,15 @@ class ModuleBlock(Block):
         b_state = self._get_from_states(name, "_buffers")
         if b_state is not None:
             return b_state
+        # support none parameter or buffer
+        if name in self._origin._parameters:
+            p_none = self._origin._parameters[name]
+            assert p_none is None
+            return None
+        if name in self._origin._buffers:
+            b_none = self._origin._buffers[name]
+            assert b_none is None
+            return None
         # support get normal attr
         if name in self._origin.__dict__:
             return self._origin.__dict__[name]
@@ -477,18 +489,8 @@ class ModuleBlock(Block):
 
         _s_block = _states[name]
         if graph_build_util.lazy_mode.is_enabled():
-            #  lazy
-            if _s_block._lazy_origin is None:
-                assert _s_block._lazy_origin_builder is not None, (
-                    repr(_s_block) + " has no lazy Tensor creation function."
-                )
-                assert self._is_executing_forward, (
-                    repr(_s_block)
-                    + "'s first get must happened in it's nn.Module.forward() to generate the right scope."
-                )
-                with _s_block.scope_context():
-                    _s_block._lazy_origin = _s_block._lazy_origin_builder()
-            return _s_block._lazy_origin
+            _s_block.try_build()
+            return _s_block.lazy_origin
         elif (
             not graph_build_util.lazy_mode.is_enabled()
         ) and self._is_executing_forward:
@@ -553,7 +555,24 @@ class ModuleBlock(Block):
         assert isinstance(msg, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
+                print(msg, flush=True)
+
+
+class LazyBuilder(object):
+    def __init__(self, name: str = None, method=None):
+        self.name = name
+        self.method = method
+        self.result = None
+        self.finished = False
+
+    def try_build(self, block=None):
+        if not self.finished:
+            assert self.name is not None
+            assert self.method is not None
+            assert self.result is None
+            with block.scope_context():
+                self.result = self.method()
+            self.finished = True
 
 
 class TensorBlock(Block):
@@ -568,8 +587,8 @@ class TensorBlock(Block):
             self._type = BlockType.BUFFER
         else:
             raise NotImplementedError()
-        self._lazy_origin = None
-        self._lazy_origin_builder = None
+        self._lazy_origin_builder = LazyBuilder()
+        self.build_finished = False
         self.set_origin(origin)
 
     @property
@@ -584,7 +603,7 @@ class TensorBlock(Block):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin"
-        return self._lazy_origin
+        return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
@@ -592,11 +611,16 @@ class TensorBlock(Block):
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         return self._lazy_origin_builder
 
-    def set_lazy_origin_builder(self, fn=None):
+    def set_lazy_origin_builder(self, builder=None):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
-        self._lazy_origin_builder = fn
+        self._lazy_origin_builder = builder
+
+    def try_build(self):
+        if not self.build_finished:
+            self._lazy_origin_builder.try_build(self)
+            self.build_finished = True
 
     def __repr__(self):
         lines = None

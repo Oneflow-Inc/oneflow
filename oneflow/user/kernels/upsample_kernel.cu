@@ -147,8 +147,8 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
-    Memset<DeviceType::kGPU>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
-                             dx_blob->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
+                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
@@ -165,22 +165,22 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(dtype)                                       \
+#define REGISTER_UPSAMPLE_NEAREST_CUDA_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("upsample")                                                        \
       .SetCreateFn<UpsampleNearestGPUKernel<dtype>>()                                     \
       .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
   REGISTER_USER_KERNEL("upsample_grad")                                                   \
       .SetCreateFn<UpsampleNearestGradGPUKernel<dtype>>()                                 \
       .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                  \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
 
-REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(float)
-REGISTER_UPSAMPLE_NEAREST_GPU_KERNEL(double)
+REGISTER_UPSAMPLE_NEAREST_CUDA_KERNEL(float)
+REGISTER_UPSAMPLE_NEAREST_CUDA_KERNEL(double)
 
 template<typename T>
 class UpsampleBilinearGPUKernel final : public user_op::OpKernel {
@@ -226,8 +226,8 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
-    Memset<DeviceType::kGPU>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
-                             dx_blob->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
+                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
     const float width_scale = ctx->Attr<float>("width_scale");
@@ -251,21 +251,21 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(dtype)                                       \
+#define REGISTER_UPSAMPLE_BILINEAR_CUDA_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("upsample")                                                         \
       .SetCreateFn<UpsampleBilinearGPUKernel<dtype>>()                                     \
       .SetIsMatchedHob(                                                                    \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
           && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
   REGISTER_USER_KERNEL("upsample_grad")                                                    \
       .SetCreateFn<UpsampleBilinearGradGPUKernel<dtype>>()                                 \
       .SetIsMatchedHob(                                                                    \
-          (user_op::HobDeviceType() == DeviceType::kGPU)                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
           && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
           && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
 
-REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(float)
-REGISTER_UPSAMPLE_BILINEAR_GPU_KERNEL(double)
+REGISTER_UPSAMPLE_BILINEAR_CUDA_KERNEL(float)
+REGISTER_UPSAMPLE_BILINEAR_CUDA_KERNEL(double)
 
 }  // namespace oneflow

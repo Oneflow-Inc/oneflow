@@ -138,10 +138,14 @@ def ones_op(
         >>> y = flow.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
-        >>> y = flow.ones(2,3)
+        >>> y = flow.ones(2,3) # construct local tensor
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.]], dtype=oneflow.float32)
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.ones(4, 5, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
+        >>> y.is_consistent
+        True
 
 
     """
@@ -229,7 +233,7 @@ def full_op(
     The tensor’s dtype is inferred from `value`.
 
     Args:
-        size(int...): a list, tuple, or torch.Size of integers defining the shape of the output tensor.
+        size(int...): a list, tuple, or oneflow.Size of integers defining the shape of the output tensor.
         fill_value(Scalar): the value to fill the output tensor with.
         dtype (flow.dtype, optional): the desired data type of returned tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
@@ -242,91 +246,23 @@ def full_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.full((5,),5)
+        >>> y = flow.full((5,),5) 
         >>> y
         tensor([5, 5, 5, 5, 5], dtype=oneflow.int64)
-        >>> y = flow.full((2,3),5.0)
+        >>> y = flow.full((2,3),5.0) # construct local tensor
         >>> y
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
+        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent tensor
+        >>> y.is_consistent
+        True
 
     """
     size = _handle_size_arg(*size)
     if dtype is None:
         dtype = flow.tensor(value).dtype
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
-
-
-class NewOnes(Module):
-    def __init__(
-        self,
-        size: Union[_size_any_t, flow.Size] = None,
-        dtype: Optional[flow.dtype] = None,
-        device: Union[flow.device, str] = None,
-        placement: flow.placement = None,
-        sbp: flow._oneflow_internal.sbp.sbp = None,
-        requires_grad: bool = False,
-    ):
-        super().__init__()
-        self.device = device
-        if isinstance(self.device, str):
-            self.device = flow.device(self.device)
-        self.placement = placement
-        self.sbp = sbp
-        self.requires_grad = requires_grad
-        if size != None:
-            size = _single(size)
-        self.size = size
-        self.dtype = dtype
-
-    def forward(self, x):
-        new_size = self.size
-        new_dtype = self.dtype
-        new_device = self.device
-        new_placement = self.placement
-        new_sbp = self.sbp
-        new_requires_grad = self.requires_grad
-        if self.size is None:
-            new_size = x.shape
-        if self.dtype is None:
-            new_dtype = x.dtype
-        if self.device is None:
-            new_device = x.device if x.is_local else None
-        if self.placement is None:
-            new_placement = x.placement if x.is_consistent else None
-        if self.sbp is None:
-            new_sbp = x.sbp if x.is_consistent else None
-        if new_placement is not None:
-            assert self.device is None
-            assert new_sbp is not None
-        assert isinstance(
-            new_size, (int, tuple, flow.Size)
-        ), f"size parameter not correct, please check!"
-        assert isinstance(
-            new_dtype, flow.dtype
-        ), f"dtype parameter not correct, please check!"
-        if new_placement is not None:
-            assert isinstance(
-                new_placement, flow.placement
-            ), f"device parameter not correct, please check!"
-            assert isinstance(
-                new_sbp, flow.sbp.sbp
-            ), f"device parameter not correct, please check!"
-        else:
-            assert isinstance(
-                new_device, (str, flow.device)
-            ), f"device parameter not correct, please check!"
-        assert isinstance(
-            new_requires_grad, bool
-        ), f"requires_grad parameter not correct, please check!"
-        if self.placement is not None:
-            res = flow._C.consistent_constant(
-                new_size, 1.0, dtype=new_dtype, placement=self.placement, sbp=self.sbp
-            )
-        else:
-            res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
-        res.requires_grad = new_requires_grad
-        return res
 
 
 @register_tensor_op("new_ones")
@@ -358,14 +294,57 @@ def new_ones_op(
         tensor([[1., 1.],
                 [1., 1.]], dtype=oneflow.float32)
     """
-    return NewOnes(
-        size=size,
-        dtype=dtype,
-        device=device,
-        placement=placement,
-        sbp=sbp,
-        requires_grad=requires_grad,
-    )(x)
+    if isinstance(device, str):
+        device = flow.device(device)
+    if size != None:
+        size = _single(size)
+    new_size = size
+    new_dtype = dtype
+    new_device = device
+    new_placement = placement
+    new_sbp = sbp
+    new_requires_grad = requires_grad
+    if size is None:
+        new_size = x.shape
+    if dtype is None:
+        new_dtype = x.dtype
+    if device is None:
+        new_device = x.device if x.is_local else None
+    if placement is None:
+        new_placement = x.placement if x.is_consistent else None
+    if sbp is None:
+        new_sbp = x.sbp if x.is_consistent else None
+    if new_placement is not None:
+        assert device is None
+        assert new_sbp is not None
+    assert isinstance(
+        new_size, (int, tuple, flow.Size)
+    ), f"size parameter not correct, please check!"
+    assert isinstance(
+        new_dtype, flow.dtype
+    ), f"dtype parameter not correct, please check!"
+    if new_placement is not None:
+        assert isinstance(
+            new_placement, flow.placement
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
+            new_sbp, flow.sbp.sbp
+        ), f"device parameter not correct, please check!"
+    else:
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"device parameter not correct, please check!"
+    assert isinstance(
+        new_requires_grad, bool
+    ), f"requires_grad parameter not correct, please check!"
+    if placement is not None:
+        res = flow._C.consistent_constant(
+            new_size, 1.0, dtype=new_dtype, placement=placement, sbp=sbp
+        )
+    else:
+        res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
+    res.requires_grad = new_requires_grad
+    return res
 
 
 if __name__ == "__main__":

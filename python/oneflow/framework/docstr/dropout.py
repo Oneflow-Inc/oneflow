@@ -74,7 +74,7 @@ add_docstr(
         ... )
         >>> x = flow.tensor(arr, dtype=flow.float32)
         >>> generator = flow.Generator()
-        >>> y = flow.nn.functional.dropout(x, 0.5, generator=generator) 
+        >>> y = flow.nn.functional.dropout(x, p=0.5, generator=generator) 
       
 
     

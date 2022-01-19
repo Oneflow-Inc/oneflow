@@ -55,7 +55,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
 
 REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kGPU)
+REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

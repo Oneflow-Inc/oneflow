@@ -22,7 +22,7 @@ bool IsIntegralDataType(DataType data_type) {
   switch (data_type) {
 #define INTEGRAL_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(INTEGRAL_CASE, INT_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(INTEGRAL_CASE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef INTEGRAL_CASE
@@ -49,7 +49,7 @@ bool IsPODAndHalfDataType(DataType data_type) {
   switch (data_type) {
 #define POD_AND_HALF_CASE(type_cpp, type_proto) \
   case type_proto: return true;
-    OF_PP_FOR_EACH_TUPLE(POD_AND_HALF_CASE, POD_AND_HALF_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(POD_AND_HALF_CASE, POD_AND_HALF_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
     default: return false;
   }
 #undef POD_AND_HALF_CASE
@@ -77,7 +77,8 @@ size_t GetSizeOfDataType(DataType data_type) {
   switch (data_type) {
 #define MAKE_CASE(type_cpp, type_proto) \
   case type_proto: return sizeof(type_cpp);
-    OF_PP_FOR_EACH_TUPLE(MAKE_CASE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ);
+    OF_PP_FOR_EACH_TUPLE(
+        MAKE_CASE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
     case kBFloat16: return 2;
     default: LOG(FATAL) << "invalid data_type: " << DataType_Name(data_type);
   }

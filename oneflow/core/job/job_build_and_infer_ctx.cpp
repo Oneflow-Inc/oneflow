@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
@@ -153,16 +153,13 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
 }
 
 Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
-    const Operator& op, cfg::SbpSignature* sbp_sig_conf,
-    HashMap<std::string, bool>* ibn2disable_boxing) const {
+    const Operator& op, cfg::SbpSignature* sbp_sig_conf) const {
   auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
   for (const std::string& ibn : op.input_bns()) {
     std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.op_conf(), ibn);
     cfg::SbpParallel sbp_parallel;
     bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
-    bool has_disable_boxing_hint =
-        JUST(ParseDisableBoxingFlag(lbn_may_with_hint, &(*ibn2disable_boxing)[ibn]));
-    if (has_sbp_hint || has_disable_boxing_hint) {
+    if (has_sbp_hint) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
@@ -282,6 +279,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 
   // create produced blob
   std::vector<std::string> produced_bns;
+  produced_bns.reserve(op->output_bns().size() + op->tmp_bns().size());
   produced_bns.insert(produced_bns.end(), op->output_bns().begin(), op->output_bns().end());
   produced_bns.insert(produced_bns.end(), op->tmp_bns().begin(), op->tmp_bns().end());
   for (const std::string& produced_bn : produced_bns) {
@@ -371,18 +369,24 @@ void JobBuildAndInferCtx::InitIbn2DisableBoxing(const Operator& op,
   }
 }
 
-void JobBuildAndInferCtx::UpdateLbi2DisableBoxing(
-    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) {
-  bool disable_boxing = false;
-  for (const auto& ibn : op.input_bns()) {
-    if (ibn2disable_boxing.at(ibn)) {
-      disable_boxing = true;
-      break;
+Maybe<cfg::NdSbpSignature> JobBuildAndInferCtx::InitConstraitNdSbpSignature(
+    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) const {
+  auto nd_sbp_sig = std::make_shared<cfg::NdSbpSignature>();
+  for (const auto& it : ibn2disable_boxing) {
+    if (it.second) {
+      const auto& ibn = it.first;
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
+      const auto& nd_sbp_iter = lbi2nd_sbp_from_producer_view_.find(lbi);
+      if (nd_sbp_iter == lbi2nd_sbp_from_producer_view_.end()) {
+        return Error::RuntimeError()
+               << "The nd_sbp of input " << ibn << " (tensor name is " << GenLogicalBlobName(lbi)
+               << ") is not found for operation " << op.op_name()
+               << ". It maybe caused by an invalid inplace operation.";
+      }
+      (*(nd_sbp_sig->mutable_bn_in_op2nd_sbp()))[ibn] = lbi2nd_sbp_from_producer_view_.at(lbi);
     }
   }
-  for (const auto& obn : op.output_bns()) {
-    lbi2disable_boxing_[op.BnInOp2Lbi(obn)] = disable_boxing;
-  }
+  return nd_sbp_sig;
 }
 
 bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
@@ -571,12 +575,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   cfg::SbpSignature sbp_sig_conf;
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
-  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
+  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf));
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
   ParallelDesc parallel_desc(*parallel_conf);
   JUST(op->FillOpParallelDesc(parallel_desc));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
-  UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
 
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
@@ -591,8 +594,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
   // infer nd_sbp signature
-  cfg::NdSbpSignature nd_sbp_sig_conf;
-  SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  cfg::NdSbpSignature nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  // Override constrait nd_sbp if sbp hint is given
+  if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  }
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, nd_sbp_sig_conf,
                                     is_mirrored_parallel_view);
   JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
@@ -662,12 +668,19 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
-Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
+Maybe<bool> JobBuildAndInferCtx::IsDisableBoxing(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
   const auto& iter = lbi2disable_boxing_.find(lbi);
   CHECK_OR_RETURN(iter != lbi2disable_boxing_.end());
   return iter->second;
+}
+
+Maybe<void> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) {
+  JUST(CheckLbnValidAndExist(lbn));
+  LogicalBlobId lbi(GenLogicalBlobId(lbn));
+  lbi2disable_boxing_[lbi] = true;
+  return Maybe<void>::Ok();
 }
 
 Maybe<Operator*> JobBuildAndInferCtx::Op4OpName(const std::string& op_name) const {
@@ -875,7 +888,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     LogicalBlobId sub_lbi;
     sub_lbi.set_op_name(op_name);
     sub_lbi.set_blob_name(blob_name);
-    lbi_vec->push_back(sub_lbi);
+    lbi_vec->emplace_back(sub_lbi);
   };
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(scope_symbol_id);
@@ -943,7 +956,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   mirrored_lbi.set_op_name(op_conf.name());
   mirrored_lbi.set_blob_name("out");
   (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
-  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].push_back(mirrored_lbi);
+  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
   {
@@ -964,8 +977,36 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
+  const auto& job_name = job().job_conf().job_name();
+  auto LogJob = [&](const std::string& name_suffix) -> void {
+    std::string full_log_name =
+        job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
+    TeePersistentLogStream::Create(full_log_name)->Write(job());
+    Global<OpGraph>::New(job());
+    Global<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
+    Global<OpGraph>::Delete();
+  };
+  std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
+  auto NeedLogJob = [&](const std::string& pass_name) -> bool {
+    if ("ALL" == debug_pass_name) {
+      return true;
+    } else if (pass_name == debug_pass_name) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob(pass_name + cnt_str + "-before");
+    }
+    JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob(pass_name + cnt_str + "-after");
+    }
+    return Maybe<void>::Ok();
   };
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
@@ -1006,7 +1047,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
-    JUST(DoPass("FuseAddToOutputPass"));
+    JUST(DoPass("FuseAddToOutputPass", 1));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
@@ -1196,9 +1237,10 @@ void FormateVariableConf(nlohmann::json& json_conf) {
 
 std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     const std::string& job_name) const {
-  HashSet<std::string> input_op_names;
-  HashSet<std::string> output_op_names;
+  HashSet<std::string> inputs_op_names;
+  HashSet<std::string> outputs_op_names;
   std::vector<nlohmann::json> layers_vec;
+  layers_vec.reserve(op_name2op_.size());
   for (const auto& pair : op_name2op_) {
     nlohmann::json json_layers_pair;
 
@@ -1213,10 +1255,10 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     }
 
     if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
-      input_op_names.insert(op_name);
+      inputs_op_names.insert(op_name);
     }
     if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
-      output_op_names.insert(op_name);
+      outputs_op_names.insert(op_name);
     }
     json_layers_pair["name"] = op_name;
 
@@ -1230,6 +1272,7 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     json_layers_pair["config"] = json_conf;
 
     std::vector<std::string> inbound_nodes_vec;
+    inbound_nodes_vec.reserve(inbound_nodes.size());
     for (const auto& in_node_name : inbound_nodes) { inbound_nodes_vec.emplace_back(in_node_name); }
     json_layers_pair["inbound_nodes"] = inbound_nodes_vec;
 
@@ -1239,8 +1282,8 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
   nlohmann::json json_pair;
   json_pair["name"] = job_name;
   json_pair["layers"] = layers_vec;
-  json_pair["input_layers"] = input_op_names;
-  json_pair["output_layers"] = output_op_names;
+  json_pair["input_layers"] = inputs_op_names;
+  json_pair["output_layers"] = outputs_op_names;
 
   return json_pair.dump();
 }
@@ -1332,7 +1375,7 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
   return op_name;

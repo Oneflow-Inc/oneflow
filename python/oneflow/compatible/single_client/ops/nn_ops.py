@@ -1297,7 +1297,6 @@ def layer_norm(
         if gamma is not None:
             scale = True
             op_builder.Input("gamma", [gamma])
-            op_builder.Output("normalized")
         op_builder.Attr("center", center)
         op_builder.Attr("scale", scale)
         op_builder.Attr("begin_norm_axis", begin_norm_axis)
@@ -2728,16 +2727,13 @@ def dropout(
         assert name is not None
     if name is None:
         name = id_util.UniqueStr("Dropout_")
-    mask = random_mask_like(
-        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
-    )
     return (
         flow.user_op_builder(name)
         .Op("dropout")
         .Input("in", [x])
-        .Input("mask", [mask])
         .Output("out")
-        .Attr("scale", float(1.0 / (1.0 - rate)))
+        .Output("mask")
+        .Attr("rate", float(rate))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

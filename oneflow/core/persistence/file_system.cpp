@@ -34,7 +34,7 @@ std::string FileSystem::SplitRecursiveDir(const std::string& dirname,
     if (status) { break; }
     // Basename returns "" for / ending dirs.
     if (remaining_dir[remaining_dir.length() - 1] != '/') {
-      sub_dirs.push_back(Basename(remaining_dir));
+      sub_dirs.emplace_back(Basename(remaining_dir));
     }
     remaining_dir = Dirname(remaining_dir);
   }
@@ -76,7 +76,7 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
   CHECK(FileExists(dirname));
   std::deque<std::string> dir_q;      // Queue for the BFS
   std::vector<std::string> dir_list;  // List of all dirs discovered
-  dir_q.push_back(dirname);
+  dir_q.emplace_back(dirname);
   // ret : Status to be returned.
   // Do a BFS on the directory to discover all the sub-directories. Remove all
   // children that are files along the way. Then cleanup and remove the
@@ -84,14 +84,14 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
   while (!dir_q.empty()) {
     std::string dir = dir_q.front();
     dir_q.pop_front();
-    dir_list.push_back(dir);
+    dir_list.emplace_back(dir);
     // GetChildren might fail if we don't have appropriate permissions.
     std::vector<std::string> children = ListDir(dir);
     for (const std::string& child : children) {
       const std::string child_path = JoinPath(dir, child);
       // If the child is a directory add it to the queue, otherwise delete it.
       if (IsDirectory(child_path)) {
-        dir_q.push_back(child_path);
+        dir_q.emplace_back(child_path);
       } else {
         // Delete file might fail because of permissions issues or might be
         // unimplemented.

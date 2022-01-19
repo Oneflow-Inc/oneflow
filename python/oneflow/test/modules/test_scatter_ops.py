@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestScatterOpsModule(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_scatter_random_data_at_dim_0(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -35,7 +35,7 @@ class TestScatterOpsModule(flow.unittest.TestCase):
         y = torch.scatter(input, 0, index, src)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_scatter_random_data_at_dim_1(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -46,7 +46,7 @@ class TestScatterOpsModule(flow.unittest.TestCase):
         y = torch.scatter(input, 1, index, src)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_scatter_scalar_random_data_at_dim0(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -57,7 +57,7 @@ class TestScatterOpsModule(flow.unittest.TestCase):
         y = torch.scatter(input, 0, index, 3.14)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_scatter_scalar_random_data_at_dim1(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -68,7 +68,7 @@ class TestScatterOpsModule(flow.unittest.TestCase):
         y = torch.scatter(input, 1, index, 3.14)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_scatter_add_random_data_at_dim0(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -79,7 +79,7 @@ class TestScatterOpsModule(flow.unittest.TestCase):
         y = torch.scatter_add(input, 0, index, src)
         return y
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_scatter_add_random_data_at_dim1(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)

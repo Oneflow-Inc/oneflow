@@ -28,15 +28,15 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestEq(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
-    def test_eq_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_eq_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(3, 2, 0, 3).to(device)
         y = random_pytorch_tensor(3, 2, 0, 3).to(device)
         z = torch.eq(x, y)
         return z
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_flow_eq_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape
@@ -44,7 +44,7 @@ class TestEq(flow.unittest.TestCase):
         y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.eq(x, y)
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_flow_eq_with_same_random_data(test_case):
         device = random_device()
         shape = random_tensor().value().shape

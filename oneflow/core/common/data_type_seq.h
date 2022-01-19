@@ -20,6 +20,8 @@ limitations under the License.
 
 // SEQ
 
+#define BOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bool, DataType::kBool)
+
 #define FLOATING_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)

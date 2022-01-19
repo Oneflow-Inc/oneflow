@@ -25,6 +25,8 @@ namespace oneflow {
 
 namespace ep {
 
+class Device;
+
 class Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Stream);
@@ -32,6 +34,7 @@ class Stream {
   virtual ~Stream() = default;
 
   virtual DeviceType device_type() const = 0;
+  virtual Device* device() const = 0;
   virtual Maybe<void> Sync() = 0;
   virtual void RecordEvent(Event* event) = 0;
 

@@ -30,7 +30,7 @@ namespace oneflow {
 
 REGISTER_RESHAPE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_RESHAPE_KERNEL(DeviceType::kGPU)
+REGISTER_RESHAPE_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

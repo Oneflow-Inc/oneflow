@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 #ifdef WITH_CUDA
 
@@ -51,17 +52,6 @@ class InsertNcclLogicalOpPass final : public JobPass {
 };
 
 const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
-
-std::string NdSbpToString(const cfg::NdSbp& nd_sbp) {
-  std::string serialized_nd_sbp;
-  const int64_t num_axes = nd_sbp.sbp_parallel_size();
-  serialized_nd_sbp += "[";
-  for (int64_t i = 0; i < num_axes - 1; ++i) {
-    serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
-  }
-  serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
-  return serialized_nd_sbp;
-}
 
 bool IsBreakpointOpNode(const OpNode* node) {
   // NOTE(chengcheng): breakpoint op is special which CANNOT through subgraph such as:
@@ -112,7 +102,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     CHECK(visited.insert(seed_node).second);
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
-    if (seed_parallel_desc.device_type() != DeviceType::kGPU) { continue; }
+    if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
     if (IsBreakpointOpNode(seed_node)) { continue; }
 
@@ -139,7 +129,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     }
 
     if (this_subgraph.size() > 1) {
-      ret->push_back(HashSet<const OpNode*>());
+      ret->emplace_back(HashSet<const OpNode*>());
       ret->back().swap(this_subgraph);
     }
   }
@@ -435,8 +425,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
                     << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
                     << next_op_name << "](order=" << src_order + 1 << ")\n";
         }
-        nccl_op_confs->push_back(nccl_op);
-        nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
+        nccl_op_confs->emplace_back(nccl_op);
+        nccl_op_parallel_confs->emplace_back(src_node->parallel_desc().parallel_conf());
       }
     }
   }
@@ -493,10 +483,10 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
                     << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
                     << ")\n";
         }
-        nccl_op_confs->push_back(nccl_op);
+        nccl_op_confs->emplace_back(nccl_op);
         // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
         //   failed in complier.
-        nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
+        nccl_op_parallel_confs->emplace_back(src_node->parallel_desc().parallel_conf());
       }
     }
   }
@@ -507,7 +497,8 @@ bool IsOpEdgeAllowInsertNccl(const OpEdge* edge,
   const OpNode* src_node = edge->src_node();
   const OpNode* dst_node = edge->dst_node();
   const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
-  return src_parallel_desc.device_type() == DeviceType::kGPU && src_parallel_desc.parallel_num() > 1
+  return src_parallel_desc.device_type() == DeviceType::kCUDA
+         && src_parallel_desc.parallel_num() > 1
          && src_parallel_desc.EqualsIgnoringHierarchy(dst_node->parallel_desc())
          && SharedPtrShapeEqual(GetOpNodeTimeShape(src_node), seed_time_shape)
          && SharedPtrShapeEqual(GetOpNodeTimeShape(dst_node), seed_time_shape);
@@ -576,7 +567,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
              + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->[" + dst_op_name + "]("
              + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
              + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
-        nccl_op_infos.push_back(nccl_op_info);
+        nccl_op_infos.emplace_back(nccl_op_info);
       }
 
       for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
@@ -601,8 +592,8 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     } else {
       info.nccl_op_conf.add_ctrl_in_op_name(nccl_op_infos.at(i - 1).nccl_op_conf.name());
     }
-    nccl_op_confs->push_back(info.nccl_op_conf);
-    nccl_op_parallel_confs->push_back(info.nccl_parallel_conf);
+    nccl_op_confs->emplace_back(info.nccl_op_conf);
+    nccl_op_parallel_confs->emplace_back(info.nccl_parallel_conf);
     LOG(INFO) << info.debug_str;
   }
 }
@@ -723,7 +714,7 @@ void InsertNcclLogicalOpsInSubGraph(
   std::vector<OperatorConf> mut_op_confs;
   mut_op_confs.reserve(mut_op_names.size());
   for (const std::string& mut_op_name : mut_op_names) {
-    mut_op_confs.push_back(subgraph_op_name2conf.at(mut_op_name));
+    mut_op_confs.emplace_back(subgraph_op_name2conf.at(mut_op_name));
   }
   job_builder->MutOpsOnlyOnce(mut_op_confs);
 
@@ -835,7 +826,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   HashMap<const OpNode*, int64_t> op_node2global_order;
   op_graph.TopoForEachNode(op_graph.DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
                            OpGraphForEachOutDataAndCtrlNode, [&](const OpNode* node) {
-                             ordered_op_nodes.push_back(node);
+                             ordered_op_nodes.emplace_back(node);
                              op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
                            });
 
@@ -861,7 +852,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       auto& info = it->second;
       info.seed_parallel_desc = &this_parallel_desc;
       info.seed_time_shape = this_time_shape;
-      info.ordered_subgraph.push_back(std::make_shared<InsertNcclSubGraph>());
+      info.ordered_subgraph.emplace_back(std::make_shared<InsertNcclSubGraph>());
       InitInsertNcclSubGraphInfoFromSet(info.ordered_subgraph.back(), subgraph,
                                         op_node2global_order, CmpOpNodeOrder);
     } else {
@@ -885,7 +876,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
         } else if (nccl_subgraph_info->begin_op_global_order > last_order) {
           if (IsReachable(last_graph->end_op->op().op_name(),
                           nccl_subgraph_info->begin_op->op().op_name())) {
-            info.ordered_subgraph.push_back(nccl_subgraph_info);
+            info.ordered_subgraph.emplace_back(nccl_subgraph_info);
           }
         } else {
           auto before = info.ordered_subgraph.begin();
@@ -914,7 +905,9 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       const ParallelDesc& this_parallel_desc = this_node->parallel_desc();
       std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
       auto it = placement2subgraphs.find(key);
-      if (it != placement2subgraphs.end()) { it->second.ordered_acc_op_nodes.push_back(this_node); }
+      if (it != placement2subgraphs.end()) {
+        it->second.ordered_acc_op_nodes.emplace_back(this_node);
+      }
     }
   }
 

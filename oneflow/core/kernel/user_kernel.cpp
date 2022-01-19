@@ -79,7 +79,9 @@ class UserKernelBaseContext {
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
-      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::NaiveTensorDesc(pair.second));
+      arg2bn_and_tensor_desc_.emplace(
+          GenUnRepeatedBn(pair.first),
+          std::make_pair(pair.first, user_op::NaiveTensorDesc(pair.second)));
     }
   }
   ~UserKernelBaseContext() = default;
@@ -89,26 +91,29 @@ class UserKernelBaseContext {
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
-    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; }
-    return &(it->second);
+    auto it = arg2bn_and_tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2bn_and_tensor_desc_.end()) { return nullptr; }
+    return &(it->second.second);
   }
 
   const ArgVec& inputs() const { return inputs_; }
   const ArgVec& outputs() const { return outputs_; }
 
  private:
+  friend class UserKernelInitAndCacheContext;
+  HashMap<std::pair<std::string, int32_t>, std::pair<std::string, user_op::NaiveTensorDesc>>
+      arg2bn_and_tensor_desc_;
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
   std::string device_tag_;
   ParallelContext parallel_ctx_;
-  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
-class UserKernelInitContext final : public user_op::KernelInitContext {
+class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
+                                            public user_op::KernelCacheContext {
  public:
-  explicit UserKernelInitContext(ep::Stream* stream, const KernelConf& kernel_conf)
+  explicit UserKernelInitAndCacheContext(ep::Stream* stream, const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         stream_(stream),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
@@ -117,15 +122,34 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
-    for (const auto& pair :
-         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
-      arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
-                                       user_op::NaiveTensorDesc(pair.second));
+    bool is_dynamic = false;
+    for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
+      if (pair.second.is_dynamic()) {
+        is_dynamic = true;
+        break;
+      }
+    }
+    if (!is_dynamic || parallel_ctx().parallel_num() == 1) {
+      for (const auto& pair :
+           kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
+        arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
+                                         user_op::NaiveTensorDesc(pair.second));
+      }
     }
   }
-  ~UserKernelInitContext() override = default;
+  ~UserKernelInitAndCacheContext() override = default;
 
   ep::Stream* stream() override { return stream_; }
+
+  void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    for (auto& pair : base_ctx_.arg2bn_and_tensor_desc_) {
+      const std::string& bn = pair.second.first;
+      auto& tensor_desc = pair.second.second;
+      Blob* blob = BnInOp2Blob(bn);
+      CHECK(blob != nullptr) << "Blob " << bn << " is not found in cache context.";
+      if (blob->blob_desc().is_dynamic()) { blob->shape().ToShape(tensor_desc.mut_shape()); }
+    }
+  }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
@@ -182,6 +206,9 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   cfg::NdSbpSignature nd_sbp_signature_;
 };
 
+using UserKernelInitContext = UserKernelInitAndCacheContext;
+using UserKernelCacheContext = UserKernelInitAndCacheContext;
+
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
   explicit UserKernelOpInferContext(const KernelConf& kernel_conf)
@@ -229,8 +256,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) override {
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; }
     return it->second.get();
@@ -322,6 +348,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+  const std::string& op_loc() const override { return user_op_conf_.op_conf().loc(); }
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
@@ -571,6 +598,7 @@ UserKernel::~UserKernel() = default;
 void UserKernel::InitUserKernel(ep::Stream* stream) {
   ctx_.reset(new UserKernelComputeContext(stream, kernel_conf()));
   infer_ctx_.reset(new UserKernelInferContext(stream, kernel_conf()));
+  cache_ctx_.reset(new UserKernelCacheContext(stream, kernel_conf()));
   infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
   {
     const std::string& op_type_name =
@@ -596,6 +624,13 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
                                    user_op::OpKernelState* opkernel_state) const {
   const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
 
+  if (updated) {
+    cache_ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
+                               &opkernel_cache_);
+  } else {
+    // do nothing
+  }
 #ifdef WITH_CUDA_GRAPHS
   bool current_scope_capturing = false;
   if (cuda_graph_exec_) {
@@ -611,7 +646,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  kernel_->Compute(ctx_.get(), opkernel_state);
+  kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS
   if (cuda_graph_exec_ && current_scope_capturing) {
@@ -634,6 +669,8 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   InitUserKernel(ctx->stream());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx);
+  kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
+                             &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
@@ -724,12 +761,13 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
   CHECK_NOTNULL(device_ctx);
+  UserKernelInitAndCacheContext init_and_cache_ctx(device_ctx->stream(), kernel_conf());
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    UserKernelInitContext init_ctx(device_ctx->stream(), kernel_conf());
-    new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
+    new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
   }
+  kernel_->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged, &cache_);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
@@ -739,7 +777,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx->stream(), kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get());
+  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
   return new_opkernel_state;
 }
 

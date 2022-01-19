@@ -93,6 +93,7 @@ struct SliceKernelUtil {
 #define INSTANTIATE_SLICE_KERNEL_UTIL(device, dtype) template struct SliceKernelUtil<device, dtype>;
 
 #define INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(device) \
+  INSTANTIATE_SLICE_KERNEL_UTIL(device, bool)             \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, float)            \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, double)           \
   INSTANTIATE_SLICE_KERNEL_UTIL(device, int32_t)          \

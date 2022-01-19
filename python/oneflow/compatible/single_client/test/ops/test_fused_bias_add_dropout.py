@@ -28,14 +28,7 @@ from oneflow.compatible.single_client import typing as oft
 
 
 def compare_with_not_fused(
-    test_case,
-    device_type,
-    x_shape,
-    data_type,
-    data_format,
-    rate,
-    seed,
-    fuse_add_to_output,
+    test_case, device_type, x_shape, data_type, data_format, rate, fuse_add_to_output,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -95,7 +88,6 @@ def compare_with_not_fused(
                         data_format=data_format,
                     ),
                     rate=rate,
-                    seed=seed,
                     name="dropout",
                 )
                 y1 = flow.cast(
@@ -106,7 +98,6 @@ def compare_with_not_fused(
                     flow.cast(bias2, dtype=flow.float16),
                     data_format=data_format,
                     rate=rate,
-                    seed=seed,
                 )
                 y2 = flow.cast(
                     out2 + flow.cast(addend2, dtype=flow.float16), dtype=flow.float
@@ -116,14 +107,13 @@ def compare_with_not_fused(
                     flow.nn.dropout(
                         flow.nn.bias_add(x1, bias1, data_format=data_format),
                         rate=rate,
-                        seed=seed,
                         name="dropout",
                     )
                     + addend1
                 )
                 y2 = (
                     flow.nn.fused_bias_add_dropout(
-                        x2, bias2, data_format=data_format, rate=rate, seed=seed
+                        x2, bias2, data_format=data_format, rate=rate,
                     )
                     + addend2
                 )
@@ -171,8 +161,7 @@ class TestFusedBiasAdd(flow.unittest.TestCase):
         arg_dict["x_shape"] = [(10, 10), (10, 5), (1, 10, 10, 10), (2, 10, 10, 10)]
         arg_dict["data_type"] = ["float16", "float32", "double"]
         arg_dict["data_format"] = ["NCHW"]
-        arg_dict["rate"] = [0.1]
-        arg_dict["seed"] = [1234]
+        arg_dict["rate"] = [0.0]
         arg_dict["fuse_add_to_output"] = [True, False]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":

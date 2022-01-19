@@ -40,8 +40,8 @@ namespace {
 
 REGISTER_USER_OP("mlir_jit")
     .Attr<std::string>("mlir_assembly")
-    .InputWithMinimum("in", 0)
-    .OutputWithMinimum("out", 0)
+    .Input("in")
+    .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // TODO: infer shape by extracting Ops from mlir_assembly
       CHECK_EQ(ctx->inputs().size(), 2);
@@ -231,7 +231,7 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \

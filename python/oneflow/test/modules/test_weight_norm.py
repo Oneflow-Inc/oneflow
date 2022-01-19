@@ -143,7 +143,7 @@ class TestWeightNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=10, auto_backward=True)
+    @autotest(n=10, auto_backward=True, check_graph=False)
     def test_weight_norm_with_random_data(test_case):
         device = random_device()
 

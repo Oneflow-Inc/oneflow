@@ -213,7 +213,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
@@ -234,7 +234,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
 #define REGISTER_BN_INFERENCE_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("normalization")                                                         \
       .SetCreateFn<NormalizationInferenceKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)           \
                        && (user_op::HobAttr<bool>("training") == false))                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
@@ -401,7 +401,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
@@ -468,7 +468,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
 #define REGISTER_BN_TRAIN_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("normalization")                                                         \
       .SetCreateFn<NormalizationTrainKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)           \
                        && (user_op::HobAttr<bool>("training") == true))                         \
       .SetInferTmpSizeFn(InferTrainTmpSize)                                                     \
@@ -487,7 +487,7 @@ REGISTER_BN_TRAIN_KERNEL(double)
 #define REGISTER_BN_ADD_RELU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("normalization_add_relu")                                       \
       .SetCreateFn<NormalizationTrainKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTrainTmpSize);
 
@@ -610,7 +610,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
 #define REGISTER_BN_GRAD_KERNEL(dtype)                                                  \
   REGISTER_USER_KERNEL("normalization_grad")                                            \
       .SetCreateFn<NormalizationGradUserKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSize);
 
@@ -621,7 +621,7 @@ REGISTER_BN_GRAD_KERNEL(double)
 #define REGISTER_BN_ADD_RELU_GRAD_KERNEL(dtype)                                         \
   REGISTER_USER_KERNEL("normalization_add_relu_grad")                                   \
       .SetCreateFn<NormalizationGradUserKernel<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferGradTmpSize);
 
@@ -760,7 +760,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
 #define REGISTER_FUSED_BN_ADD_RELU_KERNEL(dtype)                                       \
   REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu")                           \
       .SetCreateFn<FusedNormalizationAddReluKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferFusedNormalizationAddReluTmpSize);
 
@@ -853,7 +853,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
 #define REGISTER_FUSED_BN_ADD_RELU_GRAD_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu_grad")                       \
       .SetCreateFn<FusedNormalizationAddReluGradUserKernel<dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferFusedNormalizationAddReluGradTmpSize);
 

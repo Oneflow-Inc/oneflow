@@ -65,7 +65,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
       std::make_shared<Stride>(target_strides), storage_offset);
 
-  JUST(input->has_eager_blob_object());
+  CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
@@ -88,7 +88,9 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
   int need_infer_axis = -1;
   size_t count = 1;
   for (int i = 0; i < shape.NumAxes(); ++i) {
-    if (shape.At(i) == -1) {
+    if (shape.At(i) < -1) {
+      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+    } else if (shape.At(i) == -1) {
       CHECK_EQ_OR_RETURN(need_infer_axis, -1)
           << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
       need_infer_axis = i;

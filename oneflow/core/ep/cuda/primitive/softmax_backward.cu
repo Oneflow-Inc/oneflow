@@ -103,8 +103,8 @@ using SoftmaxBackwardFactoryImpl =
 using LogSoftmaxBackwardFactoryImpl =
     GenericSoftmaxBackwardFactoryImpl<LogSoftmaxBackwardFactory, LogSoftmaxBackward,
                                       Algorithm::kLogSoftmax>;
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, SoftmaxBackwardFactory, SoftmaxBackwardFactoryImpl);
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, LogSoftmaxBackwardFactory,
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, SoftmaxBackwardFactory, SoftmaxBackwardFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, LogSoftmaxBackwardFactory,
                            LogSoftmaxBackwardFactoryImpl);
 
 }  // namespace

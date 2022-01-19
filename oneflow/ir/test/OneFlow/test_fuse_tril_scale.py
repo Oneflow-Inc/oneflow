@@ -61,8 +61,26 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         FuseTrilScaleJob(x)
 
 
+# cpu
+# CHECK-LABEL: oneflow.job
+# CHECK-LABEL: oneflow.job
+# CHECK-LABEL: oneflow.job
+# CHECK-LABEL: oneflow.job
+
+# gpu
+# CHECK-LABEL: oneflow.job
+# CHECK: %0 = "oneflow.fused_scale_tril"
 # CHECK: %1 = "oneflow.fused_scale_tril"
-# CHECK: %2 = "oneflow.fused_scale_tril"
+# CHECK-LABEL: oneflow.job
+# CHECK: %0 = "oneflow.fused_scale_tril"
+# CHECK: %1 = "oneflow.fused_scale_tril"
+
+# CHECK-LABEL: oneflow.job
+# CHECK: %0 = "oneflow.fused_scale_tril"
+# CHECK: %1 = "oneflow.fused_scale_tril"
+# CHECK-LABEL: oneflow.job
+# CHECK: %0 = "oneflow.fused_scale_tril"
+# CHECK: %1 = "oneflow.fused_scale_tril"
 
 if __name__ == "__main__":
     unittest.main()

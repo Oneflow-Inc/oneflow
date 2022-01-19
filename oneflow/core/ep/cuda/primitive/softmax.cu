@@ -95,8 +95,8 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
 using SoftmaxFactoryImpl = GenericSoftmaxFactoryImpl<SoftmaxFactory, Softmax, Algorithm::kSoftmax>;
 using LogSoftmaxFactoryImpl =
     GenericSoftmaxFactoryImpl<LogSoftmaxFactory, LogSoftmax, Algorithm::kLogSoftmax>;
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, SoftmaxFactory, SoftmaxFactoryImpl);
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, LogSoftmaxFactory, LogSoftmaxFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, SoftmaxFactory, SoftmaxFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, LogSoftmaxFactory, LogSoftmaxFactoryImpl);
 
 }  // namespace
 

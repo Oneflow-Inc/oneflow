@@ -25,7 +25,7 @@ __global__ void DoCUDAScalarLogical(const int64_t elem_cnt, const T scalar, cons
 }
 
 template<template<typename T> class BIN_OP, typename T>
-struct ScalarLogicalFunctor<DeviceType::kGPU, BIN_OP, T> final {
+struct ScalarLogicalFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in,
                   int8_t* out) {
     RUN_CUDA_KERNEL((DoCUDAScalarLogical<BIN_OP, T>), stream, BlocksNum4ThreadsNum(elem_cnt),
@@ -33,14 +33,14 @@ struct ScalarLogicalFunctor<DeviceType::kGPU, BIN_OP, T> final {
   }
 };
 
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncEQ);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncNE);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncGT);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncGE);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncLT);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncLE);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncOR);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncXOR);
-INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kGPU, BinaryFuncAND);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncEQ);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncNE);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncGT);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncGE);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncLT);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncLE);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncOR);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncXOR);
+INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncAND);
 
 }  // namespace oneflow

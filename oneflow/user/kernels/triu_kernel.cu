@@ -108,10 +108,10 @@ class GpuTriuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_TRIU_KERNEL(dtype)                                                         \
+#define REGISTER_CUDA_TRIU_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("triu")                                                                  \
       .SetCreateFn<GpuTriuKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
@@ -119,12 +119,12 @@ class GpuTriuKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_GPU_TRIU_KERNEL(half)
-REGISTER_GPU_TRIU_KERNEL(float)
-REGISTER_GPU_TRIU_KERNEL(double)
-REGISTER_GPU_TRIU_KERNEL(uint8_t)
-REGISTER_GPU_TRIU_KERNEL(int8_t)
-REGISTER_GPU_TRIU_KERNEL(int32_t)
-REGISTER_GPU_TRIU_KERNEL(int64_t)
+REGISTER_CUDA_TRIU_KERNEL(half)
+REGISTER_CUDA_TRIU_KERNEL(float)
+REGISTER_CUDA_TRIU_KERNEL(double)
+REGISTER_CUDA_TRIU_KERNEL(uint8_t)
+REGISTER_CUDA_TRIU_KERNEL(int8_t)
+REGISTER_CUDA_TRIU_KERNEL(int32_t)
+REGISTER_CUDA_TRIU_KERNEL(int64_t)
 
 }  // namespace oneflow

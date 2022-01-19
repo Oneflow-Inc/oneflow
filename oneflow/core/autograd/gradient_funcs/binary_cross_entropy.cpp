@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyCaptureState : public AutoGradCaptureState {
-  std::string reduction = "";
+  bool requires_grad = false;
 };
 
 class BinaryCrossEntropy : public OpExprGradFunction<BinaryCrossEntropyCaptureState> {
@@ -44,8 +44,10 @@ Maybe<void> BinaryCrossEntropy::Init(const OpExpr& op) {
 Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* ctx,
                                         const TensorTuple& inputs, const TensorTuple& outputs,
                                         const AttrMap& attrs) const {
+  ctx->requires_grad = inputs.at(0)->requires_grad();
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
   if (inputs.size() == 3) {
@@ -55,6 +57,8 @@ Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* ctx,
 }
 Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* ctx,
                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& input = ctx->SavedTensors().at(0);
@@ -63,11 +67,9 @@ Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* ctx,
 
   if (ctx->SavedTensors().size() == 3) {
     const auto& weight = ctx->SavedTensors().at(2);
-    in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight, ctx->reduction));
+    in_grads->at(0) = JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight));
   } else {
-    in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt, ctx->reduction));
+    in_grads->at(0) = JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, NullOpt));
   }
   return Maybe<void>::Ok();
 }

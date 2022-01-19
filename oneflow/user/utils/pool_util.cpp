@@ -25,9 +25,9 @@ std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t 
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
-      vec.push_back(1);
+      vec.emplace_back(1);
     } else {
-      vec.push_back(original_vec.at(index));
+      vec.emplace_back(original_vec.at(index));
     }
   }
   return vec;
@@ -38,9 +38,9 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
-      vec.push_back(0);
+      vec.emplace_back(0);
     } else {
-      vec.push_back(original_vec.at(index));
+      vec.emplace_back(original_vec.at(index));
     }
   }
   return vec;

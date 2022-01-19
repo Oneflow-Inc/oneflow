@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void ArithemeticIf<DeviceType::kGPU>::InitializeWithConstConf(
+void ArithemeticIf<DeviceType::kCUDA>::InitializeWithConstConf(
     ep::Stream* stream, const ConstantInitializerConf& initializer_conf, Blob* blob) {
   WithHostBlobAndStreamSynchronizeEnv(stream, blob, [&](Blob* host_blob) {
     ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf, host_blob);
@@ -85,14 +85,14 @@ void LaunchUnaryByScalarPtr(ep::Stream* stream, const int64_t n, const T* x, con
 
 }  // namespace
 
-#define OP_BY_SCALAR(op, T)                                                               \
-  void ArithemeticIf<DeviceType::kGPU>::op##ByScalar(ep::Stream* stream, const int64_t n, \
-                                                     const T* x, const T y, T* z) {       \
-    LaunchUnaryByScalar<op##Op, T>(stream, n, x, y, z);                                   \
+#define OP_BY_SCALAR(op, T)                                                                \
+  void ArithemeticIf<DeviceType::kCUDA>::op##ByScalar(ep::Stream* stream, const int64_t n, \
+                                                      const T* x, const T y, T* z) {       \
+    LaunchUnaryByScalar<op##Op, T>(stream, n, x, y, z);                                    \
   }
 
 #define OP_BY_SCALAR_HALF(op)                                                               \
-  void ArithemeticIf<DeviceType::kGPU>::op##ByScalar(                                       \
+  void ArithemeticIf<DeviceType::kCUDA>::op##ByScalar(                                      \
       ep::Stream* stream, const int64_t n, const float16* x, const float16 y, float16* z) { \
     LaunchUnaryByScalar<op##Op, half>(stream, n, reinterpret_cast<const half*>(x),          \
                                       float16_2half(y), reinterpret_cast<half*>(z));        \
@@ -109,14 +109,14 @@ void LaunchUnaryByScalarPtr(ep::Stream* stream, const int64_t n, const T* x, con
 DEFINE_OP_BY_SCALAR(Mul)
 DEFINE_OP_BY_SCALAR(Add)
 
-#define OP_BY_SCALAR_PTR(op, T)                                                              \
-  void ArithemeticIf<DeviceType::kGPU>::op##ByScalarPtr(ep::Stream* stream, const int64_t n, \
-                                                        const T* x, const T* y, T* z) {      \
-    LaunchUnaryByScalarPtr<op##Op, T>(stream, n, x, y, z);                                   \
+#define OP_BY_SCALAR_PTR(op, T)                                                               \
+  void ArithemeticIf<DeviceType::kCUDA>::op##ByScalarPtr(ep::Stream* stream, const int64_t n, \
+                                                         const T* x, const T* y, T* z) {      \
+    LaunchUnaryByScalarPtr<op##Op, T>(stream, n, x, y, z);                                    \
   }
 
 #define OP_BY_SCALAR_PTR_HALF(op)                                                            \
-  void ArithemeticIf<DeviceType::kGPU>::op##ByScalarPtr(                                     \
+  void ArithemeticIf<DeviceType::kCUDA>::op##ByScalarPtr(                                    \
       ep::Stream* stream, const int64_t n, const float16* x, const float16* y, float16* z) { \
     LaunchUnaryByScalarPtr<op##Op, half>(stream, n, reinterpret_cast<const half*>(x),        \
                                          reinterpret_cast<const half*>(y),                   \

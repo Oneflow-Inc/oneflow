@@ -13,6 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
+
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -37,83 +50,130 @@ limitations under the License.
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OneFlowOps.h"
-#include "OneFlow/MLIROneFlowTranslation.h"
-#include "OneFlow/Passes.h"
-
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include <cstddef>
-#include <cstdint>
 #include <google/protobuf/text_format.h>
-#include <iostream>
-#include <iterator>
-#include <map>
-#include <new>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 namespace mlir {
 
+namespace oneflow {
+
 using PbMessage = google::protobuf::Message;
 
-bool IsOpaqueOp(Operation* op) {
-  return llvm::dyn_cast<oneflow::UserOp>(op) || llvm::dyn_cast<oneflow::SystemOp>(op);
+namespace {
+
+const ::oneflow::UserOpDef& GetUserOpDef(const std::string& op_type_name) {
+  const ::oneflow::user_op::OpRegistryResult* val =
+      ::oneflow::user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK(val) << " Cannot find op_type_name: " << op_type_name;
+  return val->op_def;
 }
+
+::oneflow::AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) {
+  ::oneflow::user_op::UserOpDefWrapper op_def(GetUserOpDef(op_type_name));
+  CHECK(op_def.IsAttrName(attr_name)) << attr_name << " not a attr name for op: " << op_type_name;
+  return op_def.GetAttrType(attr_name);
+}
+
+using SizeVec = SmallVector<int32_t, 8>;
+
+SizeVec GetSizesFromArgs(UserOpArgs args, UserOpArgDefs arg_defs) {
+  SizeVec sizes{};
+  llvm::StringSet<> names({});
+  for (const auto& arg : args) { names.insert(arg.first); }
+  for (const auto& arg_def : arg_defs) {
+    int32_t size = 0;
+    if (names.contains(arg_def.name())) { size = args.at(arg_def.name()).s_size(); }
+    sizes.push_back(size);
+  }
+  return sizes;
+}
+
+std::vector<std::string> GetOutputLbns(const ::oneflow::OperatorConf& op, UserOpArgDefs arg_defs) {
+  SizeVec sizes{};
+  llvm::StringSet<> names_appeared({});
+  std::vector<std::string> output_lbn_vec{};
+  const auto& op_name = op.name();
+  for (const auto& arg : op.user_conf().output()) { names_appeared.insert(arg.first); }
+  for (const auto& arg_def : arg_defs) {
+    const auto& key = arg_def.name();
+    const auto& it = op.user_conf().output().find(key);
+    if (it == op.user_conf().output().end()) { continue; }
+    auto result_size = it->second.s_size();
+    if (result_size == 0) { continue; }
+    for (int32_t i = 0; i < result_size; i++) {
+      const auto output_lbn = op_name + "/" + key + "_" + std::to_string(i);
+      output_lbn_vec.push_back(output_lbn);
+    }
+  }
+  return output_lbn_vec;
+}
+
+}  // namespace
 
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
-  using LBNVec = SmallVector<StringRef, 8>;
-  using LBNSegVec = SmallVector<int32_t, 8>;
-  LBNVec input_lbn_segment_keys;
-  LBNSegVec input_lbn_segment_sizes;
-  int32_t data_input_size = 0;
-  for (const auto& key : op.user_conf().input_order()) {
-    auto& value = op.user_conf().input().at(key);
-    input_lbn_segment_keys.push_back(key);
-    input_lbn_segment_sizes.push_back(value.s_size());
-    data_input_size += value.s_size();
-  }
+  if (op.has_user_conf() == false) return failure();
+  const auto& user_conf = op.user_conf();
+  const ::oneflow::UserOpDef& op_def = GetUserOpDef(op.user_conf().op_type_name());
+  const auto UserOpOperationName = OperationName(UserOp::getOperationName(), GetMLIRContext());
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "input_lbn_segment_keys", GetBuilder().getStrArrayAttr(input_lbn_segment_keys)));
+      oneflow::UserOp::input_sizesAttrName(UserOpOperationName),
+      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.input(), op_def.input()))));
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "input_lbn_segment_sizes", GetBuilder().getI32ArrayAttr(input_lbn_segment_sizes)));
-
-  LBNVec output_lbns;
-  LBNVec output_lbn_segment_keys;
-  LBNSegVec output_lbn_segment_sizes;
-  int32_t data_output_size = 0;
-  for (const auto& key : op.user_conf().output_order()) {
-    auto& value = op.user_conf().output().at(key);
-    output_lbns.insert(output_lbns.end(), value.s().begin(), value.s().end());
-    output_lbn_segment_keys.push_back(key);
-    output_lbn_segment_sizes.push_back(value.s_size());
-    data_output_size += value.s_size();
-  }
-  attr_vec.push_back(
-      GetBuilder().getNamedAttr("output_lbns", GetBuilder().getStrArrayAttr(output_lbns)));
+      oneflow::UserOp::output_sizesAttrName(UserOpOperationName),
+      GetBuilder().getI32ArrayAttr(GetSizesFromArgs(user_conf.output(), op_def.output()))));
+  auto output_lbns = GetOutputLbns(op, op_def.output());
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "output_lbn_segment_keys", GetBuilder().getStrArrayAttr(output_lbn_segment_keys)));
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      "output_lbn_segment_sizes", GetBuilder().getI32ArrayAttr(output_lbn_segment_sizes)));
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
+      GetBuilder().getStrArrayAttr(
+          SmallVector<StringRef, 8>({output_lbns.begin(), output_lbns.end()}))));
   return success();
 }
 
-LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringified) {
-  switch (value) {
+OperandRange GetDataInputOperands(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.dataInputOperands();
+  } else {
+    return op->getOperands();
+  }
+}
+
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.ctrlInputOperands();
+  } else {
+    return llvm::None;
+  }
+}
+
+ResultRange GetDataOutputResults(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.dataOutputResults();
+  } else {
+    return op->getResults();
+  }
+}
+
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    if (auto ctrl_out = cec.ctrlOutputResult()) { return ctrl_out.cast<OpResult>(); }
+  }
+  return llvm::None;
+}
+
+llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
+                                                            ::oneflow::DataType oneflow_value) {
+  // stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str();
+  switch (oneflow_value) {
     case ::oneflow::DataType::kInvalidDataType:
-      stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
+      return oneflow::DataTypeAttr::get(context, mlir::oneflow::DataType::DT_InvalidDataType);
       break;
-#define DEFINE_ONE_ELIF(datatype)                                        \
-  case ::oneflow::DataType::k##datatype:                                 \
-    stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str(); \
+#define DEFINE_ONE_ELIF(datatype)                                                       \
+  case ::oneflow::DataType::k##datatype:                                                \
+    return oneflow::DataTypeAttr::get(context, mlir::oneflow::DataType::DT_##datatype); \
     break;
       DEFINE_ONE_ELIF(Char)
       DEFINE_ONE_ELIF(Float)
@@ -125,23 +185,21 @@ LogicalResult StringifyDataType(::oneflow::DataType value, std::string& stringif
       DEFINE_ONE_ELIF(OFRecord)
       DEFINE_ONE_ELIF(Float16)
       DEFINE_ONE_ELIF(TensorBuffer)
+      DEFINE_ONE_ELIF(BFloat16)
+      DEFINE_ONE_ELIF(Bool)
 #undef DEFINE_ONE_ELIF
-    default: return failure();
+    default: return llvm::None;
   }
-  return success();
 }
 
-DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape) {
-  ArrayRef<int64_t> values = {shape.dim().begin(), shape.dim().end()};
-  RankedTensorType tt = RankedTensorType::get({static_cast<int64_t>(values.size())},
-                                              GetBuilder().getIntegerType(64, true));
-  ;
-  return DenseIntElementsAttr::get(tt, values);
+ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
+  return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
+      shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
-void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
-  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
-    shape->add_dim(int_v);
+void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
 }
 
@@ -176,8 +234,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     DEFINE_ONE_ELIF(at_string, getStringAttr)
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_shape()) {
-      attr_vec.emplace_back(
-          GetBuilder().getNamedAttr(name, DenseIntElementsAttrFromShape(value.at_shape())));
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(name, GetAttrFromShape(value.at_shape())));
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
@@ -197,31 +254,29 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_data_type()) {
-      std::string stringified = "";
-      if (failed(StringifyDataType(value.at_data_type(), stringified))) {
+      if (auto dt_attr = GetDataTypeAttr(GetMLIRContext(), value.at_data_type())) {
+        std::pair<mlir::Identifier, mlir::Attribute> kv =
+            GetBuilder().getNamedAttr(name, dt_attr.getValue());
+        attr_vec.emplace_back(kv);
+      } else {
         GetModule().emitError("fail to convert op attr, key: " + name);
         return failure();
       }
-      std::pair<mlir::Identifier, mlir::Attribute> kv =
-          GetBuilder().getNamedAttr(name, GetBuilder().getStringAttr(stringified));
-      attr_vec.emplace_back(kv);
     }
     else if (value.has_at_list_data_type()) {
-      auto stringified_list = llvm::map_range(value.at_list_data_type().val(), [&](int32_t t) {
-        std::string stringified = "";
-        assert(succeeded(StringifyDataType(static_cast<::oneflow::DataType>(t), stringified)));
-        return stringified;
-      });
-      std::vector<std::string> stringified_vector = {stringified_list.begin(),
-                                                     stringified_list.end()};
+      auto dt_attr_list =
+          llvm::map_range(value.at_list_data_type().val(), [&](auto t) -> mlir::Attribute {
+            auto dt = GetDataTypeAttr(GetMLIRContext(), static_cast<::oneflow::DataType>(t));
+            CHECK(dt) << "fail to convert op attr, key: " + name;
+            return dt.getValue();
+          });
       attr_vec.emplace_back(GetBuilder().getNamedAttr(
-          name, GetBuilder().getStrArrayAttr(std::vector<StringRef>(
-                    {stringified_vector.begin(), stringified_vector.end()}))));
+          name, GetBuilder().getArrayAttr(llvm::to_vector<8>(dt_attr_list))));
     }
     else if (value.has_at_list_shape()) {
-      auto dense_attr_list = llvm::map_range(
-          value.at_list_shape().val(),
-          [&](const ::oneflow::ShapeProto& s) { return DenseIntElementsAttrFromShape(s); });
+      auto dense_attr_list =
+          llvm::map_range(value.at_list_shape().val(),
+                          [&](const ::oneflow::ShapeProto& s) { return GetAttrFromShape(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
@@ -245,47 +300,17 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
 LogicalResult Importer::AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
                                                std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "operand_segment_sizes", GetBuilder().getI32VectorAttr({input_lbns_size, ctrl_in_size})));
+      mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr(),
+      GetBuilder().getI32VectorAttr({input_lbns_size, ctrl_in_size})));
   return success();
 }
 
 LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
                                               std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(GetBuilder().getNamedAttr(
-      "result_segment_sizes",
+      mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
       GetBuilder().getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
-}
-
-std::pair<unsigned, unsigned> getODSOperandIndexAndLength(Operation* op, unsigned index) {
-  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes");
-
-  unsigned start = 0;
-  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
-  return {start, size};
-}
-
-::mlir::Operation::operand_range getODSOperands(Operation* op, unsigned index) {
-  auto valueRange = getODSOperandIndexAndLength(op, index);
-  return {std::next(op->operand_begin(), valueRange.first),
-          std::next(op->operand_begin(), valueRange.first + valueRange.second)};
-}
-
-OperandRange GetDataInputOperands(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    return getODSOperands(op, 0);
-  } else {
-    return op->getOperands();
-  }
-}
-
-llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    return getODSOperands(op, 1);
-  } else {
-    return llvm::None;
-  }
 }
 
 LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types) {
@@ -295,13 +320,16 @@ LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types)
 
 LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
                                   std::vector<NamedAttribute>& attr_vec) {
-  attr_vec.push_back(GetBuilder().getNamedAttr("op_name", GetBuilder().getStringAttr(op.name())));
+  attr_vec.push_back(GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                                               GetBuilder().getStringAttr(op.name())));
   if (op.has_device_tag()) {
     attr_vec.push_back(
-        GetBuilder().getNamedAttr("device_tag", GetBuilder().getStringAttr(op.device_tag())));
+        GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                                  GetBuilder().getStringAttr(op.device_tag())));
   }
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      "scope_symbol_id", GetBuilder().getI64IntegerAttr(op.scope_symbol_id())));
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                                GetBuilder().getI64IntegerAttr(op.scope_symbol_id())));
   return success();
 }
 
@@ -322,25 +350,69 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
   }
 }
 
+LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp) {
+  for (const auto& sbp_attr : nd_sbp_attr) {
+    auto sbp_str_attr = sbp_attr.dyn_cast<StringAttr>();
+    if (!sbp_str_attr) {
+      llvm::errs() << "nd_sbp attr is not a StrArrayAttr";
+      return failure();
+    }
+    auto sbp_strref = sbp_str_attr.getValue();
+    if (sbp_strref.startswith("S")) {
+      if (!(sbp_strref.substr(1, 1) == "(" && sbp_strref.endswith(")"))) {
+        llvm::errs() << "invalid sbp S(x) string value: " << sbp_strref;
+        return failure();
+      }
+      auto split_axis = std::stoi(sbp_strref.substr(2, 1).str());
+      nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(split_axis);
+    } else if (sbp_strref == "B") {
+      nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    } else if (sbp_strref == "P") {
+      nd_sbp->add_sbp_parallel()->mutable_partial_sum_parallel();
+    } else {
+      llvm::errs() << "unspported nd_sbp string value: " << sbp_strref;
+      return failure();
+    }
+  }
+  return success();
+}
+
+Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
+  llvm::SmallVector<StringRef, 2> sbp_strrefs;
+  for (const auto& sbp : nd_sbp.sbp_parallel()) {
+    if (sbp.has_split_parallel()) {
+      sbp_strrefs.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
+    } else if (sbp.has_broadcast_parallel()) {
+      sbp_strrefs.emplace_back("B");
+    } else if (sbp.has_partial_sum_parallel()) {
+      sbp_strrefs.emplace_back("P");
+    } else {
+      llvm::errs() << "unsupported sbp";
+    }
+  }
+  return builder.getStrArrayAttr(makeArrayRef(sbp_strrefs));
+}
+
 LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   if (op.has_user_conf() == false) {
     GetModule().emitError("Not a user op. op name: " + op.name());
     return failure();
   }
-  const ::oneflow::UserOpConf& user_conf = op.user_conf();
-  const std::string& op_type_name = user_conf.op_type_name();
-
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
   if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
-  attr_vec.push_back(GetBuilder().getNamedAttr(
-      "op_type_name", GetBuilder().getStringAttr(op.user_conf().op_type_name())));
+  attr_vec.push_back(
+      GetBuilder().getNamedAttr(OpTrait::IsAlternative<void>::getOpTypeNameAttr(),
+                                GetBuilder().getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  for (const auto& key : op.user_conf().input_order()) {
-    auto& value = op.user_conf().input().at(key);
+  const auto& op_def = GetUserOpDef(op.user_conf().op_type_name());
+  for (const auto& arg_def : op_def.input()) {
+    const auto& key = arg_def.name();
+    auto it = op.user_conf().input().find(key);
+    if (it == op.user_conf().input().end()) { continue; }
     int32_t index = 0;
-    for (const std::string& lbn : value.s()) {
+    for (const std::string& lbn : it->second.s()) {
       if (failed(AppendDataInOperand(key, index, lbn, operand_vec))) { return failure(); }
       index += 1;
     }
@@ -351,49 +423,33 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   Operation* created_op = nullptr;
 
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (const auto& key : op.user_conf().output_order()) {
-    auto& value = op.user_conf().output().at(key);
-    for (const auto& output_lbn : value.s()) {
+  for (const auto& arg_def : op_def.output()) {
+    const auto& key = arg_def.name();
+    auto it = op.user_conf().output().find(key);
+    if (it == op.user_conf().output().end()) { continue; }
+    for (const auto& output_lbn : it->second.s()) {
       out_types.push_back(GetTensorTypeOfLbn(output_lbn));
     }
   }
-  if (op_type_name == "constant") {
-    if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
-      return failure();
-    }
-    ArrayRef<NamedAttribute> named_attributes(attr_vec);
-    created_op = GetBuilder().create<oneflow::ConstantOp>(
-        FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), out_types, operands,
-        named_attributes);
-  } else {
-    if (failed(AppendCtrlOutType(out_types))) { return failure(); }
-    OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.user");
-    for (auto na : attr_vec) {
-      if (na.first.str() == "input_lbn_segment_sizes") {
-        int32_t data_input_size = 0;
-        for (auto segment_size : na.second.dyn_cast<ArrayAttr>()) {
-          data_input_size += segment_size.dyn_cast<IntegerAttr>().getInt();
-        }
-        if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
-          return failure();
-        }
-      }
-      if (na.first.str() == "output_lbns") {
-        if (failed(AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec))) {
-          return failure();
-        }
-        if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
-          GetModule()->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
-          return failure();
-        }
-      }
-    }
-    ArrayRef<NamedAttribute> named_attributes(attr_vec);
-    state.addAttributes(named_attributes);
-    state.addOperands(operands);
-    state.addTypes(out_types);
-    created_op = GetBuilder().createOperation(state);
+
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
+                       UserOp::getOperationName());
+  uint32_t data_input_size = 0;
+  uint32_t data_output_size = 0;
+  for (const auto& input : op.user_conf().input()) { data_input_size += input.second.s().size(); }
+  for (const auto& output : op.user_conf().output()) {
+    data_output_size += output.second.s().size();
   }
+  if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
+    return failure();
+  }
+  if (failed(AddResultSegmentSizes(data_output_size, attr_vec))) { return failure(); }
+  ArrayRef<NamedAttribute> named_attributes(attr_vec);
+  state.addAttributes(named_attributes);
+  state.addOperands(operands);
+  state.addTypes(out_types);
+  created_op = GetBuilder().createOperation(state);
 
   if (created_op == nullptr) {
     GetModule()->emitError("fail to create " + op.user_conf().op_type_name()
@@ -410,81 +466,202 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
-          ctrl_in.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+          ctrl_in.getDefiningOp()
+              ->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+              .getValue()
+              .str());
     }
   }
   return success();
 }
 
-LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                                  ::oneflow::UserOpConf* user_conf) {
-  const std::string op_name = user_op_adaptor.op_name().getValue().str();
-  int32_t input_idx = 0;
-  if (auto keys = user_op_adaptor.input_lbn_segment_keys()) {
-    auto sizes = user_op_adaptor.input_lbn_segment_sizes();
-    if (keys.size() != sizes.size()) {
-      op->emitError() << "fail to convert op inputs, input_lbn_segment_keys != "
-                         "input_lbn_segment_sizes, name: "
-                             + op_name;
+template<template<typename T> class Trait>
+const std::vector<std::string>* GetFullKeys(UserOpCompatible& uc, Operation* op);
+
+template<>
+const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOpCompatible& uc,
+                                                                               Operation* op) {
+  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    return alternative_name.inputKeys();
+  }
+  return uc.inputKeys();
+}
+
+template<>
+const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOpCompatible& uc,
+                                                                              Operation* op) {
+  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+    return alternative_name.outputKeys();
+  }
+  return uc.outputKeys();
+}
+
+template<template<typename T> class Trait>
+std::pair<unsigned, unsigned> getODSIndexAndLength(UserOpCompatible& op, unsigned index);
+
+template<>
+std::pair<unsigned, unsigned> getODSIndexAndLength<OpTrait::AttrSizedOperandSegments>(
+    UserOpCompatible& op, unsigned index) {
+  return op.getODSOperandIndexAndLength(index);
+}
+
+template<>
+std::pair<unsigned, unsigned> getODSIndexAndLength<OpTrait::AttrSizedResultSegments>(
+    UserOpCompatible& op, unsigned index) {
+  return op.getODSResultIndexAndLength(index);
+}
+
+template<template<typename T> class Trait>
+StringRef GetSegmentSizeAttr();
+
+template<>
+StringRef GetSegmentSizeAttr<OpTrait::AttrSizedOperandSegments>() {
+  return OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr();
+}
+
+template<>
+StringRef GetSegmentSizeAttr<OpTrait::AttrSizedResultSegments>() {
+  return OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr();
+}
+
+template<template<typename T> class Trait>
+int32_t GetSingleSegmentSize(Operation*);
+
+template<>
+int32_t GetSingleSegmentSize<OpTrait::AttrSizedOperandSegments>(Operation* op) {
+  return op->getNumOperands();
+}
+
+template<>
+int32_t GetSingleSegmentSize<OpTrait::AttrSizedResultSegments>(Operation* op) {
+  return op->getNumResults();
+}
+
+template<template<typename T> class Trait>
+LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
+                                            std::vector<int32_t>& sizes) {
+  const std::vector<std::string>* full_keys = nullptr;
+  std::vector<int32_t> full_sizes{};
+  auto uc = dyn_cast<UserOpCompatible>(op);
+  if (!uc) {
+    op->emitError("interface UserOpCompatible not supported");
+    return failure();
+  }
+  full_keys = GetFullKeys<Trait>(uc, op);
+  if (op->hasTrait<Trait>()) {
+    const StringRef attr_name = GetSegmentSizeAttr<Trait>();
+    const DenseIntElementsAttr& size_attr = op->getAttrOfType<DenseIntElementsAttr>(attr_name);
+    if (!size_attr) return failure();
+    auto segment_sizes = size_attr.getValues<int32_t>();
+    if (full_keys->size() != segment_sizes.size()) {
+      op->emitError() << "fail to convert op inputs, attr_name: " << attr_name
+                      << ", full_keys: " << full_keys->size()
+                      << ", segment_sizes: " << segment_sizes.size() << ", name: " << op->getName();
+      op->dump();
       return failure();
     };
-    // every key
-    for (auto tuple : llvm::zip(keys, sizes)) {
-      auto input_key = std::get<0>(tuple).dyn_cast<StringAttr>().getValue().str();
-      auto input_size = std::get<1>(tuple).dyn_cast<IntegerAttr>().getInt();
-      // every input for one key
-      for (int32_t i = 0; i < input_size; i++) {
-        if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
-          const std::string output_lbn_in_source_op =
-              result.getDefiningOp()
-                  ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
-                  .dyn_cast<StringAttr>()
-                  .getValue()
-                  .str();
-          *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) = output_lbn_in_source_op;
-          input_idx += 1;
-        } else {
-          op->emitError() << "fail to convert MLIR result to protobuf, name: " + op_name;
-          op->dump();
-          return failure();
-        }
+    full_sizes = {segment_sizes.begin(), segment_sizes.end()};
+  } else {
+    if (full_keys->size() == 1) {
+      full_sizes.push_back(GetSingleSegmentSize<Trait>(op));
+    } else {
+      for (const auto& key : llvm::enumerate(*full_keys)) {
+        full_sizes.push_back(getODSIndexAndLength<Trait>(uc, key.index()).second);
       }
     }
+  }
+  for (const auto& key_size_tuple : llvm::zip(*full_keys, full_sizes)) {
+    const std::string& key = std::get<0>(key_size_tuple);
+    const int32_t size = std::get<1>(key_size_tuple);
+    if (size > 0) {
+      keys.push_back(key);
+      sizes.push_back(size);
+    }
+  }
+  return success();
+}
+
+llvm::Optional<std::string> GetOutputLbn(OpResult result) {
+  const auto def_op = result.getDefiningOp();
+  if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
+    return def_op
+        ->getAttrOfType<ArrayAttr>(
+            OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())[result.getResultNumber()]
+        .dyn_cast<StringAttr>()
+        .getValue()
+        .str();
   } else {
-    op->emitError() << "fail to convert op inputs, name: " + op_name;
-    return failure();
+    std::vector<std::string> def_op_keys{};
+    std::vector<int32_t> def_op_sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(def_op, def_op_keys,
+                                                                           def_op_sizes)
+               .succeeded());
+    const auto result_number = result.getResultNumber();
+    uint32_t size_sum = 0;
+    for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
+      auto name = std::get<0>(name_size_tuple);
+      auto size = std::get<1>(name_size_tuple);
+      if ((size_sum + size) > result_number) {
+        const uint32_t bn_i = result_number - size_sum;
+        return def_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+                   .str()
+               + "/" + name + "_" + std::to_string(bn_i);
+      }
+      size_sum += size;
+    }
+  }
+  return llvm::None;
+}
+
+LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+                                  ::oneflow::UserOpConf* user_conf) {
+  std::vector<std::string> keys{};
+  std::vector<int32_t> sizes{};
+  assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
+             .succeeded());
+  const std::string op_name = user_op_adaptor.op_name().getValue().str();
+  int32_t input_idx = 0;
+  for (auto tuple : llvm::zip(keys, sizes)) {
+    auto input_key = std::get<0>(tuple);
+    auto input_size = std::get<1>(tuple);
+    assert(input_size > 0);
+    for (int32_t i = 0; i < input_size; i++) {
+      if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
+        auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
+        *(input_s_ptr) = GetOutputLbn(result).getValue();
+        input_idx += 1;
+      } else {
+        op->emitError() << "fail to convert MLIR result to protobuf, name: " + op_name;
+        op->dump();
+        return failure();
+      }
+    }
   }
   return success();
 }
 
 LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf) {
-  int32_t output_key_idx = -1;
-  int32_t segment_offset = 0;
-  for (const auto& result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
-    const size_t result_idx = result_and_idx.index();
-    if (result_idx == segment_offset) {
-      output_key_idx += 1;
-      int32_t size = user_op_adaptor.output_lbn_segment_sizes()[output_key_idx]
-                         .dyn_cast<IntegerAttr>()
-                         .getInt();
-      segment_offset += size;
+  std::vector<std::string> keys{};
+  std::vector<int32_t> sizes{};
+  assert(
+      GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes).succeeded());
+  const std::string op_name = user_op_adaptor.op_name().getValue().str();
+  for (auto tuple : llvm::zip(keys, sizes)) {
+    auto name = std::get<0>(tuple);
+    auto result_size = std::get<1>(tuple);
+    if (result_size == 0) continue;
+    for (int32_t i = 0; i < result_size; i++) {
+      auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
+      *(out_s_ptr) = op_name + "/" + name + "_" + std::to_string(i);
     }
-    const std::string& output_key = user_op_adaptor.output_lbn_segment_keys()[output_key_idx]
-                                        .dyn_cast<StringAttr>()
-                                        .getValue()
-                                        .str();
-    const std::string& output_lbn =
-        user_op_adaptor.output_lbns()[result_idx].dyn_cast<StringAttr>().getValue().str();
-    *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
   }
   return success();
 }
 
 LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
-  Optional<mlir::oneflow::DataType> dt =
-      oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue().trim());
-  assert(dt.hasValue());
+  auto dt = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
+  if (!dt) { return failure(); }
   switch (dt.getValue()) {
     case oneflow::DataType::DT_InvalidDataType:
       data_type = ::oneflow::DataType::kInvalidDataType;
@@ -511,44 +688,41 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
                                                 oneflow::UserOpAdaptor& user_op_adaptor,
                                                 ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
-  std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+  std::string op_type_name = GetOpTypeName(op);
+  op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
     // mlir only attrs
     // TODO: find a way to skip attrs like callee in a declarative way
-    if (id.strref().equals("callee") || id.strref().equals("device_name")
-        || id.strref().equals("hierarchy") || id.strref().equals("input_lbn_segment_sizes")
-        || id.strref().equals("output_lbns") || id.strref().equals("output_lbn_segment_sizes")
-        || id.strref().equals("operand_segment_sizes")
-        || id.strref().equals("result_segment_sizes")) {
+    if (id.strref().equals("callee")
+        || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
+        || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
+        || id.strref().equals(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr())
+        || id.strref().equals(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
+        || id.strref().equals(
+            mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr())
+        || id.strref().equals(
+            mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr())) {
       continue;
     }
     // convert op conf attributes
-    else if (id.strref().equals("op_name")) {
-      if (op_name == "add_n2") { op_name = "add_n"; }
+    else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
+      std::string op_name =
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+              .getValue()
+              .str();
       op_conf.set_name(op_name);
-    } else if (id.strref().equals("op_type_name")) {
-      user_conf->set_op_type_name(user_op_adaptor.op_type_name().getValue().str());
-    } else if (id.strref().equals("device_tag")) {
+    } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
       op_conf.set_device_tag(user_op_adaptor.device_tag().getValue().str());
-    } else if (id.strref().equals("scope_symbol_id")) {
+    } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
       op_conf.set_scope_symbol_id(user_op_adaptor.scope_symbol_id().getInt());
-    } else if (id.strref().equals("input_lbn_segment_keys")) {
-      for (auto s : user_op_adaptor.input_lbn_segment_keys().dyn_cast<ArrayAttr>().getValue()) {
-        op_conf.mutable_user_conf()->add_input_order(s.dyn_cast<StringAttr>().getValue().str());
-      }
-    } else if (id.strref().equals("output_lbn_segment_keys")) {
-      for (auto s : user_op_adaptor.output_lbn_segment_keys().dyn_cast<ArrayAttr>().getValue()) {
-        op_conf.mutable_user_conf()->add_output_order(s.dyn_cast<StringAttr>().getValue().str());
-      }
     }
     // convert user conf attributes
     else {
       auto attr_name = id.str();
       Attribute attr = id_attr.second;
       auto user_attr = ::oneflow::AttrValue();
-      ::oneflow::AttrType attr_type =
-          QueryAttrType(user_op_adaptor.op_type_name().getValue().str(), attr_name);
+      const ::oneflow::AttrType attr_type = QueryAttrType(op_type_name, attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {
@@ -562,7 +736,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       } else if (attr_type == ::oneflow::kAtString) {
         user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
       } else if (attr_type == ::oneflow::kAtShape) {
-        WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
+        WriteAttrToShape(attr, user_attr.mutable_at_shape());
       } else if (attr_type == ::oneflow::kAtDataType) {
         ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
         if (succeeded(ConvertDT(attr, dt))) {
@@ -601,11 +775,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
           }
         }
       } else if (attr_type == ::oneflow::kAtListShape) {
-        for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+        for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getValues<int64_t>()) {
-            shape_ptr->mutable_dim()->Add(int_v);
-          }
+          WriteAttrToShape(shape_attr, shape_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
@@ -620,44 +792,170 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
       (*user_conf->mutable_attr())[id.str()] = user_attr;
     }
   }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
+               .succeeded());
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
+  }
+  {
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
+               .succeeded());
+    for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
+  }
   return success();
 }
 
-std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation* op, unsigned index) {
-  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes");
+LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
+                                    ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
 
-  unsigned start = 0;
-  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
-  return {start, size};
+  auto* var_op_conf = op_conf->mutable_variable_conf();
+  var_op_conf->set_out("out");
+
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, var_op_conf->mutable_shape());
+  }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    var_op_conf->set_data_type(dt);
+  }
+
+  if (op->hasAttr("model_name")) {
+    var_op_conf->set_model_name(adaptor.model_name().getValue().str());
+  }
+
+  if (op->hasAttr("l1_regularization")) {
+    var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l1(
+        adaptor.l1_regularization().getValue().convertToFloat());
+  }
+
+  if (op->hasAttr("l2_regularization")) {
+    var_op_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(
+        adaptor.l2_regularization().getValue().convertToFloat());
+  }
+
+  if (op->hasAttr("trainable")) { var_op_conf->set_trainable(adaptor.trainable().getValue()); }
+
+  for (const auto& sbp : adaptor.nd_sbp()) {
+    var_op_conf->add_nd_sbp(sbp.cast<StringAttr>().getValue().str());
+  }
+
+  // all operands are ctrl_inputs
+  for (const auto& operand : op->getOperands()) {
+    op_conf->add_ctrl_in_op_name(
+        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+
+  // empty initializer
+  var_op_conf->mutable_initializer()->mutable_empty_conf();
+
+  return success();
 }
 
-::mlir::Operation::result_range getODSResults(Operation* op, unsigned index) {
-  auto valueRange = getODSResultIndexAndLength(op, index);
-  return {std::next(op->result_begin(), valueRange.first),
-          std::next(op->result_begin(), valueRange.first + valueRange.second)};
-}
+LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
+                                 ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
 
-llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    auto ctrl_output_result = getODSResults(op, 1);
-    if (ctrl_output_result.empty()) {
-      return llvm::None;
-    } else {
-      assert(ctrl_output_result.size() == 1);
-      return ctrl_output_result.back();
+  auto* input_op_conf = op_conf->mutable_input_conf();
+  input_op_conf->set_out("out");
+
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, input_op_conf->mutable_blob_conf()->mutable_shape());
+  }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    input_op_conf->mutable_blob_conf()->set_data_type(dt);
+  }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
+    input_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
+  }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
+    if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
+                                  input_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
+      return failure();
     }
-  } else {
-    return llvm::None;
   }
+
+  if (op->hasAttr("job_name")) { input_op_conf->set_job_name(adaptor.job_name().getValue().str()); }
+
+  // operand 0 is block argument, others are ctrl_inputs
+  for (size_t i = 1; i < op->getNumOperands(); ++i) {
+    op_conf->add_ctrl_in_op_name(
+        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+
+  return success();
 }
 
-ResultRange GetDataOutputResults(Operation* op) {
-  if (IsOpaqueOp(op)) {
-    return getODSResults(op, 0);
-  } else {
-    return op->getOpResults();
+LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
+                                  ::oneflow::OperatorConf* op_conf) {
+  op_conf->set_name(adaptor.op_name().getValue().str());
+  op_conf->set_device_tag(adaptor.device_tag().getValue().str());
+  op_conf->set_scope_symbol_id(adaptor.scope_symbol_id().getInt());
+  // TODO: process stream_name_hint
+
+  auto* output_op_conf = op_conf->mutable_output_conf();
+  output_op_conf->set_out("out");
+
+  if (auto shape_attr =
+          op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
+    WriteAttrToShape(shape_attr, output_op_conf->mutable_blob_conf()->mutable_shape());
   }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
+    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
+    if (failed(ConvertDT(adaptor.data_type(), dt))) { return failure(); }
+    output_op_conf->mutable_blob_conf()->set_data_type(dt);
+  }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
+    output_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
+  }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
+    if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp(),
+                                  output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
+      return failure();
+    }
+  }
+
+  if (op->hasAttr("job_name")) {
+    output_op_conf->set_job_name(adaptor.job_name().getValue().str());
+  }
+
+  if (op->getNumOperands() == 0) {
+    op->emitError("output op has at least one input.");
+    return failure();
+  }
+  auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
+  auto* producer_op = result.getDefiningOp();
+  auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
+  output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
+  for (size_t i = 1; i < op->getNumOperands(); ++i) {
+    op_conf->add_ctrl_in_op_name(
+        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+  }
+  return success();
 }
+
+}  // namespace oneflow
 
 }  // namespace mlir

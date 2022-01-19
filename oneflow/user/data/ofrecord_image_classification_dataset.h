@@ -187,7 +187,7 @@ class OFRecordImageClassificationDataset final : public Dataset<ImageClassificat
         out_thread_idx_.fetch_add(1, std::memory_order_relaxed) % decode_out_buffers_.size();
     auto status = decode_out_buffers_.at(thread_idx)->Pull(&sample_ptr);
     CHECK_EQ(status, kBufferStatusSuccess);
-    ret.push_back(std::move(sample_ptr));
+    ret.emplace_back(std::move(sample_ptr));
     return ret;
   }
 

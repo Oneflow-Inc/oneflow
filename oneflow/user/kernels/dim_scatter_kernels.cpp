@@ -47,8 +47,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     } else if (like_tensor) {
       Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
-      std::cerr << "Unimplemented Error" << std::endl;
-      throw Error::UnimplementedError();  // TODO: Remove throw Error.
+      UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
     }
 
     const int ndim = src_tensor->shape().NumAxes();
@@ -93,13 +92,13 @@ class DimScatterKernel final : public user_op::OpKernel {
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, double, int64_t, opt);  \
   REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCPU, int32_t, int64_t, opt);
 
-#define REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS(op_type, opt)                           \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, float, int32_t, opt);   \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, double, int32_t, opt);  \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, int32_t, int32_t, opt); \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, float, int64_t, opt);   \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, double, int64_t, opt);  \
-  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kGPU, int32_t, int64_t, opt);
+#define REGISTER_DIM_SCATTER_LIKE_CUDA_KERNELS(op_type, opt)                           \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, float, int32_t, opt);   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, double, int32_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, int32_t, int32_t, opt); \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, float, int64_t, opt);   \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, double, int64_t, opt);  \
+  REGISTER_DIM_SCATTER_LIKE_KERNEL(op_type, DeviceType::kCUDA, int32_t, int64_t, opt);
 
 #define REGISTER_DIM_SCATTER_KERNEL(op_type, device, dtype_pair, itype_pair, opt)             \
   REGISTER_USER_KERNEL(#op_type)                                                              \
@@ -115,10 +114,10 @@ class DimScatterKernel final : public user_op::OpKernel {
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kCPU, dtype_pair, itype_pair, \
                               BinOpUpdateFunctor);
 
-#define REGISTER_DIM_SCATTER_GPU_KERNELS(dtype_pair, itype_pair)                            \
-  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kGPU, dtype_pair, itype_pair,    \
-                              BinOpAddFunctor);                                             \
-  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kGPU, dtype_pair, itype_pair, \
+#define REGISTER_DIM_SCATTER_CUDA_KERNELS(dtype_pair, itype_pair)                            \
+  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kCUDA, dtype_pair, itype_pair,    \
+                              BinOpAddFunctor);                                              \
+  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kCUDA, dtype_pair, itype_pair, \
                               BinOpUpdateFunctor);
 
 REGISTER_DIM_SCATTER_LIKE_CPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
@@ -127,8 +126,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_CPU_KERNELS,
                                  INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-REGISTER_DIM_SCATTER_LIKE_GPU_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_GPU_KERNELS,
+REGISTER_DIM_SCATTER_LIKE_CUDA_KERNELS("dim_scatter_add_like", BinOpAddFunctor);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_CUDA_KERNELS,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA

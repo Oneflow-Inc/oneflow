@@ -30,7 +30,7 @@ __global__ void ElementwiseXimumGradGpuKernel(int64_t elem_cnt, const T* dz, con
 }
 
 template<template<typename> class Opt, typename T>
-struct ElemwiseXimumGradFunctor<DeviceType::kGPU, Opt, T> final {
+struct ElemwiseXimumGradFunctor<DeviceType::kCUDA, Opt, T> final {
   void operator()(ep::Stream* stream, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
                   T* dy) {
     ElementwiseXimumGradGpuKernel<Opt, T>
@@ -40,7 +40,7 @@ struct ElemwiseXimumGradFunctor<DeviceType::kGPU, Opt, T> final {
 };
 
 template<template<typename> class Opt, typename T>
-struct ElemwiseXimumFunctor<DeviceType::kGPU, Opt, T> final {
+struct ElemwiseXimumFunctor<DeviceType::kCUDA, Opt, T> final {
   void operator()(ep::Stream* stream, int64_t elem_cnt, T* z, const T* x, const T* y) {
     OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<T>(), elem_cnt, z, x, y,
                                             stream->As<ep::CudaStream>()->cuda_stream()));
@@ -48,9 +48,9 @@ struct ElemwiseXimumFunctor<DeviceType::kGPU, Opt, T> final {
 };
 }  // namespace
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MAXIMUM_KERNELS, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MINIMUM_KERNELS, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 }  // namespace oneflow
 #endif  // WITH_CUDA

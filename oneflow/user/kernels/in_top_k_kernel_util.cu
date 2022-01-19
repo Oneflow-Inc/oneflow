@@ -49,7 +49,7 @@ __global__ void InTopkGpu(const int instance_num, const int classes_num, const T
 }  // namespace
 
 template<typename T>
-struct InTopkKernelUtil<DeviceType::kGPU, T> {
+struct InTopkKernelUtil<DeviceType::kCUDA, T> {
   static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
                      const T* targets, const float* predictions, const int k, int8_t* out) {
     RUN_CUDA_KERNEL((InTopkGpu<T>), stream, instance_num, instance_num, classes_num, targets,
@@ -57,11 +57,11 @@ struct InTopkKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU(cpp_data_type, data_type) \
-  template struct InTopkKernelUtil<DeviceType::kGPU, cpp_data_type>;
+#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CUDA(cpp_data_type, data_type) \
+  template struct InTopkKernelUtil<DeviceType::kCUDA, cpp_data_type>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU, INDEX_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CUDA, INDEX_DATA_TYPE_SEQ)
 
-#undef INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU
+#undef INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

@@ -56,7 +56,7 @@ __global__ void CudaFoldForward(FoldParams<INDEX_T, NDIM, SDIM> params, const T*
 }  // namespace
 
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
-struct FoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
+struct FoldKernelUtil<DeviceType::kCUDA, T, INDEX_T, NDIM, SDIM> {
   using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;
   static void Forward(ep::Stream* stream, const void* raw_params, const T* input_ptr,
                       T* output_ptr) {
@@ -67,7 +67,7 @@ struct FoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
   }
 };
 
-INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 
 }  // namespace user_op
 }  // namespace oneflow

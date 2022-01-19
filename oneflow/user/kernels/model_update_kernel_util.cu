@@ -79,14 +79,14 @@ __global__ void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T*
 }  // namespace
 
 template<typename T, typename G>
-struct SGDUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
                      float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const G* model_diff, T* model);
 };
 
 template<typename T, typename G>
-void SGDUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void SGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model) {
@@ -97,28 +97,28 @@ void SGDUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
 }
 
 template<typename T>
-struct SGDUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
                      float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float16* model_diff, T* model);
 };
 
 template<typename T>
-void SGDUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+void SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* model) {
-  SGDUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+  SGDUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
       skip_if, reinterpret_cast<const half*>(model_diff), model);
 }
 
-template struct SGDUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct SGDUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct SGDUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+template struct SGDUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct SGDUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct SGDUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename K, typename IDX>
-struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
+struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX> {
   static void Update(ep::Stream* stream, float weight_decay, int64_t num_indices,
                      int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
                      const IDX* num_unique_instance, const float* learning_rate, const K* indices,
@@ -126,7 +126,7 @@ struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
 };
 
 template<typename T, typename K, typename IDX>
-void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
+void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX>::Update(
     ep::Stream* stream, float weight_decay, int64_t num_indices, int64_t feature_size,
     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
     const float* learning_rate, const K* indices, const T* values, T* model) {
@@ -137,14 +137,14 @@ void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
                                                         learning_rate, indices, values, model);
 }
 
-#define INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_GPU(val_type_pair, key_type_pair,  \
-                                                           idx_type_pair)                 \
-  template struct IndexedSlicesSGDUpdateKernelUtil<                                       \
-      DeviceType::kGPU, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair), \
+#define INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CUDA(val_type_pair, key_type_pair,  \
+                                                            idx_type_pair)                 \
+  template struct IndexedSlicesSGDUpdateKernelUtil<                                        \
+      DeviceType::kCUDA, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair), \
       OF_PP_PAIR_FIRST(idx_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_GPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CUDA,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
-#undef INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_GPU
+#undef INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CUDA
 
 namespace {
 
@@ -186,7 +186,7 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, float weight_decay, int64
 }  // namespace
 
 template<typename T, typename G>
-struct MomentumUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct MomentumUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
                      float weight_decay, float learning_rate_val, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
@@ -194,7 +194,7 @@ struct MomentumUpdateKernelUtil<DeviceType::kGPU, T, G> {
 };
 
 template<typename T, typename G>
-void MomentumUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void MomentumUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model, T* momentum) {
@@ -205,7 +205,7 @@ void MomentumUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
 }
 
 template<typename T>
-struct MomentumUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+struct MomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
                      float weight_decay, float learning_rate_val, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
@@ -213,21 +213,21 @@ struct MomentumUpdateKernelUtil<DeviceType::kGPU, T, float16> {
 };
 
 template<typename T>
-void MomentumUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+void MomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* model, T* momentum) {
-  MomentumUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+  MomentumUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, beta, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
       skip_if, reinterpret_cast<const half*>(model_diff), model, momentum);
 }
 
-template struct MomentumUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct MomentumUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct MomentumUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+template struct MomentumUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct MomentumUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct MomentumUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename K, typename IDX>
-struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
+struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX> {
   static void Update(ep::Stream* stream, T beta, float weight_decay, int64_t num_instance,
                      int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
                      const IDX* num_unique_instance, const float* learning_rate, const K* indices,
@@ -235,7 +235,7 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
 };
 
 template<typename T, typename K, typename IDX>
-void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
+void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX>::Update(
     ep::Stream* stream, T beta, float weight_decay, int64_t num_instance, int64_t feature_size,
     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
     const float* learning_rate, const K* indices, const T* values, T* model, T* momentum) {
@@ -246,14 +246,14 @@ void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Updat
           learning_rate, indices, values, model, momentum);
 }
 
-#define INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_GPU(                 \
-    val_type_pair, key_type_pair, idx_type_pair)                                          \
-  template struct IndexedSlicesMomentumMdUpdateKernelUtil<                                \
-      DeviceType::kGPU, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair), \
+#define INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_CUDA(                 \
+    val_type_pair, key_type_pair, idx_type_pair)                                           \
+  template struct IndexedSlicesMomentumMdUpdateKernelUtil<                                 \
+      DeviceType::kCUDA, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair), \
       OF_PP_PAIR_FIRST(idx_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_GPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_CUDA,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
-#undef INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_GPU
+#undef INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_CUDA
 
 namespace {
 
@@ -345,7 +345,7 @@ __global__ void LambUpdateGpu(int64_t n, float weight_decay, const float* learni
 }  // namespace
 
 template<typename T, typename G>
-struct AdamUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct AdamUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool amsgrad,
                      bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
@@ -356,7 +356,7 @@ struct AdamUpdateKernelUtil<DeviceType::kGPU, T, G> {
 };
 
 template<typename T, typename G>
-void AdamUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void AdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
     float learning_rate_val, float bias_correction1_val, float bias_correction2_val,
@@ -371,7 +371,7 @@ void AdamUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
 }
 
 template<typename T>
-struct AdamUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+struct AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool amsgrad,
                      bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
@@ -382,23 +382,23 @@ struct AdamUpdateKernelUtil<DeviceType::kGPU, T, float16> {
 };
 
 template<typename T>
-void AdamUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+void AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
     float learning_rate_val, float bias_correction1_val, float bias_correction2_val,
     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
     const float* bias_correction1_ptr, const float* bias_correction2_ptr, const float16* model_diff,
     T* model, T* m, T* v, T* max_v) {
-  AdamUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+  AdamUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
       learning_rate_val, bias_correction1_val, bias_correction2_val, learning_rate, scale_by_ptr,
       skip_if, bias_correction1_ptr, bias_correction2_ptr,
       reinterpret_cast<const half*>(model_diff), model, m, v, max_v);
 }
 
-template struct AdamUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct AdamUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct AdamUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+template struct AdamUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct AdamUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct AdamUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename G>
 __global__ void AdagradUpdateGpu(int64_t n, T scale, float l1, float l2, float lr_decay,
@@ -421,7 +421,7 @@ __global__ void AdagradUpdateGpu(int64_t n, T scale, float l1, float l2, float l
 }
 
 template<typename T, typename G>
-struct AdagradUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct AdagradUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_decay,
                      float epsilon, float weight_decay, float learning_rate_val, int64_t train_step,
                      const float* learning_rate, const int64_t* train_step_ptr,
@@ -430,7 +430,7 @@ struct AdagradUpdateKernelUtil<DeviceType::kGPU, T, G> {
 };
 
 template<typename T, typename G>
-void AdagradUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void AdagradUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_decay, float epsilon,
     float weight_decay, float learning_rate_val, int64_t train_step, const float* learning_rate,
     const int64_t* train_step_ptr, const T* scale_by_ptr, const int64_t* skip_if,
@@ -441,11 +441,11 @@ void AdagradUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
       learning_rate, train_step_ptr, scale_by_ptr, skip_if, model_diff, model, sum);
 }
 
-template struct AdagradUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct AdagradUpdateKernelUtil<DeviceType::kGPU, double, double>;
+template struct AdagradUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct AdagradUpdateKernelUtil<DeviceType::kCUDA, double, double>;
 
 template<typename T, typename G>
-struct LambUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct LambUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
@@ -453,7 +453,7 @@ struct LambUpdateKernelUtil<DeviceType::kGPU, T, G> {
 };
 
 template<typename T, typename G>
-void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void LambUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer,
@@ -466,7 +466,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
       adam_diff, model, m, v);
   T* w_norm_2 = norm_buffer;
   T* g_norm_2 = norm_buffer + 1;
-  Memset<DeviceType::kGPU>(stream, norm_buffer, 0, 2 * sizeof(T));
+  Memset<DeviceType::kCUDA>(stream, norm_buffer, 0, 2 * sizeof(T));
   SumSquares2<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
          stream->As<ep::CudaStream>()->cuda_stream()>>>(n, model, w_norm_2, adam_diff, g_norm_2);
@@ -477,7 +477,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
 }
 
 template<typename T>
-struct LambUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+struct LambUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
@@ -485,23 +485,23 @@ struct LambUpdateKernelUtil<DeviceType::kGPU, T, float16> {
 };
 
 template<typename T>
-void LambUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+void LambUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* adam_diff, T* model, T* m, T* v,
     T* norm_buffer, T* beta1_t, T* beta2_t) {
-  LambUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+  LambUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, learning_rate, scale_by_ptr,
       skip_if, reinterpret_cast<const half*>(model_diff), adam_diff, model, m, v, norm_buffer,
       beta1_t, beta2_t);
 }
 
-template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct LambUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+template struct LambUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct LambUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct LambUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename K, typename IDX>
-struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
+struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX> {
   static void Update(ep::Stream* stream, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction, float lr,
                      int64_t num_instance, int64_t feature_size, int64_t lower_bound,
@@ -512,7 +512,7 @@ struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
 };
 
 template<typename T, typename K, typename IDX>
-void IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
+void IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX>::Update(
     ep::Stream* stream, float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float lr, int64_t num_instance, int64_t feature_size,
     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
@@ -527,22 +527,22 @@ void IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX>::Update(
           bias_correction2_ptr, indices, values, model, m, v, max_v);
 }
 
-#define INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_GPU(val_type_pair, key_type_pair, \
-                                                                     idx_type_pair)                \
-  template struct IndexedSlicesAdamMdUpdateKernelUtil<                                             \
-      DeviceType::kGPU, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair),          \
+#define INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_CUDA(                     \
+    val_type_pair, key_type_pair, idx_type_pair)                                           \
+  template struct IndexedSlicesAdamMdUpdateKernelUtil<                                     \
+      DeviceType::kCUDA, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair), \
       OF_PP_PAIR_FIRST(idx_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_GPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_CUDA,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
-#undef INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_GPU
+#undef INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_CUDA
 
 template<>
-struct BiasCorrectionFactorKernelUtil<DeviceType::kGPU> {
+struct BiasCorrectionFactorKernelUtil<DeviceType::kCUDA> {
   static void BiasCorrectionFactorCompute(ep::Stream* stream, float beta, const int64_t* train_step,
                                           float* out);
 };
 
-void BiasCorrectionFactorKernelUtil<DeviceType::kGPU>::BiasCorrectionFactorCompute(
+void BiasCorrectionFactorKernelUtil<DeviceType::kCUDA>::BiasCorrectionFactorCompute(
     ep::Stream* stream, float beta, const int64_t* train_step, float* out) {
   BiasCorrectionFactorKernelGpu<<<1, 1, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
       beta, train_step, out);
@@ -570,7 +570,7 @@ __global__ void RmsPropUpdateGpu(int64_t n, T scale, float l1, float l2, T* mean
 }  // namespace
 
 template<typename T, typename G>
-struct RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct RmsPropUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, bool centered,
                      float epsilon, float weight_decay, float decay_rate, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
@@ -578,7 +578,7 @@ struct RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G> {
 };
 
 template<typename T, typename G>
-void RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void RmsPropUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, bool centered, float epsilon,
     float weight_decay, float decay_rate, float learning_rate_val, const float* learning_rate,
     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* mean_square,
@@ -597,7 +597,7 @@ void RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
 }
 
 template<typename T>
-struct RmsPropUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+struct RmsPropUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, bool centered,
                      float epsilon, float weight_decay, float decay_rate, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
@@ -605,20 +605,20 @@ struct RmsPropUpdateKernelUtil<DeviceType::kGPU, T, float16> {
 };
 
 template<typename T>
-void RmsPropUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+void RmsPropUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, bool centered, float epsilon,
     float weight_decay, float decay_rate, float learning_rate_val, const float* learning_rate,
     const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff, T* model,
     T* mean_square, T* mean_gradient) {
-  RmsPropUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+  RmsPropUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, centered, epsilon, weight_decay, decay_rate, learning_rate_val,
       learning_rate, scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model,
       mean_square, mean_gradient);
 }
 
-template struct RmsPropUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct RmsPropUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct RmsPropUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+template struct RmsPropUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct RmsPropUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct RmsPropUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 namespace {
 
@@ -665,7 +665,7 @@ __global__ void LarsUpdateGpu(int64_t n, float momentum_beta, T* momentum, float
 }  // namespace
 
 template<typename T, typename G>
-struct LarsUpdateKernelUtil<DeviceType::kGPU, T, G> {
+struct LarsUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2,
                      float momentum_beta, float epsilon, float lars_coefficient, float weight_decay,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
@@ -673,7 +673,7 @@ struct LarsUpdateKernelUtil<DeviceType::kGPU, T, G> {
 };
 
 template<typename T, typename G>
-void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+void LarsUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
     float lars_coefficient, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model, T* momentum, T* data_tmp,
@@ -684,7 +684,7 @@ void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   T* model_norm = data_tmp;
   T* model_diff_norm = data_tmp + 1;
   T* local_learning_rate = data_tmp + 2;
-  Memset<DeviceType::kGPU>(stream, data_tmp, 0, 2 * sizeof(T));
+  Memset<DeviceType::kCUDA>(stream, data_tmp, 0, 2 * sizeof(T));
   SumSquares2<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                    stream->As<ep::CudaStream>()->cuda_stream()>>>(n, model, model_norm,
                                                                   model_diff_tmp, model_diff_norm);
@@ -697,7 +697,7 @@ void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
 }
 
 template<typename T>
-struct LarsUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+struct LarsUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2,
                      float momentum_beta, float epsilon, float lars_coefficient, float weight_decay,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
@@ -706,19 +706,19 @@ struct LarsUpdateKernelUtil<DeviceType::kGPU, T, float16> {
 };
 
 template<typename T>
-void LarsUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+void LarsUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
     float lars_coefficient, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* model, T* momentum, T* data_tmp,
     T* model_diff_tmp) {
-  LarsUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+  LarsUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, n, scale, l1, l2, momentum_beta, epsilon, lars_coefficient, weight_decay,
       learning_rate, scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model,
       momentum, data_tmp, model_diff_tmp);
 }
 
-template struct LarsUpdateKernelUtil<DeviceType::kGPU, float, float>;
-template struct LarsUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct LarsUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+template struct LarsUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct LarsUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct LarsUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 }  // namespace oneflow

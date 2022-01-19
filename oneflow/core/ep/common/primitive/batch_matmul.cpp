@@ -90,8 +90,8 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, BatchMatmulFactory,
                            BatchMatmulFactoryImpl<DeviceType::kCPU>);
 
 #ifdef WITH_CUDA
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, BatchMatmulFactory,
-                           BatchMatmulFactoryImpl<DeviceType::kGPU>);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BatchMatmulFactory,
+                           BatchMatmulFactoryImpl<DeviceType::kCUDA>);
 #endif  // WITH_CUDA
 
 }  // namespace

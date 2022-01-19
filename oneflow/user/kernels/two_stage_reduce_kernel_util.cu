@@ -38,7 +38,7 @@ __global__ void ScaleGpu(const int64_t n, const T* x, const K* scale, T* y) {
 }  // namespace
 
 template<typename T, typename K>
-struct TwoStageReduceKernelUtil<DeviceType::kGPU, T, K> {
+struct TwoStageReduceKernelUtil<DeviceType::kCUDA, T, K> {
   static void Divide(ep::Stream* stream, const int64_t n, const T* x, const K* count, T* y) {
     DivideGpu<T, K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                       stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, count, y);
@@ -55,11 +55,11 @@ struct TwoStageReduceKernelUtil<DeviceType::kGPU, T, K> {
   }
 };
 
-#define INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_GPU(data_type_pair, index_type_pair)          \
-  template struct TwoStageReduceKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
+#define INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA(data_type_pair, index_type_pair)          \
+  template struct TwoStageReduceKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type_pair), \
                                            OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_GPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA,
                                  FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
-#undef INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_GPU
+#undef INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

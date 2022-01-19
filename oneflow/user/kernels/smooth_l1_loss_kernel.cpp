@@ -37,7 +37,7 @@ void ComputeSmoothL1Out(int64_t elem_cnt, const T* input, const T* target, T* ou
 }
 template<typename T>
 void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
-                            const ReductionType reduction_type, const float beta) {
+                            const float beta) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     const T diff = input[i] - target[i];
     const T abs_diff = std::abs(diff);
@@ -46,9 +46,8 @@ void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target, c
     } else {
       dx[i] = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
     }
-    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    const T dy_val = dy[i];
     dx[i] = dx[i] * dy_val;
-    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
   }
 }
 
@@ -67,9 +66,9 @@ class SmoothL1LossGradKernel
     : public SimpleLossGradKernel<DeviceType::kCPU, T, SmoothL1LossGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
-                  const T* target, const T* dy, T* dx, const ReductionType reduction) const {
+                  const T* target, const T* dy, T* dx) const {
     const float beta = ctx->Attr<float>("beta");
-    ComputeSmoothL1GradOut(elem_cnt, input, target, dy, dx, reduction, beta);
+    ComputeSmoothL1GradOut(elem_cnt, input, target, dy, dx, beta);
   }
 };
 

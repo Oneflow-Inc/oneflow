@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/register/ofblob.h"
@@ -32,17 +33,6 @@ namespace oneflow {
 namespace one {
 
 namespace {
-
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
 
 Maybe<void> CPUSynchronize() {
   if (Global<EnvGlobalObjectsScope>::Get() != nullptr) { return vm::CurrentRankSync(); }
@@ -155,7 +145,7 @@ Maybe<void> CUDASynchronize() {
 }  // namespace
 
 CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
-    : DeviceGeneratorImpl(seed, DeviceType::kGPU, device_index) {
+    : DeviceGeneratorImpl(seed, DeviceType::kCUDA, device_index) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, device_index));
   max_block_num_ = prop.multiProcessorCount;
@@ -164,7 +154,8 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
   CudaCurrentDeviceGuard dev_guard(device_index);
   OF_CUDA_CHECK(
       cudaMalloc(&curand_states_, max_block_num_ * max_thread_num_ * sizeof(curandState)));
-  detail::InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_);
+  OF_CUDA_CHECK(cudaMalloc(&cuda_gen_state_, sizeof(CUDAGeneratorState)));
+  detail::InitCurandStates(seed, max_block_num_, max_thread_num_, curand_states_, cuda_gen_state_);
 }
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
@@ -172,13 +163,14 @@ CUDAGeneratorImpl::~CUDAGeneratorImpl() {
   if (cudaErrorCudartUnloading == cudaSetDevice(this->device_index())) { return; }
   CudaCurrentDeviceGuard dev_guard(this->device_index());
   OF_CUDA_CHECK(cudaFree(curand_states_));
+  OF_CUDA_CHECK(cudaFree(cuda_gen_state_));
 }
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   CudaCurrentDeviceGuard dev_guard(this->device_index());
   CHECK_JUST(CUDASynchronize());
   seed_ = seed;
-  detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_);
+  detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_, cuda_gen_state_);
 }
 
 Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
@@ -256,6 +248,7 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
   state.state_length = 0;
   std::vector<std::shared_ptr<Tensor>> tensor_states;
   std::vector<int64_t> state_sizes;
+  state_sizes.reserve(generators_.size());
   for (auto it = generators_.begin(); it != generators_.end(); ++it) {
     const auto& tensor_state = JUST(it->second->GetState());
     tensor_states.emplace_back(tensor_state);
@@ -414,7 +407,7 @@ template<>
 DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
   if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
   DeviceKey device_key;
-  device_key.device_type = DeviceType::kGPU;
+  device_key.device_type = DeviceType::kCUDA;
   device_key.device_index = device_index;
   return device_key;
 }
@@ -435,7 +428,7 @@ Maybe<GeneratorImpl> MakeGeneratorImpl(uint64_t seed, DeviceType device_type, in
       break;
     }
 #ifdef WITH_CUDA
-    case kGPU: {
+    case kCUDA: {
       impl = JUST(MakeGeneratorImpl<CUDAGeneratorImpl>(seed, device_index));
       break;
     }

@@ -20,17 +20,19 @@ limitations under the License.
 #include "oneflow/xrt/graph_compiler.h"
 #include "oneflow/xrt/platform.h"
 #include "oneflow/xrt/utility/env.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 // General executable setup.
-DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
-             "Maximum temporary workspace bytes.");
-// TENSORRT executable setup.
-DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
-             "Maximum batch size for builder of TENSORRT engine.");
+// Maximum temporary workspace bytes.
+int64_t FLAGS_max_workspace_bytes = EnvToInt64(FLAGS_max_workspace_bytes, -1);
 
-DECLARE_bool(tensorrt_fp16);
-DECLARE_bool(tensorrt_int8);
-DECLARE_string(int8_calibration);
+// TENSORRT executable setup.
+// Maximum batch size for builder of TENSORRT engine.
+int32_t FLAGS_max_batch_size = EnvToInt(FLAGS_max_batch_size, 1);
+
+extern bool FLAGS_tensorrt_fp16;
+extern bool FLAGS_tensorrt_int8;
+extern std::string FLAGS_int8_calibration;
 
 namespace oneflow {
 namespace xrt {
@@ -163,13 +165,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    entry_params.push_back(input);
+    entry_params.emplace_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
-    return_params.push_back(output);
+    return_params.emplace_back(output);
   }
 
   xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
@@ -186,9 +188,9 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   run_options.device_ordinal = device_ordinal;
   run_options.return_params = return_params;
   bool block_until_done = true;
-  if (device_type == DeviceType::kGPU) {
+  if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
-    run_options.stream = ctx->device_ctx()->cuda_stream();
+    run_options.stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
     block_until_done = false;
 #else
@@ -196,7 +198,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
 #endif  // WITH_CUDA
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
-    CHECK_EQ(device_type, DeviceType::kGPU);
+    CHECK_EQ(device_type, DeviceType::kCUDA);
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
     run_options.tensorrt_int8 = FLAGS_tensorrt_int8;

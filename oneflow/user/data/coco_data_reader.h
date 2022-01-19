@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/user/data/data_reader.h"
 #include "oneflow/user/data/coco_parser.h"
 #include "oneflow/core/common/str_util.h"
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 namespace data {
@@ -117,7 +117,7 @@ std::vector<T> COCOMeta::GetLabelVec(int64_t index) const {
   const auto& anno_ids = image_id2anno_ids_.at(image_id);
   for (int64_t anno_id : anno_ids) {
     int32_t category_id = anno_id2anno_.at(anno_id)["category_id"].get<int32_t>();
-    label_vec.push_back(category_id2contiguous_id_.at(category_id));
+    label_vec.emplace_back(category_id2contiguous_id_.at(category_id));
   }
   return label_vec;
 }
@@ -134,7 +134,7 @@ void COCOMeta::ReadSegmentationsToTensorBuffer(int64_t index, TensorBuffer* segm
     if (!segm_json.is_array()) { continue; }
     for (const auto& poly_json : segm_json) {
       CHECK(poly_json.is_array());
-      for (const auto& elem : poly_json) { segm_vec.push_back(elem.get<T>()); }
+      for (const auto& elem : poly_json) { segm_vec.emplace_back(elem.get<T>()); }
     }
   }
   CHECK_EQ(segm_vec.size() % 2, 0);

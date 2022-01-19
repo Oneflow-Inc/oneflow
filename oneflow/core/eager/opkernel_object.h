@@ -90,8 +90,6 @@ class SystemOpKernelContext : public KernelContext {
     return device_ctx_->stream();
   }
 
-  DeviceCtx* device_ctx() const override { return device_ctx_; }
-
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
   const std::shared_ptr<KernelState>& state() const override {

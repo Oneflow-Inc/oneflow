@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
@@ -29,19 +30,53 @@ void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, 
 }
 
 template<typename T>
+void FusedDropoutKernel(ep::Stream* stream, const int64_t elem_cnt,
+                        const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate,
+                        float scale, const T* x, int8_t* mask, T* y) {
+  /*
+  `uniform_real_distribution` interval is [a, b).
+  And `curand_uniform4` interval is (0, 1.0], so we use > in CUDA and use >= in CPU.
+  */
+  std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
+                                                            GetOneVal<float>());
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    mask[i] = random_distribution(cpu_gen->engine()) >= rate;
+    y[i] = x[i] * static_cast<T>(mask[i]) * scale;
+  }
+}
+
+template<typename T>
 class DropoutKernelCPU final : public user_op::OpKernel {
  public:
   DropoutKernelCPU() = default;
   ~DropoutKernelCPU() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    return std::make_shared<FusedDropoutKernelState>(generator);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->stream(), in->shape().elem_cnt(), scale, in->dptr<T>(),
-                    mask->dptr<int8_t>(), out->mut_dptr<T>());
+    const float rate = ctx->Attr<float>("rate");
+    float scale = 0.0f;
+    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+
+    auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(state);
+    CHECK_NOTNULL(fused_dropout_kernel_state);
+    const auto& generator = fused_dropout_kernel_state->generator();
+    CHECK_NOTNULL(generator);
+    std::shared_ptr<one::CPUGeneratorImpl> cpu_generator =
+        CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+
+    FusedDropoutKernel<T>(ctx->stream(), in->shape().elem_cnt(), cpu_generator, rate, scale,
+                          in->dptr<T>(), mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
+
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
@@ -50,7 +85,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), add_to_output->dptr<T>(), out->dptr<T>(), out->mut_dptr<T>(),
+      primitive->Launch(ctx->stream(), out->dptr<T>(), add_to_output->dptr<T>(), out->mut_dptr<T>(),
                         add_to_output->shape().elem_cnt());
     }
   }
@@ -61,7 +96,8 @@ class DropoutKernelCPU final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("dropout")                                                               \
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)         \
+                       && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \

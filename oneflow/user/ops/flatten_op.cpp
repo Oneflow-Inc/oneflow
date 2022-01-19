@@ -14,12 +14,48 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/* static */ Maybe<void> FlattenOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
+  const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
+  const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  const Shape& in_shape = in_tensor_desc.shape();
 
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
+  CHECK_GE_OR_RETURN(start_dim, 0);
+  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
+  const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
+  CHECK_GE_OR_RETURN(true_end_dim, 0);
+  CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
+  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
+
+  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
+
+  Shape* out_shape = out_tensor_desc->mut_shape();
+
+  DimVector dim_vec;
+
+  for (int i = 0; i < start_dim; ++i) { dim_vec.emplace_back(in_shape.At(i)); }
+  int64_t flatten_dim = 1;
+  for (int i = start_dim; i <= true_end_dim; ++i) { flatten_dim *= in_shape.At(i); }
+  dim_vec.emplace_back(flatten_dim);
+  for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) {
+    dim_vec.emplace_back(in_shape.At(i));
+  }
+
+  *out_shape = Shape(dim_vec);
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FlattenOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FlattenOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
@@ -46,50 +82,10 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
-  const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
-  const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
-  const Shape& in_shape = in_tensor_desc.shape();
-
-  CHECK_GE_OR_RETURN(start_dim, 0);
-  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
-  const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
-  CHECK_GE_OR_RETURN(true_end_dim, 0);
-  CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
-  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
-
-  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-
-  Shape* out_shape = out_tensor_desc->mut_shape();
-
-  DimVector dim_vec;
-
-  for (int i = 0; i < start_dim; ++i) { dim_vec.push_back(in_shape.At(i)); }
-  int64_t flatten_dim = 1;
-  for (int i = start_dim; i <= true_end_dim; ++i) { flatten_dim *= in_shape.At(i); }
-  dim_vec.push_back(flatten_dim);
-  for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) { dim_vec.push_back(in_shape.At(i)); }
-
-  *out_shape = Shape(dim_vec);
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FlattenOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP("flatten")
-    .Input("in")
-    .Output("out")
-    .Attr<int32_t>("start_dim", 0)
-    .Attr<int32_t>("end_dim", -1)
-    .SetTensorDescInferFn(TensorDescInferFn)
-    .SetGetSbpFn(GetSbpFn)
-    .SetDataTypeInferFn(DataTypeInferFn);
 
 REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {
@@ -107,5 +103,4 @@ REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOp
   return Maybe<void>::Ok();
 });
 
-}  // namespace
 }  // namespace oneflow

@@ -73,13 +73,13 @@ struct GpuKernelUtilIf {
 
 // GPU, Floating
 template<typename T>
-struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
+struct KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsFloating<T>::value>::type>
+    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kCUDA, T>> {};
 
 // GPU, Integral
 template<typename T>
-struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {};
+struct KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsIntegral<T>::value>::type>
+    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kCUDA, T>> {};
 
 }  // namespace oneflow
 

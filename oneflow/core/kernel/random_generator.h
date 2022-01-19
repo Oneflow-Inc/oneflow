@@ -44,7 +44,7 @@ class RandomGenerator<DeviceType::kCPU> final {
 };
 
 template<>
-class RandomGenerator<DeviceType::kGPU> final {
+class RandomGenerator<DeviceType::kCUDA> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
   RandomGenerator(int64_t seed, ep::Stream* stream);

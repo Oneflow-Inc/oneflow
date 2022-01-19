@@ -169,7 +169,7 @@ Maybe<void> InitShapeAxis2NdSbpIndexes(
       int64_t axis = sbp.split_parallel().axis();
       CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LT_OR_RETURN(axis, shape_axis2nd_sbp_indexes->size());
-      shape_axis2nd_sbp_indexes->at(axis).push_back(i);
+      shape_axis2nd_sbp_indexes->at(axis).emplace_back(i);
     }
   }
   return Maybe<void>::Ok();
@@ -188,11 +188,11 @@ Maybe<void> InitShapAxis2ExpandedDim(
       if (j < src_nd_sbp_indexes.size() && j < dst_nd_sbp_indexes.size()) {
         int64_t m = hierarchy.At(src_nd_sbp_indexes.at(j));
         int64_t n = hierarchy.At(dst_nd_sbp_indexes.at(j));
-        shape_axis2required_dim.at(i).push_back(Lcm(m, n));
+        shape_axis2required_dim.at(i).emplace_back(Lcm(m, n));
       } else if (j < src_nd_sbp_indexes.size()) {
-        shape_axis2required_dim.at(i).push_back(hierarchy.At(src_nd_sbp_indexes.at(j)));
+        shape_axis2required_dim.at(i).emplace_back(hierarchy.At(src_nd_sbp_indexes.at(j)));
       } else if (j < dst_nd_sbp_indexes.size()) {
-        shape_axis2required_dim.at(i).push_back(hierarchy.At(dst_nd_sbp_indexes.at(j)));
+        shape_axis2required_dim.at(i).emplace_back(hierarchy.At(dst_nd_sbp_indexes.at(j)));
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -202,7 +202,7 @@ Maybe<void> InitShapAxis2ExpandedDim(
     int64_t total_dim = shape.At(i);
     shape_axis2expanded_dims->at(i).clear();
     if (shape_axis2required_dim.at(i).empty()) {
-      shape_axis2expanded_dims->at(i).push_back(total_dim);
+      shape_axis2expanded_dims->at(i).emplace_back(total_dim);
     } else {
       Shape inner_shape(shape_axis2required_dim.at(i));
       CHECK_EQ_OR_RETURN(total_dim % inner_shape.elem_cnt(), 0)
@@ -395,6 +395,7 @@ Maybe<void> InitNdSbpValidTransformationAxisSequence(
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   int64_t num_axes = src_nd_sbp->sbp_parallel_size();
   HashSet<int64_t> handled_axes;
+  nd_sbp_axis_sequence->reserve(num_axes);
   const auto& HasNoExclusiveSrcNdSbpAxis = [&](int64_t axis) -> Maybe<bool> {
     const auto& opt_src_axis = JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(axis));
     if (!opt_src_axis->has_value()) { return true; }
@@ -404,7 +405,7 @@ Maybe<void> InitNdSbpValidTransformationAxisSequence(
     for (int axis = 0; axis < num_axes; ++axis) {
       if (handled_axes.count(axis) == 0 && JUST(HasNoExclusiveSrcNdSbpAxis(axis))) {
         if (!(src_nd_sbp->sbp_parallel(axis) == dst_nd_sbp->sbp_parallel(axis))) {
-          nd_sbp_axis_sequence->push_back(axis);
+          nd_sbp_axis_sequence->emplace_back(axis);
         }
         handled_axes.insert(axis);
       }
@@ -445,8 +446,8 @@ std::string GetCyclicBoxingDebugString(
   CHECK_EQ(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   std::stringstream ss;
   ss << "cyclic split axis boxing are not supported. "
-     << "src_nd_sbp: " << CHECK_JUST(NdSbpToString(src_nd_sbp))
-     << ", dst_nd_sbp: " << CHECK_JUST(NdSbpToString(dst_nd_sbp)) << ". "
+     << "src_nd_sbp: " << NdSbpToString(src_nd_sbp) << ", dst_nd_sbp: " << NdSbpToString(dst_nd_sbp)
+     << ". "
      << "dst_nd_sbp axis to exclusive src_nd_sbp axis: ";
   ss << "[";
   for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
@@ -535,7 +536,7 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
     const auto& new_src_nd_sbp =
         JUST(ReplaceNdSbpComponent(tensor_meta->nd_sbp(), axis, sub_dst_nd_sbp));
     tensor_meta = JUST(ReplaceNdSbp(tensor_meta, new_src_nd_sbp));
-    transformations->push_back(NaiveBoxingTransformation{
+    transformations->emplace_back(NaiveBoxingTransformation{
         .consistent_tensor_meta = sub_consistent_tensor_meta,
         .dst_nd_sbp = sub_dst_nd_sbp,
     });
@@ -563,7 +564,7 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
     std::vector<int64_t> vec{process_id};
     CHECK_OR_RETURN(process_id2group.emplace(process_id, vec).second);
     CHECK_OR_RETURN(dst_parallel_desc->ContainingMachineId(process_id));
-    node_id2src_process_id[GlobalProcessCtx::NodeId(process_id)].push_back(process_id);
+    node_id2src_process_id[GlobalProcessCtx::NodeId(process_id)].emplace_back(process_id);
   }
   std::vector<int64_t> remainder_process_ids{};
   remainder_process_ids.reserve(dst_parallel_desc->sorted_machine_ids().size());
@@ -577,21 +578,21 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
             << src_parallel_desc->parallel_conf().DebugString() << "\n----[dst_placement]----\n"
             << dst_parallel_desc->parallel_conf().DebugString();
         // handle `process_id` later.
-        remainder_process_ids.push_back(process_id);
+        remainder_process_ids.emplace_back(process_id);
       } else {
         // balancedly put `process_id` into the groups within the same node..
         int64_t node_id = node_iter->first;
         const auto& src_process_ids = node_iter->second;
         int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
         int64_t src_process_id = src_process_ids.at(src_process_index);
-        JUST(MapAt(&process_id2group, src_process_id))->push_back(process_id);
+        JUST(MapAt(&process_id2group, src_process_id))->emplace_back(process_id);
       }
     }
   }
   // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
-    JUST(MapAt(&process_id2group, src_process_id))->push_back(remainder_process_ids.at(i));
+    JUST(MapAt(&process_id2group, src_process_id))->emplace_back(remainder_process_ids.at(i));
   }
   const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
   for (const auto& pair : process_id2group) {
@@ -628,10 +629,36 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNd
   return Maybe<void>::Ok();
 }
 
+Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
+                                                      Symbol<PlacedNdSbp> out,
+                                                      const Shape& logical_shape) {
+  using namespace private_details;
+  Symbol<cfg::NdSbp> src_nd_sbp = in->nd_sbp();
+  Symbol<cfg::NdSbp> dst_nd_sbp = out->nd_sbp();
+  const auto& hierarchy = in->placement()->hierarchy();
+  std::shared_ptr<const Shape> shape;
+
+  std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(CalcDecomposableEquivalentShapeAndNdSbpPair(
+      logical_shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
+
+  std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
+  JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
+                                              dst_nd_sbp));
+  bool is_acyclic = JUST(
+      IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+  CHECK_OR_RETURN(is_acyclic) << Error::UnimplementedError()
+                              << GetCyclicBoxingDebugString(src_nd_sbp, dst_nd_sbp,
+                                                            ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
     DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);
+
+decltype(CheckIsNdSbpBoxingAcyclicWithDecompose) CheckIsNdSbpBoxingAcyclicWithDecompose =
+    DECORATE(&RawCheckIsNdSbpBoxingAcyclicWithDecompose, ThreadLocalCopiable);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc) {

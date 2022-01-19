@@ -100,7 +100,7 @@ int GetCrossEntropyNumBlocks(const int num_instances) {
 int GetCrossEntropyBlockSize() { return kCrossEntropyGpuBlockSize; }
 
 template<typename T>
-struct CrossEntropyKernelUtil<DeviceType::kGPU, T> {
+struct CrossEntropyKernelUtil<DeviceType::kCUDA, T> {
   static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
                              const int64_t num_classes, const T* x, const T* labels, T* y) {
     cudaMemset(y, 0, sizeof(T) * num_instances);
@@ -119,7 +119,7 @@ struct CrossEntropyKernelUtil<DeviceType::kGPU, T> {
 };
 
 template<>
-struct CrossEntropyKernelUtil<DeviceType::kGPU, float16> {
+struct CrossEntropyKernelUtil<DeviceType::kCUDA, float16> {
   static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
                              const int64_t num_classes, const float16* x, const float16* labels,
                              float16* y) {
@@ -142,11 +142,11 @@ struct CrossEntropyKernelUtil<DeviceType::kGPU, float16> {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace user_op

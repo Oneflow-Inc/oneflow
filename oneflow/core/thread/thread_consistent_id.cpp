@@ -59,6 +59,11 @@ class ConsistentIdStorage final {
     return MapAt(id2debug_string_, id);
   }
 
+  Maybe<void> Reset() {
+    HashMap<int64_t, std::string>().swap(id2debug_string_);
+    return Maybe<void>::Ok();
+  }
+
  private:
   mutable std::mutex mutex_;
   HashMap<int64_t, std::string> id2debug_string_;
@@ -93,6 +98,10 @@ Maybe<int64_t> GetThisThreadConsistentId() {
   auto* ptr = MutThreadLocalUniqueConsistentId();
   CHECK_NOTNULL_OR_RETURN(ptr->get());
   return **ptr;
+}
+
+Maybe<void> ResetThisThreadUniqueConsistentId() {
+  return ConsistentIdStorage::Singleton()->Reset();
 }
 
 }  // namespace oneflow

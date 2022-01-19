@@ -64,7 +64,7 @@ class TestArgsort(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=False, check_graph=False)
     def test_argsort_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)

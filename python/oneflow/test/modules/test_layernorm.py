@@ -140,24 +140,81 @@ class TestLayerNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skip(
-        "TODO(zzk): Pytorch use welford online algorithem, but we use naive algorithem"
-    )
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
-    def test_layernorm_with_random_data(test_case):
+    @autotest(n=20, auto_backward=True, rtol=1.0, atol=1.0)
+    def test_layernorm_with_random_data_warp(test_case):
         device = random_device()
-        channel = random(1, 6).to(int)
-        height = random(1, 6).to(int)
-        width = random(1, 6).to(int)
+        channel = random(1, 200).to(int)
+        height = random(1, 2).to(int)
+        width = random(1, 1024).to(int)
 
         def get_random_norm_shape():
-            begin_axis = random(0, 3).to(int).value()
+            begin_axis = random(1, 3).to(int).value()
             return tuple((channel.value(), height.value(), width.value())[begin_axis:])
 
         m = torch.nn.LayerNorm(
             normalized_shape=get_random_norm_shape(),
             elementwise_affine=random().to(bool),
         ).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+            device
+        )
+        y = m(x)
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    def test_layernorm_with_random_data_shared_mem(test_case):
+        device = random_device()
+        channel = random(1, 200).to(int)
+        height = random(1, 2).to(int)
+        width = random(1024, 8192).to(int)
+
+        def get_random_norm_shape():
+            begin_axis = random(1, 3).to(int).value()
+            return tuple((channel.value(), height.value(), width.value())[begin_axis:])
+
+        m = torch.nn.LayerNorm(
+            normalized_shape=get_random_norm_shape(),
+            elementwise_affine=random().to(bool),
+        ).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+            device
+        )
+        y = m(x)
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    def test_layernorm_with_random_data_uncached(test_case):
+        device = random_device()
+        channel = random(1, 200).to(int)
+        height = random(1, 2).to(int)
+        width = random(8192, 32768).to(int)
+
+        def get_random_norm_shape():
+            begin_axis = random(1, 3).to(int).value()
+            return tuple((channel.value(), height.value(), width.value())[begin_axis:])
+
+        m = torch.nn.LayerNorm(
+            normalized_shape=get_random_norm_shape(),
+            elementwise_affine=random().to(bool),
+        ).to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+            device
+        )
+        y = m(x)
+        return y
+
+    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    def test_layernorm_without_affine(test_case):
+        device = random_device()
+        channel = random(1, 200).to(int)
+        height = random(1, 2).to(int)
+        width = random(8192, 32768).to(int)
+
+        def get_random_norm_shape():
+            begin_axis = random(1, 3).to(int).value()
+            return tuple((channel.value(), height.value(), width.value())[begin_axis:])
+
+        m = torch.nn.LayerNorm(normalized_shape=get_random_norm_shape()).to(device)
         x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
             device
         )

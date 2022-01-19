@@ -20,10 +20,15 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/ep/include/event.h"
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/include/allocation_options.h"
 
 namespace oneflow {
 
 namespace ep {
+
+constexpr size_t kMaxAlignmentRequirement = 512;
+
+class DeviceManager;
 
 class Device {
  public:
@@ -33,6 +38,10 @@ class Device {
 
   virtual void SetAsActiveDevice() = 0;
 
+  virtual DeviceType device_type() const = 0;
+  virtual size_t device_index() const = 0;
+  virtual DeviceManager* device_manager() const = 0;
+
   virtual Stream* CreateStream() = 0;
   virtual void DestroyStream(Stream* stream) = 0;
 
@@ -40,6 +49,11 @@ class Device {
   virtual void DestroyEvent(Event* event);
   virtual void CreateEvents(Event** events, size_t count) = 0;
   virtual void DestroyEvents(Event** events, size_t count) = 0;
+
+  virtual Maybe<void> Alloc(const AllocationOptions& options, void** ptr, size_t size) = 0;
+  virtual void Free(const AllocationOptions& options, void* ptr) = 0;
+  virtual Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) = 0;
+  virtual void FreePinned(const AllocationOptions& options, void* ptr) = 0;
 };
 
 }  // namespace ep

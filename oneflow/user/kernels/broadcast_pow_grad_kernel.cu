@@ -82,6 +82,6 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 }  // namespace oneflow

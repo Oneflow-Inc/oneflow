@@ -46,6 +46,7 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
     if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
 
@@ -86,6 +87,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
     if (iter != stream_type_index2consistent_id.end()) {
       CHECK_JUST(InitThisThreadConsistentId(iter->second, stream_type_index.name()));
     }
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker");
   };
 }
 
@@ -94,6 +96,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
 VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
     : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
+  OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Main");
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
@@ -141,7 +144,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
-      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+      CHECK(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     }
     JUST(vm_->Receive(instr_list));

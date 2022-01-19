@@ -62,17 +62,17 @@ __global__ void MultiSquareSumGpu(const MultiSquareSumParams<T> params, T* y) {
 }  // namespace
 
 template<typename T>
-struct SquareSumKernelUtil<DeviceType::kGPU, T> {
+struct SquareSumKernelUtil<DeviceType::kCUDA, T> {
   static void SquareSum(ep::Stream* stream, int64_t n, const T* x, T* y) {
     const int32_t num_blocks = BlocksNum4ThreadsNum(n);
     CHECK_GE(num_blocks, 0);
     if (num_blocks == 0) {
-      Memset<DeviceType::kGPU>(stream, y, 0, sizeof(T));
+      Memset<DeviceType::kCUDA>(stream, y, 0, sizeof(T));
     } else if (num_blocks == 1) {
       SquareSumGpu<T, true>
           <<<1, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
     } else {
-      Memset<DeviceType::kGPU>(stream, y, 0, sizeof(T));
+      Memset<DeviceType::kCUDA>(stream, y, 0, sizeof(T));
       SquareSumGpu<T, false>
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               n, x, y);
@@ -81,7 +81,7 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
 
   static void MultiSquareSum(ep::Stream* stream, const std::vector<SquareSumParam<T>>& params,
                              T* y) {
-    Memset<DeviceType::kGPU>(stream, y, 0, sizeof(T));
+    Memset<DeviceType::kCUDA>(stream, y, 0, sizeof(T));
     for (int64_t start = 0; start < params.size(); start += kMultiSquareSumMaxSize) {
       MultiSquareSumParams<T> gpu_params{};
       int64_t max_count = 0;
@@ -96,9 +96,9 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_GPU(type_cpp, type_proto) \
-  template struct SquareSumKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_GPU, FLOATING_DATA_TYPE_SEQ);
-#undef INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_GPU
+#define INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_CUDA(type_cpp, type_proto) \
+  template struct SquareSumKernelUtil<DeviceType::kCUDA, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_CUDA, FLOATING_DATA_TYPE_SEQ);
+#undef INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

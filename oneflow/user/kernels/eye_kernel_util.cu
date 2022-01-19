@@ -27,12 +27,12 @@ __global__ void EyeForwardGpuKernel(const int64_t cols, const int64_t rows, T* o
 }
 
 template<typename T>
-struct EyeFunctor<DeviceType::kGPU, T> final {
+struct EyeFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, const int64_t& cols, const int64_t& rows, T* out) {
     RUN_CUDA_KERNEL((EyeForwardGpuKernel<T>), stream, rows, cols, rows, out);
   }
 };
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kGPU), RANGE_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kCUDA), RANGE_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 

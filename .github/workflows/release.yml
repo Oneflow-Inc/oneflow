@@ -47,10 +47,7 @@ jobs:
             "cu110",
             "cu111",
             "cu112",
-            "cu100_xla",
             "cu101_xla",
-            "cu102_xla",
-            "cu110_xla",
           ]
     steps:
       - name: Fix permissions

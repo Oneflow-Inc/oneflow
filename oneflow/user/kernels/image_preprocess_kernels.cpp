@@ -105,7 +105,7 @@ class CMNAttr final : public user_op::OpKernelState {
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     CHECK(mean_vec_.size() == 1 || mean_vec_.size() == C);
     CHECK(std_vec.size() == 1 || std_vec.size() == C);
-    for (float elem : std_vec) { inv_std_vec_.push_back(1.0f / elem); }
+    for (float elem : std_vec) { inv_std_vec_.emplace_back(1.0f / elem); }
     if (mean_vec_.size() == 1) { mean_vec_.resize(C, mean_vec_.at(0)); }
     if (inv_std_vec_.size() == 1) { inv_std_vec_.resize(C, inv_std_vec_.at(0)); }
   }
@@ -132,7 +132,8 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* cmn_attr = dynamic_cast<CMNAttr*>(state);
     const std::vector<float>& mean_vec = cmn_attr->mean_vec();
     const std::vector<float>& inv_std_vec = cmn_attr->inv_std_vec();
@@ -213,7 +214,8 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* cmn_attr = dynamic_cast<CMNAttr*>(state);
     const std::vector<float>& mean_vec = cmn_attr->mean_vec();
     const std::vector<float>& inv_std_vec = cmn_attr->inv_std_vec();
@@ -322,7 +324,8 @@ class CoinFlipKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* rand_bool_gen = dynamic_cast<RandBoolGen*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int8_t* dptr = out_blob->mut_dptr<int8_t>();
@@ -381,7 +384,8 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
     CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);

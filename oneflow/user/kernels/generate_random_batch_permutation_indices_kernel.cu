@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -85,15 +85,16 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     int64_t seed = ctx->Attr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>>(seed,
-                                                                                     ctx->stream());
+    return std::make_shared<OpKernelStateWrapper<RandomGenerator<DeviceType::kCUDA>>>(
+        seed, ctx->stream());
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* random_generator =
-        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);
+        dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCUDA>>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t batch_size = y->shape().At(0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -115,7 +116,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
 
 REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kGPU)
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
       const Shape* y_shape = ctx->OutputShape("y", 0);
       const int32_t batch_size = y_shape->At(0);

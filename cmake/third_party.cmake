@@ -3,10 +3,11 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-include(zlib)
+if (WITH_ZLIB)
+  include(zlib)
+endif()
 include(protobuf)
 include(googletest)
-include(gflags)
 include(glog)
 include(libjpeg-turbo)
 include(opencv)
@@ -30,11 +31,23 @@ if (WITH_XLA)
   include(tensorflow)
 endif()
 
+if (WITH_OPENVINO)
+  include(openvino)
+endif()
+
 if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
 include(hwloc)
+if (WITH_ONEDNN)
+  include(oneDNN)
+endif()
+
+set_mirror_url_with_hash(INJA_URL
+  https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
+  611e6b7206d0fb89728a3879f78b4775
+)
 
 option(CUDA_STATIC "" ON)
 
@@ -116,11 +129,11 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-# libraries only a top level .so or exe should be linked to
-set(oneflow_exe_third_party_libs
-    glog_imported
-    gflags_imported
+set(oneflow_test_libs
+    ${GOOGLETEST_STATIC_LIBRARIES}
+    ${GOOGLEMOCK_STATIC_LIBRARIES}
 )
+
 
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
@@ -132,16 +145,23 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    zlib_imported
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
+    nlohmann_json::nlohmann_json
 )
+if (WITH_ONEDNN)
+  set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
+endif()
 
 if (NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
+endif()
+
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_libs zlib_imported)
 endif()
 
 if(WIN32)
@@ -151,10 +171,7 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib
   protobuf
-  gflags
-  glog
   googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
@@ -162,11 +179,16 @@ set(oneflow_third_party_dependencies
   eigen
   half_copy_headers_to_destination
   re2
-  json_copy_headers_to_destination
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
+if (WITH_ONEDNN)
+  list(APPEND oneflow_third_party_dependencies onednn)
+endif()
+if (WITH_ZLIB)
+  list(APPEND oneflow_third_party_dependencies zlib)
+endif()
 
 if (WITH_COCOAPI)
   list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
@@ -179,8 +201,6 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ZLIB_INCLUDE_DIR}
-    ${GFLAGS_INCLUDE_DIR}
-    ${GLOG_INCLUDE_DIR}
     ${GOOGLETEST_INCLUDE_DIR}
     ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
@@ -191,12 +211,15 @@ list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
-    ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
 )
+if (WITH_ONEDNN)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
+endif()
+
 
 if (NOT WITH_XLA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
@@ -217,9 +240,9 @@ if (BUILD_CUDA)
   endif()
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies nccl)
 
@@ -265,17 +288,44 @@ if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
+if (WITH_OPENVINO)
+  list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
+endif()
+
+foreach (oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
+  if (NOT "${oneflow_third_party_lib}" MATCHES "^-l.+" AND NOT TARGET ${oneflow_third_party_lib} AND "${oneflow_third_party_lib}" MATCHES "^\/.+" AND NOT "${oneflow_third_party_lib}" MATCHES "^.+\.framework")
+    get_filename_component(IMPORTED_LIB_NAME ${oneflow_third_party_lib} NAME_WE)
+    set(IMPORTED_LIB_NAME "imported::${IMPORTED_LIB_NAME}")
+    message(STATUS "Creating imported lib: ${oneflow_third_party_lib} => ${IMPORTED_LIB_NAME}")
+    add_library(${IMPORTED_LIB_NAME} UNKNOWN IMPORTED)
+    set_property(TARGET ${IMPORTED_LIB_NAME} PROPERTY IMPORTED_LOCATION "${oneflow_third_party_lib}")
+    list(APPEND ONEFLOW_THIRD_PARTY_LIBS_TO_LINK "${IMPORTED_LIB_NAME}")
+  else()
+    list(APPEND ONEFLOW_THIRD_PARTY_LIBS_TO_LINK "${oneflow_third_party_lib}")
+  endif()
+endforeach()
+
+set(oneflow_third_party_libs ${ONEFLOW_THIRD_PARTY_LIBS_TO_LINK})
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  if(BUILD_PYTHON)
-    foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-      copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
-    endforeach()
-  endif(BUILD_PYTHON)
+  if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
+    message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
+  endif()
+  get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
+  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+    if(of_include_src_dir MATCHES "/include$")
+      # it requires two slashes, but in CMake doc it states only one slash is needed
+      set(of_include_src_dir "${of_include_src_dir}//")
+    endif()
+    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
+      COMPONENT oneflow_py_include
+      EXCLUDE_FROM_ALL
+    )
+  endforeach()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()

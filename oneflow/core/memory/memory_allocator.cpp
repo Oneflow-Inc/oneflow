@@ -14,68 +14,55 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/memory/memory_allocator.h"
-#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
-void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
-  void* ptr = nullptr;
+namespace {
+
+std::shared_ptr<ep::Device> GetAllocationDevice(const MemoryCase& mem_case) {
+  DeviceType device_type = DeviceType::kInvalidDevice;
+  size_t device_index = 0;
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-#ifdef WITH_CUDA
-      // NOTE(chengcheng):
-      //   All cudaMallocHost MUST set the correct device id to avoid creating CUDA context
-      //   on other GPU which will occopy 500MiB device memory.
-      int64_t device_id = mem_case.host_mem().cuda_pinned_mem().device_id();
-      CudaCurrentDeviceGuard guard(device_id);
-      NumaAwareCudaMallocHost(device_id, &ptr, size);
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      ptr = aligned_alloc(kHostAlignSize, size);
-      CHECK_NOTNULL(ptr);
-    }
+    device_type = DeviceType::kCPU;
   } else if (mem_case.has_device_cuda_mem()) {
-#ifdef WITH_CUDA
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    OF_CUDA_CHECK(cudaMalloc(&ptr, size));
-#else
-    UNIMPLEMENTED();
-#endif
+    device_type = DeviceType::kCUDA;
+    device_index = mem_case.device_cuda_mem().device_id();
   } else {
     UNIMPLEMENTED();
   }
+  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  CHECK(device);
+  return device;
+}
+
+ep::AllocationOptions GetAllocationOptions(const MemoryCase& mem_case) {
+  ep::AllocationOptions options{};
+  if (mem_case.has_host_mem() && mem_case.host_mem().has_cuda_pinned_mem()) {
+    options.SetPinnedDevice(DeviceType::kCUDA, mem_case.host_mem().cuda_pinned_mem().device_id());
+  }
+  return options;
+}
+
+}  // namespace
+
+void* MemoryAllocatorImpl::Allocate(const MemoryCase& mem_case, size_t size) {
+  void* ptr = nullptr;
+  std::shared_ptr<ep::Device> device = GetAllocationDevice(mem_case);
+  ep::AllocationOptions options = GetAllocationOptions(mem_case);
+  CHECK_JUST(device->Alloc(options, &ptr, size));
   return ptr;
 }
 
-void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-#ifdef WITH_CUDA
-      OF_CUDA_CHECK(cudaFreeHost(ptr));
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      free(ptr);
-    }
-  } else if (mem_case.has_device_cuda_mem()) {
-#ifdef WITH_CUDA
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    OF_CUDA_CHECK(cudaFree(ptr));
-#else
-    UNIMPLEMENTED();
-#endif
-  } else {
-    UNIMPLEMENTED();
-  }
+void MemoryAllocatorImpl::Deallocate(void* ptr, const MemoryCase& mem_case) {
+  std::shared_ptr<ep::Device> device = GetAllocationDevice(mem_case);
+  ep::AllocationOptions options = GetAllocationOptions(mem_case);
+  device->Free(options, ptr);
 }
 
 void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
@@ -84,13 +71,15 @@ void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
   return ptr;
 }
 
-void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) { free(ptr); }
-
-MemoryAllocator::~MemoryAllocator() {
-  for (std::function<void()> deleter : deleters_) { deleter(); }
+void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) {
+  free(ptr);  // NOLINT
 }
 
-char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
+MemoryAllocator::~MemoryAllocator() {
+  for (const std::function<void()>& deleter : deleters_) { deleter(); }
+}
+
+char* MemoryAllocator::Allocate(const MemoryCase& mem_case, std::size_t size) {
   const int memset_val = 0;
   char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
   if (mem_case.has_host_mem()) {
@@ -109,7 +98,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   return dptr;
 }
 
-void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(char* dptr, const MemoryCase& mem_case) {
   MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
 }
 

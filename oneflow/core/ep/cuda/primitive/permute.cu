@@ -318,7 +318,7 @@ class PermuteFactoryImpl : public PermuteFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, PermuteFactory, PermuteFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, PermuteFactory, PermuteFactoryImpl);
 
 }  // namespace
 

@@ -86,7 +86,7 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
     if (in_height == out_height) {
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
           x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
@@ -109,8 +109,8 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kGPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("scale_factor");
     const bool align_corners = ctx->Attr<bool>("align_corners");
@@ -123,7 +123,7 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
     if (in_height == out_height) {
-      Memcpy<DeviceType::kGPU>(
+      Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
           dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
@@ -136,17 +136,17 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(dtype)                                     \
+#define REGISTER_UPSAMPLELINEAR1D_CUDA_KERNEL(dtype)                                    \
   REGISTER_USER_KERNEL("upsample_linear_1d")                                            \
       .SetCreateFn<UpsampleLinear1DGPUKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("upsample_linear_1d_grad")                                       \
       .SetCreateFn<UpsampleLinearGrad1DGPUKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kGPU)                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(float)
-REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(double)
+REGISTER_UPSAMPLELINEAR1D_CUDA_KERNEL(float)
+REGISTER_UPSAMPLELINEAR1D_CUDA_KERNEL(double)
 
 }  // namespace oneflow

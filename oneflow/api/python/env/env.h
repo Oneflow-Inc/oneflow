@@ -81,7 +81,18 @@ inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
   return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
 }
-
+inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
+  FLAGS_alsologtostderr = flag;
+  return Maybe<void>::Ok();
+}
+inline Maybe<bool> GetFLAGS_alsologtostderr() {
+  return FLAGS_alsologtostderr;
+}  // namespace oneflow
+inline Maybe<void> SetFLAGS_v(int32_t v_level) {
+  FLAGS_v = v_level;
+  return Maybe<void>::Ok();
+}
+inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

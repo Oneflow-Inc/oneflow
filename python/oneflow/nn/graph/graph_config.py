@@ -110,6 +110,51 @@ class GraphConfig(object):
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
 
+    def set_zero_redundancy_optimizer_min_size_after_split(self, value):
+        """Set the min size of optimizer state/grad/parameter after split.
+
+        Args:
+            value (int): min size value.
+        """
+        assert isinstance(value, int)
+        assert value >= 1
+        self.proto.set_optimizer_placement_optimization_threshold(value)
+
+    def enable_xla_jit(self, value=True):
+        """Whether use xla_jit in xrt or not. When this option enable, oneflow will check all operators is supported by 
+           xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
+
+           XLA: https://www.tensorflow.org/xla
+
+        Args:
+            value (bool, optional): [description]. Defaults to True.
+        """
+        self.proto.mutable_xrt_config().set_use_xla_jit(value)
+
+    def enable_tensorrt(self, value=True):
+        """Whether use tensorrt in xrt or not. When this option enable, oneflow will check all operators is supported by 
+           tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
+
+           TensorRT: https://developer.nvidia.com/tensorrt
+
+        Args:
+            value (bool, optional): [description]. Defaults to True.
+        """
+        self.proto.mutable_xrt_config().set_use_tensorrt(value)
+
+    def enable_openvino(self, value=True):
+        """Whether use openvino in xrt or not. When this option enable, oneflow will check all operators is supported by 
+           openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
+
+           Please note that, openvino only support inference mode.
+
+           OpenVINO: https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html
+
+        Args:
+            value (bool, optional): [description]. Defaults to True.
+        """
+        self.proto.mutable_xrt_config().set_use_openvino(value)
+
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         """ Whether enable cudnn conv operatioin to use heuristic search algorithm.
     
@@ -122,9 +167,7 @@ class GraphConfig(object):
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
-        opt_dict.generate_optimizer_and_variable_configs(
-            self.proto.mutable_train_conf(), variables_conf
-        )
+        opt_dict.generate_optimizer_and_variable_configs(self.proto, variables_conf)
 
     def __repr__(self):
         main_str = (

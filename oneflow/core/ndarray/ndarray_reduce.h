@@ -32,12 +32,13 @@ struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Reduce(ep::Stream* stream, const XpuVarNdarray<T>& origin_y,
+  using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
+  static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& origin_y,
                      const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
     DimVector simplified_x_dim;
     DimVector simplified_y_dim;
     TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim, &simplified_y_dim);
-    XpuVarNdarray<T> y(Shape(simplified_y_dim), origin_y.ptr());
+    XpuVarNdarray<RetT> y(Shape(simplified_y_dim), origin_y.ptr());
     XpuVarNdarray<const T> x(Shape(simplified_x_dim), origin_x.ptr());
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
@@ -62,8 +63,8 @@ struct NdarrayReduce<
     CHECK(y.At(0) == 1 || y.At(0) == x.At(0));
     CHECK(simplified_x->empty());
     CHECK(simplified_y->empty());
-    simplified_x->push_back(x.At(0));
-    simplified_y->push_back(y.At(0));
+    simplified_x->emplace_back(x.At(0));
+    simplified_y->emplace_back(y.At(0));
     bool prev_axis_is_reduced = (y.At(0) == 1);
     FOR_RANGE(int, i, 1, x.NumAxes()) {
       const int64_t x_dim = x.At(i);
@@ -74,8 +75,8 @@ struct NdarrayReduce<
         simplified_x->back() *= x_dim;
         simplified_y->back() *= y_dim;
       } else {
-        simplified_x->push_back(x_dim);
-        simplified_y->push_back(y_dim);
+        simplified_x->emplace_back(x_dim);
+        simplified_y->emplace_back(y_dim);
       }
       prev_axis_is_reduced = cur_axis_is_reduced;
     }

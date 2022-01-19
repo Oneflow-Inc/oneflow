@@ -78,10 +78,10 @@ class TmpBufferManager final {
   void* ptr_;
 };
 
-class IndexedSlicesUpdateOpKernelState final : public user_op::OpKernelState {
+class IndexedSlicesUpdateOpKernelCache final : public user_op::OpKernelCache {
  public:
-  IndexedSlicesUpdateOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~IndexedSlicesUpdateOpKernelState() override = default;
+  IndexedSlicesUpdateOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~IndexedSlicesUpdateOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -91,8 +91,8 @@ class IndexedSlicesUpdateOpKernelState final : public user_op::OpKernelState {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelState> CreateIndexedSlicesUpdateOpKernelState(
-    user_op::KernelInitContext* ctx) {
+std::shared_ptr<user_op::OpKernelCache> CreateIndexedSlicesUpdateOpKernelCache(
+    user_op::KernelCacheContext* ctx) {
   const cfg::SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_logical_desc =
       ctx->LogicalTensorDesc4ArgNameAndIndex("model", 0);
@@ -102,11 +102,11 @@ std::shared_ptr<user_op::OpKernelState> CreateIndexedSlicesUpdateOpKernelState(
     CHECK(ctx->SbpParallel4ArgNameAndIndex("model_diff_indices", 0).has_broadcast_parallel());
     CHECK(ctx->SbpParallel4ArgNameAndIndex("model_diff_values", 0).has_broadcast_parallel());
     BalancedSplitter bs(num_model_instances, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<IndexedSlicesUpdateOpKernelState>(
+    return std::make_shared<IndexedSlicesUpdateOpKernelCache>(
         bs.At(ctx->parallel_ctx().parallel_id()).begin(),
         bs.At(ctx->parallel_ctx().parallel_id()).end());
   } else {
-    return std::make_shared<IndexedSlicesUpdateOpKernelState>(0, num_model_instances);
+    return std::make_shared<IndexedSlicesUpdateOpKernelCache>(0, num_model_instances);
   }
 }
 
@@ -161,9 +161,9 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
@@ -184,15 +184,16 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
   IndexedSlicesSGDUpdateKernel() = default;
   ~IndexedSlicesSGDUpdateKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateIndexedSlicesUpdateOpKernelState(ctx);
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
 
  private:
   using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
   using MdUpdateUtilT = IndexedSlicesSGDUpdateKernelUtil<device_type, T, K, int32_t>;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff_indices =
         ctx->Tensor4ArgNameAndIndex("model_diff_indices", 0);
@@ -208,9 +209,9 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
     CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
-    auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
-    CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
+    CHECK_NOTNULL(kernel_cache);
+    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
@@ -221,7 +222,7 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(ctx->stream(), weight_decay, num_indices, feature_size,
-                          kernel_state->lower(), kernel_state->upper(),
+                          kernel_cache->lower(), kernel_cache->upper(),
                           buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
                           buffer_manager.UniqueDiffIndicesPtr(),
                           buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>());
@@ -300,9 +301,9 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
@@ -311,15 +312,16 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
   IndexedSlicesMomentumUpdateKernel() = default;
   ~IndexedSlicesMomentumUpdateKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateIndexedSlicesUpdateOpKernelState(ctx);
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
 
  private:
   using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
   using MdUpdateUtilT = IndexedSlicesMomentumMdUpdateKernelUtil<device_type, T, K, int32_t>;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff_indices =
         ctx->Tensor4ArgNameAndIndex("model_diff_indices", 0);
@@ -338,9 +340,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
     CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
-    auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
-    CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
+    CHECK_NOTNULL(kernel_cache);
+    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
@@ -351,8 +353,8 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(
-        ctx->stream(), beta, weight_decay, num_indices, feature_size, kernel_state->lower(),
-        kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        ctx->stream(), beta, weight_decay, num_indices, feature_size, kernel_cache->lower(),
+        kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
         learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
@@ -458,9 +460,9 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>
@@ -525,8 +527,8 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
@@ -534,15 +536,16 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
  public:
   IndexedSlicesAdamUpdateKernel() = default;
   ~IndexedSlicesAdamUpdateKernel() override = default;
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateIndexedSlicesUpdateOpKernelState(ctx);
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateIndexedSlicesUpdateOpKernelCache(ctx);
   }
 
  private:
   using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
   using MdUpdateUtilT = IndexedSlicesAdamMdUpdateKernelUtil<device_type, T, K, int32_t>;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
     if (ctx->has_input("learning_rate", 0)) {
@@ -579,9 +582,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
 
-    auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
-    CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
+    CHECK_NOTNULL(kernel_cache);
+    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
     if (num_indices == 0) {
@@ -605,7 +608,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 
     MdUpdateUtilT::Update(
         ctx->stream(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
-        learning_rate_val, num_indices, feature_size, kernel_state->lower(), kernel_state->upper(),
+        learning_rate_val, num_indices, feature_size, kernel_cache->lower(), kernel_cache->upper(),
         buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr, bias_correction1_ptr,
         bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
@@ -731,9 +734,9 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type>
@@ -760,7 +763,7 @@ class BiasCorrectionFactorKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == device));
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kGPU)
+REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>
@@ -823,9 +826,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T>
@@ -926,9 +929,9 @@ user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
-REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, float, float);
-REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
 }  // namespace

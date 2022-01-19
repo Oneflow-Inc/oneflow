@@ -58,14 +58,14 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
 
 #ifdef WITH_CUDA
 
-REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D, "DECODE_H2D")
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCUDA, TaskType::kDecodeH2D, "DECODE_H2D")
 
 #endif
 
 namespace {
 
 CompTaskNode* CreateCompTaskNodeByOpDeviceType(const OperatorConf& op_conf) {
-  if (CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag())) == DeviceType::kGPU) {
+  if (CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag())) == DeviceType::kCUDA) {
     return new DecodeH2DCompTaskNode;
   } else {
     return new NormalForwardCompTaskNode;
