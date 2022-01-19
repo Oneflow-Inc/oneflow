@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/embedding/posix_file.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/profiler/profiler.h"
 #include <robin_hood.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -469,6 +470,7 @@ void PersistentTableImpl<Key, Engine>::GetBlocks(uint32_t num_keys, const void* 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, void* values,
                                            uint32_t* n_missing, uint32_t* missing_indices) {
+  OF_PROFILER_RANGE_PUSH("PersistentTable::Get(" + std::to_string(num_keys) + ")");
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
@@ -492,6 +494,7 @@ void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, 
     }
   }
   *n_missing = missing_count;
+  OF_PROFILER_RANGE_POP();
 }
 
 template<typename Key, typename Engine>
@@ -548,6 +551,7 @@ void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* 
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
                                            const void* values) {
+  OF_PROFILER_RANGE_PUSH("PersistentTable::Put(" + std::to_string(num_keys) + ")");
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
   if (value_size_ == logical_block_size_) {
@@ -566,6 +570,7 @@ void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
     blocks_ptr = blocks_buffer_.ptr();
   }
   PutBlocks(num_keys, keys, blocks_ptr);
+  OF_PROFILER_RANGE_POP();
 }
 
 template<typename Key, typename Engine>
