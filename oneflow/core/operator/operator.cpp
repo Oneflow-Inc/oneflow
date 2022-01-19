@@ -495,7 +495,7 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
     const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const {
   JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   // Leave those valid Nd SBPs
-  FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+  JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   CHECK(nd_sbp_sig_list->size() > 0) << "Empty sbp signature after filtering for " << op_name();
   return Maybe<void>::Ok();
 }
@@ -682,7 +682,7 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     //            but LogicalBlobDesc4Ibn not has output blob names
     if (JUST(FilterSbp4Blobs(input_bns(), nd_sbp_sig_list->at(sbp_id)))
         /*|| JUST(FilterSbp4Blobs(output_bns(), nd_sbp_sig_list[sbp_id]))*/) {
-      nd_sbp_sig_list[sbp_id] = nd_sbp_sig_list[nd_sbp_sig_list->size() - 1];
+      nd_sbp_sig_list->at(sbp_id) = nd_sbp_sig_list->at(nd_sbp_sig_list->size() - 1);
       nd_sbp_sig_list->pop_back();
     }
   }
