@@ -45,8 +45,9 @@ class OneEmbeddingLookup(Module):
         print("block_based_path", block_based_path)
 
         embedding_options = {
-            "embedding_name": embedding_name,
-            "embedding_size": int(os.environ.get("EMBEDDING_SIZE", 128)),
+            "name": embedding_name,
+            "embedding_dim": int(os.environ.get("EMBEDDING_SIZE", 128)),
+            "max_query_length": int(65536 * 26),
             "l1_cache": {
                 "policy": str(os.environ.get("L1_CACHE_POLICY", "lru")),
                 "cache_memory_budget_mb": int(
@@ -65,7 +66,6 @@ class OneEmbeddingLookup(Module):
                 "persistent_table": {
                     "path": block_based_path,
                     "physical_block_size": fixed_table_block_size,
-                    "chunk_size": 4 * 1024 * 1024,
                 },
             },
             "default_initializer": {"type": "uniform", "mean": 0, "std": 1},

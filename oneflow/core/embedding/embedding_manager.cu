@@ -29,7 +29,7 @@ EmbeddingMgr::~EmbeddingMgr() {
 embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
     int64_t parallel_num) {
-  const std::string& name = embedding_options.EmbeddingName();
+  const std::string& name = embedding_options.Name();
   const uint32_t line_size = embedding_options.LineSize();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
@@ -46,7 +46,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
                                + rank_id + "-" + num_rank;
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
-  options.max_query_length = 65536 * 26;
+  options.max_query_length = embedding_options.MaxQueryLength();
   options.table_options.physical_block_size = embedding_options.PersistentTablePhysicalBlockSize();
   options.table_options.target_chunk_size_mb = 4 * 1024;
   store = NewPersistentTableKeyValueStore(options);
@@ -61,7 +61,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     } else {
       UNIMPLEMENTED();
     }
-    cache_options.max_query_length = 65536 * 26;
+    cache_options.max_query_length = embedding_options.MaxQueryLength();
     cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
     cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
     cache_options.capacity =
@@ -81,7 +81,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
     } else {
       UNIMPLEMENTED();
     }
-    cache_options.max_query_length = 65536 * 26;
+    cache_options.max_query_length = embedding_options.MaxQueryLength();
     cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
     cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
     cache_options.capacity =
