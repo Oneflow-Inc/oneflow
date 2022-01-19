@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/cum_kernel.h"
+#include "oneflow/core/ndarray/binary_func.h"
 namespace oneflow {
 
 namespace {
@@ -30,7 +30,7 @@ void CumForward(const T* in_ptr, T* out_ptr, int64_t up_space, int64_t space, in
       auto* tmp_out_ptr = tmp_out_ptr_base + j * down_space;
       auto* last_tmp_out_ptr = tmp_out_ptr - down_space;
       for (auto k = 0; k < down_space; k++) {
-        BinaryFunc<T>()(&tmp_out_ptr[k], &last_tmp_out_ptr[k]);
+        tmp_out_ptr[k] = BinaryFunc<T>::Invoke(tmp_out_ptr[k], last_tmp_out_ptr[k]);
       }
     }
     tmp_out_ptr_base += step;
@@ -68,7 +68,7 @@ class CpuCumKernel : public user_op::OpKernel {
 };
 
 template<typename T>
-class CpuCumSumKernel final : public CpuCumKernel<T, BinaryAdd> {
+class CpuCumSumKernel final : public CpuCumKernel<T, BinaryFuncAdd> {
  public:
   CpuCumSumKernel() = default;
   ~CpuCumSumKernel() = default;
@@ -85,7 +85,7 @@ REGISTER_CUMSUM_KERNEL(double)
 #undef REGISTER_CUMSUM_KERNEL
 
 template<typename T>
-class CpuCumProdKernel final : public CpuCumKernel<T, BinaryProd> {
+class CpuCumProdKernel final : public CpuCumKernel<T, BinaryFuncMul> {
  public:
   CpuCumProdKernel() = default;
   ~CpuCumProdKernel() = default;

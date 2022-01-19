@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/cum_kernel.h"
+#include "oneflow/core/ndarray/binary_func.h"
 
 namespace oneflow {
 #ifdef WITH_CUDA
@@ -49,7 +49,10 @@ __global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_spac
     for (auto j = 0; j < cs_space; j++) {
       auto idx = j * cs_down_space;
       out_ptr_base[idx] = in_ptr_base[idx];
-      if (j != 0) { BinaryFunc<T>()(&out_ptr_base[idx], &out_ptr_base[idx - cs_down_space]); }
+      if (j != 0) {
+        out_ptr_base[idx] =
+            BinaryFunc<T>::Invoke(out_ptr_base[idx], out_ptr_base[idx - cs_down_space]);
+      }
     }
   }
 }
@@ -64,7 +67,10 @@ __global__ void CumsumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t 
     for (auto j = 0; j < cs_space; j++) {
       auto idx = j * cs_down_space;
       out_ptr_base[idx] = in_ptr_base[idx];
-      if (j != 0) { BinaryFunc<T>()(&out_ptr_base[idx], &out_ptr_base[idx - cs_down_space]); }
+      if (j != 0) {
+        out_ptr_base[idx] =
+            BinaryFunc<T>::Invoke(out_ptr_base[idx], out_ptr_base[idx - cs_down_space]);
+      }
     }
   }
 }
@@ -78,7 +84,7 @@ __global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_
     // calculate cs_space data in one thread
     for (auto j = 0; j < cs_space; j++) {
       out_ptr_base[j] = in_ptr_base[j];
-      if (j != 0) { BinaryFunc<T>()(&out_ptr_base[j], &out_ptr_base[j - 1]); }
+      if (j != 0) { out_ptr_base[j] = BinaryFunc<T>::Invoke(out_ptr_base[j], out_ptr_base[j - 1]); }
     }
   }
 }
@@ -124,7 +130,7 @@ class GpuCumKernel : public user_op::OpKernel {
 };
 
 template<typename T>
-class GpuCumSumKernel final : public GpuCumKernel<T, BinaryAdd> {
+class GpuCumSumKernel final : public GpuCumKernel<T, BinaryFuncAdd> {
  public:
   GpuCumSumKernel() = default;
   ~GpuCumSumKernel() = default;
@@ -141,7 +147,7 @@ REGISTER_CUDA_CUMSUM_KERNEL(double)
 #undef REGISTER_CUDA_CUMSUM_KERNEL
 
 template<typename T>
-class GpuCumProdKernel final : public GpuCumKernel<T, BinaryProd> {
+class GpuCumProdKernel final : public GpuCumKernel<T, BinaryFuncMul> {
  public:
   GpuCumProdKernel() = default;
   ~GpuCumProdKernel() = default;
