@@ -219,7 +219,7 @@ def _le(self, other):
 
 
 def _mul(self, other):
-    return flow.mul(self, other)
+    return flow._C.mul(self, other)
 
 
 def _mul_(self, other):
@@ -231,11 +231,11 @@ def _rmul(self, other):
 
 
 def _add(self, other):
-    return flow.add(self, other)
+    return flow._C.add(self, other)
 
 
 def _add_inplace(self, other):
-    return flow.add(self, other, inplace=True)
+    return flow._C.add(self, other, inplace=True)
 
 
 def _iadd(self, other):
@@ -247,15 +247,15 @@ def _radd(self, other):
 
 
 def _sub(self, other):
-    return flow.sub(self, other)
+    return flow._C.sub(self, other)
 
 
 def _sub_inplace(self, other):
-    return flow.sub(self, other, inplace=True)
+    return flow._C.sub(self, other, inplace=True)
 
 
 def _rsub(self, other):
-    return flow.sub(other, self)
+    return flow._C.sub(other, self)
 
 
 def _truediv(self, other):
