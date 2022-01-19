@@ -19,4 +19,5 @@ Optimizers
             StepLR,
             MultiStepLR,
             ExponentialLR,
-            ReduceLROnPlateau
+            ReduceLROnPlateau,
+            PolynomialLR
