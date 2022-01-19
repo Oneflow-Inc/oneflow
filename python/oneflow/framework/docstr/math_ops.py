@@ -1379,8 +1379,8 @@ add_docstr(
 	$$
 
     Args:
-        input (Tensor):  the input ND tensor.
-        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
+        input (Tensor):  the input tensor.
+        dim (int):  the dimension to do cumsum whose valid range is [-N, N-1), and the N is tensor's dimensions
 
     Returns:
         oneflow.Tensor: The result tensor with cumprod result.
