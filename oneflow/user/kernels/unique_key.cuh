@@ -18,33 +18,11 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_UNIQUE_KEY_H_
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/embedding/hash_functions.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 
 namespace oneflow {
 
 namespace {
-
-using CuInt64T = unsigned long long int;
-
-__device__ __inline__ int32_t AtomicCAS(int32_t* address, int32_t compare, int32_t val) {
-  return atomicCAS(address, compare, val);
-}
-
-__device__ __inline__ int64_t AtomicCAS(int64_t* address, int64_t compare, int64_t val) {
-  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
-  return static_cast<int64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
-                                        static_cast<CuInt64T>(compare),
-                                        static_cast<CuInt64T>(val)));
-}
-
-__device__ __inline__ int32_t AtomicAdd(int32_t* address, int32_t val) {
-  return atomicAdd(address, val);
-}
-
-__device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
-  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
-  return static_cast<int64_t>(
-      atomicAdd(reinterpret_cast<CuInt64T*>(address), static_cast<CuInt64T>(val)));
-}
 
 // ref from
 // https://github.com/NVIDIA-Merlin/HugeCTR/blob/master/HugeCTR/src/inference/unique_op/unique_op.cu
@@ -63,10 +41,10 @@ __global__ void UniqueIds(const int64_t capacity, const K empty_key, const IDX e
         printf("counter >= capacity\n");
         // assert(false && "error: unique op fails: hashtable is full");
       }
-      const K old_key = AtomicCAS(table_keys + hash_index, empty_key, target_key);
+      const K old_key = cuda::atomic::CAS(table_keys + hash_index, empty_key, target_key);
       volatile IDX& target_val_pos = table_vals[hash_index];
       if (empty_key == old_key) {
-        IDX unique_pos = AtomicAdd(num_unique_ids, 1);
+        IDX unique_pos = cuda::atomic::Add(num_unique_ids, 1);
         reverse_index[i] = unique_pos;
         target_val_pos = unique_pos;
         unique_ids[unique_pos] = target_key;
