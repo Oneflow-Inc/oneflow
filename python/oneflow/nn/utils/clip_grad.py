@@ -32,7 +32,7 @@ def clip_grad_norm_(
     parameters: _tensor_or_tensors,
     max_norm: float,
     norm_type: float = 2.0,
-    error_if_nonfinite: bool = True,
+    error_if_nonfinite: bool = False,
 ) -> Tensor:
     r"""Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were
@@ -46,7 +46,7 @@ def clip_grad_norm_(
             infinity norm.
         error_if_nonfinite (bool): if True, an error is thrown if the total
             norm of the gradients from :attr:``parameters`` is ``nan``,
-            ``inf``, or ``-inf``. Default: True
+            ``inf``, or ``-inf``. Default: False (will switch to True in the future)
 
     Returns:
         Parameters after cliping gradient norm
@@ -107,24 +107,15 @@ def clip_grad_norm_(
             ),
             norm_type,
         )
-    if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
-        if error_if_nonfinite:
-            raise RuntimeError(
-                f"The total norm of order {norm_type} for gradients from "
-                "`parameters` is non-finite, so it cannot be clipped. To disable "
-                "this error and scale the gradients by the non-finite norm anyway, "
-                "set `error_if_nonfinite=False`"
-            )
-        else:
-            warnings.warn(
-                "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
-                "Note that the default behavior will change in a future release to error out "
-                "if a non-finite total norm is encountered. At that point, setting "
-                "error_if_nonfinite=false will be required to retain the old behavior.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
+    if error_if_nonfinite and (
+        np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all()
+    ):
+        raise RuntimeError(
+            f"The total norm of order {norm_type} for gradients from "
+            "`parameters` is non-finite, so it cannot be clipped. To disable "
+            "this error and scale the gradients by the non-finite norm anyway, "
+            "set `error_if_nonfinite=False`"
+        )
     clip_coef = max_norm / (total_norm + 1e-6)
     clip_coef_clamped = clip_coef.clamp(max=1.0)
     for p in parameters:
