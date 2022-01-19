@@ -61,12 +61,18 @@ class OneEmbeddingLookup(Module):
                 ),
                 "device": "host",
             },
-            "fixed_table": {
-                "path": block_based_path,
-                "block_size": fixed_table_block_size,
-                "chunk_size": 4 * 1024 * 1024,
+            "kv_store": {
+                "persistent_table": {
+                    "path": block_based_path,
+                    "physical_block_size": fixed_table_block_size,
+                    "chunk_size": 4 * 1024 * 1024,
+                },
             },
-            "initializer": {"type": "uniform", "mean": 0, "std": 1,},
+            "default_initializer": {"type": "uniform", "mean": 0, "std": 1},
+            "columns": [
+                {"initializer": {"type": "uniform", "mean": 0, "std": 1,}},
+                {"initializer": {"type": "uniform", "mean": 0, "std": 1,}},
+            ],
             "optimizer": {
                 "type": optimizer,
                 "beta": 0.9,

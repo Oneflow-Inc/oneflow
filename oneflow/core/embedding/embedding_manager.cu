@@ -37,7 +37,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   if (it != key_value_store_map_.end()) { return it->second.get(); }
 
   std::unique_ptr<embedding::KeyValueStore> store;
-  const std::string& path = embedding_options.FixedTablePath();
+  const std::string& path = embedding_options.PersistentTablePath();
   const std::string& num_rank = std::to_string(parallel_num);
   const int32_t rank_id_suffix_length = num_rank.size();
   const std::string& rank_id = std::to_string(parallel_id);
@@ -47,7 +47,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
   options.max_query_length = 65536 * 26;
-  options.table_options.physical_block_size = embedding_options.FixedTableBlockSize();
+  options.table_options.physical_block_size = embedding_options.PersistentTablePhysicalBlockSize();
   options.table_options.target_chunk_size_mb = 4 * 1024;
   store = NewPersistentTableKeyValueStore(options);
 

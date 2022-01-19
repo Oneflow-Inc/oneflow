@@ -32,9 +32,9 @@ class EmbeddingOptions final {
     l1_cache_memory_budget_mb_ = json_object["l1_cache"]["cache_memory_budget_mb"];
     l2_cache_policy_ = json_object["l2_cache"]["policy"];
     l2_cache_memory_budget_mb_ = json_object["l2_cache"]["cache_memory_budget_mb"];
-    fixed_table_path_ = json_object["fixed_table"]["path"];
-    fixed_table_block_size_ = json_object["fixed_table"]["block_size"];
-    fixed_table_chunk_size_ = json_object["fixed_table"]["chunk_size"];
+    persistent_table_path_ = json_object["kv_store"]["persistent_table"]["path"];
+    persistent_table_phisical_block_size_ =
+        json_object["kv_store"]["persistent_table"]["physical_block_size"];
 
     optimizer_type_ = json_object["optimizer"]["type"];
     if (optimizer_type_ == "sgd") {
@@ -94,9 +94,8 @@ class EmbeddingOptions final {
   int64_t L1CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
   std::string L2CachePolicy() const { return l2_cache_policy_; }
   int64_t L2CacheMemoryBudgetMb() const { return l2_cache_memory_budget_mb_; }
-  std::string FixedTablePath() const { return fixed_table_path_; }
-  int64_t FixedTableBlockSize() const { return fixed_table_block_size_; }
-  int64_t FixedTableChunkSize() const { return fixed_table_chunk_size_; }
+  std::string PersistentTablePath() const { return persistent_table_path_; }
+  int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
   std::string Optimizer() const { return optimizer_type_; }
   float Beta() const { return beta_; }
   float Beta1() const { return beta1_; }
@@ -118,9 +117,8 @@ class EmbeddingOptions final {
   int64_t l1_cache_memory_budget_mb_;
   std::string l2_cache_policy_;
   int64_t l2_cache_memory_budget_mb_;
-  std::string fixed_table_path_;
-  int64_t fixed_table_block_size_;
-  int64_t fixed_table_chunk_size_;
+  std::string persistent_table_path_;
+  int64_t persistent_table_phisical_block_size_;
   std::string optimizer_type_;
   float learning_rate_;
   float beta_;
