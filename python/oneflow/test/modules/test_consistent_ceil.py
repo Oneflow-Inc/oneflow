@@ -24,22 +24,19 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_bmm_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to_consistent(
-        placement=placement, sbp=sbp
-    )
-    y = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=5).to_consistent(
+def _test_ceil_with_random_data(test_case, placement, sbp):
+    x = random_pytorch_tensor(ndim=2, dim0=8, dim1=5).to_consistent(
         placement=placement, sbp=sbp
     )
 
-    return torch.bmm(x, y)
+    return torch.ceil(x)
 
 class TestModule(flow.unittest.TestCase):
     @consistent
     def test_bmm_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=3):
-                _test_bmm_with_random_data(test_case, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_ceil_with_random_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
