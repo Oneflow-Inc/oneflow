@@ -21,6 +21,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> IdShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
+  const Shape& slots_shape = ctx->InputShape("slots", 0);
+  CHECK_EQ_OR_RETURN(ids_shape, slots_shape);
   const ParallelDesc& parallel_desc = ctx->parallel_desc();
   const int64_t parallel_num = parallel_desc.parallel_num();
   *ctx->OutputShape("num_unique_ids", 0) = Shape({parallel_num});
@@ -44,6 +46,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> IdShuffleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
+  const Shape& slots_shape = ctx->InputShape("slots", 0);
+  CHECK_EQ_OR_RETURN(ids_shape, slots_shape);
   const ParallelDesc& parallel_desc = ctx->parallel_desc();
   const int64_t parallel_num = parallel_desc.parallel_num();
   *ctx->OutputShape("num_unique_ids", 0) = Shape({1});
