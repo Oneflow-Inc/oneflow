@@ -162,8 +162,7 @@ void VirtualMachine::ControlSync() {
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
   CHECK_JUST(Receive(&list));
-  CHECK_JUST(
-      bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
+  CHECK_JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -173,7 +172,7 @@ VirtualMachine::~VirtualMachine() {
   CHECK(!vm_);
 }
 
-std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions() {
+std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
   return [last_total_erased]() -> Maybe<bool> {
     auto* vm = Global<VirtualMachine>::Get();
@@ -220,8 +219,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
           return true;
         });
         notifier_.Notify();
-        JUST(bc.WaitUntilCntEqualZero(
-            VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
+        JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
         return Maybe<void>::Ok();
       }));
     }

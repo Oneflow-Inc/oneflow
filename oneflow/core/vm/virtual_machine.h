@@ -33,7 +33,7 @@ class VirtualMachine final {
   VirtualMachine(const Resource& resource, int64_t this_machine_id);
   ~VirtualMachine();
 
-  static std::function<Maybe<bool>()> GetPredicatorNoMoreErasedLivelyInstructions();
+  static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
   bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   std::string GetBlockingDebugString();

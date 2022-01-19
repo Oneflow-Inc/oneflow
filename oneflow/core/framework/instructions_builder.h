@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/spin_counter.h"
+#include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/opkernel_object.h"
@@ -142,6 +143,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> SyncAccessBlobByCallback(const T tensor,
                                        const std::shared_ptr<SpinCounter>& spin_counter,
                                        std::shared_ptr<std::function<void(uint64_t)>> callback,
+                                       const std::string& modifier);
+
+  template<typename T>
+  Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+                                       const std::function<void(uint64_t)>& Callback,
                                        const std::string& modifier);
 
   template<typename T>
