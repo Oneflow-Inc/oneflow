@@ -76,7 +76,7 @@ def clip_grad_norm_(
         >>> out2.backward()
         >>> norm2 = flow.nn.utils.clip_grad_norm_(x2, 0.5)
         >>> norm2
-        tensor([1.0394], dtype=oneflow.float32)
+        tensor(1.0394, dtype=oneflow.float32)
         >>> x2.grad
         tensor([[0.0962, 0.0481, 0.0283],
                 [0.0663, 0.4810, 0.0428]], dtype=oneflow.float32)
@@ -128,8 +128,7 @@ def clip_grad_norm_(
     clip_coef = max_norm / (total_norm + 1e-6)
     clip_coef_clamped = clip_coef.clamp(max=1.0)
     for p in parameters:
-        # TODO: Switch to inplace multiply in future
-        p.grad[:] = p.grad.detach().mul(clip_coef_clamped.to(p.grad.device))
+        p.grad.detach().mul_(clip_coef_clamped.to(p.grad.device))
     return total_norm
 
 

@@ -266,4 +266,32 @@ decltype(InFirstDeviceAndAllBroadcast) InFirstDeviceAndAllBroadcast =
     DECORATE(&RawInFirstDeviceAndAllBroadcast, ThreadLocal);
 decltype(OutFirstDeviceAndAllBroadcast) OutFirstDeviceAndAllBroadcast =
     DECORATE(&RawOutFirstDeviceAndAllBroadcast, ThreadLocal);
+
+namespace {
+
+Maybe<Symbol<PlacedNdSbp>> RawPlacementAndRepeatFirstSbp(Symbol<PlacedNdSbp> placed_nd_sbp) {
+  const auto& first_sbp_parallel = placed_nd_sbp->nd_sbp()->sbp_parallel(0);
+  cfg::NdSbp out_nd_sbp;
+  for (int64_t i = 0; i < placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {
+    out_nd_sbp.mutable_sbp_parallel()->Add()->CopyFrom(first_sbp_parallel);
+  }
+  return JUST(PlacedNdSbp::New(SymbolOf(out_nd_sbp), placed_nd_sbp->placement()));
+}
+
+static constexpr auto* PlacementAndRepeatFirstSbp =
+    DECORATE(&RawPlacementAndRepeatFirstSbp, ThreadLocal);
+
+Maybe<BoxingDividor> RawInPlacementAndRepeatFirstSbp() {
+  return std::make_shared<BoxingDividor>(
+      "InPlacementAndRepeatFirstSbp",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return PlacementAndRepeatFirstSbp(in);
+      });
+}
+
+}  // namespace
+
+decltype(InPlacementAndRepeatFirstSbp) InPlacementAndRepeatFirstSbp =
+    DECORATE(&RawInPlacementAndRepeatFirstSbp, ThreadLocal);
+
 }  // namespace oneflow

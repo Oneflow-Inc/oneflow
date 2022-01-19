@@ -8,7 +8,6 @@ if (WITH_ZLIB)
 endif()
 include(protobuf)
 include(googletest)
-include(gflags)
 include(glog)
 include(libjpeg-turbo)
 include(opencv)
@@ -45,7 +44,7 @@ if (WITH_ONEDNN)
   include(oneDNN)
 endif()
 
-set_mirror_url_with_hash(INJA_URL 
+set_mirror_url_with_hash(INJA_URL
   https://github.com/pantor/inja/archive/refs/tags/v3.3.0.zip
   611e6b7206d0fb89728a3879f78b4775
 )
@@ -130,12 +129,6 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-# libraries only a top level .so or exe should be linked to
-set(oneflow_exe_third_party_libs
-    glog_imported
-    gflags_imported
-)
-
 set(oneflow_test_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
@@ -179,8 +172,6 @@ endif()
 
 set(oneflow_third_party_dependencies
   protobuf
-  gflags
-  glog
   googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
@@ -210,8 +201,6 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ZLIB_INCLUDE_DIR}
-    ${GFLAGS_INCLUDE_DIR}
-    ${GLOG_INCLUDE_DIR}
     ${GOOGLETEST_INCLUDE_DIR}
     ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
@@ -328,11 +317,11 @@ if (THIRD_PARTY)
   endif()
   get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
   foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR})
     if(of_include_src_dir MATCHES "/include$")
-      set(ONEFLOW_INCLUDE_DIR_DST ${ONEFLOW_INCLUDE_DIR_PARENT})
+      # it requires two slashes, but in CMake doc it states only one slash is needed
+      set(of_include_src_dir "${of_include_src_dir}//")
     endif()
-    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR_DST}
+    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
       COMPONENT oneflow_py_include
       EXCLUDE_FROM_ALL
     )

@@ -61,12 +61,12 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const auto* in = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto elem_cnt = in->shape().elem_cnt();
     // judge whether tensor has 0 size dimension first
     if (!elem_cnt) { return; }
 
-    auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto dim = ctx->Attr<int64_t>("dim");
     const auto* in_ptr = in->dptr<T>();
     auto* out_ptr = out->mut_dptr<T>();
@@ -86,7 +86,7 @@ class CpuCumsumKernel final : public user_op::OpKernel {
 #define REGISTER_CUMSUM_KERNEL(dtype)                                                   \
   REGISTER_USER_KERNEL("cumsum").SetCreateFn<CpuCumsumKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
-      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUMSUM_KERNEL(int64_t)
 REGISTER_CUMSUM_KERNEL(float)

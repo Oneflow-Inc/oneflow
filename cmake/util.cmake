@@ -102,7 +102,7 @@ function(add_copy_headers_target)
 endfunction()
 
 function(use_mirror)
-  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/" 
+  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/"
     CACHE STRING "URL prefix of Aliyun OSS mirror"
   )
   cmake_parse_arguments(PARSED_ARGS
@@ -113,6 +113,10 @@ function(use_mirror)
     message(FATAL_ERROR "VARIABLE or URL required")
   endif()
 
+  if(PARSED_ARGS_URL MATCHES "file://")
+    set(${PARSED_ARGS_VARIABLE} ${PARSED_ARGS_URL} PARENT_SCOPE)
+    return()
+  endif()
   if(DEFINED THIRD_PARTY_MIRROR)
     if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
       if(NOT PARSED_ARGS_URL MATCHES "^https://")
@@ -255,4 +259,3 @@ function(set_compile_options_to_oneflow_target target)
     >)
   endif()
 endfunction()
-
