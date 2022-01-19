@@ -123,20 +123,20 @@ def _compare_lazy_consistent_with_torch(
 
 
 class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
-    # @consistent
-    # def test_eager_consistent_sparse_softmax_cross_entropy(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["data_type"] = ["float32", "double"]
-    #     arg_dict["label_type"] = ["int32", "int64"]
-    #     arg_dict["batch_size"] = [64]
-    #     arg_dict["num_classes"] = [1024]
-    #     for arg in GenArgList(arg_dict):
-    #         for placement in all_placement():
-    #             for logits_sbp in all_sbp(placement, max_dim=2):
-    #                 for labels_sbp in all_sbp(placement, max_dim=1):
-    #                     _compare_eager_consistent_with_torch(
-    #                         placement, logits_sbp, labels_sbp, *arg
-    #                     )
+    @consistent
+    def test_eager_consistent_sparse_softmax_cross_entropy(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["label_type"] = ["int32", "int64"]
+        arg_dict["batch_size"] = [64]
+        arg_dict["num_classes"] = [1024]
+        for arg in GenArgList(arg_dict):
+            for placement in all_placement():
+                for logits_sbp in all_sbp(placement, max_dim=2):
+                    for labels_sbp in all_sbp(placement, max_dim=1):
+                        _compare_eager_consistent_with_torch(
+                            placement, logits_sbp, labels_sbp, *arg
+                        )
 
     @consistent
     def test_lazy_consistent_sparse_softmax_cross_entropy(test_case):
