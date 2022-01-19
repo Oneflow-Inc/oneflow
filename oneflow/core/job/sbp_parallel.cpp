@@ -70,9 +70,9 @@ bool IsSbpSignatureContaining(const cfg::SbpSignature& bigger, const cfg::SbpSig
 void FilterSbpSignatureList(const cfg::SbpSignatureList& sbp_sig_list,
                             const cfg::SbpSignature& sbp_sig_conf,
                             cfg::SbpSignatureList* filtered_sbp_sig_list) {
-  for (const auto& sbp_sigature : sbp_sig_list.sbp_signature()) {
-    if (IsSbpSignatureContaining(sbp_sigature, sbp_sig_conf)) {
-      *filtered_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_sigature;
+  for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+    if (IsSbpSignatureContaining(sbp_signature, sbp_sig_conf)) {
+      *filtered_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_signature;
     }
   }
 }
