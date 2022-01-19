@@ -30,12 +30,28 @@
     ]
   bind_python: true
 
+- name: "add_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=True) => Add",
+      "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=True) => ScalarAdd",
+    ]
+  bind_python: true
+
 - name: "sub"
   signature:
     [
-      "Tensor (Tensor input, Tensor other) => Sub",
+      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Sub",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
       "Tensor (Scalar input, Tensor other) =>  ScalarSub",
+    ]
+  bind_python: true
+
+- name: "sub_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other, *, Bool inplace=True) => Sub",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=True) => ScalarSub",
     ]
   bind_python: true
 
@@ -62,6 +78,14 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+    ]
+  bind_python: true
+
+- name: "div_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceDiv",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarDiv",
     ]
   bind_python: true
 

@@ -214,6 +214,14 @@ class ScalarDiv2Functor {
   }
 };
 
+class InplaceScalarDivFunctor : public ScalarMathBaseFunctor {
+ public:
+  InplaceScalarDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_mul") {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMathBaseFunctor::operator()(x, Scalar(1.0) / scalar, true);
+  }
+};
+
 class ScalarPowFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
@@ -1830,6 +1838,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
