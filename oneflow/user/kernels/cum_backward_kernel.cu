@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/cum_kernel.h"
 
 namespace oneflow {
 #ifdef WITH_CUDA
