@@ -506,7 +506,21 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.mul_,
     """
-    In-place version of :func`oneflow.Tensor.mul`.
+    In-place version of :func:`oneflow.Tensor.mul`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div_,
+    """
+    In-place version of :func:`oneflow.Tensor.div`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub_,
+    """
+    In-place version of :func:`oneflow.Tensor.sub`.
     """,
 )
 
