@@ -107,23 +107,23 @@ def clip_grad_norm_(
             ),
             norm_type,
         )
-    if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
-        if error_if_nonfinite:
-            raise RuntimeError(
-                f"The total norm of order {norm_type} for gradients from "
-                "`parameters` is non-finite, so it cannot be clipped. To disable "
-                "this error and scale the gradients by the non-finite norm anyway, "
-                "set `error_if_nonfinite=False`"
-            )
-        else:
-            warnings.warn(
-                "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
-                "Note that the default behavior will change in a future release to error out "
-                "if a non-finite total norm is encountered. At that point, setting "
-                "error_if_nonfinite=false will be required to retain the old behavior.",
-                FutureWarning,
-                stacklevel=2,
-            )
+    # if np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all():
+    #     if error_if_nonfinite:
+    #         raise RuntimeError(
+    #             f"The total norm of order {norm_type} for gradients from "
+    #             "`parameters` is non-finite, so it cannot be clipped. To disable "
+    #             "this error and scale the gradients by the non-finite norm anyway, "
+    #             "set `error_if_nonfinite=False`"
+    #         )
+    #     else:
+    #         warnings.warn(
+    #             "Non-finite norm encountered in flow.nn.utils.clip_grad_norm_; continuing anyway. "
+    #             "Note that the default behavior will change in a future release to error out "
+    #             "if a non-finite total norm is encountered. At that point, setting "
+    #             "error_if_nonfinite=false will be required to retain the old behavior.",
+    #             FutureWarning,
+    #             stacklevel=2,
+    #         )
 
     clip_coef = max_norm / (total_norm + 1e-6)
     clip_coef_clamped = clip_coef.clamp(max=1.0)
