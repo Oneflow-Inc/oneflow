@@ -99,8 +99,8 @@ bool ConsistentTensor::is_cuda() const {
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {
-  std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
-  return t;
+  std::shared_ptr<Tensor> tensor = std::make_shared<ConsistentTensor>(JUST(impl_->detach()));
+  return tensor;
 }
 
 Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
