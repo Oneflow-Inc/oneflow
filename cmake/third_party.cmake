@@ -8,7 +8,6 @@ if (WITH_ZLIB)
 endif()
 include(protobuf)
 include(googletest)
-include(gflags)
 include(glog)
 include(libjpeg-turbo)
 include(opencv)
@@ -130,12 +129,6 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-# libraries only a top level .so or exe should be linked to
-set(oneflow_exe_third_party_libs
-    glog_imported
-    gflags_imported
-)
-
 set(oneflow_test_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
@@ -179,8 +172,6 @@ endif()
 
 set(oneflow_third_party_dependencies
   protobuf
-  gflags
-  glog
   googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
@@ -210,8 +201,6 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ZLIB_INCLUDE_DIR}
-    ${GFLAGS_INCLUDE_DIR}
-    ${GLOG_INCLUDE_DIR}
     ${GOOGLETEST_INCLUDE_DIR}
     ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
