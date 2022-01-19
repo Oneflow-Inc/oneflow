@@ -900,7 +900,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_t_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(
@@ -909,7 +909,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.t()
         return y
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_T_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=random(1, 4)).to(device)
