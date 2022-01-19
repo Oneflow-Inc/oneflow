@@ -1335,7 +1335,9 @@ add_docstr(
 
 add_docstr(
     oneflow.cumsum,
-    r"""This operator computes the cumulative sum of input elements in the given dimension.
+    r"""oneflow.cumsum(input, dim) -> Tensor
+    
+    This operator computes the cumulative sum of input elements in the given dimension.
 
     The equation is:
 
@@ -1366,7 +1368,9 @@ add_docstr(
 
 add_docstr(
     oneflow.cumprod,
-    r"""This operator computes the cumulative product of input elements in the given dimension.
+    """oneflow.cumprod(input, dim) -> Tensor
+
+    This operator computes the cumulative product of input elements in the given dimension.
 
     The equation is:
 
