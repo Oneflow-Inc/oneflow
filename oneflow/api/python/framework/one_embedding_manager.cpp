@@ -44,6 +44,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
 ONEFLOW_API_PYBIND11_MODULE("", m){
   py::class_<OneEmbeddingHandler, std::shared_ptr<OneEmbeddingHandler>>(m, "OneEmbeddingManager")
+      .def(py::init([](){return std::make_shared<OneEmbeddingHandler>(); })) 
       .def("SaveSnapshot", &OneEmbeddingHandler::SaveSnapshot); 
 }
 
