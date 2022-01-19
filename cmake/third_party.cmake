@@ -168,6 +168,10 @@ endif()
 
 set(oneflow_third_party_dependencies
   protobuf
+<<<<<<< HEAD
+=======
+  googletest
+>>>>>>> 0dbb976003c87a6924ffa337f6f7cb6eacdce073
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -196,6 +200,11 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ZLIB_INCLUDE_DIR}
+<<<<<<< HEAD
+=======
+    ${GOOGLETEST_INCLUDE_DIR}
+    ${GOOGLEMOCK_INCLUDE_DIR}
+>>>>>>> 0dbb976003c87a6924ffa337f6f7cb6eacdce073
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
     ${LIBJPEG_INCLUDE_DIR}
