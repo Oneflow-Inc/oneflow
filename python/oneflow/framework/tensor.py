@@ -259,11 +259,11 @@ def _rsub(self, other):
 
 
 def _truediv(self, other):
-    return flow.div(self, other)
+    return flow._C.div(self, other)
 
 
 def _truediv_inplace(self, other):
-    return flow.div_(self, other)
+    return flow._C.div_(self, other)
 
 
 def _rtruediv(self, other):

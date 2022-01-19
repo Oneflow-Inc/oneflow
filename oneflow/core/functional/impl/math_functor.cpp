@@ -164,14 +164,6 @@ class ScalarAdd2Functor {
   }
 };
 
-class InplaceScalarAddFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
-                           const Scalar& alpha) const {
-    return ScalarAdd(x, scalar, /*alpha=*/alpha, /*inplace=*/true);
-  }
-};
-
 class ScalarSubFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
@@ -1842,7 +1834,6 @@ using namespace impl;
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AddNFunctor>("Add");
   m.add_functor<ScalarAddFunctor, ScalarAdd2Functor>("ScalarAdd");
-  m.add_functor<InplaceScalarAddFunctor>("InplaceScalarAdd");
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
