@@ -58,7 +58,10 @@ class TensorStorage {
     last_used_device_ = last_used_device;
   }
 
-  void Release() { blob_dptr_.reset(); }
+  void Release() {
+    non_pod_allocator_.reset();
+    blob_dptr_.reset();
+  }
 
  private:
   size_t blob_bytes_;
