@@ -1647,6 +1647,10 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerPToS"
   bind_python: False
 
+- name: "eager_s_to_p"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerSToP"
+  bind_python: False
+
 - name: "consistent_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False
