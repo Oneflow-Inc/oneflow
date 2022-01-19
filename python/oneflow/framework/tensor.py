@@ -250,12 +250,20 @@ def _sub(self, other):
     return flow.sub(self, other)
 
 
+def _sub_inplace(self, other):
+    return flow.sub(self, other, inplace=True)
+
+
 def _rsub(self, other):
     return flow.sub(other, self)
 
 
 def _truediv(self, other):
     return flow.div(self, other)
+
+
+def _truediv_inplace(self, other):
+    return flow.div_(self, other)
 
 
 def _rtruediv(self, other):
@@ -853,10 +861,12 @@ def RegisterMethods():
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
+    Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
     Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
+    Tensor.sub_ = _sub_inplace
     Tensor.asin = _asin
     Tensor.arcsin = _arcsin
     Tensor.asinh = _asinh

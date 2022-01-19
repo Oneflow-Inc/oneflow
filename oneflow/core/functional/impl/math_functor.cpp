@@ -164,6 +164,14 @@ class ScalarAdd2Functor {
   }
 };
 
+class InplaceScalarAddFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           const Scalar& alpha) const {
+    return ScalarAdd(x, scalar, /*alpha=*/alpha, /*inplace=*/true);
+  }
+};
+
 class ScalarSubFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
@@ -1594,7 +1602,7 @@ class StandardDeviationFunctor {
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square));
+      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
             sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
@@ -1627,7 +1635,7 @@ class StandardDeviationFunctor {
       const auto& square = JUST(functional::Square(
           JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
                                      Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square));
+      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
@@ -1834,6 +1842,7 @@ using namespace impl;
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AddNFunctor>("Add");
   m.add_functor<ScalarAddFunctor, ScalarAdd2Functor>("ScalarAdd");
+  m.add_functor<InplaceScalarAddFunctor>("InplaceScalarAdd");
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
