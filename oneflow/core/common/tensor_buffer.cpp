@@ -247,20 +247,21 @@ void TensorBufferPool::Deallocate(ItemT* item) {
   if (thread_local_cache.size() < thread_local_cache_size_) {
     thread_local_cache.push_back(std::move(*item));
   } else {
-    std::unique_lock<std::mutex> lck(mtx_);
     size_t releases = thread_local_cache.size() / 2;
-    if (global_free_list_.size() < pool_size_) {
-      global_free_list_.push_back(std::move(*item));
-      // release half of tensor buffers in thread local cache back to global free list
-      while (global_free_list_.size() < pool_size_ && releases > 0) {
-        global_free_list_.push_back(std::move(thread_local_cache.back()));
-        thread_local_cache.pop_back();
-        releases--;
+    {
+      std::unique_lock<std::mutex> lck(mtx_);
+      if (global_free_list_.size() < pool_size_) {
+        global_free_list_.push_back(std::move(*item));
+        // release half of tensor buffers in thread local cache back to global free list
+        while (global_free_list_.size() < pool_size_ && releases > 0) {
+          global_free_list_.push_back(std::move(thread_local_cache.back()));
+          thread_local_cache.pop_back();
+          releases--;
+        }
       }
-    } else {
-      // global free list is also full, release half of thread local cache
-      thread_local_cache.resize(thread_local_cache.size() - releases);
     }
+    // global free list is also full, release half of thread local cache
+    thread_local_cache.resize(thread_local_cache.size() - releases);
   }
   if (*item) { item->reset(); }
 }
