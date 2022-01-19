@@ -110,7 +110,7 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
                                 uint64_t inc_offset, const int64_t line_size,
                                 const int64_t embedding_size, InitParam<IDX> param,
                                 const IDX* slots, const uint32_t* num_missing_keys,
-                                const K* missing_keys, const uint32_t* missing_indices, T* values) {
+                                const uint32_t* missing_indices, T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -143,16 +143,13 @@ class PrefetchTmpBufferManager final {
   PrefetchTmpBufferManager(void* ptr, const int64_t num_keys, const int64_t value_size)
       : ptr_(ptr) {
     const size_t num_store_missing_bytes = GetCudaAlignedSize(1 * sizeof(uint32_t));
-    const size_t store_missing_keys_bytes = GetCudaAlignedSize(num_keys * sizeof(K));
     const size_t store_missing_indices_bytes = GetCudaAlignedSize(num_keys * sizeof(uint32_t));
     const size_t store_values_bytes = GetCudaAlignedSize(num_keys * value_size * sizeof(T));
 
     num_store_missing_offset_ = 0;
-    store_missing_keys_offset_ = num_store_missing_offset_ + num_store_missing_bytes;
-    store_missing_indices_offset_ = store_missing_keys_offset_ + store_missing_keys_bytes;
+    store_missing_indices_offset_ = num_store_missing_offset_ + num_store_missing_bytes;
     store_values_offset_ = store_missing_indices_offset_ + store_missing_indices_bytes;
-    total_buffer_size_ = num_store_missing_bytes + store_missing_keys_bytes
-                         + store_missing_indices_bytes + store_values_bytes;
+    total_buffer_size_ = num_store_missing_bytes + store_missing_indices_bytes + store_values_bytes;
   }
   ~PrefetchTmpBufferManager() = default;
 
@@ -161,10 +158,6 @@ class PrefetchTmpBufferManager final {
   uint32_t* NumStoreMissingPtr() const {
     CHECK(ptr_ != nullptr);
     return reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(ptr_) + num_store_missing_offset_);
-  }
-  K* StoreMissingKeysPtr() const {
-    CHECK(ptr_ != nullptr);
-    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + store_missing_keys_offset_);
   }
   uint32_t* StoreMissingIndicesPtr() const {
     CHECK(ptr_ != nullptr);
@@ -178,7 +171,6 @@ class PrefetchTmpBufferManager final {
 
  private:
   size_t num_store_missing_offset_;
-  size_t store_missing_keys_offset_;
   size_t store_missing_indices_offset_;
   size_t store_values_offset_;
   size_t total_buffer_size_;
@@ -265,8 +257,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
         <<<grid_size, line_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             seed, cuda_gen_state, inc_offset, line_size, embedding_size, init_param,
             slots->dptr<IDX>(), buffer_manager.NumStoreMissingPtr(),
-            buffer_manager.StoreMissingKeysPtr(), buffer_manager.StoreMissingIndicesPtr(),
-            buffer_manager.StoreValuesPtr());
+            buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
     store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
