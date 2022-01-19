@@ -17,16 +17,34 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+
 namespace py = pybind11;
 
 namespace oneflow {
 
+class OneEmbeddingHandler final {
+	public: 
+  void SaveSnapshot(const std::string& embedding_name, int64_t parallel_id, const std::string& snapshot_name){
+    Global<EmbeddingMgr>::Get()->SaveSnapshot(embedding_name, parallel_id, snapshot_name); 
+  }
+  
+}; 
+
+/*
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<EmbeddingMgr, std::shared_ptr<EmbeddingMgr>>(m, "OneEmbeddingManager")
-      .def(py::init([]() { return std::make_shared<EmbeddingMgr>(); }))
-      .def("get_key_value_store", &EmbeddingMgr::GetKeyValueStore)
-      .def("save_snapshot", &EmbeddingMgr::SaveSnapshot)
-      .def("load_snapshot", &EmbeddingMgr::LoadSnapshot);
+      .def(py::init([]() { return std::make_shared<EmbeddingMgr>(); })) // todo: remove
+      .def("GetKeyValueStore", &EmbeddingMgr::GetKeyValueStore)
+      .def("GetOrCreateKeyValueStore", &EmbeddingMgr::GetOrCreateKeyValueStore)
+      .def("CreateKeyValueStore", &EmbeddingMgr::CreateKeyValueStore)
+      .def("SaveSnapshot", &EmbeddingMgr::SaveSnapshot)
+      .def("LoadSnapshot", &EmbeddingMgr::LoadSnapshot);
+}
+*/
+
+ONEFLOW_API_PYBIND11_MODULE("", m){
+  py::class_<OneEmbeddingHandler, std::shared_ptr<OneEmbeddingHandler>>(m, "OneEmbeddingManager")
+      .def("SaveSnapshot", &OneEmbeddingHandler::SaveSnapshot); 
 }
 
 }  // namespace oneflow

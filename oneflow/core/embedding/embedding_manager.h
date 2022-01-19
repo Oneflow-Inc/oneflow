@@ -40,7 +40,7 @@ class EmbeddingMgr final {
 
   embedding::KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t parallel_id,
                                              int64_t parallel_num);
-  void CreateKeyValueStore(const embedding::EmbeddingOptions& options, int64_t parallel_id,
+  void CreateKeyValueStore(std::string options, int64_t parallel_id,
                            int64_t parallel_num, uint64_t cuda_device_id);
 
  private:
