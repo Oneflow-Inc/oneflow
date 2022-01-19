@@ -44,11 +44,12 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         t4 = flow.tensor(t4, dtype=flow.float32)
         
         def fn(*args, **kwargs):
+            print("kw: ", type(kwargs))
             io_node = IONode(None, 0, IONodeType.EMPTY, None, args, kwargs)
-            for (name, node) in list(io_node.named_nodes()):
+            for (name, node) in list(io_node.named_nodes(None, "0")):
                 print(name, repr(node))
 
-        fn(1, x, lt0, dic=t4)
+        fn(None, 1, x, lt0, {'dic':t4})
         
 
     def _test_non_tensor_types_of_module(test_case):

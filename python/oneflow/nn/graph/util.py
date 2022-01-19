@@ -110,20 +110,20 @@ class IONode(object):
             memo = set()
         if self not in memo:
             memo.add(self)
-            yield (prefix + str(self._start_idx), self)
+            yield (prefix + "-" + str(self._name), self)
             for (name, node) in self._sub_nodes.items():
                 if node is None:
                     continue
-                subnode_prefix = prefix + ("_" if prefix else "") + str(name)
+                subnode_prefix = prefix + ("." if prefix else "") + str(name)
                 for n in node.named_nodes(memo, subnode_prefix):
                     yield n
     
     def __repr__(self):
         repr_str = ""
-        repr_str += "(" + self._name
+        repr_str += "(name: " + self._name
         repr_str += ', idx: ' + str(self._start_idx)
         repr_str += ", type: " + self._type
-        repr_str += ", value: " + repr(self._value)
+        repr_str += ", value: " + repr(self._value) + ")"
         return repr_str
 
 
