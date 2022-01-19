@@ -46,3 +46,4 @@ from .clamp import *
 from .erfinv import *
 from .swapaxes import *
 from .repeat import *
+from .tile import *
