@@ -55,8 +55,7 @@ class IONodeType:
     LIST = "LIST"
     TUPLE = "TUPLE"
     DICT = "DICT"
-    # Opaque data type
-    OPA= "OPA"
+    OPAQUE= "OPAQUE"
 
 class IONode(object):
     def __init__(self, name=None, start_idx=0, n_type=IONodeType.EMPTY, value=None, seq=None, dic=None):
@@ -103,7 +102,7 @@ class IONode(object):
         elif item is None:
             self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.NONE, item, None, None))
         else:
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.OPA, item, None, None))
+            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.OPAQUE, item, None, None))
 
     def named_nodes(self, memo = None, prefix: str = ""):
         if memo is None:

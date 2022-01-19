@@ -42,14 +42,16 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         t4 = np.ones((2, 2))
         t4 = flow.tensor(t4, dtype=flow.float32)
+
+        t4 = np.ones((2, 2))
+        t4 = flow.tensor(t4, dtype=flow.float32)
         
         def fn(*args, **kwargs):
-            print("kw: ", type(kwargs))
             io_node = IONode(None, 0, IONodeType.EMPTY, None, args, kwargs)
-            for (name, node) in list(io_node.named_nodes(None, "0")):
+            for (name, node) in list(io_node.named_nodes(None, "Graph_0")):
                 print(name, repr(node))
 
-        fn(None, 1, x, lt0, {'dic':t4})
+        fn(None, 1, "test_str", x, lt0, {'t':t4, 'l':lt0}, kw=t4)
         
 
     def _test_non_tensor_types_of_module(test_case):
