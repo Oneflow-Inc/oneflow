@@ -148,6 +148,7 @@ OneFlow Tensor Class
             storage_offset, 
             stride, 
             swapaxes, 
+            swapdims,
             sub, 
             tan, 
             tanh, 

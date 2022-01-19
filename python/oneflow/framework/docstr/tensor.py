@@ -388,6 +388,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.swapdims,
+    """
+    See :func:`oneflow.swapdims`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`

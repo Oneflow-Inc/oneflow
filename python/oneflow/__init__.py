@@ -174,6 +174,7 @@ from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
+from oneflow._C import swapdims
 
 
 from . import sbp

@@ -650,6 +650,28 @@ class SwapaxesFunctor {
   }
 };
 
+class SwapdimsFunctor {
+ public:
+  SwapdimsFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, 
+                           const int32_t dim0, const int32_t dim1) const {
+    const int64_t ndim = input->shape()->NumAxes();
+    int32_t dim_0 = dim0;
+    int32_t dim_1 = dim1;
+
+    if (dim0 < 0) { dim_0 += ndim; }
+    if (dim1 < 0) { dim_1 += ndim; }
+
+    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
+    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
+    return Transpose2dim(input, dim_0, dim_1);
+  }
+};
+
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
@@ -1851,6 +1873,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<SwapaxesFunctor>("Swapaxes");
+  m.add_functor<SwapdimsFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");

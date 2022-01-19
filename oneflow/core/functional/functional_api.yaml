@@ -299,6 +299,13 @@
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
 
+- name: "swapdims"
+  signature:
+    [
+      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapdims",
+    ]
+  bind_python: True
+
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
   bind_python: True
