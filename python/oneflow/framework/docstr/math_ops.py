@@ -1375,7 +1375,7 @@ add_docstr(
 	$$
 
     Args:
-        input (Tensor):  the input ND tensor.
+        input (Tensor):  the input tensor.
         dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
 
     Returns:
