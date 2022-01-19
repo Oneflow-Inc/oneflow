@@ -789,3 +789,10 @@ add_docstr(
     See :func:`oneflow.repeat`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.tile,
+    """
+    See :func:`oneflow.tile`
+    """,
+)

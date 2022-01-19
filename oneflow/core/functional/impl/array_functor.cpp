@@ -2574,6 +2574,24 @@ class RepeatFunctor {
     return result;
   }
 };
+
+class TileFunctor {
+ public:
+  TileFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Shape& dims) const {
+    std::vector<int32_t> new_dims_vec;
+    int32_t numaxes_diff = input->shape()->NumAxes() - dims.NumAxes();
+    for (int32_t i = dims.NumAxes() - 1; i >= 0; i--) {
+      CHECK_GE_OR_RETURN(dims.At(i), 0)
+          << "RuntimeError: Tring to create tensor with negative dimension " << dims.At(i);
+      new_dims_vec.insert(new_dims_vec.begin(), dims.At(i));
+    }
+    for (int32_t i = 0; i < numaxes_diff; i++) { new_dims_vec.insert(new_dims_vec.begin(), 1); }
+    Shape new_dims(DimVector(new_dims_vec.begin(), new_dims_vec.end()));
+    return JUST(Repeat(input, new_dims));
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2678,6 +2696,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
   m.add_functor<impl::RepeatFunctor>("Repeat");
+  m.add_functor<impl::TileFunctor>("Tile");
 };
 
 }  // namespace functional

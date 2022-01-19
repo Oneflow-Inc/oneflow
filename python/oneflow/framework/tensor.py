@@ -746,9 +746,25 @@ def _gather(self, dim, index):
 
 
 def _repeat(self, *sizes):
-    return flow._C.repeat(self, sizes)
+    if len(sizes) == 1:
+        new_sizes = dim[0]
+        if isinstance(new_sizes, int):
+            new_sizes = (new_sizes,)
+    else:
+        new_sizes = sizes
+    return flow._C.repeat(self, new_sizes)
 
-  
+
+def _tile(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.tile(self, new_dims)
+
+
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -909,6 +925,7 @@ def RegisterMethods():
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
     Tensor.repeat = _repeat
+    Tensor.tile = _tile
     Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
