@@ -94,6 +94,24 @@ std::shared_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
 }
 
 struct LocalCallOpKernelUtil {
+  static Maybe<void> CheckInputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
+    return ForEachDTRInputTensor(operand,
+                                 [](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+                                   CHECK_OR_RETURN(dtr_blob_object->is_in_memory());
+                                   CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
+                                   return Maybe<void>::Ok();
+                                 });
+  }
+
+  static Maybe<void> CheckOutputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
+    return ForEachDTROutputTensor(
+        operand, [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
+          CHECK_OR_RETURN(object->is_in_memory());
+          CHECK_NOTNULL_OR_RETURN(object->blob().dptr());
+          return Maybe<void>::Ok();
+        });
+  }
+
   // inputs are guaranteed to be in memory before calling this function,
   // thus no recomputation is needed, but eviction is still possible.
   static inline Maybe<void> ComputeOperand(LocalCallOpKernelPhyInstrOperand* operand,
@@ -105,62 +123,24 @@ struct LocalCallOpKernelUtil {
 
     JUST(InferTempStorageBlobDesc(operand));
     JUST(ResetTempStorageBlob(operand));
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-          return Maybe<void>::Ok();
-        }));
+
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-          return Maybe<void>::Ok();
-        }));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-          return Maybe<void>::Ok();
-        }));
-    JUST(ForEachDTROutputTensor(
-        operand, [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
-          CHECK_OR_RETURN(object->is_in_memory());
-          return Maybe<void>::Ok();
-        }));
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-          return Maybe<void>::Ok();
-        }));
+
     user_op::OpKernelState* state;
     TryInitOpKernelState(operand, device_ctx, &state);
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-          return Maybe<void>::Ok();
-        }));
+    if (oneflow::DTREnabled()) { JUST(CheckInputInMemory(operand)); }
     JUST(OpKernelCompute(operand, device_ctx, state));
-    JUST(
-        ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-          CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-          return Maybe<void>::Ok();
-        }));
 
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
     if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "DoCompute done"; }
-    JUST(ForEachDTROutputTensor(
-        operand, [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
-          CHECK_OR_RETURN(object->is_in_memory());
-          return Maybe<void>::Ok();
-        }));
+    if (oneflow::DTREnabled()) {
+      JUST(CheckOutputInMemory(operand));
+    }
     return Maybe<void>::Ok();
   }
   static inline Maybe<void> ComputeInstruction(vm::Instruction* instruction);
-
-  // static inline Maybe<void> evict(vm::DTREagerBlobObject* blob_object) {
-  //   return Maybe<void>::Ok();
-  // }
 
   static inline Maybe<LocalCallOpKernelPhyInstrOperand> GetLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
@@ -274,11 +254,9 @@ struct LocalCallOpKernelUtil {
       CHECK_NOTNULL_OR_RETURN(blob_object->tensor_buffer()->blob_dptr());
       return Maybe<void>::Ok();
     }));
-    JUST(ForEachDTROutputTensor(
-        operand, [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
-          CHECK_OR_RETURN(object->is_in_memory());
-          return Maybe<void>::Ok();
-        }));
+    if (oneflow::DTREnabled()) {
+      JUST(CheckOutputInMemory(operand));
+    }
     return Maybe<void>::Ok();
   }
 

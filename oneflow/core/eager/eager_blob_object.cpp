@@ -378,7 +378,7 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
 
 Maybe<double> DTREagerBlobObject::cost() const {
   const auto& heuristic = Global<DTRConfig>::Get()->heuristic;
-  const double cost = CHECK_JUST(this->cost(heuristic));
+  const double cost = JUST(this->cost(heuristic));
   return cost;
 }
 

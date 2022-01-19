@@ -20,19 +20,17 @@ limitations under the License.
 namespace py = pybind11;
 
 namespace oneflow {
-Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level, int memory_policy,
-                              const std::string &heuristic) {
+Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
+                              const std::string& heuristic) {
   CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
-  *Global<DTRConfig>::Get() =
-      DTRConfig(enable_dtr, thres, debug_level, memory_policy, heuristic);
+  *Global<DTRConfig>::Get() = DTRConfig(enable_dtr, thres, debug_level, heuristic);
   return Maybe<void>::Ok();
 }
 }  // namespace oneflow
 
-void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level, int memory_policy,
-                          const std::string &heuristic) {
-  oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, memory_policy, heuristic)
-      .GetOrThrow();
+void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
+                          const std::string& heuristic) {
+  oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, heuristic).GetOrThrow();
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

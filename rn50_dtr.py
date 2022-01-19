@@ -46,7 +46,6 @@ else:
 WARMUP_ITERS = 2
 ALL_ITERS = int(os.environ["OF_ITERS"])
 
-memory_policy = 2
 heuristic = "eq_compute_time_and_last_access"
 
 if dtr_enabled:
@@ -55,7 +54,7 @@ else:
     print(f'dtr_enabled: {dtr_enabled}')
 
 if dtr_enabled:
-    flow.enable_dtr(dtr_enabled, threshold, debug_level, memory_policy, heuristic)
+    flow.enable_dtr(dtr_enabled, threshold, debug_level, heuristic)
 
 seed = 20
 flow.manual_seed(seed)

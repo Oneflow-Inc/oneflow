@@ -285,7 +285,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       total_size += end->second->size;
       // end_tensor is fakely evicted, update_after_pesudo_evict
       if (end_tensor != nullptr) {
-        Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor);
+        CHECK_JUST(Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor));
       }
       cost += get_cost(end_tensor, -1);
       end++;
