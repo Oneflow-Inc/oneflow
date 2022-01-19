@@ -394,6 +394,10 @@ def _arcsin(self):
     return flow.arcsin(self)
 
 
+def _argwhere(self):
+    return flow.argwhere(self)
+
+
 def _asinh(self):
     return flow.asinh(self)
 
@@ -825,6 +829,7 @@ def RegisterMethods():
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
+    Tensor.argwhere = _argwhere
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh

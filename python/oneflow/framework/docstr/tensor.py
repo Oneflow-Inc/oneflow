@@ -327,6 +327,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.argwhere,
+    """
+    See :func:`oneflow.argwhere`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atanh,
     """
     See :func:`oneflow.atanh`
