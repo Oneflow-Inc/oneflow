@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/lru_cache.h"
-#include "oneflow/core/embedding/full_cache.h"
+#include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"

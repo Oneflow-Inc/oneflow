@@ -74,7 +74,7 @@ void MemcpyOffset(void* dst, size_t dst_off, const void* src, size_t src_off, si
 void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
   bool exists = PosixFile::FileExists(pathname);
   if (init) {
-    CHECK(!exists);
+    CHECK(!exists) << pathname;
     std::ofstream ofs(pathname);
     ofs << expected << std::endl;
   } else {

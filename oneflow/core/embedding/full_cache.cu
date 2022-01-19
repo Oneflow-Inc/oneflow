@@ -16,10 +16,15 @@ limitations under the License.
 #include "oneflow/core/embedding/full_cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/embedding/hash_functions.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 
 namespace oneflow {
 
 namespace embedding {
+
+using Key32 = unsigned int;
+using Key64 = unsigned long long int;
+using Key128 = ulonglong2;
 
 namespace {
 
@@ -29,54 +34,12 @@ struct alignas(2 * std::max(sizeof(Key), sizeof(Index))) TableEntry {
   Index index;
 };
 
-using CuInt64T = unsigned long long int;
-
-__device__ __inline__ int32_t AtomicCAS(int32_t* address, int32_t compare, int32_t val) {
-  return atomicCAS(address, compare, val);
-}
-
-__device__ __inline__ int32_t AtomicCAS(uint32_t* address, uint32_t compare, uint32_t val) {
-  return atomicCAS(address, compare, val);
-}
-
-__device__ __inline__ int64_t AtomicCAS(int64_t* address, int64_t compare, int64_t val) {
-  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
-  return static_cast<int64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
-                                        static_cast<CuInt64T>(compare),
-                                        static_cast<CuInt64T>(val)));
-}
-
-__device__ __inline__ uint64_t AtomicCAS(uint64_t* address, uint64_t compare, uint64_t val) {
-  static_assert(sizeof(uint64_t) == sizeof(CuInt64T), "size error");
-  return static_cast<uint64_t>(atomicCAS(reinterpret_cast<CuInt64T*>(address),
-                                         static_cast<CuInt64T>(compare),
-                                         static_cast<CuInt64T>(val)));
-}
-
-__device__ __inline__ int32_t AtomicAdd(int32_t* address, int32_t val) {
-  return atomicAdd(address, val);
-}
-
-__device__ __inline__ int32_t AtomicAdd(uint32_t* address, uint32_t val) {
-  return atomicAdd(address, val);
-}
-
-__device__ __inline__ int32_t AtomicAdd(uint64_t* address, uint64_t val) {
-  return atomicAdd(reinterpret_cast<unsigned long long int*>(address), val);
-}
-
-__device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
-  static_assert(sizeof(int64_t) == sizeof(CuInt64T), "size error");
-  return static_cast<int64_t>(
-      atomicAdd(reinterpret_cast<CuInt64T*>(address), static_cast<CuInt64T>(val)));
-}
-
 template<typename Key, typename Index>
 __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint64_t* table_size,
                                Key key, uint64_t* out) {
-  Key old_entry_key = AtomicCAS(entry_key, static_cast<Key>(0), key);
+  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key);
   if (old_entry_key == 0) {
-    Index index = AtomicAdd(table_size, 1) + 1;
+    Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1)) + 1;
     *entry_index = index;
     *out = index;
     return true;
@@ -162,7 +125,7 @@ __global__ void OrdinalEncodeDumpKernel(const TableEntry<Key, Index>* table,
   CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
     TableEntry<Key, Index> entry = table[i + start_key_index];
     if (entry.index != 0) {
-      uint32_t index = atomicAdd(n_dumped, 1);
+      uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
       keys[index] = entry.key;
       context[index] = entry.index;
     }
@@ -194,7 +157,7 @@ __global__ void LookupKernel(uint32_t value_length, uint64_t capacity, const Ele
       if (missing_key == 0) {
         if (return_value) { values[col_id] = Zero<Elem>(); }
       } else if (col_id == 0) {
-        const uint32_t old_n_missing = atomicAdd(n_missing, 1);
+        const uint32_t old_n_missing = cuda::atomic::Add(n_missing, static_cast<uint32_t>(1));
         missing_keys[old_n_missing] = missing_key;
         missing_indices[old_n_missing] = key_id;
       }
@@ -432,10 +395,10 @@ std::unique_ptr<Cache> DispatchValueType(const CacheOptions& options) {
 }
 
 std::unique_ptr<Cache> DispatchKeyType(const CacheOptions& options) {
-  if (options.key_size == sizeof(uint32_t)) {
-    return DispatchValueType<uint32_t>(options);
-  } else if (options.key_size == sizeof(uint64_t)) {
-    return DispatchValueType<uint64_t>(options);
+  if (options.key_size == sizeof(Key32)) {
+    return DispatchValueType<Key32>(options);
+  } else if (options.key_size == sizeof(Key64)) {
+    return DispatchValueType<Key64>(options);
   } else {
     UNIMPLEMENTED();
     return nullptr;
