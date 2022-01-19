@@ -357,14 +357,14 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_functional_hardsigmoid_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.nn.functional.hardsigmoid(x, random_bool())
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_functional_hardsigmoid_with_0dim_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=0).to(device)
