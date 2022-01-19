@@ -111,14 +111,6 @@ class BroadcastPowFunctor : public BinaryFloatFunctor {
   }
 };
 
-// class SubFunctor : public BinaryFunctor {
-//  public:
-//   SubFunctor() {
-//     op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
-//   }
-// };
-
-// here
 class SubFunctor : public InplaceableBinaryFunctor {
  public:
   SubFunctor() {
