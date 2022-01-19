@@ -23,11 +23,13 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -207,6 +209,22 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     JUST(vm_->Receive(instr_list));
     while (!vm_->Empty()) { vm_->Schedule(); }
   } else {
+    const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+    const int64_t kLowWaterMark = GetInstructionLowWaterMark();
+    if (vm_->flying_instruction_cnt() > kHighWaterMark) {
+      JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+        BlockingCounter bc(1);
+        vm_->InsertProbe([&](vm::VirtualMachineEngine* vm) {
+          if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
+          bc.Decrease();
+          return true;
+        });
+        notifier_.Notify();
+        JUST(bc.WaitUntilCntEqualZero(
+            VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
+        return Maybe<void>::Ok();
+      }));
+    }
     if (JUST(vm_->Receive(instr_list))) {
       // old pending_instruction_list is empty.
       notifier_.Notify();

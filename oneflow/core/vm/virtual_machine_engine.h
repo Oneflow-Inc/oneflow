@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/intrusive/mutexed_list.h"
 #include "oneflow/core/intrusive/object_pool.h"
+#include "oneflow/core/vm/probe.h"
 
 namespace oneflow {
 
@@ -69,6 +70,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   size_t total_erased_lively_instruction_cnt() const {
     return total_erased_lively_instruction_cnt_;
   }
+  void InsertProbe(const std::function<bool(VirtualMachineEngine*)>& ProbeFunction);
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
   const LogicalObjectDeleteList& delete_logical_object_list() const {
@@ -192,6 +194,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void LivelyInstructionListPushBack(Instruction* instruction);
   intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction);
+  void HandleProbe();
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -230,6 +233,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   LivelyInstructionList lively_instruction_list_;
   size_t total_inserted_lively_instruction_cnt_;
   size_t total_erased_lively_instruction_cnt_;
+  intrusive::MutexedList<INTRUSIVE_FIELD(Probe, Probe::probe_hook_)> probe_hook_;
+  intrusive::List<INTRUSIVE_FIELD(Probe, Probe::probe_hook_)> local_probe_hook_;
   BarrierInstructionList barrier_instruction_list_;
   std::map<std::string, RtInstrTypeId> instr_type_name2rt_instr_type_id_;
   RwMutexedObjectAccess::object_pool_type access_pool_;
