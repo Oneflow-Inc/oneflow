@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -190,6 +191,51 @@ Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& ten
   return NewScopeWithParallelConfAndCurScope(parallel_conf);
 }
 
+Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  CHECK_OR_RETURN(input_tensor->is_eager());
+  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(empty_lbn.empty());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
+  OperatorConf op_conf;
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
+  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
+  var_conf->set_out("out");
+  input_tensor->shape()->ToProto(var_conf->mutable_shape());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
+  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
+  //   by EagerTensor.
+  var_conf->mutable_initializer()->mutable_empty_conf();
+  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
+  // NOTE(chengcheng): Free EagerTensor not trainable
+  var_conf->set_trainable(false);
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
+  //  name so just new a unique name for it.
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
+  op_conf.set_name(new_op_name);
+
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf.DebugString() << std::endl;
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.DebugString() << " for FreeEagerTensor.\n";
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << " for FreeEagerTensor.\n";
+
+  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
+  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
+  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
+  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+      graph_name, input_tensor, new_op_name);
+  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
+  TensorNameScope::Global()->Record(input_tensor, lbn);
+
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   // NOTE(chengcheng): inputs[0] is the EagerTensor
@@ -308,8 +354,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-  CHECK_OR_RETURN(input_tensor->is_lazy());
-  const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  // Lazy tensor must has lbn.
+  // Eager tensor may has lbn if it has already been treated as an output of a variable op
+  // or an output of an inplace op.
+  if (input_lbn.empty()) {
+    CHECK_OR_RETURN(input_tensor->is_eager());
+    // This output tensor is a new free eager tensor, so treat it as a new variable op output.
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  }
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
@@ -490,51 +544,6 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
-  CHECK_OR_RETURN(input_tensor->is_eager());
-  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(empty_lbn.empty());
-  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-  OperatorConf op_conf;
-  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
-  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
-  var_conf->set_out("out");
-  input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype()->data_type());
-  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
-  //   by EagerTensor.
-  var_conf->mutable_initializer()->mutable_empty_conf();
-  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
-  // NOTE(chengcheng): Free EagerTensor not trainable
-  var_conf->set_trainable(false);
-
-  auto infer_ctx = JUST(GetCurInferCtx());
-  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
-  //  name so just new a unique name for it.
-  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
-  op_conf.set_name(new_op_name);
-
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
-          << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << " for FreeEagerTensor.\n";
-  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
-          << " infer and and op attr : \n"
-          << op_attr.DebugString() << " for FreeEagerTensor.\n";
-
-  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
-  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
-  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
-  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-      graph_name, input_tensor, new_op_name);
-  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
-  TensorNameScope::Global()->Record(input_tensor, lbn);
-
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
                                                       const TensorTuple& inputs,
                                                       TensorTuple* outputs,
@@ -683,6 +692,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       (*outputs)[i] =
           JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     } else {
+      VLOG(2) << "Lazy nn.Graph name " << graph_name << " op name " << new_op_name
+              << " run with inplace.";
       const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
       JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
     }
