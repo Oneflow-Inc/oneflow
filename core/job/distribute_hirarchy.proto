@@ -1,0 +1,20 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/sbp_parallel.proto";
+
+enum DistributeType {
+  kInvalidDistributeType = 0;
+  kSpaceDistribute = 2;
+  kTimeDistribute = 3;
+}
+
+message DistributeDim {
+  required DistributeType distribute_type = 1;
+  required SbpParallel sbp_parallel = 2;
+  required int64 distribute_num = 3;
+}
+
+message DistributeHirarchy {
+  repeated DistributeDim dim = 1;
+}

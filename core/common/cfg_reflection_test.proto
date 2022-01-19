@@ -1,0 +1,28 @@
+syntax = "proto2";
+
+package oneflow;
+
+message ReflectionTestFoo {
+  required int32 required_int32 = 1;
+  optional string optional_string = 2 [default = "undefined"];
+
+  repeated int32 repeated_int32 = 3;
+  repeated string repeated_string = 4;
+  map<int32, int32> map_int32 = 5;
+  oneof type {
+    int32 oneof_int32 = 6;
+    int32 another_oneof_int32 = 7;
+  }
+}
+
+message ReflectionTestBar {
+  required ReflectionTestFoo required_foo = 1;
+  optional ReflectionTestFoo optional_foo = 2;
+
+  repeated ReflectionTestFoo repeated_foo = 3;
+  map<int32, ReflectionTestFoo> map_foo = 4;
+  oneof type {
+    ReflectionTestFoo oneof_foo = 5;
+    ReflectionTestFoo another_oneof_foo = 6;
+  }
+}

@@ -1,0 +1,50 @@
+syntax = "proto2";
+package oneflow.summary;
+
+message MetaData {
+  enum ProjectorType {
+    EMBEDDING = 0;
+    EXCEPTION = 1;
+  }
+  required ProjectorType type = 1;
+  //Metadata specific information
+  optional string content = 2;
+}
+
+message Tensor {
+  message TensorShape {
+    message Dim {
+      required int64 size = 1;
+      optional string name = 2;
+    }
+    repeated Dim dim = 1;
+  }
+  required string dtype = 1;
+  required TensorShape shape = 2;
+  optional bytes content = 3;
+}
+
+message Sample{
+  enum SampleType {
+    IMAGE = 0;
+    AUDIO = 1;
+    TEXT = 2;
+  }
+  required string name = 1;
+  required SampleType type = 2;
+  required Tensor X = 3;
+}
+
+message Projector {
+  required string tag = 1;
+  optional int64 step = 2;
+  required double WALL_TIME = 3;
+  required Tensor value = 4;
+  optional Tensor label = 5;
+}
+
+message SummaryProjector {
+  required MetaData metadata = 6;
+  optional Sample sample = 2;
+  repeated Projector projector = 1;
+}

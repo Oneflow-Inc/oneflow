@@ -1,0 +1,48 @@
+syntax = "proto2";
+package oneflow.summary;
+
+import "oneflow/core/summary/tensor.proto";
+
+message SummaryMetadata {
+  message PluginData {
+    required string plugin_name = 1;
+    optional bytes content = 2;
+  }
+  required PluginData plugin_data = 1;
+  optional string display_name = 2;
+  optional string summary_description = 3;
+};
+
+message HistogramProto {
+  required double min = 1;
+  required double max = 2;
+  required double num = 3;
+  required double sum = 4;
+  required double sum_squares = 5;
+  repeated double bucket_limit = 6 [packed = true];
+  repeated double bucket = 7 [packed = true];
+};
+
+message Image {
+    required int32 height = 1;
+    required int32 width = 2;
+    required int32 colorspace = 3;
+    required bytes encoded_image_string = 4;
+};
+
+message Summary {
+  message Value {
+    optional string node_name = 7;
+    required string tag = 1;
+    optional SummaryMetadata metadata = 9;
+    oneof value {
+      float simple_value = 2;
+      bytes obsolete_old_style_histogram = 3;
+      Image image = 4;
+      HistogramProto histo = 5;
+      //Audio audio = 6;
+      TensorProto tensor = 8;
+    }
+  }
+  repeated Value value = 1;
+}

@@ -1,0 +1,137 @@
+# Copyright 2020 The OneFlow Authors. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The following data types are allowed,
+# {
+#   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
+#   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
+#   "BoolList", "DataType", "Shape", "Generator", "TensorIndex", "Device", "Placement",
+#   "Sbp", "SbpList"
+# }
+
+- name: "dispatch_feed_input"
+  signature: "Tensor (OpExpr op, Tensor input) => DispatchFeedInput"
+  bind_python: True
+
+- name: "dispatch_feed_variable"
+  signature: "Tensor (OpExpr op, Tensor input, Scalar l2) => DispatchFeedVariable"
+  bind_python: True
+
+- name: "dispatch_fetch_output"
+  signature: "Tensor (OpExpr op, Tensor input) => DispatchFetchOutput"
+  bind_python: True
+
+- name: "dispatch_ofrecord_reader"
+  signature: [
+      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix=\"part-\", Int32 part_name_suffix_length=-1, Int32 batch_size, Int32 shuffle_buffer_size=1024, Bool random_shuffle=False, Bool shuffle_after_epoch=False, Int64 seed=-1, Device device=None) => DispatchOfrecordReader",
+      "Tensor (OpExpr op, String data_dir, Int32 data_part_num, String part_name_prefix=\"part-\", Int32 part_name_suffix_length=-1, Int32 batch_size, Int32 shuffle_buffer_size=1024, Bool random_shuffle=False, Bool shuffle_after_epoch=False, Int64 seed=-1, Placement placement, SbpList sbp) => DispatchOfrecordReader",
+  ]
+  bind_python: True
+
+- name: "dispatch_ofrecord_raw_decoder"
+  signature: "Tensor (OpExpr op, Tensor input, String name, Shape shape, DataType data_type, Bool dim1_varying_length=False, Bool truncate=False) => DispatchOfrecordRawDecoder"
+  bind_python: True
+
+- name: "dispatch_coin_flip"
+  signature: [
+      "Tensor (OpExpr op, Int64 batch_size, Scalar probability=0.5, Int64 seed=-1, Bool has_seed=False, Device device=None) => DispatchCoinFlip",
+      "Tensor (OpExpr op, Int64 batch_size, Scalar probability=0.5, Int64 seed=-1, Bool has_seed=False, Placement placement, SbpList sbp) => DispatchCoinFlip",
+  ]
+  bind_python: True
+
+- name: "dispatch_crop_mirror_normalize_from_uint8"
+  signature: "Tensor (OpExpr op, TensorTuple input, Int64 crop_h=0, Int64 crop_w=0, Float crop_pos_x=0.5, Float crop_pos_y=0.5, FloatList mean, FloatList std, DataType output_dtype=kFloat, String output_layout=\"NCHW\", String color_space=\"BGR\") => DispatchCropMirrorNormalizeFromUint8"
+  bind_python: True
+
+- name: "dispatch_crop_mirror_normalize_from_tensorbuffer"
+  signature: "Tensor (OpExpr op, TensorTuple input, Int64 crop_h=0, Int64 crop_w=0, Float crop_pos_x=0.5, Float crop_pos_y=0.5, FloatList mean, FloatList std, DataType output_dtype=kFloat, String output_layout=\"NCHW\", String color_space=\"BGR\") => DispatchCropMirrorNormalizeFromTensorBuffer"
+  bind_python: True
+
+- name: "dispatch_ofrecord_image_decoder_random_crop"
+  signature: "Tensor (OpExpr op, Tensor input, String name, String color_space=\"BGR\", FloatList random_area, FloatList random_aspect_ratio, Int32 num_attempts=10, Int64 seed=-1, Bool has_seed=False) => DispatchOfrecordImageDecoderRandomCrop"
+  bind_python: True
+
+- name: "dispatch_ofrecord_image_decoder"
+  signature: "Tensor (OpExpr op, Tensor input, String name, String color_space=\"BGR\") => DispatchOfrecordImageDecoder"
+  bind_python: True
+
+- name: "dispatch_image_decoder_random_crop_resize"
+  signature: "Tensor (OpExpr op, Tensor input, Int64 target_width, Int64 target_height, Int64 seed, Int64 num_workers=3, Int64 max_num_pixels=67108864, Float random_area_min=0.08f, Float random_area_max=1.0f, Float random_aspect_ratio_min=0.75f, Float random_aspect_ratio_max=1.333333f, Int64 warmup_size=6400, Int64 num_attempts=10) => DispatchImageDecoderRandomCropResize"
+  bind_python: True
+
+- name: "dispatch_tensor_buffer_to_list_of_tensors_v2"
+  signature: "TensorTuple (OpExpr op, Tensor input, ShapeList out_shapes, DataTypeList out_dtypes, Bool dynamic_out) => DispatchTensorBufferToListOfTensorsV2"
+  bind_python: True
+
+- name: "dispatch_image_resize_keep_aspect_ratio"
+  signature: "TensorTuple (OpExpr op, Tensor input, Int32 target_size, Int32 min_size=0, Int32 max_size=0, Bool resize_longer=False, String interpolation_type=\"bilinear\") => DispatchImageResizeKeepAspectRatio"
+  bind_python: True
+
+- name: "dispatch_image_resize_to_fixed"
+  signature: "TensorTuple (OpExpr op, Tensor input, Int64 target_width=0, Int64 target_height=0, Int64 channels=3, DataType data_type=kUInt8, String interpolation_type=\"bilinear\") => DispatchImageResizeToFixed"
+  bind_python: True
+
+- name: "dispatch_image_decode"
+  signature: "Tensor (OpExpr op, Tensor input, String color_space=\"BGR\", DataType data_type=kUInt8) => DispatchImageDecode"
+  bind_python: True
+
+- name: "dispatch_image_normalize"
+  signature: "Tensor (OpExpr op, Tensor input, FloatList mean, FloatList std) => DispatchImageNormalize"
+  bind_python: True
+
+- name: "dispatch_coco_reader"
+  signature: [
+      "TensorTuple (OpExpr op, String image_dir, String annotation_file, Int64 batch_size, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool group_by_ratio=True, Bool remove_images_without_annotations=True, Bool stride_partition=False, Int64 session_id, Device device=None) => DispatchCOCOReader",
+      "TensorTuple (OpExpr op, String image_dir, String annotation_file, Int64 batch_size, Bool shuffle_after_epoch=False, Int64 random_seed=-1, Bool group_by_ratio=True, Bool remove_images_without_annotations=True, Bool stride_partition=False, Int64 session_id, Placement placement, SbpList sbp) => DispatchCOCOReader",
+  ]
+  bind_python: True
+
+- name: "dispatch_image_batch_align"
+  signature: "Tensor (OpExpr op, Tensor input, Int32 alignment, Shape shape, DataType data_type, Bool dynamic_out) => DispatchImageBatchAlign"
+  bind_python: True
+
+- name: "dispatch_ofrecord_bytes_decoder"
+  signature: "Tensor (OpExpr op, Tensor input, String name) => DispatchOfrecordBytesDecoder"
+  bind_python: True
+
+- name: "dispatch_megatron_gpt_mmap_data_loader"
+  signature: [
+      "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length=1, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Device device=None) => DispatchMegatronGptMmapDataLoader",
+      "Tensor (OpExpr op, String data_file_prefix, Int64 seq_length, Int64 label_length=1, Int64 num_samples, Int64 batch_size, DataType dtype, Int64List split_sizes, Int64 split_index, Bool shuffle, Int64 random_seed, Placement placement, SbpList sbp) => DispatchMegatronGptMmapDataLoader",
+  ]
+  bind_python: True
+
+- name: "dispatch_rmsprop_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Bool centered=False, Float epsilon=1e-8, Float decay_rate=0.99, Float weight_decay=0.0) => DispatchRmspropUpdate"
+  bind_python: True
+
+- name: "dispatch_adam_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Float bias_correction1=1.0, Float bias_correction2=1.0, Double scale=1.0, Float l1=0, Float l2=0, Float beta1=0.9, Float beta2=0.999, Float epsilon=1e-8, Float weight_decay=0, Bool amsgrad=False, Bool do_bias_correction=True) => DispatchAdamUpdate"
+  bind_python: True
+
+- name: "dispatch_adagrad_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float lr_decay=0, Float weight_decay=0, Float epsilon=1e-10, Int32 train_step_val=0) => DispatchAdagradUpdate"
+  bind_python: True
+
+- name: "dispatch_momentum_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float beta=0.9, Float weight_decay=0) => DispatchMomentumUpdate"
+  bind_python: True
+
+- name: "dispatch_sgd_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float weight_decay=0) => DispatchSgdUpdate"
+  bind_python: True
+
+- name: "dispatch_eager_nccl_all_reduce"
+  signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerNcclAllReduce"
+  bind_python: True

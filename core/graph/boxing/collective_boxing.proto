@@ -1,0 +1,63 @@
+syntax = "proto2";
+package oneflow.boxing.collective;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/device_type.proto";
+
+enum OpType {
+    kOpTypeInvalid = 0;
+    kOpTypeAllReduce = 1;
+    kOpTypeReduceScatter = 2;
+    kOpTypeAllGather = 3;
+    kOpTypeReduce = 4;
+    kOpTypeBroadcast = 5;
+    kOpTypeAll2All = 6;
+}
+
+enum ReduceMethod {
+    kReduceMethodInvalid = 0;
+    kReduceMethodSum = 1;
+}
+
+enum Backend {
+    kBackendInvalid = 0;
+    kBackendNCCL = 1;
+}
+
+message DeviceDesc {
+    required int64 machine_id = 1;
+    required DeviceType device_type = 2;
+    required int64 device_id = 3;
+}
+
+message DeviceSet {
+    repeated DeviceDesc device = 1;
+}
+
+message OpDesc {
+    required string name = 1;
+    required OpType op_type = 2;
+    optional ReduceMethod reduce_method = 3;
+    optional int64 root = 4;
+    required DataType data_type = 5;
+    required ShapeProto shape = 6;
+    required int64 num_ranks = 7;
+    required Backend backend = 8;
+}
+
+message RequestDesc {
+    required OpDesc op_desc = 1;
+    required DeviceSet device_set = 2;
+    required int64 order = 3;
+    required int64 dependency_depth = 4;
+}
+
+message RequestSet {
+    repeated RequestDesc request = 1;
+}
+
+message RankDesc {
+    required OpDesc op_desc = 1;
+    required int64 rank = 2;
+}

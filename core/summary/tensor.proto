@@ -1,0 +1,43 @@
+syntax = "proto2";
+package oneflow.summary;
+
+message TensorProto {
+  required TensorDataType dtype = 1;
+  required TensorShapeProto tensor_shape = 2;
+  optional int32 version_number = 3;
+  optional bytes tensor_content = 4;
+  repeated float float_val = 5 [packed = true];
+  repeated double double_val = 6 [packed = true];
+  repeated int32 int_val = 7 [packed = true];
+  repeated bytes string_val = 8;
+  repeated int64 int64_val = 9 [packed = true];
+  repeated bool bool_val = 10 [packed = true];
+  repeated uint32 uint32_val = 11 [packed = true];
+  repeated uint64 uint64_val = 12 [packed = true];
+  repeated int32 half_val = 13 [packed = true];
+};
+
+message TensorShapeProto {
+  message Dim {
+    required int64 size = 1;
+    optional string name = 2;
+  };
+  repeated Dim dim = 2;
+};
+
+
+enum TensorDataType {
+  DT_INVALID = 0;
+  DT_FLOAT = 1;
+  DT_DOUBLE = 2;
+  DT_INT32 = 3;
+  DT_UINT8 = 4;
+  DT_INT16 = 5;
+  DT_INT8 = 6;
+  DT_STRING = 7;
+  DT_INT64 = 8;
+  DT_UINT16 = 9;
+  DT_HALF = 10;
+  DT_UINT32 = 11;
+  DT_UINT64 = 12;
+}

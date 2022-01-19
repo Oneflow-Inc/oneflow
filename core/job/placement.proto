@@ -1,0 +1,35 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/common/shape.proto";
+
+message ParallelContext {
+  required int64 parallel_id = 1;
+  required int64 parallel_num = 2;
+}
+
+message ParallelConf {
+  repeated string device_name = 1;
+  required string device_tag = 2;
+  optional ShapeProto hierarchy = 3;
+}
+
+message OpNameSet {
+  repeated string op_name = 1;
+}
+
+message PlacementGroup {
+  required OpNameSet op_set = 1;
+  required ParallelConf parallel_conf = 2;
+}
+
+message BlobPlacementGroup {
+  repeated LogicalBlobId lbi = 1;
+  required ParallelConf parallel_conf = 2;
+}
+
+message Placement {
+  repeated PlacementGroup placement_group = 1;
+  repeated BlobPlacementGroup blob_placement_group = 2;
+}

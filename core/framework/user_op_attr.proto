@@ -1,0 +1,66 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+
+enum AttrType {
+  kAtInt32 = 1;
+  kAtInt64 = 2;
+  kAtBool = 3;
+  kAtFloat = 4;
+  kAtDouble = 5;
+  kAtString = 6;
+  kAtShape = 7;
+  kAtDataType = 8;
+  kAtListInt32 = 9;
+  kAtListInt64 = 10;
+  kAtListFloat = 11;
+  kAtListDataType = 12;
+  kAtListShape = 13;
+  kAtListString = 14;
+}
+
+message AttrValue {
+  message ListInt32 {
+    repeated int32 val = 1;
+  }
+  message ListInt64 {
+    repeated int64 val = 1;
+  }
+  message ListFloat {
+    repeated float val = 1;
+  }
+  message ListDataType {
+    repeated DataType val = 1;
+  }
+  message ListShape {
+    repeated ShapeProto val = 1;
+  }
+  // order and naming convention of the oneof field must be consistent with the enum AttrType
+  message ListString {
+    repeated string val = 1;
+  }
+  oneof value {
+    int32 at_int32 = 1;
+    int64 at_int64 = 2;
+    bool at_bool = 3;
+    float at_float = 4;
+    double at_double = 5;
+    string at_string = 6;
+    ShapeProto at_shape = 7;
+    DataType at_data_type = 8;
+    ListInt32 at_list_int32 = 9;
+    ListInt64 at_list_int64 = 10;
+    ListFloat at_list_float = 11;
+    ListDataType at_list_data_type = 12;
+    ListShape at_list_shape = 13;
+    ListString at_list_string = 14;
+  }
+}
+
+message AttrDef {
+  required string name = 1;
+  required string description = 2;
+  required AttrValue default_val = 3;
+}

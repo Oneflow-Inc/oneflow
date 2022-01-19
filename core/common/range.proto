@@ -1,0 +1,7 @@
+syntax = "proto2";
+package oneflow;
+
+message RangeProto {
+  required int64 begin = 1;
+  required int64 end = 2;
+}

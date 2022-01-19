@@ -1,0 +1,19 @@
+syntax = "proto2";
+package oneflow;
+
+message TotalJobCriticalSection {}
+message InputOutputCriticalSection {
+  repeated string lbi_producer_op_name = 1;
+}
+
+message CriticalSection {
+  required int64 job_id = 1;
+  map<int64, string> machine_id2source_tick_op_name = 2;
+  map<int64, string> machine_id2sink_tick_op_name = 3;
+  repeated int64 mem_block_id = 4;
+  repeated int64 chunk_id = 5;
+  oneof type {
+    TotalJobCriticalSection total_job_critical_section = 6;
+    InputOutputCriticalSection input_output_critical_section = 7;
+  }
+}

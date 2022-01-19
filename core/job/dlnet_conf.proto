@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/operator/op_conf.proto";
+
+message DLNetConf {
+  repeated OperatorConf op = 1;
+}
