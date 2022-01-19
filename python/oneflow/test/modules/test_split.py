@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 class TestSplit(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_split_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
@@ -34,7 +34,7 @@ class TestSplit(flow.unittest.TestCase):
         res = torch.split(x, 2, dim=rand_dim)
         return torch.cat(res, rand_dim)
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_split_sizes_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = 7
