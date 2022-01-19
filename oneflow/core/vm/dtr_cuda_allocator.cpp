@@ -40,7 +40,7 @@ inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
 }  // namespace
 
 DtrCudaAllocator::DtrCudaAllocator(int64_t device_id)
-    : Allocator(), device_id_(device_id), total_memory_bytes_(0) {
+    : Allocator(), device_id_(device_id), total_memory_bytes_(0), recycle_piece_list_(nullptr) {
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
@@ -80,12 +80,24 @@ void DtrCudaAllocator::RemovePieceFromBin(Piece* piece) {
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::AllocatePiece() {
-  Piece* piece = new Piece();
-  return piece;
+  if (recycle_piece_list_) {
+    Piece* ret = recycle_piece_list_;
+    recycle_piece_list_ = recycle_piece_list_->next;
+    return ret;
+  } else {
+    pieces_.emplace_back(new Piece());
+    return pieces_.at(pieces_.size() - 1).get();
+  }
 }
 
 void DtrCudaAllocator::DeallocatePiece(Piece* piece) {
-  free(piece);
+  piece->ptr = nullptr;
+  piece->size = 0;
+  piece->bin_num = kInvalidBinNum;
+  CHECK(piece->is_free);
+  piece->prev = nullptr;
+  piece->next = recycle_piece_list_;
+  recycle_piece_list_ = piece;
 }
 
 void DtrCudaAllocator::MarkPiece(Piece* piece) {
@@ -334,6 +346,9 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
                 << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no tensor");
     }
     size2 += piece->size;
+    // NOTE: evict will trigger the merge and deallocation of neighbour free pieces,
+    // currently deallocation only set tensor to nullptr, not real free,
+    // so no bug occurs. It is tricky and fragile.
     if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict()); }
   }
   if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "evict size: " << size2; }
