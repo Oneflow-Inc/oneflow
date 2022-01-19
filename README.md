@@ -1,5 +1,5 @@
 # OneFlow
-## Just a test,please close this PR,sorry for the trouble
+## Just a test,please close this PR,sorry for the trouble.
 **OneFlow is a performance-centered and open-source deep learning framework.**
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
