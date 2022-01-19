@@ -87,7 +87,6 @@ class generator:
 
     def _init(self):
         self._value = None
-        self._has_value = False
         for x in self.children:
             x._init()
 
@@ -390,8 +389,9 @@ class gpu_device(generator):
 
 
 class all_placement(generator):
-    def __init__(self):
+    def __init__(self, enable_2d_hierarchy=True):
         super().__init__([])
+        self.enable_2d_hierarchy = enable_2d_hierarchy
         self.node_size = flow.env.get_node_size()
         self.world_size = flow.env.get_world_size()
         self.num_rank_for_each_node = self.world_size // self.node_size
@@ -413,10 +413,9 @@ class all_placement(generator):
     def _calc_all_placement(self):
         all_device = self._calc_device()
         device_ids = [i for i in range(self.num_rank_for_each_node)]
-        all_hierarchy = [
-            (self.world_size,),
-            (self.node_size, self.num_rank_for_each_node),
-        ]
+        all_hierarchy = [(self.world_size,)]
+        if self.enable_2d_hierarchy:
+            all_hierarchy.append((self.node_size, self.num_rank_for_each_node))
         return [
             flow.placement(
                 device, {i: device_ids for i in range(self.node_size)}, hierarchy

@@ -69,19 +69,16 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     cfg::NdSbp stat_distribution_for_consumer;
 
-    bool has_split_axis_parallel = false;
     CHECK_EQ(prediction_nd_sbp.sbp_parallel_size(), node->parallel_desc().hierarchy()->NumAxes());
     for (int64_t i = 0; i < node->parallel_desc().hierarchy()->NumAxes(); ++i) {
       const auto& sbp = prediction_nd_sbp.sbp_parallel(i);
       if (sbp.has_split_parallel() && sbp.split_parallel().axis() == split_axis) {
-        has_split_axis_parallel = true;
         stat_distribution_for_consumer.add_sbp_parallel()->mutable_broadcast_parallel();
       } else {
         CHECK(!sbp.has_partial_sum_parallel());
         *stat_distribution_for_consumer.add_sbp_parallel() = cfg::SbpParallel(sbp);
       }
     }
-    CHECK(has_split_axis_parallel);
 
     auto reduce_max_device_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_device_stage")
