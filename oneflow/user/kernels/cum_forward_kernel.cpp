@@ -67,16 +67,16 @@ class CpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, template<typename> class BinaryFunc>
-class CpuCumSumKernel final : public CpuCumKernel<T, BinaryFunc> {
+template<typename T>
+class CpuCumSumKernel final : public CpuCumKernel<T, BinaryAdd> {
  public:
   CpuCumSumKernel() = default;
   ~CpuCumSumKernel() = default;
 };
 
-#define REGISTER_CUMSUM_KERNEL(dtype)                                                              \
-  REGISTER_USER_KERNEL("cumsum").SetCreateFn<CpuCumSumKernel<dtype, BinaryAdd>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                               \
+#define REGISTER_CUMSUM_KERNEL(dtype)                                                   \
+  REGISTER_USER_KERNEL("cumsum").SetCreateFn<CpuCumSumKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUMSUM_KERNEL(int64_t)
@@ -84,18 +84,17 @@ REGISTER_CUMSUM_KERNEL(float)
 REGISTER_CUMSUM_KERNEL(double)
 #undef REGISTER_CUMSUM_KERNEL
 
-template<typename T, template<typename> class BinaryFunc>
-class CpuCumProdKernel final : public CpuCumKernel<T, BinaryFunc> {
+template<typename T>
+class CpuCumProdKernel final : public CpuCumKernel<T, BinaryProd> {
  public:
   CpuCumProdKernel() = default;
   ~CpuCumProdKernel() = default;
 };
 
-#define REGISTER_CUMPROD_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("cumprod")                                     \
-      .SetCreateFn<CpuCumProdKernel<dtype, BinaryProd>>()             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUMPROD_KERNEL(dtype)                                                    \
+  REGISTER_USER_KERNEL("cumprod").SetCreateFn<CpuCumProdKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                      \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUMPROD_KERNEL(int64_t)
 REGISTER_CUMPROD_KERNEL(float)

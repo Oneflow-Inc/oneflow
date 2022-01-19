@@ -123,16 +123,16 @@ class GpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, template<typename> class BinaryFunc>
-class GpuCumSumKernel final : public GpuCumKernel<T, BinaryFunc> {
+template<typename T>
+class GpuCumSumKernel final : public GpuCumKernel<T, BinaryAdd> {
  public:
   GpuCumSumKernel() = default;
   ~GpuCumSumKernel() = default;
 };
 
-#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                                         \
-  REGISTER_USER_KERNEL("cumsum").SetCreateFn<GpuCumSumKernel<dtype, BinaryAdd>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCUDA)                                              \
+#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("cumsum").SetCreateFn<GpuCumSumKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
@@ -140,18 +140,17 @@ REGISTER_CUDA_CUMSUM_KERNEL(float)
 REGISTER_CUDA_CUMSUM_KERNEL(double)
 #undef REGISTER_CUDA_CUMSUM_KERNEL
 
-template<typename T, template<typename> class BinaryFunc>
-class GpuCumProdKernel final : public GpuCumKernel<T, BinaryFunc> {
+template<typename T>
+class GpuCumProdKernel final : public GpuCumKernel<T, BinaryProd> {
  public:
   GpuCumProdKernel() = default;
   ~GpuCumProdKernel() = default;
 };
 
-#define REGISTER_CUDA_CUMPROD_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("cumprod")                                      \
-      .SetCreateFn<GpuCumProdKernel<dtype, BinaryProd>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_CUMPROD_KERNEL(dtype)                                               \
+  REGISTER_USER_KERNEL("cumprod").SetCreateFn<GpuCumProdKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_CUMPROD_KERNEL(int64_t)
 REGISTER_CUDA_CUMPROD_KERNEL(float)
