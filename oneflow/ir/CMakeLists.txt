@@ -50,7 +50,7 @@ endif()
 
 set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
   -Wl,--no-as-needed oneflow -Wl,--as-needed
-  -Wl,--no-as-needed ${oneflow_exe_third_party_libs} -Wl,--as-needed
+  -Wl,--no-as-needed glog::glog -Wl,--as-needed
   -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
 )
 
