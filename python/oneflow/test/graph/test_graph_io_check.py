@@ -22,12 +22,36 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
+from oneflow.nn.graph.util import IONodeType, IONode
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphIOCheck(flow.unittest.TestCase):
-    def test_non_tensor_types_of_module(test_case):
+    def test_io_node(test_case):
+        x = np.ones((2, 2))
+        x = flow.tensor(x, dtype=flow.float32)
+
+        t2 = np.ones((2, 2))
+        t2 = flow.tensor(t2, dtype=flow.float32)
+        t3 = np.ones((2, 2))
+        t3 = flow.tensor(t3, dtype=flow.float32)
+        lt0 = list()
+        lt0.append(t2)
+        lt0.append(t3)
+
+        t4 = np.ones((2, 2))
+        t4 = flow.tensor(t4, dtype=flow.float32)
+        
+        def fn(*args, **kwargs):
+            io_node = IONode(None, 0, IONodeType.EMPTY, None, args, kwargs)
+            for (name, node) in list(io_node.named_nodes()):
+                print(name, repr(node))
+
+        fn(1, x, lt0, dic=t4)
+        
+
+    def _test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -71,7 +95,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         test_case.assertTrue(on is None)
 
-    def test_graph_outputs_buffer(test_case):
+    def _test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()

@@ -168,7 +168,7 @@ class ModuleBlock(Block):
 
                 _set_child(self._modules)
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
@@ -192,12 +192,12 @@ class ModuleBlock(Block):
 
             self.__print(0, 1, in_str)
 
-            def _print_state(d):
-                for (_, n) in d.items():
-                    self.__print(0, 1, n._shallow_repr())
+        def _print_state(d):
+            for (_, n) in d.items():
+                self.__print(0, 1, n._shallow_repr())
 
-            _print_state(self._parameters)
-            _print_state(self._buffers)
+        _print_state(self._parameters)
+        _print_state(self._buffers)
 
         # NOTE: The original nn.Moudle's __call__ method is ignored, which means
         # that hooks of nn.Modules are ignored. It is not recommended

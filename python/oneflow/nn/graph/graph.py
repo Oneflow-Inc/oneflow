@@ -33,7 +33,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType, get_block_cls
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
+from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg, IONodeType, IONode
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -829,6 +829,18 @@ class Graph(object):
                 build_args.append(seq_args)
             else:
                 self.__io_item_check_and_gen(arg, Tensor, io_type, idx)
+
+        return op_names, build_args, args_repr, tensor2op_name
+
+    def __build_io2(self, io_type, build_func, *args, **kwargs):
+        assert io_type in ("input", "output")
+        io_type_upper = io_type.upper()
+        build_args = []
+        op_names = []
+        args_repr = []
+        tensor2op_name = {}
+
+        io_node = IONode(NONE, 0, IONodeType.EMPTY, None, args, kwargs)
 
         return op_names, build_args, args_repr, tensor2op_name
 
