@@ -233,7 +233,7 @@ def full_op(
     The tensor’s dtype is inferred from `value`.
 
     Args:
-        size(int...): a list, tuple, or torch.Size of integers defining the shape of the output tensor.
+        size(int...): a list, tuple, or oneflow.Size of integers defining the shape of the output tensor.
         fill_value(Scalar): the value to fill the output tensor with.
         dtype (flow.dtype, optional): the desired data type of returned tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type

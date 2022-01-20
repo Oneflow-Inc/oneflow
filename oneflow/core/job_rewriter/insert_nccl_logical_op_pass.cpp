@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 #ifdef WITH_CUDA
 
@@ -51,17 +52,6 @@ class InsertNcclLogicalOpPass final : public JobPass {
 };
 
 const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
-
-std::string NdSbpToString(const cfg::NdSbp& nd_sbp) {
-  std::string serialized_nd_sbp;
-  const int64_t num_axes = nd_sbp.sbp_parallel_size();
-  serialized_nd_sbp += "[";
-  for (int64_t i = 0; i < num_axes - 1; ++i) {
-    serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
-  }
-  serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
-  return serialized_nd_sbp;
-}
 
 bool IsBreakpointOpNode(const OpNode* node) {
   // NOTE(chengcheng): breakpoint op is special which CANNOT through subgraph such as:

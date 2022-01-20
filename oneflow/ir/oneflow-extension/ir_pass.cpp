@@ -73,7 +73,7 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
   }
 
   const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const override {
-    return job_builder_.ParallelConf4OpName(op_name);
+    return job_builder_.ParallelConf4OpName(op_name).GetOrThrow();
   }
   const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const override {
     return job_builder_.OpConf4OpName(op_name).GetOrThrow();

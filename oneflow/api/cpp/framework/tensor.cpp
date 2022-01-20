@@ -100,7 +100,7 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
 }
 
 template<typename T>
-void Tensor::copy_to(T* buffer) {
+void Tensor::copy_to(T* buffer) const {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor_->AsMirroredTensor().GetPtrOrThrow();
   const auto shape = this->shape();
@@ -130,7 +130,7 @@ void Tensor::copy_to(T* buffer) {
 const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const { return tensor_; }
 
 #define REGISTER_TENSOR_COPY_TO(cpp_dtype) \
-  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer);
+  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer) const;
 
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)

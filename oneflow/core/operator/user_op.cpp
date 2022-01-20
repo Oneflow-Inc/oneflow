@@ -138,8 +138,9 @@ class UserOpInferContext final : public user_op::InferContext {
     auto InitTensorDesc = [&](const ArgVec& arg_vec, const PbRpf<std::string>& bns) {
       CHECK_EQ(arg_vec.size(), bns.size());
       for (int32_t i = 0; i < arg_vec.size(); ++i) {
+        const auto& bn_i = bns.Get(i);
         BlobDesc* blob = GetBlobDesc4BnInOp(bns.Get(i));
-        CHECK_NOTNULL(blob);
+        CHECK(blob != nullptr) << bn_i;
         arg2tensor_desc_.emplace(arg_vec.at(i), GenTensorDescFromBlobDesc(blob));
       }
     };
@@ -262,6 +263,7 @@ class UserOpInferContext final : public user_op::InferContext {
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+  const std::string& op_loc() const override { return op_->op_loc(); }
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return op_->user_op_conf(); }
@@ -894,11 +896,11 @@ Maybe<void> UserOp::InferNdSbpSignature(
 
 Maybe<void> UserOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const {
   if (val_->get_nd_sbp_list_fn) {
     cfg::NdSbpSignature empty_sbp_signature;
     UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
-        this, LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list);
+        this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
     return val_->get_nd_sbp_list_fn(&user_op_get_nd_sbp_list_context);
   } else {
     JUST(Operator::GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));

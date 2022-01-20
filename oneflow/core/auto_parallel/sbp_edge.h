@@ -18,13 +18,14 @@ limitations under the License.
 
 #include <assert.h>
 #include <algorithm>
+#include <unordered_set>
+
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
-#include "sbp_node.h"
-#include "sbp_util.h"
-
-#include <unordered_set>
-#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/auto_parallel/sbp_node.h"
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
@@ -422,7 +423,6 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // B->S cause cudaEventSynchronize in current implementation.
     bool is_same_sbp = (!compute_cost) || IsSameSbp(consumer, ibn);
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
-    bool allow_cpu2gpu = consumer->op().op_conf().has_image_decoder_random_crop_resize_conf();
 
     // look through sbp signature in producer
     for (int32_t sbp_id_producer = 0; sbp_id_producer < StartNode->SbpSignatureList.size();
@@ -440,9 +440,12 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
         const cfg::NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         // compute copy cost for a specific logical blob
-        Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputCopyCostBetweenNdSbp(
-            sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
-            consumer_parallel_desc, is_same_sbp, allow_cpu2gpu));
+        {
+          LazyMode::Guard enable_lazy_mode(true);
+          Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputeCopyCostBetweenNdSbp(
+              sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+              consumer_parallel_desc, is_same_sbp));
+        }
       }
     }
   }

@@ -71,8 +71,8 @@ class JobBuilder final {
   void SetNdSbp4Oba(const OpBlobArg& oba, const cfg::NdSbp& nd_sbp);
   Maybe<void> ForEachOperator(const std::function<Maybe<void>(const Operator&)>& Handler) const;
 
-  const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
-  const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
+  Maybe<const ParallelConf&> ParallelConf4Lbi(const LogicalBlobId& lbi) const;
+  Maybe<const ParallelConf&> ParallelConf4OpName(const std::string& op_name) const;
 
   const cfg::SbpSignature SbpSignature4OpName(const std::string& op_name) const;
   void AddSbpSignature4OpName(const std::string& op_name, const cfg::SbpSignature& sbp_signature);

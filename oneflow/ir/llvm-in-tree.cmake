@@ -19,7 +19,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELEASE "" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "" CACHE STRING "" FORCE)
 
-set(CMAKE_INSTALL_PREFIX ${LLVM_INSTALL_DIR} CACHE STRING "")
+set(CMAKE_INSTALL_PREFIX ${LLVM_INSTALL_DIR} CACHE STRING "" FORCE)
 set(LLVM_ENABLE_RTTI ON CACHE BOOL "turn this on to make it compatible with protobuf")
 set(LLVM_ENABLE_EH ON CACHE BOOL "turn this on to make it compatible with half (the library)")
 set(LLVM_BUILD_EXAMPLES OFF CACHE BOOL "")
@@ -45,6 +45,7 @@ set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir)
 set(MLIR_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include)
 set(MLIR_GENERATED_INCLUDE_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
 set(MLIR_INCLUDE_DIRS "${MLIR_INCLUDE_DIR};${MLIR_GENERATED_INCLUDE_DIR}")
+
 
 set(llvm_monorepo_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
 install(TARGETS oneflow of_protoobj of_cfgobj of_functional_obj EXPORT oneflow DESTINATION lib)

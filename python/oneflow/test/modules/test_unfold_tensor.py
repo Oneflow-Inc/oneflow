@@ -24,7 +24,7 @@ import numpy as np
 
 @flow.unittest.skip_unless_1n1d()
 class TestUnfoldTensor(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=True, check_graph=False)
+    @autotest(n=10, auto_backward=True, check_graph=True)
     def test_unfold_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(3, 3, 4, 5).to(device)

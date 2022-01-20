@@ -255,7 +255,7 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     cast_from_mirrored->set_in(GenLogicalBlobName(*total_loss_instance_num_lbi));
     cast_from_mirrored->set_out("out");
     cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
-    const auto& parallel_conf = job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi);
+    const auto& parallel_conf = JUST(job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi));
     int64_t scope_symbol_id = 0;
     {
       const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
@@ -821,8 +821,8 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
-    GenerateCloneGradOpIfNeed(*op_node, job_builder, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
-                              &out_oba2clone_bw_add_out_lbi);
+    JUST(GenerateCloneGradOpIfNeed(*op_node, job_builder, in_oba2in_diff_lbi, &out_oba2out_diff_lbi,
+                                   &out_oba2clone_bw_add_out_lbi));
     std::vector<OperatorConf> ops;
     JUST(GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
     int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();

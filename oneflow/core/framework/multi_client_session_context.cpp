@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -99,6 +100,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     {
       // NOTE(chengcheng): init runtime global objects
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
       Global<RuntimeCtx>::New();
       Global<MemoryAllocator>::New();
       Global<ChunkMgr>::New();
@@ -143,6 +145,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Global<ChunkMgr>::Delete();
       Global<MemoryAllocator>::Delete();
       Global<RuntimeCtx>::Delete();
+      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
     }
 

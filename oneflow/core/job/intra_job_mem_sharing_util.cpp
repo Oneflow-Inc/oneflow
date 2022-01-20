@@ -444,7 +444,7 @@ class MemBlockBuffer final {
 };
 
 void MemBlockBuffer::Occupy(int64_t begin, int64_t end) {
-  CHECK(begin < end && end <= buffer_size_);
+  CHECK(begin <= end && end <= buffer_size_);
   for (auto it = piece_list_.begin(); it != piece_list_.end(); ++it) {
     if (it->end <= begin) { continue; }
     if (end <= it->begin) { break; }
@@ -516,7 +516,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     }
     int64_t offset = -1;
     buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
-    CHECK(offset >= 0 && offset < buffer_size);
+    CHECK(offset >= 0 && offset <= buffer_size);
     CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
   }
   result->mem_block_size = buffer_size;

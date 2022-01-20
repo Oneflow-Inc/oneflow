@@ -156,10 +156,16 @@ class TestSquare(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
     @autotest(check_graph=False)
-    def test_pow_scalar_with_random_data(test_case):
+    def test_pow_float_scalar_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = random().to(float)
+        return torch.pow(x, y)
+
+    def test_pow_int_scalar_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random().to(int)
         return torch.pow(x, y)
 
     @autotest(check_graph=False)

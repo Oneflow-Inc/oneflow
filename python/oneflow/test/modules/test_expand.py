@@ -181,7 +181,7 @@ def random_expand(x, ndim, expand_size):
 
 @flow.unittest.skip_unless_1n1d()
 class TestExpand(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_expand_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
         x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)

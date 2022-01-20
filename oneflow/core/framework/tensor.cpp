@@ -99,12 +99,14 @@ bool ConsistentTensor::is_cuda() const {
 }
 
 Maybe<Tensor> ConsistentTensor::detach() const {
-  std::shared_ptr<Tensor> t = std::make_shared<ConsistentTensor>(impl_);
-  return t;
+  std::shared_ptr<Tensor> tensor = std::make_shared<ConsistentTensor>(JUST(impl_->detach()));
+  return tensor;
 }
 
 Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
-  CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+  CHECK_OR_RETURN(this->is_leaf())
+      << "Only leaf tensor's data can be set, because non-leaf tensor's data has been captured in "
+         "the backward graph in autograd.";
   const auto& consistent_tensor =
       std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
   CHECK_NOTNULL_OR_RETURN(consistent_tensor);

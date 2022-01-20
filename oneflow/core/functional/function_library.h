@@ -30,10 +30,10 @@ class FunctionLibrary {
   virtual ~FunctionLibrary() = default;
 
   template<typename T>
-  struct PackedFuncMap;
+  struct PackedFuncCreatorMap;
 
   template<typename R, typename... Args>
-  struct PackedFuncMap<R(Args...)> {
+  struct PackedFuncCreatorMap<R(Args...)> {
     using FunctorCreator = typename std::function<PackedFunctor<R(Args...)>()>;
 
     static HashMap<std::string, FunctorCreator>* Get() {
@@ -43,13 +43,17 @@ class FunctionLibrary {
   };
 
   template<typename Func>
+  void add_functor(const std::string& func_name, const Func& func) {
+    using func_type = typename function_traits<Func>::func_type;
+    add_functor_creator<Func>(
+        func_name, [=]() { return PackedFunctorMaker<func_type>::make(func_name, func); });
+  }
+
+  template<typename Func>
   void add_one_functor(const std::string& func_name) {
     using func_type = typename function_traits<Func>::func_type;
-    using FType = typename PackedFunctorMaker<func_type>::FType;
-    auto* functors = PackedFuncMap<FType>::Get();
-    CHECK_EQ(functors->count(func_name), 0)
-        << "The functor with name " << func_name << " has been registered more than once.";
-    functors->emplace(func_name, [func_name]() -> PackedFunctor<FType> {
+    add_functor_creator<Func>(func_name, [=]() {
+      // Lazily construct functor since ops maybe have not been registered.
       Func func;
       return PackedFunctorMaker<func_type>::make(func_name, func);
     });
@@ -58,15 +62,13 @@ class FunctionLibrary {
   template<typename... Fs>
   void add_functor(const std::string& func_name) {
     static_assert(sizeof...(Fs) > 0, "at least one functor is expected");
-
     __attribute__((__unused__)) int dummy[] = {(add_one_functor<Fs>(func_name), 0)...};
   }
 
   template<typename R, typename... Args>
   auto find(const std::string& func_name)
       -> Maybe<PackedFunctor<typename PackedFunctorMaker<R(Args...)>::FType>> {
-    using FType = typename PackedFunctorMaker<R(Args...)>::FType;
-    auto* functors = PackedFuncMap<FType>::Get();
+    auto* functors = PackedFuncCreatorMap<typename PackedFunctorMaker<R(Args...)>::FType>::Get();
     const auto& it = functors->find(func_name);
     CHECK_OR_RETURN(it != functors->end())
         << "Functor was not found for \"" << func_name
@@ -81,6 +83,15 @@ class FunctionLibrary {
 
  private:
   FunctionLibrary() = default;
+
+  template<typename Func, typename Creator>
+  void add_functor_creator(const std::string& func_name, Creator creator) {
+    using func_type = typename function_traits<Func>::func_type;
+    auto* functors = PackedFuncCreatorMap<typename PackedFunctorMaker<func_type>::FType>::Get();
+    CHECK_EQ(functors->count(func_name), 0)
+        << "The functor with name " << func_name << " has been registered more than once.";
+    functors->emplace(func_name, creator);
+  }
 };
 
 #define ONEFLOW_FUNCTION_LIBRARY(m) ONEFLOW_FUNCTION_LIBRARY_IMPL(m, __COUNTER__)

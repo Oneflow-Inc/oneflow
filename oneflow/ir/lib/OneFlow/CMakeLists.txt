@@ -33,7 +33,6 @@ oneflow_add_mlir_dialect_library(MLIROneFlow
   DEPENDS
   MLIROneFlowOpsIncGen
   prepare_oneflow_third_party
-  oneflow-gen-ods
 
   LINK_LIBS PUBLIC
   ${dialect_libs}

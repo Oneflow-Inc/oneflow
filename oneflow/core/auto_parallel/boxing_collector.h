@@ -51,7 +51,7 @@ class BoxingCollector final {
                                 std::vector<cfg::NdSbp>& middle_sbps);
   // Filter nd sbp from nd_sbp_lists with given logical shape
   Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
-                                           const std::shared_ptr<Shape>& parallel_hierarchy);
+                                           const Shape& parallel_hierarchy);
 
  private:
   // Collect Sbp Parallel
