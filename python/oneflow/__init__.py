@@ -174,7 +174,7 @@ from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
-
+from oneflow._C import t
 
 from . import sbp
 import atexit
@@ -392,7 +392,6 @@ from . import (
     amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
-import oneflow.utils.vision
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
