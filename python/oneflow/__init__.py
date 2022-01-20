@@ -175,6 +175,9 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
 from oneflow._C import t
+from oneflow._C import equal
+from oneflow._C import equal as eq
+
 
 from . import sbp
 import atexit
@@ -310,8 +313,6 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.comparison import eq_op as eq
-from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor

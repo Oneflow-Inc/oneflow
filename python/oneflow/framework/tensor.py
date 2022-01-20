@@ -127,7 +127,7 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return self.eq(other)
+    return flow._C.equal(self, other)
 
 
 def _ne(self, other):
@@ -930,6 +930,7 @@ def RegisterMethods():
     Tensor.any = _any
     Tensor.T = property(_T)
     Tensor.t = _t
+    Tensor.eq = _eq
 
 
 def register_tensor_op(op_name):

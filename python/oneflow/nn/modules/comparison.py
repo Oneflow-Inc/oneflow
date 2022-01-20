@@ -17,38 +17,6 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
-@register_tensor_op("eq")
-def eq_op(input, other):
-    """
-    Computes element-wise equality.
-    The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
-
-    Args:
-        input (oneflow.Tensor): the tensor to compare
-        other (oneflow.Tensor, float or int): the target to compare
-
-    Returns:
-
-        - A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
-
-        >>> y = flow.eq(input, other)
-        >>> y
-        tensor([1, 1, 1, 0], dtype=oneflow.int8)
-
-    """
-    return flow._C.equal(input, other)
-
-
 @register_tensor_op("ne")
 def ne_op(input, other):
     """
