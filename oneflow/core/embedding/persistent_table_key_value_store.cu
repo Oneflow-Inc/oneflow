@@ -72,7 +72,7 @@ class KeyValueStoreImpl : public KeyValueStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStoreImpl);
   explicit KeyValueStoreImpl(const PersistentTableKeyValueStoreOptions& options)
-      : device_index_(-1), max_query_length_(options.max_query_length) {
+      : device_index_(-1), max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     key_size_ = options.table_options.key_size;
     value_size_ = options.table_options.value_size;
@@ -90,15 +90,37 @@ class KeyValueStoreImpl : public KeyValueStore {
   }
   ~KeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
-    OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
+      OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
+      OF_CUDA_CHECK(cudaFreeHost(host_missing_indices_));
+    }
+    OF_CUDA_CHECK(cudaFreeHost(host_n_missing_));
   }
 
   uint32_t KeySize() const override { return key_size_; }
 
   uint32_t ValueSize() const override { return value_size_; }
 
-  uint32_t MaxQueryLength() const override { return GetMaxVal<int32_t>(); }
+  uint32_t MaxQueryLength() const override { return max_query_length_; }
+
+  void ReserveQueryLength(uint32_t query_length) override {
+    CudaCurrentDeviceGuard guard(device_index_);
+    if (query_length <= max_query_length_) { return; }
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFreeHost(host_query_keys_));
+      OF_CUDA_CHECK(cudaFreeHost(host_query_values_));
+      OF_CUDA_CHECK(cudaFreeHost(host_missing_indices_));
+    }
+    OF_CUDA_CHECK(NumaAwareCudaMallocHost(
+        device_index_, reinterpret_cast<void**>(&host_query_keys_), key_size_ * query_length));
+    OF_CUDA_CHECK(NumaAwareCudaMallocHost(
+        device_index_, reinterpret_cast<void**>(&host_query_values_), value_size_ * query_length));
+    OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
+                                          reinterpret_cast<void**>(&host_missing_indices_),
+                                          sizeof(uint32_t) * query_length));
+    max_query_length_ = query_length;
+  }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, uint32_t* missing_indices) override;

@@ -75,7 +75,6 @@ void Cache::WithIterator(const std::function<void(KVBaseIterator*)>& fn) {
 std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
   CHECK_GT(options.key_size, 0);
   CHECK_GT(options.value_size, 0);
-  CHECK_GT(options.max_query_length, 0);
   CHECK_GT(options.capacity, 0);
   if (options.policy == CacheOptions::Policy::kLRU) {
     return NewLruCache(options);

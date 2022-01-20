@@ -113,8 +113,7 @@ __global__ void OrdinalEncodeLookupKernel(uint64_t capacity, TableEntry<Key, Ind
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
     uint64_t hash = XXH64()(key);
-    bool success = GetOne<Key, Index>(capacity, table, key, hash, context + i);
-    assert(success);
+    GetOne<Key, Index>(capacity, table, key, hash, context + i);
   }
 }
 
@@ -259,7 +258,7 @@ class CacheImpl : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
   explicit CacheImpl(const CacheOptions& options)
-      : encoder_(options.capacity), device_index_(-1), options_(options) {
+      : encoder_(options.capacity), device_index_(-1), options_(options), max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaMalloc(&values_, options.capacity * options.value_size));
@@ -269,7 +268,6 @@ class CacheImpl : public Cache {
     } else {
       UNIMPLEMENTED();
     }
-    OF_CUDA_CHECK(cudaMalloc(&encoding_buffer_, options.max_query_length * sizeof(uint64_t)));
     num_elem_per_value_ = options_.value_size / sizeof(Elem);
   }
   ~CacheImpl() {
@@ -281,7 +279,7 @@ class CacheImpl : public Cache {
     } else {
       UNIMPLEMENTED();
     }
-    OF_CUDA_CHECK(cudaFree(encoding_buffer_));
+    if (max_query_length_ > 0) { OF_CUDA_CHECK(cudaFree(encoding_buffer_)); }
   }
 
   uint64_t Capacity() const override { return options_.capacity; }
@@ -290,7 +288,15 @@ class CacheImpl : public Cache {
 
   uint32_t ValueSize() const override { return options_.value_size; }
 
-  uint32_t MaxQueryLength() const override { return options_.max_query_length; }
+  uint32_t MaxQueryLength() const override { return max_query_length_; }
+
+  void ReserveQueryLength(uint32_t query_length) override {
+    CudaCurrentDeviceGuard guard(device_index_);
+    if (query_length <= max_query_length_) { return; }
+    if (max_query_length_ > 0) { OF_CUDA_CHECK(cudaFree(encoding_buffer_)); }
+    OF_CUDA_CHECK(cudaMalloc(&encoding_buffer_, query_length * sizeof(uint64_t)));
+    max_query_length_ = query_length;
+  }
 
   CacheOptions::Policy Policy() const override { return CacheOptions::Policy::kFull; }
 
@@ -315,6 +321,7 @@ class CacheImpl : public Cache {
   Elem* values_;
   uint64_t* encoding_buffer_{};
   CacheOptions options_;
+  uint32_t max_query_length_;
 };
 
 template<typename Key, typename Elem>
@@ -324,7 +331,7 @@ void CacheImpl<Key, Elem>::Test(ep::Stream* stream, uint32_t n_keys, const void*
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
-  CHECK_LE(n_keys, options_.max_query_length);
+  CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem, false>), stream, values_elem_cnt, num_elem_per_value_,
@@ -339,7 +346,7 @@ void CacheImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t n_keys, const void* 
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
-  CHECK_LE(n_keys, options_.max_query_length);
+  CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem, true>), stream, values_elem_cnt, num_elem_per_value_,
@@ -355,7 +362,7 @@ void CacheImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t n_keys, const void* 
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
-  CHECK_LE(n_keys, options_.max_query_length);
+  CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((UpdateKernel<Elem>), stream, values_elem_cnt, num_elem_per_value_,

@@ -44,17 +44,12 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheKeyValueStoreImpl);
   CacheKeyValueStoreImpl(std::unique_ptr<KeyValueStore>&& store, std::unique_ptr<Cache>&& cache)
-      : store_(std::move(store)), cache_(std::move(cache)), synced_(true) {
+      : store_(std::move(store)), cache_(std::move(cache)), synced_(true), max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     CHECK_EQ(store_->KeySize(), cache_->KeySize());
     CHECK_EQ(store_->ValueSize(), cache_->ValueSize());
-    max_query_length_ = std::min(store_->MaxQueryLength(), cache_->MaxQueryLength());
     OF_CUDA_CHECK(cudaMalloc(&num_buffer_, sizeof(uint32_t)));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_buffer_, sizeof(uint32_t)));
-    OF_CUDA_CHECK(cudaMalloc(&keys_buffer_, max_query_length_ * store_->KeySize()));
-    OF_CUDA_CHECK(cudaMalloc(&values_buffer_, max_query_length_ * store_->ValueSize()));
-    OF_CUDA_CHECK(cudaMalloc(&indices_buffer0_, max_query_length_ * sizeof(uint32_t)));
-    OF_CUDA_CHECK(cudaMalloc(&indices_buffer1_, max_query_length_ * sizeof(uint32_t)));
     num_elems_per_value_ = store_->ValueSize() / sizeof(Elem);
   }
   ~CacheKeyValueStoreImpl() {
@@ -62,10 +57,12 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
     SyncCacheToStore();
     OF_CUDA_CHECK(cudaFree(num_buffer_));
     OF_CUDA_CHECK(cudaFreeHost(host_num_buffer_));
-    OF_CUDA_CHECK(cudaFree(keys_buffer_));
-    OF_CUDA_CHECK(cudaFree(values_buffer_));
-    OF_CUDA_CHECK(cudaFree(indices_buffer0_));
-    OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFree(keys_buffer_));
+      OF_CUDA_CHECK(cudaFree(values_buffer_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer0_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+    }
     cache_.reset();
     store_.reset();
   }
@@ -73,6 +70,24 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   uint32_t KeySize() const override { return store_->KeySize(); }
   uint32_t ValueSize() const override { return store_->ValueSize(); }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
+
+  void ReserveQueryLength(uint32_t query_length) override {
+    CudaCurrentDeviceGuard guard(device_index_);
+    if (query_length <= max_query_length_) { return; }
+    if (query_length > cache_->MaxQueryLength()) { cache_->ReserveQueryLength(query_length); }
+    if (query_length > store_->MaxQueryLength()) { store_->ReserveQueryLength(query_length); }
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFree(keys_buffer_));
+      OF_CUDA_CHECK(cudaFree(values_buffer_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer0_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+    }
+    OF_CUDA_CHECK(cudaMalloc(&keys_buffer_, query_length * store_->KeySize()));
+    OF_CUDA_CHECK(cudaMalloc(&values_buffer_, query_length * store_->ValueSize()));
+    OF_CUDA_CHECK(cudaMalloc(&indices_buffer0_, query_length * sizeof(uint32_t)));
+    OF_CUDA_CHECK(cudaMalloc(&indices_buffer1_, query_length * sizeof(uint32_t)));
+    max_query_length_ = query_length;
+  }
 
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
 

@@ -25,7 +25,6 @@ namespace embedding {
 
 struct PersistentTableKeyValueStoreOptions {
   PersistentTableOptions table_options{};
-  uint32_t max_query_length{};
 };
 
 std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(

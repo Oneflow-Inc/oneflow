@@ -181,9 +181,9 @@ TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
   options.table_options.value_size = value_length * sizeof(float);
   options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   options.table_options.physical_block_size = 512;
-  options.max_query_length = 128;
 
   std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(options);
+  store->ReserveQueryLength(128);
   TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, value_length);
   store.reset();
   PosixFile::RecursiveDelete(path);
@@ -200,18 +200,17 @@ TEST(CachedKeyValueStore, LRU) {
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   store_options.table_options.physical_block_size = 512;
-  store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(store_options);
   CacheOptions cache_options{};
   cache_options.policy = CacheOptions::Policy::kLRU;
   cache_options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
   cache_options.value_size = 512;
   cache_options.capacity = 130172;
-  cache_options.max_query_length = 128;
   cache_options.key_size = 8;
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
+  cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);
@@ -228,18 +227,17 @@ TEST(CachedKeyValueStore, Full) {
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   store_options.table_options.physical_block_size = 512;
-  store_options.max_query_length = 128;
   std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(store_options);
   CacheOptions cache_options{};
   cache_options.policy = CacheOptions::Policy::kFull;
   cache_options.value_memory_kind = CacheOptions::MemoryKind::kHost;
   cache_options.value_size = 512;
   cache_options.capacity = 1024 * 1024 * 2;
-  cache_options.max_query_length = 128;
   cache_options.key_size = 8;
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
+  cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);

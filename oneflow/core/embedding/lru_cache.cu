@@ -41,8 +41,6 @@ struct LruCacheContext {
   Key* keys;
   Elem* lines;
   uint8_t* lru_queue;
-  uint32_t* query_indices_buffer;
-  Key* query_keys_buffer;
   cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
   uint64_t n_set;
   uint32_t line_size;
@@ -82,9 +80,7 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lru_queue), lru_queue_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->mutex), mutex_size));
-  OF_CUDA_CHECK(
-      cudaMalloc(&(ctx->query_indices_buffer), options.max_query_length * sizeof(uint32_t)));
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->query_keys_buffer), options.max_query_length * sizeof(Key)));
+
   ClearLruCacheContext(ctx);
 }
 
@@ -94,8 +90,6 @@ void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaFree(ctx->lines));
   OF_CUDA_CHECK(cudaFree(ctx->lru_queue));
   OF_CUDA_CHECK(cudaFree(ctx->mutex));
-  OF_CUDA_CHECK(cudaFree(ctx->query_indices_buffer));
-  OF_CUDA_CHECK(cudaFree(ctx->query_keys_buffer));
 }
 
 struct ThreadContext {
@@ -420,13 +414,16 @@ template<typename Key, typename Elem>
 class LruCache : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LruCache);
-  explicit LruCache(const CacheOptions& options)
-      : device_index_{}, max_query_length_(options.max_query_length) {
+  explicit LruCache(const CacheOptions& options) : device_index_{}, max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     InitLruCacheContext(options, &ctx_);
   }
   ~LruCache() override {
     CudaCurrentDeviceGuard guard(device_index_);
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFree(query_indices_buffer_));
+      OF_CUDA_CHECK(cudaFree(query_keys_buffer_));
+    }
     DestroyLruCacheContext(&ctx_);
   }
 
@@ -435,10 +432,23 @@ class LruCache : public Cache {
   uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
+  void ReserveQueryLength(uint32_t query_length) override {
+    CudaCurrentDeviceGuard guard(device_index_);
+    if (query_length < max_query_length_) { return; }
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFree(query_indices_buffer_));
+      OF_CUDA_CHECK(cudaFree(query_keys_buffer_));
+    }
+    OF_CUDA_CHECK(cudaMalloc(&query_indices_buffer_, query_length * sizeof(uint32_t)));
+    OF_CUDA_CHECK(cudaMalloc(&query_keys_buffer_, query_length * sizeof(Key)));
+    max_query_length_ = query_length;
+  }
+
   CacheOptions::Policy Policy() const override { return CacheOptions::Policy::kLRU; }
 
   void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
             void* missing_keys, uint32_t* missing_indices) override {
+    CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
@@ -449,6 +459,7 @@ class LruCache : public Cache {
 
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override {
+    CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
@@ -459,15 +470,16 @@ class LruCache : public Cache {
 
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override {
+    CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(PutWithoutEvictingKernel<Key, Elem>, GetLaunchConfig(n_keys), ctx_,
                               n_keys, static_cast<const Key*>(keys),
-                              static_cast<const Elem*>(values), n_evicted, ctx_.query_keys_buffer,
-                              ctx_.query_indices_buffer);
+                              static_cast<const Elem*>(values), n_evicted, query_keys_buffer_,
+                              query_indices_buffer_);
     cuda_stream->LaunchKernel(EvictKernel<Key, Elem>, GetLaunchConfig(n_keys), ctx_,
-                              ctx_.query_keys_buffer, ctx_.query_indices_buffer,
+                              query_keys_buffer_, query_indices_buffer_,
                               static_cast<const Elem*>(values), n_evicted,
                               static_cast<Key*>(evicted_keys), static_cast<Elem*>(evicted_values));
   }
@@ -491,6 +503,8 @@ class LruCache : public Cache {
   int device_index_;
   uint32_t max_query_length_;
   LruCacheContext<Key, Elem> ctx_;
+  uint32_t* query_indices_buffer_;
+  Key* query_keys_buffer_;
 };
 
 template<typename Key>

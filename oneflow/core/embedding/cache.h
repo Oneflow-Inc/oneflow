@@ -36,7 +36,6 @@ struct CacheOptions {
   Policy policy = Policy::kLRU;
   MemoryKind value_memory_kind = MemoryKind::kDevice;
   uint64_t capacity{};
-  uint32_t max_query_length{};
   uint32_t key_size{};
   uint32_t value_size{};
   float load_factor = 0.75;
@@ -51,6 +50,7 @@ class Cache : public KVBase {
   virtual uint32_t KeySize() const = 0;
   virtual uint32_t ValueSize() const = 0;
   virtual uint32_t MaxQueryLength() const = 0;
+  virtual void ReserveQueryLength(uint32_t query_length) = 0;
   virtual uint64_t Capacity() const = 0;
   virtual CacheOptions::Policy Policy() const = 0;
   virtual void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,

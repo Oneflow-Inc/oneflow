@@ -212,11 +212,11 @@ TEST(Cache, LruCache) {
   const uint32_t line_size = 128;
   options.value_size = 512;
   options.capacity = 65536;
-  options.max_query_length = 65536;
   options.key_size = 8;
   options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
 
   std::unique_ptr<Cache> cache(NewCache(options));
+  cache->ReserveQueryLength(65536);
   TestCache(cache.get(), line_size);
 }
 
@@ -228,10 +228,10 @@ TEST(Cache, FullCache) {
   const uint32_t line_size = 128;
   options.value_size = 512;
   options.capacity = 65536;
-  options.max_query_length = 65536;
   options.key_size = 8;
   options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
   std::unique_ptr<Cache> cache(NewCache(options));
+  cache->ReserveQueryLength(65536);
   TestCache(cache.get(), line_size);
 }
 
