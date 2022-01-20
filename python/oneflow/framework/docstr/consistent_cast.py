@@ -44,7 +44,7 @@ add_docstr(
         >>> output_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
         >>> output_tensor.is_consistent
         True
-    """
+    """,
 )
 
 add_docstr(
@@ -70,6 +70,5 @@ add_docstr(
         >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
         >>> consistent_tensor.to_local()
         tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
-    """
-
+    """,
 )
