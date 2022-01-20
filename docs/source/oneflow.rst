@@ -76,6 +76,7 @@ oneflow
             log, 
             log1p, 
             lt, 
+            le, 
             masked_fill, 
             masked_select, 
             matmul, 

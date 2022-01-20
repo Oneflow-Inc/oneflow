@@ -215,7 +215,7 @@ def _ge(self, other):
 
 
 def _le(self, other):
-    return flow.le(self, other)
+    return flow._C.less_equal(self, other)
 
 
 def _mul(self, other):
@@ -933,6 +933,7 @@ def RegisterMethods():
     Tensor.eq = _eq
     Tensor.ne = _ne
     Tensor.lt = _lt
+    Tensor.le = _le
 
 
 def register_tensor_op(op_name):

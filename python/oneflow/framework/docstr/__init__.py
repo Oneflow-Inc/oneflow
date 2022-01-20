@@ -49,3 +49,4 @@ from .tensor_t import *
 from .equal import *
 from .not_equal import *
 from .less import *
+from .less_equal import *
