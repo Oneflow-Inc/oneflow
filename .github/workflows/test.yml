@@ -260,7 +260,7 @@ jobs:
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7-xla.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
@@ -274,18 +274,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
-      - name: Upload bin
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
-        timeout-minutes: 10
-        with:
-          digest: ${{ steps.save-cache.outputs.build-digest }}
-          entry: ${{ matrix.entry }}
-          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
-          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/bin
-          dst-dir: bin
-      - name: Upload liboneflow_cpp library
+      - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
         timeout-minutes: 10
@@ -294,8 +283,8 @@ jobs:
           entry: ${{ matrix.entry }}
           ssh-tank-host: ${{ env.SSH_TANK_HOST }}
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/liboneflow_cpp/lib
-          dst-dir: liboneflow_cpp/lib
+          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
+          dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
@@ -425,7 +414,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - name: Download wheel, binary and liboneflow_cpp lib
+      - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: Oneflow-Inc/get-oneflow/digest/download@remove-single-client
         id: download-digest
@@ -478,20 +467,17 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
         env:
-          ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
-          ONEFLOW_CPP_API_LIB_PATH: ${{ steps.download-digest.outputs.entry-dir }}/liboneflow_cpp/lib
+          ONEFLOW_CPACK_PATH: ${{ steps.download-digest.outputs.entry-dir }}/cpack
         run: |
           docker run -d --rm --privileged --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
-            -v ${ONEFLOW_BIN_PATH}:${ONEFLOW_BIN_PATH}:ro \
-            -v ${ONEFLOW_CPP_API_LIB_PATH}:${ONEFLOW_CPP_API_LIB_PATH}:ro \
+            -v ${ONEFLOW_CPACK_PATH}:${ONEFLOW_CPACK_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
-            -e ONEFLOW_BIN_PATH=${ONEFLOW_BIN_PATH} \
             -e ONEFLOW_CI=1 \
             -v $PWD:$PWD \
             -w $PWD \
@@ -515,14 +501,18 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow --doctor
+      - name: Unzip packed liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
+        run: |
+          unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d ${{ steps.download-digest.outputs.entry-dir }}/cpack/
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
         timeout-minutes: 10
         run: |
-          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
-          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
-          docker exec -e LD_LIBRARY_PATH=${{ steps.download-digest.outputs.entry-dir }}/liboneflow_cpp/lib ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
+          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
+          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Build documentation
         timeout-minutes: 10
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
