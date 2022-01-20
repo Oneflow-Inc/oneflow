@@ -8,7 +8,6 @@ if (WITH_ZLIB)
 endif()
 include(protobuf)
 include(googletest)
-include(gflags)
 include(glog)
 include(libjpeg-turbo)
 include(opencv)
@@ -130,12 +129,6 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-# libraries only a top level .so or exe should be linked to
-set(oneflow_exe_third_party_libs
-    glog_imported
-    gflags_imported
-)
-
 set(oneflow_test_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
@@ -179,8 +172,6 @@ endif()
 
 set(oneflow_third_party_dependencies
   protobuf
-  gflags
-  glog
   googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
@@ -210,8 +201,6 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
     ${ZLIB_INCLUDE_DIR}
-    ${GFLAGS_INCLUDE_DIR}
-    ${GLOG_INCLUDE_DIR}
     ${GOOGLETEST_INCLUDE_DIR}
     ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
@@ -323,20 +312,22 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
-    message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
-  endif()
-  get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
-  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    if(of_include_src_dir MATCHES "/include$")
-      # it requires two slashes, but in CMake doc it states only one slash is needed
-      set(of_include_src_dir "${of_include_src_dir}//")
+  if(BUILD_PYTHON)
+    if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
+      message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
     endif()
-    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
-      COMPONENT oneflow_py_include
-      EXCLUDE_FROM_ALL
-    )
-  endforeach()
+    get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
+    foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+      if(of_include_src_dir MATCHES "/include$")
+        # it requires two slashes, but in CMake doc it states only one slash is needed
+        set(of_include_src_dir "${of_include_src_dir}//")
+      endif()
+      install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
+        COMPONENT oneflow_py_include
+        EXCLUDE_FROM_ALL
+      )
+    endforeach()
+  endif(BUILD_PYTHON)
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()

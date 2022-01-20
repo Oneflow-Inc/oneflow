@@ -764,6 +764,14 @@ def _tile(self, *dims):
         new_dims = dims
     return flow._C.tile(self, new_dims)
 
+  
+def _T(self):
+    return flow._C.T(self)
+
+
+def _t(self):
+    return flow._C.t(self)
+
 
 def _numpy(self):
     assert (
@@ -937,6 +945,8 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
+    Tensor.T = property(_T)
+    Tensor.t = _t
 
 
 def register_tensor_op(op_name):
