@@ -89,10 +89,16 @@ class PosixFile final {
     while (true) {
       struct stat sb {};
       if (stat(pathname.c_str(), &sb) == 0) {
-        CHECK(S_ISDIR(sb.st_mode)) << "'" << pathname << "' already exists and is not a directory.";
+        CHECK(S_ISDIR(sb.st_mode)) << "Could not create directory: '" << pathname
+                                   << "' already exists and is not a directory.";
         return;
       } else {
-        PCHECK(errno == ENOENT);
+        PCHECK(errno == ENOENT) << "Could not create directory '" << pathname << "'.";
+        if (lstat(pathname.c_str(), &sb) == 0) {
+          LOG(FATAL) << "Could not create directory: '" << pathname << "' is a broken link.";
+        } else {
+          PCHECK(errno == ENOENT) << "Could not create directory '" << pathname << "'.";
+        }
         std::vector<char> dirname_input(pathname.size() + 1);
         std::memcpy(dirname_input.data(), pathname.c_str(), pathname.size() + 1);
         const std::string parent = dirname(dirname_input.data());
@@ -100,7 +106,7 @@ class PosixFile final {
         if (mkdir(pathname.c_str(), mode) == 0) {
           return;
         } else {
-          PCHECK(errno == EEXIST);
+          PCHECK(errno == EEXIST) << "Could not create directory '" << pathname << "'.";
         }
       }
     }
