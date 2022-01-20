@@ -1178,7 +1178,9 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
   const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
     btb->mut_blocking_counter()->Decrease();
+    OF_PROFILER_RANGE_PUSH("Callback");
     Callback(ofblob_ptr);
+    OF_PROFILER_RANGE_POP();
     btb->mut_spin_counter()->Decrease();
   };
   return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
