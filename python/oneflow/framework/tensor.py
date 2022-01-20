@@ -131,7 +131,7 @@ def _eq(self, other):
 
 
 def _ne(self, other):
-    return self.ne(other)
+    return flow._C.not_equal(self, other)
 
 
 def _and(self, other):
@@ -931,6 +931,7 @@ def RegisterMethods():
     Tensor.T = property(_T)
     Tensor.t = _t
     Tensor.eq = _eq
+    Tensor.ne=_ne
 
 
 def register_tensor_op(op_name):

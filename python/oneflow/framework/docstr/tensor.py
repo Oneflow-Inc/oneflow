@@ -456,6 +456,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.ne,
+    """
+    See :func:`oneflow.ne`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.fill_,
     """
     Tensor.fill_(value) → Tensor

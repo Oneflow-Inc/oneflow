@@ -177,6 +177,8 @@ from oneflow._C import swapaxes
 from oneflow._C import t
 from oneflow._C import equal
 from oneflow._C import equal as eq
+from oneflow._C import not_equal
+from oneflow._C import not_equal as ne
 
 
 from . import sbp
@@ -318,8 +320,6 @@ from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.comparison import less_op as lt
 from oneflow.nn.modules.comparison import less_equal_op as le
-from oneflow.nn.modules.comparison import ne_op as ne
-from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select

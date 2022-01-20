@@ -90,6 +90,7 @@ oneflow
             negative, 
             nonzero,
             numel, 
+            ne, 
             empty,
             ones, 
             ones_like, 
