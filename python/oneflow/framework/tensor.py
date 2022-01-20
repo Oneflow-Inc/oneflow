@@ -28,29 +28,6 @@ Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
 
-def _tensor_numpy(eager_local_tensor):
-    assert (
-        not eager_local_tensor.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
-    if eager_local_tensor.dtype == flow.tensor_buffer:
-        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
-        tensors = flow.tensor_buffer_to_list_of_tensors(
-            eager_local_tensor, shapes, dtypes
-        )
-        return [t.numpy() for t in tensors]
-    method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
-    copy_to_numpy = getattr(eager_local_tensor, method_name)
-
-    ndarray = np.empty(
-        shape=tuple(eager_local_tensor.shape),
-        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
-    )
-
-    if ndarray.size != 0:
-        copy_to_numpy(ndarray)
-    return ndarray
-
-
 def _size(self, idx=None):
     if idx is None:
         return self.shape
@@ -293,6 +270,10 @@ def _floor(self):
     return flow._C.floor(self)
 
 
+def _floor_inplace_(self):
+    return flow._C.floor_(self)
+
+
 def _neg(self):
     return flow.neg(self)
 
@@ -381,6 +362,10 @@ def _softsign(self):
     return flow.softsign(self)
 
 
+def _swapaxes(self, dim0, dim1):
+    return flow._C.swapaxes(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -430,11 +415,19 @@ def _ceil(self):
 
 
 def _clamp(self, min=None, max=None):
-    return flow.clamp(self, min=min, max=max)
+    return flow._C.clamp(self, min=min, max=max)
+
+
+def _clamp_(self, min=None, max=None):
+    return flow._C.clamp_(self, min=min, max=max)
 
 
 def _clip(self, min=None, max=None):
-    return flow.clip(self, min=min, max=max)
+    return flow._C.clip(self, min=min, max=max)
+
+
+def _clip_(self, min=None, max=None):
+    return flow._C.clip_(self, min=min, max=max)
 
 
 def _cos(self):
@@ -451,6 +444,14 @@ def _erf(self):
 
 def _erfc(self):
     return flow.erfc(self)
+
+
+def _erfinv(self):
+    return flow._C.erfinv(self)
+
+
+def _erfinv_inplace(self):
+    return flow._C.erfinv_(self)
 
 
 def _expm1(self):
@@ -587,7 +588,7 @@ def _chunk(self, chunks=None, dim=None):
     return flow._C.chunk(self, chunks, dim)
 
 
-def _split(self, split_size_or_sections=None, dim=None):
+def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
 
 
@@ -744,6 +745,31 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
+def _T(self):
+    return flow._C.T(self)
+
+
+def _t(self):
+    return flow._C.t(self)
+
+
+def _numpy(self):
+    assert (
+        not self.is_lazy
+    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    if self.dtype == flow.tensor_buffer:
+        shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
+        tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
+        return [t.numpy() for t in tensors]
+    if self.is_consistent:
+        sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
+        self = self.to_consistent(placement=self.placement, sbp=sbp_list).to_local()
+    assert self.is_local
+    if self.device != flow.device("cpu"):
+        self = self.cpu()
+    return self.to_numpy()
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -751,7 +777,7 @@ def RegisterMethods():
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.__matmul__ = lambda self, other: self.matmul(other)
     Tensor.ndim = property(_ndim)
-    Tensor.numpy = _tensor_numpy
+    Tensor.numpy = _numpy
     Tensor.size = _size
     Tensor.dim = _ndim
     Tensor.ndimension = _ndim
@@ -803,6 +829,7 @@ def RegisterMethods():
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
     Tensor.floor = _floor
+    Tensor.floor_ = _floor_inplace_
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
@@ -846,12 +873,16 @@ def RegisterMethods():
     Tensor.arctan = _arctan
     Tensor.ceil = _ceil
     Tensor.clamp = _clamp
+    Tensor.clamp_ = _clamp_
     Tensor.clip = _clip
+    Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
+    Tensor.erfinv = _erfinv
+    Tensor.erfinv_ = _erfinv_inplace
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
@@ -883,6 +914,7 @@ def RegisterMethods():
     Tensor.chunk = _chunk
     Tensor.split = _split
     Tensor.squeeze = _squeeze
+    Tensor.swapaxes = _swapaxes
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
@@ -891,6 +923,8 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
+    Tensor.T = property(_T)
+    Tensor.t = _t
 
 
 def register_tensor_op(op_name):

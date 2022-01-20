@@ -35,7 +35,8 @@ bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
 
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
 
-Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                            const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
@@ -44,7 +45,7 @@ Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckCclSToB = DECORATE(&RawCheckCclSToB, ThreadLocal);
+static constexpr auto* CheckCclSToB = DECORATE(&RawCheckCclSToB, ThreadLocalCopiable);
 
 }  // namespace
 

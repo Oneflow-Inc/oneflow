@@ -203,7 +203,10 @@ class ModuleBlock(Block):
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         # result = self._origin.__class__.__call__(self, *args)
-        result = self.__block_forward(*args)
+        with graph_build_util.GLogScopeContext(
+            self._debug_min_s_level, self._debug_max_v_level
+        ):
+            result = self.__block_forward(*args)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -552,7 +555,7 @@ class ModuleBlock(Block):
         assert isinstance(msg, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
+                print(msg, flush=True)
 
 
 class LazyBuilder(object):

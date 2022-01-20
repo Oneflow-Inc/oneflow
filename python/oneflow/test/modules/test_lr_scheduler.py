@@ -28,7 +28,7 @@ from oneflow.nn.parameter import Parameter
 from test_util import GenArgDict
 
 
-def compare_with_troch_reduce_lr(
+def compare_with_torch_reduce_lr(
     test_case, mode, factor, patience, threshold, threshold_mode, cooldown, min_lr, eps,
 ):
     optimizer_flow = flow.optim.SGD(
@@ -218,6 +218,53 @@ class TestLrScheduler(flow.unittest.TestCase):
             for (lr1, lr2) in zip(lambda_lr.get_last_lr(), new_lrs):
                 test_case.assertAlmostEqual(lr1, lr2, places=5)
 
+    def test_polynomial_lr(test_case):
+        optimizer = flow.optim.SGD(
+            [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
+        )
+
+        def polynomial_lr_step(base_lr, end_lr, step, decay_steps, power, cycle):
+            if cycle:
+                if step == 0:
+                    step = 1
+                decay_steps = decay_steps * math.ceil(step / decay_steps)
+            step = min(step, decay_steps)
+            return (base_lr - end_lr) * (1 - step / decay_steps) ** power + end_lr
+
+        decay_steps = 100
+        end_learning_rate = 1e-5
+        power = 2
+        cycle = True
+        poly_decay_lr = flow.optim.lr_scheduler.PolynomialLR(
+            optimizer, decay_steps, end_learning_rate, power, cycle
+        )
+        # step(0) will be invoked in LrScheduler.__init__
+        new_lr = polynomial_lr_step(
+            TestLrScheduler.base_lr, end_learning_rate, 0, decay_steps, power, cycle
+        )
+        test_case.assertAlmostEqual(poly_decay_lr.get_last_lr()[0], new_lr, places=4)
+        for i in range(1, 21):
+            poly_decay_lr.step()
+            new_lr = polynomial_lr_step(
+                TestLrScheduler.base_lr, end_learning_rate, i, decay_steps, power, cycle
+            )
+            test_case.assertAlmostEqual(
+                poly_decay_lr.get_last_lr()[0], new_lr, places=4
+            )
+
+        cycle = True
+        poly_decay_lr = flow.optim.lr_scheduler.PolynomialLR(
+            optimizer, decay_steps, end_learning_rate, power, cycle
+        )
+        for i in range(1, 21):
+            poly_decay_lr.step()
+            new_lr = polynomial_lr_step(
+                TestLrScheduler.base_lr, end_learning_rate, i, decay_steps, power, cycle
+            )
+            test_case.assertAlmostEqual(
+                poly_decay_lr.get_last_lr()[0], new_lr, places=4
+            )
+
     def test_reduce_lr_on_plateau(test_case):
         arg_dict = OrderedDict()
         arg_dict["mode"] = ["min", "max"]
@@ -229,7 +276,7 @@ class TestLrScheduler(flow.unittest.TestCase):
         arg_dict["min_lr"] = [0, 1e-3]
         arg_dict["eps"] = [1e-5, 1e-8]
         for arg in GenArgDict(arg_dict):
-            compare_with_troch_reduce_lr(test_case, **arg)
+            compare_with_torch_reduce_lr(test_case, **arg)
 
     def test_warmup_scheduler_save_and_load(test_case):
         param = flow.nn.Parameter(flow.ones(3, 4))

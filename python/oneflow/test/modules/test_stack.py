@@ -29,7 +29,7 @@ class TestStackModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
         y = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        out = torch.stack((x, y), dim=random(low=1, high=4).to(int))
+        out = torch.stack((x, y), dim=random(low=-5, high=5).to(int))
         return out
 
 

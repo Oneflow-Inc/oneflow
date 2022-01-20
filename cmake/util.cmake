@@ -102,7 +102,7 @@ function(add_copy_headers_target)
 endfunction()
 
 function(use_mirror)
-  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/" 
+  set(ALIYUN_URL_PREFIX "https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/https/"
     CACHE STRING "URL prefix of Aliyun OSS mirror"
   )
   cmake_parse_arguments(PARSED_ARGS
@@ -113,6 +113,10 @@ function(use_mirror)
     message(FATAL_ERROR "VARIABLE or URL required")
   endif()
 
+  if(PARSED_ARGS_URL MATCHES "file://")
+    set(${PARSED_ARGS_VARIABLE} ${PARSED_ARGS_URL} PARENT_SCOPE)
+    return()
+  endif()
   if(DEFINED THIRD_PARTY_MIRROR)
     if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
       if(NOT PARSED_ARGS_URL MATCHES "^https://")
@@ -231,7 +235,7 @@ function(set_compile_options_to_oneflow_target target)
   # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
   target_try_compile_options(${target} -Wno-mismatched-tags)
   target_try_compile_options(${target} -Wno-covered-switch-default)
-
+  set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
   if(BUILD_CUDA)
     if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
       target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
@@ -256,3 +260,19 @@ function(set_compile_options_to_oneflow_target target)
   endif()
 endfunction()
 
+function(checkDirAndAppendSlash)
+set(singleValues DIR;OUTPUT)
+set(prefix ARG)
+cmake_parse_arguments(
+  PARSE_ARGV 0
+  ${prefix}
+  "${noValues}" "${singleValues}" "${multiValues}"
+)
+
+if("${${prefix}_DIR}" STREQUAL "" OR "${${prefix}_DIR}" STREQUAL "/")
+  message(FATAL_ERROR "emtpy path found: ${${prefix}_DIR}")
+else()
+  set(${${prefix}_OUTPUT} "${${prefix}_DIR}/" PARENT_SCOPE)
+endif()
+
+endfunction()

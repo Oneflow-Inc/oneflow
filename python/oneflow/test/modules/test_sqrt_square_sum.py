@@ -43,6 +43,16 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
         y = torch.linalg.norm(x)
         return y
 
+    @autotest(n=30, auto_backward=False, check_graph=False, rtol=0.5, atol=0.5)
+    def test_scalar_print_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=30, dim2=40, dim3=50, requires_grad=False
+        ).to(device)
+        y = torch.linalg.norm(x)
+        print(f"grad_norm {y.oneflow:.4f}\t")
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

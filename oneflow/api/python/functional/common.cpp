@@ -15,8 +15,11 @@ limitations under the License.
 */
 
 #include "oneflow/api/python/functional/common.h"
+#include <object.h>
+#include <string>
 
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
@@ -54,8 +57,18 @@ bool PyStringSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyStringCheck(item); });
 }
 
-Maybe<const char*> PyStringAsString(PyObject* object) {
-  return PyBytes_AsString(PyUnicode_AsEncodedString(object, "utf-8", "~E~"));
+Maybe<std::string> PyStringAsString(PyObject* str_obj) {
+  PyObject* bytes = PyUnicode_AsEncodedString(str_obj, "utf-8", "~E~");
+  std::string str = PyBytes_AS_STRING(bytes);
+  Py_XDECREF(bytes);
+  return str;
+}
+
+Maybe<std::string> PyObjectToReprStr(PyObject* obj) {
+  PyObject* repr_obj = PyObject_Repr(obj);
+  std::string str = *JUST(PyStringAsString(repr_obj));
+  Py_XDECREF(repr_obj);
+  return str;
 }
 
 bool PyTensorCheck(PyObject* obj) {
