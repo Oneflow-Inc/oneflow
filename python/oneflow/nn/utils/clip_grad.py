@@ -95,17 +95,18 @@ def clip_grad_norm_(
         assert all(
             [p.is_consistent for p in parameters]
         ), "All parameters must be consistent tensor."
+        sbp_broadcast = [flow.sbp.broadcast for _ in parameters[0].sbp]
         if norm_type == float("inf"):
-            norms = [p.grad.detach().abs().max() for p in parameters]
+            norms = [p.grad.detach().to_consistent(sbp=sbp_broadcast).abs().max() for p in parameters]
             total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
         elif norm_type == float("-inf"):
-            norms = [p.grad.detach().abs().min() for p in parameters]
+            norms = [p.grad.detach().to_consistent(sbp=sbp_broadcast).abs().min() for p in parameters]
             total_norm = norms[0] if len(norms) == 1 else flow.min(flow.stack(norms))
         else:
             total_norm = flow.linalg.vector_norm(
                 flow.stack(
                     [
-                        flow.linalg.vector_norm(p.grad.detach(), norm_type)
+                        flow.linalg.vector_norm(p.grad.detach().to_consistent(sbp=sbp_broadcast), norm_type)
                         for p in parameters
                     ]
                 ),
@@ -136,6 +137,8 @@ def clip_grad_norm_(
         clip_coef_clamped = clip_coef.clamp(max=1.0)
         for p in parameters:
             p.grad.detach().mul_(clip_coef_clamped)
+            print(clip_coef_clamped, p.grad.detach())
+        
     else:
         device = parameters[0].grad.device
         if norm_type == float("inf"):
