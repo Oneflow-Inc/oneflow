@@ -49,6 +49,12 @@ namespace oneflow {
   cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *like_distribution = in_sbp;
   *out_distribution = in_sbp;
+  for (auto& sbp : *out_distribution->mutable_sbp_parallel()) {
+    if (sbp.has_partial_sum_parallel()) {
+      sbp.Clear();
+      *sbp.mutable_broadcast_parallel() = cfg::BroadcastParallel();
+    }
+  }
   return Maybe<void>::Ok();
 }
 
