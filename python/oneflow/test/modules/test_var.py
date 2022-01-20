@@ -21,6 +21,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestVar(flow.unittest.TestCase):
     def test_flow_var_all_dim_with_random_data(test_case):
