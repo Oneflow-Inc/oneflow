@@ -307,6 +307,14 @@
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
 
+- name: "T"
+  signature: "Tensor (Tensor input) => TransposeAllDimProperty"
+  bind_python: True
+
+- name: "t"
+  signature: "Tensor (Tensor input) => TransposeAllDimFunction"
+  bind_python: True 
+
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
   bind_python: True
