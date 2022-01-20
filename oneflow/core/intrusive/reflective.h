@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 #define REFLECTIVE_CLASS_BEGIN(class_name)           \
-  struct class_name final { \
+  struct class_name final {                          \
    public:                                           \
     using self_type = class_name;                    \
     static const bool __has_intrusive_ref__ = true;  \

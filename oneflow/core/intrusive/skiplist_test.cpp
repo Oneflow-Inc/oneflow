@@ -24,7 +24,7 @@ namespace test {
 
 namespace {
 
-class SkipListFoo final : public intrusive::Base {
+class SkipListFoo final {
  public:
   void __Init__() { clear_is_deleted(); }
   void __Delete__() {
@@ -55,8 +55,10 @@ class SkipListFoo final : public intrusive::Base {
   intrusive::SkipListHook<int32_t> foo_map_key_;
 };
 
-class SkipListFooContainer final : public intrusive::Base {
+class SkipListFooContainer final {
  public:
+  void __Init__() {}
+  void __Delete__() {}
   // types
   using Key2SkipListFoo = intrusive::SkipList<INTRUSIVE_FIELD(SkipListFoo, foo_map_key_)>;
   // Getters
