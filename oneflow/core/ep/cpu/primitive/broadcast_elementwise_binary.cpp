@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
 
 namespace oneflow {
 
@@ -129,6 +130,155 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr, OR)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, XOR)
 
+#ifdef WITH_ONEDNN
+
+inline void OneDnnBroadcastDims(dnnl::memory::dims src0, dnnl::memory::dims src1,
+                                dnnl::memory::dims& dst) {
+  for (int64_t i = 0; i < dst.size(); i++) {
+    int64_t src0_dim = i < src0.size() ? src0[i] : 1;
+    int64_t src1_dim = i < src1.size() ? src1[i] : 1;
+    CHECK(src0_dim != src1_dim && src0_dim == 1 && src1_dim == 1);
+    dst[i] = std::max(src0_dim, src1_dim);
+  }
+}
+
+template<dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
+         dnnl::memory::data_type dst_onednn>
+class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OneDnnBroadcastElementwiseBinaryImpl);
+  OneDnnBroadcastElementwiseBinaryImpl(){};
+  ~OneDnnBroadcastElementwiseBinaryImpl() override = default;
+
+  void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
+              const void* src1, void* dst) override {}
+  void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
+              Scalar src1, void* dst) override {}
+  void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
+              size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
+              void* dst) override {
+    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
+    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
+
+    dnnl::memory::dims src_0_dims;
+    dnnl::memory::dims src_1_dims;
+
+    const void* mm_src0 = nullptr;
+    const void* mm_src1 = nullptr;
+
+    if (src1 == dst) {
+      src_0_dims.resize(num_src1_dims);
+      src_1_dims.resize(num_src0_dims);
+      memcpy(src_0_dims.data(), src1_dims, num_src1_dims * sizeof(int64_t));
+      memcpy(src_1_dims.data(), src0_dims, num_src0_dims * sizeof(int64_t));
+      mm_src0 = src1;
+      mm_src1 = src0;
+    } else {
+      src_0_dims.resize(num_src0_dims);
+      src_1_dims.resize(num_src1_dims);
+      memcpy(src_0_dims.data(), src0_dims, num_src0_dims * sizeof(int64_t));
+      memcpy(src_1_dims.data(), src1_dims, num_src1_dims * sizeof(int64_t));
+      mm_src0 = src0;
+      mm_src1 = src1;
+    }
+
+    size_t dest_num_dims = std::max(num_src0_dims, num_src1_dims);
+    dnnl::memory::dims dst_dims(dest_num_dims);
+    OneDnnBroadcastDims(src_0_dims, src_1_dims, dst_dims);
+
+    auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn, dnnl::memory::format_tag::ab);
+    auto src_1_md = dnnl::memory::desc(src_1_dims, src_onednn, dnnl::memory::format_tag::ab);
+    auto dst_md = dnnl::memory::desc(dst_dims, dst_onednn, dnnl::memory::format_tag::ab);
+
+    auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)mm_src0);
+    auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)mm_src1);
+    auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
+
+    auto binary_d = dnnl::binary::desc(algorithm, src_0_md, src_1_md, dst_md);
+    auto binary_pd = dnnl::binary::primitive_desc(binary_d, *onednn_engine);
+    auto binary_prim = dnnl::binary(binary_pd);
+
+    std::unordered_map<int, dnnl::memory> binary_args{
+        {DNNL_ARG_SRC_0, src_0_mem}, {DNNL_ARG_SRC_1, src_1_mem}, {DNNL_ARG_DST, dst_mem}};
+
+    binary_prim.execute(*onednn_stream, binary_args);
+    onednn_stream->wait();
+  }
+};
+
+#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ \
+  CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ         \
+  CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ        \
+  CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ        \
+  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ      \
+  CPU_PRIMITIVE_ONEDNN_BFLOAT16_TYPE_SEQ
+// OneDNN binary op does not support s32
+// CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ
+
+#define CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ \
+  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ                            \
+  CPU_PRIMITIVE_INT32_TYPE_SEQ                             \
+  CPU_PRIMITIVE_INT64_TYPE_SEQ
+
+#define BINARY_ONEDNN_ADD OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd, dnnl::algorithm::binary_add)
+#define BINARY_ONEDNN_SUB OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub, dnnl::algorithm::binary_sub)
+#define BINARY_ONEDNN_MUL OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul, dnnl::algorithm::binary_mul)
+#define BINARY_ONEDNN_DIV OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv, dnnl::algorithm::binary_div)
+#define BINARY_ONEDNN_MAX OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax, dnnl::algorithm::binary_max)
+#define BINARY_ONEDNN_MIN OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin, dnnl::algorithm::binary_min)
+
+#define BINARY_ONEDNN_EQ OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual, dnnl::algorithm::binary_eq)
+#define BINARY_ONEDNN_NE OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual, dnnl::algorithm::binary_ne)
+#define BINARY_ONEDNN_LT OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan, dnnl::algorithm::binary_lt)
+#define BINARY_ONEDNN_LE OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual, dnnl::algorithm::binary_le)
+#define BINARY_ONEDNN_GT OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan, dnnl::algorithm::binary_gt)
+#define BINARY_ONEDNN_GE OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual, dnnl::algorithm::binary_ge)
+
+#define BINARY_MATH_OP_ONEDNN_PAIR \
+  BINARY_ONEDNN_ADD                \
+  BINARY_ONEDNN_SUB                \
+  BINARY_ONEDNN_MUL                \
+  BINARY_ONEDNN_DIV                \
+  BINARY_ONEDNN_MAX                \
+  BINARY_ONEDNN_MIN
+
+#define BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR \
+  BINARY_ONEDNN_EQ                                \
+  BINARY_ONEDNN_NE                                \
+  BINARY_ONEDNN_LT                                \
+  BINARY_ONEDNN_LE                                \
+  BINARY_ONEDNN_GT                                \
+  BINARY_ONEDNN_GE
+
+#define BINARY_LOGICAL_COMPARISION_OP_ONEDNN_UNIMPLEMENTED \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalAnd, AND)         \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr, OR)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, XOR)
+
+template<dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
+         dnnl::memory::data_type dst_onednn>
+std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary() {
+  return std::unique_ptr<BroadcastElementwiseBinary>(
+      new OneDnnBroadcastElementwiseBinaryImpl<algorithm, src_onednn, dst_onednn>());
+}
+
+#define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
+  {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(data_type_pair),         \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                                          \
+   NewOneDnnBroadcastElementwiseBinary<OF_PP_PAIR_SECOND(binary_op_pair),                       \
+                                       OF_PP_PAIR_FIRST(data_type_pair),                        \
+                                       OF_PP_PAIR_FIRST(data_type_pair)>},
+
+#define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(         \
+    binary_op_pair, src_data_type_pair, dst_data_type_pair)                                 \
+  {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(src_data_type_pair), \
+                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                                  \
+   NewOneDnnBroadcastElementwiseBinary<OF_PP_PAIR_SECOND(binary_op_pair),                   \
+                                       OF_PP_PAIR_FIRST(src_data_type_pair),                \
+                                       OF_PP_PAIR_FIRST(dst_data_type_pair)>},
+
+#endif  // WITH_ONEDNN
+
 class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseBinaryFactoryImpl);
@@ -157,6 +307,38 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
        &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(src_data_type_pair)>::OF_PP_CAT(     \
            Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
 
+#ifdef WITH_ONEDNN
+    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
+                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
+        new_broadcast_elementwise_binary_handle{
+            // For oneDNN binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY, BINARY_MATH_OP_ONEDNN_PAIR,
+                CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ)
+            // For OneDNN comparasion binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR, CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ,
+                CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ)
+            // OneDNN unimplemented binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                             OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow),
+                                             NDARRAY_BINARY_TYPE_SEQ)
+            // OneDNN unimplemented comparasion binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                BINARY_LOGICAL_COMPARISION_OP_ONEDNN_UNIMPLEMENTED, NDARRAY_BINARY_TYPE_SEQ,
+                CPU_PRIMITIVE_INT8_TYPE_SEQ)
+            // OneDNN unimplemented data type binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                             BINARY_MATH_OP_NDARRAY_PAIR,
+                                             CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ)
+            // OneDNN unimplemented data type comparasion binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR,
+                CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ, CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+#else
     static const std::map<std::tuple<BinaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
         new_broadcast_elementwise_binary_handle{
@@ -166,6 +348,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                     BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ,
                     CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+#endif
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY

@@ -20,8 +20,83 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 namespace oneflow {
+
+#define MATH_BINARY_BROADCAST_EP_FUNC_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_add", ep::BinaryOp::kAdd)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", ep::BinaryOp::kSub)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", ep::BinaryOp::kMul)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_div", ep::BinaryOp::kDiv)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", ep::BinaryOp::kMin) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", ep::BinaryOp::kMax) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", ep::BinaryOp::kPow)
+
+#define MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", FMod)
+
+#define MATH_BINARY_BROADCAST_EP_LOGICAL_FUNC_SEQ                              \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_equal", ep::BinaryOp::kEqual)                \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_not_equal", ep::BinaryOp::kNotEqual)         \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_greater", ep::BinaryOp::kGreaterThan)        \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_greater_equal", ep::BinaryOp::kGreaterEqual) \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_less", ep::BinaryOp::kLessThan)              \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_less_equal", ep::BinaryOp::kLessEqual)       \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_and", ep::BinaryOp::kLogicalAnd)     \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_or", ep::BinaryOp::kLogicalOr)       \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_xor", ep::BinaryOp::kLogicalXor)
+
+template<typename Context, ep::primitive::BinaryOp binary_op>
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinaryFactory>
+NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
+  user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+  user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
+  size_t num_axes = z->shape().NumAxes();
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+      ctx->device_type(), binary_op, x->data_type(), z->data_type(), num_axes);
+}
+
+template<ep::primitive::BinaryOp binary_op>
+class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
+ public:
+  MathBinaryBroadcastEpKernel() = default;
+  ~MathBinaryBroadcastEpKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
+
+    auto primitive =
+        NewBroadcastElementwiseBinaryPrimitive<user_op::KernelComputeContext, binary_op>(ctx);
+    CHECK(primitive.get() != nullptr) << "Exceeds maximum supported dimensions";
+
+    primitive->Launch(ctx->stream(), x->shape().NumAxes(), x->shape().ptr(), x->dptr(),
+                      y->shape().NumAxes(), y->shape().ptr(), y->dptr(), z->dptr());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<ep::primitive::BinaryOp binary_op>
+auto MathBinaryBroadcastPrimitiveExists() {
+  return hob::make_custom("MathBinaryBroadcastPrimitiveExists", [](const user_op::KernelRegContext&
+                                                                       ctx) {
+    return NewBroadcastElementwiseBinaryPrimitive<const user_op::KernelRegContext, binary_op>(&ctx).
+    operator bool();
+  });
+}
+
+#define REGISTER_MATH_BINARY_BROADCAST_EP_KERNEL(math_type_pair)                               \
+  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                       \
+      .SetCreateFn<MathBinaryBroadcastEpKernel<OF_PP_PAIR_SECOND(math_type_pair)>>()           \
+      .SetIsMatchedHob(MathBinaryBroadcastPrimitiveExists<OF_PP_PAIR_SECOND(math_type_pair)>() \
+                       == true);
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_EP_KERNEL,
+                                 MATH_BINARY_BROADCAST_EP_FUNC_SEQ)
 
 template<DeviceType device_type, typename T, typename K,
          void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<K>& z,
@@ -57,27 +132,27 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
                        && (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
-                                 MATH_BINARY_BROADCAST_FUNC_SEQ, DEVICE_TYPE_SEQ,
+                                 MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 // gpu half
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
-                                 MATH_BINARY_BROADCAST_FUNC_SEQ, (DeviceType::kCUDA),
+                                 MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif
 
-#define REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL(math_type_pair, device, data_type_pair) \
-  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                      \
-      .SetCreateFn<MathBinaryBroadcastKernel<                                                 \
-          device, OF_PP_PAIR_FIRST(data_type_pair), int8_t,                                   \
-          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
-              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)) \
-                       && (user_op::HobDataType("z", 0) == DataType::kInt8));
+// #define REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL(math_type_pair, device, data_type_pair) \
+//   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                      \
+//       .SetCreateFn<MathBinaryBroadcastKernel<                                                 \
+//           device, OF_PP_PAIR_FIRST(data_type_pair), int8_t,                                   \
+//           &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
+//               Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
+//       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+//                        && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)) \
+//                        && (user_op::HobDataType("z", 0) == DataType::kInt8));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
-                                 MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL,
+//                                  MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ, DEVICE_TYPE_SEQ,
+//                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
