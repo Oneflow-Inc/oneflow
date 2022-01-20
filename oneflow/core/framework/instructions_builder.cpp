@@ -47,6 +47,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -1068,6 +1069,10 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   const auto& last_used_device = JUST(eager_blob_object->last_used_device());
   const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
+  if (pthread_fork::IsForkedSubProcess() && parallel_desc
+      && parallel_desc->device_type() == DeviceType::kCUDA) {
+    return Maybe<void>::Ok();
+  }
   if (last_used_device != producer_op_device) {
     JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                         last_used_device));
