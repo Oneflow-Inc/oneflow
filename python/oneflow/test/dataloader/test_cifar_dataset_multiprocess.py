@@ -21,6 +21,8 @@ import oneflow as flow
 import oneflow.nn as nn
 import oneflow.optim as optim
 from data_utils import load_data_cifar10
+import flowvision as vision
+import flowvision.transforms as transforms
 
 
 classes = (
@@ -69,11 +71,8 @@ def test(test_case):
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
-    transform = flow.utils.vision.transforms.Compose(
-        [
-            flow.utils.vision.transforms.ToTensor(),
-            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ]
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),]
     )
 
     train_epoch = 1

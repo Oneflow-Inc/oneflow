@@ -175,7 +175,7 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import contiguous
 from oneflow._C import swapaxes
-
+from oneflow._C import t
 
 from . import sbp
 import atexit
@@ -297,6 +297,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
@@ -392,7 +393,6 @@ from . import (
     amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
-import oneflow.utils.vision
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
