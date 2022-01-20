@@ -41,6 +41,7 @@ endif()
 if(THIRD_PARTY)
 ExternalProject_Add(onednn
     PREFIX onednn
+    DEPENDS install-tbb
     URL ${ONEDNN_URL}
     URL_MD5 c60ea96acbaccec053be7e3fa81c6184
     UPDATE_COMMAND ""
