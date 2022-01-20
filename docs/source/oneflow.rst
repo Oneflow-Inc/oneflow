@@ -44,6 +44,7 @@ oneflow
             diag, 
             diagonal,
             movedim,
+            select,
             div, 
             dot, 
             eq, 

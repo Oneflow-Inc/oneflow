@@ -119,6 +119,7 @@ from oneflow._C import asin as arcsin
 from oneflow._C import asinh
 from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
+from oneflow._C import select
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
 from oneflow._C import ceil

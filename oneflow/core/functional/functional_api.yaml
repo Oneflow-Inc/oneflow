@@ -1663,6 +1663,14 @@
   signature: "TensorTuple (TensorTuple inputs, Int32 n) => SelectTopN"
   bind_python: True
 
+- name: "select"
+  signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
+  bind_python: True
+
+- name: "select_grad"
+  signature: "Tensor (Tensor dy, Tensor input, Int32 dim, Int32 index) => SelectGrad"
+  bind_python: True
+
 - name: "cast_like"
   signature: "Tensor (Tensor x, Tensor like) => CastLike"
   bind_python: False

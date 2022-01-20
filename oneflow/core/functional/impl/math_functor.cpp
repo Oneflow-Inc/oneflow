@@ -1348,6 +1348,59 @@ class SelectTopNFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SelectFunctor {
+ public:
+  SelectFunctor() { op_ =
+        CHECK_JUST(one::OpBuilder("select").Input("input").Output("output").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim, const int32_t& index) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN((dim>=-ndim)&&(dim<ndim))<< "Dimension out of range (expected to be in range of ["
+                                              <<-ndim<<","<< ndim-1 <<"], but got "<<dim<<")";
+    int32_t pos_dim = dim>=0?dim:dim+ndim;
+    int32_t ndim_in_dim =  input->shape()->At(pos_dim);
+    CHECK_OR_RETURN((index>=-ndim_in_dim)&&(index<ndim_in_dim))<< "select(): index "<< index << "out of range for tensor of input at dimension "<< dim;
+    int32_t pos_index = index>=0?index:index+ndim_in_dim;
+
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<int32_t>("dim", pos_dim));
+    JUST(attr.SetAttr<int32_t>("index", pos_index));
+    
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {input}, attr));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SelectGradFunctor {
+ public:
+  SelectGradFunctor() { op_ =
+        CHECK_JUST(one::OpBuilder("select_grad").Input("dy").Input("input").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::shared_ptr<one::Tensor>& input, 
+                           const int32_t& dim, const int32_t& index) const {
+    int32_t ndim = input->shape()->NumAxes();
+    CHECK_OR_RETURN((dim>=-ndim)&&(dim<ndim))<< "Dimension out of range (expected to be in range of ["
+                                              <<-ndim<<","<< ndim-1 <<"], but got "<<dim<<")";
+    int32_t pos_dim = dim>=0?dim:dim+ndim;
+    int32_t ndim_in_dim =  input->shape()->At(pos_dim);
+    CHECK_OR_RETURN((index>=-ndim_in_dim)&&(index<ndim_in_dim))<< "select(): index "<< index << "out of range for tensor of input at dimension "<< dim;
+    int32_t pos_index = index>=0?index:index+ndim_in_dim;
+
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<int32_t>("dim", pos_dim));
+    JUST(attr.SetAttr<int32_t>("index", pos_index));
+
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input}, attr));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class MinimumFunctor {
  public:
   MinimumFunctor() {
@@ -1865,6 +1918,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
+  m.add_functor<SelectFunctor>("Select");
+  m.add_functor<SelectGradFunctor>("SelectGrad");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
