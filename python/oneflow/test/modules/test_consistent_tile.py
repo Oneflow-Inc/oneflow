@@ -45,20 +45,22 @@ def _test_consistent_flow_tensor_tile_with_random_data(test_case, placement, sbp
     return y
 
 
-# ndsbp infer ger error when world_size=2
+# ndsbp infer ger error when world_size != 1
 @flow.unittest.skip_unless_1n1d()
 class TestConsistentTile(flow.unittest.TestCase):
     @consistent
     def test_consistent_flow_tile_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_flow_tile_with_random_data(test_case, placement, sbp)
+                _test_consistent_flow_tile_with_random_data(test_case, placement, sbp)
 
     @consistent
     def test_consistent_flow_tensor_tile_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_flow_tensor_tile_with_random_data(test_case, placement, sbp)
+                _test_consistent_flow_tensor_tile_with_random_data(
+                    test_case, placement, sbp
+                )
 
 
 if __name__ == "__main__":
