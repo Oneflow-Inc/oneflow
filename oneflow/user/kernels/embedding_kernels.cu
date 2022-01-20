@@ -29,7 +29,7 @@ namespace oneflow {
 
 namespace {
 
-constexpr size_t kMaxColumns = 26;
+constexpr size_t kMaxColumns = 128;
 
 struct InitParam {
   int32_t num_columns = 0;
@@ -123,12 +123,23 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     const uint32_t index = missing_indices[row];
     const int32_t slot_idx = slots[index];
     assert(slot_idx < param.num_columns);
-    const double mean = param.initializer[slot_idx].mean;
-    const double scale = param.initializer[slot_idx].scale;
     for (int col = threadIdx.x; col < line_size; col += blockDim.x) {
       const int64_t offset = index * line_size + col;
       T value = 0;
-      if (col < embedding_size) { value = (curand_uniform(&state) - 0.5 + mean) * 2 * scale; }
+      if (col < embedding_size) {
+        if (param.initializer[slot_idx].type == embedding::InitializerType::kUniform) {
+          const float low = param.initializer[slot_idx].uniform_param.low;
+          const float high = param.initializer[slot_idx].uniform_param.high;
+          T rand_num = curand_uniform(&state);
+          value = rand_num * (high - low) + low;
+        } else if (param.initializer[slot_idx].type == embedding::InitializerType::kNormal) {
+          const float mean = param.initializer[slot_idx].normal_param.mean;
+          const float std = param.initializer[slot_idx].normal_param.std;
+          value = (curand_normal(&state) + mean) / std;
+        } else {
+          __trap();
+        }
+      }
       values[offset] = value;
     }
   }

@@ -21,9 +21,23 @@ limitations under the License.
 namespace oneflow {
 namespace embedding {
 
+enum class InitializerType {
+  kUniform,
+  kNormal,
+};
+
 struct EmbeddingInitializer {
-  double mean;
-  double scale;
+  InitializerType type;
+  union {
+    struct {
+      float low;
+      float high;
+    } uniform_param;
+    struct {
+      float mean;
+      float std;
+    } normal_param;
+  };
 };
 
 struct EmbeddingColumn {
@@ -128,14 +142,35 @@ class EmbeddingOptions final {
         EmbeddingColumn embedding_column;
         auto column = columns.at(i);
         auto initializer = GetValue(column, "initializer");
-        embedding_column.initializer.mean = GetValue(initializer, "mean");
-        embedding_column.initializer.scale = GetValue(initializer, "scale");
+        std::string type = GetValue(initializer, "type");
+        if (type == "uniform") {
+          embedding_column.initializer.type = InitializerType::kUniform;
+          embedding_column.initializer.uniform_param.low = GetValue(initializer, "low");
+          embedding_column.initializer.uniform_param.high = GetValue(initializer, "high");
+        } else if (type == "normal") {
+          embedding_column.initializer.type = InitializerType::kNormal;
+          embedding_column.initializer.normal_param.mean = GetValue(initializer, "mean");
+          embedding_column.initializer.normal_param.std = GetValue(initializer, "std");
+        } else {
+          UNIMPLEMENTED();
+        }
         columns_.push_back(embedding_column);
       }
     } else {
       EmbeddingColumn embedding_column;
-      embedding_column.initializer.mean = 0;
-      embedding_column.initializer.scale = 1;
+      auto initializer = GetValue(json_object, "default_initializer");
+      std::string type = GetValue(initializer, "type");
+      if (type == "uniform") {
+        embedding_column.initializer.type = InitializerType::kUniform;
+        embedding_column.initializer.uniform_param.low = GetValue(initializer, "low");
+        embedding_column.initializer.uniform_param.high = GetValue(initializer, "high");
+      } else if (type == "normal") {
+        embedding_column.initializer.type = InitializerType::kNormal;
+        embedding_column.initializer.normal_param.mean = GetValue(initializer, "mean");
+        embedding_column.initializer.normal_param.std = GetValue(initializer, "std");
+      } else {
+        UNIMPLEMENTED();
+      }
       columns_.push_back(embedding_column);
     }
   }

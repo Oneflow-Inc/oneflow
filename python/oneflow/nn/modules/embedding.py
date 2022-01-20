@@ -61,7 +61,7 @@ scales = np.sqrt(1 / slot_size_array)
 initializer_list = []
 for i in range(scales.size):
     initializer_list.append(
-        {"initializer": {"type": "uniform", "mean": 0, "scale": scales[i],}}
+        {"initializer": {"type": "uniform", "low": -scales[i], "high": scales[i],}}
     )
 
 
