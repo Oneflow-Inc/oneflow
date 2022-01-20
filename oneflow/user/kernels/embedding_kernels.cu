@@ -38,6 +38,7 @@ template<typename T, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
                                 const float* learning_rate, const int64_t* skip_if,
                                 const T* model_diff, const T* model, T* updated_model) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   float learning_rate_val = *learning_rate;
   const int64_t n = *num_unique_ids * embedding_size;
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -52,6 +53,7 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
                                      const float* learning_rate, const int64_t* skip_if,
                                      const T* model_diff, const T* unique_values,
                                      T* updated_unique_values) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   float learning_rate_val = *learning_rate;
   const int64_t rows = *num_unique_ids;
   for (int row = blockIdx.x; row < rows; row += gridDim.x) {
@@ -77,6 +79,7 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
                                  const float* learning_rate, const int64_t* skip_if,
                                  const T* model_diff, const T* unique_values,
                                  T* updated_unique_values) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   float learning_rate_val = *learning_rate;
   float bias_correction1_val = 1.0;
   float bias_correction2_val = 1.0;
