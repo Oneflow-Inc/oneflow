@@ -28,7 +28,7 @@ from oneflow.nn.graph.util import IONodeType, IONode
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphIOCheck(flow.unittest.TestCase):
-    def test_io_node(test_case):
+    def _test_io_node(test_case):
         x = np.ones((2, 2))
         x = flow.tensor(x, dtype=flow.float32)
 
@@ -47,18 +47,25 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         t4 = flow.tensor(t4, dtype=flow.float32)
         
         def fn(*args, **kwargs):
-            io_node = IONode(None, 0, (args, kwargs))
+            inp = (args, kwargs)
+            print("origin: ", inp)
+
+            io_node = IONode(None, 0, inp)
+
             for (name, node) in list(io_node.named_nodes(None, "Graph_0")):
                 print(name, repr(node))
-            def m_fn(v):
-                return v
-            m_v = io_node.mapping(m_fn)
-            print(m_v)
+
+            def leaf_fn(node):
+                if isinstance(node._value, str):
+                    return "mapped_str"
+                return node._value
+            m_v = io_node.map_leaf(leaf_fn)
+            print("mapped:", m_v)
 
         fn(None, 1, "test_str", x, lt0, {'t':t4, 'l':lt0}, kw=t4)
         
 
-    def _test_non_tensor_types_of_module(test_case):
+    def test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()

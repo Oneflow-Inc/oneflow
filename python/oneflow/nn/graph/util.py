@@ -64,6 +64,7 @@ class IONode(object):
         self._end_idx = start_idx
         self._cur_level_idx = 0
         self._sub_nodes = OrderedDict()
+        self.attrs = dict()
 
         if isinstance(value, tuple):
             self._type = IONodeType.TUPLE
@@ -122,27 +123,23 @@ class IONode(object):
             repr_str += ", value: " + repr(self._value) + ")"
         return repr_str
 
-
-    def mapping(self, fn):
+    def map_leaf(self, leaf_node_fn):
         if self._type == IONodeType.TUPLE:
             l_value = list()
             for (name, node) in self._sub_nodes.items():
-                l_value.append(node.mapping(fn))
+                l_value.append(node.map_leaf(leaf_node_fn))
             mapped_value = tuple(l_value)
         elif self._type == IONodeType.LIST:
             mapped_value = list()
             for (name, node) in self._sub_nodes.items():
-                mapped_value.append(node.mapping(fn))
+                mapped_value.append(node.map_leaf(leaf_node_fn))
         elif self._type == IONodeType.DICT:
             mapped_value = dict()
             for (name, node) in self._sub_nodes.items():
-                mapped_value[node._name] = node.mapping(fn)
-        elif self._type == IONodeType.TENSOR:
-            mapped_value = fn(self._value)
-        elif self._type == IONodeType.NONE:
-            mapped_value = fn(self._value)
-        elif self._type == IONodeType.OPAQUE:
-            mapped_value = fn(self._value)
+                mapped_value[node._name] = node.map_leaf(leaf_node_fn)
+        else:
+            # Leaf node: TENSOR/NONE/OPAQUE
+            mapped_value = leaf_node_fn(self)
         return mapped_value
 
     def to_py_arg():

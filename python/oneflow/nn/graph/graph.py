@@ -591,7 +591,6 @@ class Graph(object):
             arg_op_names, lazy_args, self._args_repr, _ = self.__build_io2(
                 "input", graph_build_util.build_graph_input_arg, *args
             )
-            exit()
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
@@ -612,7 +611,7 @@ class Graph(object):
                 self._eager_outputs,
                 self._outs_repr,
                 out2name,
-            ) = self.__build_io("output", graph_build_util.build_graph_output, *outputs)
+            ) = self.__build_io2("output", graph_build_util.build_graph_output, *outputs)
 
             self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
@@ -836,7 +835,6 @@ class Graph(object):
     def __build_io2(self, io_type, build_func, *args, **kwargs):
         assert io_type in ("input", "output")
         io_type_upper = io_type.upper()
-        build_args = []
         op_names = []
         args_repr = []
         tensor2op_name = {}
@@ -855,25 +853,28 @@ class Graph(object):
             return build_arg
 
         io_node = IONode(None, 0, (args, kwargs))
-
-        def fun(item):
-            return item
-
-        out = io_node.mapping(fun)
-        print("======: ", out)
-        exit()
         for (name, node) in list(io_node.named_nodes(None, "_" + self.name + "-" + io_type_upper)):
-            print(name, node)
             if node._type == IONodeType.TENSOR:
                 arg_repr = self.__io_item_check_and_gen_repr(node._value, Tensor, io_type, name)
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
+                node.attrs["build_arg"] = build_arg
             elif node._type == IONodeType.NONE:
                 arg_repr = self.__io_item_check_and_gen_repr(node._value, None, io_type, name)
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
+                node.attrs["build_arg"] = build_arg
             elif node._type == IONodeType.OPAQUE:
+                # Error
                 arg_repr = self.__io_item_check_and_gen_repr(node._value, None, io_type, name)
             else:
                 continue
+
+        def leaf_node_fn(leaf_node):
+            return leaf_node.attrs["build_arg"]
+
+        out = io_node.map_leaf(leaf_node_fn)
+        print(">>>>>>>>", out)
+        build_args = list(out[0])
+        print(">>>>>>>>", build_args)
 
         return op_names, build_args, args_repr, tensor2op_name
 
