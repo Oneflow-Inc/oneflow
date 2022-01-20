@@ -138,6 +138,7 @@ oneflow
             tile, 
             to, 
             transpose,
+            t,
             tril, 
             unsqueeze, 
             permute,
