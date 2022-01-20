@@ -246,12 +246,6 @@ include_directories(${PROJECT_BINARY_DIR})
 # cc obj lib
 oneflow_add_library(oneflow ${of_all_obj_cc})
 
-if (WITH_CPU_THREADING_RUNTIME STREQUAL "TBB") 
-  get_property(TBB_SRC_DIR GLOBAL PROPERTY TBB_SRC_DIR)
-  target_include_directories(oneflow PRIVATE ${TBB_SRC_DIR})
-  target_link_libraries(oneflow tbb)
-endif()
-
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
@@ -280,12 +274,17 @@ endif()
 
 include(op_schema)
 
+get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
+get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
+
+target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
+
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs} ${EXTERNAL_TARGETS} -Wl,--no-whole-archive -ldl -lrt)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
@@ -521,7 +520,7 @@ if(BUILD_CPP_API)
   )
 
   set(LIBONEFLOW_TARGETS)
-  list(APPEND LIBONEFLOW_TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj glog ${MLIR_RELATED_TARGETS} ${LLVM_RELATED_TARGETS})
+  list(APPEND LIBONEFLOW_TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj glog ${MLIR_RELATED_TARGETS} ${LLVM_RELATED_TARGETS} ${EXTERNAL_TARGETS})
 
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)
