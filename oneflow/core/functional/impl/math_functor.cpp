@@ -1401,14 +1401,21 @@ class ScalarLogicalBaseFunctor {
   }
   virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    const DataType dtype = x->dtype()->data_type();
+    Symbol<DType> scalar_dtype;
+    if (scalar.IsFloatingPoint()) {
+      scalar_dtype = DType::Double();
+    } else {
+      scalar_dtype = DType::Int64();
+    }
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, scalar_dtype).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     MutableAttrMap attrs;
-
-    if (IsFloatingDataType(dtype)) {
+    if (IsFloatingDataType(scalar_dtype->data_type())) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-    } else if (IsIntegralDataType(dtype) || dtype == DataType::kUInt8) {
+    } else if (IsIntegralDataType(scalar_dtype->data_type())) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -1417,7 +1424,7 @@ class ScalarLogicalBaseFunctor {
                                   << " should be float or int.";
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
 
  private:
