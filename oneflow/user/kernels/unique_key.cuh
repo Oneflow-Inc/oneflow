@@ -52,7 +52,7 @@ __global__ void UniqueIds(const int64_t capacity, const K empty_key, const IDX e
         break;
       } else if (target_key == old_key) {
         while (target_val_pos == empty_val)
-          ;
+          ;  // dead lock on sm<70
         reverse_index[i] = target_val_pos;
         break;
       }
