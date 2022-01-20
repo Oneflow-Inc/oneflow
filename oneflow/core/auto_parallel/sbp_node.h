@@ -199,6 +199,8 @@ class SbpNode {
   // Drop down the tributary layer
   void DropTributaryLayer(int32_t upper_bound);
 
+  // Get the current cost
+  double GetCurrCost() const;
   // Get the minimum element in Cost
   double GetMinCost();
   // get the cut ratio
@@ -729,6 +731,12 @@ void SbpNode<SbpSignature>::LiftMaxLayer() {
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer(int32_t upper_bound) {
   if (MaxLayer < MinLayer) { MaxLayer = upper_bound; }
+}
+
+// Get the current cost
+template<class SbpSignature>
+double SbpNode<SbpSignature>::GetCurrCost() const {
+  return Cost[FinalSbpSignatureId];
 }
 
 // Get the minimum element in Cost

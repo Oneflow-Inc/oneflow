@@ -113,21 +113,23 @@ class SbpEdge {
   std::unordered_set<oneflow::LogicalBlobId> CarryLbis;
 
   // load a logical blob
-  void LoadLbi(oneflow::LogicalBlobId lbi) { CarryLbis.insert(lbi); }
+  void LoadLbi(const oneflow::LogicalBlobId& lbi) { CarryLbis.insert(lbi); }
 
   // check existancy of a logical blob
-  bool SearchLbi(oneflow::LogicalBlobId lbi) const {
+  bool SearchLbi(const oneflow::LogicalBlobId& lbi) const {
     return CarryLbis.find(lbi) != CarryLbis.end();
   }
 
   // unload a logical blob
-  void UnloadLbi(oneflow::LogicalBlobId lbi) {
+  void UnloadLbi(const oneflow::LogicalBlobId& lbi) {
     if (CarryLbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
   }
 
   // Not carrying any blob
   bool EmptyLbi() const { return CarryLbis.empty(); }
 
+  // Get the current cost
+  double GetCurrCost() const;
   // Get the minimum element in Cost
   double GetMinCost();
   // Get the maximum element in Cost
@@ -329,6 +331,12 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
   StartNode->FinalSbpSignatureId = MinSbpStart;
   EndNode->FinalSbpSignatureId = MinSbpEnd;
   return MinCost - OrgCost;
+}
+
+// Get the current cost
+template<class SbpSignature>
+double SbpEdge<SbpSignature>::GetCurrCost() const {
+  return Cost[StartNode->FinalSbpSignatureId][EndNode->FinalSbpSignatureId];
 }
 
 // Get the minimum element in Cost

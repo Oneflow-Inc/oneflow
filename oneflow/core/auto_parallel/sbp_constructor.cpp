@@ -16,11 +16,13 @@ limitations under the License.
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
+#include "oneflow/core/auto_parallel/sbp_statistics.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "sbp_collector.h"
 
 namespace oneflow {
@@ -77,6 +79,14 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
   if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
+
+  if (GlobalProcessCtx::Rank() == 0) {
+    // Collect statistics for this sbp graph
+    SbpStatistics sbp_statistics;
+    sbp_statistics.CollectStatistics(sbp_graph_);
+    sbp_statistics.PrintStatistics();
+  }
+
   // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, cut_cost)
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
