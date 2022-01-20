@@ -588,9 +588,10 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
-            arg_op_names, lazy_args, self._args_repr, _ = self.__build_io(
+            arg_op_names, lazy_args, self._args_repr, _ = self.__build_io2(
                 "input", graph_build_util.build_graph_input_arg, *args
             )
+            exit()
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
@@ -840,9 +841,79 @@ class Graph(object):
         args_repr = []
         tensor2op_name = {}
 
-        io_node = IONode(NONE, 0, IONodeType.EMPTY, None, args, kwargs)
+        def build_tensor_or_none(tensor, name, repr_str):
+            assert tensor is None or (isinstance(tensor, Tensor))
+            if isinstance(tensor, Tensor):
+                build_arg = build_func(name, tensor)
+                op_names.append(name)
+                tensor2op_name[build_arg] = name
+            else:
+                build_arg = None
+
+            args_repr.append(repr_str)
+            self.__print(0, 1, repr_str)
+            return build_arg
+
+        io_node = IONode(None, 0, (args, kwargs))
+
+        def fun(item):
+            return item
+
+        out = io_node.mapping(fun)
+        print("======: ", out)
+        exit()
+        for (name, node) in list(io_node.named_nodes(None, "_" + self.name + "-" + io_type_upper)):
+            print(name, node)
+            if node._type == IONodeType.TENSOR:
+                arg_repr = self.__io_item_check_and_gen_repr(node._value, Tensor, io_type, name)
+                build_arg = build_tensor_or_none(node._value, name, arg_repr)
+            elif node._type == IONodeType.NONE:
+                arg_repr = self.__io_item_check_and_gen_repr(node._value, None, io_type, name)
+                build_arg = build_tensor_or_none(node._value, name, arg_repr)
+            elif node._type == IONodeType.OPAQUE:
+                arg_repr = self.__io_item_check_and_gen_repr(node._value, None, io_type, name)
+            else:
+                continue
 
         return op_names, build_args, args_repr, tensor2op_name
+
+    def __io_item_check_and_gen_repr(self, item, expect_type, io_type, name):
+        assert io_type in ("input", "output")
+        if expect_type is None and item is None:
+            repr_str = (
+                "[WARNING]("
+                + io_type.upper()
+                + ":"
+                + name
+                + ":"
+                + str(type(item))
+                + ")"
+            )
+            return repr_str
+        elif expect_type is not None and isinstance(item, expect_type):
+            if isinstance(item, Tensor):
+                repr_str = (
+                    "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
+                )
+            else:
+                repr_str = (
+                    "[WARNING]("
+                    + io_type.upper()
+                    + ":"
+                    + name
+                    + ":"
+                    + str(type(item))
+                    + ")"
+                )
+            return repr_str
+        else:
+            repr_str = (
+                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+            )
+            self.__print(2, 0, repr_str)
+            raise NotImplementedError(
+                "nn.Graph.build()'s input/output item only support types: Tensor/None."
+            )
 
     def __mapping_io(self, io_type, func, *args):
         assert io_type in ("input", "output")

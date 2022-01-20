@@ -49,7 +49,6 @@ def seq_to_func_return(li):
         return tuple(li)
 
 class IONodeType:
-    EMPTY = "EMPTY"
     TENSOR = "TENSOR"
     NONE = "NONE"
     LIST = "LIST"
@@ -58,29 +57,38 @@ class IONodeType:
     OPAQUE= "OPAQUE"
 
 class IONode(object):
-    def __init__(self, name=None, start_idx=0, n_type=IONodeType.EMPTY, value=None, seq=None, dic=None):
+    def __init__(self, name=None, start_idx=0, value=None):
         # Node indexs
         self._name = name if name is not None else str(start_idx)
         self._start_idx = start_idx
         self._end_idx = start_idx
         self._cur_level_idx = 0
-
-        # This node
-        self._type = n_type
-        self._value = value
-
-        # Sub nodes
         self._sub_nodes = OrderedDict()
-        self._seq = seq
-        self._dic = dic
 
-        if self._seq is not None:
-            for idx, item in enumerate(self._seq):
-                self.__add_sub_item(None, item)
-
-        if self._dic is not None:
-            for idx, (key, item) in enumerate(self._dic.items()):
-                self.__add_sub_item(key, item)
+        if isinstance(value, tuple):
+            self._type = IONodeType.TUPLE
+            self._value = None
+            for idx, item in enumerate(value):
+                self.__add_sub_node(IONode(None, self._end_idx + 1, item))
+        elif isinstance(value, list):
+            self._type = IONodeType.LIST
+            self._value = None
+            for idx, item in enumerate(value):
+                self.__add_sub_node(IONode(None, self._end_idx + 1, item))
+        elif isinstance(value, dict):
+            self._type = IONodeType.DICT
+            self._value = None
+            for idx, (key, item) in enumerate(value.items()):
+                self.__add_sub_node(IONode(key, self._end_idx + 1, item))
+        elif isinstance(value, Tensor):
+            self._type = IONodeType.TENSOR
+            self._value = value
+        elif value is None:
+            self._type = IONodeType.NONE
+            self._value = value
+        else:
+            self._type = IONodeType.OPAQUE
+            self._value = value
 
     def size(self):
         return self._end_idx - self._start_idx + 1
@@ -89,20 +97,6 @@ class IONode(object):
         self._sub_nodes[self._cur_level_idx + 1] = node
         self._end_idx += node.size()
         self._cur_level_idx += 1
-
-    def __add_sub_item(self, key, item):
-        if isinstance(item, tuple):
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.TUPLE, None, item, None))
-        elif isinstance(item, list):
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.LIST, None, item, None))
-        elif isinstance(item, dict):
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.DICT, None, None, item))
-        elif isinstance(item, Tensor):
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.TENSOR, item, None, None))
-        elif item is None:
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.NONE, item, None, None))
-        else:
-            self.__add_sub_node(IONode(key, self._end_idx + 1, IONodeType.OPAQUE, item, None, None))
 
     def named_nodes(self, memo = None, prefix: str = ""):
         if memo is None:
@@ -122,14 +116,34 @@ class IONode(object):
         repr_str += "(name: " + self._name
         repr_str += ', idx: ' + str(self._start_idx)
         repr_str += ", type: " + self._type
-        repr_str += ", value: " + repr(self._value) + ")"
+        if self._type == IONodeType.TENSOR:
+            repr_str += ", value: " + self._value._meta_repr() + ")"
+        else:
+            repr_str += ", value: " + repr(self._value) + ")"
         return repr_str
 
 
-    def mapping_tensor(self, fn):
-        pass
+    def mapping(self, fn):
+        if self._type == IONodeType.TUPLE:
+            l_value = list()
+            for (name, node) in self._sub_nodes.items():
+                l_value.append(node.mapping(fn))
+            mapped_value = tuple(l_value)
+        elif self._type == IONodeType.LIST:
+            mapped_value = list()
+            for (name, node) in self._sub_nodes.items():
+                mapped_value.append(node.mapping(fn))
+        elif self._type == IONodeType.DICT:
+            mapped_value = dict()
+            for (name, node) in self._sub_nodes.items():
+                mapped_value[node._name] = node.mapping(fn)
+        elif self._type == IONodeType.TENSOR:
+            mapped_value = fn(self._value)
+        elif self._type == IONodeType.NONE:
+            mapped_value = fn(self._value)
+        elif self._type == IONodeType.OPAQUE:
+            mapped_value = fn(self._value)
+        return mapped_value
 
     def to_py_arg():
         pass
-
-

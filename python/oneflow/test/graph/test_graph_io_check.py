@@ -47,9 +47,13 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         t4 = flow.tensor(t4, dtype=flow.float32)
         
         def fn(*args, **kwargs):
-            io_node = IONode(None, 0, IONodeType.EMPTY, None, args, kwargs)
+            io_node = IONode(None, 0, (args, kwargs))
             for (name, node) in list(io_node.named_nodes(None, "Graph_0")):
                 print(name, repr(node))
+            def m_fn(v):
+                return v
+            m_v = io_node.mapping(m_fn)
+            print(m_v)
 
         fn(None, 1, "test_str", x, lt0, {'t':t4, 'l':lt0}, kw=t4)
         
@@ -75,13 +79,10 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         g = CustomGraphIOCheck()
         g.debug(1)
 
-        x = np.ones((10, 10))
-        x = flow.tensor(x, dtype=flow.float32)
+        x = flow.tensor(np.random.randn(1,), dtype=flow.float32)
 
-        t2 = np.ones((10, 10))
-        t2 = flow.tensor(t2, dtype=flow.float32)
-        t3 = np.ones((10, 10))
-        t3 = flow.tensor(t3, dtype=flow.float32)
+        t2 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        t3 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
         lt0 = list()
         lt0.append(t2)
         lt0.append(t3)
