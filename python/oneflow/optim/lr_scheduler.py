@@ -22,3 +22,4 @@ from oneflow.nn.optimizer.multistep_lr import MultiStepLR
 from oneflow.nn.optimizer.exponential_lr import ExponentialLR
 from oneflow.nn.optimizer.warm_up_lr import WarmUpLR
 from oneflow.nn.optimizer.reduce_lr_on_plateau import ReduceLROnPlateau
+from oneflow.nn.optimizer.polynomial_lr import PolynomialLR

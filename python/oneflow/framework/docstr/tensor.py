@@ -791,8 +791,26 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.t,
+    """
+    Tensor.t() → Tensor
+
+    See :func:`oneflow.t`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.tile,
     """
     See :func:`oneflow.tile`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.T,
+    """
+    Is this Tensor with its dimensions reversed.
+ 
+    If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
     """,
 )
