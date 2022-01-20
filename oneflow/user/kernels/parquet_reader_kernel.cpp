@@ -361,6 +361,8 @@ Maybe<void> ParquetReader::GetColumnBatch(int col, user_op::Tensor* tensor) {
 }
 
 Maybe<bool> ParquetReader::ReadColumn(int col) {
+  const auto& col_desc = schema_.col_descs[col];
+  std::shared_ptr<parquet::ColumnReader> col_reader;
   // when all col readers finish reading, it's the last finishing reader's due
   // to move to next row group
   thread_local bool new_row_group = false;
@@ -371,15 +373,14 @@ Maybe<bool> ParquetReader::ReadColumn(int col) {
     cond_.wait(lock, [this]() { return read_done_ || IsClosed(); });
     if (!row_group_reader_) { JUST(NextRowGroup()); }
     if (++read_keys_ == workers_.size()) { read_done_ = false; }
+    int col_id = col_desc.col_id;
+    CHECK_GE_OR_RETURN(col_id, 0);
+    CHECK_LT_OR_RETURN(col_id, row_group_reader_->metadata()->num_columns());
+    col_reader = row_group_reader_->Column(col_id);
     new_row_group = true;
   }
   cond_.notify_all();
 
-  const auto& col_desc = schema_.col_descs[col];
-  int col_id = col_desc.col_id;
-  CHECK_GE_OR_RETURN(col_id, 0);
-  CHECK_LT_OR_RETURN(col_id, row_group_reader_->metadata()->num_columns());
-  auto col_reader = row_group_reader_->Column(col_id);
   while (col_reader->HasNext()) {
     // read from parquet column chunk to TensorBuffer
     std::shared_ptr<TensorBuffer> sample_or_batch;
