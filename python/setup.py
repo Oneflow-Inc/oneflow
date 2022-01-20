@@ -45,6 +45,7 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "requests",
     "pillow",
+    "flowvision==0.0.54",
 ]
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:

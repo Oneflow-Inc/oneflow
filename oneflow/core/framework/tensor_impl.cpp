@@ -98,8 +98,8 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
-          if (eager_blob_object->last_used_device().has_value()) {
+          if (eager_blob_object->producer_op_device().has_value()) {
+            JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
             const auto& device = JUST(eager_blob_object->producer_op_device());
             auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
             JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
@@ -211,6 +211,11 @@ size_t ConsistentTensorMeta::CalcHashValue() const {
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
+Maybe<ConsistentTensorImpl> LazyConsistentTensorImpl::detach() const {
+  auto detached_impl = std::make_shared<LazyConsistentTensorImpl>(tensor_meta_, false, true);
+  return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
+}
+
 EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf,
     const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor)
@@ -270,6 +275,14 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
   return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
+}
+
+Maybe<ConsistentTensorImpl> EagerConsistentTensorImpl::detach() const {
+  auto detached_impl = JUST(EagerConsistentTensorImpl::New(tensor_meta_, false, true));
+  detached_impl->cur_rank_phy_tensor_ = cur_rank_phy_tensor_;
+  detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
+  detached_impl->transport_token_ = transport_token_;
+  return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
 }
 
 }  // namespace one

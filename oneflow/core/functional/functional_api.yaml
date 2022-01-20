@@ -299,6 +299,14 @@
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
 
+- name: "T"
+  signature: "Tensor (Tensor input) => TransposeAllDimProperty"
+  bind_python: True
+
+- name: "t"
+  signature: "Tensor (Tensor input) => TransposeAllDimFunction"
+  bind_python: True 
+
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
   bind_python: True
@@ -965,15 +973,15 @@
   bind_python: True
 
 - name: "layer_norm_grad"
-  signature: "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  bind_python: False
+
+- name: "layer_norm_affine_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int64 begin_norm_axis, Double epsilon) => LayerNormAffineGrad"
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature: "Tensor (Tensor dy, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
-  bind_python: False
-
-- name: "layer_norm_affine_param_grad"
-  signature: "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
@@ -1639,6 +1647,10 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerPToS"
   bind_python: False
 
+- name: "eager_s_to_p"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerSToP"
+  bind_python: False
+
 - name: "consistent_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False
@@ -1762,12 +1774,12 @@
   bind_python: True
 
 - name: "normalize"
-  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12) => Normalize"
+  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12, Bool use_l2_norm_kernel=True) => Normalize"
   bind_python: True
 
 - name: "l2_normalize"
   signature: "Tensor (Tensor input, Int32 axis=0, Float epsilon=1e-12) => L2Normalize"
-  bind_python: True
+  bind_python: False
 
 - name: "l2_normalize_grad"
   signature: "Tensor (Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon) => L2NormalizeGrad"
