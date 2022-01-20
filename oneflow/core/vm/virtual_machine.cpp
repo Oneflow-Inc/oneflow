@@ -131,9 +131,9 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
-    : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
-        vm::MakeVmDesc(resource, this_machine_id).Get())) {
+VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id) {
+  vm_ = intrusive::make_shared<vm::VirtualMachineEngine>(
+      vm::MakeVmDesc(resource, this_machine_id).Get(), [this]() { callback_notifier_.Notify(); });
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
@@ -191,7 +191,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     }
     JUST(vm_->Receive(instr_list));
     while (!vm_->Empty()) { vm_->Schedule(); }
-    vm_->ScheduleEnd();
+    vm_->Callback();
     vm::InstructionMsgList garbage_msg_list;
     vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
@@ -232,14 +232,14 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
         do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
+        vm->ScheduleEnd();
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
-    ScheduleEnd();
     OF_PROFILER_RANGE_POP();
   }
   while (!(vm->Empty() && vm->CallbackEmpty())) {
     vm->Schedule();
-    ScheduleEnd();
+    vm->ScheduleEnd();
   }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_pending_instruction_list()->Close();
@@ -247,11 +247,6 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   }));
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   vm_.Reset();
-}
-
-void VirtualMachine::ScheduleEnd() {
-  mut_vm()->ScheduleEnd();
-  callback_notifier_.Notify();
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {

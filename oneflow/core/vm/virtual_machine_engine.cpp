@@ -198,6 +198,7 @@ void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
 
 void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
   garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
+  notify_callback_thread_();
 }
 
 void VirtualMachineEngine::RunInstructionsInAdvance(InstructionMsg* instr_msg) {
@@ -591,7 +592,9 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   }
 }
 
-void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
+void VirtualMachineEngine::__Init__(const VmDesc& vm_desc,
+                                    const std::function<void()>& notify_callback_thread) {
+  notify_callback_thread_ = notify_callback_thread;
   mut_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
   CHECK_GT(vm_desc.machine_id_range().size(), 0);
   *mut_machine_id_range() = vm_desc.machine_id_range();
@@ -818,6 +821,7 @@ void VirtualMachineEngine::Schedule() {
 void VirtualMachineEngine::Callback() {
   InstructionMsgList garbage_msg_list;
   mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
+  // destruct garbage_msg_list.
 }
 
 void VirtualMachineEngine::ScheduleEnd() { MoveToGarbageMsgListAndNotifyGC(); }

@@ -98,7 +98,10 @@ class VirtualMachineEngine final : public intrusive::Base {
   Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
 
   // methods
-  void __Init__(const VmDesc& vm_desc);
+  void __Init__(const VmDesc& vm_desc) {
+    __Init__(vm_desc, []() {});
+  }
+  void __Init__(const VmDesc& vm_desc, const std::function<void()>& notify_callback_thread);
   // Returns true if old pending_instruction_list is empty
   Maybe<bool> Receive(InstructionMsgList* instr_list);
   // Returns true if old pending_instruction_list is empty
@@ -207,6 +210,7 @@ class VirtualMachineEngine final : public intrusive::Base {
         callback_msg_mutex_(),
         garbage_msg_list_(&callback_msg_mutex_),
         local_garbage_msg_list_(),
+        notify_callback_thread_([]() {}),
         ready_instruction_list_(),
         lively_instruction_list_(),
         barrier_instruction_list_() {}
@@ -228,6 +232,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   std::mutex callback_msg_mutex_;
   InstructionMsgMutexedList garbage_msg_list_;
   InstructionMsgList local_garbage_msg_list_;
+  std::function<void()> notify_callback_thread_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   BarrierInstructionList barrier_instruction_list_;
