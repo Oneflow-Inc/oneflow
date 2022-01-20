@@ -120,9 +120,27 @@ __device__ __forceinline__ float AddImpl(float* address, float val) {
   return atomicAdd(address, val);
 }
 
+#if __CUDA_ARCH__ >= 600
+
 __device__ __forceinline__ double AddImpl(double* address, double val) {
   return atomicAdd(address, val);
 }
+
+#endif  // __CUDA_ARCH__ >= 600
+
+#if __CUDA_ARCH__ >= 700
+
+__device__ __forceinline__ half AddImpl(half* address, half val) { return atomicAdd(address, val); }
+
+#endif  // __CUDA_ARCH__ >= 700
+
+#if __CUDA_ARCH__ >= 800
+
+__device__ __forceinline__ nv_bfloat16 AddImpl(nv_bfloat16* address, nv_bfloat16 val) {
+  return atomicAdd(address, val);
+}
+
+#endif  // __CUDA_ARCH__ >= 800
 
 }  // namespace internal
 
