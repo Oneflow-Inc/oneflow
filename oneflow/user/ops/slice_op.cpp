@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -91,7 +92,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 
 /*static*/ Maybe<void> SliceGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const Shape& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+  const Shape& like_shape = ctx->Attr<Shape>("like_shape");
   const int64_t ndim = like_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
@@ -105,21 +106,12 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
     }
   }
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("dy", 0))
-      .Broadcast(user_op::OpArg("like", 0))
-      .PartialSum(user_op::OpArg("dx", 0))
-      .Build();
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("dy", 0))
-      .PartialSum(user_op::OpArg("like", 0))
-      .Broadcast(user_op::OpArg("dx", 0))
-      .Build();
+  ctx->NewBuilder().PartialSum(user_op::OpArg("dy", 0)).PartialSum(user_op::OpArg("dx", 0)).Build();
+  ctx->NewBuilder().Broadcast(user_op::OpArg("dy", 0)).Broadcast(user_op::OpArg("dx", 0)).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& like_shape = ctx->InputShape("like", 0);
+  const Shape& like_shape = ctx->Attr<Shape>("like_shape");
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
@@ -134,7 +126,20 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  Shape logical_shape = ctx->Attr<Shape>("like_shape");
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
+
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
+  *(dx_desc->mut_shape()) =
+      *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+  int dx_ndim = dx_desc->shape().NumAxes();
+  int dy_ndim = dy_desc.shape().NumAxes();
+  CHECK_EQ_OR_RETURN(dx_ndim, dy_ndim)
+      << "Output dimension (" << dx_ndim << ") should equal to the input dimension (" << dy_ndim
+      << ") for slice backward.";
+  return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
@@ -145,9 +150,6 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
   CHECK_NOTNULL_OR_RETURN(dy_modifier);
   dy_modifier->set_requires_grad(false);
-  user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-  CHECK_NOTNULL_OR_RETURN(like_modifier);
-  like_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
@@ -315,10 +317,11 @@ namespace {
 
 Maybe<void> GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    const auto& x_desc = op.TensorDesc4ArgNameAndIndex("x", 0);
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("slice_grad")
                                              .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                             .Input("like", op.input("x", 0))
+                                             .Attr("like_shape", x_desc.shape())
                                              .Attr("start", op.attr<std::vector<int64_t>>("start"))
                                              .Attr("stop", op.attr<std::vector<int64_t>>("stop"))
                                              .Attr("step", op.attr<std::vector<int64_t>>("step"))

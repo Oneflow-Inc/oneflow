@@ -119,8 +119,8 @@ class TestGreater(flow.unittest.TestCase):
         y2 = x1 > x2
         return (y1, y2)
 
-    @autotest(auto_backward=False, check_graph=False)
-    def test_greater_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_greater_with_0_size_data(test_case):
         device = random_device()
         x1 = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)
         x2 = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)

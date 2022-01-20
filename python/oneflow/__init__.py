@@ -106,7 +106,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div
-from oneflow._C import floor
+from oneflow._C import floor, floor_
 from oneflow._C import floor_divide
 from oneflow._C import mul
 from oneflow._C import negative
@@ -122,8 +122,8 @@ from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
 from oneflow._C import ceil
-from oneflow._C import clamp
-from oneflow._C import clamp as clip
+from oneflow._C import clamp, clamp_
+from oneflow._C import clip, clip_
 from oneflow._C import cos
 from oneflow._C import cosh
 from oneflow._C import diagonal
@@ -156,7 +156,6 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import meshgrid
 from oneflow._C import stack
 from oneflow._C import squeeze
 from oneflow._C import narrow
@@ -172,7 +171,10 @@ from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
-
+from oneflow._C import erfinv, erfinv_
+from oneflow._C import cumsum
+from oneflow._C import swapaxes
+from oneflow._C import t
 
 from . import sbp
 import atexit
@@ -294,6 +296,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
@@ -326,6 +329,7 @@ from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
+from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -343,6 +347,7 @@ from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
+from oneflow.nn.modules.slice import logical_slice_op as logical_slice
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
@@ -387,7 +392,6 @@ from . import (
     amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
-import oneflow.utils.vision
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda

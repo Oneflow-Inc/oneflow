@@ -381,6 +381,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.swapaxes,
+    """
+    See :func:`oneflow.swapaxes`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`
@@ -417,6 +424,20 @@ add_docstr(
     oneflow.Tensor.exp,
     """
     See :func:`oneflow.exp`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfinv,
+    """
+    See :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfinv_,
+    """
+    Inplace version of :func:`oneflow.erfinv`
     """,
 )
 
@@ -506,6 +527,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.normal_,
     """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
@@ -519,7 +548,8 @@ add_docstr(
     """
     Tensor.numpy() → numpy.ndarray
 
-    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to self tensor will be reflected in the ndarray and vice versa.
+    Returns self tensor as a NumPy ndarray. This tensor and the returned ndarray share the same underlying storage. Changes to
+     self tensor will be reflected in the ndarray and vice versa.
     """,
 )
 
@@ -591,7 +621,7 @@ add_docstr(
     """
     The interface is consistent with PyTorch.
     
-    Returns the size of the self tensor. If dim is not specified, the returned value is a torch.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
+    Returns the size of the self tensor. If dim is not specified, the returned value is a oneflow.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
 
     Args:
         idx (int, optional): The dimension for which to retrieve the size.
@@ -722,5 +752,51 @@ add_docstr(
 
     See :func:`oneflow.gather`
 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp,
+    """
+    See :func:`oneflow.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clamp_,
+    """
+    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip,
+    """
+    Alias for :func:`oneflow.Tensor.clamp`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.clip_,
+    """
+    Alias for :func:`oneflow.Tensor.clamp_`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.t,
+    """
+    Tensor.t() → Tensor
+
+    See :func:`oneflow.t`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.T,
+    """
+    Is this Tensor with its dimensions reversed.
+ 
+    If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
     """,
 )

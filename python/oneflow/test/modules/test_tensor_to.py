@@ -59,6 +59,15 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
+    def test_tensor_to_h2d1(test_case):
+        input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.int64)
+        output = input.to(device=flow.device("cuda:1"), dtype=flow.int32)
+        test_case.assertEqual(output.device, flow.device("cuda:1"))
+        test_case.assertEqual(output.dtype, flow.int32)
+        test_case.assertTrue(
+            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

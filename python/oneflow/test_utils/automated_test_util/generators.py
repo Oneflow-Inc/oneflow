@@ -362,6 +362,22 @@ class random_device(generator):
             return random_util.choice(["cuda", "cpu"])
 
 
+class cpu_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(["cpu"])
+
+
+class gpu_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(["cuda"])
+
+
 def test_against_pytorch(
     test_case,
     callable_name,
@@ -649,6 +665,8 @@ __all__ = [
     "random_tensor",
     "random_bool",
     "random_device",
+    "cpu_device",
+    "gpu_device",
     "random",
     "random_or_nothing",
     "oneof",

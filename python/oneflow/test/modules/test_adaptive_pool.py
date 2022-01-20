@@ -92,7 +92,7 @@ class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
     def test_adaptive_avgpool3d_functional(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=5).to(device)
-        return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
+        return torch.nn.functional.adaptive_avg_pool3d(x, output_size=random().to(int))
 
 
 if __name__ == "__main__":
