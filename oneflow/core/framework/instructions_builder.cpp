@@ -1067,12 +1067,12 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  const auto& last_used_device = JUST(eager_blob_object->last_used_device());
-  const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
   if (pthread_fork::IsForkedSubProcess() && parallel_desc
       && parallel_desc->device_type() == DeviceType::kCUDA) {
     return Maybe<void>::Ok();
   }
+  const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+  const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
   if (last_used_device != producer_op_device) {
     JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
                         last_used_device));
