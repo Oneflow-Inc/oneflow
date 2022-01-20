@@ -556,6 +556,10 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
+def _to_local(self):
+    return flow.to_local(self)
+
+
 def _relu(self, inplace=False):
     return flow.relu(self, inplace=inplace)
 
@@ -934,6 +938,7 @@ def RegisterMethods():
     Tensor.ne = _ne
     Tensor.lt = _lt
     Tensor.le = _le
+    Tensor.to_local = _to_local
 
 
 def register_tensor_op(op_name):
