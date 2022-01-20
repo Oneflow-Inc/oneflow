@@ -40,9 +40,16 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
-    py::gil_scoped_acquire acquire;
-    if (obj) { Py_DECREF(obj); }
-    obj = NULL;
+    const auto& Release = [&]() {
+      if (obj) { Py_DECREF(obj); }
+      obj = NULL;
+    };
+    if (!PyGILState_Check()) {
+      py::gil_scoped_acquire acquire;
+      Release();
+    } else {
+      Release();
+    }
   }
 };
 

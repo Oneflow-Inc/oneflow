@@ -187,14 +187,14 @@ void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instructio
 
 void VirtualMachineEngine::InsertProbe(
     const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
-  probe_hook_.EmplaceBack(intrusive::make_shared<Probe>(ProbeFunction));
+  probe_list_.EmplaceBack(intrusive::make_shared<Probe>(ProbeFunction));
 }
 
 void VirtualMachineEngine::HandleProbe() {
-  if (unlikely(probe_hook_.thread_unsafe_size())) { probe_hook_.MoveTo(&local_probe_hook_); }
-  if (unlikely(local_probe_hook_.size())) {
-    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_hook_) {
-      if (probe->probe(this)) { local_probe_hook_.Erase(probe); }
+  if (unlikely(probe_list_.thread_unsafe_size())) { probe_list_.MoveTo(&local_probe_list_); }
+  if (unlikely(local_probe_list_.size())) {
+    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
+      if (probe->probe(this)) { local_probe_list_.Erase(probe); }
     }
   }
 }
@@ -216,10 +216,24 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
+      intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
       stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
+      MoveInstructionMsgToGarbageMsgList(std::move(instr_msg));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
+}
+
+void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
+    intrusive::shared_ptr<InstructionMsg>&& instr_msg) {
+  local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
+  static constexpr int kWindowSize = 32;
+  if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) { MoveToGarbageMsgListAndNotifyGC(); }
+}
+
+void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
+  garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
+  notify_callback_thread_();
 }
 
 void VirtualMachineEngine::RunInstructionsInAdvance(InstructionMsg* instr_msg) {
@@ -613,7 +627,9 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   }
 }
 
-void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
+void VirtualMachineEngine::__Init__(const VmDesc& vm_desc,
+                                    const std::function<void()>& notify_callback_thread) {
+  notify_callback_thread_ = notify_callback_thread;
   mut_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
   CHECK_GT(vm_desc.machine_id_range().size(), 0);
   *mut_machine_id_range() = vm_desc.machine_id_range();
@@ -820,9 +836,17 @@ void VirtualMachineEngine::Schedule() {
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
   // handle probes
-  if (unlikely(probe_hook_.thread_unsafe_size())) { HandleProbe(); }
-  if (unlikely(local_probe_hook_.size())) { HandleProbe(); }
+  if (unlikely(probe_list_.thread_unsafe_size())) { HandleProbe(); }
+  if (unlikely(local_probe_list_.size())) { HandleProbe(); }
 }
+
+void VirtualMachineEngine::Callback() {
+  InstructionMsgList garbage_msg_list;
+  mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
+  // destruct garbage_msg_list.
+}
+
+void VirtualMachineEngine::ScheduleEnd() { MoveToGarbageMsgListAndNotifyGC(); }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
   return local_pending_msg_list().empty() && active_stream_list().empty()
@@ -833,6 +857,8 @@ bool VirtualMachineEngine::Empty() const {
   // hook and size will be check in pending_msg_list().empty().
   return pending_msg_list().empty() && ThreadUnsafeEmpty();
 }
+
+bool VirtualMachineEngine::CallbackEmpty() const { return garbage_msg_list_.empty(); }
 
 }  // namespace vm
 }  // namespace oneflow

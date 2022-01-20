@@ -31,19 +31,30 @@ namespace vm {
 class TensorStorage {
  public:
   TensorStorage()
-      : non_pod_allocator_(std::make_unique<MemoryAllocator>()),
+      : blob_bytes_(0),
+        blob_dptr_(nullptr),
+        non_pod_allocator_(std::make_unique<MemoryAllocator>()),
         producer_op_device_(NullOpt),
         last_used_device_(NullOpt) {}
 
+  ~TensorStorage() { TryFree(); }
+
   size_t blob_bytes() const { return blob_bytes_; }
 
-  char* blob_dptr() { return blob_dptr_.get(); }
+  char* blob_dptr() { return blob_dptr_; }
 
   MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
 
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
+  void set_blob_dptr(char* blob_dptr, size_t bytes, std::function<void(char*)>&& free_func) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
+    free_func_ = std::move(free_func);
+  }
+
+  void TryFree() {
+    if (blob_dptr_ == nullptr) { return; }
+    free_func_(blob_dptr_);
+    blob_dptr_ = nullptr;
   }
 
   const Optional<Symbol<Device>>& producer_op_device() const { return producer_op_device_; }
@@ -60,7 +71,8 @@ class TensorStorage {
 
  private:
   size_t blob_bytes_;
-  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  char* blob_dptr_;
+  std::function<void(char*)> free_func_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
   Optional<Symbol<Device>> producer_op_device_;
   Optional<Symbol<Device>> last_used_device_;
@@ -94,7 +106,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
-    tensor_storage_.reset(new TensorStorage);
+    tensor_storage_->TryFree();
     return Maybe<void>::Ok();
   }
 

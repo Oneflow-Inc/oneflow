@@ -173,8 +173,13 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         JUST(tensor->AsMirroredTensor()),
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-          py::gil_scoped_acquire acquire;
-          CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+          auto Call = [&]() { CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob())); };
+          if (!PyGILState_Check()) {
+            py::gil_scoped_acquire acquire;
+            Call();
+          } else {
+            Call();
+          }
         },
         "mut");
   }));
