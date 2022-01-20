@@ -194,6 +194,18 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return {};
 }
 
+::llvm::SmallVector<::mlir::Value, 4> CreateGPUMemcpyOpFromMemrefCopy(
+    ::mlir::PatternRewriter& rewriter, ::mlir::memref::CopyOp copyOp) {
+  ::mlir::ValueRange asyncDependencies{};
+  return rewriter
+      .create<gpu::MemcpyOp>(copyOp->getLoc(),
+                             /*optional asyncToken*/ llvm::None,
+                             /*asyncDependencies*/ asyncDependencies,
+                             /*dst*/ copyOp.target(),
+                             /*src*/ copyOp.source())
+      ->getResults();
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -251,6 +263,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
+  pm.addNestedPass<FuncOp>(createGpuCopyArgPass());                      // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   return pm.run(module);
 }
@@ -267,6 +280,10 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+}
+
+void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ReplaceCopyWithGPUPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow

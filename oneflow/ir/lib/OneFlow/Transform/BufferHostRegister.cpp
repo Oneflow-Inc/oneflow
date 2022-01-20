@@ -17,8 +17,10 @@ limitations under the License.
 #include <string>
 #include "OneFlow/Passes.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-using namespace mlir;
+namespace mlir {
 
 namespace {
 
@@ -36,15 +38,23 @@ class BufferHostRegisterPass : public BufferHostRegisterPassBase<BufferHostRegis
   }
 };
 
+class GpuCopyArgPass : public GpuCopyArgPassBase<GpuCopyArgPass> {
+  void runOnFunction() override {
+    Operation* op = getFunction();
+    RewritePatternSet patterns(op->getContext());
+    oneflow::populateGpuHelperPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
-namespace mlir {
-
 namespace oneflow {
-
 std::unique_ptr<Pass> createBufferHostRegisterPass() {
   return std::make_unique<BufferHostRegisterPass>();
 }
+
+std::unique_ptr<Pass> createGpuCopyArgPass() { return std::make_unique<GpuCopyArgPass>(); }
 
 }  // namespace oneflow
 

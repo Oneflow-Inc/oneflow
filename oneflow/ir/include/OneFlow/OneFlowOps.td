@@ -257,6 +257,12 @@ def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
   let dependentDialects = ["gpu::GPUDialect"];
 }
 
+def GpuCopyArgPass : FunctionPass<"gpu-copy-arg"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createGpuCopyArgPass()";
+  let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
+}
+
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let summary = "move ops could be jitted to jit function";
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
