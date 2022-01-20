@@ -23,10 +23,46 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 import json
 import os
-
+import numpy as np
 
 fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 4096))
 optimizer = str(os.environ.get("OPTIMIZER", "sgd"))
+slot_size_array = np.array(
+    [
+        227605432,
+        39060,
+        17295,
+        7424,
+        20265,
+        3,
+        7122,
+        1543,
+        63,
+        130229467,
+        3067956,
+        405282,
+        10,
+        2209,
+        11938,
+        155,
+        4,
+        976,
+        14,
+        292775614,
+        40790948,
+        187188510,
+        590152,
+        12973,
+        108,
+        36,
+    ]
+)
+scales = np.sqrt(1 / slot_size_array)
+initializer_list = []
+for i in range(scales.size):
+    initializer_list.append(
+        {"initializer": {"type": "uniform", "mean": 0, "scale": scales[i],}}
+    )
 
 
 class OneEmbeddingLookup(Module):
@@ -69,10 +105,7 @@ class OneEmbeddingLookup(Module):
                 },
             },
             "default_initializer": {"type": "uniform", "mean": 0, "std": 1},
-            "columns": [
-                {"initializer": {"type": "uniform", "mean": 0, "std": 1,}},
-                {"initializer": {"type": "uniform", "mean": 0, "std": 1,}},
-            ],
+            "columns": initializer_list,
             "optimizer": {
                 "type": optimizer,
                 "beta": 0.9,

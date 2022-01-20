@@ -21,15 +21,9 @@ limitations under the License.
 namespace oneflow {
 namespace embedding {
 
-enum class InitializerType {
-  kUniform = 0,
-  kNormal = 1,
-};
-
 struct EmbeddingInitializer {
-  InitializerType type;
   double mean;
-  double stddev;
+  double scale;
 };
 
 struct EmbeddingColumn {
@@ -127,6 +121,23 @@ class EmbeddingOptions final {
     } else {
       learning_rate_decay_type_ = "none";
     }
+
+    auto columns = json_object["columns"];
+    if (columns != nlohmann::detail::value_t::null) {
+      for (int32_t i = 0; i < columns.size(); ++i) {
+        EmbeddingColumn embedding_column;
+        auto column = columns.at(i);
+        auto initializer = GetValue(column, "initializer");
+        embedding_column.initializer.mean = GetValue(initializer, "mean");
+        embedding_column.initializer.scale = GetValue(initializer, "scale");
+        columns_.push_back(embedding_column);
+      }
+    } else {
+      EmbeddingColumn embedding_column;
+      embedding_column.initializer.mean = 0;
+      embedding_column.initializer.scale = 1;
+      columns_.push_back(embedding_column);
+    }
   }
   ~EmbeddingOptions() = default;
 
@@ -152,6 +163,7 @@ class EmbeddingOptions final {
   WarmupConf WarmupConfProto() const { return warmup_conf_; }
   std::string LearningRateDecayType() const { return learning_rate_decay_type_; }
   LearningRateDecayConf LearningRateDecayConfProto() const { return learning_rate_decay_conf_; }
+  std::vector<EmbeddingColumn> Columns() const { return columns_; }
 
  private:
   std::string name_;
@@ -175,6 +187,7 @@ class EmbeddingOptions final {
   WarmupConf warmup_conf_;
   std::string learning_rate_decay_type_;
   LearningRateDecayConf learning_rate_decay_conf_;
+  std::vector<EmbeddingColumn> columns_;
 };
 
 }  // namespace embedding
