@@ -42,7 +42,6 @@ class VirtualMachine final {
 
   void ScheduleLoop(const std::function<void()>& Initializer);
   void CallbackLoop(const std::function<void()>& Initializer);
-  void ScheduleEnd();
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
