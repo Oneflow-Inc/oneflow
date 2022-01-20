@@ -1068,7 +1068,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   if (pthread_fork::IsForkedSubProcess() && parallel_desc
-      && parallel_desc->device_type() == DeviceType::kCUDA) {
+      && parallel_desc->device_type() != DeviceType::kCPU) {
     return Maybe<void>::Ok();
   }
   const auto& last_used_device = JUST(eager_blob_object->last_used_device());
