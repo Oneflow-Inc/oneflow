@@ -305,20 +305,22 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
-    message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
-  endif()
-  get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
-  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    if(of_include_src_dir MATCHES "/include$")
-      # it requires two slashes, but in CMake doc it states only one slash is needed
-      set(of_include_src_dir "${of_include_src_dir}//")
+  if(BUILD_PYTHON)
+    if(NOT ONEFLOW_INCLUDE_DIR MATCHES "/include$")
+      message(FATAL_ERROR "ONEFLOW_INCLUDE_DIR must end with '/include', current value: ${ONEFLOW_INCLUDE_DIR}")
     endif()
-    install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
-      COMPONENT oneflow_py_include
-      EXCLUDE_FROM_ALL
-    )
-  endforeach()
+    get_filename_component(ONEFLOW_INCLUDE_DIR_PARENT "${ONEFLOW_INCLUDE_DIR}" DIRECTORY)
+    foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+      if(of_include_src_dir MATCHES "/include$")
+        # it requires two slashes, but in CMake doc it states only one slash is needed
+        set(of_include_src_dir "${of_include_src_dir}//")
+      endif()
+      install(DIRECTORY ${of_include_src_dir} DESTINATION ${ONEFLOW_INCLUDE_DIR}
+        COMPONENT oneflow_py_include
+        EXCLUDE_FROM_ALL
+      )
+    endforeach()
+  endif(BUILD_PYTHON)
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
