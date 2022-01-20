@@ -23,7 +23,6 @@ limitations under the License.
 #include <pybind11/numpy.h>
 
 #include "oneflow/extension/python/numpy.h"
-#include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"

@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/register/ofblob.h"
-#include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/vm/virtual_machine.h"

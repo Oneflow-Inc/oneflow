@@ -149,7 +149,7 @@ Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp> symbol) {
   FlatNdSbpAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx.WaitDone());
   JUST(ctx.Check());
   return Maybe<void>::Ok();
 }

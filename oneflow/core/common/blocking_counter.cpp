@@ -21,6 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 
+int64_t BlockingCounter::Increase() {
+  std::unique_lock<std::mutex> lck(mtx_);
+  CHECK_GT(cnt_val_, 0);
+  cnt_val_ += 1;
+  return cnt_val_;
+}
+
 int64_t BlockingCounter::Decrease() {
   std::unique_lock<std::mutex> lck(mtx_);
   cnt_val_ -= 1;

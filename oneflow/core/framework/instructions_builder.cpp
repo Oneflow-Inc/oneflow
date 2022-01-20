@@ -1174,30 +1174,6 @@ template Maybe<void> InstructionsBuilder::TensorView(
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const T tensor, const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
-  const auto& CallbackWrapper = [spin_counter, Callback](uint64_t ofblob_ptr) {
-    (*Callback)(ofblob_ptr);
-    CHECK_GT(Callback.use_count(), 1);
-    // What we want to do here is dereferencing the `Callback` in scheduler thread, because we don't
-    // want any python objects destructed in scheduler thread.
-    const_cast<std::shared_ptr<std::function<void(uint64_t)>>*>(&Callback)->reset();
-    spin_counter->Decrease();
-  };
-  return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
-}
-
-template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const std::shared_ptr<one::MirroredTensor> tensor,
-    const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
-
-template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
-
-template<typename T>
-Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
     const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
   const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
