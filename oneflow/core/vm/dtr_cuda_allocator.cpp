@@ -181,7 +181,25 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
           piece->bin_num = kInvalidBinNum;
           piece->is_free = false;
         } else if (piece->size > aligned_size) {
-          if (left_) {
+                    const std::string& name = Global<one::DTRTensorPool>::Get()->current_op_type_name();
+          const bool choose_left = [&]() {
+            if (ParseBooleanFromEnv("OF_DTR_NLR", false)) {
+              CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
+              CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
+              std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
+                                                               "conv_filter_grad", "add_n"};
+              if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
+                  != high_compute_cost_names.cend()) {
+                return true;
+              }
+              return false;
+
+            } else {
+              return left_;
+            }
+          }();
+          if (choose_left) {
+            if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "left: " << name; }
             piece->bin_num = kInvalidBinNum;
             piece->is_free = false;
 
@@ -252,7 +270,7 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int coeff) {
   if (ebo == nullptr) { return 0.; }
   const std::string cost_type = "eq_compute_time_and_last_access";
   double cost = CHECK_JUST(ebo->cost(cost_type));
-  if (std::getenv("OF_DTR_NO_EE") == nullptr) {
+  if (!ParseBooleanFromEnv("OF_DTR_O_ONE", false)) {
     CHECK(!isinf(cost));
     CHECK(!isnan(cost));
     return cost;
@@ -377,7 +395,7 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   *mem_ptr = piece->ptr;
   total_allocate_bytes_ += size;
 
-  if (std::getenv("OF_DTR_LR") != nullptr) { left_ = !left_; }
+  if (ParseBooleanFromEnv("OF_DTR_LR", true)) { left_ = !left_; }
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
   //             << "MB, total mem: " << (total_memory_bytes_ / 1024. / 1024.)

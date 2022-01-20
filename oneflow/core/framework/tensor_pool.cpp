@@ -316,5 +316,13 @@ void DTRTensorPool::set_total_memory(size_t mem) { total_memory_bytes_ = mem; }
 
 size_t DTRTensorPool::get_total_memory() { return total_memory_bytes_; }
 
+void DTRTensorPool::set_current_op_type_name(std::string op_type_name) {
+  current_op_type_name_ = std::move(op_type_name);
+}
+
+const std::string& DTRTensorPool::current_op_type_name() {
+  return current_op_type_name_;
+}
+
 }  // namespace one
 }  // namespace oneflow

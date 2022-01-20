@@ -249,11 +249,15 @@ struct LocalCallOpKernelUtil {
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
+
+    Global<one::DTRTensorPool>::Get()->set_current_op_type_name(operand->opkernel().op_type_name());
     JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
       CHECK_NOTNULL_OR_RETURN(blob_object->tensor_buffer()->blob_dptr());
       return Maybe<void>::Ok();
     }));
+    Global<one::DTRTensorPool>::Get()->set_current_op_type_name("");
+
     if (oneflow::DTREnabled()) {
       JUST(CheckOutputInMemory(operand));
     }

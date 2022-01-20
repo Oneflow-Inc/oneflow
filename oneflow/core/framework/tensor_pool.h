@@ -45,6 +45,10 @@ struct DTRTensorPool {
   Maybe<void> insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object, size_t thres = 0);
   Maybe<void> clear();
 
+  void set_current_op_type_name(std::string op_type_name);
+  const std::string& current_op_type_name();
+  std::string current_op_type_name_;
+
   Maybe<vm::DTREagerBlobObject*> find_best_tensor();
   Maybe<bool> find_best_tensor_and_evict();
   // do not need Maybe

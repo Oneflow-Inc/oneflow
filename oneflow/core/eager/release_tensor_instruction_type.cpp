@@ -36,7 +36,7 @@ void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const 
   const auto* ptr =
       dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  if (std::getenv("OF_DTR_NO_EE") == nullptr) {
+  if (ParseBooleanFromEnv("OF_DTR_EE", true)) {
     if (oneflow::DTRDebugEnabled()) {
       std::cout << "eager eviction tensor " << ptr->eager_blob_object().get() << " with ref count "
                 << ptr->eager_blob_object().use_count() << std::endl;

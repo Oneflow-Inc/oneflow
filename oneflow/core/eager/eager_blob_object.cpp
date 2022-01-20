@@ -87,7 +87,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    if (std::getenv("OF_DTR_NO_ALLO") == nullptr) {
+    if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) {
       if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
         if (auto* dtr_allocator =
                 dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {
@@ -389,8 +389,14 @@ void DTREagerBlobObject::set_compute_time(double val) {
   } else {
     compute_time_ = blob_body_bytes_;
   }
-  if (compute_op_type_name() == "add_n") { compute_time_ *= (blob_body_bytes_ * blob_body_bytes_); }
-  // else if (compute_op_type_name() == "conv2d") { compute_time_ *= (blob_body_bytes_); }
+  if (ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true)) {
+    if (compute_op_type_name() == "add_n") { compute_time_ *= 5; }
+  }
+  if (ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true)) {
+    if (compute_op_type_name() == "conv2d") { compute_time_ *= 5; }
+    if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 5; }
+    if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 5; }
+  }
   if (oneflow::DTRDebugEnabled()) {
     LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
               << compute_op_type_name() << std::endl;
