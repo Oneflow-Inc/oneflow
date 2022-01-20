@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/infer_stream_type.h"
@@ -22,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -173,6 +171,43 @@ void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
   MakeAndAppendFusedInstruction(&fused_instr_msg_list, pending_instr_msgs);
 }
 
+std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t debug_cnt) {
+  std::stringstream ss;
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
+    if (--debug_cnt <= 0) { break; }
+    ss << instruction->instr_msg().DebugName() << "\n";
+  }
+  return ss.str();
+}
+
+void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instruction) {
+  ++total_inserted_lively_instruction_cnt_;
+  mut_lively_instruction_list()->PushBack(instruction);
+}
+
+void VirtualMachineEngine::InsertProbe(
+    const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
+  probe_list_.EmplaceBack(intrusive::make_shared<Probe>(ProbeFunction));
+}
+
+void VirtualMachineEngine::HandleProbe() {
+  if (unlikely(probe_list_.thread_unsafe_size())) { probe_list_.MoveTo(&local_probe_list_); }
+  if (unlikely(local_probe_list_.size())) {
+    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
+      if (probe->probe(this)) { local_probe_list_.Erase(probe); }
+    }
+  }
+}
+
+intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
+    Instruction* instruction) {
+  ++total_erased_lively_instruction_cnt_;
+  auto ret = mut_lively_instruction_list()->Erase(instruction);
+  static constexpr int kProbeInterval = 20;
+  if (unlikely(total_erased_lively_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
+  return ret;
+}
+
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
@@ -182,7 +217,7 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
       intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
-      stream->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction_ptr));
+      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
       MoveInstructionMsgToGarbageMsgList(std::move(instr_msg));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
@@ -236,7 +271,7 @@ void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
   bool is_barrier_instruction = instruction_type.IsFrontSequential();
   const auto& NewAndMove = [&](Stream* stream, const std::shared_ptr<const ParallelDesc>& pd) {
     intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, pd);
-    mut_lively_instruction_list()->PushBack(instr.Mutable());
+    LivelyInstructionListPushBack(instr.Mutable());
     if (unlikely(is_barrier_instruction)) {
       mut_barrier_instruction_list()->PushBack(instr.Mutable());
     } else {
@@ -659,22 +694,6 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
-  const int64_t kHighWaterMark = GetInstructionHighWaterMark();
-  const int64_t kLowWaterMark = GetInstructionLowWaterMark();
-  if (flying_instruction_cnt() > kHighWaterMark) {
-    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
-      const auto& NeedSpin = [&] { return flying_instruction_cnt() > kLowWaterMark; };
-      while (true) {
-        int64_t last_cnt = flying_instruction_cnt();
-        const auto& ret = TRY(SpinWaitUntilTimeout(NeedSpin, InstructionMaxRunningSeconds()));
-        if (ret.IsOk()) { break; }
-        CHECK_NE_OR_RETURN(last_cnt, flying_instruction_cnt())
-            << Error::UnimplementedError() << "The virtual machine don't respond in "
-            << InstructionMaxRunningSeconds() << " seconds.";
-      }
-      return Maybe<void>::Ok();
-    }));
-  }
   bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
   OF_PROFILER_RANGE_POP();
   return old_list_empty;
@@ -765,7 +784,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(this, sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
-  mut_lively_instruction_list()->Erase(sequnential_instruction);
+  LivelyInstructionListErase(sequnential_instruction);
   OF_PROFILER_RANGE_POP();
 }
 
@@ -816,6 +835,9 @@ void VirtualMachineEngine::Schedule() {
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
+  // handle probes
+  if (unlikely(probe_list_.thread_unsafe_size())) { HandleProbe(); }
+  if (unlikely(local_probe_list_.size())) { HandleProbe(); }
 }
 
 void VirtualMachineEngine::Callback() {

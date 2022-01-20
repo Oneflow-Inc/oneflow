@@ -33,6 +33,11 @@ class VirtualMachine final {
   VirtualMachine(const Resource& resource, int64_t this_machine_id);
   ~VirtualMachine();
 
+  static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
+
+  bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
+  std::string GetBlockingDebugString();
+
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
   const vm::VirtualMachineEngine& vm() const { return *vm_; }

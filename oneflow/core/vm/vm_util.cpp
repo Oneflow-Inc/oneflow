@@ -50,9 +50,7 @@ Maybe<void> ClusterSync() {
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return Maybe<void>::Ok();
 }
 
