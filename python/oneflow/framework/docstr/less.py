@@ -13,13 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-
-@register_tensor_op("le")
-def less_equal_op(input, other):
-    """Returns the truth value of :math:`input <= other` element-wise.
+add_docstr(
+    oneflow.lt,
+    """Returns the truth value of :math:`input < other` element-wise.
 
     Args:
         input (oneflow.Tensor): A Tensor
@@ -36,17 +35,11 @@ def less_equal_op(input, other):
         >>> import oneflow as flow
         
         >>> input1 = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
 
-        >>> out = flow.le(input1, input2)
+        >>> out = flow.lt(input1, input2)
         >>> out
-        tensor([1, 0, 1], dtype=oneflow.int8)
+        tensor([0, 0, 1], dtype=oneflow.int8)
 
-    """
-    return flow._C.less_equal(input, other)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)

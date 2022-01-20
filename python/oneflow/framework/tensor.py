@@ -207,7 +207,7 @@ def _gt(self, other):
 
 
 def _lt(self, other):
-    return flow.lt(self, other)
+    return flow._C.less(self, other)
 
 
 def _ge(self, other):
@@ -931,7 +931,8 @@ def RegisterMethods():
     Tensor.T = property(_T)
     Tensor.t = _t
     Tensor.eq = _eq
-    Tensor.ne=_ne
+    Tensor.ne = _ne
+    Tensor.lt = _lt
 
 
 def register_tensor_op(op_name):
