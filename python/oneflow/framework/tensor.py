@@ -718,6 +718,8 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
             )
+        else:
+            other = other.to_consistent(placement=self.placement, sbp=self.sbp)
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if not isinstance(other, (Tensor)):
