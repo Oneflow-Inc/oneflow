@@ -764,7 +764,7 @@ def _tile(self, *dims):
         new_dims = dims
     return flow._C.tile(self, new_dims)
 
-  
+
 def _T(self):
     return flow._C.T(self)
 
