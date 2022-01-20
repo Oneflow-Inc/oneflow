@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class VmDesc final : public intrusive::Base {
+class VmDesc final {
  public:
   // types
   using StreamTypeId2StreamDesc = intrusive::SkipList<INTRUSIVE_FIELD(StreamDesc, stream_type_id_)>;
@@ -46,11 +46,13 @@ class VmDesc final : public intrusive::Base {
   StreamTypeId2StreamDesc* mut_stream_type_id2desc() { return &stream_type_id2desc_; }
 
   // methods
+  void __Init__() {}
   void __Init__(const VmResourceDesc& vm_resource_desc) { __Init__(vm_resource_desc, Range(0, 1)); }
   void __Init__(const VmResourceDesc& vm_resource_desc, const Range& machine_id_range) {
     mut_vm_resource_desc()->CopyFrom(vm_resource_desc);
     *mut_machine_id_range() = machine_id_range;
   }
+  void __Delete__() {}
 
  private:
   friend class intrusive::Ref;

@@ -40,11 +40,11 @@ enum OperandAccessType {
 };
 
 class RwMutexedObjectAccess final
-    : public intrusive::Base,
-      public intrusive::EnableObjectPool<RwMutexedObjectAccess,
+    : public intrusive::EnableObjectPool<RwMutexedObjectAccess,
                                          intrusive::kThreadUnsafeAndDisableDestruct> {
  public:
   void __Init__();
+  void __Delete__();
   // Getters
   OperandAccessType access_type() const { return access_type_; }
   bool has_instruction() const { return instruction_ != nullptr; }
@@ -110,9 +110,10 @@ class RwMutexedObjectAccess final
 };  // NOLINT
 
 struct LogicalObject;
-class RwMutexedObject final : public intrusive::Base {
+class RwMutexedObject final {
  public:
   void __Init__() {}
+  void __Delete__() {}
   // types
   using RwMutexedObjectAccessList =
       intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, rw_mutexed_object_access_hook_)>;
@@ -173,7 +174,7 @@ class RwMutexedObject final : public intrusive::Base {
   RwMutexedObjectAccessList access_list_;
 };
 
-class MirroredObject final : public intrusive::Base {
+class MirroredObject final {
  public:
   // Getters
   bool has_deleting_access() const { return deleting_access_ != nullptr; }
@@ -205,6 +206,8 @@ class MirroredObject final : public intrusive::Base {
   // methods
   void __Init__() { clear_deleting_access(); }
   void __Init__(LogicalObject* logical_object, int64_t global_device_id);
+  void __Delete__() {}
+
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
@@ -230,7 +233,7 @@ class MirroredObject final : public intrusive::Base {
 };
 
 struct VirtualMachineEngine;
-class LogicalObject final : public intrusive::Base {
+class LogicalObject final {
  public:
   // types
   using GlobalDeviceId2MirroredObject =
@@ -260,6 +263,8 @@ class LogicalObject final : public intrusive::Base {
     set_logical_object_id(logical_object_id);
     *mut_parallel_desc() = parallel_desc;
   }
+  void __Delete__() {}
+
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 

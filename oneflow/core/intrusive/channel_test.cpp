@@ -26,8 +26,10 @@ namespace test {
 
 namespace {
 
-class Foo final : public intrusive::Base {
+class Foo final {
  public:
+  void __Init__() {}
+  void __Delete__() {}
   int x() const { return x_; }
   void set_x(int val) { x_ = val; }
 

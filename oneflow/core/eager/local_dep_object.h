@@ -26,8 +26,10 @@ namespace oneflow {
 class Device;
 
 // Helps VirtualMachineEngine building instruction edges
-class LocalDepObject final : public intrusive::Base {
+class LocalDepObject final {
  public:
+  void __Init__() {}
+  void __Delete__() {}
   // Getters
   const vm::LogicalObject& logical_object() const {
     if (logical_object_) { return logical_object_.Get(); }

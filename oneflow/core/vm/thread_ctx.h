@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class ThreadCtx final : public intrusive::Base {
+class ThreadCtx final {
  public:
   void __Init__() { clear_stream_rt_desc(); }
 
@@ -50,6 +50,9 @@ class ThreadCtx final : public intrusive::Base {
     __Init__();
     set_stream_rt_desc(&stream_rt_desc);
   }
+
+  void __Delete__() {}
+
   void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   intrusive::ChannelStatus TryReceiveAndRun();
 

@@ -35,9 +35,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class InstructionOperandList final : public intrusive::Base {
+class InstructionOperandList final {
  public:
   void __Init__() {}
+  void __Delete__() {}
+
   // Getters
   const std::vector<FlatMsg<InstructionOperand>>& operand() const { return operand_; }
   // Setters
@@ -54,7 +56,7 @@ class InstructionOperandList final : public intrusive::Base {
 
 class VirtualMachineEngine;
 
-class InstructionMsg final : public intrusive::Base {
+class InstructionMsg final {
  public:
   // Getters
   bool has_parallel_desc_symbol_id() const { return 0 != parallel_desc_symbol_id_; }
@@ -92,6 +94,8 @@ class InstructionMsg final : public intrusive::Base {
   void __Init__(const InstructionProto& proto);
   void __Init__(const cfg::InstructionProto& proto);
   void __Init__(const InstructionMsg& instr_msg);
+  void __Delete__() {}
+
 
   void ToProto(InstructionProto* proto) const;
   intrusive::shared_ptr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
@@ -173,9 +177,7 @@ FLAT_MSG_END(InstructionStatusBuffer);
 
 struct Instruction;
 class InstructionEdge final
-    : public intrusive::Base,
-      public intrusive::EnableObjectPool<InstructionEdge,
-                                         intrusive::kThreadUnsafeAndDisableDestruct> {
+    : public intrusive::EnableObjectPool<InstructionEdge,intrusive::kThreadUnsafeAndDisableDestruct> {
  public:
   InstructionEdge()
       : intrusive_ref_(),
@@ -187,6 +189,7 @@ class InstructionEdge final
     clear_src_instruction();
     clear_dst_instruction();
   }
+  void __Delete__() {}
   // Getters
   bool has_src_instruction() const { return src_instruction_ != nullptr; }
   bool has_dst_instruction() const { return dst_instruction_ != nullptr; }
@@ -221,7 +224,7 @@ class InstructionEdge final
 };
 
 struct Stream;
-class Instruction final : public intrusive::Base {
+class Instruction final {
  public:
   // types
   using InEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, in_edge_hook_)>;
@@ -233,6 +236,7 @@ class Instruction final : public intrusive::Base {
 
   // Getters
   void __Init__() { clear_stream(); }
+  void __Delete__() {}
   bool has_stream() const { return stream_ != nullptr; }
   const Stream& stream() const { return *stream_; }
   const InstructionMsg& instr_msg() const {

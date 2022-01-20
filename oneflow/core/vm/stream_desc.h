@@ -56,7 +56,7 @@ class StreamId final {
   int64_t global_device_id_;
 };
 
-class StreamDesc final : public intrusive::Base {
+class StreamDesc final {
  public:
   // Getters
   int32_t num_streams_per_machine() const { return num_streams_per_machine_; }
@@ -71,6 +71,7 @@ class StreamDesc final : public intrusive::Base {
   void __Init__() {}
   void __Init__(const StreamTypeId& stream_type_id, int32_t num_streams_per_machine,
                 int32_t num_streams_per_thread);
+  void __Delete__() {}
   int32_t num_threads() const;
   int32_t parallel_num() const { return num_streams_per_machine(); }
 

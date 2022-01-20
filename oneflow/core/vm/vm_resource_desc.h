@@ -28,9 +28,11 @@ namespace vm {
 
 using DeviceTag2DeviceNum = std::unordered_map<std::string, int64_t>;
 
-class VmResourceDesc final : public intrusive::Base {
+class VmResourceDesc final {
  public:
   void __Init__() {}
+  void __Delete__() {}
+
   // Getters
   int64_t machine_num() const { return machine_num_; }
   int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }

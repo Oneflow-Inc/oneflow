@@ -25,7 +25,7 @@ namespace vm {
 
 struct ThreadCtx;
 
-class Stream final : public intrusive::Base {
+class Stream final {
  public:
   // types
   using DispatchedInstructionList =
@@ -61,6 +61,8 @@ class Stream final : public intrusive::Base {
   void __Init__();
   void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
                 const int64_t max_device_num_per_machine);
+  void __Delete__() {}
+
   intrusive::shared_ptr<Instruction> NewInstruction(
       InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);

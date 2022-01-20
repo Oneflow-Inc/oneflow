@@ -26,7 +26,7 @@ class StreamType;
 struct StreamDesc;
 
 // Rt is short for Runtime
-class StreamRtDesc final : public intrusive::Base {
+class StreamRtDesc final {
  public:
   // Getters
   const StreamDesc& stream_desc() const {
@@ -61,7 +61,9 @@ class StreamRtDesc final : public intrusive::Base {
   }
 
   // methods
+  void __Init__() {}
   void __Init__(StreamDesc* stream_desc);
+  void __Delete__() {}
   const StreamType& stream_type() const;
 
  private:

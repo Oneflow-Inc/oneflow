@@ -28,9 +28,10 @@ namespace test {
 namespace {
 
 class IntrusiveFoo final  // NOLINT
-    : public intrusive::Base,
-      public intrusive::EnableObjectPool<IntrusiveFoo, kThreadUnsafeAndDisableDestruct> {  // NOLINT
+    : public intrusive::EnableObjectPool<IntrusiveFoo, kThreadUnsafeAndDisableDestruct> {  // NOLINT
  public:
+  void __Init__() {}
+  void __Delete__() {}
   IntrusiveFoo() = default;  // NOLINT
 
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }

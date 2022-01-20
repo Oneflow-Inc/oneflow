@@ -19,15 +19,16 @@ limitations under the License.
 #include "oneflow/core/intrusive/dss.h"
 #include "oneflow/core/intrusive/static_counter.h"
 #include "oneflow/core/intrusive/struct_traits.h"
-#include "oneflow/core/intrusive/base.h"
 
 namespace oneflow {
 
 #define REFLECTIVE_CLASS_BEGIN(class_name)           \
-  struct class_name final : public intrusive::Base { \
+  struct class_name final { \
    public:                                           \
     using self_type = class_name;                    \
     static const bool __has_intrusive_ref__ = true;  \
+    void __Init__() {}                               \
+    void __Delete__() {}                             \
                                                      \
    private:                                          \
     DEFINE_STATIC_COUNTER(field_counter);            \

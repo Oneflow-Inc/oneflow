@@ -36,7 +36,7 @@ namespace oneflow {
 namespace vm {
 
 struct VmDesc;
-class VirtualMachineEngine final : public intrusive::Base {
+class VirtualMachineEngine final {
  public:
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
@@ -95,7 +95,9 @@ class VirtualMachineEngine final : public intrusive::Base {
   Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
 
   // methods
+  void __Init__() {}
   void __Init__(const VmDesc& vm_desc);
+  void __Delete__() {}
   // Returns true if old pending_instruction_list is empty
   Maybe<bool> Receive(InstructionMsgList* instr_list);
   // Returns true if old pending_instruction_list is empty
