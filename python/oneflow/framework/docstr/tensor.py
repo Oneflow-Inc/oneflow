@@ -786,6 +786,8 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.repeat,
     """
+    Tensor.repeat(*size) -> Tensor
+
     See :func:`oneflow.repeat`
     """,
 )
@@ -793,6 +795,8 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.tile,
     """
+    Tensor.tile(*dims) -> Tensor
+
     See :func:`oneflow.tile`
     """,
 )

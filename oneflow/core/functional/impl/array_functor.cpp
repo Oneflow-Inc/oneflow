@@ -2568,9 +2568,9 @@ class RepeatFunctor {
     Shape input_reshape(DimVector(input_reshape_vec.begin(), input_reshape_vec.end()));
     Shape expand_shape(DimVector(expand_shape_vec.begin(), expand_shape_vec.end()));
     Shape output_reshape(DimVector(output_reshape_vec.begin(), output_reshape_vec.end()));
-    std::shared_ptr<one::Tensor> new_tensor = JUST(Reshape(input, input_reshape));
-    std::shared_ptr<one::Tensor> tmp_tensor = JUST(Expand(new_tensor, expand_shape));
-    std::shared_ptr<one::Tensor> result = JUST(Reshape(tmp_tensor, output_reshape));
+    std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
+    std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
+    std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
     return result;
   }
 };

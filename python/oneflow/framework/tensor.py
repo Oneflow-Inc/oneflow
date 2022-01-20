@@ -747,7 +747,7 @@ def _gather(self, dim, index):
 
 def _repeat(self, *sizes):
     if len(sizes) == 1:
-        new_sizes = dim[0]
+        new_sizes = sizes[0]
         if isinstance(new_sizes, int):
             new_sizes = (new_sizes,)
     else:

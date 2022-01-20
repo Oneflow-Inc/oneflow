@@ -19,6 +19,8 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.tile,
     """
+    tile(input, dims) -> Tensor
+
     The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.tile.html
