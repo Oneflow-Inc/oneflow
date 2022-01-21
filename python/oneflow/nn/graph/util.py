@@ -165,6 +165,3 @@ class IONode(object):
             # Leaf node: TENSOR/NONE/OPAQUE
             mapped_value = leaf_node_fn(self)
         return mapped_value
-
-    def to_py_arg():
-        pass
