@@ -1108,13 +1108,13 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
-    std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_object,
+    std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     const std::string& modifier, Symbol<Device> op_device) {
   if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
   OF_PROFILER_RANGE_PUSH("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
-      std::move(compute_local_dep_object), modifier);
+      std::move(compute_local_dep_objects), modifier);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
       parallel_desc, phy_instr_operand);

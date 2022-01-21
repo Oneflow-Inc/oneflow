@@ -648,9 +648,6 @@ class SwapaxesFunctor {
         << "], but got " << dim_1 << ")";
     return Transpose2dim(x, dim0, dim1);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class ArangeFunctor {
