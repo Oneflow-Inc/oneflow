@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
-#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
@@ -125,12 +124,12 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("unique_ids", 0);
   DimVector out_dim_vec = ids_shape.dim_vec();
-  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
-  const int64_t embedding_size = options.EmbeddingSize();
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
-  out_dim_vec.at(out_dim_vec.size() - 1) = options.LineSize();
+  out_dim_vec.at(out_dim_vec.size() - 1) = line_size;
   *ctx->OutputShape("unique_values", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
@@ -258,10 +257,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids_reverse_idx", 0);
+  const Shape& cur_rank_embeddings_shape = ctx->InputShape("cur_rank_embeddings", 0);
+  const int64_t embedding_size =
+      cur_rank_embeddings_shape.At(cur_rank_embeddings_shape.NumAxes() - 1);
   DimVector out_dim_vec = ids_shape.dim_vec();
-  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
-  const int64_t embedding_size = options.EmbeddingSize();
-  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   *ctx->OutputIsDynamic("embeddings", 0) = false;

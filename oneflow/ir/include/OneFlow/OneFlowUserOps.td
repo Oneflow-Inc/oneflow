@@ -8850,9 +8850,6 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
     AnyType:$num_unique_ids_matrix,
     AnyType:$partition_index
   );
-  let attrs = (ins
-    StrAttr:$embedding_options
-  );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8871,9 +8868,6 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
   let output = (outs
     AnyType:$embeddings
   );
-  let attrs = (ins
-    StrAttr:$embedding_options
-  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -8891,9 +8885,6 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
   let output = (outs
     AnyType:$cur_rank_unique_embedding_diff
   );
-  let attrs = (ins
-    StrAttr:$embedding_options
-  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -8910,6 +8901,8 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
     AnyType:$context //no practical sense, control lookup run after prefetch.
   );
   let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_options
   );
   let same_output_regst_num = 1;
@@ -8931,6 +8924,8 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_options
   );
   let same_output_regst_num = 1;

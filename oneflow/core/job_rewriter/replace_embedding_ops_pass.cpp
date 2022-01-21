@@ -123,8 +123,8 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
   return GenLogicalBlobName(op_name, schedule_conf->out());
 }
 
-void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder,
-                          const ParallelConf& parallel_conf,
+void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
+                          const int64_t line_size, const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const user_op::UserOpConfWrapper& id_shuffle_op,
                           std::string* embedding_lbn, std::string* unique_values_lbn) {
@@ -141,6 +141,8 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder,
           .Input("unique_ids", unique_ids_lbn)
           .Input("column_ids", id_shuffle_op.output("cur_rank_column_ids", 0))
           .Output("context")
+          .Attr<int64_t>("embedding_size", embedding_size)
+          .Attr<int64_t>("line_size", line_size)
           .Attr<std::string>("embedding_options",
                              embedding_op.attr<std::string>("embedding_options"))
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
@@ -161,6 +163,8 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder,
           .Output("unique_values")
           .Output("embeddings")
           .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
+          .Attr<int64_t>("embedding_size", embedding_size)
+          .Attr<int64_t>("line_size", line_size)
           .Attr<std::string>("embedding_options",
                              embedding_op.attr<std::string>("embedding_options"))
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
@@ -204,8 +208,6 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const ParallelConf& parallel
                  AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
           .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
           .Output("embeddings")
-          .Attr<std::string>("embedding_options",
-                             embedding_op.attr<std::string>("embedding_options"))
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   // add_ops.push_back(embedding_shuffle_op.op_conf());
@@ -248,8 +250,6 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
                  AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
           .Input("partition_index", AddIdentityOp(id_shuffle_op.output("partition_index", 0)))
           .Output("cur_rank_unique_embedding_diff")
-          .Attr<std::string>("embedding_options",
-                             embedding_op.attr<std::string>("embedding_options"))
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   job_builder->AddOps(parallel_conf, {embedding_gradient_shuffle_op.op_conf()});
@@ -400,8 +400,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             .Output("cur_rank_reverse_idx")
             .Output("num_unique_ids_matrix")
             .Output("partition_index")
-            .Attr<std::string>("embedding_options",
-                               embedding_op.attr<std::string>("embedding_options"))
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
@@ -410,8 +408,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
-    BuildEmbeddingLookup(ctx, job_builder, op_node->parallel_desc().parallel_conf(), embedding_op,
-                         id_shuffle_op, &embedding_lbn, &unique_values_lbn);
+    BuildEmbeddingLookup(ctx, job_builder, options.EmbeddingSize(), options.LineSize(),
+                         op_node->parallel_desc().parallel_conf(), embedding_op, id_shuffle_op,
+                         &embedding_lbn, &unique_values_lbn);
 
     // embedding shuffle op
     BuildEmbeddingShuffle(job_builder, op_node->parallel_desc().parallel_conf(), embedding_op,
