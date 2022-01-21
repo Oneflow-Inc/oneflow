@@ -501,13 +501,13 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           return Maybe<void>::Ok();
         }));
 
-    LOG(INFO) << "unpin output";
+    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output"; }
     JUST(ForEachDTROutputTensor(
         operand.get(), [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
           object->unpin();
           return Maybe<void>::Ok();
         }));
-    LOG(INFO) << "unpin output end";
+    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output end"; }
 
     // use current timestamp as access time and **then** update timestamp
     JUST(ForEachDTRInputTensor(operand.get(),
@@ -707,8 +707,10 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
 Maybe<void> IncReferenceNumOfRecomputedTensor(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
-  LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
-            << " start";
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
+              << " start";
+  }
   JUST(ForEachDTRInputTensor(
       operand.get(), [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
         dtr_blob_object->pin();
@@ -726,21 +728,27 @@ Maybe<void> IncReferenceNumOfRecomputedTensor(
             Global<one::DTRTensorPool>::Get()->operand_visited_.insert(
                 dtr_blob_object->compute_op());
 
-            LOG(INFO) << dtr_blob_object << " with compute op " << dtr_op << ", type "
-                      << dtr_op->shared_opkernel()->op_type_name()
-                      << " is not in memory, searching parents..";
+            if (oneflow::DTRDebugEnabled()) {
+              LOG(INFO) << dtr_blob_object << " with compute op " << dtr_op << ", type "
+                        << dtr_op->shared_opkernel()->op_type_name()
+                        << " is not in memory, searching parents..";
+            }
 
             JUST(IncReferenceNumOfRecomputedTensor(local_call_op, pinned_num));
           }
         } else {
           pinned_num++;
-          LOG(INFO) << "pin: compute op of " << dtr_blob_object << " is " << dtr_op
-                    << " with type " << dtr_op->shared_opkernel()->op_type_name();
+          if (oneflow::DTRDebugEnabled()) {
+            LOG(INFO) << "pin: compute op of " << dtr_blob_object << " is " << dtr_op
+                      << " with type " << dtr_op->shared_opkernel()->op_type_name();
+          }
         }
         return Maybe<void>::Ok();
       }));
-  LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
-            << " end";
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
+              << " end";
+  }
   return Maybe<void>::Ok();
 }
 
@@ -748,11 +756,15 @@ inline Maybe<void> LocalCallOpKernelUtil::ComputeInstruction(vm::Instruction* in
   auto operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   if (oneflow::DTREnabled()) {
-    LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
-    LOG(INFO) << "start pinning input tensors..";
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
+      LOG(INFO) << "start pinning input tensors..";
+    }
     int pinned_num = 0;
     JUST(IncReferenceNumOfRecomputedTensor(operand, pinned_num));
-    LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
+    }
     Global<one::DTRTensorPool>::Get()->operand_visited_.clear();
     JUST(DTRLocalCallOpKernelUtil::Prepare(instruction));
     JUST(DTRLocalCallOpKernelUtil::InitOutputBlobAttrs(instruction));
