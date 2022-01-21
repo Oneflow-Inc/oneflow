@@ -22,8 +22,9 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSplit(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_split_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
@@ -34,7 +35,7 @@ class TestSplit(flow.unittest.TestCase):
         res = torch.split(x, 2, dim=rand_dim)
         return torch.cat(res, rand_dim)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_split_sizes_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = 7
@@ -44,7 +45,7 @@ class TestSplit(flow.unittest.TestCase):
         res = torch.split(x, [1, 2, 3, 1], dim=1)
         return torch.cat(res, dim=1)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_split_sizes_neg_dim_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = 7
