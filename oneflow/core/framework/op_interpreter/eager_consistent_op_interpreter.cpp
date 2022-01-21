@@ -81,10 +81,10 @@ constexpr auto* CachedIsAllZeroSizeTensorMeta =
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
-  const auto& local_shape = input->shape();
+  const auto& logical_shape = input->shape();
   // If the input is a tensor of size 0, construct the output directly.
-  if (unlikely(local_shape->elem_cnt() == 0)) {
-    ConsistentTensorMeta tensor_meta(local_shape, input->dtype()->data_type(), out_nd_sbp,
+  if (unlikely(logical_shape->elem_cnt() == 0)) {
+    ConsistentTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
                                      out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
@@ -96,7 +96,7 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg:
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
-      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *local_shape));
+      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
   Global<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
