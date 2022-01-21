@@ -36,6 +36,7 @@ struct DTRTensorPool {
     std::cout << "Times of eviction: " << num_eviction_ << std::endl;
     std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
     std::cout << "Times of destruction: " << num_destruction_ << std::endl;
+    std::cout << "duration_: " << duration_ << std::endl;
     if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
@@ -62,6 +63,9 @@ struct DTRTensorPool {
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
   int update_after_pesudo_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object);
+
+  std::set<vm::DTRInstrOperand*> operand_visited_;
+  std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;
 
   // TODO: Implementation of disjoint-set data structure
 

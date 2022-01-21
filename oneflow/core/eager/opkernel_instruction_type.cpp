@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/object.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/tensor_pool.h"
@@ -134,10 +136,10 @@ struct LocalCallOpKernelUtil {
 
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "DoCompute done"; }
-    if (oneflow::DTREnabled()) {
-      JUST(CheckOutputInMemory(operand));
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand done";
     }
+    if (oneflow::DTREnabled()) { JUST(CheckOutputInMemory(operand)); }
     return Maybe<void>::Ok();
   }
   static inline Maybe<void> ComputeInstruction(vm::Instruction* instruction);
@@ -254,9 +256,7 @@ struct LocalCallOpKernelUtil {
       CHECK_NOTNULL_OR_RETURN(blob_object->tensor_buffer()->blob_dptr());
       return Maybe<void>::Ok();
     }));
-    if (oneflow::DTREnabled()) {
-      JUST(CheckOutputInMemory(operand));
-    }
+    if (oneflow::DTREnabled()) { JUST(CheckOutputInMemory(operand)); }
     return Maybe<void>::Ok();
   }
 
@@ -435,12 +435,18 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand,
       DeviceCtx* device_ctx) {
     // PinGuard guard(operand->inputs());
-    JUST(ForEachDTRInputTensor(operand.get(),
-                               [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-                                 // pin inputs
-                                 dtr_blob_object->pin();
-                                 return Maybe<void>::Ok();
-                               }));
+    if (oneflow::DTRDebugLevel() >= 2) {
+      if (auto* thread_safe_allocator =
+              dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
+        if (auto* dtr_allocator =
+                dynamic_cast<vm::DtrCudaAllocator*>(thread_safe_allocator->backend_allocator())) {
+          LOG(INFO) << "allocator stats:";
+          dtr_allocator->DisplayAllPieces();
+        } else {
+          CHECK_OR_RETURN(false);
+        }
+      }
+    }
     JUST(ForEachDTROutputTensor(
         operand.get(), [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
           object->pin();
@@ -455,8 +461,8 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           if (!dtr_blob_object->is_in_memory()) {
             CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
             // TODO: recursive recompute the inputs
-            auto unique_op = DTROp2LocalCallOp(dtr_blob_object->compute_op());
-            CHECK_NOTNULL_OR_RETURN(unique_op);
+            auto local_call_op = DTROp2LocalCallOp(dtr_blob_object->compute_op());
+            CHECK_NOTNULL_OR_RETURN(local_call_op);
 
             if (oneflow::DTRDebugEnabled()) {
               LOG(INFO) << "going to recompute " << dtr_blob_object->compute_op() << "("
@@ -464,9 +470,8 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
                         << ", whose dptr is " << dtr_blob_object->blob().dptr()
                         << ", is in memory: " << dtr_blob_object->is_in_memory() << std::endl;
             }
-            // pin inputs
             // TODO for each ptr rather than shared_ptr
-            JUST(ComputeOperandWithRecompute(unique_op, device_ctx));
+            JUST(ComputeOperandWithRecompute(local_call_op, device_ctx));
             Global<one::DTRTensorPool>::Get()->add_recompute_times();
           }
           return Maybe<void>::Ok();
@@ -496,17 +501,13 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           return Maybe<void>::Ok();
         }));
 
-    // unpin inputs
-    JUST(ForEachDTRInputTensor(operand.get(),
-                               [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-                                 dtr_blob_object->unpin();
-                                 return Maybe<void>::Ok();
-                               }));
+    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output"; }
     JUST(ForEachDTROutputTensor(
         operand.get(), [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
           object->unpin();
           return Maybe<void>::Ok();
         }));
+    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output end"; }
 
     // use current timestamp as access time and **then** update timestamp
     JUST(ForEachDTRInputTensor(operand.get(),
@@ -517,6 +518,25 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     JUST(ForEachDTROutputTensor(
         operand.get(), [&](const std::shared_ptr<vm::DTREagerBlobObject>& object) -> Maybe<void> {
           object->update_access_time();
+          return Maybe<void>::Ok();
+        }));
+
+    JUST(ForEachDTRInputTensor(
+        operand.get(), [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+          dtr_blob_object->unpin();
+          if (dtr_blob_object->num_pinned() == 0
+              && Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.count(dtr_blob_object)
+                     > 0) {
+            if (oneflow::DTRDebugEnabled()) {
+              LOG(INFO) << "going to evict " << dtr_blob_object
+                        << " in recomputation, whose dptr is " << dtr_blob_object->blob().dptr()
+                        << ", compute op: " << dtr_blob_object->compute_op_type_name()
+                        << ", size: " << dtr_blob_object->blob().ByteSizeOfBlobBody()
+                        << ", is in memory: " << dtr_blob_object->is_in_memory() << std::endl;
+            }
+            Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.erase(dtr_blob_object);
+            JUST(dtr_blob_object->evict());
+          }
           return Maybe<void>::Ok();
         }));
     Global<one::DTRTensorPool>::Get()->time_flies(compute_time);
@@ -632,12 +652,12 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
                 << object << ", whose dptr is " << object->blob().dptr()
                 << ", is in memory: " << object->is_in_memory() << std::endl;
     }
-    auto unique_op = DTROp2LocalCallOp(object->compute_op());
-    CHECK_NOTNULL_OR_RETURN(unique_op);
+    auto local_call_op = DTROp2LocalCallOp(object->compute_op());
+    CHECK_NOTNULL_OR_RETURN(local_call_op);
 
     // pin inputs
     // TODO for each ptr rather than shared_ptr
-    auto* operand = unique_op.get();
+    auto* operand = local_call_op.get();
     // PinGuard guard(operand->inputs());
     JUST(
         ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
@@ -685,10 +705,67 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 #endif
 };
 
+Maybe<void> IncReferenceNumOfRecomputedTensor(
+    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
+              << " start";
+  }
+  JUST(ForEachDTRInputTensor(
+      operand.get(), [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+        dtr_blob_object->pin();
+        const auto& dtr_op = dtr_blob_object->compute_op();
+        if (!dtr_blob_object->is_in_memory()) {
+          const auto local_call_op = DTROp2LocalCallOp(dtr_blob_object->compute_op());
+          CHECK_NOTNULL_OR_RETURN(local_call_op);
+          if (!dtr_blob_object->is_bp_required()) {
+            Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.insert(dtr_blob_object);
+          }
+
+          if (Global<one::DTRTensorPool>::Get()->operand_visited_.count(
+                  dtr_blob_object->compute_op())
+              == 0) {
+            Global<one::DTRTensorPool>::Get()->operand_visited_.insert(
+                dtr_blob_object->compute_op());
+
+            if (oneflow::DTRDebugEnabled()) {
+              LOG(INFO) << dtr_blob_object << " with compute op " << dtr_op << ", type "
+                        << dtr_op->shared_opkernel()->op_type_name()
+                        << " is not in memory, searching parents..";
+            }
+
+            JUST(IncReferenceNumOfRecomputedTensor(local_call_op, pinned_num));
+          }
+        } else {
+          pinned_num++;
+          if (oneflow::DTRDebugEnabled()) {
+            LOG(INFO) << "pin: compute op of " << dtr_blob_object << " is " << dtr_op
+                      << " with type " << dtr_op->shared_opkernel()->op_type_name();
+          }
+        }
+        return Maybe<void>::Ok();
+      }));
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
+              << " end";
+  }
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> LocalCallOpKernelUtil::ComputeInstruction(vm::Instruction* instruction) {
   auto operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   if (oneflow::DTREnabled()) {
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
+      LOG(INFO) << "start pinning input tensors..";
+    }
+    int pinned_num = 0;
+    JUST(IncReferenceNumOfRecomputedTensor(operand, pinned_num));
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
+    }
+    Global<one::DTRTensorPool>::Get()->operand_visited_.clear();
     JUST(DTRLocalCallOpKernelUtil::Prepare(instruction));
     JUST(DTRLocalCallOpKernelUtil::InitOutputBlobAttrs(instruction));
     JUST(ForEachDTRInputTensor(operand.get(),
@@ -700,8 +777,10 @@ inline Maybe<void> LocalCallOpKernelUtil::ComputeInstruction(vm::Instruction* in
     JUST(DTRLocalCallOpKernelUtil::UpdateTensorInfo(instruction));
     auto operand =
         JUST(LocalCallOpKernelUtil::GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
+
+    CHECK_OR_RETURN(Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.empty());
     if (oneflow::DTRDebugLevel() >= 1) {
-      std::cout << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
+      LOG(INFO) << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
     }
     return Maybe<void>::Ok();
   } else {
