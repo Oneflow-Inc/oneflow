@@ -706,16 +706,16 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 };
 
 Maybe<void> IncReferenceNumOfRecomputedTensor(
-    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
   LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
             << " start";
   JUST(ForEachDTRInputTensor(
       operand.get(), [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
         dtr_blob_object->pin();
+        const auto& dtr_op = dtr_blob_object->compute_op();
         if (!dtr_blob_object->is_in_memory()) {
           const auto local_call_op = DTROp2LocalCallOp(dtr_blob_object->compute_op());
           CHECK_NOTNULL_OR_RETURN(local_call_op);
-
           if (!dtr_blob_object->is_bp_required()) {
             Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.insert(dtr_blob_object);
           }
@@ -726,15 +726,16 @@ Maybe<void> IncReferenceNumOfRecomputedTensor(
             Global<one::DTRTensorPool>::Get()->operand_visited_.insert(
                 dtr_blob_object->compute_op());
 
-            LOG(INFO) << dtr_blob_object << " with compute op " << local_call_op.get() << ", type "
-                      << local_call_op->shared_opkernel()->op_type_name()
-                      << "is not in memory, searching parents..";
+            LOG(INFO) << dtr_blob_object << " with compute op " << dtr_op << ", type "
+                      << dtr_op->shared_opkernel()->op_type_name()
+                      << " is not in memory, searching parents..";
 
-            JUST(IncReferenceNumOfRecomputedTensor(local_call_op));
+            JUST(IncReferenceNumOfRecomputedTensor(local_call_op, pinned_num));
           }
         } else {
-          LOG(INFO) << "pin: compute op of " << dtr_blob_object << " is " << local_call_op.get()
-                    << " with type " << local_call_op->shared_opkernel()->op_type_name();
+          pinned_num++;
+          LOG(INFO) << "pin: compute op of " << dtr_blob_object << " is " << dtr_op
+                    << " with type " << dtr_op->shared_opkernel()->op_type_name();
         }
         return Maybe<void>::Ok();
       }));
@@ -749,8 +750,9 @@ inline Maybe<void> LocalCallOpKernelUtil::ComputeInstruction(vm::Instruction* in
   if (oneflow::DTREnabled()) {
     LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
     LOG(INFO) << "start pinning input tensors..";
-    JUST(IncReferenceNumOfRecomputedTensor(operand));
-    LOG(INFO) << "pinning input tensors ended";
+    int pinned_num = 0;
+    JUST(IncReferenceNumOfRecomputedTensor(operand, pinned_num));
+    LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
     Global<one::DTRTensorPool>::Get()->operand_visited_.clear();
     JUST(DTRLocalCallOpKernelUtil::Prepare(instruction));
     JUST(DTRLocalCallOpKernelUtil::InitOutputBlobAttrs(instruction));
