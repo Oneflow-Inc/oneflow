@@ -44,17 +44,12 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheKeyValueStoreImpl);
   CacheKeyValueStoreImpl(std::unique_ptr<KeyValueStore>&& store, std::unique_ptr<Cache>&& cache)
-      : store_(std::move(store)), cache_(std::move(cache)), synced_(true) {
+      : store_(std::move(store)), cache_(std::move(cache)), synced_(true), max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     CHECK_EQ(store_->KeySize(), cache_->KeySize());
     CHECK_EQ(store_->ValueSize(), cache_->ValueSize());
-    max_query_length_ = std::min(store_->MaxQueryLength(), cache_->MaxQueryLength());
     OF_CUDA_CHECK(cudaMalloc(&num_buffer_, sizeof(uint32_t)));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_buffer_, sizeof(uint32_t)));
-    OF_CUDA_CHECK(cudaMalloc(&keys_buffer_, max_query_length_ * store_->KeySize()));
-    OF_CUDA_CHECK(cudaMalloc(&values_buffer_, max_query_length_ * store_->ValueSize()));
-    OF_CUDA_CHECK(cudaMalloc(&indices_buffer0_, max_query_length_ * sizeof(uint32_t)));
-    OF_CUDA_CHECK(cudaMalloc(&indices_buffer1_, max_query_length_ * sizeof(uint32_t)));
     num_elems_per_value_ = store_->ValueSize() / sizeof(Elem);
   }
   ~CacheKeyValueStoreImpl() {
@@ -62,10 +57,12 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
     SyncCacheToStore();
     OF_CUDA_CHECK(cudaFree(num_buffer_));
     OF_CUDA_CHECK(cudaFreeHost(host_num_buffer_));
-    OF_CUDA_CHECK(cudaFree(keys_buffer_));
-    OF_CUDA_CHECK(cudaFree(values_buffer_));
-    OF_CUDA_CHECK(cudaFree(indices_buffer0_));
-    OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFree(keys_buffer_));
+      OF_CUDA_CHECK(cudaFree(values_buffer_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer0_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+    }
     cache_.reset();
     store_.reset();
   }
@@ -74,10 +71,28 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   uint32_t ValueSize() const override { return store_->ValueSize(); }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
+  void ReserveQueryLength(uint32_t query_length) override {
+    CudaCurrentDeviceGuard guard(device_index_);
+    if (query_length <= max_query_length_) { return; }
+    if (query_length > cache_->MaxQueryLength()) { cache_->ReserveQueryLength(query_length); }
+    if (query_length > store_->MaxQueryLength()) { store_->ReserveQueryLength(query_length); }
+    if (max_query_length_ != 0) {
+      OF_CUDA_CHECK(cudaFree(keys_buffer_));
+      OF_CUDA_CHECK(cudaFree(values_buffer_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer0_));
+      OF_CUDA_CHECK(cudaFree(indices_buffer1_));
+    }
+    OF_CUDA_CHECK(cudaMalloc(&keys_buffer_, query_length * store_->KeySize()));
+    OF_CUDA_CHECK(cudaMalloc(&values_buffer_, query_length * store_->ValueSize()));
+    OF_CUDA_CHECK(cudaMalloc(&indices_buffer0_, query_length * sizeof(uint32_t)));
+    OF_CUDA_CHECK(cudaMalloc(&indices_buffer1_, query_length * sizeof(uint32_t)));
+    max_query_length_ = query_length;
+  }
+
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) override;
+           uint32_t* n_missing, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
@@ -116,12 +131,12 @@ void CacheKeyValueStoreImpl<Key, Elem>::WithIterator(
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                            void* values, uint32_t* n_missing, void* missing_keys,
+                                            void* values, uint32_t* n_missing,
                                             uint32_t* missing_indices) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   if (cache_->Policy() == CacheOptions::Policy::kFull) {
-    cache_->Get(stream, num_keys, keys, values, n_missing, missing_keys, missing_indices);
+    cache_->Get(stream, num_keys, keys, values, n_missing, keys_buffer_, missing_indices);
     return;
   } else {
     cache_->Get(stream, num_keys, keys, values, num_buffer_, keys_buffer_, indices_buffer0_);
@@ -135,8 +150,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     return;
   }
-  store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, missing_keys,
-              indices_buffer1_);
+  store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, indices_buffer1_);
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, n_missing, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());

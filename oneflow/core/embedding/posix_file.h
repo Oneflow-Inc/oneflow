@@ -18,7 +18,6 @@ limitations under the License.
 
 #ifdef __linux__
 
-#include "oneflow/core/common/util.h"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,7 +35,6 @@ namespace embedding {
 
 class PosixFile final {
  public:
-  OF_DISALLOW_COPY(PosixFile);
   PosixFile() : fd_(-1), size_(0) {}
   PosixFile(const std::string& pathname, int flags, mode_t mode)
       : PosixFile(pathname.c_str(), flags, mode) {}
@@ -48,6 +46,9 @@ class PosixFile final {
     size_ = sb.st_size;
   }
   PosixFile(PosixFile&& other) noexcept : PosixFile() { *this = std::move(other); }
+  PosixFile(const PosixFile&) = delete;
+  ~PosixFile() { Close(); }
+
   PosixFile& operator=(PosixFile&& other) noexcept {
     this->Close();
     fd_ = other.fd_;
@@ -56,12 +57,14 @@ class PosixFile final {
     other.size_ = 0;
     return *this;
   }
-  ~PosixFile() { Close(); }
+  PosixFile& operator=(const PosixFile&) = delete;
 
   int fd() { return fd_; }
 
+  bool IsOpen() { return fd_ != -1; }
+
   void Close() {
-    if (fd_ != -1) {
+    if (IsOpen()) {
       PCHECK(close(fd_) == 0);
       fd_ = -1;
     }
@@ -70,22 +73,32 @@ class PosixFile final {
   size_t Size() { return size_; }
 
   void Truncate(size_t new_size) {
-    CHECK_NE(fd_, -1);
+    CHECK(IsOpen());
     if (new_size == size_) { return; }
     PCHECK(ftruncate(fd_, new_size) == 0);
     size_ = new_size;
   }
 
-  static bool FileExists(const char* name) { return access(name, F_OK) == 0; }
+  static bool FileExists(const std::string& pathname) {
+    return access(pathname.c_str(), F_OK) == 0;
+  }
+
+  static std::string JoinPath(const std::string& a, const std::string& b) { return a + "/" + b; }
 
   static void RecursiveCreateDirectory(const std::string& pathname, mode_t mode) {
     while (true) {
       struct stat sb {};
       if (stat(pathname.c_str(), &sb) == 0) {
-        CHECK(S_ISDIR(sb.st_mode)) << "'" << pathname << "' already exists and is not a directory.";
+        CHECK(S_ISDIR(sb.st_mode)) << "Could not create directory: '" << pathname
+                                   << "' already exists and is not a directory.";
         return;
       } else {
-        PCHECK(errno == ENOENT);
+        PCHECK(errno == ENOENT) << "Could not create directory '" << pathname << "'.";
+        if (lstat(pathname.c_str(), &sb) == 0) {
+          LOG(FATAL) << "Could not create directory: '" << pathname << "' is a broken link.";
+        } else {
+          PCHECK(errno == ENOENT) << "Could not create directory '" << pathname << "'.";
+        }
         std::vector<char> dirname_input(pathname.size() + 1);
         std::memcpy(dirname_input.data(), pathname.c_str(), pathname.size() + 1);
         const std::string parent = dirname(dirname_input.data());
@@ -93,7 +106,7 @@ class PosixFile final {
         if (mkdir(pathname.c_str(), mode) == 0) {
           return;
         } else {
-          PCHECK(errno == EEXIST);
+          PCHECK(errno == EEXIST) << "Could not create directory '" << pathname << "'.";
         }
       }
     }
@@ -127,7 +140,6 @@ class PosixFile final {
 
 class PosixMappedFile final {
  public:
-  OF_DISALLOW_COPY(PosixMappedFile);
   PosixMappedFile() : file_(), ptr_(nullptr) {}
   PosixMappedFile(PosixFile&& file, size_t size, int prot) : file_(std::move(file)), ptr_(nullptr) {
     CHECK_NE(file_.fd(), -1);
@@ -138,6 +150,9 @@ class PosixMappedFile final {
   PosixMappedFile(PosixMappedFile&& other) noexcept : PosixMappedFile() {
     *this = std::move(other);
   }
+  PosixMappedFile(const PosixMappedFile&) = delete;
+  ~PosixMappedFile() { Unmap(); }
+
   PosixMappedFile& operator=(PosixMappedFile&& other) noexcept {
     Unmap();
     this->file_ = std::move(other.file_);
@@ -145,7 +160,7 @@ class PosixMappedFile final {
     other.ptr_ = nullptr;
     return *this;
   }
-  ~PosixMappedFile() { Unmap(); }
+  PosixMappedFile& operator=(const PosixMappedFile&) = delete;
 
   void* ptr() { return ptr_; }
 

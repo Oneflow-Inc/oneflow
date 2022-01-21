@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/embedding/fixed_table_key_value_store.h"
+#include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
-#include "oneflow/core/embedding/cuda_lru_cache.h"
+#include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -93,7 +93,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, num_keys);
@@ -109,7 +109,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, 0);
@@ -128,7 +128,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, num_keys);
@@ -141,7 +141,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
     store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
-               missing_keys, missing_indices);
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, 0);
@@ -170,10 +170,10 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   device->DestroyStream(stream);
 }
 
-TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
+TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
-  FixedTableKeyValueStoreOptions options{};
+  PersistentTableKeyValueStoreOptions options{};
   uint32_t value_length = 128;
 
   std::string path = CreateTempDirectory();
@@ -181,10 +181,9 @@ TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
   options.table_options.value_size = value_length * sizeof(float);
   options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   options.table_options.physical_block_size = 512;
-  options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
-  options.max_query_length = 128;
 
-  std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(options);
+  std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(options);
+  store->ReserveQueryLength(128);
   TestKeyValueStore(store.get(), 1024 * 1024, 1024 * 1024, value_length);
   store.reset();
   PosixFile::RecursiveDelete(path);
@@ -194,26 +193,24 @@ TEST(FixedTableKeyValueStore, FixedTableKeyValueStore) {
 TEST(CachedKeyValueStore, LRU) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
-  FixedTableKeyValueStoreOptions store_options{};
+  PersistentTableKeyValueStoreOptions store_options{};
   std::string path = CreateTempDirectory();
   store_options.table_options.path = path;
   uint32_t value_length = 128;
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   store_options.table_options.physical_block_size = 512;
-  store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
-  store_options.max_query_length = 128;
-  std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
+  std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(store_options);
   CacheOptions cache_options{};
   cache_options.policy = CacheOptions::Policy::kLRU;
   cache_options.value_memory_kind = CacheOptions::MemoryKind::kDevice;
   cache_options.value_size = 512;
   cache_options.capacity = 130172;
-  cache_options.max_query_length = 128;
   cache_options.key_size = 8;
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
+  cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);
@@ -223,26 +220,24 @@ TEST(CachedKeyValueStore, LRU) {
 TEST(CachedKeyValueStore, Full) {
   if (!HasCudaDevice()) { return; }
   Global<ep::DeviceManagerRegistry>::New();
-  FixedTableKeyValueStoreOptions store_options{};
+  PersistentTableKeyValueStoreOptions store_options{};
   std::string path = CreateTempDirectory();
   store_options.table_options.path = path;
   uint32_t value_length = 128;
   store_options.table_options.value_size = value_length * sizeof(float);
   store_options.table_options.key_size = GetSizeOfDataType(DataType::kUInt64);
   store_options.table_options.physical_block_size = 512;
-  store_options.table_options.num_blocks_per_chunk = 4 * 1024 * 1024;
-  store_options.max_query_length = 128;
-  std::unique_ptr<KeyValueStore> store = NewFixedTableKeyValueStore(store_options);
+  std::unique_ptr<KeyValueStore> store = NewPersistentTableKeyValueStore(store_options);
   CacheOptions cache_options{};
   cache_options.policy = CacheOptions::Policy::kFull;
   cache_options.value_memory_kind = CacheOptions::MemoryKind::kHost;
   cache_options.value_size = 512;
   cache_options.capacity = 1024 * 1024 * 2;
-  cache_options.max_query_length = 128;
   cache_options.key_size = 8;
   std::unique_ptr<Cache> cache = NewCache(cache_options);
   std::unique_ptr<KeyValueStore> cached_store =
       NewCachedKeyValueStore(std::move(store), std::move(cache));
+  cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024 * 1024, 1024 * 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);

@@ -13,27 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_FIXED_TABLE_KEY_VALUE_STORE_H_
-#define ONEFLOW_EMBEDDING_FIXED_TABLE_KEY_VALUE_STORE_H_
+#ifndef ONEFLOW_CORE_BOXING_EAGER_BOXING_LOGGER_H_
+#define ONEFLOW_CORE_BOXING_EAGER_BOXING_LOGGER_H_
 
-#include "oneflow/core/embedding/key_value_store.h"
-#include "oneflow/core/embedding/fixed_table.h"
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-namespace embedding {
+class BoxingInterpreterStatus;
 
-struct FixedTableKeyValueStoreOptions {
-  FixedTableOptions table_options{};
-  uint32_t max_query_length{};
+class EagerBoxingLogger {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EagerBoxingLogger);
+  EagerBoxingLogger() = default;
+  virtual ~EagerBoxingLogger() = default;
+
+  virtual void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const = 0;
 };
-
-std::unique_ptr<KeyValueStore> NewFixedTableKeyValueStore(
-    const FixedTableKeyValueStoreOptions& options);
-
-}  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_FIXED_TABLE_KEY_VALUE_STORE_H_
+#endif  // ONEFLOW_CORE_BOXING_EAGER_BOXING_LOGGER_H_

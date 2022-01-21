@@ -29,10 +29,18 @@ namespace oneflow {
 
 namespace {
 
+constexpr size_t kMaxColumns = 128;
+
+struct InitParam {
+  int32_t num_columns = 0;
+  embedding::EmbeddingInitializer initializer[kMaxColumns];
+};
+
 template<typename T, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
                                 const float* learning_rate, const int64_t* skip_if,
                                 const T* model_diff, const T* model, T* updated_model) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   float learning_rate_val = *learning_rate;
   const int64_t n = *num_unique_ids * embedding_size;
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -47,6 +55,7 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
                                      const float* learning_rate, const int64_t* skip_if,
                                      const T* model_diff, const T* unique_values,
                                      T* updated_unique_values) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   float learning_rate_val = *learning_rate;
   const int64_t rows = *num_unique_ids;
   for (int row = blockIdx.x; row < rows; row += gridDim.x) {
@@ -72,6 +81,7 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
                                  const float* learning_rate, const int64_t* skip_if,
                                  const T* model_diff, const T* unique_values,
                                  T* updated_unique_values) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
   float learning_rate_val = *learning_rate;
   float bias_correction1_val = 1.0;
   float bias_correction2_val = 1.0;
@@ -100,21 +110,35 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
   }
 }
 
-template<typename T, typename K>
+template<typename T, typename K, typename IDX>
 __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int64_t line_size,
-                                const int64_t embedding_size, const uint32_t* num_missing_keys,
-                                const K* missing_keys, const uint32_t* missing_indices, T* values) {
+                                const int64_t embedding_size, InitParam param, const IDX* slots,
+                                const uint32_t* num_missing_keys, const uint32_t* missing_indices,
+                                T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   for (int row = blockIdx.x; row < *num_missing_keys; row += gridDim.x) {
     const uint32_t index = missing_indices[row];
+    const int32_t slot_idx = slots[index];
+    assert(slot_idx < param.num_columns);
     for (int col = threadIdx.x; col < line_size; col += blockDim.x) {
       const int64_t offset = index * line_size + col;
       T value = 0;
       if (col < embedding_size) {
-        value = (curand_uniform(&state) - 0.5) * 0.1;  // [-0.05, 0.05]
+        if (param.initializer[slot_idx].type == embedding::InitializerType::kUniform) {
+          const float low = param.initializer[slot_idx].uniform_param.low;
+          const float high = param.initializer[slot_idx].uniform_param.high;
+          T rand_num = curand_uniform(&state);
+          value = rand_num * (high - low) + low;
+        } else if (param.initializer[slot_idx].type == embedding::InitializerType::kNormal) {
+          const float mean = param.initializer[slot_idx].normal_param.mean;
+          const float std = param.initializer[slot_idx].normal_param.std;
+          value = (curand_normal(&state) + mean) / std;
+        } else {
+          __trap();
+        }
       }
       values[offset] = value;
     }
@@ -136,16 +160,13 @@ class PrefetchTmpBufferManager final {
   PrefetchTmpBufferManager(void* ptr, const int64_t num_keys, const int64_t value_size)
       : ptr_(ptr) {
     const size_t num_store_missing_bytes = GetCudaAlignedSize(1 * sizeof(uint32_t));
-    const size_t store_missing_keys_bytes = GetCudaAlignedSize(num_keys * sizeof(K));
     const size_t store_missing_indices_bytes = GetCudaAlignedSize(num_keys * sizeof(uint32_t));
     const size_t store_values_bytes = GetCudaAlignedSize(num_keys * value_size * sizeof(T));
 
     num_store_missing_offset_ = 0;
-    store_missing_keys_offset_ = num_store_missing_offset_ + num_store_missing_bytes;
-    store_missing_indices_offset_ = store_missing_keys_offset_ + store_missing_keys_bytes;
+    store_missing_indices_offset_ = num_store_missing_offset_ + num_store_missing_bytes;
     store_values_offset_ = store_missing_indices_offset_ + store_missing_indices_bytes;
-    total_buffer_size_ = num_store_missing_bytes + store_missing_keys_bytes
-                         + store_missing_indices_bytes + store_values_bytes;
+    total_buffer_size_ = num_store_missing_bytes + store_missing_indices_bytes + store_values_bytes;
   }
   ~PrefetchTmpBufferManager() = default;
 
@@ -154,10 +175,6 @@ class PrefetchTmpBufferManager final {
   uint32_t* NumStoreMissingPtr() const {
     CHECK(ptr_ != nullptr);
     return reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(ptr_) + num_store_missing_offset_);
-  }
-  K* StoreMissingKeysPtr() const {
-    CHECK(ptr_ != nullptr);
-    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + store_missing_keys_offset_);
   }
   uint32_t* StoreMissingIndicesPtr() const {
     CHECK(ptr_ != nullptr);
@@ -171,7 +188,6 @@ class PrefetchTmpBufferManager final {
 
  private:
   size_t num_store_missing_offset_;
-  size_t store_missing_keys_offset_;
   size_t store_missing_indices_offset_;
   size_t store_values_offset_;
   size_t total_buffer_size_;
@@ -184,12 +200,15 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
       : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
     options_.reset(new embedding::EmbeddingOptions(ctx->Attr<std::string>("embedding_options")));
+    key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+        *options_, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
   }
   ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
 
   void* HostNumKeys() { return host_num_keys_; }
 
   embedding::EmbeddingOptions* EmbeddingOptions() { return options_.get(); }
+  embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
   one::Generator* generator() { return generator_.get(); }
 
@@ -197,6 +216,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   std::unique_ptr<embedding::EmbeddingOptions> options_;
+  embedding::KeyValueStore* key_value_store_;
 };
 
 }  // namespace
@@ -226,10 +246,11 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
     embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetOrCreateKeyValueStore(
-        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+    const std::vector<embedding::EmbeddingColumn>& columns = options->Columns();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
+    const user_op::Tensor* slots = ctx->Tensor4ArgNameAndIndex("slots", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = options->EmbeddingSize();
     const int64_t line_size = options->LineSize();
@@ -242,15 +263,21 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_keys = *host_num_keys;
     store->Get(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
-               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-               buffer_manager.StoreMissingIndicesPtr());
+               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingIndicesPtr());
+
+    CHECK_LE(columns.size(), kMaxColumns);
+    InitParam init_param;
+    init_param.num_columns = columns.size();
+    for (int32_t i = 0; i < columns.size(); ++i) {
+      init_param.initializer[i] = columns.at(i).initializer;
+    }
     // init values
     const int64_t grid_size = BlocksNum4ThreadsNum(num_keys);
     uint64_t inc_offset = num_keys / grid_size + 1;
-    InitValueKernel<T, K>
+    InitValueKernel<T, K, IDX>
         <<<grid_size, line_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, line_size, embedding_size,
-            buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
+            seed, cuda_gen_state, inc_offset, line_size, embedding_size, init_param,
+            slots->dptr<IDX>(), buffer_manager.NumStoreMissingPtr(),
             buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
     store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr());
   }
@@ -290,9 +317,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetOrCreateKeyValueStore(
-        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
@@ -310,8 +335,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
 
     store->Get(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_values->mut_dptr(),
-               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingKeysPtr(),
-               buffer_manager.StoreMissingIndicesPtr());
+               buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingIndicesPtr());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, buffer_manager.NumStoreMissingPtr(),
                                   sizeof(uint32_t), cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -522,9 +546,7 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
-    embedding::KeyValueStore* store = Global<EmbeddingMgr>::Get()->GetOrCreateKeyValueStore(
-        *options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);

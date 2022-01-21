@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/embedding/embedding_manager.h"
-#include "oneflow/core/embedding/fixed_table_key_value_store.h"
+#include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
 
@@ -29,7 +29,7 @@ EmbeddingMgr::~EmbeddingMgr() {
 embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
     const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
     int64_t parallel_num) {
-  const std::string& name = embedding_options.EmbeddingName();
+  const std::string& name = embedding_options.Name();
   const uint32_t line_size = embedding_options.LineSize();
   int device_id = 0; 
   OF_CUDA_CHECK(cudaGetDevice(&device_id)); 
@@ -43,20 +43,18 @@ embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
   LOG(ERROR) << "Map Key is: "<<name<<"-"<<parallel_id; 
 
   std::unique_ptr<embedding::KeyValueStore> store;
-  const std::string& path = embedding_options.FixedTablePath();
+  const std::string& path = embedding_options.PersistentTablePath();
   const std::string& num_rank = std::to_string(parallel_num);
   const int32_t rank_id_suffix_length = num_rank.size();
   const std::string& rank_id = std::to_string(parallel_id);
-  embedding::FixedTableKeyValueStoreOptions options{};
+  embedding::PersistentTableKeyValueStoreOptions options{};
   options.table_options.path = path + "/" + std::string(rank_id_suffix_length - rank_id.size(), '0')
                                + rank_id + "-" + num_rank;
   options.table_options.value_size = line_size * GetSizeOfDataType(DataType::kFloat);
   options.table_options.key_size = GetSizeOfDataType(DataType::kInt64);
-  options.max_query_length = 65536 * 26;
-  options.table_options.physical_block_size = embedding_options.FixedTableBlockSize();
-  options.table_options.num_blocks_per_chunk = embedding_options.FixedTableChunkSize();
-  store = NewFixedTableKeyValueStore(options);
-
+  options.table_options.physical_block_size = embedding_options.PersistentTablePhysicalBlockSize();
+  options.table_options.target_chunk_size_mb = 4 * 1024;
+  store = NewPersistentTableKeyValueStore(options);
   if (embedding_options.L2CachePolicy() != "none") {
     embedding::CacheOptions cache_options{};
     cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
@@ -67,7 +65,6 @@ embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
     } else {
       UNIMPLEMENTED();
     }
-    cache_options.max_query_length = 65536 * 26;
     cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
     cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
     cache_options.capacity =
@@ -87,7 +84,6 @@ embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
     } else {
       UNIMPLEMENTED();
     }
-    cache_options.max_query_length = 65536 * 26;
     cache_options.key_size = GetSizeOfDataType(DataType::kInt64);
     cache_options.value_size = GetSizeOfDataType(DataType::kFloat) * line_size;
     cache_options.capacity =
@@ -97,6 +93,8 @@ embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
                << embedding_options.L1CacheMemoryBudgetMb();
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
+
+  store->ReserveQueryLength(embedding_options.MaxQueryLength());
   if (store->SnapshotExists("index")) { store->LoadSnapshot("index"); }
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
   LOG(ERROR) << "emplace kv into MAP \n"; 

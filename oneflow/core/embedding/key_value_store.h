@@ -33,9 +33,10 @@ class KeyValueStore : public KVBase {
   virtual uint32_t KeySize() const = 0;
   virtual uint32_t ValueSize() const = 0;
   virtual uint32_t MaxQueryLength() const = 0;
+  virtual void ReserveQueryLength(uint32_t query_length) = 0;
 
   virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-                   uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) = 0;
+                   uint32_t* n_missing, uint32_t* missing_indices) = 0;
   virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) = 0;
   virtual bool SnapshotExists(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;

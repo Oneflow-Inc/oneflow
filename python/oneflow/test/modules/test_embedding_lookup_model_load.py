@@ -23,7 +23,7 @@ import oneflow.nn as nn
 import os
 
 os.environ["DEBUG_SHUFFLE"] = "1"
-os.environ["CACHE_MEMORY_BUDGET_MB"] = "4096"
+os.environ["L1_CACHE_MEMORY_BUDGET_MB"] = "4096"
 os.environ["KEY_VALUE_STORE"] = "block_based"
 os.environ["BLOCK_BASED_PATH"] = (
     "/NVME0/guoran/unittest/" + os.environ["TEST_OPTIMIZER"]
@@ -77,8 +77,8 @@ class TrainGraph(flow.nn.Graph):
             flow.optim.SGD(self.dense.parameters(), lr=0.1, momentum=0.9)
         )
 
-    def build(self, ids):
-        loss = self.embedding_lookup(ids)
+    def build(self, ids, slots):
+        loss = self.embedding_lookup(ids, slots)
         loss = self.dense(loss)
         loss = loss.mean()
         loss.backward()
@@ -86,9 +86,13 @@ class TrainGraph(flow.nn.Graph):
 
 
 ids = flow.randint(
-    1, 1000, (1, 10), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int64
+    0, 1000, (10, 10), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int64
 )
+slots = flow.randint(
+    0, 26, (10, 10), placement=placement, sbp=flow.sbp.split(0), dtype=flow.int32
+)
+print(slots)
 graph = TrainGraph()
 for i in range(1):
-    loss = graph(ids)
+    loss = graph(ids, slots)
 print(loss)

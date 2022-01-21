@@ -23,12 +23,47 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 import json
 import os
-
 from oneflow._oneflow_internal import OneEmbeddingHandler
-
+import numpy as np
 
 fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 4096))
 optimizer = str(os.environ.get("OPTIMIZER", "sgd"))
+slot_size_array = np.array(
+    [
+        227605432,
+        39060,
+        17295,
+        7424,
+        20265,
+        3,
+        7122,
+        1543,
+        63,
+        130229467,
+        3067956,
+        405282,
+        10,
+        2209,
+        11938,
+        155,
+        4,
+        976,
+        14,
+        292775614,
+        40790948,
+        187188510,
+        590152,
+        12973,
+        108,
+        36,
+    ]
+)
+scales = np.sqrt(1 / slot_size_array)
+initializer_list = []
+for i in range(scales.size):
+    initializer_list.append(
+        {"initializer": {"type": "uniform", "low": -scales[i], "high": scales[i],}}
+    )
 
 
 class OneEmbeddingLookup(Module):
@@ -47,26 +82,31 @@ class OneEmbeddingLookup(Module):
         print("block_based_path", block_based_path)
 
         embedding_options = {
-            "embedding_name": embedding_name,
-            "embedding_size": int(os.environ.get("EMBEDDING_SIZE", 128)),
+            "name": embedding_name,
+            "embedding_dim": int(os.environ.get("EMBEDDING_SIZE", 128)),
+            "max_query_length": int(65536 * 26),
             "l1_cache": {
                 "policy": str(os.environ.get("L1_CACHE_POLICY", "lru")),
                 "cache_memory_budget_mb": int(
                     os.environ.get("L1_CACHE_MEMORY_BUDGET_MB", 16384)
                 ),
+                "device": "device",
             },
             "l2_cache": {
                 "policy": str(os.environ.get("L2_CACHE_POLICY", "none")),
                 "cache_memory_budget_mb": int(
                     os.environ.get("L2_CACHE_MEMORY_BUDGET_MB", 16384)
                 ),
+                "device": "host",
             },
-            "fixed_table": {
-                "path": block_based_path,
-                "block_size": fixed_table_block_size,
-                "chunk_size": 4 * 1024 * 1024,
+            "kv_store": {
+                "persistent_table": {
+                    "path": block_based_path,
+                    "physical_block_size": fixed_table_block_size,
+                },
             },
-            "initializer": {"type": "uniform", "mean": 0, "std": 1,},
+            "default_initializer": {"type": "uniform", "mean": 0, "std": 1},
+            "columns": initializer_list,
             "optimizer": {
                 "type": optimizer,
                 "beta": 0.9,
@@ -98,7 +138,8 @@ class OneEmbeddingLookup(Module):
         print("Parallel num is: ", self.parallel_num)
         self.handler = OneEmbeddingHandler(self.embedding_options, self.parallel_id, self.parallel_num)
     
-    def forward(self, ids):
+
+    def forward(self, ids, slots):
         return flow._C.embedding_lookup_placeholder(
-            ids, self.dtype, self.embedding_options,
+            ids, slots, self.dtype, self.embedding_options,
         )

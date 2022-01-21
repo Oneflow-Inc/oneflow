@@ -38,6 +38,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
+      .Split(user_op::OpArg("slots", 0), 0)
       .Split(user_op::OpArg("embeddings", 0), 0)
       .Build();
   return Maybe<void>::Ok();
@@ -48,6 +49,9 @@ namespace oneflow {
   user_op::InputArgModifier* ids = GetInputArgModifierFn("ids", 0);
   CHECK_OR_RETURN(ids != nullptr);
   ids->set_requires_grad(false);
+  user_op::InputArgModifier* slots = GetInputArgModifierFn("slots", 0);
+  CHECK_OR_RETURN(slots != nullptr);
+  slots->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
