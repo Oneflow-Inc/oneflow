@@ -242,27 +242,52 @@ class MaxPool2d(Module):
         self.dilation = _pair(dilation)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
+        self.nhwc_use_cudnn_ = False
 
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_pos = "channels_last"
+            if self.return_indices or self.dilation[0] > 1 or self.dilation[1] > 1:
+                pass
+            else:
+                # cudnn implementation not support return_indices or dilation 
+                self.nhwc_use_cudnn_ = True
+                padding = (0, self.padding[0], self.padding[1], 0)
+                self.padding_type_, pads_list = calc_pool_padding(
+                    padding, get_dhw_offset(self.channel_pos), 2
+                )
+                self.padding_before_ = [pad[0] for pad in pads_list]
+                self.padding_after_ = [pad[1] for pad in pads_list]
+
         else:
             self.channel_pos = "channels_first"
 
     def forward(self, x):
-        y, indice = flow._C.max_pool2d(
-            x,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            return_indices=True,
-            ceil_mode=self.ceil_mode,
-            data_format=self.channel_pos,
-        )
-        if self.return_indices:
-            return y, indice
+        if self.nhwc_use_cudnn_:
+            return flow._C.max_pool2d_nhwc(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding_type_,
+                padding_before=self.padding_before_,
+                padding_after=self.padding_after_,
+                data_format=self.channel_pos,
+                ceil_mode=self.ceil_mode,
+            )
         else:
-            return y
+            y, indice = flow._C.max_pool2d(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                return_indices=True,
+                ceil_mode=self.ceil_mode,
+                data_format=self.channel_pos,
+            )
+            if self.return_indices:
+                return y, indice
+            else:
+                return y
 
     def extra_repr(self) -> str:
         return "kernel_size={}, stride={}, padding={}, dilation={}".format(
