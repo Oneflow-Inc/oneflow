@@ -36,6 +36,7 @@ struct DTRTensorPool {
     std::cout << "Times of eviction: " << num_eviction_ << std::endl;
     std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
     std::cout << "Times of destruction: " << num_destruction_ << std::endl;
+    std::cout << "duration_: " << duration_ << std::endl;
     if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
