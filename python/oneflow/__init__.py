@@ -176,6 +176,9 @@ from oneflow._C import swapaxes
 from oneflow._C import t
 
 from . import sbp
+
+sbp.sbp.__call__ = lambda self: self
+
 import atexit
 
 import oneflow.framework.c_api_util
