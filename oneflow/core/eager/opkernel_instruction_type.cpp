@@ -444,13 +444,6 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 }  // namespace
 
 struct LocalCallOpKernelUtil final {
-  static inline void OnDispatch(const InstructionMsg& instr_msg) {
-    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
-    for (const auto& blob_object : *operand->outputs()) {
-      CHECK_NOTNULL(blob_object);
-      CHECK_JUST(blob_object->TryInitBlob());
-    }
-  }
   static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
     OF_PROFILER_RANGE_PUSH("ResetPrior");
     auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
@@ -526,6 +519,7 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
+      JUST(blob_object->TryInitBlob());
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
     return Maybe<void>::Ok();
@@ -555,10 +549,6 @@ struct LocalCallOpKernelUtil final {
     return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
 };
-
-void LocalCallOpKernelInstructionType::OnDispatch(const InstructionMsg& instr_msg) const {
-  LocalCallOpKernelUtil::OnDispatch(instr_msg);
-}
 
 void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   UNIMPLEMENTED();
