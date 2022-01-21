@@ -594,7 +594,7 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
-            arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io2(
+            arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
                 "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
@@ -618,9 +618,7 @@ class Graph(object):
                 _,  # empty kwargs return
                 self._outs_repr,
                 out2name,
-            ) = self.__build_io2(
-                "output", graph_build_util.build_graph_output, *outputs
-            )
+            ) = self.__build_io("output", graph_build_util.build_graph_output, *outputs)
 
             self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
@@ -796,55 +794,7 @@ class Graph(object):
         )
         return seq_to_func_return(eager_outputs)
 
-    def __build_io(self, io_type, build_func, *args):
-        assert io_type in ("input", "output")
-        io_type_upper = io_type.upper()
-        build_args = []
-        op_names = []
-        args_repr = []
-        tensor2op_name = {}
-
-        def build_tensor_or_none(tensor, name, repr_str):
-            assert tensor is None or (isinstance(tensor, Tensor))
-            if isinstance(tensor, Tensor):
-                build_arg = build_func(name, tensor)
-                op_names.append(name)
-                tensor2op_name[build_arg] = name
-            else:
-                build_arg = None
-
-            args_repr.append(repr_str)
-            self.__print(0, 1, repr_str)
-            return build_arg
-
-        for idx, arg in enumerate(args):
-            if isinstance(arg, Tensor) or arg is None:
-                if arg is None:
-                    name, repr_str = self.__io_item_check_and_gen(
-                        arg, None, io_type, idx
-                    )
-                else:
-                    name, repr_str = self.__io_item_check_and_gen(
-                        arg, Tensor, io_type, idx
-                    )
-                build_args.append(build_tensor_or_none(arg, name, repr_str))
-            elif isinstance(arg, (TensorTuple, list)):
-                if isinstance(arg, TensorTuple):
-                    seq_args = TensorTuple()
-                else:
-                    seq_args = list()
-                for i in range(len(arg)):
-                    name, repr_str = self.__io_item_check_and_gen(
-                        arg[i], Tensor, io_type, idx, i
-                    )
-                    seq_args.append(build_tensor_or_none(arg[i], name, repr_str))
-                build_args.append(seq_args)
-            else:
-                self.__io_item_check_and_gen(arg, Tensor, io_type, idx)
-
-        return op_names, build_args, args_repr, tensor2op_name
-
-    def __build_io2(self, io_type, build_func, *args, **kwargs):
+    def __build_io(self, io_type, build_func, *args, **kwargs):
         print("args ", args)
         print("kwargs ", kwargs)
         assert io_type in ("input", "output")
@@ -956,7 +906,7 @@ class Graph(object):
             if isinstance(arg, Tensor) or arg is None:
                 return mapping_tensor_or_none(arg)
             else:
-                self.__io_item_check2(
+                self.__io_item_check(
                     arg,
                     None,
                     io_type,
@@ -986,7 +936,7 @@ class Graph(object):
                 continue
         return flattened_args
 
-    def __io_item_check2(self, item, expect_type, io_type, name):
+    def __io_item_check(self, item, expect_type, io_type, name):
         if expect_type is None and item is None:
             return
         elif expect_type is not None and isinstance(item, expect_type):
@@ -1025,53 +975,6 @@ class Graph(object):
                 return build_arg
 
         return self.__mapping_io(io_type, func, *args, **kwargs)
-
-    def __io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
-        assert io_type in ("input", "output")
-        name = (
-            "_"
-            + self.name
-            + "-"
-            + io_type
-            + "_"
-            + str(idx)
-            + ("" if second_idx is None else "_" + str(second_idx))
-        )
-        if expect_type is None and item is None:
-            repr_str = (
-                "[WARNING]("
-                + io_type.upper()
-                + ":"
-                + name
-                + ":"
-                + str(type(item))
-                + ")"
-            )
-            return name, repr_str
-        elif expect_type is not None and isinstance(item, expect_type):
-            if isinstance(item, Tensor):
-                repr_str = (
-                    "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
-                )
-            else:
-                repr_str = (
-                    "[WARNING]("
-                    + io_type.upper()
-                    + ":"
-                    + name
-                    + ":"
-                    + str(type(item))
-                    + ")"
-                )
-            return name, repr_str
-        else:
-            repr_str = (
-                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
-            )
-            self.__print(2, 0, repr_str)
-            raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
-            )
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will
