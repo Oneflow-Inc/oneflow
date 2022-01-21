@@ -201,7 +201,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
     options_.reset(new embedding::EmbeddingOptions(ctx->Attr<std::string>("embedding_options")));
     key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        *options_, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+        options_->Name(), ctx->parallel_ctx().parallel_id());
   }
   ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
 

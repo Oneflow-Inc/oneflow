@@ -25,7 +25,7 @@ class OneEmbeddingHandler final {
   public:
   OneEmbeddingHandler(const std::string& embedding_option_string, int64_t rank_id, int64_t world_size):rank_id_(rank_id), world_size_(world_size){
     embedding_option_.reset(new embedding::EmbeddingOptions(embedding_option_string));
-    embedding_name_ = embedding_option_->EmbeddingName(); 
+    embedding_name_ = embedding_option_->Name(); 
     CreateKeyValueStore(*embedding_option_, rank_id_, world_size_);
   }  	
   
