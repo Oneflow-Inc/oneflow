@@ -27,7 +27,6 @@ namespace vm {
 
 class LocalCallOpKernelInstructionType : public vm::InstructionType {
  public:
-  void OnDispatch(const InstructionMsg& instr_msg) const override;
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;

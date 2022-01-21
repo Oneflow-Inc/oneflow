@@ -45,15 +45,6 @@ class FuseInstructionType : public vm::InstructionType {
     last_instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(instruction);
   }
 
-  void OnDispatch(const InstructionMsg& instr_msg) const override {
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    auto* ptr = static_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
-    auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
-      instr_msg->instr_type_id().instruction_type().OnDispatch(*instr_msg);
-    }
-  }
-
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
