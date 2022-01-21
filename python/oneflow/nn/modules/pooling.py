@@ -248,17 +248,17 @@ class MaxPool2d(Module):
             self.channel_pos = "channels_first"
 
     def forward(self, x):
-        if self.return_indices:
+        if not self.return_indices:
             return flow._C.max_pool2d(
                 x,
                 kernel_size=self.kernel_size,
                 stride=self.stride,
                 padding=self.padding,
                 dilation=self.dilation,
-                return_indices=True,
+                return_indices=self.return_indices,
                 ceil_mode=self.ceil_mode,
                 data_format=self.channel_pos,
-            )
+            )[0]
         else:
             return flow._C.max_pool2d(
                 x,
@@ -266,10 +266,10 @@ class MaxPool2d(Module):
                 stride=self.stride,
                 padding=self.padding,
                 dilation=self.dilation,
-                return_indices=True,
+                return_indices=self.return_indices,
                 ceil_mode=self.ceil_mode,
                 data_format=self.channel_pos,
-            )[0]
+            )
 
     def extra_repr(self) -> str:
         return "kernel_size={}, stride={}, padding={}, dilation={}".format(
@@ -547,6 +547,7 @@ class AvgPool2d(Module):
             )
             self._padding_before = [pad[0] for pad in _pads_list]
             self._padding_after = [pad[1] for pad in _pads_list]
+
         else:
             self.data_format = "NCHW"
             self.channel_pos = "channels_first"

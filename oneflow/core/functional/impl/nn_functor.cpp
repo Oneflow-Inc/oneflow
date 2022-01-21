@@ -350,34 +350,30 @@ class PoolingNDFunctor {
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
-    if (x->ndim()==4 && data_format=="channels_last"){
-      if(!return_indices && dilation.at(0)==1 && dilation.at(1)==1){
+    if (x->ndim() == 4 && data_format == "channels_last") {
+      if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
         // legacy tf style maxpool2d , use cudnn implementation
         // with high performance but do not support dilation/return_indices
         MutableAttrMap attrs;
-        std::vector<int32_t> padding_before{padding[0], padding[0]};
-        std::vector<int32_t> padding_after{padding[1], padding[1]};
+        std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
+        std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
 
-        JUST(attrs.SetAttr<std::string>("data_format", data_format));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+        if (stride.has_value()) {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(stride)));
+        } else {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", kernel_size));
+        }
         JUST(attrs.SetAttr<std::string>("padding", "customized"));
         JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
         JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
-        JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
-        if (stride) {
-          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(stride)));
-        } else {
-          JUST(attrs.SetAttr<std::vector<int32_t>>(
-              "strides", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
-        }
+        JUST(attrs.SetAttr<std::string>("data_format", data_format));
         JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
-        TensorTuple output(1);
-        output.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs))
-        );
+        TensorTuple output;
+        output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
         return output;
       }
     }
-
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
