@@ -105,7 +105,9 @@ Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
 bool PyScalarCheck(PyObject* obj) { return PyLong_Check(obj) || PyFloat_Check(obj); }
 
 Maybe<Scalar> PyUnpackScalar(PyObject* obj) {
-  if (PyLong_Check(obj)) {
+  if (PyBool_Check(obj)) {
+    return std::make_shared<Scalar>(obj == Py_True);
+  } else if (PyLong_Check(obj)) {
     return std::make_shared<Scalar>(static_cast<int64_t>(PyLong_AsLongLong(obj)));
   } else if (PyFloat_Check(obj)) {
     return std::make_shared<Scalar>(PyFloat_AsDouble(obj));

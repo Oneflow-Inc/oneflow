@@ -55,7 +55,7 @@ py::array ApiEagerTensorToNumpy(const py::handle& py_tensor) {
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
   case of_type: return EagerTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
-    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
     default:
       return Maybe<py::array>(Error::UnimplementedError() << "not support datatype").GetOrThrow();
   }
@@ -214,7 +214,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
-          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
       .def("_get_copy_mirrored_tensor_to_numpy_func_name", &ApiGetCopyMirroredTensorToNumpyFuncName)
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
