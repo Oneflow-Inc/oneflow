@@ -107,26 +107,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
 
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
   Initializer(thread_ctx);
-  while (thread_ctx->ReceiveAndRun() == intrusive::kChannelStatusSuccess) {
-    for (bool is_continue = true; is_continue;) {
-      is_continue = false;
-      auto start = std::chrono::steady_clock::now();
-      static constexpr int kWorkingMicroseconds = 100;
-      // Every time worker threads wake up, there run for about `kWorkingMicroseconds`.
-      // The cost of os thread switching is about 5-10 microseconds. Doing more worker in
-      // a single waiting up can reach higher performance.
-      do {
-        static constexpr int kTryCntPerTimoutTest = 10000;
-        // Every time kWorkingMicroseconds timeout tested, worker threads run for about
-        // kNumSchedulingPerTimoutTest.
-        // The cost of `MicrosecondsFrom(start)` is about 400ns, while the empty TryReceiveAndRun
-        // costs about 10ns.
-        for (int i = 0; i < kTryCntPerTimoutTest; ++i) {
-          is_continue = (thread_ctx->TryReceiveAndRun() > 0) || is_continue;
-        }
-      } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
-    }
-  }
+  while (thread_ctx->ReceiveAndRun() == intrusive::kChannelStatusSuccess) {}
 }
 
 }  // namespace
