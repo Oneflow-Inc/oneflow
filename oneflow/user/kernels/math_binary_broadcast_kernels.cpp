@@ -21,11 +21,11 @@ limitations under the License.
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
+
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename K,
-         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<K>& z,
-                             const XpuVarNdarray<const T>& x, const XpuVarNdarray<const T>& y)>
+template<DeviceType device_type, typename T, typename K, ep::primitive::BinaryOp op>
 class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MathBinaryBroadcastKernel() = default;
@@ -33,16 +33,27 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    const T* dptr_x = tensor_x->dptr<T>();
-    const T* dptr_y = tensor_y->dptr<T>();
-    K* dptr_z = tensor_z->mut_dptr<K>();
-    size_t num_axes = tensor_z->shape().NumAxes();
-    binary_func(ctx->stream(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
-                XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
-                XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
+
+    DimVector x_dim_vec;
+    DimVector y_dim_vec;
+    x->shape().ToDimVector(&x_dim_vec);
+    y->shape().ToDimVector(&y_dim_vec);
+
+    // StrideVector x_stride_vec;
+    // StrideVector y_stride_vec;
+    // x->strides().ToStrideVector(&x_stride_vec);
+    // y->strides().ToStrideVector(&y_stride_vec);
+
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+        ctx->device_type(), op, x->data_type(), y->data_type(), x->shape().NumAxes() > y->shape().NumAxes() ? x->shape().NumAxes() : y->shape().NumAxes());
+    CHECK(primitive);
+    primitive->Launch(ctx->stream(), 
+      x->shape().NumAxes(), x_dim_vec.data(), x->dptr<T>(), // TODO: add strides here
+      y->shape().NumAxes(), y_dim_vec.data(), y->dptr<T>(),
+      z->mut_dptr<K>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -51,8 +62,7 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                              \
       .SetCreateFn<MathBinaryBroadcastKernel<                                         \
           device, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair), \
-          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(          \
-              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                       \
+          ep::primitive::BinaryOp::k##OF_PP_PAIR_SECOND(data_type_pair)>                \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
                        && (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 

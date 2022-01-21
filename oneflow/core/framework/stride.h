@@ -39,6 +39,11 @@ class Stride final {
 
   // Getters and Setters
   const StrideVector& StrideVec() const { return stride_vec_; }
+  void ToStrideVector(StrideVector* stride_vec) const { 
+    stride_vec->resize(stride_vec_.size());
+    stride_vec->assign(stride_vec_.begin(), stride_vec_.end());
+  }
+
   int64_t NumAxes() const { return stride_vec_.size(); }
   int64_t At(int64_t index) const { return stride_vec_.at(index); }
   void Set(int64_t index, int64_t val) { stride_vec_.at(index) = val; }
