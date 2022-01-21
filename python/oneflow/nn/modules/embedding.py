@@ -137,7 +137,33 @@ class OneEmbeddingLookup(Module):
         print("Parallel id is: ", self.parallel_id)
         print("Parallel num is: ", self.parallel_num)
         self.handler = OneEmbeddingHandler(self.embedding_options, self.parallel_id, self.parallel_num)
-    
+        self.snapshot_name = "snapshot_test"
+
+    def _save_to_state_dict(self, destination, prefix, keep_vars):
+        # WARNING: HARD CODE HERE
+        self.handler.SaveSnapshot("snapshot_test")
+        destination[prefix + "OneEmbedding"] = "snapshot_test"
+
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        key = prefix + self.snapshot_name
+        print("Load here key is:", key)
+        if key in state_dict:
+            saved_snapshot_name = state_dict[key]
+            try:
+                self.handler.LoadSnapshot(saved_snapshot_name)
+            except Exception as ex:
+                error_msgs.append(
+                    'While Loading OneEmbedding Snapshot named "{}" failed, please check whether the Snapshot exist'.format(saved_snapshot_name)
+                )  
 
     def forward(self, ids, slots):
         return flow._C.embedding_lookup_placeholder(
