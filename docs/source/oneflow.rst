@@ -158,7 +158,6 @@ oneflow
             is_floating_point,
             set_printoptions,
             decode_onerec,
-            read_onerec,
             from_numpy,
             cumsum,
 
