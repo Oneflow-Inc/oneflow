@@ -206,7 +206,7 @@ class ModuleBlock(Block):
         with graph_build_util.GLogScopeContext(
             self._debug_min_s_level, self._debug_max_v_level
         ):
-            result = self.__block_forward(*args)
+            result = self.__block_forward(*args, **kwargs)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -234,11 +234,11 @@ class ModuleBlock(Block):
 
         return result
 
-    def __block_forward(self, *args):
+    def __block_forward(self, *args, **kwargs):
         self._is_executing_forward = True
         args = self.__pre_forward_mapping_out_scope(*args)
         with self.scope_context():
-            result = self._origin.__class__.forward(self, *args)
+            result = self._origin.__class__.forward(self, *args, **kwargs)
         result = self.__post_forward_mapping_out_scope(result)
         result = seq_to_func_return(result)
         self._is_executing_forward = False

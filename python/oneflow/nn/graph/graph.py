@@ -33,7 +33,13 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType, get_block_cls
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg, IONodeType, IONode
+from oneflow.nn.graph.util import (
+    add_indent,
+    seq_to_func_return,
+    sys_exc_error_msg,
+    IONodeType,
+    IONode,
+)
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -588,14 +594,14 @@ class Graph(object):
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
-            arg_op_names, lazy_args, self._args_repr, _ = self.__build_io2(
-                "input", graph_build_util.build_graph_input_arg, *args
+            arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io2(
+                "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
             self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
             self.__print(0, 1, self._shallow_repr() + " start building graph modules.")
-            outputs = self.build(*lazy_args)
+            outputs = self.build(*lazy_args, **lazy_kwargs)
             self.__print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
@@ -609,9 +615,12 @@ class Graph(object):
             (
                 output_op_names,
                 self._eager_outputs,
+                _,  # empty kwargs return
                 self._outs_repr,
                 out2name,
-            ) = self.__build_io2("output", graph_build_util.build_graph_output, *outputs)
+            ) = self.__build_io2(
+                "output", graph_build_util.build_graph_output, *outputs
+            )
 
             self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
@@ -648,7 +657,8 @@ class Graph(object):
 
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
-                arg_op_names, convert_to_tensor_tuple(self.__flatten_io("input", *args))
+                arg_op_names,
+                convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
             )
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
@@ -696,7 +706,7 @@ class Graph(object):
             )
             return tensor_tuple
 
-        self._eager_outputs = self.__mapping_io(
+        self._eager_outputs, _ = self.__mapping_io(
             "output", build_real_output, *self._eager_outputs
         )
 
@@ -712,7 +722,9 @@ class Graph(object):
 
         # Make outputs buffer
         for i in range(self._outputs_buffer_size - 1):
-            outputs_buffer_item = self.__empty_like_io("output", *self._eager_outputs)
+            outputs_buffer_item, _ = self.__empty_like_io(
+                "output", *self._eager_outputs
+            )
             self._eager_outputs_buffer.append(outputs_buffer_item)
             outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
                 self.__flatten_io("output", *outputs_buffer_item)
@@ -744,7 +756,7 @@ class Graph(object):
 
     def __run(self, *args, **kwargs):
         try:
-            flattened_eager_args = self.__flatten_io("input", *args)
+            flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                 self._cur_index_of_ouputs_buffer
             ]
@@ -773,7 +785,7 @@ class Graph(object):
             raise
 
         # Copy outputs from buffer
-        eager_outputs = self.__copy_io("output", *eager_outputs)
+        eager_outputs, _ = self.__copy_io("output", *eager_outputs)
 
         # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
         # "critical_section".
@@ -833,8 +845,9 @@ class Graph(object):
         return op_names, build_args, args_repr, tensor2op_name
 
     def __build_io2(self, io_type, build_func, *args, **kwargs):
+        print("args ", args)
+        print("kwargs ", kwargs)
         assert io_type in ("input", "output")
-        io_type_upper = io_type.upper()
         op_names = []
         args_repr = []
         tensor2op_name = {}
@@ -853,18 +866,26 @@ class Graph(object):
             return build_arg
 
         io_node = IONode(None, 0, (args, kwargs))
-        for (name, node) in list(io_node.named_nodes(None, "_" + self.name + "-" + io_type_upper)):
+        for (name, node) in list(
+            io_node.named_nodes(None, "_" + self.name + "_" + io_type)
+        ):
             if node._type == IONodeType.TENSOR:
-                arg_repr = self.__io_item_check_and_gen_repr(node._value, Tensor, io_type, name)
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    node._value, Tensor, io_type, name
+                )
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
                 node.attrs["build_arg"] = build_arg
             elif node._type == IONodeType.NONE:
-                arg_repr = self.__io_item_check_and_gen_repr(node._value, None, io_type, name)
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    node._value, None, io_type, name
+                )
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
                 node.attrs["build_arg"] = build_arg
             elif node._type == IONodeType.OPAQUE:
                 # Error
-                arg_repr = self.__io_item_check_and_gen_repr(node._value, None, io_type, name)
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    node._value, None, io_type, name
+                )
             else:
                 continue
 
@@ -872,11 +893,12 @@ class Graph(object):
             return leaf_node.attrs["build_arg"]
 
         out = io_node.map_leaf(leaf_node_fn)
-        print(">>>>>>>>", out)
         build_args = list(out[0])
-        print(">>>>>>>>", build_args)
+        build_kwargs = out[1]
+        print("build args ", build_args)
+        print("build kwargs ", build_kwargs)
 
-        return op_names, build_args, args_repr, tensor2op_name
+        return op_names, build_args, build_kwargs, args_repr, tensor2op_name
 
     def __io_item_check_and_gen_repr(self, item, expect_type, io_type, name):
         assert io_type in ("input", "output")
@@ -916,10 +938,8 @@ class Graph(object):
                 "nn.Graph.build()'s input/output item only support types: Tensor/None."
             )
 
-    def __mapping_io(self, io_type, func, *args):
+    def __mapping_io(self, io_type, func, *args, **kwargs):
         assert io_type in ("input", "output")
-        io_type_upper = io_type.upper()
-        mapped_args = []
 
         def mapping_tensor_or_none(tensor):
             assert tensor is None or (isinstance(tensor, Tensor))
@@ -929,23 +949,59 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        for idx, arg in enumerate(args):
+        io_node = IONode(None, 0, (args, kwargs))
+
+        def leaf_node_fn(leaf_node):
+            arg = leaf_node._value
             if isinstance(arg, Tensor) or arg is None:
-                mapped_args.append(mapping_tensor_or_none(arg))
-            elif isinstance(arg, (TensorTuple, list)):
-                if isinstance(arg, TensorTuple):
-                    seq_args = TensorTuple()
-                else:
-                    seq_args = list()
-                for i in range(len(arg)):
-                    seq_args.append(mapping_tensor_or_none(arg[i]))
-                mapped_args.append(seq_args)
+                return mapping_tensor_or_none(arg)
             else:
-                self.__io_item_check(arg, None, io_type, idx)
+                self.__io_item_check2(
+                    arg,
+                    None,
+                    io_type,
+                    "_"
+                    + self.name
+                    + "_"
+                    + io_type
+                    + "_"
+                    + leaf_node._prefix
+                    + leaf_node._name,
+                )
 
-        return mapped_args
+        out = io_node.map_leaf(leaf_node_fn)
+        mapped_args = list(out[0])
+        mapped_kwargs = out[1]
+        return mapped_args, mapped_kwargs
 
-    def __empty_like_io(self, io_type, *args):
+    def __flatten_io(self, io_type, *args, **kwargs):
+        flattened_args = []
+        io_node = IONode(None, 0, (args, kwargs))
+        for (name, node) in list(
+            io_node.named_nodes(None, "_" + self.name + "_" + io_type)
+        ):
+            if node._type == IONodeType.TENSOR:
+                flattened_args.append(node._value)
+            else:
+                continue
+        return flattened_args
+
+    def __io_item_check2(self, item, expect_type, io_type, name):
+        if expect_type is None and item is None:
+            return
+        elif expect_type is not None and isinstance(item, expect_type):
+            return
+        else:
+            assert io_type in ("input", "output")
+            repr_str = (
+                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+            )
+            self.__print(2, 0, repr_str)
+            raise NotImplementedError(
+                "nn.Graph.build()'s input/output item only support types: Tensor/None."
+            )
+
+    def __empty_like_io(self, io_type, *args, **kwargs):
         def func(t):
             shape = t.shape
             dtype = t.dtype
@@ -960,53 +1016,15 @@ class Graph(object):
 
             return eager_out
 
-        return self.__mapping_io(io_type, func, *args)
+        return self.__mapping_io(io_type, func, *args, **kwargs)
 
-    def __copy_io(self, io_type, *args):
+    def __copy_io(self, io_type, *args, **kwargs):
         def func(tensor):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 build_arg = tensor.to(copy=True)
                 return build_arg
 
-        return self.__mapping_io(io_type, func, *args)
-
-    def __flatten_io(self, io_type, *args):
-        assert isinstance(args, tuple)
-        flattened_args = []
-        for idx, arg in enumerate(args):
-            if isinstance(arg, Tensor):
-                flattened_args.append(arg)
-            elif isinstance(arg, (TensorTuple, list)):
-                for i in range(len(arg)):
-                    self.__io_item_check(arg[i], Tensor, io_type, idx, i)
-                    flattened_args.append(arg[i])
-            else:
-                self.__io_item_check(arg, None, io_type, idx)
-        return flattened_args
-
-    def __io_item_check(self, item, expect_type, io_type, idx, second_idx=None):
-        if expect_type is None and item is None:
-            return
-        elif expect_type is not None and isinstance(item, expect_type):
-            return
-        else:
-            assert io_type in ("input", "output")
-            name = (
-                "_"
-                + self.name
-                + "-"
-                + io_type
-                + "_"
-                + str(idx)
-                + ("" if second_idx is None else "_" + str(second_idx))
-            )
-            repr_str = (
-                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
-            )
-            self.__print(2, 0, repr_str)
-            raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
-            )
+        return self.__mapping_io(io_type, func, *args, **kwargs)
 
     def __io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
         assert io_type in ("input", "output")

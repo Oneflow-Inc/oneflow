@@ -119,7 +119,7 @@ def _str(self):
 
 
 def _repr(self):
-    #return tensor_str._gen_tensor_str(self)
+    # return tensor_str._gen_tensor_str(self)
     return tensor_str._gen_tensor_meta_str(self)
 
 

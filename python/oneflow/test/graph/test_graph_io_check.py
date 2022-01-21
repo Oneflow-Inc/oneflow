@@ -45,7 +45,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         t4 = np.ones((2, 2))
         t4 = flow.tensor(t4, dtype=flow.float32)
-        
+
         def fn(*args, **kwargs):
             inp = (args, kwargs)
             print("origin: ", inp)
@@ -59,19 +59,19 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 if isinstance(node._value, str):
                     return "mapped_str"
                 return node._value
+
             m_v = io_node.map_leaf(leaf_fn)
             print("mapped:", m_v)
 
-        fn(None, 1, "test_str", x, lt0, {'t':t4, 'l':lt0}, kw=t4)
-        
+        fn(None, 1, "test_str", x, lt0, {"t": t4, "l": lt0}, kw=t4)
 
     def test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()
 
-            def forward(self, t, lt, n, i, s):
-                return t, lt, n, i, s
+            def forward(self, t, lt, n, i, s, **kwargs):
+                return t, lt, n, i, s, kwargs
 
         class CustomGraphIOCheck(flow.nn.Graph):
             def __init__(self):
@@ -79,9 +79,9 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 self.m = CustomModuleIOCheck()
                 self.m.config.activation_checkpointing = True
 
-            def build(self, t, lt, n):
-                rt, rlt, n, ri, rs = self.m(t, lt, n, 1, "2")
-                return t, lt, n
+            def build(self, t, lt, n, **kwargs):
+                rt, rlt, n, ri, rs, dic = self.m(t, lt, n, 1, "2", **kwargs)
+                return t, lt, n, dic
 
         g = CustomGraphIOCheck()
         g.debug(1)
@@ -94,7 +94,9 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         lt0.append(t2)
         lt0.append(t3)
 
-        ot, olt, on = g(x, lt0, None)
+        t4 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+
+        ot, olt, on, odic = g(x, lt0, None, kw=t4)
         # print(g)
         test_case.assertTrue(np.array_equal(x.numpy(), ot.numpy()))
 
@@ -105,6 +107,8 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(olt[1].numpy(), lt0[1].numpy()))
 
         test_case.assertTrue(on is None)
+        test_case.assertTrue(isinstance(odic, dict))
+        test_case.assertTrue(np.array_equal(odic["kw"].numpy(), t4.numpy()))
 
     def _test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
