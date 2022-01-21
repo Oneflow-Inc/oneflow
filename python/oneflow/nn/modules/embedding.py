@@ -132,7 +132,7 @@ class OneEmbeddingLookup(Module):
         }
         self.embedding_options = json.dumps(embedding_options)
 
-    def forward(self, ids, slots):
+    def forward(self, ids, column_ids):
         return flow._C.embedding_lookup_placeholder(
-            ids, slots, self.dtype, self.embedding_options,
+            ids, column_ids, self.dtype, self.embedding_options,
         )

@@ -8804,7 +8804,7 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_placeholder", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ids,
-    AnyType:$slots
+    AnyType:$column_ids
   );
   let output = (outs
     AnyType:$embeddings
@@ -8839,14 +8839,14 @@ def OneFlow_SgdEmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"sgd_embedding_upda
 def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ids,
-    AnyType:$slots
+    AnyType:$column_ids
   );
   let output = (outs
     AnyType:$num_unique_ids,
     AnyType:$ids_reverse_idx,
     AnyType:$cur_rank_num_unique_ids,
     AnyType:$cur_rank_unique_ids,
-    AnyType:$cur_rank_slots,
+    AnyType:$cur_rank_column_ids,
     AnyType:$cur_rank_reverse_idx,
     AnyType:$num_unique_ids_matrix,
     AnyType:$partition_index
@@ -8909,7 +8909,7 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
   let input = (ins
     AnyType:$num_unique_ids,
     AnyType:$unique_ids,
-    AnyType:$slots
+    AnyType:$column_ids
   );
   let output = (outs
     AnyType:$context //no practical sense, control lookup run after prefetch.

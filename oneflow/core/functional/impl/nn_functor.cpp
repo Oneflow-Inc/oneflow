@@ -2150,18 +2150,18 @@ class EmbeddingLookupFunctor {
   EmbeddingLookupFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
                          .Input("ids")
-                         .Input("slots")
+                         .Input("column_ids")
                          .Output("embeddings")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ids,
-                           const std::shared_ptr<one::Tensor>& slots, const Symbol<DType>& dtype,
-                           const std::string& embedding_options) const {
+                           const std::shared_ptr<one::Tensor>& column_ids,
+                           const Symbol<DType>& dtype, const std::string& embedding_options) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<std::string>("embedding_options", embedding_options));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids, slots}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids, column_ids}, attrs);
   }
 
  private:
