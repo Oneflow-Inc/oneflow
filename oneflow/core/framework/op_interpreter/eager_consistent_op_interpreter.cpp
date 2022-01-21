@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace one {
@@ -67,15 +68,34 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
   return ss.str();
 }
 
+Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMeta>>& tensor_metas) {
+  for (const auto& tensor_meta : tensor_metas) {
+    if (tensor_meta->shape().elem_cnt() != 0) { return false; }
+  }
+  return true;
+}
+
+constexpr auto* CachedIsAllZeroSizeTensorMeta =
+    DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
+
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
+  const auto& local_shape = input->shape();
+  if (unlikely(local_shape->elem_cnt() == 0)) {
+    ConsistentTensorMeta tensor_meta(local_shape, input->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    std::shared_ptr<Tensor> output = std::make_shared<ConsistentTensor>(tensor_impl);
+    return output;
+  }
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
-      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
+      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *local_shape));
   Global<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
@@ -111,6 +131,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
         output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+  }
+  if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
+    return Maybe<void>::Ok();
   }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
