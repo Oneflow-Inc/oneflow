@@ -82,6 +82,7 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg:
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
   const auto& local_shape = input->shape();
+  // If the input is a tensor of size 0, construct the output directly.
   if (unlikely(local_shape->elem_cnt() == 0)) {
     ConsistentTensorMeta tensor_meta(local_shape, input->dtype()->data_type(), out_nd_sbp,
                                      out_parallel_desc);
@@ -132,6 +133,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
+  // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
+  // output is not 0-size, it cannot be judged based on the input, such as flow.cat
   if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
     return Maybe<void>::Ok();
   }
