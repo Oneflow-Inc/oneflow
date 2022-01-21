@@ -753,6 +753,14 @@ def _t(self):
     return flow._C.t(self)
 
 
+def _masked_fill(self, mask, fill_value):
+    return flow.masked_fill(self, mask, fill_value)
+
+
+def _masked_select(self, mask):
+    return flow.masked_select(self, mask)
+
+
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -908,7 +916,10 @@ def RegisterMethods():
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.logical_and = _and
+    Tensor.logical_or = _or
     Tensor.logical_not = _not
+    Tensor.logical_xor = _xor
     Tensor.roll = _roll
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
@@ -925,6 +936,8 @@ def RegisterMethods():
     Tensor.any = _any
     Tensor.T = property(_T)
     Tensor.t = _t
+    Tensor.masked_fill = _masked_fill
+    Tensor.masked_select = _masked_select
 
 
 def register_tensor_op(op_name):
