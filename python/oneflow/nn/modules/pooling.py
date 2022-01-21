@@ -131,7 +131,6 @@ def get_dhw_offset(channel_pos):
 
 
 def get_ndim_pads_list(padding, dhw_offset, ndims):
-    #(0, self.padding[0], self.padding[1], 0) 1 2  >> [self.padding[0], self.padding[0], self.padding[1], self.padding[1]]
     pads_list = []
     for i in range(len(padding)):
         pad = padding[i]

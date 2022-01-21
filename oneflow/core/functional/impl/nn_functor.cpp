@@ -372,7 +372,7 @@ class PoolingNDFunctor {
         JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
         TensorTuple output(1);
         output.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*tf_cudnn_op_, {x}, attrs))
+          JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs))
         );
         return output;
       }
@@ -397,7 +397,7 @@ class PoolingNDFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> tf_cudnn_op_;
+  std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
 class TFAvgPool2DFunctor : public PoolNDFunctor {
@@ -418,7 +418,7 @@ class Maxpool2DFunctor : public PoolingNDFunctor {
  public:
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
-    tf_cudnn_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
+    tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
