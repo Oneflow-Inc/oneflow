@@ -87,8 +87,6 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
                << embedding_options.L1CacheMemoryBudgetMb();
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
-
-  store->ReserveQueryLength(embedding_options.MaxQueryLength());
   if (store->SnapshotExists("index")) { store->LoadSnapshot("index"); }
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
   CHECK(pair.second);

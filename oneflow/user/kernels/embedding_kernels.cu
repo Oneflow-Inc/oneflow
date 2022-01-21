@@ -202,6 +202,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     options_.reset(new embedding::EmbeddingOptions(ctx->Attr<std::string>("embedding_options")));
     key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
         *options_, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+    key_value_store_->ReserveQueryLength(options_.MaxQueryLength());
   }
   ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
 
