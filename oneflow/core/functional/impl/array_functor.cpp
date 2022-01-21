@@ -2523,6 +2523,32 @@ class GenTensorBufferFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TransposeAllDimPropertyFunctor {
+ public:
+  TransposeAllDimPropertyFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    const int64_t ndim = x->ndim();
+    std::vector<int32_t> permute;
+    permute.resize(ndim);
+    std::iota(permute.begin(), permute.end(), 0);
+    std::reverse(permute.begin(), permute.end());
+    return Transpose(x, permute);
+  }
+};
+
+class TransposeAllDimFunctionFunctor {
+ public:
+  TransposeAllDimFunctionFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    const int64_t ndim = x->ndim();
+    CHECK_OR_RETURN(ndim <= 2)
+        << "RuntimeError: t() expects a tensor with <= 2 dimensions, but input tensor is " << ndim
+        << "D";
+    if (ndim == 0 || ndim == 1) { return x; }
+    return Transpose2dim(x, 0, 1);
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2626,6 +2652,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
+  m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
+  m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
 };
 
 }  // namespace functional
