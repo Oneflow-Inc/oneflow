@@ -718,6 +718,8 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
             )
+        else:
+            other = other.to_consistent(placement=self.placement, sbp=self.sbp)
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if not isinstance(other, (Tensor)):
@@ -745,6 +747,14 @@ def _to(self, *args, **kwargs):
 
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
+
+
+def _T(self):
+    return flow._C.T(self)
+
+
+def _t(self):
+    return flow._C.t(self)
 
 
 def _numpy(self):
@@ -917,6 +927,8 @@ def RegisterMethods():
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
+    Tensor.T = property(_T)
+    Tensor.t = _t
 
 
 def register_tensor_op(op_name):
