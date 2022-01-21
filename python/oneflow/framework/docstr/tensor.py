@@ -104,6 +104,22 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.view_as,
+    """
+    view_as(other) -> Tensor
+
+    Expand this tensor to the same size as :attr:`other`.
+    ``self.view_as(other)`` is equivalent to ``self.view(other.size())``.
+
+    Please see :meth:`~Tensor.view` for more information about ``view``.
+
+    Args:
+        other (:class:`oneflow.Tensor`): The result tensor has the same size
+            as :attr:`other`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.flatten,
     """
     See :func:`oneflow.flatten`

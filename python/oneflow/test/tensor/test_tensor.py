@@ -1662,6 +1662,17 @@ class TestTensor(flow.unittest.TestCase):
         dim_size[random_index] = expand_size
         y = torch.ones(dim_size)
         return x.expand_as(y)
+    
+    @autotest(check_graph=False)
+    def test_flow_tensor_view_with_random_data(test_case):
+        dim0_ = random(2, 4).to(int)
+        dim1_ = random(2, 4).to(int)
+        dim2_ = random(2, 4).to(int)
+        dim3_ = random(2, 4).to(int)
+        dim4_ = random(2, 4).to(int)
+        x = random_pytorch_tensor(ndim=5, dim0=dim0_, dim1=dim1_, dim2=dim2_, dim3=dim3_, dim4=dim4_)
+        other = random_pytorch_tensor(ndim=5, dim0=dim4_, dim1=dim3_, dim2=dim2_, dim3=dim1_, dim4=dim0_)
+        return x.view_as(other)
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=False)

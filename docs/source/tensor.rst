@@ -58,6 +58,7 @@ OneFlow Tensor Class
             exp, 
             expand, 
             expand_as, 
+            view_as,
             expm1, 
             fill_, 
             flatten, 

@@ -294,6 +294,10 @@ def _expand_as(input, other):
     return flow.expand(input, *other.size())
 
 
+def _view_as(input, other):
+    return flow.view(input, *other.size())
+
+
 def _acos(self):
     return flow.acos(self)
 
@@ -879,6 +883,7 @@ def RegisterMethods():
     Tensor.cos = _cos
     Tensor.cosh = _cosh
     Tensor.expand_as = _expand_as
+    Tensor.view_as = _view_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
     Tensor.erfinv = _erfinv
