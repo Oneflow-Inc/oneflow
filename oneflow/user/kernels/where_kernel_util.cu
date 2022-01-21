@@ -84,6 +84,7 @@ struct WhereKernelUtil<DeviceType::kCUDA, T, CondT> {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCUDA),
-                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

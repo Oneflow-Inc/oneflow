@@ -260,7 +260,8 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
       auto indices = std::make_shared<TensorTuple>();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
+      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+          || tensor->dtype() == DType::Bool()) {
         for (int j = 0; j < tensor->ndim(); ++j) {
           if (tensor->shape()->At(j) != shape.At(dim + j)) {
             return Error::IndexError()

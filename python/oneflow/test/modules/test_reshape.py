@@ -118,6 +118,13 @@ class TestModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_reshape_flow_bool_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device=device, dtype=torch.bool)
+        y = torch.reshape(x, shape=(-1,))
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
