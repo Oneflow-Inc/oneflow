@@ -1,3 +1,4 @@
+source scl_source enable devtoolset-7
 set -ex
 export PATH=/usr/lib64/ccache:$PATH
 gcc --version
@@ -8,7 +9,6 @@ ${ONEFLOW_CI_PYTHON_EXE} -m pip install -i https://mirrors.aliyun.com/pypi/simpl
 cd python
 git clean -nXd -e \!dist -e \!dist/**
 git clean -fXd -e \!dist -e \!dist/**
-
 # cmake config
 mkdir -p ${ONEFLOW_CI_BUILD_DIR}
 cd ${ONEFLOW_CI_BUILD_DIR}
@@ -18,12 +18,13 @@ if [ ! -f "$ONEFLOW_CI_CMAKE_INIT_CACHE" ]; then
     echo "$ONEFLOW_CI_CMAKE_INIT_CACHE does not exist."
     exit 1
 fi
+export PATH="${PATH}:$(dirname ${ONEFLOW_CI_PYTHON_EXE})"
+export PYTHON_BIN_PATH=${ONEFLOW_CI_PYTHON_EXE}
 cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
+
 # cmake build
 cd ${ONEFLOW_CI_BUILD_DIR}
 cmake --build . -j $(nproc)
-cpack
-rm -rf ./cpack/_CPack_Packages
 
 # build pip
 cd ${ONEFLOW_CI_SRC_DIR}

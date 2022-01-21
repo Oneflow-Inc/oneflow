@@ -1450,9 +1450,9 @@ class DropoutFunctor {
                                         .Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& addend, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+                           const bool& training, const Optional<one::Generator>& generator,
+                           const Optional<one::Tensor>& addend) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
