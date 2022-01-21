@@ -570,7 +570,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
-  instruction->instr_msg().instr_type_id().instruction_type().OnDispatch(instruction->instr_msg());
   if (OnSchedulerThread(stream_type)) {
     stream_type.Run(this, instruction);
   } else {
