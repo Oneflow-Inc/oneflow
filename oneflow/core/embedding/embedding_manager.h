@@ -28,22 +28,20 @@ namespace embedding {}  // namespace embedding
 
 class EmbeddingMgr final {
  public:
-  // EmbeddingMgr() = default;
-  EmbeddingMgr(){printf("construct mgr \n"); }
+  EmbeddingMgr() = default;
   ~EmbeddingMgr();
 
   embedding::KeyValueStore* GetOrCreateKeyValueStore(const embedding::EmbeddingOptions& options,
                                                      int64_t parallel_id, int64_t parallel_num);
-  void SaveSnapshot(const std::string embedding_name, int64_t parallel_id,
-                    const std::string snapshot_name);
-  void LoadSnapshot(const std::string embedding_name, int64_t parallel_id,
-                    const std::string snapshot_name);
+  void SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                    const std::string& snapshot_name);
+  void LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                    const std::string& snapshot_name);
 
-  embedding::KeyValueStore* GetKeyValueStore(const std::string embedding_name, int64_t parallel_id,
-                                             int64_t parallel_num);
+  embedding::KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t parallel_id);
   
   void CreateKeyValueStore(const embedding::EmbeddingOptions& options, int64_t parallel_id,
-                           int64_t parallel_num, uint64_t cuda_device_id);
+                           int64_t parallel_num);
 
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<embedding::KeyValueStore>>

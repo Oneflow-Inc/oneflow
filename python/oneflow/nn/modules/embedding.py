@@ -24,6 +24,8 @@ from oneflow.nn.modules.utils import _check_inplace_valid
 import json
 import os
 
+from oneflow._oneflow_internal import OneEmbeddingHandler
+
 
 fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 4096))
 optimizer = str(os.environ.get("OPTIMIZER", "sgd"))
@@ -90,7 +92,12 @@ class OneEmbeddingLookup(Module):
             },
         }
         self.embedding_options = json.dumps(embedding_options)
-
+        self.parallel_id = flow.env.get_rank()
+        self.parallel_num = flow.env.get_world_size()
+        print("Parallel id is: ", self.parallel_id)
+        print("Parallel num is: ", self.parallel_num)
+        self.handler = OneEmbeddingHandler(self.embedding_options, self.parallel_id, self.parallel_num)
+    
     def forward(self, ids):
         return flow._C.embedding_lookup_placeholder(
             ids, self.dtype, self.embedding_options,
