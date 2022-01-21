@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import numpy as np
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
@@ -23,13 +24,23 @@ class TestAsStrided(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_AsStrided(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
-            ndim=4,
-            dim1=random(3, 6),
-            dim2=random(3, 6),
-            dim3=random(3, 6),
-            dim4=random(3, 6),
-        ).to(device)
+        ndim = np.random.randint(1, 6)
+        dim0 = np.random.randint(4, 10) * 8
+        dim1 = np.random.randint(4, 10) * 8
+        dim2 = np.random.randint(4, 10) * 8
+        dim3 = np.random.randint(4, 10) * 8
+        dim4 = np.random.randint(4, 10) * 8
+        if ndim==1:
+            x = random_pytorch_tensor(1, dim0)
+        elif ndim==2:
+            x = random_pytorch_tensor(2, dim0, dim1)
+        elif ndim==3:
+            x = random_pytorch_tensor(3, dim0, dim1, dim2)
+        elif ndim==4:
+            x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
+        elif ndim==5:
+            x = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
+        x = x.to(device)
         storage_offset = random(0,3).to(int)
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
