@@ -100,6 +100,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
     {
       // NOTE(chengcheng): init runtime global objects
+      // Global<EmbeddingMgr>::New(); 
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
       Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
       Global<RuntimeCtx>::New();
@@ -111,9 +112,8 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
       Global<boxing::collective::Scheduler>::New();
-      Global<EmbeddingMgr>::New();
-    }
-
+    } 
+    printf("HERE GLOBAL INIT \n"); 
     is_inited_ = true;
   }
   return Maybe<void>::Ok();
@@ -138,7 +138,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     graphs_.clear();
     {
       // NOTE(chengcheng): delete runtime global objects
-      Global<EmbeddingMgr>::Delete();
+      // Global<EmbeddingMgr>::Delete();
       Global<boxing::collective::Scheduler>::Delete();
       Global<summary::EventsWriter>::Delete();
       Global<RuntimeJobDescs>::Delete();

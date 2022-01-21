@@ -133,7 +133,7 @@ embedding::KeyValueStore* EmbeddingMgr::GetOrCreateKeyValueStore(
   return pair.first->second.get();
 }
 
-embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& embedding_name,
+embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string embedding_name,
                                                          int64_t parallel_id,
                                                          int64_t parallel_num) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
@@ -142,20 +142,26 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& embe
   return it->second.get();
 }
 
-void EmbeddingMgr::CreateKeyValueStore(std::string embedding_options_string,
-                                       int64_t parallel_id, int64_t parallel_num,
+void EmbeddingMgr::CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id, int64_t parallel_num,
                                        uint64_t cuda_device_id) {
   // This function is used in Python, so it need to set CudaDeviceId manually.
-  OF_CUDA_CHECK(cudaSetDevice(cuda_device_id));
+  // OF_CUDA_CHECK(cudaSetDevice(cuda_device_id));
   // todo(use json directly)
-  embedding::EmbeddingOptions embedding_options(embedding_options_string); 
+  
+	
+  // embedding::EmbeddingOptions embedding_options(embedding_options_string); 
+
   const std::string& name = embedding_options.EmbeddingName();
   const uint32_t line_size = embedding_options.LineSize();
-  
   std::cout<<"Name is: "<<name<<std::endl; 
-  std::cout<<"Parallel id is: "<<parallel_id<<std::endl; 
+  std::cout<<"Line size is: "<<line_size<<std::endl; 
+  printf("213123 \n"); 
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
-
+  printf("5555 \n"); 
+  // std::unique_lock<std::mutex> lock(mutex_); 
+  printf("6666 \n"); 
+  OF_CUDA_CHECK(cudaSetDevice(cuda_device_id));
+  printf("44444 \n");
   std::unique_ptr<embedding::KeyValueStore> store;
   const std::string& path = embedding_options.FixedTablePath();
   const std::string& num_rank = std::to_string(parallel_num);
@@ -170,7 +176,7 @@ void EmbeddingMgr::CreateKeyValueStore(std::string embedding_options_string,
   options.table_options.physical_block_size = embedding_options.FixedTableBlockSize();
   options.table_options.num_blocks_per_chunk = embedding_options.FixedTableChunkSize();
   store = NewFixedTableKeyValueStore(options);
-
+  printf("333 \n");
   if (embedding_options.L2CachePolicy() != "none") {
     embedding::CacheOptions cache_options{};
     cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
@@ -191,6 +197,7 @@ void EmbeddingMgr::CreateKeyValueStore(std::string embedding_options_string,
                << embedding_options.L2CacheMemoryBudgetMb();
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
+  printf("222 \n"); 
   if (embedding_options.L1CachePolicy() != "none") {
     embedding::CacheOptions cache_options{};
     cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
@@ -211,49 +218,32 @@ void EmbeddingMgr::CreateKeyValueStore(std::string embedding_options_string,
                << embedding_options.L1CacheMemoryBudgetMb();
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
+  printf("111 \n");
   auto pair = key_value_store_map_.emplace(map_key, std::move(store));
-  if (!pair.second) { LOG(ERROR) << "Create Embedding failed!"; }
-  else{
-    printf("Create Embedding Success! \n"); 
-  }
+
+  
 }
 
-void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
-                                const std::string& snapshot_name) {
-  // std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+void EmbeddingMgr::SaveSnapshot(const std::string embedding_name, int64_t parallel_id,
+                                const std::string snapshot_name) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  std::cout<<"Map key is: "<<embedding_name<<"-"<<parallel_id<<std::endl; 
   std::unique_lock<std::mutex> lock(mutex_);
   std::cout<<"Here enter SaveSnapshot function"<<std::endl; 
   OF_CUDA_CHECK(cudaSetDevice(0)); 
 
-  for(auto& pair: key_value_store_map_){
-    printf("Enter for loop! \n");  
-    std::cout<<"map key is: "<<pair.first.first<<"-"<<pair.first.second<<std::endl; 
-  }
-  
-  std::pair<std::string, int64_t> map_key = std::make_pair("EmbeddingTest", 0);
-  std::string tmp_snapshot_name("zzk_test_save"); 
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) {
     printf("Success \n");
-    it->second->SaveSnapshot(tmp_snapshot_name);
-  } else {
-    LOG(ERROR) << "Can not find embedding: EmbeddingTest-0";
-  }
-  
-  OF_CUDA_CHECK(cudaDeviceSynchronize());   
-  /* 
-  auto it = key_value_store_map_.find(map_key);
-  if (it != key_value_store_map_.end()) {
-    printf("Success \n"); 
     it->second->SaveSnapshot(snapshot_name);
   } else {
-    LOG(ERROR) << "Can not find this embedding: " << embedding_name << "-" << parallel_id;
+    LOG(ERROR) << "Can not find embedding: "<<embedding_name<<"-"<<parallel_id;
   }
-  */
+  
 }
 
-void EmbeddingMgr::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
-                                const std::string& snapshot_name) {
+void EmbeddingMgr::LoadSnapshot(const std::string embedding_name, int64_t parallel_id,
+                                const std::string snapshot_name) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) {
