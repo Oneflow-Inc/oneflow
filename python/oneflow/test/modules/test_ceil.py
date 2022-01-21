@@ -32,10 +32,24 @@ class TestCeilModule(flow.unittest.TestCase):
         y = torch.ceil(input)
         return y
 
+    @autotest(check_graph=True)
+    def test_ceil_flow_with_random_0d_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=0).to(device)
+        y = torch.ceil(input)
+        return y
+
     @autotest(auto_backward=False, check_graph=True)
     def test_ceil_with_0_size_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.ceil(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_ceil_with_0shape_0d_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
         y = torch.ceil(x)
         return y
 

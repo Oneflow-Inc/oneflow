@@ -72,20 +72,20 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest()
     def test_adaptive_avgpool1d_functional(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=3).to(device)
         return torch.nn.functional.adaptive_avg_pool1d(x, output_size=random().to(int))
 
-    @autotest(check_graph=True)
+    @autotest()
     def test_adaptive_avgpool2d_functional(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
         return torch.nn.functional.adaptive_avg_pool2d(x, output_size=random().to(int))
 
     @unittest.skipIf(
-        version.parse(torch_original.__version__) < version.parse("1.10.0"),
+        version.parse(torch_original.__version__) <= version.parse("1.10.0"),
         "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
     )
     @autotest()

@@ -102,6 +102,13 @@ class TestModule(flow.unittest.TestCase):
         y = torch.reshape(x, shape=(-1,))
         return y
 
+    @autotest(check_graph=True)
+    def test_reshape_flow_with_0dim_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=0).to(device)
+        y = torch.reshape(x, shape=(-1,))
+        return y
+
     @autotest(auto_backward=False, check_graph=True)
     def test_reshape_with_0_size_data(test_case):
         device = random_device()
