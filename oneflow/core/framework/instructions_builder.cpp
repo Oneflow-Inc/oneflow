@@ -1095,7 +1095,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       const auto& opt_last_used_device = eager_blob_object->last_used_device();
       if (unlikely(!opt_last_used_device.has_value())) { continue; }
       if (JUST(opt_last_used_device) == last_used_device) {
-        dep_objects.push_back(JUST(eager_blob_object->compute_local_dep_object()));
+        dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
       }
       eager_blob_object->set_last_used_device(op_device);
     }
