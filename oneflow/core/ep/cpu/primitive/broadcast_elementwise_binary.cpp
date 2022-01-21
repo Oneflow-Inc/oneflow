@@ -132,12 +132,19 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
 
 #ifdef WITH_ONEDNN
 
-inline void OneDnnBroadcastDims(dnnl::memory::dims src0, dnnl::memory::dims src1,
+inline void OneDnnBroadcastDims(dnnl::memory::dims& src0, size_t num_src0_dims,
+                                const int64_t* src0_dims, dnnl::memory::dims& src1,
+                                size_t num_src1_dims, const int64_t* src1_dims,
                                 dnnl::memory::dims& dst) {
-  for (int64_t i = 0; i < dst.size(); i++) {
-    int64_t src0_dim = i < src0.size() ? src0[i] : 1;
-    int64_t src1_dim = i < src1.size() ? src1[i] : 1;
-    CHECK(src0_dim != src1_dim && src0_dim == 1 && src1_dim == 1);
+  const int64_t num_dims = dst.size();
+  const int64_t num_src0_padding_dims = num_dims - num_src0_dims;
+  const int64_t num_src1_padding_dims = num_dims - num_src1_dims;
+  for (int64_t i = 0; i < num_dims; i++) {
+    size_t src0_dim = i < num_src0_padding_dims ? 1 : src0_dims[i - num_src0_padding_dims];
+    size_t src1_dim = i < num_src1_padding_dims ? 1 : src1_dims[i - num_src1_padding_dims];
+    CHECK((src0_dim == src1_dim || src0_dim == 1 || src1_dim == 1));
+    src0[i] = src0_dim;
+    src1[i] = src1_dim;
     dst[i] = std::max(src0_dim, src1_dim);
   }
 }
@@ -160,35 +167,32 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
-    dnnl::memory::dims src_0_dims;
-    dnnl::memory::dims src_1_dims;
+    size_t num_dims = std::max(num_src0_dims, num_src1_dims);
+    dnnl::memory::dims src_0_dims(num_dims);
+    dnnl::memory::dims src_1_dims(num_dims);
+    dnnl::memory::dims dst_dims(num_dims);
 
     const void* mm_src0 = nullptr;
     const void* mm_src1 = nullptr;
 
     if (src1 == dst) {
-      src_0_dims.resize(num_src1_dims);
-      src_1_dims.resize(num_src0_dims);
-      memcpy(src_0_dims.data(), src1_dims, num_src1_dims * sizeof(int64_t));
-      memcpy(src_1_dims.data(), src0_dims, num_src0_dims * sizeof(int64_t));
       mm_src0 = src1;
       mm_src1 = src0;
+      OneDnnBroadcastDims(src_0_dims, num_src1_dims, src1_dims, src_1_dims, num_src0_dims,
+                          src0_dims, dst_dims);
     } else {
-      src_0_dims.resize(num_src0_dims);
-      src_1_dims.resize(num_src1_dims);
-      memcpy(src_0_dims.data(), src0_dims, num_src0_dims * sizeof(int64_t));
-      memcpy(src_1_dims.data(), src1_dims, num_src1_dims * sizeof(int64_t));
       mm_src0 = src0;
       mm_src1 = src1;
+      OneDnnBroadcastDims(src_0_dims, num_src0_dims, src0_dims, src_1_dims, num_src1_dims,
+                          src1_dims, dst_dims);
     }
 
-    size_t dest_num_dims = std::max(num_src0_dims, num_src1_dims);
-    dnnl::memory::dims dst_dims(dest_num_dims);
-    OneDnnBroadcastDims(src_0_dims, src_1_dims, dst_dims);
-
-    auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn, dnnl::memory::format_tag::ab);
-    auto src_1_md = dnnl::memory::desc(src_1_dims, src_onednn, dnnl::memory::format_tag::ab);
-    auto dst_md = dnnl::memory::desc(dst_dims, dst_onednn, dnnl::memory::format_tag::ab);
+    auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn,
+                                       static_cast<dnnl::memory::format_tag>(num_dims + 1));
+    auto src_1_md = dnnl::memory::desc(src_1_dims, src_onednn,
+                                       static_cast<dnnl::memory::format_tag>(num_dims + 1));
+    auto dst_md = dnnl::memory::desc(dst_dims, dst_onednn,
+                                     static_cast<dnnl::memory::format_tag>(num_dims + 1));
 
     auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)mm_src0);
     auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)mm_src1);
