@@ -80,6 +80,10 @@ class OneEmbeddingLookup(Module):
         else:
             block_based_path = options.get("block_based_path")
         print("block_based_path", block_based_path)
+        if options.get("snapshot_name") == None: 
+            self.snapshot_name = "snapshot_test"
+        else: 
+            self.snapshot_name = options.get("snapshot_name")
 
         embedding_options = {
             "name": embedding_name,
@@ -137,12 +141,10 @@ class OneEmbeddingLookup(Module):
         print("Parallel id is: ", self.parallel_id)
         print("Parallel num is: ", self.parallel_num)
         self.handler = OneEmbeddingHandler(self.embedding_options, self.parallel_id, self.parallel_num)
-        self.snapshot_name = "snapshot_test"
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
-        # WARNING: HARD CODE HERE
-        self.handler.SaveSnapshot("snapshot_test")
-        destination[prefix + "OneEmbedding"] = "snapshot_test"
+        self.handler.SaveSnapshot(self.snapshot_name)
+        destination[prefix + "OneEmbedding"] = self.snapshot_name
 
     def _load_from_state_dict(
         self,
