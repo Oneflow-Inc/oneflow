@@ -183,7 +183,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << kernel->op_type_name(); }
   for (const auto& output : *outputs) {
     if (auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output)) {
       JUST(dtr_output->set_tensor_inputs(inputs));

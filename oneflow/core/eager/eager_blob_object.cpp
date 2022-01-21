@@ -122,7 +122,23 @@ DTREagerBlobObject::~DTREagerBlobObject() {
   blob_.reset();
 }
 
+void DTREagerBlobObject::pin() {
+  pinned_++;
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "pinned " << this << ", " << (pinned_ - 1) << " to " << pinned_ << std::endl;
+  }
+}
+
+void DTREagerBlobObject::unpin() {
+  CHECK_GT(pinned_, 0) << this;
+  pinned_--;
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "unpinned " << this << ", " << (pinned_ + 1) << " to " << pinned_ << std::endl;
+  }
+}
+
 Maybe<void> DTREagerBlobObject::evict() {
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "evict " << this; }
   evict_flag_ = true;
   JUST(DeallocateBlobDataPtr());
   if (blob_) { blob_->reset_dptr(nullptr); }
@@ -140,7 +156,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
     std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
   // reset DTREageBlobObject properties
   compute_time_ = 0;
-  pinned_ = 0;
+  // pinned_ = 0;
 
   // current time
   update_access_time();

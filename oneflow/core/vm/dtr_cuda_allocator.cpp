@@ -302,8 +302,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         if (oneflow::DTRDebugEnabled()) {
           LOG(INFO) << "skip tensor: " << end_tensor
                     << ", size: " << end_tensor->blob_body_bytes_double() << ", compute op "
-                    << end_tensor->compute_op_type_name();
-          LOG(INFO) << "num_pinned: " << end_tensor->num_pinned()
+                    << end_tensor->compute_op_type_name() << ", num_pinned: " << end_tensor->num_pinned()
                     << ", is_evictable: " << end_tensor->is_evictable();
         }
         end++;
@@ -318,13 +317,14 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         CHECK_JUST(Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor));
       }
       cost += get_cost(end_tensor, -1);
-      end++;
-
       if (oneflow::DTRDebugEnabled()) {
-        LOG(INFO) << "move end, compute op: "
+        LOG(INFO) << "move end, include op: "
                   << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
+                  << ", size: " << end->second->size
                   << ", total_size: " << total_size << ", cost: " << cost;
       }
+      end++;
+
     } else {
       if (min_cost > cost) {
         min_cost = cost;
@@ -342,8 +342,9 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       }
       cost -= get_cost(start_tensor, coeff);
       if (oneflow::DTRDebugEnabled()) {
-        LOG(INFO) << "move start, compute op: "
+        LOG(INFO) << "move start, exclude op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
+                  << ", size: " << start->second->size
                   << ", total_size: " << total_size << ", cost: " << cost;
       }
       start++;
@@ -359,7 +360,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
   }
   for (auto* piece : pieces_to_be_evicted) {
     if (oneflow::DTRDebugEnabled()) {
-      LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
+      LOG(INFO) << "release ebo: " << piece->tensor << ", dptr: " << (void*)piece->ptr << ", size: " << piece->size
                 << ", cost: " << get_cost(piece->tensor, -1) << ", compute op: "
                 << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no tensor");
     }
