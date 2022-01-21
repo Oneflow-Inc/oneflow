@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import imp
 from .math_ops import *
 from .random import *
 from .conv import *
@@ -46,3 +47,7 @@ from .clamp import *
 from .erfinv import *
 from .swapaxes import *
 from .tensor_t import *
+from .expand import *
+from .flip import *
+from .in_top_k import *
+from .index_select import *

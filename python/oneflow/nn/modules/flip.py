@@ -18,39 +18,6 @@ from oneflow.framework.tensor import register_tensor_op
 
 
 def flip_op(input, dims):
-    """
-    
-    Reverse the order of a n-D tensor along given axis in dims.
-
-    .. note::
-        `flow.flip` makes a copy of :attr:`input`'s data. This is different from NumPy's `np.flip`,
-        which returns a view in constant time. Since copying a tensor's data is more work than viewing that data,
-        `flow.flip` is expected to be slower than `np.flip`.
-
-    Args:
-        input (Tensor): the input tensor
-        dims (a list or tuple): axis to flip on
-        
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> np_arr = np.arange(0, 8).reshape((2, 2, 2)).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
-        >>> input.shape
-        oneflow.Size([2, 2, 2])
-        >>> out = flow.flip(input, [0, 1])
-        >>> out
-        tensor([[[6., 7.],
-                 [4., 5.]],
-        <BLANKLINE>
-                [[2., 3.],
-                 [0., 1.]]], dtype=oneflow.float32)
-
-    """
     assert isinstance(dims, (int, list, tuple)), f"dims must be int, list or tuple"
     if isinstance(dims, int):
         dims = [dims]
@@ -68,11 +35,7 @@ def flip_op(input, dims):
     return flow._C.flip(input, new_dims)
 
 
-@register_tensor_op("flip")
 def flip_op_tensor(input, dims):
-    """
-    See :func:`oneflow.flip`
-    """
     return flip_op(input, dims)
 
 
