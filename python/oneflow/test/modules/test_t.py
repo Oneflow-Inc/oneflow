@@ -19,25 +19,23 @@ from collections import OrderedDict
 
 import numpy as np
 
+from oneflow.test_utils.automated_test_util import *
+from test_util import GenArgList
+
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
-
 
 @flow.unittest.skip_unless_1n1d()
-class TestLog1pModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
-    def test_log1p_with_random_data(test_case):
+class TestTransposeAllDimFunction(flow.unittest.TestCase):
+    @autotest(check_graph=False)
+    def test_t_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
-        return torch.log1p(x)
-
-    @autotest(check_graph=True)
-    def test_log1p_with_0dim_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
-        return torch.log1p(x)
+        x = random_pytorch_tensor(
+            ndim=constant(2).to(int), dim0=random(0, 64), dim1=random(0, 64)
+        ).to(device)
+        y = torch.t(x)
+        return y
 
 
 if __name__ == "__main__":
