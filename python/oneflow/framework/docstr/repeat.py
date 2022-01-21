@@ -40,9 +40,9 @@ add_docstr(
         >>> input = flow.Tensor(np_arr)
         >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
-        oneflow.Size([5, 3, 12, 8])
+        oneflow.Size([5, 3, 12, 18])
         >>> out = input.repeat(2, 1, 1, 2, 2)
         >>> out.shape
-        oneflow.Size([2, 5, 3, 12, 8])
+        oneflow.Size([2, 5, 3, 12, 18])
     """,
 )
