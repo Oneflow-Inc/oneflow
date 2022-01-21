@@ -56,7 +56,6 @@ add_docstr(
         >>> out = input.tile(2,1,2,1)
         >>> out.shape
         oneflow.Size([10,3,12,9])
-
         >>> x = np.random.randn(5, 2, 1)
         >>> input = flow.Tensor(x)
         >>> out = input.tile(3,4)

@@ -41,7 +41,6 @@ add_docstr(
         >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
         oneflow.Size([5, 3, 12, 8])
-
         >>> out = input.repeat(2, 1, 1, 2, 2)
         >>> out.shape
         oneflow.Size([2, 5, 3, 12, 8])
