@@ -133,56 +133,6 @@ void CudaAllocator::Display() {
 
 CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
-  if (oneflow::DTREnabled() && oneflow::GetDTRMemoryPolicy() == 1) {
-    Piece* best_fit_piece = nullptr;
-    size_t best_fit_piece_size = 0;
-    Bin* bin_of_best_fit_piece = nullptr;
-    for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
-      Bin* bin = &bins_.at(bin_num);
-      for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
-        Piece* piece = *it;
-        CHECK(piece->is_free);
-        CHECK_NOTNULL(piece->ptr);
-        CHECK_EQ(piece->bin_num, bin_num);
-        CHECK(IsAlignedSize(piece->size));
-        if (piece->size == aligned_size) {
-          // if (piece->size >= aligned_size) {
-          if (best_fit_piece == nullptr || piece->size < best_fit_piece_size) {
-            best_fit_piece = piece;
-            best_fit_piece_size = piece->size;
-            bin_of_best_fit_piece = bin;
-          }
-        }
-      }
-    }
-    if (!best_fit_piece) { return nullptr; }
-    {
-      bin_of_best_fit_piece->pieces.erase(best_fit_piece);
-      best_fit_piece->bin_num = kInvalidBinNum;
-      best_fit_piece->is_free = false;
-      if (best_fit_piece->size >= aligned_size * 2
-          || best_fit_piece->size - aligned_size >= kPieceSplitThreshold) {
-        Piece* new_piece = AllocatePiece();
-        new_piece->ptr = best_fit_piece->ptr + aligned_size;
-        new_piece->size = best_fit_piece->size - aligned_size;
-        best_fit_piece->size = aligned_size;
-
-        Piece* next_p = best_fit_piece->next;
-        best_fit_piece->next = new_piece;
-        new_piece->prev = best_fit_piece;
-        new_piece->next = next_p;
-        if (next_p != nullptr) { next_p->prev = new_piece; }
-
-        new_piece->is_free = true;
-        new_piece->bin_num = kInvalidBinNum;
-        CHECK(IsAlignedSize(best_fit_piece->size));
-        CHECK(IsAlignedSize(new_piece->size));
-        InsertPiece2Bin(new_piece);
-        MarkPiece(new_piece);
-      }
-      return best_fit_piece;
-    }
-  }
 
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
@@ -258,18 +208,6 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   }
 
   size_t allocate_bytes = aligned_size;
-  if (!(oneflow::DTREnabled() && oneflow::GetDTRMemoryPolicy() == 1)) {
-    if (allocate_bytes < 1048576) {
-      // Allocate 2MB if `allocate_bytes` is less than 1MB
-      allocate_bytes = 2097152;
-    } else if (allocate_bytes < 10485760) {
-      // Allocate 20MB if `allocate_bytes` is between 1MB and 10MB
-      allocate_bytes = 20971520;
-    } else {
-      // Round up to 2MB if `allocate_bytes` is larger than 10MB
-      allocate_bytes = RoundUp(allocate_bytes, 2097152);
-    }
-  }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
   if (oneflow::DTRDebugEnabled()) {
     LOG(INFO) << "final allocate " << final_allocate_bytes / 1024. / 1024. << ", allocate "

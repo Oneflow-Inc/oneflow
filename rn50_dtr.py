@@ -28,6 +28,7 @@ dtr_enabled = os.getenv("OF_DTR", "0") != "0"
 
 batch_size = int(os.environ["OF_DTR_BS"])
 if dtr_enabled:
+    dtr_allo = os.getenv("OF_DTR_NO_ALLO", None) is None
     dtr_ee_enabled = os.getenv("OF_DTR_NO_EE", None) is None
     threshold = os.environ["OF_DTR_THRESHOLD"]
     debug_level = int(os.getenv("OF_DTR_DEBUG", "0"))
@@ -36,6 +37,7 @@ if dtr_enabled:
 else:
     if any([os.getenv(x) is not None for x in ["OF_DTR_NO_EE", "OF_DTR_THRESHOLD", "OF_DTR_DEBUG", "OF_DTR_LR"]]):
         print("warning! dtr is not enabled but dtr related env var is set")
+    dtr_allo = False
     dtr_ee_enabled = False
     threshold = "NaN"
     debug_level = "NaN"
@@ -46,16 +48,15 @@ else:
 WARMUP_ITERS = 2
 ALL_ITERS = int(os.environ["OF_ITERS"])
 
-memory_policy = 2
 heuristic = "eq_compute_time_and_last_access"
 
 if dtr_enabled:
-    print(f'dtr_enabled: {dtr_enabled}, threshold: {threshold}, batch size: {batch_size}, eager eviction: {dtr_ee_enabled}, left and right: {left_right}, debug_level: {debug_level}, heuristic: {heuristic}, o_one: {o_one}')
+    print(f'dtr_enabled: {dtr_enabled}, dtr_allo: {dtr_allo}, threshold: {threshold}, batch size: {batch_size}, eager eviction: {dtr_ee_enabled}, left and right: {left_right}, debug_level: {debug_level}, heuristic: {heuristic}, o_one: {o_one}')
 else:
     print(f'dtr_enabled: {dtr_enabled}')
 
 if dtr_enabled:
-    flow.enable_dtr(dtr_enabled, threshold, debug_level, memory_policy, heuristic)
+    flow.enable_dtr(dtr_enabled, threshold, debug_level, heuristic)
 
 seed = 20
 flow.manual_seed(seed)
@@ -64,7 +65,7 @@ random.seed(seed)
 
 def sync():
     flow._oneflow_internal.eager.multi_client.Sync()
-    sync_tensor.numpy()
+    # sync_tensor.numpy()
 
 
 def display():
@@ -145,11 +146,12 @@ train_label = flow.tensor(
 )
 
 def temp():
-    sync()
-    print('----------allocator start')
-    flow._oneflow_internal.eager.multi_client.Temp()
-    sync()
-    print('----------allocator end')
+    if dtr_allo:
+        sync()
+        print('----------allocator start')
+        flow._oneflow_internal.eager.multi_client.Temp()
+        sync()
+        print('----------allocator end')
 
 total_time = 0
 for iter in range(ALL_ITERS):
@@ -170,8 +172,8 @@ for iter in range(ALL_ITERS):
     if dtr_enabled and debug_level > 0:
         sync()
         display()
-    # if (epoch + 1) % 1 == 0:
-        # print('loss: ', loss.numpy())
+    if (iter + 1) % 1 == 0:
+        print('loss: ', loss.numpy())
     del logits
     del loss
     sync()

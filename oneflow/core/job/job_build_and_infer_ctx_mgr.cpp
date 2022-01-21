@@ -111,7 +111,6 @@ int DTRDebugLevel() {
   if (!DTREnabled()) { return 0; }
   return Global<DTRConfig>::Get()->debug_level;
 }
-int GetDTRMemoryPolicy() { return Global<DTRConfig>::Get()->memory_policy; }
 bool dtr_use_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {

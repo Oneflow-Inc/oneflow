@@ -87,20 +87,22 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
-      if (auto* dtr_allocator =
-              dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {
-        if (auto* dtr_ebo = dynamic_cast<vm::DTREagerBlobObject*>(this)) {
-          dtr_allocator->Mark(dtr_ebo, dptr);
-        } else {
-          // do nothing
-          if (oneflow::DTRDebugEnabled()) {
-            LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
+    if (std::getenv("OF_DTR_NO_ALLO") == nullptr) {
+      if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
+        if (auto* dtr_allocator =
+                dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {
+          if (auto* dtr_ebo = dynamic_cast<vm::DTREagerBlobObject*>(this)) {
+            dtr_allocator->Mark(dtr_ebo, dptr);
+          } else {
+            // do nothing
+            if (oneflow::DTRDebugEnabled()) {
+              LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
+            }
           }
-        }
-      } else {
-        if (oneflow::DTRDebugEnabled()) {
-          LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
+        } else {
+          if (oneflow::DTRDebugEnabled()) {
+            LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
+          }
         }
       }
     }
@@ -172,7 +174,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
 
   node = std::make_shared<DisjNode>(0);
   auto pesudo_node = std::make_shared<DisjNode>(0);
-  node->set_pesudo_node(pesudo_node);     // might induce some problems
+  node->set_pesudo_node(pesudo_node);  // might induce some problems
 
   return Maybe<void>::Ok();
 }
@@ -347,7 +349,6 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
 }
 
 Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
-
   const double time_since_last_access =
       heuristic == "size" ? 1 : Global<one::DTRTensorPool>::Get()->duration() - last_access_time_;
 
@@ -394,7 +395,7 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
 
 Maybe<double> DTREagerBlobObject::cost() const {
   const auto& heuristic = Global<DTRConfig>::Get()->heuristic;
-  const double cost = CHECK_JUST(this->cost(heuristic));
+  const double cost = JUST(this->cost(heuristic));
   return cost;
 }
 
@@ -514,9 +515,7 @@ bool DTREagerBlobObject::is_evictable() const {
   return could_evict_;
 }
 
-void DTREagerBlobObject::reset_pesudo_node() {
-  node->reset_pesudo_node();
-}
+void DTREagerBlobObject::reset_pesudo_node() { node->reset_pesudo_node(); }
 
 void DisjNode::reset_pesudo_node() {
   pesudo_node_->set_compute_time(compute_time_);
