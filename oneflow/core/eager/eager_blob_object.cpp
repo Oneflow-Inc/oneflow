@@ -407,9 +407,9 @@ void DTREagerBlobObject::set_compute_time(double val) {
   }
   // if (compute_op_type_name() == "add_n") { compute_time_ *= (blob_body_bytes_ *
   // blob_body_bytes_); }
-  if (compute_op_type_name() == "conv2d") { compute_time_ *= (blob_body_bytes_); }
-  if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= (blob_body_bytes_); }
-  if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= (blob_body_bytes_); }
+  // if (compute_op_type_name() == "conv2d") { compute_time_ *= (blob_body_bytes_); }
+  // if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= (blob_body_bytes_); }
+  // if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= (blob_body_bytes_); }
   if (oneflow::DTRDebugEnabled()) {
     LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
               << compute_op_type_name() << std::endl;
