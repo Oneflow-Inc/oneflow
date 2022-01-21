@@ -197,11 +197,8 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const ParallelConf& parallel
   user_op::UserOpConfWrapper embedding_shuffle_op =
       embedding_shuffle_op_builder.OpTypeName("embedding_shuffle")
           .Input("cur_rank_embeddings", embedding_lbn)
-          .Input("cur_rank_num_unique_ids",
-                 AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
           .Input("cur_rank_reverse_idx",
                  AddIdentityOp(id_shuffle_op.output("cur_rank_reverse_idx", 0)))
-          .Input("num_unique_ids", AddIdentityOp(id_shuffle_op.output("num_unique_ids", 0)))
           .Input("ids_reverse_idx", AddIdentityOp(id_shuffle_op.output("ids_reverse_idx", 0)))
           .Input("num_unique_ids_matrix",
                  AddIdentityOp(id_shuffle_op.output("num_unique_ids_matrix", 0)))
@@ -243,11 +240,8 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
       embedding_op.op_name() + "_embedding_gradient_shuffle");
   user_op::UserOpConfWrapper embedding_gradient_shuffle_op =
       embedding_gradient_shuffle_op_builder.OpTypeName("embedding_gradient_shuffle")
-          .Input("cur_rank_num_unique_ids",
-                 AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
           .Input("cur_rank_reverse_idx",
                  AddIdentityOp(id_shuffle_op.output("cur_rank_reverse_idx", 0)))
-          .Input("num_unique_ids", AddIdentityOp(id_shuffle_op.output("num_unique_ids", 0)))
           .Input("ids_reverse_idx", AddIdentityOp(id_shuffle_op.output("ids_reverse_idx", 0)))
           .Input("embedding_diff", update_embedding_diff_lbn)
           .Input("num_unique_ids_matrix",
@@ -430,7 +424,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       const OpNode* consumer = edge->dst_node();
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
-        if (update_op_conf.op_type_name() != "sgd_embedding_update_placeholder") { continue; }
+        if (update_op_conf.op_type_name() != "embedding_update_placeholder") { continue; }
         if (update_op_conf.attr<std::string>("embedding_options")
             != embedding_op.attr<std::string>("embedding_options")) {
           continue;

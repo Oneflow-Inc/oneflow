@@ -455,11 +455,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
     const user_op::Tensor* cur_rank_embeddings =
         ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
-    const user_op::Tensor* cur_rank_num_unique_ids =
-        ctx->Tensor4ArgNameAndIndex("cur_rank_num_unique_ids", 0);
     const user_op::Tensor* cur_rank_reverse_idx =
         ctx->Tensor4ArgNameAndIndex("cur_rank_reverse_idx", 0);
-    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* ids_reverse_idx = ctx->Tensor4ArgNameAndIndex("ids_reverse_idx", 0);
     const user_op::Tensor* num_unique_ids_matrix =
         ctx->Tensor4ArgNameAndIndex("num_unique_ids_matrix", 0);
@@ -554,13 +551,13 @@ user_op::InferTmpSizeFn GenEmbeddingShuffleInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(t_dtype, idx_dtype)                                 \
-  REGISTER_USER_KERNEL("embedding_shuffle")                                                        \
-      .SetCreateFn<EmbeddingShuffleKernel<t_dtype, idx_dtype>>()                                   \
-      .SetIsMatchedHob(                                                                            \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                          \
-          && (user_op::HobDataType("cur_rank_num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
-          && (user_op::HobDataType("embeddings", 0) == GetDataType<t_dtype>::value))               \
+#define REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(t_dtype, idx_dtype)                              \
+  REGISTER_USER_KERNEL("embedding_shuffle")                                                     \
+      .SetCreateFn<EmbeddingShuffleKernel<t_dtype, idx_dtype>>()                                \
+      .SetIsMatchedHob(                                                                         \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
+          && (user_op::HobDataType("cur_rank_reverse_idx", 0) == GetDataType<idx_dtype>::value) \
+          && (user_op::HobDataType("embeddings", 0) == GetDataType<t_dtype>::value))            \
       .SetInferTmpSizeFn(GenEmbeddingShuffleInferTmpSizeFn<t_dtype, idx_dtype>());
 
 REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float, int32_t)
@@ -613,11 +610,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     ncclComm_t comm = nccl_comm->comm();
 
     const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
-    const user_op::Tensor* cur_rank_num_unique_ids =
-        ctx->Tensor4ArgNameAndIndex("cur_rank_num_unique_ids", 0);
     const user_op::Tensor* cur_rank_reverse_idx =
         ctx->Tensor4ArgNameAndIndex("cur_rank_reverse_idx", 0);
-    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* ids_reverse_idx = ctx->Tensor4ArgNameAndIndex("ids_reverse_idx", 0);
     const user_op::Tensor* num_unique_ids_matrix =
         ctx->Tensor4ArgNameAndIndex("num_unique_ids_matrix", 0);
