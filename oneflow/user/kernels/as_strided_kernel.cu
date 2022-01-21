@@ -124,6 +124,7 @@ class GpuAsStridedKernel final : public user_op::OpKernel {
   ~GpuAsStridedKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
@@ -149,6 +150,7 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
   ~GpuAsStridedGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);

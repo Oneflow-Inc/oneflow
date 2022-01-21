@@ -1299,7 +1299,9 @@ add_docstr(
 add_docstr(
     oneflow.as_strided,
     r"""
-    Create a view of an existing torch.Tensor input with specified size, stride and storage_offset.
+    Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
 
     Args:
         input (Tensor): the input tensor.
