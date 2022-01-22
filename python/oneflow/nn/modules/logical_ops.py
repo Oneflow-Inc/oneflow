@@ -54,7 +54,7 @@ def logical_and_op(input, other):
 
         >>> out = flow.logical_and(input1, input2)
         >>> out
-        tensor([1, 0, 0], dtype=oneflow.int8)
+        tensor([ True, False, False], dtype=oneflow.bool)
 
     """
     return LogicalAnd()(input, other)
@@ -108,7 +108,7 @@ def logical_or_op(input, other):
 
         >>> out = flow.logical_or(input1, input2)
         >>> out
-        tensor([1, 0, 1], dtype=oneflow.int8)
+        tensor([ True, False,  True], dtype=oneflow.bool)
 
     """
     return LogicalOr()(input, other)
@@ -149,7 +149,7 @@ def logical_xor_op(input, other):
         >>> input2 = flow.tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
         >>> out = flow.logical_xor(input1, input2)
         >>> out
-        tensor([0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False,  True], dtype=oneflow.bool)
 
     """
 
