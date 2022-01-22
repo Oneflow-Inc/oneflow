@@ -38,7 +38,7 @@ bool IsScalarTensor(const one::Tensor& tensor) {
 
 // Checks and sets default value for initial gradients based on out_grads
 // If output is the tensor whose size is greater than 1, out_grad's shape must be same as output's.
-// If output is a scalar tensor, out_grad will also be a scaler or empty(will be inited to
+// If output is a scalar tensor, out_grad will also be a scaler or empty(will be initted to
 // `oneflow.ones([1])`).
 Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
                                              const one::TensorTuple& out_grads) {
@@ -50,6 +50,13 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(outputs.at(i)->requires_grad())
         << "All output tensors `.requires_grad` should be true";
+    if (!outputs.at(i)->grad_fn_node()) {
+      CHECK_OR_RETURN(outputs.at(i)->is_leaf())
+          << "output[" << i << "] doesn't have grad_fn and it is not leaf tensor!\n"
+          << "It is a bug with oneflow, please submit an issue on GitHub: "
+             "https://github.com/Oneflow-Inc/oneflow/issues";
+      JUST(one::AddAccumulateFunctionNode(outputs.at(i)));
+    }
     if (out_grads.empty()) {
       CHECK_OR_RETURN(IsScalarTensor(*outputs.at(i)))
           << "Grad can be implicitly created only for scalar outputs";
