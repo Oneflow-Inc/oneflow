@@ -5,10 +5,6 @@ import os
 
 import numpy as np
 from numpy import random
-import oneflow as flow
-import oneflow.nn as nn
-
-import resnet50_model
 
 
 # resnet50 bs 32, use_disjoint_set=False: threshold ~800MB
@@ -69,11 +65,17 @@ args = parser.parse_args()
 
 print(os.environ)
 
+import oneflow as flow
+import oneflow.nn as nn
+
+import resnet50_model
+
 # run forward, backward and update parameters
 WARMUP_ITERS = 2
 ALL_ITERS = args.iters
 
-heuristic = "eq_compute_time_and_last_access"
+# NOTE: it has not effect for dtr allocator
+heuristic = "eq"
 
 if args.dtr:
     print(f'dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}')
@@ -189,6 +191,8 @@ for iter in range(ALL_ITERS):
         start_time = time.time()
     logits = model(train_data)
     loss = criterion(logits, train_label)
+    if (iter + 1) % 1 == 0:
+        print('loss: ', loss.numpy())
     loss.backward()
     optimizer.step()
     optimizer.zero_grad(True)
@@ -197,8 +201,6 @@ for iter in range(ALL_ITERS):
     if args.dtr and args.debug_level > 0:
         sync()
         display()
-    if (iter + 1) % 1 == 0:
-        print('loss: ', loss.numpy())
     del logits
     del loss
     sync()
