@@ -341,7 +341,9 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_oneflow = copy.deepcopy(oneflow).to(arg_device_type)
+                                    graph_train_oneflow = copy.deepcopy(oneflow).to(
+                                        arg_device_type
+                                    )
                                     of_sgd = flow.optim.SGD(
                                         graph_train_oneflow.parameters(),
                                         lr=0.001,
