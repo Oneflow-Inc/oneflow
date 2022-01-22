@@ -143,6 +143,22 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_permute4d_tensor_bool_with_random_data(test_case):
+        device = random_device()
+        ndim = 4
+        permute_list = [0, 1, 2, 3]
+        shuffle(permute_list)
+        x = random_pytorch_tensor(
+            ndim=ndim,
+            dim0=random(1, 32).to(int),
+            dim1=random(1, 59).to(int),
+            dim2=random(1, 65).to(int),
+            dim3=random(1, 127).to(int),
+        ).to(device=device, dtype=torch.bool)
+        y = x.permute(permute_list)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
