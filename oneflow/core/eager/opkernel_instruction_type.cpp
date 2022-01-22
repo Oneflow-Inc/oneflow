@@ -76,15 +76,21 @@ std::shared_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
       std::make_shared<one::EagerBlobObjectList>(outputs.size());
 
   for (int i = 0; i < inputs.size(); ++i) {
-    if (!inputs[i].lock()) {
-      std::cout << "null at input " << i << std::endl;
-      CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+    if (auto input = inputs[i].lock()) {
+      input_shared_ptr->at(i) = input;
+    } else {
+      // CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+      LOG(FATAL) << "null at input " << i << " of op " << operand->shared_opkernel()->op_type_name();
     }
-    input_shared_ptr->at(i) = CHECK_NOTNULL(inputs[i].lock());
   }
 
   for (int i = 0; i < outputs.size(); ++i) {
-    output_shared_ptr->at(i) = CHECK_NOTNULL(outputs[i].lock());
+    if (auto output = outputs[i].lock()) {
+      output_shared_ptr->at(i) = output;
+    } else {
+      // CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+      LOG(FATAL) << "null at output " << i << " of op " << operand->shared_opkernel()->op_type_name();
+    }
   }
 
   auto phy_instr_operand = std::make_shared<LocalCallOpKernelPhyInstrOperand>(

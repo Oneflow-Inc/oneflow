@@ -184,8 +184,8 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
                     const std::string& name = Global<one::DTRTensorPool>::Get()->current_op_type_name();
           const bool choose_left = [&]() {
             if (ParseBooleanFromEnv("OF_DTR_NLR", false)) {
-              CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
-              CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
+              // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
+              // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
               std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
                                                                "conv_filter_grad", "add_n"};
               if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
