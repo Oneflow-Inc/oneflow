@@ -16,24 +16,17 @@ limitations under the License.
 from .optimizer import Optimizer
 
 
-class LrScheduler(object):
-    def __init__(self, optimizer, last_step=-1, verbose=False):
+class LRScheduler(object):
+    def __init__(
+        self, optimizer: Optimizer, last_step: int = -1, verbose: bool = False
+    ):
         if not isinstance(optimizer, Optimizer):
             raise TypeError(f"{type(optimizer).__name__} is not an Optimizer object")
-        self._optimizer = optimizer
-        if last_step == -1:
-            for group in self._optimizer.param_groups:
-                if "initial_lr" not in group:
-                    group["initial_lr"] = group["lr"]
-        else:
-            for (i, group) in enumerate(self._optimizer.param_groups):
-                assert (
-                    "initial_lr" in group
-                ), f"param 'initial_lr' is not specified in param_groups[{i}] when resuming an optimizer"
 
-        self.base_lrs = [group["initial_lr"] for group in self._optimizer.param_groups]
+        self._optimizer = optimizer
         self.last_step = last_step
         self.verbose = verbose
+        self._init_base_lrs()
         self.step()
 
     def state_dict(self):
@@ -63,35 +56,53 @@ class LrScheduler(object):
     def get_last_lr(self):
         """Return last computed learning rate by current scheduler.
         """
-        return [group["lr"] for group in self._optimizer.param_groups]
+        return self._last_lr
 
-    def print_lr(self, group_idx, lr):
+    def print_lr(self, group, lr):
         """Display the current learning rate.
         """
         print(
-            f"Last step {self.last_step} adjusting learning rate of param_groups[{group_idx}] to {lr}"
+            f"Last step {self.last_step} of {type(self)} adjusting learning rate "
+            f"of param_groups[{group}] to {lr:.5f}"
         )
 
     def step(self):
         self.last_step += 1
-        self._saved_lr = [group["lr"] for group in self._optimizer.param_groups]
-        last_lr = self.get_lr()
-        for (i, group) in enumerate(self._optimizer.param_groups):
-            group["lr"] = last_lr[i]
+        lrs = self.get_lr()
+
+        self._last_lr = []
+        for i, (group, lr) in enumerate(zip(self._optimizer.param_groups, lrs)):
+            group["lr"] = lr
+            self._last_lr.append(lr)
             if self.verbose:
-                self.print_lr(i, last_lr[i])
+                self.print_lr(i, lr)
+
+    def _init_base_lrs(self):
+        if self.last_step == -1:
+            for group in self._optimizer.param_groups:
+                if "initial_lr" not in group:
+                    group.setdefault("initial_lr", group["lr"])
+        else:
+            for (i, group) in enumerate(self._optimizer.param_groups):
+                if "initial_lr" not in group:
+                    raise KeyError(
+                        "param 'initial_lr' is not specified "
+                        f"in param_groups[{i}] when resuming an optimizer"
+                    )
+
+        self.base_lrs = [group["initial_lr"] for group in self._optimizer.param_groups]
 
 
-class WarmUpLrScheduler(LrScheduler):
+class WarmUpLrScheduler(LRScheduler):
     def __init__(
         self, lrsch_or_optimizer, last_step=-1, verbose=False,
     ):
         self._inner_lr_sch = None
-        if not isinstance(lrsch_or_optimizer, (LrScheduler, Optimizer)):
+        if not isinstance(lrsch_or_optimizer, (LRScheduler, Optimizer)):
             raise TypeError(
-                f"{type(lrsch_or_optimizer).__name__} is not an Optimizer object or a LrScheduler object."
+                f"{type(lrsch_or_optimizer).__name__} is not an Optimizer object or a LRScheduler object."
             )
-        if isinstance(lrsch_or_optimizer, LrScheduler):
+        if isinstance(lrsch_or_optimizer, LRScheduler):
             self._inner_lr_sch = lrsch_or_optimizer
             # the _inner_lr_sch has called step() in it's __init__
             if self._inner_lr_sch.last_step != last_step + 1:
@@ -145,3 +156,17 @@ class WarmUpLrScheduler(LrScheduler):
         # Resume _inner_lr_sch because that we should not change `state_dict`
         if self._inner_lr_sch is not None:
             state_dict["_inner_lr_sch"] = inner_lr_sch_state
+
+
+class _scheduler_with_step(object):
+    def __init__(self, scheduler, step):
+        self._scheduler = scheduler
+        self._step = step
+        self._origin_step = scheduler.last_step
+
+    def __enter__(self):
+        self._scheduler.last_step = self._step
+        return self._scheduler
+
+    def __exit__(self, type, value, traceback):
+        self._scheduler.last_step = self._origin_step

@@ -16,8 +16,10 @@ limitations under the License.
 
 import math
 import random
+from tabnanny import verbose
 import tempfile
 import unittest
+import numpy as np
 from collections import OrderedDict
 
 import oneflow as flow
@@ -238,7 +240,7 @@ class TestLrScheduler(flow.unittest.TestCase):
         poly_decay_lr = flow.optim.lr_scheduler.PolynomialLR(
             optimizer, decay_steps, end_learning_rate, power, cycle
         )
-        # step(0) will be invoked in LrScheduler.__init__
+        # step(0) will be invoked in LRScheduler.__init__
         new_lr = polynomial_lr_step(
             TestLrScheduler.base_lr, end_learning_rate, 0, decay_steps, power, cycle
         )
@@ -315,6 +317,222 @@ class TestLrScheduler(flow.unittest.TestCase):
             test_case.assertEqual(
                 getattr(cosine_scheduler, attr), getattr(cosine_scheduler2, attr)
             )
+
+
+@flow.unittest.skip_unless_1n1d()
+class WarmupLRTestCase(flow.unittest.TestCase):
+    # @unittest.skipIf(True, "")
+    def test_linear_warmup_multistep_lr(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.001)
+        multistep_lr = flow.optim.lr_scheduler.MultiStepLR(optimizer, [10])
+        warmup_lr = flow.optim.lr_scheduler.WarmupLR(
+            multistep_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
+        )
+        expected_lrs = [
+            0.0005,
+            0.0006,
+            0.0007,
+            0.0008,
+            0.0009,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+        ]
+        lrs = [warmup_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            optimizer.step()
+            warmup_lr.step()
+            lrs.append(warmup_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_only_warmup(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.001)
+        warmup_lr = flow.optim.lr_scheduler.WarmupLR(
+            optimizer, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
+        )
+        expected_lrs = [
+            0.0005,
+            0.0006,
+            0.0007,
+            0.0008,
+            0.0009,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+        ]
+        lrs = [warmup_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            optimizer.step()
+            warmup_lr.step()
+            lrs.append(warmup_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_warmup_iters_0_exp_lr(test_case):
+        lr = 0.1
+        gamma = 0.9
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr)
+        exp_lr = flow.optim.lr_scheduler.ExponentialLR(optimizer, gamma)
+        warmup_lr = flow.optim.lr_scheduler.WarmupLR(
+            exp_lr, warmup_factor=0.5, warmup_iters=0, warmup_method="linear"
+        )
+        iters = 10
+        lrs = [warmup_lr.get_last_lr()[0]]
+        for _ in range(iters):
+            warmup_lr.step()
+            lrs.append(warmup_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        expected_lrs = [lr * pow(gamma, i) for i in range(iters)]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_linear_warmup_exp_lr(test_case):
+        lr = 0.1
+        gamma = 0.9
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr)
+        exp_lr = flow.optim.lr_scheduler.ExponentialLR(optimizer, gamma)
+        warmup_lr = flow.optim.lr_scheduler.WarmupLR(
+            exp_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
+        )
+        expected_lrs = [
+            0.05,
+            0.0518098,
+            0.0536196,
+            0.0554294,
+            0.0572392,
+            0.059049,
+            0.0531441,
+            0.04782969,
+            0.043046721,
+            0.0387420489,
+        ]
+
+        lrs = [warmup_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            warmup_lr.step()
+            lrs.append(warmup_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_linear_warmup_with_prefix_exp_lr(test_case):
+        lr = 0.1
+        gamma = 0.9
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr)
+        exp_lr = flow.optim.lr_scheduler.ExponentialLR(optimizer, gamma)
+        warmup_lr = flow.optim.lr_scheduler.WarmupLR(
+            exp_lr,
+            warmup_factor=0.5,
+            warmup_iters=5,
+            warmup_method="linear",
+            warmup_prefix=True,
+        )
+        expected_lrs = [
+            0.05,
+            0.06,
+            0.07,
+            0.08,
+            0.09,
+            0.1,
+            0.09,
+            0.081,
+            0.0729,
+            0.06561,
+        ]
+
+        lrs = [warmup_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            warmup_lr.step()
+            lrs.append(warmup_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_constant_warmup_cosine_annealing(test_case):
+        lr = 0.1
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr)
+        cos_annl_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
+        warmup_lr = flow.optim.lr_scheduler.WarmupLR(
+            cos_annl_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="constant",
+        )
+
+        expected_lrs = [
+            0.05,
+            0.05,
+            0.05,
+            0.05,
+            0.05,
+            0.05,
+            0.03454915028125264,
+            0.020610737385376353,
+            0.009549150281252635,
+            0.002447174185242324,
+            0.0,
+            0.0024471741852423235,
+            0.009549150281252666,
+            0.020610737385376433,
+            0.034549150281252786,
+            0.050000000000000225,
+            0.06545084971874766,
+            0.079389262614624,
+            0.09045084971874778,
+            0.09755282581475812,
+            0.1,
+        ]
+
+        lrs = [warmup_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            warmup_lr.step()
+            lrs.append(warmup_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        for lr in lrs:
+            print(lr)
+
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
 
 
 if __name__ == "__main__":
