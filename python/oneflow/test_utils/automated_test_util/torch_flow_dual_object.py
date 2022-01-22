@@ -321,9 +321,11 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             graph_args = []
+                            arg_device_type = "cpu"
                             for arg in oneflow_args:
                                 if flow.is_tensor(arg):
                                     copy_arg = arg.clone().detach()
+                                    arg_device_type = arg.device.type
                                 else:
                                     copy_arg = copy.deepcopy(arg)
                                 graph_args.append(copy_arg)
@@ -339,11 +341,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_args = []
-                                    for arg in oneflow_args:
-                                        copy_arg = copy.deepcopy(arg)
-                                        graph_train_args.append(copy_arg)
-                                    graph_train_oneflow = copy.deepcopy(oneflow)
+                                    graph_train_oneflow = copy.deepcopy(oneflow).to(arg_device_type)
                                     of_sgd = flow.optim.SGD(
                                         graph_train_oneflow.parameters(),
                                         lr=0.001,
