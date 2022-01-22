@@ -257,7 +257,7 @@ class ModuleBlock(Block):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self.__mapping_io(
+            args = self.__map_io(
                 "input", insert_identity, "insert_identity", *args,
             )
 
@@ -273,7 +273,7 @@ class ModuleBlock(Block):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self.__mapping_io(
+            args = self.__map_io(
                 "output", insert_identity, "insert_identity", *args,
             )
         return args
@@ -303,7 +303,7 @@ class ModuleBlock(Block):
                 for m in module.modules(memo):
                     yield m
 
-    def __mapping_io(self, io_type, func, func_desc, *args):
+    def __map_io(self, io_type, func, func_desc, *args):
         assert isinstance(func_desc, str)
         assert io_type in ("input", "output")
         mapped_args = []

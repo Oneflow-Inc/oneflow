@@ -704,7 +704,7 @@ class Graph(object):
             )
             return tensor_tuple
 
-        self._eager_outputs, _ = self.__mapping_io(
+        self._eager_outputs, _ = self.__map_io(
             "output", build_real_output, *self._eager_outputs
         )
 
@@ -815,32 +815,26 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_node = IONode(None, 0, (args, kwargs))
-        for (name, node) in list(
-            io_node.named_nodes(None, "_" + self.name + "_" + io_type)
-        ):
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type + "_")
+        def leaf_node_fn(node):
+            name = node._prefix + "_" + node._name
             if node._type == IONodeType.TENSOR:
                 arg_repr = self.__io_item_check_and_gen_repr(
                     node._value, Tensor, io_type, name
                 )
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
-                node.attrs["build_arg"] = build_arg
+                return build_arg
             elif node._type == IONodeType.NONE:
                 arg_repr = self.__io_item_check_and_gen_repr(
                     node._value, None, io_type, name
                 )
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
-                node.attrs["build_arg"] = build_arg
+                return build_arg
             elif node._type == IONodeType.OPAQUE:
                 # Error
                 arg_repr = self.__io_item_check_and_gen_repr(
                     node._value, None, io_type, name
                 )
-            else:
-                continue
-
-        def leaf_node_fn(leaf_node):
-            return leaf_node.attrs["build_arg"]
 
         out = io_node.map_leaf(leaf_node_fn)
         build_args = list(out[0])
@@ -888,7 +882,7 @@ class Graph(object):
                 "nn.Graph.build()'s input/output item only support types: Tensor/None."
             )
 
-    def __mapping_io(self, io_type, func, *args, **kwargs):
+    def __map_io(self, io_type, func, *args, **kwargs):
         assert io_type in ("input", "output")
 
         def mapping_tensor_or_none(tensor):
@@ -966,7 +960,7 @@ class Graph(object):
 
             return eager_out
 
-        return self.__mapping_io(io_type, func, *args, **kwargs)
+        return self.__map_io(io_type, func, *args, **kwargs)
 
     def __copy_io(self, io_type, *args, **kwargs):
         def func(tensor):
@@ -974,7 +968,7 @@ class Graph(object):
                 build_arg = tensor.to(copy=True)
                 return build_arg
 
-        return self.__mapping_io(io_type, func, *args, **kwargs)
+        return self.__map_io(io_type, func, *args, **kwargs)
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will
