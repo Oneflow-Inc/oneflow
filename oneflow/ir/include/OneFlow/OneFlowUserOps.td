@@ -498,8 +498,10 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareO
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3183,8 +3185,10 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, Dec
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3205,10 +3209,14 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, N
     DefaultValuedAttr<BoolAttr, "false">:$has_x_float_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_y_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_y_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_x_bool_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_y_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$x_int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$x_float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$x_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$y_int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$y_float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$y_float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$y_bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3228,8 +3236,10 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
