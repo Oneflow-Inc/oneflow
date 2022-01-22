@@ -182,10 +182,11 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
     if (var_conf.initializer().has_constant_conf()
         || var_conf.initializer().has_constant_int_conf()) {
       CHECK_OR_RETURN(variable_op_names_.insert(var_name).second)
-          << " ERROR! variable_op_name : " << var_name << " has been add in nn.Graph: " << name_;
+          << " ERROR! variable_op_name: " << var_name << " has been add in nn.Graph: " << name_;
       CHECK_OR_RETURN(
           variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
-          << " ERROR! variable_op_name : " << var_name << " has been add in nn.Graph: " << name_;
+          << " ERROR! variable Tensor with op_name: " << var_name
+          << " has been add in nn.Graph: " << name_;
     } else {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
           << " nn.Graph ONLY support variable_op with empty conf,"
