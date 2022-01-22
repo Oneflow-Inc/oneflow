@@ -19,6 +19,7 @@ import inspect
 import copy
 import os
 import warnings
+import copy
 
 import numpy as np
 import oneflow as flow
@@ -319,6 +320,19 @@ def GetDualObject(name, pytorch, oneflow):
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
+                            graph_args = []
+                            for arg in oneflow_args:
+                                if flow.is_tensor(arg):
+                                    copy_arg = arg.clone().detach()
+                                else:
+                                    copy_arg = copy.deepcopy(arg)
+                                graph_args.append(copy_arg)
+                            graph_kwargs = {}
+                            for key, value in oneflow_kwargs.items():
+                                if flow.is_tensor(value):
+                                    graph_kwargs[key] = value.clone().detach()
+                                else:
+                                    graph_kwargs[key] = copy.deepcopy(value)
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
@@ -365,7 +379,8 @@ def GetDualObject(name, pytorch, oneflow):
                                     if verbose:
                                         print("Run graph of module: ", repr(oneflow))
                                         test_g.debug(3)
-                                    test_g_res = test_g(*oneflow_args)
+                                    # When testing module methods, kwargs are not considered.
+                                    test_g_res = test_g(*graph_args)
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
                                 # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
@@ -385,9 +400,7 @@ def GetDualObject(name, pytorch, oneflow):
                                             super().__init__()
 
                                         def build(self):
-                                            return oneflow(
-                                                *oneflow_args, **oneflow_kwargs
-                                            )
+                                            return oneflow(*graph_args, **graph_kwargs)
 
                                     try:
                                         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
@@ -475,6 +488,19 @@ def GetDualObject(name, pytorch, oneflow):
                                     "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                                 )
                             raise PyTorchDoesNotSupportError(e)
+                        tensor_graph_args = []
+                        for arg in oneflow_args:
+                            if flow.is_tensor(arg):
+                                copy_arg = arg.clone().detach()
+                            else:
+                                copy_arg = copy.deepcopy(arg)
+                            tensor_graph_args.append(copy_arg)
+                        tensor_graph_kwargs = {}
+                        for key, value in oneflow_kwargs.items():
+                            if flow.is_tensor(value):
+                                tensor_graph_kwargs[key] = value.clone().detach()
+                            else:
+                                tensor_graph_kwargs[key] = copy.deepcopy(value)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
 
@@ -484,7 +510,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                                 def build(self):
                                     return oneflow_method(
-                                        *oneflow_args, **oneflow_kwargs
+                                        *tensor_graph_args, **tensor_graph_kwargs
                                     )
 
                             try:
