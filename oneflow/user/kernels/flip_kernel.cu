@@ -127,6 +127,7 @@ class FlipGrad1DGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)              \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_FLIP_CUDA_KERNEL(bool)
 REGISTER_FLIP_CUDA_KERNEL(float)
 REGISTER_FLIP_CUDA_KERNEL(double)
 REGISTER_FLIP_CUDA_KERNEL(uint8_t)
