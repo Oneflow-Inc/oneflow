@@ -208,6 +208,16 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   }
 
   size_t allocate_bytes = aligned_size;
+  if (allocate_bytes < 1048576) {
+    // Allocate 2MB if `allocate_bytes` is less than 1MB
+    allocate_bytes = 2097152;
+  } else if (allocate_bytes < 10485760) {
+    // Allocate 20MB if `allocate_bytes` is between 1MB and 10MB
+    allocate_bytes = 20971520;
+  } else {
+    // Round up to 2MB if `allocate_bytes` is larger than 10MB
+    allocate_bytes = RoundUp(allocate_bytes, 2097152);
+  }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
   if (oneflow::DTRDebugEnabled()) {
     LOG(INFO) << "final allocate " << final_allocate_bytes / 1024. / 1024. << ", allocate "
