@@ -171,7 +171,6 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 }
 
 Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
-  JUST(vm::CurrentRankSync());
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
@@ -190,7 +189,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
     } else {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
           << " nn.Graph ONLY support variable_op with empty conf,"
-          << " because variable is initted by eager tensor."
+          << " because variable is inited by eager tensor."
           << " This error variable conf is : " << variable_op.op_conf().DebugString()
           << " in nn.Graph " << name_;
       CHECK_OR_RETURN(variable_op_names_.find(var_name) != variable_op_names_.end())
