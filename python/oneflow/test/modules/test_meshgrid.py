@@ -77,7 +77,7 @@ class TestMeshGridModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     @unittest.skip("pytorch 1.9.0 exist not indexing")
     def test_meshgrid_with_random_data(test_case):
         device = random_device()
