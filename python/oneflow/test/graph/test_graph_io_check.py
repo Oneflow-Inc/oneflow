@@ -97,10 +97,18 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         lt0 = list()
         lt0.append(t2)
         lt0.append(t3)
+        t7 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        dic2 = {"kw2":t7}
+        lt0.append(dic2)
 
         t4 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        t5 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        t6 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        lt1 = list()
+        lt1.append(t5)
+        lt1.append(t6)
 
-        ot, olt, on, odic = g(x, lt0, None, kw=t4)
+        ot, olt, on, odic = g(x, lt0, None, kw0=t4, kw1=lt1)
         # print(g)
         test_case.assertTrue(np.array_equal(x.numpy(), ot.numpy()))
 
@@ -109,10 +117,14 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(olt[0].numpy(), lt0[0].numpy()))
         test_case.assertTrue(isinstance(olt[1], Tensor))
         test_case.assertTrue(np.array_equal(olt[1].numpy(), lt0[1].numpy()))
+        test_case.assertTrue(isinstance(olt[2], dict))
+        test_case.assertTrue(np.array_equal(olt[2]['kw2'].numpy(), lt0[2]['kw2'].numpy()))
 
         test_case.assertTrue(on is None)
         test_case.assertTrue(isinstance(odic, dict))
-        test_case.assertTrue(np.array_equal(odic["kw"].numpy(), t4.numpy()))
+        test_case.assertTrue(np.array_equal(odic["kw0"].numpy(), t4.numpy()))
+        test_case.assertTrue(np.array_equal(odic["kw1"][0].numpy(), t5.numpy()))
+        test_case.assertTrue(np.array_equal(odic["kw1"][1].numpy(), t6.numpy()))
 
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
