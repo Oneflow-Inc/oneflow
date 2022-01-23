@@ -128,7 +128,7 @@ class Graph(object):
         session.TryInit()
         session.AddCGraph(self._c_nn_graph)
 
-    def build(self, *args):
+    def build(self, *args, *kwargs):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
 
@@ -157,11 +157,10 @@ class Graph(object):
             >>> x = flow.randn(4, 3)
             >>> y = linear_graph(x) # The build() method is called implicitly
 
-        Note that ``build()`` method's inputs and outputs only accept positional
-        arguements at the moment, each argument must be one of these types:
+        Note that ``build()`` method's inputs and outputs support list/tuple/dict,
+        but the item in them must be one of these types:
 
         * ``Tensor``
-        * ``list`` of ``Tensor``
         * ``None``
 
         """
