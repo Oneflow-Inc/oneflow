@@ -65,9 +65,10 @@ class IONode(object):
         self._prefix = prefix
         self._start_idx = start_idx
         self._end_idx = start_idx
-        self._cur_level_idx = 0
+        self._cur_level_idx = -1
         self._sub_nodes = OrderedDict()
         self.attrs = dict()
+        self._is_leaf = False
 
         if isinstance(value, tuple):
             self._type = IONodeType.TUPLE
@@ -108,12 +109,15 @@ class IONode(object):
         elif isinstance(value, Tensor):
             self._type = IONodeType.TENSOR
             self._value = value
+            self._is_leaf = True
         elif value is None:
             self._type = IONodeType.NONE
             self._value = value
+            self._is_leaf = True
         else:
             self._type = IONodeType.OPAQUE
             self._value = value
+            self._is_leaf = True
 
     def size(self):
         return self._end_idx - self._start_idx + 1
@@ -123,17 +127,16 @@ class IONode(object):
         self._end_idx += node.size()
         self._cur_level_idx += 1
 
-    def named_nodes(self, memo=None, prefix: str = ""):
+    def named_nodes(self, memo=None):
         if memo is None:
             memo = set()
         if self not in memo:
             memo.add(self)
-            yield (prefix + "_" + str(self._name), self)
-            for (name, node) in self._sub_nodes.items():
+            yield (self._prefix + "_" + str(self._name), self)
+            for (level_idx, node) in self._sub_nodes.items():
                 if node is None:
                     continue
-                subnode_prefix = prefix + ("." if prefix else "") + str(name)
-                for n in node.named_nodes(memo, subnode_prefix):
+                for n in node.named_nodes(memo):
                     yield n
 
     def __repr__(self):

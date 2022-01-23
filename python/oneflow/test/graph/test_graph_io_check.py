@@ -28,7 +28,7 @@ from oneflow.nn.graph.util import IONodeType, IONode
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphIOCheck(flow.unittest.TestCase):
-    def _test_io_node(test_case):
+    def test_io_node(test_case):
         x = np.ones((2, 2))
         x = flow.tensor(x, dtype=flow.float32)
 
@@ -50,9 +50,9 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             inp = (args, kwargs)
             print("origin: ", inp)
 
-            io_node = IONode(None, 0, inp)
+            io_node = IONode(None, 0, inp, "Graph_0")
 
-            for (name, node) in list(io_node.named_nodes(None, "Graph_0")):
+            for (name, node) in list(io_node.named_nodes()):
                 print(name, repr(node))
 
             def leaf_fn(node):
@@ -110,7 +110,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertTrue(isinstance(odic, dict))
         test_case.assertTrue(np.array_equal(odic["kw"].numpy(), t4.numpy()))
 
-    def _test_graph_outputs_buffer(test_case):
+    def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()

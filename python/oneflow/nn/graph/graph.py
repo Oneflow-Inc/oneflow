@@ -795,8 +795,6 @@ class Graph(object):
         return seq_to_func_return(eager_outputs)
 
     def __build_io(self, io_type, build_func, *args, **kwargs):
-        print("args ", args)
-        print("kwargs ", kwargs)
         assert io_type in ("input", "output")
         op_names = []
         args_repr = []
@@ -815,7 +813,7 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type + "_")
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
         def leaf_node_fn(node):
             name = node._prefix + "_" + node._name
             if node._type == IONodeType.TENSOR:
@@ -839,8 +837,6 @@ class Graph(object):
         out = io_node.map_leaf(leaf_node_fn)
         build_args = list(out[0])
         build_kwargs = out[1]
-        print("build args ", build_args)
-        print("build kwargs ", build_kwargs)
 
         return op_names, build_args, build_kwargs, args_repr, tensor2op_name
 
@@ -893,7 +889,7 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_node = IONode(None, 0, (args, kwargs))
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
 
         def leaf_node_fn(leaf_node):
             arg = leaf_node._value
@@ -904,12 +900,8 @@ class Graph(object):
                     arg,
                     None,
                     io_type,
-                    "_"
-                    + self.name
+                    leaf_node._prefix
                     + "_"
-                    + io_type
-                    + "_"
-                    + leaf_node._prefix
                     + leaf_node._name,
                 )
 
@@ -920,9 +912,9 @@ class Graph(object):
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        io_node = IONode(None, 0, (args, kwargs))
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
         for (name, node) in list(
-            io_node.named_nodes(None, "_" + self.name + "_" + io_type)
+            io_node.named_nodes()
         ):
             if node._type == IONodeType.TENSOR:
                 flattened_args.append(node._value)
