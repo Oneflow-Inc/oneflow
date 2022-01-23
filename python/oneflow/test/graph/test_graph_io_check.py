@@ -62,8 +62,12 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
             m_v = io_node.map_leaf(leaf_fn)
             print("mapped:", m_v)
+            return *m_v[0], m_v[1]
 
-        fn(None, 1, "test_str", x, lt0, {"t": t4, "l": lt0}, kw=t4)
+        ret = fn(None, 1, "test_str", x, lt0, {"t": t4, "l": lt0}, kw=t4)
+        print(ret)
+        test_case.assertEqual(ret[2], "mapped_str")
+        test_case.assertEqual(id(ret[6]['kw']), id(t4))
 
     def test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
