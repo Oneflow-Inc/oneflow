@@ -177,20 +177,16 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        in_node = IONode(None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input")
+        in_node = IONode(
+            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
+        )
         for (name, node) in list(in_node.named_nodes()):
             if node._is_leaf:
                 arg = node._value
                 meta_repr_str = (
                     arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
                 )
-                in_str = (
-                    "(INPUT:"
-                    + name
-                    + ":"
-                    + meta_repr_str
-                    + ")"
-                )
+                in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg, Tensor):
                     in_str = "[WARNING]" + in_str
                 self._args_repr.append(in_str)
@@ -218,20 +214,16 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        out_node = IONode(None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output")
+        out_node = IONode(
+            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
+        )
         for (name, node) in list(out_node.named_nodes()):
             if node._is_leaf:
                 arg = node._value
                 meta_repr_str = (
                     arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
                 )
-                out_str = (
-                    "(OUTPUT:"
-                    + name
-                    + ":"
-                    + meta_repr_str
-                    + ")"
-                )
+                out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg, Tensor):
                     out_str = "[WARNING]" + out_str
                 self._outs_repr.append(out_str)
@@ -322,14 +314,14 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type)
+        io_node = IONode(
+            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
+        )
 
         def leaf_node_fn(leaf_node):
             arg = leaf_node._value
             name = leaf_node._prefix + "_" + leaf_node._name
-            is_tensor, repr_str = self.__io_tensor_check_and_gen(
-                arg, io_type, name
-            )
+            is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
             if is_tensor:
                 self.__print(
                     0,

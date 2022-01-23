@@ -814,6 +814,7 @@ class Graph(object):
             return build_arg
 
         io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
+
         def leaf_node_fn(node):
             name = node._prefix + "_" + node._name
             if node._type == IONodeType.TENSOR:
@@ -897,12 +898,7 @@ class Graph(object):
                 return mapping_tensor_or_none(arg)
             else:
                 self.__io_item_check(
-                    arg,
-                    None,
-                    io_type,
-                    leaf_node._prefix
-                    + "_"
-                    + leaf_node._name,
+                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
@@ -913,9 +909,7 @@ class Graph(object):
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
         io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
-        for (name, node) in list(
-            io_node.named_nodes()
-        ):
+        for (name, node) in list(io_node.named_nodes()):
             if node._type == IONodeType.TENSOR:
                 flattened_args.append(node._value)
             else:
