@@ -98,7 +98,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         lt0.append(t2)
         lt0.append(t3)
         t7 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
-        dic2 = {"kw2":t7}
+        dic2 = {"kw2": t7}
         lt0.append(dic2)
 
         t4 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
@@ -118,7 +118,9 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertTrue(isinstance(olt[1], Tensor))
         test_case.assertTrue(np.array_equal(olt[1].numpy(), lt0[1].numpy()))
         test_case.assertTrue(isinstance(olt[2], dict))
-        test_case.assertTrue(np.array_equal(olt[2]['kw2'].numpy(), lt0[2]['kw2'].numpy()))
+        test_case.assertTrue(
+            np.array_equal(olt[2]["kw2"].numpy(), lt0[2]["kw2"].numpy())
+        )
 
         test_case.assertTrue(on is None)
         test_case.assertTrue(isinstance(odic, dict))

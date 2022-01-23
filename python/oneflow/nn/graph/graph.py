@@ -128,7 +128,7 @@ class Graph(object):
         session.TryInit()
         session.AddCGraph(self._c_nn_graph)
 
-    def build(self, *args, *kwargs):
+    def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
 
