@@ -91,6 +91,13 @@ class TestUnsqueeze(flow.unittest.TestCase):
         y = torch.unsqueeze(x, random(0, 2).to(int))
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_flow_unsqueeze_bool_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device=device, dtype=torch.bool)
+        y = torch.unsqueeze(x, random(1, 3).to(int))
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
