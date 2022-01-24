@@ -67,8 +67,8 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
 Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
     const Shape& in_shape, const Shape& out_shape, const int64_t parallel_num,
     HashMap<int, int>* group_start_in_axis2out_axis) {
-  CHECK_NE_OR_RETURN(in_shape.NumAxes(), 0);
-  CHECK_NE_OR_RETURN(out_shape.NumAxes(), 0);
+  CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0);   // support 0D tensor
+  CHECK_GE_OR_RETURN(out_shape.NumAxes(), 0);  // support 0D tensor
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
   int in_axis = in_shape.NumAxes() - 1;
   int out_axis = out_shape.NumAxes() - 1;
