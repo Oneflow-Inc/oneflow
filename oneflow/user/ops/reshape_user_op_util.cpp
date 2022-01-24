@@ -52,7 +52,6 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
 
 Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
                                        HashMap<int, int>* squeezed_axis2origin_axis) {
-  CHECK_GT_OR_RETURN(origin.NumAxes(), 0);
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
