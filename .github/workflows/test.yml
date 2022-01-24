@@ -556,7 +556,7 @@ jobs:
         uses: actions/github-script@v4
         run: |
           mkdir -p ${{ env.METRICS_DIR }}
-          echo "{{ steps.speed.outputs.stats }}" >> ${{ env.METRICS_DIR }}/speed_stats.json
+          echo "{{ steps.speed.outputs.stats }}" >> ${{ env.METRICS_DIR }}/speed_stats.txt
       - name: Upload speed stats
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         uses: ./.github/actions/upload_oss
