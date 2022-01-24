@@ -129,7 +129,7 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> MultiClientSessionContextUpdateResource(const std::string &resource_proto_str) {
+inline Maybe<void> MultiClientSessionContextUpdateResource(const std::string& resource_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
   Resource reso_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(resource_proto_str, &reso_proto))
