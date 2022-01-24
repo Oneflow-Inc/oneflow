@@ -88,6 +88,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.expand,
+    """
+    expand() -> Tensor
+
+    See :func:`oneflow.expand`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.expand_as,
     """
     expand_as(other) -> Tensor
@@ -146,6 +155,33 @@ add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_ones,
+    """
+    new_ones() -> Tensor
+
+    See :func:`oneflow.new_ones`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to_consistent,
+    """
+    to_consistent() -> Tensor
+
+    See :func:`oneflow.to_consistent`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to_local,
+    """
+    to_local() -> Tensor
+
+    See :func:`oneflow.to_local`
     """,
 )
 

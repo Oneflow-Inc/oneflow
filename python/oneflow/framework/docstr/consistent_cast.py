@@ -18,9 +18,9 @@ from oneflow.framework.docstr.utils import add_docstr
 from torch import Tensor
 
 add_docstr(
-    oneflow.to_consistent_op,
+    oneflow.to_consistent,
     """
-    to_consistent_op(input, placement=None, sbp=None, grad_sbp=None) -> Tensor
+    to_consistent(input, placement=None, sbp=None, grad_sbp=None) -> Tensor
 
     Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with

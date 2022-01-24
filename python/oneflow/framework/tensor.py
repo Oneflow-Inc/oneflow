@@ -290,6 +290,10 @@ def _exp(self):
     return flow.exp(self)
 
 
+def _expand(self, *size):
+    return flow.expand(self, *size)
+
+
 def _expand_as(input, other):
     return flow.expand(input, *other.size())
 
@@ -484,6 +488,18 @@ def _negative(self):
 
 def _neg(self):
     return flow._C.negative(self)
+
+
+def _new_ones(
+    self,
+    size=None,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -753,6 +769,14 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
+def _to_consistent(self, placement=None, sbp=None, grad_sbp=None):
+    return flow.to_consistent(self, placement, sbp, grad_sbp)
+
+
+def _to_local(self):
+    return flow.to_local(self)
+
+
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
@@ -890,6 +914,7 @@ def RegisterMethods():
     Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
@@ -898,11 +923,13 @@ def RegisterMethods():
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
+    Tensor.flip = _flip
     Tensor.in_top_k = _in_top_k
     Tensor.index_select = _index_select
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.new_ones = _new_ones
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
@@ -919,6 +946,8 @@ def RegisterMethods():
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
+    Tensor.to_consistent = _to_consistent
+    Tensor.to_local = _to_local
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
