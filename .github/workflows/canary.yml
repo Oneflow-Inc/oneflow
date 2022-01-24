@@ -27,6 +27,7 @@ jobs:
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
+      ONEFLOW_SRC_HEAD: oneflow-head
     steps:
       - name: Fix permissions
         run: |
@@ -43,11 +44,16 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
+      - name: Checkout Oneflow-Inc/oneflow
+        if: ${{ github.event.inputs.oneflow-ref == '' }}
+        uses: actions/checkout@v2
+        with:
+          path: ${{ env.ONEFLOW_SRC_HEAD }}
       - uses: Oneflow-Inc/get-oneflow@remove-single-client
         name: Build manylinux
         id: build-cuda
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/canary/cuda.cmake
+          cmake-init-cache: ${{ env.ONEFLOW_SRC_HEAD }}/cmake/caches/ci/canary/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
