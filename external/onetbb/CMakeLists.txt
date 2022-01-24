@@ -5,8 +5,7 @@ include(FetchContent)
 FetchContent_Declare(
   tbb
   URL ${ONETBB_URL}
-  # URL_HASH MD5=${ONETBB_MD5}
-  URL_MD5 ${ONETBB_MD5}
+  URL_HASH MD5=${ONETBB_MD5}
   CMAKE_CACHE_ARGS
     -DBUILD_SHARED_LIBS:BOOL=ON
 )
