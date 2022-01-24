@@ -23,6 +23,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 import json
 import os
+import datetime 
 from oneflow._oneflow_internal import OneEmbeddingHandler
 import numpy as np
 
@@ -80,10 +81,6 @@ class OneEmbeddingLookup(Module):
         else:
             block_based_path = options.get("block_based_path")
         print("block_based_path", block_based_path)
-        if options.get("snapshot_name") == None: 
-            self.snapshot_name = "snapshot_test"
-        else: 
-            self.snapshot_name = options.get("snapshot_name")
 
         embedding_options = {
             "name": embedding_name,
@@ -136,15 +133,20 @@ class OneEmbeddingLookup(Module):
             },
         }
         self.embedding_options = json.dumps(embedding_options)
+        # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
         self.parallel_id = flow.env.get_rank()
         self.parallel_num = flow.env.get_world_size()
-        print("Parallel id is: ", self.parallel_id)
-        print("Parallel num is: ", self.parallel_num)
         self.handler = OneEmbeddingHandler(self.embedding_options, self.parallel_id, self.parallel_num)
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
-        self.handler.SaveSnapshot(self.snapshot_name)
-        destination[prefix + "OneEmbedding"] = self.snapshot_name
+        snapshot_timestamp_tensor = flow.tensor(datetime.datetime.now().timestamp(), dtype=flow.float64, device="cuda")
+        # Broadcast timestamp tensor from master rank. 
+        flow.comm.broadcast(snapshot_timestamp_tensor, src=0)
+        snapshot_timestamp = float(snapshot_timestamp_tensor.numpy())
+        snapshot_timestamp_datetime = datetime.datetime.fromtimestamp(snapshot_timestamp)
+        snapshot_timestamp_str = snapshot_timestamp_datetime.strftime("%Y-%m-%d-%H-%M-%S-%f")
+        self.handler.SaveSnapshot(snapshot_timestamp_str)
+        destination[prefix + "OneEmbedding"] = snapshot_timestamp_str
 
     def _load_from_state_dict(
         self,
@@ -156,7 +158,7 @@ class OneEmbeddingLookup(Module):
         unexpected_keys,
         error_msgs,
     ):
-        key = prefix + self.snapshot_name
+        key = prefix + "OneEmbedding"
         print("Load here key is:", key)
         if key in state_dict:
             saved_snapshot_name = state_dict[key]
