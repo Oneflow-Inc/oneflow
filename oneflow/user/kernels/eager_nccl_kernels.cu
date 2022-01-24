@@ -144,6 +144,23 @@ REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerNcclBroadcastKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
+class EagerNcclTouchKernel final : public user_op::OpKernel {
+ public:
+  EagerNcclTouchKernel() = default;
+  ~EagerNcclTouchKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override{
+      // Do nothing.
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_touch")
+    .SetCreateFn<EagerNcclTouchKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+
 class EagerNcclReduceKernel final : public user_op::OpKernel {
  public:
   EagerNcclReduceKernel() = default;
