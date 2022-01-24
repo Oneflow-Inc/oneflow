@@ -22,7 +22,7 @@ set(HWLOC_INCLUDE_DIR ${HWLOC_INSTALL}/include)
 set(HWLOC_LIBRARY_DIR ${HWLOC_INSTALL}/lib)
 set(HWLOC_LIBRARY_NAMES libhwloc.a)
 foreach(LIBRARY_NAME ${HWLOC_LIBRARY_NAMES})
-  list(APPEND HWLOC_STATIC_LIBRARIES ${HWLOC_LIBRARY_DIR}/${LIBRARY_NAME})
+  list(APPEND ONEFLOW_HWLOC_STATIC_LIBRARIES ${HWLOC_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
 if(THIRD_PARTY)
@@ -80,7 +80,7 @@ ExternalProject_Add(hwloc
         UPDATE_COMMAND ""
         CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL} PKG_CONFIG_PATH=${PCIACCESS_INSTALL}/lib/pkgconfig --disable-libxml2 --enable-static --enable-shared=no
         BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${HWLOC_CFLAGS}
-        BUILD_BYPRODUCTS ${HWLOC_STATIC_LIBRARIES}
+        BUILD_BYPRODUCTS ${ONEFLOW_HWLOC_STATIC_LIBRARIES}
         INSTALL_COMMAND make install
         DEPENDS pciaccess
         )
