@@ -226,12 +226,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   // Same sbp is always supported.
-  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
-
-  // Will directly modify output blob of source op. Requiring data having same sbp_parallel.
-  if (is_same_sbp
-      && !(reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
-           && same_nd_sbp)) {
+  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) {
+    return 0.0;
+  } else if (is_same_sbp) {
     return kUnsupportedBoxing;
   }
 
@@ -308,11 +305,10 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
   }
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
-  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
-  // Will directly modify output blob of source op. Requiring data having same sbp_parallel
-  if (is_same_sbp
-      && !(reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
-           && same_nd_sbp)) {
+  // Same sbp is always supported.
+  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) {
+    return 0.0;
+  } else if (is_same_sbp) {
     return kUnsupportedBoxing;
   }
 
