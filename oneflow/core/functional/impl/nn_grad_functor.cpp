@@ -807,7 +807,9 @@ class LayerNormGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous(), mean->contiguous(), inv_variance->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {dy->contiguous(), x->contiguous(), mean->contiguous(), inv_variance->contiguous()},
+        attrs);
   }
 
  private:
@@ -835,7 +837,10 @@ class LayerNormAffineGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous(), mean->contiguous(), inv_variance->contiguous(), gamma->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_,
+                                          {dy->contiguous(), x->contiguous(), mean->contiguous(),
+                                           inv_variance->contiguous(), gamma->contiguous()},
+                                          attrs);
   }
 
  private:
@@ -862,7 +867,9 @@ class LayerNormParamGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy->contiguous(), x->contiguous(), mean->contiguous(), inv_variance->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {dy->contiguous(), x->contiguous(), mean->contiguous(), inv_variance->contiguous()},
+        attrs);
   }
 
  private:

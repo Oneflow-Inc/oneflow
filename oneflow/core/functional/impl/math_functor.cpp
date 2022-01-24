@@ -857,7 +857,8 @@ class ClampBaseFunctor {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       if (x->requires_grad()) {
-        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x->contiguous()))}, outputs.get(), attrs));
+        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x->contiguous()))},
+                                    outputs.get(), attrs));
       } else {
         JUST(OpInterpUtil::Dispatch(*op, {x->contiguous()}, outputs.get(), attrs));
       }
