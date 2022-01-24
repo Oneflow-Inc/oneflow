@@ -46,6 +46,15 @@ class TestFlip(flow.unittest.TestCase):
         y = torch.flip(x, constant((0, 1, 2)))
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_flow_flip_bool_tuple_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device=device, dtype=torch.bool)
+        y = torch.flip(x, constant((0, 1, 2)))
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
