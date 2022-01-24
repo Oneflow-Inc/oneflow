@@ -322,7 +322,6 @@ def GetDualObject(name, pytorch, oneflow):
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
-                            oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 graph_args = []
                                 for arg in oneflow_args:
@@ -338,6 +337,8 @@ def GetDualObject(name, pytorch, oneflow):
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
 
+                            oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            if testing_graph:
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
@@ -496,7 +497,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 )
                             raise PyTorchDoesNotSupportError(e)
 
-                        oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
                             tensor_graph_args = []
                             for arg in oneflow_args:
@@ -511,6 +511,9 @@ def GetDualObject(name, pytorch, oneflow):
                                     tensor_graph_kwargs[key] = value.clone().detach()
                                 else:
                                     tensor_graph_kwargs[key] = copy.deepcopy(value)
+
+                        oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
+                        if testing_graph:
 
                             class TestGraphOfTensorMethod(flow.nn.Graph):
                                 def __init__(self):
