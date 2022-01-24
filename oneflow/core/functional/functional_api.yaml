@@ -1616,6 +1616,10 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
+- name: "stream_touch"
+  signature: "Void (TensorTuple x) => StreamTouch"
+  bind_python: True
+
 - name: "broadcast"
   signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
@@ -1923,3 +1927,11 @@
 - name: "cumsum_grad"
   signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
   bind_python: False 
+
+- name: "cumprod"
+  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  bind_python: True
+
+- name: "cumprod_grad"
+  signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
+  bind_python: False
