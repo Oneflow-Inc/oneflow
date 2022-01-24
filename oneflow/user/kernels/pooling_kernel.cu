@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace {
 
-constexpr int kBlockSize = cuda::elementwise::kBlockSize << 2;
+constexpr int kBlockSize = cuda::elementwise::kBlockSize;
 
 int GetMinThreadNum(int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
 
