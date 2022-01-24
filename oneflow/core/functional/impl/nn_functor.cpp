@@ -296,7 +296,6 @@ class LayerNormAffineFunctor {
                          .Output("y")
                          .Output("mean")
                          .Output("inv_variance")
-                         .Output("normalized")
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -351,6 +350,31 @@ class PoolingNDFunctor {
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
+    if (x->ndim() == 4 && data_format == "channels_last") {
+      if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
+        // legacy tf style maxpool2d , use cudnn implementation
+        // with high performance but do not support dilation/return_indices
+        MutableAttrMap attrs;
+        std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
+        std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
+
+        JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+        if (stride.has_value()) {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(stride)));
+        } else {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", kernel_size));
+        }
+        JUST(attrs.SetAttr<std::string>("padding", "customized"));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+        JUST(attrs.SetAttr<std::string>("data_format", data_format));
+        JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+        TensorTuple output;
+        output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
+        return output;
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
@@ -369,19 +393,13 @@ class PoolingNDFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
 class TFAvgPool2DFunctor : public PoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
-  }
-};
-
-class TFMaxPool2DFunctor : public PoolNDFunctor {
- public:
-  TFMaxPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -396,6 +414,7 @@ class Maxpool2DFunctor : public PoolingNDFunctor {
  public:
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
+    tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -1451,9 +1470,9 @@ class DropoutFunctor {
                                         .Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& addend, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+                           const bool& training, const Optional<one::Generator>& generator,
+                           const Optional<one::Tensor>& addend) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
@@ -1663,21 +1682,27 @@ class L2NormalizeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
                            const float& epsilon) const {
+    const auto ndims = input->shape()->NumAxes();
+    const auto final_dim = ndims - 1;
+
+    auto axis_ = axis >= 0 ? axis : axis + ndims;
+    CHECK_GE_OR_RETURN(axis_, 0) << "Axis should >=0 but axis is " << axis_ << " now.";
+    CHECK_LE_OR_RETURN(axis_, final_dim)
+        << "Axis should <" << ndims << " but axis is " << axis_ << " now.";
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", 0));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<int32_t>("axis", final_dim));
 
-    if (axis != 0) {
-      std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
-      for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
-      std::swap(input_perm[0], input_perm[static_cast<size_t>(axis)]);
+    if (axis_ == final_dim) { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs); }
 
-      const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
-      return functional::Transpose(result->at(0), input_perm);
-    }
+    std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+    for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
+    std::swap(input_perm[final_dim], input_perm[static_cast<size_t>(axis_)]);
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
+    return functional::Transpose(result->at(0), input_perm);
   }
 
  private:
@@ -1687,7 +1712,11 @@ class L2NormalizeFunctor {
 class NormalizeFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
-                           const int32_t& dim, const float& eps) const {
+                           const int32_t& dim, const float& eps,
+                           const bool& use_l2_norm_kernel) const {
+    if (use_l2_norm_kernel && (std::fabs(p - 2.0f) < std::numeric_limits<float>::min())) {
+      return functional::L2Normalize(input, dim, eps);
+    }
     return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
                                           const int32_t&)>(
                [](const auto& x, const float& p, const int32_t& dim) -> Maybe<Tensor> {
@@ -2154,7 +2183,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
-  m.add_functor<impl::TFMaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");

@@ -75,6 +75,26 @@ class TestEye(flow.unittest.TestCase):
         x = torch.eye(n=n, m=m, device=random_device())
         return x
 
+    @autotest(check_graph=False)
+    def test_eye_bool_with_random_data(test_case):
+        n = random().to(int)
+        m = random().to(int)
+        x = torch.eye(n=n, m=m)
+        device = random_device()
+        x.to(device=device, dtype=torch.bool)
+        x = random_pytorch_tensor().to(device)
+        return x
+
+    @autotest(check_graph=True, auto_backward=False)
+    def test_eye_with_0dim_data(test_case):
+        n = random().to(int)
+        m = random().to(int)
+        x = torch.eye(n=n, m=m)
+        device = random_device()
+        x.to(device)
+        x = random_pytorch_tensor(ndim=0).to(device)
+        return x
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentEye(flow.unittest.TestCase):
