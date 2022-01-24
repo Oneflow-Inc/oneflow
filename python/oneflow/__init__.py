@@ -94,6 +94,8 @@ from oneflow._C import logical_xor
 from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
+from oneflow._C import repeat
+from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
 from oneflow._C import silu
@@ -173,8 +175,16 @@ from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import contiguous
+from oneflow._C import cumprod
 from oneflow._C import swapaxes
 from oneflow._C import t
+from oneflow._C import equal
+from oneflow._C import equal as eq
+from oneflow._C import not_equal
+from oneflow._C import not_equal as ne
+from oneflow._C import less as lt
+from oneflow._C import less_equal as le
+
 
 from . import sbp
 import atexit
@@ -310,15 +320,9 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.comparison import eq_op as eq
-from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
-from oneflow.nn.modules.comparison import less_op as lt
-from oneflow.nn.modules.comparison import less_equal_op as le
-from oneflow.nn.modules.comparison import ne_op as ne
-from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
@@ -341,7 +345,6 @@ from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.reduce_ops import all_op as all
 from oneflow.nn.modules.reduce_ops import any_op as any
-from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
@@ -355,7 +358,6 @@ from oneflow.nn.modules.tensor_buffer import (
 )
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
-from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
