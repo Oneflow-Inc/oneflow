@@ -36,8 +36,7 @@ jobs:
           fi
           python3 -m pip install -U pip setuptools wheel
           python3 -m pip install oss2
-          python3 tools/package_mirror.py -i cmake
-          python3 tools/package_mirror.py -i oneflow/ir
+          python3 tools/package_mirror.py -i $PWD
 
   check_license_and_format:
     name: License and format
@@ -529,7 +528,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: test_resnet50_with_ci
+          ref: 96a727f566534151bff2cad445d5661f0ceedf83
           path: oneflow-models-resnet50
       - name: ResNet50 Graph DDP test
         id: models-resnet50
