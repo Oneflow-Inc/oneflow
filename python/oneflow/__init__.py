@@ -172,6 +172,7 @@ from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
+from oneflow._C import cumprod
 from oneflow._C import swapaxes
 from oneflow._C import t
 from oneflow._C import equal
