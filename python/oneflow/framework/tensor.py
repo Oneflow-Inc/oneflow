@@ -725,6 +725,18 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
+def _flip(self, dims):
+    return flow.flip(self, dims)
+
+
+def _in_top_k(self, predictions, k):
+    return flow._C.in_top_k(self, predictions, k)
+
+
+def _index_select(self, dim, index):
+    return flow.index_select(self, dim ,index)
+
+
 def _get_device(self):
     if self.device.type == "cuda":
         return self.device.index
@@ -886,6 +898,8 @@ def RegisterMethods():
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
+    Tensor.in_top_k = _in_top_k
+    Tensor.index_select = _index_select
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum

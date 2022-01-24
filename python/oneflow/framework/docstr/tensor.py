@@ -118,6 +118,31 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flip,
+    """
+    See :func:`oneflow.flip`
+    """
+)
+
+add_docstr(
+    oneflow.Tensor.in_top_k,
+    """
+    in_top_k(targets, predictions, k) -> Tensor
+
+    See :func:`oneflow.in_top_k`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.index_select,
+    """
+    input.index_select(dim, index) -> Tensor
+
+    See :func:`oneflow.index_select`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`

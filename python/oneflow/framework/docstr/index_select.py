@@ -13,16 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import Tensor, register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
+add_docstr(
+    oneflow.index_select,
+    """
+    input.index_select(dim, index) -> Tensor
 
-def _input_args_is_int(args):
-    return all((isinstance(x, int) for x in args))
-
-
-def index_select_op(input, dim, index):
-    r"""The interface is consistent with PyTorch.    
+    The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch-cn.readthedocs.io/zh/latest/package_references/torch/#torchindex_select
 
     Select values along an axis specified by `dim`.
@@ -55,32 +54,5 @@ def index_select_op(input, dim, index):
         >>> output
         tensor([[1, 2],
                 [4, 5]], dtype=oneflow.int32)
-    """
-    assert len(index.shape) == 1, "Dimensions of index should be 1-D"
-    assert (
-        dim < len(input.shape) and dim >= 0
-    ), "Value of dim is out of range(dim should be in the range of [0, input dimensions) )"
-    assert _input_args_is_int(
-        index.tolist()
-    ), "input index parameter is not legal!(index should be an 1-D int tensor)"
-    index_rshp = list(input.shape)
-
-    for index_i in index:
-        assert (
-            index_i < index_rshp[dim]
-        ), "index is out of range(index shuold be lower than the dim-th dimension of input)"
-
-    index_rshp[dim] = 1
-    index_gather = index[0].expand(*index_rshp)
-    if index.size()[0] > 1:
-        for index_i in index[1:]:
-            x = index_i.expand(*index_rshp)
-            index_gather = flow.cat((index_gather, x), dim)
-
-    return flow.gather(input, dim, index_gather)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)

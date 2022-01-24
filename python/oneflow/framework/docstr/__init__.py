@@ -46,3 +46,8 @@ from .clamp import *
 from .erfinv import *
 from .swapaxes import *
 from .tensor_t import *
+from .expand import *
+from .flip import *
+from .in_top_k import *
+from .index_select import *
+from .consistent_cast import *

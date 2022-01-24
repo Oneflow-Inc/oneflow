@@ -132,6 +132,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import in_top_k
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
@@ -320,7 +321,6 @@ from oneflow.nn.modules.comparison import less_equal_op as le
 from oneflow.nn.modules.comparison import ne_op as ne
 from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
