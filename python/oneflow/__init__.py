@@ -175,6 +175,13 @@ from oneflow._C import cumsum
 from oneflow._C import swapaxes
 from oneflow._C import t
 from oneflow._C import masked_fill
+from oneflow._C import equal
+from oneflow._C import equal as eq
+from oneflow._C import not_equal
+from oneflow._C import not_equal as ne
+from oneflow._C import less as lt
+from oneflow._C import less_equal as le
+
 
 from . import sbp
 import atexit
@@ -310,15 +317,9 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.comparison import eq_op as eq
-from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
-from oneflow.nn.modules.comparison import less_op as lt
-from oneflow.nn.modules.comparison import less_equal_op as le
-from oneflow.nn.modules.comparison import ne_op as ne
-from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select

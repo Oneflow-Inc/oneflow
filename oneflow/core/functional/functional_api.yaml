@@ -991,13 +991,6 @@
     String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
   bind_python: True
 
-- name: "max_pool2d_nhwc"
-  signature:
-    'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
-    Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
-  bind_python: True
-
 - name: "ctc_loss_grad"
   signature:
     "Tensor (Tensor loss_grad, Tensor log_probs, Tensor targets,
@@ -1758,8 +1751,8 @@
 
 - name: "split"
   signature: [
-    "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
-    "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+    "TensorTuple (Tensor x, Int64 split_size_or_sections, Int64 dim=0) => Split",
+    "TensorTuple (Tensor x, Int64List split_size_or_sections, Int64 dim=0) => SplitWithSize",
   ]
   bind_python: True
 
