@@ -322,30 +322,35 @@ def GetDualObject(name, pytorch, oneflow):
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
-                            graph_args = []
-                            arg_device_type = "cpu"
-                            for arg in oneflow_args:
-                                if flow.is_tensor(arg):
-                                    copy_arg = arg.clone().detach()
-                                    arg_device_type = arg.device.type
-                                else:
-                                    copy_arg = copy.deepcopy(arg)
-                                graph_args.append(copy_arg)
-                            graph_kwargs = {}
-                            for key, value in oneflow_kwargs.items():
-                                if flow.is_tensor(value):
-                                    graph_kwargs[key] = value.clone().detach()
-                                else:
-                                    graph_kwargs[key] = copy.deepcopy(value)
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
+                                graph_args = []
+                                for arg in oneflow_args:
+                                    if flow.is_tensor(arg):
+                                        copy_arg = arg.clone().detach()
+                                    else:
+                                        copy_arg = copy.deepcopy(arg)
+                                    graph_args.append(copy_arg)
+                                graph_kwargs = {}
+                                for key, value in oneflow_kwargs.items():
+                                    if flow.is_tensor(value):
+                                        graph_kwargs[key] = value.clone().detach()
+                                    else:
+                                        graph_kwargs[key] = copy.deepcopy(value)
+
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_oneflow = copy.deepcopy(oneflow).to(
-                                        arg_device_type
-                                    )
+                                    graph_train_oneflow = copy.deepcopy(oneflow)
+                                    if not is_consistent():
+                                        arg_device_type = "cpu"
+                                        for arg in oneflow_args:
+                                            if flow.is_tensor(arg):
+                                                arg_device_type = arg.device.type
+                                        graph_train_oneflow = graph_train_oneflow.to(
+                                            arg_device_type
+                                        )
                                     of_sgd = flow.optim.SGD(
                                         graph_train_oneflow.parameters(),
                                         lr=0.001,
@@ -490,21 +495,22 @@ def GetDualObject(name, pytorch, oneflow):
                                     "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                                 )
                             raise PyTorchDoesNotSupportError(e)
-                        tensor_graph_args = []
-                        for arg in oneflow_args:
-                            if flow.is_tensor(arg):
-                                copy_arg = arg.clone().detach()
-                            else:
-                                copy_arg = copy.deepcopy(arg)
-                            tensor_graph_args.append(copy_arg)
-                        tensor_graph_kwargs = {}
-                        for key, value in oneflow_kwargs.items():
-                            if flow.is_tensor(value):
-                                tensor_graph_kwargs[key] = value.clone().detach()
-                            else:
-                                tensor_graph_kwargs[key] = copy.deepcopy(value)
+
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
+                            tensor_graph_args = []
+                            for arg in oneflow_args:
+                                if flow.is_tensor(arg):
+                                    copy_arg = arg.clone().detach()
+                                else:
+                                    copy_arg = copy.deepcopy(arg)
+                                tensor_graph_args.append(copy_arg)
+                            tensor_graph_kwargs = {}
+                            for key, value in oneflow_kwargs.items():
+                                if flow.is_tensor(value):
+                                    tensor_graph_kwargs[key] = value.clone().detach()
+                                else:
+                                    tensor_graph_kwargs[key] = copy.deepcopy(value)
 
                             class TestGraphOfTensorMethod(flow.nn.Graph):
                                 def __init__(self):
