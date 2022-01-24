@@ -58,6 +58,11 @@ class TensorStorage {
     last_used_device_ = last_used_device;
   }
 
+  void Release() {
+    non_pod_allocator_.reset();
+    blob_dptr_.reset();
+  }
+
  private:
   size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
@@ -94,6 +99,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
+    tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
     return Maybe<void>::Ok();
   }
