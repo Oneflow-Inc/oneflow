@@ -32,7 +32,7 @@ __global__ void MaskGpu(const int64_t n, const T* x, const K* mask, T* y) {
 
 template<typename T, typename K>
 __global__ void ScaleGpu(const int64_t n, const T* x, const K* scale, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * scale[i]; }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * static_cast<T>(scale[i]); }
 }
 
 }  // namespace
@@ -59,7 +59,8 @@ struct TwoStageReduceKernelUtil<DeviceType::kCUDA, T, K> {
   template struct TwoStageReduceKernelUtil<DeviceType::kCUDA, OF_PP_PAIR_FIRST(data_type_pair), \
                                            OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA,
-                                 FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
 #undef INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow

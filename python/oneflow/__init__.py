@@ -168,7 +168,6 @@ from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
-from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
@@ -176,6 +175,13 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import swapaxes
 from oneflow._C import t
+from oneflow._C import equal
+from oneflow._C import equal as eq
+from oneflow._C import not_equal
+from oneflow._C import not_equal as ne
+from oneflow._C import less as lt
+from oneflow._C import less_equal as le
+
 
 from . import sbp
 import atexit
@@ -312,15 +318,9 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.comparison import eq_op as eq
-from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
-from oneflow.nn.modules.comparison import less_op as lt
-from oneflow.nn.modules.comparison import less_equal_op as le
-from oneflow.nn.modules.comparison import ne_op as ne
-from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
