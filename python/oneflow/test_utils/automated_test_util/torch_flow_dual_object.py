@@ -16,6 +16,7 @@ limitations under the License.
 import collections.abc
 import functools
 import inspect
+import copy
 import os
 import warnings
 import copy
@@ -45,7 +46,8 @@ testing = False
 testing_graph = False
 global_check_allclose = True
 global_atol = 1e-5
-gloal_rtol = 1e-5
+global_rtol = 1e-5
+global_backward = True
 
 
 def torch_tensor_to_flow(x):
@@ -222,7 +224,7 @@ def check_eager_graph_tensor(eager_res, graph_res):
         equality_res = np.allclose(
             eager_res.numpy(),
             graph_res.numpy(),
-            rtol=gloal_rtol,
+            rtol=global_rtol,
             atol=global_atol,
             equal_nan=True,
         )
@@ -321,9 +323,11 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             graph_args = []
+                            arg_device_type = "cpu"
                             for arg in oneflow_args:
                                 if flow.is_tensor(arg):
                                     copy_arg = arg.clone().detach()
+                                    arg_device_type = arg.device.type
                                 else:
                                     copy_arg = copy.deepcopy(arg)
                                 graph_args.append(copy_arg)
@@ -339,14 +343,39 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
+                                    graph_train_oneflow = copy.deepcopy(oneflow).to(
+                                        arg_device_type
+                                    )
+                                    of_sgd = flow.optim.SGD(
+                                        graph_train_oneflow.parameters(),
+                                        lr=0.001,
+                                        momentum=0.9,
+                                    )
+                                    graph_train_parameters_len = 0
+                                    for param in oneflow._parameters.values():
+                                        if param is not None:
+                                            graph_train_parameters_len += 1
 
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
-                                            self.test_module = oneflow
+                                            self.test_module = graph_train_oneflow
+                                            if (
+                                                global_backward
+                                                and graph_train_parameters_len
+                                            ):
+                                                self.add_optimizer(of_sgd)
 
                                         def build(self, *args):
-                                            return self.test_module(*args)
+                                            res = self.test_module(*args)
+                                            forward_res = res
+                                            if (
+                                                global_backward
+                                                and graph_train_parameters_len
+                                            ):
+                                                res = res.sum()
+                                                res.backward()
+                                            return forward_res
 
                                     test_g = TestGraphOfModule()
                                     if verbose:
@@ -780,10 +809,11 @@ def autotest(
                     raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
-                global global_check_allclose, global_rtol, global_atol
+                global global_check_allclose, global_rtol, global_atol, global_backward
                 global_check_allclose = check_allclose
                 global_rtol = rtol
                 global_atol = atol
+                global_backward = auto_backward
 
                 try:
                     global testing_graph
@@ -846,8 +876,9 @@ def autotest(
                 for x in dual_objects_to_test:
                     if check_allclose:
                         test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
-                    if verbose:
-                        print(f"{f.__name__} test eager passed.")
+
+                if verbose:
+                    print(f"{f.__name__} test eager passed.")
 
                 if verbose and check_graph:
                     print(f"{f.__name__} test graph passed.")
