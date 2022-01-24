@@ -270,7 +270,7 @@ endif()
 
 if(BUILD_HWLOC)
   list(APPEND oneflow_third_party_dependencies hwloc)
-  list(APPEND oneflow_third_party_libs ${HWLOC_STATIC_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${ONEFLOW_HWLOC_STATIC_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${PCIACCESS_STATIC_LIBRARIES})
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HWLOC_INCLUDE_DIR})
   add_definitions(-DWITH_HWLOC)
