@@ -35,9 +35,8 @@ namespace oneflow {
     if (!is_printed) { blocking::StackInfoCallback(); }
     is_printed = true;
   };
-  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds, TryPrintStackInfo,
-                            TransportUtil::BlockingWarningIntervalSeconds()));
-  return Maybe<void>::Ok();
+  return SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds, TryPrintStackInfo,
+                              TransportUtil::BlockingWarningIntervalSeconds());
 }
 
 namespace {

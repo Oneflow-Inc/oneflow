@@ -149,7 +149,9 @@ Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp> symbol) {
   FlatNdSbpAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  auto ret = TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds());
+  CHECK_OR_RETURN(ret.IsOk()) << "maybe execute different code in different ranks, please check if "
+                                 "the code is branched and operates on the global tensor.";
   JUST(ctx.Check());
   return Maybe<void>::Ok();
 }
