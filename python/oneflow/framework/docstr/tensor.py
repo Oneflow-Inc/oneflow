@@ -327,6 +327,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.argwhere,
+    """
+    See :func:`oneflow.argwhere`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atanh,
     """
     See :func:`oneflow.atanh`
@@ -438,6 +445,34 @@ add_docstr(
     oneflow.Tensor.erfinv_,
     """
     Inplace version of :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.eq,
+    """
+    See :func:`oneflow.eq`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.lt,
+    """
+    See :func:`oneflow.lt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.le,
+    """
+    See :func:`oneflow.le`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ne,
+    """
+    See :func:`oneflow.ne`
     """,
 )
 
@@ -680,6 +715,29 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.to_local,
+    """Returns the local tensor of a consistent tensor.
+
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.tensor(np_arr, dtype=flow.float32)
+        >>> placement = flow.placement("cpu", {0:range(1)})
+        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
+        >>> consistent_tensor.to_local()
+        tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.uniform_,
     """
     Tensor.uniform_(from=0, to=1) → Tensor
@@ -780,5 +838,23 @@ add_docstr(
     oneflow.Tensor.clip_,
     """
     Alias for :func:`oneflow.Tensor.clamp_`. 
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.t,
+    """
+    Tensor.t() → Tensor
+
+    See :func:`oneflow.t`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.T,
+    """
+    Is this Tensor with its dimensions reversed.
+ 
+    If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
     """,
 )

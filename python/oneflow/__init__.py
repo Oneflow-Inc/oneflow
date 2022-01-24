@@ -167,7 +167,6 @@ from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
-from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
@@ -175,6 +174,13 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
+from oneflow._C import t
+from oneflow._C import equal
+from oneflow._C import equal as eq
+from oneflow._C import not_equal
+from oneflow._C import not_equal as ne
+from oneflow._C import less as lt
+from oneflow._C import less_equal as le
 
 
 from . import sbp
@@ -297,6 +303,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
@@ -310,15 +317,9 @@ from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.comparison import eq_op as eq
-from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
-from oneflow.nn.modules.comparison import less_op as lt
-from oneflow.nn.modules.comparison import less_equal_op as le
-from oneflow.nn.modules.comparison import ne_op as ne
-from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
@@ -392,7 +393,6 @@ from . import (
     amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
-import oneflow.utils.vision
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
