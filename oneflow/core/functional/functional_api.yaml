@@ -1608,6 +1608,10 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
+- name: "stream_touch"
+  signature: "Void (TensorTuple x) => StreamTouch"
+  bind_python: True
+
 - name: "broadcast"
   signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
