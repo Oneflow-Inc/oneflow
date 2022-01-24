@@ -127,11 +127,11 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return self.eq(other)
+    return flow._C.equal(self, other)
 
 
 def _ne(self, other):
-    return self.ne(other)
+    return flow._C.not_equal(self, other)
 
 
 def _and(self, other):
@@ -207,7 +207,7 @@ def _gt(self, other):
 
 
 def _lt(self, other):
-    return flow.lt(self, other)
+    return flow._C.less(self, other)
 
 
 def _ge(self, other):
@@ -215,7 +215,7 @@ def _ge(self, other):
 
 
 def _le(self, other):
-    return flow.le(self, other)
+    return flow._C.less_equal(self, other)
 
 
 def _mul(self, other):
@@ -394,6 +394,10 @@ def _arcsin(self):
     return flow.arcsin(self)
 
 
+def _argwhere(self):
+    return flow.argwhere(self)
+
+
 def _asinh(self):
     return flow.asinh(self)
 
@@ -550,6 +554,10 @@ def _tril(self, diagonal=0):
 
 def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
+
+
+def _to_local(self):
+    return flow.to_local(self)
 
 
 def _relu(self, inplace=False):
@@ -745,6 +753,26 @@ def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
 
+def _repeat(self, *sizes):
+    if len(sizes) == 1:
+        new_sizes = sizes[0]
+        if isinstance(new_sizes, int):
+            new_sizes = (new_sizes,)
+    else:
+        new_sizes = sizes
+    return flow._C.repeat(self, new_sizes)
+
+
+def _tile(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.tile(self, new_dims)
+
+
 def _T(self):
     return flow._C.T(self)
 
@@ -833,6 +861,7 @@ def RegisterMethods():
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
+    Tensor.argwhere = _argwhere
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh
@@ -912,6 +941,8 @@ def RegisterMethods():
     Tensor.roll = _roll
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
+    Tensor.repeat = _repeat
+    Tensor.tile = _tile
     Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
@@ -925,6 +956,11 @@ def RegisterMethods():
     Tensor.any = _any
     Tensor.T = property(_T)
     Tensor.t = _t
+    Tensor.eq = _eq
+    Tensor.ne = _ne
+    Tensor.lt = _lt
+    Tensor.le = _le
+    Tensor.to_local = _to_local
 
 
 def register_tensor_op(op_name):
