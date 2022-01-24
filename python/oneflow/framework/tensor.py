@@ -761,6 +761,42 @@ def _t(self):
     return flow._C.t(self)
 
 
+def _topk(self, k, dim, largest, sorted):
+    return self.topk(k, dim, largest, sorted)
+
+
+def _nms(self, scores, iou_threshold: float):
+    score_inds = flow.argsort(scores, dim=0, descending=True)
+    boxes = flow._C.gather(self, score_inds, axis=0)
+    keep = flow._C.nms(boxes, iou_threshold)
+    index = flow.squeeze(flow.argwhere(keep), dim=[1])
+    return flow._C.gather(score_inds, index, axis=0)
+
+
+def _nonzero(self, as_tuple):
+    return flow.nonzero(self, as_tuple)
+
+
+def _max(self, dim, keepdim):
+    return flow.max(self, dim, keepdim)
+
+
+def _min(self, dim, keepdim):
+    return flow.min(self, dim, keepdim)
+
+
+def _sum(self, dim, keepdim):
+    return flow.sum(self, dim, keepdim)
+
+
+def _mean(self, dim, keepdim):
+    return flow.mean(self, dim, keepdim)
+
+
+def _prod(self, dim, keepdim):
+    return flow.prod(self, dim, keepdim)
+
+
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -939,6 +975,14 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
+    Tensor.topk = _topk
+    Tensor.nms = _nms
+    Tensor.nonzero = _nonzero
+    Tensor.max = _max
+    Tensor.min = _min
+    Tensor.sum = _sum
+    Tensor.mean = _mean
+    Tensor.prod = _prod
 
 
 def register_tensor_op(op_name):

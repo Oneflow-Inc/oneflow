@@ -147,6 +147,7 @@ OneFlow Tensor Class
             std, 
             storage_offset, 
             stride, 
+            sum,
             swapaxes, 
             sub, 
             tan, 
@@ -170,3 +171,4 @@ OneFlow Tensor Class
             view, 
             where, 
             zeros_, 
+            nms,

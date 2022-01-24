@@ -46,3 +46,5 @@ from .clamp import *
 from .erfinv import *
 from .swapaxes import *
 from .tensor_t import *
+from .topk import *
+from .nms import *

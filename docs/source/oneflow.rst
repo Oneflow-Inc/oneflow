@@ -160,5 +160,7 @@ oneflow
             decode_onerec,
             from_numpy,
             cumsum,
+            topk,
+            nms,
 
 .. autofunction:: oneflow.relu

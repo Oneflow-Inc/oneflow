@@ -110,18 +110,6 @@ def nonzero_op(input, as_tuple=False):
         return res
 
 
-@register_tensor_op("nonzero")
-def nonzero_tensor_op(input, as_tuple=False):
-    """
-
-    nonzero(input, as_tuple=False) -> Tensor
-
-    See :func:`oneflow.nonzero`
-
-    """
-    return nonzero_op(input, as_tuple)
-
-
 if __name__ == "__main__":
     import doctest
 

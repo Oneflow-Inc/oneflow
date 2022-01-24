@@ -911,55 +911,6 @@ class Topk(Module):
             return (flow.gather(input, axis, indices), indices)
 
 
-@register_tensor_op("topk")
-def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
-    """Finds the values and indices of the k largest entries at specified axis.
-
-    Args:
-        input (oneflow.Tensor): Input Tensor
-        k (int): the k in “top-k”
-        dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
-        largest (bool, optional): controls whether to return largest or smallest elements
-        sorted (bool, optional): controls whether to return the elements in sorted order (Only Support True Now!)
-
-    Returns:
-        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
-        the indices are the indices of the elements in the original input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
-        >>> (values, indices) = flow.topk(flow.Tensor(x), k=3, dim=1)
-        >>> values
-        tensor([[8., 7., 3.],
-                [9., 4., 3.]], dtype=oneflow.float32)
-        >>> indices
-        tensor([[2, 3, 1],
-                [1, 2, 3]], dtype=oneflow.int64)
-        >>> values.shape
-        oneflow.Size([2, 3])
-        >>> indices.shape
-        oneflow.Size([2, 3])
-        >>> (values, indices) = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
-        >>> values
-        tensor([[1., 2.],
-                [1., 2.]], dtype=oneflow.float32)
-        >>> indices
-        tensor([[0, 4],
-                [0, 4]], dtype=oneflow.int64)
-        >>> values.shape
-        oneflow.Size([2, 2])
-        >>> indices.shape
-        oneflow.Size([2, 2])
-
-    """
-    return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
-
-
 if __name__ == "__main__":
     import doctest
 

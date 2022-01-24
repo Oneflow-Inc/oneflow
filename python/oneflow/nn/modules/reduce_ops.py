@@ -64,16 +64,6 @@ def max_op(input, dim=None, keepdim=False):
         )
 
 
-@register_tensor_op("max")
-def max_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.max(dim, index) -> Tensor
-    See :func:`oneflow.max`
-    """
-
-    return max_op(input, dim, keepdim)
-
-
 def min_op(input, dim=None, keepdim=False):
     """Computes the minimum value of all elements in the input tensor.
     
@@ -116,16 +106,6 @@ def min_op(input, dim=None, keepdim=False):
         )
 
 
-@register_tensor_op("min")
-def min_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.min(dim, index) -> Tensor
-    See :func:`oneflow.min`
-    """
-
-    return min_op(input, dim, keepdim)
-
-
 def sum_op(input, dim=None, keepdim=False):
     """Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
@@ -150,16 +130,6 @@ def sum_op(input, dim=None, keepdim=False):
     return flow._C.reduce_sum(input, axis=axis_checked, keepdims=keepdim)
 
 
-@register_tensor_op("sum")
-def sum_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.sum(dim, index) -> Tensor
-    See :func:`oneflow.sum`
-    """
-
-    return sum_op(input, dim, keepdim)
-
-
 def mean_op(input, dim=None, keepdim=False):
     """Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
@@ -181,16 +151,6 @@ def mean_op(input, dim=None, keepdim=False):
     if len(axis_checked) == 0:
         return input
     return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
-
-
-@register_tensor_op("mean")
-def mean_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.mean(dim, index) -> Tensor
-    See :func:`oneflow.mean`
-    """
-
-    return mean_op(input, dim, keepdim)
 
 
 def prod_op(input, dim=None, keepdim=False):
@@ -220,16 +180,6 @@ def prod_op(input, dim=None, keepdim=False):
     if len(axis_checked) == 0:
         return input
     return flow._C.reduce_prod(input, axis_checked, keepdim)
-
-
-@register_tensor_op("prod")
-def prod_tensor_op(input, dim=None, keepdim=False):
-    """
-    input.prod(dim, index) -> Tensor
-    See :func:`oneflow.prod`
-    """
-
-    return prod_op(input, dim, keepdim)
 
 
 def all_op(input, dim=None, keepdim=False):
