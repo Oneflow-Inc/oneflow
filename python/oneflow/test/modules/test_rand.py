@@ -105,14 +105,15 @@ class TestConstantModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-def _test_consistent_rand(test_case,shape, placement, sbp):
+
+def _test_consistent_rand(test_case, shape, placement, sbp):
     x = flow.rand(*shape, placement=placement, sbp=sbp)
     test_case.assertEqual(x.shape, shape)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
-def _test_consistent_rand_graph(test_case,shape, placement, sbp):
+def _test_consistent_rand_graph(test_case, shape, placement, sbp):
     class ConsistentRandGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
