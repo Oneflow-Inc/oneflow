@@ -27,6 +27,7 @@ jobs:
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
+      OSS_ONEFLOW_REF_DIR: canary/${{ github.event.inputs.oneflow-ref }}
       ONEFLOW_SRC_HEAD: oneflow-head
     steps:
       - name: Fix permissions
@@ -88,3 +89,27 @@ jobs:
             --dir_key ${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }} \
             --index_key=${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}/index.html \
             --index_key=${{ env.OSS_GITHUB_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html
+      - name: Update pip index
+        if: ${{ github.event.inputs.oneflow-ref == '' }}
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          python3 -m pip install oss2 beautifulsoup4 --user
+          python3 tools/create_pip_index.py -b ${{ env.OSS_BUCKET }} \
+            --dir_key ${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }} \
+            --index_key=${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}/index.html \
+            --index_key=${{ env.OSS_GITHUB_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html
+      - name: Update pip index
+        if: ${{ github.event.inputs.oneflow-ref != '' }}
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          python3 -m pip install oss2 beautifulsoup4 --user
+          python3 tools/create_pip_index.py -b ${{ env.OSS_BUCKET }} \
+            --dir_key ${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }} \
+            --index_key=${{ env.OSS_WHEEL_HOUSE_DIR }}/${{ env.COMPUTE_PLATFORM }}/index.html \
+            --index_key=${{ env.OSS_ONEFLOW_REF_DIR}}/${{ env.COMPUTE_PLATFORM }}/index.html
