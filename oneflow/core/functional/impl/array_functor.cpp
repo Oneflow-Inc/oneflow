@@ -498,8 +498,7 @@ class ConcatFunctor {
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]->contiguous(); }
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs))
-      );
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -1974,17 +1973,11 @@ class TensorGetItemFunctor {
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
-    if (shape != *(result->shape())) { 
-      result = JUST(Reshape(result->contiguous(), shape)); 
-    }
-    if (!tensor_indices.empty()) { 
-      result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); 
-    }
+    if (shape != *(result->shape())) { result = JUST(Reshape(result->contiguous(), shape)); }
+    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
 
     // TODO(): Returns a view of tensor `x`.
-    if (result == x) { 
-      result = JUST(Identity(x)); 
-    }
+    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
@@ -2526,8 +2519,7 @@ class MeshgridFunctor {
     Shape view_shape(view_shape_vec);
     for (int i = 0; i < size; ++i) {
       view_shape.Set(i, -1);
-      std::shared_ptr<one::Tensor> reshaped =
-          JUST(Reshape(tensor_consts.at(i), view_shape));
+      std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensor_consts.at(i), view_shape));
       grids[i] = JUST(Expand(reshaped, grids_shape))->contiguous();
       view_shape.Set(i, 1);
     }
