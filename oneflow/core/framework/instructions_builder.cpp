@@ -1080,6 +1080,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     // Disable inter-device instruction sequential for tensor used by nccl stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     op_device = Optional<Symbol<Device>>(NullOpt);
+  } else if (producer_op_device->type() == "async_launched_nccl") {
+    // Disable inter-device instruction sequential for tensor produced by nccl stream.
+    op_device = Optional<Symbol<Device>>(NullOpt);
   } else {
     op_device = producer_op_device;
   }
