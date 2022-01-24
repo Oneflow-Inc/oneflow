@@ -274,12 +274,17 @@ endif()
 
 include(op_schema)
 
+get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
+get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
+
+target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
+
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema -Wl,--no-whole-archive -ldl -lrt)
-  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs} -Wl,--no-whole-archive -ldl -lrt)
+  target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs} ${EXTERNAL_TARGETS} -Wl,--no-whole-archive -ldl -lrt)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
@@ -356,11 +361,7 @@ if (BUILD_CPP_API)
   file(GLOB_RECURSE of_cpp_api_files
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.cpp
     ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/*.h)
-  if(BUILD_MONOLITHIC_LIBONEFLOW_CPP_SO)
-    oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
-  else()
-    oneflow_add_library(oneflow_cpp ${of_cpp_api_files})
-  endif()
+  oneflow_add_library(oneflow_cpp SHARED ${of_cpp_api_files})
   set_target_properties(oneflow_cpp PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}" LIBRARY_OUTPUT_DIRECTORY "${LIBONEFLOW_LIBRARY_DIR}")
   target_link_libraries(oneflow_cpp PRIVATE ${of_libs} of_api_common ${oneflow_third_party_libs})
 endif()
@@ -392,7 +393,8 @@ if(BUILD_TESTING)
   if (BUILD_CPP_API)
     file(GLOB_RECURSE cpp_api_test_files ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/tests/*.cpp)
     oneflow_add_test(oneflow_cpp_api_testexe SRCS ${cpp_api_test_files} TEST_NAME oneflow_cpp_api_test WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs})
+    find_package(Threads REQUIRED)
+    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs} Threads::Threads)
   endif()
 endif()
 
@@ -463,28 +465,93 @@ if(BUILD_PYTHON)
 
 endif(BUILD_PYTHON)
 
+if(BUILD_CPP_API)
 
-set(LIBONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/liboneflow_cpp/include/oneflow/api")
-install(DIRECTORY oneflow/api/cpp DESTINATION ${LIBONEFLOW_INCLUDE_DIR}
-  COMPONENT oneflow_cpp_include
-  EXCLUDE_FROM_ALL
-  FILES_MATCHING
-  PATTERN "*.h"
-)
+  set(LIBONEFLOW_DIR ${PROJECT_BINARY_DIR}/liboneflow_cpp)
 
-add_custom_target(install_oneflow_cpp_include
-  COMMAND
-      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_include
-      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  DEPENDS oneflow_internal
-)
-if (BUILD_CPP_API)
-  add_dependencies(of_include_copy oneflow_cpp)
-  add_dependencies(of_include_copy install_oneflow_cpp_include)
-  copy_files("${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake" "${PROJECT_SOURCE_DIR}/cmake" "${LIBONEFLOW_SHARE_DIR}" of_include_copy)
+  install(DIRECTORY oneflow/api/cpp/
+    COMPONENT oneflow_cpp_all
+    DESTINATION include/oneflow
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "tests" EXCLUDE
+  )
+  set(LIBONEFLOW_THIRD_PARTY_DIRS)
+  checkDirAndAppendSlash(DIR ${PROTOBUF_LIBRARY_DIR} OUTPUT PROTOBUF_LIBRARY_DIR_APPENDED)
+  list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${PROTOBUF_LIBRARY_DIR_APPENDED})
+  if(BUILD_CUDA)
+    checkDirAndAppendSlash(DIR ${NCCL_LIBRARY_DIR} OUTPUT NCCL_LIBRARY_DIR_APPENDED)
+    list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${NCCL_LIBRARY_DIR_APPENDED})
+  endif()
 
-  if(WITH_MLIR)
-    file(GLOB mlir_shared_libs "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib/*.14git")
-    copy_files("${mlir_shared_libs}" "${PROJECT_BINARY_DIR}/oneflow/ir/llvm_monorepo-build/lib" "${LIBONEFLOW_LIBRARY_DIR}" of_include_copy)
-  endif(WITH_MLIR)
+  install(DIRECTORY ${LIBONEFLOW_THIRD_PARTY_DIRS}
+    COMPONENT oneflow_cpp_all
+    DESTINATION lib
+    FILES_MATCHING
+    PATTERN "*.so*"
+    PATTERN "*.a" EXCLUDE
+    PATTERN "libprotobuf-lite.so*" EXCLUDE
+    PATTERN "libprotoc.so*" EXCLUDE
+    PATTERN "cmake" EXCLUDE
+    PATTERN "pkgconfig" EXCLUDE
+  )
+
+  install(FILES ${PROJECT_SOURCE_DIR}/cmake/oneflow-config.cmake
+    COMPONENT oneflow_cpp_all
+    DESTINATION share
+  )
+
+  get_property(MLIR_RELATED_TARGETS GLOBAL PROPERTY MLIR_EXPORTS)
+  get_property(LLVM_RELATED_TARGETS GLOBAL PROPERTY LLVM_EXPORTS)
+
+  list(REMOVE_ITEM LLVM_RELATED_TARGETS
+    count
+    not
+    FileCheck
+    lli-child-target
+    llvm-jitlink-executor
+    llvm-PerfectShuffle
+    llvm-tblgen
+    mlir-tblgen
+    obj2yaml
+    oneflow_tblgen
+    yaml-bench
+    yaml2obj
+  )
+
+  set(LIBONEFLOW_TARGETS)
+  list(APPEND LIBONEFLOW_TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj glog ${MLIR_RELATED_TARGETS} ${LLVM_RELATED_TARGETS} ${EXTERNAL_TARGETS})
+
+  if(BUILD_TESTING)
+    list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)
+    list(APPEND LIBONEFLOW_TARGETS oneflow_testexe)
+  endif(BUILD_TESTING)
+
+  install(TARGETS ${LIBONEFLOW_TARGETS}
+    COMPONENT oneflow_cpp_all
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+  )
+
+  add_custom_target(install_oneflow_cpp
+    COMMAND
+        "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=oneflow_cpp_all
+        -DCMAKE_INSTALL_PREFIX="${LIBONEFLOW_DIR}"
+        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+    DEPENDS oneflow_cpp
+  )
+  if(BUILD_TESTING)
+    add_dependencies(install_oneflow_cpp oneflow_cpp_api_testexe oneflow_testexe)
+  endif(BUILD_TESTING)
+  add_dependencies(of_include_copy install_oneflow_cpp)
+
+  string(TOLOWER ${CMAKE_SYSTEM_NAME} CPACK_SYSTEM_NAME)
+  set(CPACK_GENERATOR ZIP)
+  set(CPACK_PACKAGE_DIRECTORY ${PROJECT_BINARY_DIR}/cpack)
+  set(CPACK_PACKAGE_NAME liboneflow)
+  # TODO: by Shenghang, unify python and c++ version genenerating and getting
+  set(CPACK_PACKAGE_VERSION ${ONEFLOW_CURRENT_VERSION})
+  set(CPACK_INSTALL_CMAKE_PROJECTS ${PROJECT_BINARY_DIR};oneflow;oneflow_cpp_all;/)
+  include(CPack)
 endif(BUILD_CPP_API)
