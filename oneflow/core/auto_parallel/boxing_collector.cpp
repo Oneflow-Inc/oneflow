@@ -43,12 +43,19 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 }  // namespace
 
 // Construct a boxing collector with given maximum number of axis
-void BoxingCollector::Init(int32_t max_axis) {
+void BoxingCollector::Init(int32_t max_axis, double transfer_cost_) {
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
+  SetTransferCost(transfer_cost_);
   CollectUniverse(max_axis);
   GenerateNdSbpList();
   GenerateCombination(2);
+}
+
+// Set up the cost incresement after each middle node
+void BoxingCollector::SetTransferCost(double transfer_cost_) {
+  transfer_cost = transfer_cost_;
+  if (transfer_cost < 0) { transfer_cost = 0.0; }
 }
 
 // Collect Sbp Parallel
@@ -138,7 +145,7 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
         // k is the middle node, i -> k -> j
         for (int32_t k = 0; k < n; k++) {
           if (NotMiddleNode(i, j, k, middle_node_num_ik)) { continue; }
-          double curr_copy_cost = minimum_copy_cost[i][k] + minimum_copy_cost[k][j];
+          double curr_copy_cost = minimum_copy_cost[i][k] + minimum_copy_cost[k][j] + transfer_cost;
           if (curr_copy_cost < minimum_copy_cost[i][j]) {
             minimum_copy_cost[i][j] = curr_copy_cost;
           }
@@ -317,6 +324,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   // Customized boxing collector and try the algorithm again
   BoxingCollector customized_boxing_collector;
   customized_boxing_collector.CollectUniverse(logical_blob_desc.shape().NumAxes());
+  customized_boxing_collector.SetTransferCost(transfer_cost);
   customized_boxing_collector.GenerateNdSbpList();
   // Filter out unsuitable middle nodes before computing minimum cost.
   customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_hierarchy);
