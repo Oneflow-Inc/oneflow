@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(check_graph=False)
 def _test_bmm_with_random_data(test_case, placement, sbp):
     x = random_pytorch_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to_consistent(
         placement=placement, sbp=sbp

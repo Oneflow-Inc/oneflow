@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(check_graph=False)
 def _test_broadcast_like_with_random_data(test_case, placement, sbp):
     x = random_pytorch_tensor(ndim=3, dim0=8, dim1=1, dim2=1).to_consistent(
         placement=placement, sbp=sbp

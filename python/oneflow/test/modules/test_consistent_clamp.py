@@ -11,6 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from random import choice
 import unittest
 from collections import OrderedDict
 
@@ -22,21 +23,27 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-
 @autotest(check_graph=False)
-def _test_ceil_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(ndim=2, dim0=8, dim1=5).to_consistent(
+def _test_clamp(test_case, placement, sbp):
+    x = random_pytorch_tensor(
+        ndim=4,
+        dim1=random(low=4, high=8).to(int),
+        dim2=random(low=4, high=8).to(int),
+        dim3=random(low=4, high=8).to(int),
+    ).to_consistent(
         placement=placement, sbp=sbp
     )
+    arg = choice([(None, 0.5), (0.1, None), (0.1, 0.5)])
+    y = torch.clamp(x, arg[0], arg[1])
+    return y
 
-    return torch.ceil(x)
 
 class TestModule(flow.unittest.TestCase):
     @consistent
     def test_bmm_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_ceil_with_random_data(test_case, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=4):
+                _test_clamp(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
