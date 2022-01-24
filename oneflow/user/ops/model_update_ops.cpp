@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -427,361 +428,369 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
-REGISTER_NO_GRAD_USER_OP("sgd_update")
-    .Input("model")
-    .Input("model_diff")
-    .OptionalInput("learning_rate")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .Attr<float>("learning_rate_val", 0.0)
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferSGDUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(ctx->inputs())
-            .Split(user_op::OpArg("model", 0), axis)
-            .Split(user_op::OpArg("model_diff", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(SgdInputArgModifyFn)
-    .SetDataTypeInferFn(InferSGDUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("indexed_slices_sgd_update")
-    .Input("model")
-    .Input("model_diff_indices")
-    .Input("model_diff_values")
-    .Input("learning_rate")
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferIndexedSlicesSGDUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      const user_op::TensorDesc& model_diff_indices =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("learning_rate", 0))
-          .Broadcast(user_op::OpArg("model_diff_indices", 0))
-          .Broadcast(user_op::OpArg("model_diff_values", 0))
-          .Split(user_op::OpArg("model", 0), 0)
-          .Build();
-      FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("learning_rate", 0))
-            .Broadcast(user_op::OpArg("model_diff_indices", 0))
-            .Split(user_op::OpArg("model_diff_values", 0),
-                   model_diff_indices.shape().NumAxes() + i - 1)
-            .Split(user_op::OpArg("model", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(IndexedSlicesSgdInputArgModifyFn)
-    .SetDataTypeInferFn(InferIndexedSlicesSGDUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("momentum_update")
-    .Input("model")
-    .Input("model_diff")
-    .Input("momentum")
-    .OptionalInput("learning_rate")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .Attr<float>("learning_rate_val", 0.0)
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<float>("beta", 0.9)
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferMomentumUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(ctx->inputs())
-            .Split(user_op::OpArg("model", 0), axis)
-            .Split(user_op::OpArg("model_diff", 0), axis)
-            .Split(user_op::OpArg("momentum", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(MomentumInputArgModifyFn)
-    .SetDataTypeInferFn(InferMomentumUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("indexed_slices_momentum_update")
-    .Input("model")
-    .Input("model_diff_indices")
-    .Input("model_diff_values")
-    .Input("learning_rate")
-    .Input("momentum")
-    .Attr<float>("beta", 0.9)
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferIndexedSlicesMomentumUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      const user_op::TensorDesc& model_diff_indices =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("learning_rate", 0))
-          .Broadcast(user_op::OpArg("model_diff_indices", 0))
-          .Broadcast(user_op::OpArg("model_diff_values", 0))
-          .Split(user_op::OpArg("model", 0), 0)
-          .Split(user_op::OpArg("momentum", 0), 0)
-          .Build();
-      FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("learning_rate", 0))
-            .Broadcast(user_op::OpArg("model_diff_indices", 0))
-            .Split(user_op::OpArg("model_diff_values", 0),
-                   model_diff_indices.shape().NumAxes() + i - 1)
-            .Split(user_op::OpArg("model", 0), i)
-            .Split(user_op::OpArg("momentum", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(IndexedSlicesMomentumInputArgModifyFn)
-    .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("adam_update")
-    .Input("model")
-    .Input("model_diff")
-    .OptionalInput("learning_rate")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .OptionalInput("bias_correction1")
-    .OptionalInput("bias_correction2")
-    .Input("m")
-    .Input("v")
-    .Input("max_v")
-    .Attr<float>("learning_rate_val", 0.0)
-    .Attr<float>("bias_correction1_val", 1.0)
-    .Attr<float>("bias_correction2_val", 1.0)
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<float>("beta1", 0.9)
-    .Attr<float>("beta2", 0.999)
-    .Attr<float>("epsilon", 1e-8)
-    .Attr<float>("weight_decay", 0.0)
-    .Attr<bool>("amsgrad", false)
-    .Attr<bool>("do_bias_correction", true)
-    .SetTensorDescInferFn(InferAdamUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(ctx->inputs())
-            .Split(user_op::OpArg("model", 0), axis)
-            .Split(user_op::OpArg("model_diff", 0), axis)
-            .Split(user_op::OpArg("m", 0), axis)
-            .Split(user_op::OpArg("v", 0), axis)
-            .Split(user_op::OpArg("max_v", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetDataTypeInferFn(InferAdamUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("adagrad_update")
-    .Input("model")
-    .Input("model_diff")
-    .OptionalInput("learning_rate")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .OptionalInput("train_step")
-    .Input("sum")
-    .Attr<int>("train_step_val", 0)
-    .Attr<float>("learning_rate_val", 0.0)
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<float>("lr_decay", 0.0)
-    .Attr<float>("weight_decay", 0.0)
-    .Attr<float>("epsilon", 1e-10)
-    .SetTensorDescInferFn(InferAdagradUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(ctx->inputs())
-            .Split(user_op::OpArg("model", 0), axis)
-            .Split(user_op::OpArg("model_diff", 0), axis)
-            .Split(user_op::OpArg("sum", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(AdagradInputArgModifyFn)
-    .SetDataTypeInferFn(InferAdagradUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
-    .Input("model")
-    .Input("model_diff_indices")
-    .Input("model_diff_values")
-    .Input("learning_rate")
-    .OptionalInput("bias_correction1")
-    .OptionalInput("bias_correction2")
-    .Input("m")
-    .Input("v")
-    .Input("max_v")
-    .Attr<float>("learning_rate_val", 0.0)
-    .Attr<float>("beta1", 0.9)
-    .Attr<float>("beta2", 0.999)
-    .Attr<float>("epsilon", 1e-8)
-    .Attr<float>("weight_decay", 0.0)
-    .Attr<bool>("amsgrad", false)
-    .Attr<bool>("do_bias_correction", true)
-    .SetTensorDescInferFn(InferIndexedSlicesAdamUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      const user_op::TensorDesc& model_diff_indices =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
-      std::vector<user_op::OpArg> broadcast_args;
-      broadcast_args.emplace_back("learning_rate", 0);
-      broadcast_args.emplace_back("model_diff_indices", 0);
-      ctx->NewBuilder()
-          .Broadcast(broadcast_args)
-          .Broadcast(user_op::OpArg("model_diff_values", 0))
-          .Split(user_op::OpArg("model", 0), 0)
-          .Split(user_op::OpArg("m", 0), 0)
-          .Split(user_op::OpArg("v", 0), 0)
-          .Split(user_op::OpArg("max_v", 0), 0)
-          .Build();
-      FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(broadcast_args)
-            .Split(user_op::OpArg("model_diff_values", 0),
-                   model_diff_indices.shape().NumAxes() + i - 1)
-            .Split(user_op::OpArg("model", 0), i)
-            .Split(user_op::OpArg("m", 0), i)
-            .Split(user_op::OpArg("v", 0), i)
-            .Split(user_op::OpArg("max_v", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("lamb_update")
-    .Input("m")
-    .Input("v")
-    .Input("beta1_t")
-    .Input("beta2_t")
-    .Input("model")
-    .Input("model_diff")
-    .Input("learning_rate")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .Attr<float>("beta1")
-    .Attr<float>("beta2")
-    .Attr<float>("epsilon")
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferLambUpdateTensorDesc)
-    // every bn has sbp broadcast signature
-    .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetDataTypeInferFn(InferLambUpdateDataType)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
-
-REGISTER_NO_GRAD_USER_OP("adam_bias_correction_factor")
-    .Input("train_step")
-    .Output("out")
-    .Attr<float>("beta", 0.9)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("train_step", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = DataType::kFloat;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
-
-// every bn has sbp broadcast signature
-
-REGISTER_NO_GRAD_USER_OP("rmsprop_update")
-    .Input("model")
-    .Input("model_diff")
-    .OptionalInput("learning_rate")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .Input("mean_square")
-    .OptionalInput("mean_gradient")
-    .Attr<float>("learning_rate_val", 0.0)
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<bool>("centered", false)
-    .Attr<float>("epsilon", 1e-8)
-    .Attr<float>("decay_rate", 0.99)
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferRmsPropUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      bool centered = ctx->Attr<bool>("centered");
-      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        if (centered) {
-          ctx->NewBuilder()
-              .Broadcast(ctx->inputs())
-              .Split(user_op::OpArg("model", 0), axis)
-              .Split(user_op::OpArg("model_diff", 0), axis)
-              .Split(user_op::OpArg("mean_square", 0), axis)
-              .Split(user_op::OpArg("mean_gradient", 0), axis)
-              .Build();
-        } else {
-          ctx->NewBuilder()
-              .Broadcast(ctx->inputs())
-              .Split(user_op::OpArg("model", 0), axis)
-              .Split(user_op::OpArg("model_diff", 0), axis)
-              .Split(user_op::OpArg("mean_square", 0), axis)
-              .Build();
-        }
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(RmsPropUpdateInputArgModifyFn)
-    .SetDataTypeInferFn(InferRmsPropUpdateDataType);
-
-REGISTER_NO_GRAD_USER_OP("lars_update")
-    .Input("model")
-    .Input("model_diff")
-    .Input("learning_rate")
-    .Input("momentum")
-    .OptionalInput("scale_by_tensor")
-    .OptionalInput("skip_if")
-    .Attr<double>("scale", 1.0)
-    .Attr<float>("l1", 0.0)
-    .Attr<float>("l2", 0.0)
-    .Attr<float>("momentum_beta", 0.9)
-    .Attr<float>("epsilon", 1e-9)
-    .Attr<float>("lars_coefficient", 1e-4)
-    .Attr<float>("weight_decay", 0.0)
-    .SetTensorDescInferFn(InferLarsUpdateTensorDesc)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(ctx->inputs())
-            .Split(user_op::OpArg("model", 0), axis)
-            .Split(user_op::OpArg("model_diff", 0), axis)
-            .Split(user_op::OpArg("momentum", 0), axis)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn(LarsUpdateInputArgModifyFn)
-    .SetDataTypeInferFn(InferLarsUpdateDataType);
 
 }  // namespace
+
+/* static */ Maybe<void> SgdUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferSGDUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> SgdUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> SgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> SgdUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return SgdInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> SgdUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferSGDUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> IndexedSlicesSgdUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferIndexedSlicesSGDUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> IndexedSlicesSgdUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> IndexedSlicesSgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("learning_rate", 0))
+      .Broadcast(user_op::OpArg("model_diff_indices", 0))
+      .Broadcast(user_op::OpArg("model_diff_values", 0))
+      .Split(user_op::OpArg("model", 0), 0)
+      .Build();
+  FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("learning_rate", 0))
+        .Broadcast(user_op::OpArg("model_diff_indices", 0))
+        .Split(user_op::OpArg("model_diff_values", 0), model_diff_indices.shape().NumAxes() + i - 1)
+        .Split(user_op::OpArg("model", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> IndexedSlicesSgdUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return IndexedSlicesSgdInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> IndexedSlicesSgdUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferIndexedSlicesSGDUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> MomentumUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferMomentumUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> MomentumUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> MomentumUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Split(user_op::OpArg("momentum", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MomentumUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return MomentumInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> MomentumUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferMomentumUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferIndexedSlicesMomentumUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> IndexedSlicesMomentumUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("learning_rate", 0))
+      .Broadcast(user_op::OpArg("model_diff_indices", 0))
+      .Broadcast(user_op::OpArg("model_diff_values", 0))
+      .Split(user_op::OpArg("model", 0), 0)
+      .Split(user_op::OpArg("momentum", 0), 0)
+      .Build();
+  FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("learning_rate", 0))
+        .Broadcast(user_op::OpArg("model_diff_indices", 0))
+        .Split(user_op::OpArg("model_diff_values", 0), model_diff_indices.shape().NumAxes() + i - 1)
+        .Split(user_op::OpArg("model", 0), i)
+        .Split(user_op::OpArg("momentum", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return IndexedSlicesMomentumInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferIndexedSlicesMomentumUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> AdamUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferAdamUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdamUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Split(user_op::OpArg("m", 0), axis)
+        .Split(user_op::OpArg("v", 0), axis)
+        .Split(user_op::OpArg("max_v", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AdamUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return AdamInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> AdamUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferAdamUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> AdagradUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferAdagradUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> AdagradUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AdagradUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Split(user_op::OpArg("sum", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AdagradUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return AdagradInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> AdagradUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferAdagradUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> IndexedSlicesAdamUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferIndexedSlicesAdamUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> IndexedSlicesAdamUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> IndexedSlicesAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("model_diff_indices", 0);
+  std::vector<user_op::OpArg> broadcast_args;
+  broadcast_args.emplace_back("learning_rate", 0);
+  broadcast_args.emplace_back("model_diff_indices", 0);
+  ctx->NewBuilder()
+      .Broadcast(broadcast_args)
+      .Broadcast(user_op::OpArg("model_diff_values", 0))
+      .Split(user_op::OpArg("model", 0), 0)
+      .Split(user_op::OpArg("m", 0), 0)
+      .Split(user_op::OpArg("v", 0), 0)
+      .Split(user_op::OpArg("max_v", 0), 0)
+      .Build();
+  FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(broadcast_args)
+        .Split(user_op::OpArg("model_diff_values", 0), model_diff_indices.shape().NumAxes() + i - 1)
+        .Split(user_op::OpArg("model", 0), i)
+        .Split(user_op::OpArg("m", 0), i)
+        .Split(user_op::OpArg("v", 0), i)
+        .Split(user_op::OpArg("max_v", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> IndexedSlicesAdamUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return AdamInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> IndexedSlicesAdamUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferIndexedSlicesAdamUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> LambUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLambUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> LambUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LambUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> LambUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return LambInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> LambUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferLambUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("train_step", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> AdamBiasCorrectionFactorOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AdamBiasCorrectionFactorOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = DataType::kFloat;
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> RmspropUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferRmsPropUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> RmspropUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> RmspropUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  bool centered = ctx->Attr<bool>("centered");
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    if (centered) {
+      ctx->NewBuilder()
+          .Broadcast(ctx->inputs())
+          .Split(user_op::OpArg("model", 0), axis)
+          .Split(user_op::OpArg("model_diff", 0), axis)
+          .Split(user_op::OpArg("mean_square", 0), axis)
+          .Split(user_op::OpArg("mean_gradient", 0), axis)
+          .Build();
+    } else {
+      ctx->NewBuilder()
+          .Broadcast(ctx->inputs())
+          .Split(user_op::OpArg("model", 0), axis)
+          .Split(user_op::OpArg("model_diff", 0), axis)
+          .Split(user_op::OpArg("mean_square", 0), axis)
+          .Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> RmspropUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return RmsPropUpdateInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> RmspropUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferRmsPropUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> LarsUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLarsUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> LarsUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LarsUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Broadcast(ctx->inputs())
+        .Split(user_op::OpArg("model", 0), axis)
+        .Split(user_op::OpArg("model_diff", 0), axis)
+        .Split(user_op::OpArg("momentum", 0), axis)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> LarsUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return LarsUpdateInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> LarsUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferLarsUpdateDataType(ctx);
+}
 
 }  // namespace oneflow

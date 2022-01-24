@@ -15,8 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow._oneflow_internal.exception import IndexException
-import oneflow.framework.check_point_v2 as check_point_v2
-import oneflow.framework.tensor_str as tensor_str_util
+import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
@@ -27,29 +26,6 @@ from typing import Union
 
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
-
-
-def _tensor_numpy(eager_local_tensor):
-    assert (
-        not eager_local_tensor.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
-    if eager_local_tensor.dtype == flow.tensor_buffer:
-        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
-        tensors = flow.tensor_buffer_to_list_of_tensors(
-            eager_local_tensor, shapes, dtypes
-        )
-        return [t.numpy() for t in tensors]
-    method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
-    copy_to_numpy = getattr(eager_local_tensor, method_name)
-
-    ndarray = np.empty(
-        shape=tuple(eager_local_tensor.shape),
-        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
-    )
-
-    if ndarray.size != 0:
-        copy_to_numpy(ndarray)
-    return ndarray
 
 
 def _size(self, idx=None):
@@ -143,19 +119,19 @@ def _str(self):
 
 
 def _repr(self):
-    return tensor_str_util._gen_tensor_str(self)
+    return tensor_str._gen_tensor_str(self)
 
 
 def _meta_repr(self):
-    return tensor_str_util._gen_tensor_meta_str(self)
+    return tensor_str._gen_tensor_meta_str(self)
 
 
 def _eq(self, other):
-    return self.eq(other)
+    return flow._C.equal(self, other)
 
 
 def _ne(self, other):
-    return self.ne(other)
+    return flow._C.not_equal(self, other)
 
 
 def _and(self, other):
@@ -231,7 +207,7 @@ def _gt(self, other):
 
 
 def _lt(self, other):
-    return flow.lt(self, other)
+    return flow._C.less(self, other)
 
 
 def _ge(self, other):
@@ -239,7 +215,7 @@ def _ge(self, other):
 
 
 def _le(self, other):
-    return flow.le(self, other)
+    return flow._C.less_equal(self, other)
 
 
 def _mul(self, other):
@@ -292,6 +268,10 @@ def _floor_divide(self, other):
 
 def _floor(self):
     return flow._C.floor(self)
+
+
+def _floor_inplace_(self):
+    return flow._C.floor_(self)
 
 
 def _neg(self):
@@ -382,12 +362,20 @@ def _softsign(self):
     return flow.softsign(self)
 
 
+def _swapaxes(self, dim0, dim1):
+    return flow._C.swapaxes(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
 
 def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
+
+
+def _diagonal(self, offset=0, dim1=0, dim2=1):
+    return flow._C.diagonal(self, offset=offset, dim1=dim1, dim2=dim2)
 
 
 def _log1p(self):
@@ -404,6 +392,10 @@ def _asin(self):
 
 def _arcsin(self):
     return flow.arcsin(self)
+
+
+def _argwhere(self):
+    return flow.argwhere(self)
 
 
 def _asinh(self):
@@ -427,11 +419,19 @@ def _ceil(self):
 
 
 def _clamp(self, min=None, max=None):
-    return flow.clamp(self, min=min, max=max)
+    return flow._C.clamp(self, min=min, max=max)
+
+
+def _clamp_(self, min=None, max=None):
+    return flow._C.clamp_(self, min=min, max=max)
 
 
 def _clip(self, min=None, max=None):
-    return flow.clip(self, min=min, max=max)
+    return flow._C.clip(self, min=min, max=max)
+
+
+def _clip_(self, min=None, max=None):
+    return flow._C.clip_(self, min=min, max=max)
 
 
 def _cos(self):
@@ -448,6 +448,14 @@ def _erf(self):
 
 def _erfc(self):
     return flow.erfc(self)
+
+
+def _erfinv(self):
+    return flow._C.erfinv(self)
+
+
+def _erfinv_inplace(self):
+    return flow._C.erfinv_(self)
 
 
 def _expm1(self):
@@ -548,6 +556,10 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
+def _to_local(self):
+    return flow.to_local(self)
+
+
 def _relu(self, inplace=False):
     return flow.relu(self, inplace=inplace)
 
@@ -578,6 +590,14 @@ def _roll(self, shifts, dims=None):
 
 def _bmm(self, other):
     return flow.bmm(self, other)
+
+
+def _chunk(self, chunks=None, dim=None):
+    return flow._C.chunk(self, chunks, dim)
+
+
+def _split(self, split_size_or_sections=None, dim=0):
+    return flow._C.split(self, split_size_or_sections, dim)
 
 
 def _all(self, dim=None, keepdim=False):
@@ -682,7 +702,7 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
-    np_arr = check_point_v2.generate_values_by_initializer(
+    np_arr = initializer_util.generate_values_by_initializer(
         initializer, shape, tensor.dtype
     )
     if tensor.is_consistent:
@@ -729,13 +749,43 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
+def _gather(self, dim, index):
+    return flow._C.dim_gather(self, dim, index, False)
+
+
+def _T(self):
+    return flow._C.T(self)
+
+
+def _t(self):
+    return flow._C.t(self)
+
+
+def _numpy(self):
+    assert (
+        not self.is_lazy
+    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    if self.dtype == flow.tensor_buffer:
+        shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
+        tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
+        return [t.numpy() for t in tensors]
+    if self.is_consistent:
+        sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
+        self = self.to_consistent(placement=self.placement, sbp=sbp_list).to_local()
+    assert self.is_local
+    if self.device != flow.device("cpu"):
+        self = self.cpu()
+    return self.to_numpy()
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
+    Tensor.__matmul__ = lambda self, other: self.matmul(other)
     Tensor.ndim = property(_ndim)
-    Tensor.numpy = _tensor_numpy
+    Tensor.numpy = _numpy
     Tensor.size = _size
     Tensor.dim = _ndim
     Tensor.ndimension = _ndim
@@ -745,8 +795,6 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.__setstate__ = check_point_v2.tensor_setstate
-    Tensor.__getstate__ = check_point_v2.tensor_getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
@@ -789,9 +837,11 @@ def RegisterMethods():
     Tensor.exp = _exp
     Tensor.floor_divide = _floor_divide
     Tensor.floor = _floor
+    Tensor.floor_ = _floor_inplace_
     Tensor.argmax = _argmax
     Tensor.argmin = _argmin
     Tensor.argsort = _argsort
+    Tensor.argwhere = _argwhere
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh
@@ -815,6 +865,7 @@ def RegisterMethods():
     Tensor.softsign = _softsign
     Tensor.cast = _cast
     Tensor.diag = _diag
+    Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
     Tensor.add = _add
     Tensor.add_ = _add_inplace
@@ -831,12 +882,16 @@ def RegisterMethods():
     Tensor.arctan = _arctan
     Tensor.ceil = _ceil
     Tensor.clamp = _clamp
+    Tensor.clamp_ = _clamp_
     Tensor.clip = _clip
+    Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
+    Tensor.erfinv = _erfinv
+    Tensor.erfinv_ = _erfinv_inplace
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
@@ -865,14 +920,25 @@ def RegisterMethods():
     Tensor.logical_not = _not
     Tensor.roll = _roll
     Tensor.bmm = _bmm
+    Tensor.chunk = _chunk
+    Tensor.split = _split
     Tensor.squeeze = _squeeze
+    Tensor.swapaxes = _swapaxes
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
+    Tensor.T = property(_T)
+    Tensor.t = _t
+    Tensor.eq = _eq
+    Tensor.ne = _ne
+    Tensor.lt = _lt
+    Tensor.le = _le
+    Tensor.to_local = _to_local
 
 
 def register_tensor_op(op_name):

@@ -45,17 +45,17 @@ Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
 
 auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
-class EagerSymmetricSToPOpKernelState final : public user_op::OpKernelState {
+class EagerSymmetricSToPOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerSymmetricSToPOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerSymmetricSToPOpKernelState() override = default;
+  explicit EagerSymmetricSToPOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerSymmetricSToPOpKernelCache() override = default;
 
   const std::shared_ptr<TensorSliceCopier>& tensor_slice_copier() const {
     return tensor_slice_copier_;
   }
 
  private:
-  void Init(user_op::KernelInitContext* ctx) {
+  void Init(user_op::KernelCacheContext* ctx) {
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
     const user_op::TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
@@ -93,15 +93,18 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
   EagerSymmetricSToPKernel() = default;
   ~EagerSymmetricSToPKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerSymmetricSToPOpKernelState>(ctx);
+  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
+                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    if (*cache_ptr == nullptr) {
+      *cache_ptr = std::make_shared<EagerSymmetricSToPOpKernelCache>(ctx);
+    }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerSymmetricSToPOpKernelState*>(state);
-    CHECK(kernel_state != nullptr);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerSymmetricSToPOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& out_shape_view = out->shape();
@@ -112,7 +115,7 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
                         out_shape_view.elem_cnt() * GetSizeOfDataType(out->data_type()));
 
-    const auto& tensor_slice_copier = kernel_state->tensor_slice_copier();
+    const auto& tensor_slice_copier = kernel_cache->tensor_slice_copier();
     tensor_slice_copier->Copy(ctx->stream(), out_ptr, in_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

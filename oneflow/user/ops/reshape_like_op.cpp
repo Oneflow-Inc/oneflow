@@ -15,60 +15,53 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/reshape_user_op_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
+/*static*/ Maybe<void> ReshapeLikeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
   return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, out_shape);
 }
-
-}  // namespace
-
-REGISTER_USER_OP("reshape_like")
-    .Input("in")
-    .Input("like")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      const Shape& like_shape = ctx->InputShape("like", 0);
-      CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt());
-      *ctx->OutputShape("out", 0) = like_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_NOTNULL_OR_RETURN(like_modifier);
-      like_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-      const auto& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("like", 0))
-          .Broadcast(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("like", 0))
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
-      return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, like_shape, {{"in", 0}},
-                                                              {{"like", 0}, {"out", 0}},
-                                                              ctx->parallel_num(), &builder);
-    })
-    .SetNdSbpInferFn(InferNdSbpFn)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> ReshapeLikeOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+  const auto& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("like", 0))
+      .Broadcast(user_op::OpArg("in", 0))
+      .Broadcast(user_op::OpArg("out", 0))
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("like", 0))
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
+  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
+      in_shape, like_shape, {{"in", 0}}, {{"like", 0}, {"out", 0}}, ctx->parallel_num(), &builder);
+}
+/*static*/ Maybe<void> ReshapeLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  const Shape& like_shape = ctx->InputShape("like", 0);
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt());
+  *ctx->OutputShape("out", 0) = like_shape;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReshapeLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReshapeLikeOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReshapeLikeOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
+  CHECK_NOTNULL_OR_RETURN(like_modifier);
+  like_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("reshape_like")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

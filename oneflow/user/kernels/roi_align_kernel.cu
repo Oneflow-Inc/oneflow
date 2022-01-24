@@ -239,6 +239,7 @@ class RoIAlignKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* rois_blob = ctx->Tensor4ArgNameAndIndex("rois", 0);
+    if (rois_blob->shape().elem_cnt() == 0) { return; }
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
     const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");

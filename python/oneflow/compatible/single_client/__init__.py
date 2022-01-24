@@ -37,6 +37,15 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
+locals()["uint16"] = oneflow._oneflow_internal.uint16
+locals()["uint32"] = oneflow._oneflow_internal.uint32
+locals()["uint64"] = oneflow._oneflow_internal.uint64
+locals()["uint128"] = oneflow._oneflow_internal.uint128
+locals()["int16"] = oneflow._oneflow_internal.int16
+locals()["int128"] = oneflow._oneflow_internal.int128
+locals()["complex32"] = oneflow._oneflow_internal.complex32
+locals()["complex64"] = oneflow._oneflow_internal.complex64
+locals()["complex128"] = oneflow._oneflow_internal.complex128
 from oneflow.compatible.single_client.framework import (
     env_util,
     session_context,
@@ -247,7 +256,7 @@ from oneflow.compatible.single_client.ops.array_ops import (
     zeros,
 )
 from oneflow.compatible.single_client.ops.assign_op import assign
-from oneflow.compatible.single_client.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.compatible.single_client.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.compatible.single_client.ops.categorical_ordinal_encode_op import (
     categorical_ordinal_encode,
 )

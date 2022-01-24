@@ -18,9 +18,9 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type_seq.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/device_register_cpu.h"
 
 namespace oneflow {
 
@@ -32,9 +32,8 @@ std::size_t GetDataTypeBytes() {
 }
 
 #define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
-DEFINE_STATIC_SWITCH_FUNC(
-    std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
-    MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ));
+DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
 
 class DTypeMeta final {
  public:
@@ -104,24 +103,33 @@ bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_
 
 /*
   The order of datatype is:
-  0    1    2    3    4    5    6    7    8    9    10   11
-  iv   c1   f4   f8   i1   i4   i8   u1   re   f2   bu   bf
-  The priority order of datatype is:
-  0    1    2    3    4    5    6    7    8    9    10   11
-  iv < u1 < c1 < i1 < i4 < i8 < f2 < f4 < f8 < bf < re < bu.
+  0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15   16   17   18   19
+  20 iv   c1   f4   f8   i1   i4   i8   u1   re   f2   bu   bf   b1   u4   u8   u16  i2   i16  cp4
+  cp8  cp16 The priority order of datatype is: 0    1    2    3    4    5    6    7    8    9    10
+  11    12   13   14   15    16    17     18   19   20 iv < b1 < u1 < c1 < i1 < i2 < u4 < i4 < u8 <
+  i8 < u16 < i16 < f2 < f4 < f8 < cp4 < cp8 < cp16 < bf < re < bu.
 */
-const int DType::priority_order[DataType::kMaxDataType] = {0,  /*kInvalid*/
-                                                           2,  /*kChar*/
-                                                           7,  /*kFloat32*/
-                                                           8,  /*kDouble*/
-                                                           3,  /*kInt8*/
-                                                           4,  /*kInt32*/
-                                                           5,  /*kInt64*/
-                                                           1,  /*kUInt8*/
-                                                           10, /*kOFRecord*/
-                                                           6,  /*kFloat16*/
-                                                           11, /*kTensorBuffer*/
-                                                           9 /*kBFloat16*/};
+const int DType::priority_order[DataType_ARRAYSIZE] = {0,  /*kInvalid*/
+                                                       3,  /*kChar*/
+                                                       13, /*kFloat32*/
+                                                       14, /*kDouble*/
+                                                       4,  /*kInt8*/
+                                                       7,  /*kInt32*/
+                                                       9,  /*kInt64*/
+                                                       2,  /*kUInt8*/
+                                                       19, /*kOFRecord*/
+                                                       12, /*kFloat16*/
+                                                       20, /*kTensorBuffer*/
+                                                       18, /*kBFloat16*/
+                                                       1,  /*kBool*/
+                                                       6,  /*kUint32*/
+                                                       8,  /*kUint64*/
+                                                       10, /*kUint128*/
+                                                       5,  /*kInt16*/
+                                                       11, /*kInt128*/
+                                                       15, /*kComplex32*/
+                                                       16, /*kComplex64*/
+                                                       17 /*kComplex128*/};
 
 bool DType::is_floating_point() const {
   return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
@@ -150,6 +158,16 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
   const Symbol<DType> f2 = CHECK_JUST(DType::Get(DataType::kFloat16));
   const Symbol<DType> bu = CHECK_JUST(DType::Get(DataType::kTensorBuffer));
   const Symbol<DType> bf = CHECK_JUST(DType::Get(DataType::kBFloat16));
+  const Symbol<DType> b1 = CHECK_JUST(DType::Get(DataType::kBool));
+  const Symbol<DType> u2 = CHECK_JUST(DType::Get(DataType::kUInt16));
+  const Symbol<DType> u4 = CHECK_JUST(DType::Get(DataType::kUInt32));
+  const Symbol<DType> u8 = CHECK_JUST(DType::Get(DataType::kUInt64));
+  const Symbol<DType> u16 = CHECK_JUST(DType::Get(DataType::kUInt128));
+  const Symbol<DType> i2 = CHECK_JUST(DType::Get(DataType::kInt16));
+  const Symbol<DType> i16 = CHECK_JUST(DType::Get(DataType::kInt128));
+  const Symbol<DType> cp4 = CHECK_JUST(DType::Get(DataType::kComplex32));
+  const Symbol<DType> cp8 = CHECK_JUST(DType::Get(DataType::kComplex64));
+  const Symbol<DType> cp16 = CHECK_JUST(DType::Get(DataType::kComplex128));
 
   /* It is consistent with data_type.proto(except kInvalidDataType, kOFRecord and kTensorBuffer)
     kInvalidDataType = 0;
@@ -164,29 +182,54 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
     kFloat16 = 9;
     kTensorBuffer = 10;
     kBFloat16 = 11;
+    kBool = 12;
+    kUInt16 = 13;
+    kUInt32 = 14;
+    kUInt64 = 15;
+    kUInt128 = 16;
+    kInt16 = 17;
+    kInt128 = 18;
+    kComplex32 = 19;
+    kComplex64 = 20;
+    kComplex128 = 21;
 
     The priority order of datatype is:
-    iv < u1 < c1 < i1 < i4 < i8 < f2 < f4 < f8 < bf < re < bu.
+    iv < b1 < u1 < c1 < i1 < u2 < i2 < u4 < i4 < u8 < i8 < u16 < i16 < f2 < f4 < f8 < cp4 < cp8 <
+    cp16 < bf < re < bu.
+
+    When int8 + uint8, it need to promote to int16, etc.
+    But in int8 + uint128, we should promote to int256, but it is not exist, so we set as Invalid.
 
     The new DataType should be add in the end of proto, and the Loopup table should be maintained as
     right priority (author:zhengzekang).
   */
-  static const Symbol<DType> _promoteTypesLookup[DataType::kMaxDataType][DataType::kMaxDataType] = {
-      /*        iv  c1  f4  f8  i1  i4  i8  u1  re  f2  bu  bf */
-      /* iv */ {iv, c1, f4, f8, i1, i4, i8, u1, re, f2, bu, bf},
-      /* c1 */ {c1, c1, f4, f8, i1, i4, i8, c1, re, f2, bu, bf},
-      /* f4 */ {f4, f4, f4, f8, f4, f4, f4, f4, re, f4, bu, bf},
-      /* f8 */ {f8, f8, f8, f8, f8, f8, f8, f8, re, f8, bu, bf},
-      /* i1 */ {i1, i1, f4, f8, i1, i4, i8, i1, re, f2, bu, bf},
-      /* i4 */ {i4, i4, f4, f8, i4, i4, i8, i4, re, f2, bu, bf},
-      /* i8 */ {i8, i8, f4, f8, i8, i8, i8, i8, re, f2, bu, bf},
-      /* u1 */ {u1, c1, f4, f8, i1, i4, i8, u1, re, f2, bu, bf},
-      /* re */ {re, re, re, re, re, re, re, re, re, re, bu, re},
-      /* f2 */ {f2, f2, f4, f8, f2, f2, f2, f2, re, f2, bu, bf},
-      /* bu */ {bu, bu, bu, bu, bu, bu, bu, bu, bu, bu, bu, bu},
-      /* bf */ {bf, bf, bf, bf, bf, bf, bf, bf, re, bf, bu, bf},
-  };
 
+  // clang-format off
+  static const Symbol<DType> _promoteTypesLookup[DataType_ARRAYSIZE][DataType_ARRAYSIZE] = {
+      /*          iv   c1   f4   f8   i1   i4   i8   u1   re   f2   bu   bf   b1   u2   u4   u8   u16   i2   i16   cp4   cp8   cp16 */
+      /* iv */   {iv,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  re,  f2,  bu,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  cp4,  cp8,  cp16},
+      /* c1 */   {c1,  c1,  f4,  f8,  i1,  i4,  i8,  c1,  iv,  f2,  iv,  bf,  c1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
+      /* f4 */   {f4,  f4,  f4,  f8,  f4,  f4,  f4,  f4,  iv,  f4,  iv,  bf,  f4,  f4,  f4,  f4,  f4,   f4,  f4,   iv,   cp4,  cp16},
+      /* f8 */   {f8,  f8,  f8,  f8,  f8,  f8,  f8,  f8,  iv,  f8,  iv,  bf,  f8,  f8,  f8,  f8,  f8,   f8,  f8,   iv,   cp4,  cp16},
+      /* i1 */   {i1,  i1,  f4,  f8,  i1,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i1,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp4,  cp16},
+      /* i4 */   {i4,  i4,  f4,  f8,  i4,  i4,  i8,  i4,  iv,  f2,  iv,  bf,  i4,  i4,  i8,  i16, iv,   i4,  i16,  iv,   cp4,  cp16},
+      /* i8 */   {i8,  i8,  f4,  f8,  i8,  i8,  i8,  i8,  iv,  f2,  iv,  bf,  i8,  i8,  i8,  i16, iv,   i8,  i16,  iv,   cp4,  cp16},
+      /* u1 */   {u1,  c1,  f4,  f8,  i2,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  u1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
+      /* re */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},
+      /* f2 */   {f2,  f2,  f4,  f8,  f2,  f2,  f2,  f2,  iv,  f2,  iv,  bf,  f2,  f2,  f2,  f2,  iv,   f2,  f2,   iv,   cp4,  cp16},
+      /* bu */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  bu,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},
+      /* bf */   {bf,  bf,  bf,  bf,  bf,  bf,  bf,  bf,  iv,  bf,  iv,  bf,  bf,  bf,  bf,  bf,  iv,   bf,  bf,   iv,   cp4,  cp16},
+      /* b1 */   {b1,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
+      /* u2 */   {u2,  u2,  f4,  f8,  i4,  i4,  i8,  u2,  iv,  f2,  iv,  bf,  u2,  u2,  u4,  u8,  u16,  i4,  i16,  iv,   cp4,  cp16},
+      /* u4 */   {u4,  u4,  f4,  f8,  i8,  i8,  i8,  u4,  iv,  f2,  iv,  bf,  u4,  u4,  u4,  u8,  u16,  i8,  i16,  iv,   cp4,  cp16},
+      /* u8 */   {u8,  u8,  f4,  f8,  i16, i16, i16, u8,  iv,  f2,  iv,  bf,  u8,  u8,  u8,  u8,  u16,  i16, i16,  iv,   cp4,  cp16},
+      /* u16 */  {u16, u16, f4,  f8,  iv,  iv,  iv,  u16, iv,  f2,  iv,  bf,  u16, u16, u16, u16, u16,  iv,  iv,   iv,   cp4,  cp16},
+      /* i2 */   {i2,  i2,  f4,  f8,  i2,  i4,  i8,  i2,  iv,  f2,  iv,  bf,  i2,  i4,  i8,  i16, iv,   i2,  i16,  iv,   cp4,  cp16},
+      /* i16 */  {i16, i16, f4,  f8,  i16, i16, i16, i16, iv,  f2,  iv,  bf,  i16, i16, i16, i16, iv,   i16, i16,  iv,   cp4,  cp16},
+      /* cp4 */  {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   cp4,  cp8,  cp16},
+      /* cp8 */  {cp8, cp8, cp8, cp8, cp8, cp8, cp8, cp8, iv,  cp8, iv,  cp8, cp8, cp8, cp8, cp8, cp8,  cp8, cp8,  cp8,  cp8,  cp16},
+      /* cp16 */ {cp16,cp16,cp16,cp16,cp16,cp16,cp16,cp16,iv,  cp16,iv,  cp16,cp16,cp16,cp16,cp16,cp16, cp16,cp16, cp16, cp16, cp16}};
+  // clang-format on
   return _promoteTypesLookup[static_cast<int>(a->data_type())][static_cast<int>(b->data_type())];
 }
 

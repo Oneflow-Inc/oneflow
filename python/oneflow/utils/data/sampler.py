@@ -140,7 +140,7 @@ class RandomSampler(Sampler[int]):
     def __iter__(self):
         n = len(self.data_source)
         if self.generator is None:
-            generator = flow.Generator()
+            generator = flow.Generator("cpu")
             generator.manual_seed(np.random.randint(0, np.iinfo(np.int64).max))
             # TODO: use Tensor.random_
             # generator.manual_seed(

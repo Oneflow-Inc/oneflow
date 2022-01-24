@@ -19,29 +19,35 @@ limitations under the License.
 namespace oneflow {
 
 user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
+                             user_op::SbpContext* ctx)>& f) {
   return [=](user_op::SbpContext* ctx) -> Maybe<void> {
     auto builder = ctx->NewBuilder()
                        .Split(user_op::OpArg("input", 0), 0)
                        .Split(user_op::OpArg("target", 0), 0)
-                       .Broadcast(user_op::OpArg("weight", 0))
                        .Split(user_op::OpArg("out", 0), 0);
-    f(builder);
+    if (ctx->user_op_conf().has_input("weight", 0)) {
+      builder.Broadcast(user_op::OpArg("weight", 0));
+    }
+    f(builder, ctx);
     builder.Build();
     return Maybe<void>::Ok();
   };
 }
 
 user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
-    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder)>& f) {
+    const std::function<void(user_op::UserOpSbpSignatureBuilder& builder,
+                             user_op::SbpContext* ctx)>& f) {
   return [=](user_op::SbpContext* ctx) -> Maybe<void> {
     auto builder = ctx->NewBuilder()
                        .Split(user_op::OpArg("input", 0), 0)
                        .Split(user_op::OpArg("target", 0), 0)
-                       .Broadcast(user_op::OpArg("weight", 0))
                        .Split(user_op::OpArg("dx", 0), 0)
                        .Split(user_op::OpArg("dy", 0), 0);
-    f(builder);
+    if (ctx->user_op_conf().has_input("weight", 0)) {
+      builder.Broadcast(user_op::OpArg("weight", 0));
+    }
+    f(builder, ctx);
     builder.Build();
     return Maybe<void>::Ok();
   };

@@ -28,6 +28,8 @@ namespace ep {
 
 constexpr size_t kMaxAlignmentRequirement = 512;
 
+class DeviceManager;
+
 class Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Device);
@@ -38,6 +40,7 @@ class Device {
 
   virtual DeviceType device_type() const = 0;
   virtual size_t device_index() const = 0;
+  virtual DeviceManager* device_manager() const = 0;
 
   virtual Stream* CreateStream() = 0;
   virtual void DestroyStream(Stream* stream) = 0;

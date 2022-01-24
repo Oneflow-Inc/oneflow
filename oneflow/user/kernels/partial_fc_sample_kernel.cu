@@ -313,7 +313,8 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* mapped_label = ctx->Tensor4ArgNameAndIndex("mapped_label", 0);
@@ -394,7 +395,8 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* sampled_weight_diff =
         ctx->Tensor4ArgNameAndIndex("sampled_weight_diff", 0);
     const user_op::Tensor* sampled_label = ctx->Tensor4ArgNameAndIndex("sampled_label", 0);

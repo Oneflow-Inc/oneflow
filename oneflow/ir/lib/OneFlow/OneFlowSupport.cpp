@@ -21,11 +21,12 @@ namespace oneflow {
 
 namespace support {
 
-using namespace ::oneflow;
+using ::oneflow::UserOpDef;
+using ::oneflow::user_op::OpRegistryResult;
+using ::oneflow::user_op::UserOpRegistryMgr;
 
 const UserOpDef& GetUserOpDef(const std::string& op_type_name) {
-  const user_op::OpRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  const OpRegistryResult* val = UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK(val) << " Cannot find op_type_name: " << op_type_name;
   return val->op_def;
 }

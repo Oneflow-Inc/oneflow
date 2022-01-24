@@ -30,7 +30,7 @@ union Pack {
 };
 
 __device__ int8_t GenMask(curandState* state, const float rate) {
-  return curand_uniform(state) >= rate;
+  return curand_uniform(state) > rate;
 }
 
 __global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, int8_t* mask) {

@@ -20,7 +20,7 @@ namespace oneflow {
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in,
-                  int8_t* out) {
+                  bool* out) {
     DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
@@ -44,7 +44,7 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
     const T* in_ptr = in->dptr<T>();
-    int8_t* out_ptr = out->mut_dptr<int8_t>();
+    bool* out_ptr = out->mut_dptr<bool>();
 
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
@@ -85,13 +85,15 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_and", BinaryFuncAND,  \
                                                      dtype_pair);
 
-// we register uint8_t, int8_t, int32_t, int64_t, float, double.
+// we register bool, uint8_t, int8_t, int32_t, int64_t, float, double.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kCUDA),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

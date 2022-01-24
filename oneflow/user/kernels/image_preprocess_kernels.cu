@@ -141,7 +141,8 @@ class CropMirrorNormalizeGpuKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* normalize_attr = dynamic_cast<NormalizeAttr*>(state);
     const NormalizeVal& mean = normalize_attr->mean();
     const NormalizeVal& inv_std = normalize_attr->inv_std();

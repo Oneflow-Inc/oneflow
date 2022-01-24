@@ -89,7 +89,7 @@ class TestAffineGrid(flow.unittest.TestCase):
             np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
-    @autotest(rtol=1e-03, atol=1e-04, check_graph=False)
+    @autotest(rtol=1e-03, atol=1e-04, check_allclose=False, check_graph=True)
     def test_flow_affine_grid_2d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
@@ -103,7 +103,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         ).to(device)
         return output
 
-    @autotest(rtol=1e-03, atol=1e-03, check_graph=False)
+    @autotest(rtol=1e-03, atol=1e-03, check_allclose=False, check_graph=True)
     def test_flow_affine_grid_3d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)

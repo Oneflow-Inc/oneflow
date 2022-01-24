@@ -111,7 +111,7 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
             ):
                 find_ctrl = False
                 for name in op.ctrl_in_op_name:
-                    if re.search("identity_.*_grad", str(name), re.I) is not None:
+                    if re.search("identity-.*_grad", str(name), re.I) is not None:
                         find_ctrl = True
                         print(name)
                 test_case.assertTrue(find_ctrl)

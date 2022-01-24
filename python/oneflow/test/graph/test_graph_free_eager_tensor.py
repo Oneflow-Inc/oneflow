@@ -21,22 +21,21 @@ import oneflow as flow
 import oneflow.unittest
 
 
-class MyModuleWithEagerTensorForward(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.linear = flow.nn.Linear(3, 8, False)
-
-    def forward(self, x):
-        y0 = self.linear(x)
-        eager_t = flow.tensor([1.0], dtype=y0.dtype, device=y0.device)
-        out = y0 + eager_t
-        return out
-
-
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
     def test_eager_tensor_forward_graph(test_case):
+        class MyModuleWithEagerTensorForward(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(3, 8, False)
+
+            def forward(self, x):
+                y0 = self.linear(x)
+                eager_t = flow.tensor([1.0], dtype=y0.dtype, device=y0.device)
+                out = y0 + eager_t
+                return out
+
         my_net_module = MyModuleWithEagerTensorForward()
         flow.nn.init.constant_(my_net_module.linear.weight, 2.3)
         x = np.random.randn(5, 3)
@@ -83,6 +82,101 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
         )
+
+    def test_two_graph_caught_same_free_eager_tensor(test_case):
+        np_x = np.random.randn(5, 3)
+        np_y = np.random.randn(5, 3)
+        x = flow.tensor(np_x, dtype=flow.float32)
+        y = flow.tensor(np_y, dtype=flow.float32)
+
+        class GraphAdd(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self):
+                return x + y
+
+        class GraphMul(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self):
+                return x * y
+
+        g_add = GraphAdd()
+        g_mul = GraphMul()
+
+        add_out = g_add()
+        mul_out = g_mul()
+        test_case.assertTrue(
+            np.allclose(add_out.numpy(), np_x + np_y, atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(mul_out.numpy(), np_x * np_y, atol=1e-4, rtol=1e-4)
+        )
+
+    def test_graph_return_free_eager_tensor(test_case):
+        np_x = np.random.randn(5, 3)
+        x = flow.tensor(np_x, dtype=flow.float32)
+
+        class GraphReturnEager(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self):
+                # Return free eager tensor
+                return x
+
+        g_return_eager = GraphReturnEager()
+
+        # Run first time
+        ret_eager_out = g_return_eager()
+        test_case.assertTrue(
+            np.allclose(ret_eager_out.numpy(), np_x, atol=1e-4, rtol=1e-4)
+        )
+
+        # Run second time
+        ret_eager_out1 = g_return_eager()
+        test_case.assertTrue(
+            np.allclose(ret_eager_out1.numpy(), np_x, atol=1e-4, rtol=1e-4)
+        )
+
+    def test_graph_return_inplace_free_eager_tensor(test_case):
+        np_x = np.random.randn(5, 3)
+        x = flow.tensor(np_x, dtype=flow.float32)
+
+        class GraphInplaceReturnEager(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self):
+                # x is free eager tensor
+                # mul_ is inplace scalar mul
+                # Input and output of mul_ are both tensor x
+                # After lazy interpretr, tensor x's name will be the ouput lbn of mul_
+                x.mul_(2)
+                # Here will return the output of mul_
+                return x
+
+        g_return_eager = GraphInplaceReturnEager()
+
+        # Run first time
+        ret_eager_out = g_return_eager()
+        # x in ouput changed
+        # So nn.Graph simulate inplace in nn.Graph.build().
+        test_case.assertTrue(
+            np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
+        )
+        # x has not changed
+        # So nn.Graph inplace will not change free eager tensor.
+        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
+
+        # Run second time
+        ret_eager_out = g_return_eager()
+        test_case.assertTrue(
+            np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

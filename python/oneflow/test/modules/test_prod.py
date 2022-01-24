@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestReduceProd(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_reduce_prod_without_dim(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)
@@ -31,7 +31,7 @@ class TestReduceProd(flow.unittest.TestCase):
 
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_reduce_prod_with_dim(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)
@@ -39,6 +39,15 @@ class TestReduceProd(flow.unittest.TestCase):
         dim = random(0, ndim).to(int)
         y = torch.prod(x, dim)
         y = torch.exp(y)
+
+        return y
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_reduce_prod_bool_without_dim(test_case):
+        device = random_device()
+        ndim = random(1, 5).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device=device, dtype=torch.bool)
+        y = torch.prod(x)
 
         return y
 

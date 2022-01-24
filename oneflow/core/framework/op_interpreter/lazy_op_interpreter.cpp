@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -73,12 +76,8 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
 Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
                                  const OpAttribute& op_attribute, const std::string& bn_in_op,
                                  const std::shared_ptr<ParallelDesc>& parallel_desc,
-                                 const bool is_lazy, const bool is_local, const bool requires_grad,
-                                 const bool is_leaf) {
-  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
+                                 const bool is_local) {
   CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
-  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
-  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
 
   CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
   const auto& blob_desc_sign_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
@@ -100,7 +99,8 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     cfg::NdSbp nd_sbp(nd_sbp_it->second);
-    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp));
+    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
+        << "The input sbp is not valid for an inplace operation, please try to use non-inplace.";
     CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
   }
   return Maybe<void>::Ok();
@@ -189,6 +189,51 @@ Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& ten
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
   parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
   return NewScopeWithParallelConfAndCurScope(parallel_conf);
+}
+
+Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  CHECK_OR_RETURN(input_tensor->is_eager());
+  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(empty_lbn.empty());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
+  OperatorConf op_conf;
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
+  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
+  var_conf->set_out("out");
+  input_tensor->shape()->ToProto(var_conf->mutable_shape());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
+  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
+  //   by EagerTensor.
+  var_conf->mutable_initializer()->mutable_empty_conf();
+  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
+  // NOTE(chengcheng): Free EagerTensor not trainable
+  var_conf->set_trainable(false);
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
+  //  name so just new a unique name for it.
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
+  op_conf.set_name(new_op_name);
+
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf.DebugString() << std::endl;
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.DebugString() << " for FreeEagerTensor.\n";
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << " for FreeEagerTensor.\n";
+
+  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
+  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
+  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
+  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+      graph_name, input_tensor, new_op_name);
+  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
+  TensorNameScope::Global()->Record(input_tensor, lbn);
+
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
@@ -309,8 +354,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-  CHECK_OR_RETURN(input_tensor->is_lazy());
-  const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  // Lazy tensor must has lbn.
+  // Eager tensor may has lbn if it has already been treated as an output of a variable op
+  // or an output of an inplace op.
+  if (input_lbn.empty()) {
+    CHECK_OR_RETURN(input_tensor->is_eager());
+    // This output tensor is a new free eager tensor, so treat it as a new variable op output.
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  }
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
@@ -418,12 +471,15 @@ namespace {
 Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_expr,
                                                         TensorTuple* outputs,
                                                         const OpExprInterpContext& ctx) {
+  NonRecursiveMetaInfoConsistencyCheckScope non_scope;
   bool is_local;
   std::shared_ptr<const ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc).shared_from_symbol();
+    const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
+    parallel_desc = parallel_desc_sym.shared_from_symbol();
+    JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp));
     is_local = false;
   } else {
     // NOTE(chengcheng): local
@@ -485,51 +541,6 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
         JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
-  CHECK_OR_RETURN(input_tensor->is_eager());
-  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(empty_lbn.empty());
-  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-  OperatorConf op_conf;
-  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
-  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
-  var_conf->set_out("out");
-  input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype()->data_type());
-  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
-  //   by EagerTensor.
-  var_conf->mutable_initializer()->mutable_empty_conf();
-  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
-  // NOTE(chengcheng): Free EagerTensor not trainable
-  var_conf->set_trainable(false);
-
-  auto infer_ctx = JUST(GetCurInferCtx());
-  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
-  //  name so just new a unique name for it.
-  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
-  op_conf.set_name(new_op_name);
-
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
-          << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << " for FreeEagerTensor.\n";
-  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
-          << " infer and and op attr : \n"
-          << op_attr.DebugString() << " for FreeEagerTensor.\n";
-
-  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
-  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
-  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
-  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-      graph_name, input_tensor, new_op_name);
-  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
-  TensorNameScope::Global()->Record(input_tensor, lbn);
-
   return Maybe<void>::Ok();
 }
 
@@ -650,6 +661,21 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     }
   }
 
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+
+  // Disable boxing if the computation is inplace.
+  for (int i = 0; i < op_expr.output_size(); ++i) {
+    const auto& output = outputs->at(i);
+    if (output) {
+      const std::string& lbn = TensorNameScope::Global()->Lookup(output);
+      CHECK_OR_RETURN(!lbn.empty()) << "The output which index is " << i
+                                    << " has no tensor name, please check whether the inplaced "
+                                       "output is also an input of the operation "
+                                    << new_op_name;
+      JUST(infer_ctx->DisableBoxing(lbn));
+    }
+  }
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
@@ -660,20 +686,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
   auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
-
-  // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const std::string& obn = op_expr.indexed_obns().at(i);
     if (!(*outputs)[i]) {
       (*outputs)[i] =
           JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
     } else {
+      VLOG(2) << "Lazy nn.Graph name " << graph_name << " op name " << new_op_name
+              << " run with inplace.";
       const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
-      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
-                                is_local,
-                                /* requires_grad */ false,
-                                /* is_leaf */ true));
+      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
     }
     TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
   }

@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -33,7 +33,7 @@ class TestModule(flow.unittest.TestCase):
         z = torch.matmul(x, y)
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -41,7 +41,7 @@ class TestModule(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)

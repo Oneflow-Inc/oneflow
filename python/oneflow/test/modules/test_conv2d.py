@@ -1843,7 +1843,7 @@ class TestConv2d(flow.unittest.TestCase):
         return y
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30)
+    @autotest(n=30, check_allclose=False)
     def test_conv2d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv2d(

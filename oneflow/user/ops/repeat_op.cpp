@@ -14,45 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/*static*/ Maybe<void> RepeatOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RepeatOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RepeatOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> RepeatOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RepeatOp::InferOutputBlobTimeShape(
+    user_op::InferOutputBlobTimeShapeFnContext* ctx) {
+  DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
+  dim_vec.emplace_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
+  *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("repeat")
-    .Input("in")
-    .Output("out")
-    .Attr<int32_t>("repeat_num")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetOutputBlobTimeShapeInferFn(
-        [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
-          DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
-          dim_vec.emplace_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
-          *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
-          return Maybe<void>::Ok();
-        })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+namespace {
 
 REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
                                                            -> Maybe<void> {

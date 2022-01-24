@@ -38,8 +38,9 @@ void CpuDevice::DestroyEvents(Event** events, size_t count) {
 
 Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_t size) {
   if (options.HasPinnedDevice()) {
-    auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(
-        options.GetPinnedDeviceType(), options.GetPinnedDeviceIndex());
+    auto device =
+        this->device_manager()->registry()->GetDevice(options.GetPinnedDeviceType(),    // NOLINT
+                                                      options.GetPinnedDeviceIndex());  // NOLINT
     CHECK_OR_RETURN(device);
     return device->AllocPinned(options, ptr, size);
   } else {
@@ -54,8 +55,9 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
 
 void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
   if (options.HasPinnedDevice()) {
-    auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(
-        options.GetPinnedDeviceType(), options.GetPinnedDeviceIndex());
+    auto device =
+        this->device_manager()->registry()->GetDevice(options.GetPinnedDeviceType(),    // NOLINT
+                                                      options.GetPinnedDeviceIndex());  // NOLINT
     CHECK(device);
     return device->FreePinned(options, ptr);
   } else {

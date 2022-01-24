@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/common/sbp.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/maybe.h"
@@ -32,7 +33,7 @@ namespace oneflow {
 namespace {
 
 std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
-  return *SbpToString(sbp_sym).GetPtrOrThrow();
+  return *api::SbpToString(sbp_sym).GetPtrOrThrow();
 }
 
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {

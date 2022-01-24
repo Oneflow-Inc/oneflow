@@ -15,11 +15,11 @@ limitations under the License.
 */
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
-
-using namespace mlir;
-using namespace mlir::oneflow;
-
 #include "OneFlow/OneFlowOpsDialect.cpp.inc"
+
+namespace mlir {
+
+namespace oneflow {
 
 void OneFlowDialect::initialize() {
   addOperations<
@@ -132,3 +132,7 @@ void OneFlowDialect::initialize() {
 #include "OneFlow/OneFlow.upsample_ops.cpp.inc"
       >();
 }
+
+}  // namespace oneflow
+
+}  // namespace mlir

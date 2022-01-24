@@ -151,19 +151,6 @@ struct SoftSignGradFunctor<half> {
 };
 
 template<>
-struct ReluFunctor<half> {
-  OF_DEVICE_FUNC explicit ReluFunctor() {}
-  __device__ half operator()(half x) const {
-    half zero = __float2half(0.0);
-    if (__hgt(x, zero)) {
-      return x;
-    } else {
-      return zero;
-    }
-  }
-};
-
-template<>
 struct ReluGradFunctor<half> {
   OF_DEVICE_FUNC explicit ReluGradFunctor() {}
   __device__ half operator()(half y, half dy) const {
@@ -176,17 +163,16 @@ struct ReluGradFunctor<half> {
   }
 };
 
-#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)            \
-  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);          \
-  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);    \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype);  \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);     \
-  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);     \
-  REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, dtype); \
+#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)           \
+  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);   \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
 namespace {
@@ -194,12 +180,6 @@ namespace {
 REGISTER_ACTIVATION_CUDA_KERNEL(half);
 REGISTER_ACTIVATION_CUDA_KERNEL(float);
 REGISTER_ACTIVATION_CUDA_KERNEL(double);
-
-// For some special DType
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, uint8_t);
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int8_t);
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int32_t);
-REGISTER_RELU_FORWARD_KERNEL(DeviceType::kCUDA, int64_t);
 
 }  // namespace
 

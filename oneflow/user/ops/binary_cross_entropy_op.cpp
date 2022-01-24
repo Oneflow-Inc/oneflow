@@ -16,10 +16,13 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/loss_op_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
+
 namespace {
-Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
+
+Maybe<void> InferTensorDescFn_(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic());
@@ -37,7 +40,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
@@ -85,31 +88,47 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 }
 }  // namespace
 
-REGISTER_USER_OP("binary_cross_entropy")
-    .Input("input")
-    .Input("target")
-    .OptionalInput("weight")
-    .Output("out")
-    .SetTensorDescInferFn(InferTensorDescFn)
-    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
-      CHECK_OR_RETURN(target_modifier != nullptr);
-      target_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn());
+/* static */ Maybe<void> BinaryCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDescFn_(ctx);
+}
 
-REGISTER_USER_OP("binary_cross_entropy_grad")
-    .Input("input")
-    .Input("target")
-    .OptionalInput("weight")
-    .Input("dy")
-    .Output("dx")
-    .SetTensorDescInferFn(InferGradTensorDescFn)
-    .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn());
+/*static*/ Maybe<void> BinaryCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::GetSbp(user_op::SbpContext* ctx) {
+  return GenLossForwardDefaultGetSbpFn()(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+  CHECK_OR_RETURN(target_modifier != nullptr);
+  target_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataType_(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> BinaryCrossEntropyGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GenLossBackwardDefaultGetSbpFn()(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferGradDataType(ctx);
+}
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

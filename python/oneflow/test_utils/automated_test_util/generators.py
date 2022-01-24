@@ -325,6 +325,16 @@ class random_tensor(generator):
         low = self.low.value()
         high = self.high.value()
         dtype = self.dtype.value()
+        if ndim == 0:
+            if dtype == float:
+                np_arr = rng.uniform(low=low, high=high)
+                return torch.tensor(np_arr)
+            elif dtype == int:
+                np_arr = rng.integers(low=low, high=high)
+                return torch.tensor(np_arr, dtype=torch.int64)
+            else:
+                raise NotImplementedError(f"Not implemented dtype {dtype} in random")
+
         shape = rng.integers(low=1, high=8, size=ndim)
         if dim0 is not None:
             shape[0] = dim0
@@ -360,6 +370,22 @@ class random_device(generator):
             return "cpu"
         else:
             return random_util.choice(["cuda", "cpu"])
+
+
+class cpu_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(["cpu"])
+
+
+class gpu_device(generator):
+    def __init__(self):
+        super().__init__([])
+
+    def _calc_value(self):
+        return random_util.choice(["cuda"])
 
 
 def test_against_pytorch(
@@ -649,6 +675,8 @@ __all__ = [
     "random_tensor",
     "random_bool",
     "random_device",
+    "cpu_device",
+    "gpu_device",
     "random",
     "random_or_nothing",
     "oneof",

@@ -16,6 +16,7 @@ limitations under the License.
 #include <algorithm>
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
@@ -26,13 +27,8 @@ ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_nod
     : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
   CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
-  int64_t max_device_num = std::max(resource.gpu_device_num(), resource.cpu_device_num());
-  CHECK_GT(max_device_num, 0);
-  max_device_num = std::min(max_device_num, num_process_per_node);
-  for (int i = 0; i < resource_.machine_num(); ++i) {
-    for (int j = 0; j < max_device_num; ++j) {
-      CHECK(process_ranks_.emplace(i * num_process_per_node + j).second);
-    }
+  for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
+    CHECK(process_ranks_.emplace(i).second);
   }
 }
 
@@ -84,7 +80,6 @@ bool ResourceDesc::nccl_use_compute_stream() const {
 }
 
 void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
-  resource_.clear_cudnn_conf();
   auto* cudnn_conf = resource_.mutable_cudnn_conf();
   if (job_conf.has_enable_cudnn()) { cudnn_conf->set_enable_cudnn(job_conf.enable_cudnn()); }
   if (job_conf.has_cudnn_buf_limit_mbyte()) {

@@ -40,7 +40,6 @@ class InferContext {
 
   virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
   virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
-  virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
@@ -60,6 +59,7 @@ class InferContext {
   virtual const std::string& op_name() const = 0;
   virtual const std::string& op_type_name() const = 0;
   virtual const std::string& device_tag() const = 0;
+  virtual const std::string& op_loc() const = 0;
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {

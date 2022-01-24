@@ -1,3 +1,5 @@
+message(STATUS "LLVM_TOOLS_BINARY_DIR (used as LLVM_TOOLS_DIR): ${LLVM_TOOLS_BINARY_DIR}")
+message(STATUS "LLVM_EXTERNAL_LIT: ${LLVM_EXTERNAL_LIT}")
 configure_lit_site_cfg(
         ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
         ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
@@ -5,16 +7,13 @@ configure_lit_site_cfg(
         ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
 )
 
-set(LLVM_EXTERNAL_LIT "${llvm_monorepo_BINARY_DIR}/bin/llvm-lit" CACHE STRING "")
-message(STATUS "LLVM_EXTERNAL_LIT: ${LLVM_EXTERNAL_LIT}")
-
 set(ONEFLOW_TEST_DEPENDS
         FileCheck count not
         oneflow-opt
         oneflow-translate
         )
 
-add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests"
+add_lit_testsuite(check-oneflow "Running the OneFlow MLIR regression tests from: ${CMAKE_CURRENT_SOURCE_DIR}"
         ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${ONEFLOW_TEST_DEPENDS}
         )

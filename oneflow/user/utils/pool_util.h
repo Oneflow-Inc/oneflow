@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_UTILS_POOL_UTIL_H_
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
 

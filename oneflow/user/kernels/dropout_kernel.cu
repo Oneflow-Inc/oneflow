@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/cuda/atomic.cuh"
@@ -338,11 +338,11 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
 }
 
 template<int pack_size>
-unsigned int ComputeGridSize(const int32_t block_size, const int64_t elem_cnt) {
-  int32_t max_threads_multi_process = 0;
-  int32_t multi_processor_count = 0;
-  cudaDeviceGetAttribute(&max_threads_multi_process, cudaDevAttrMaxThreadsPerMultiProcessor, 0);
-  cudaDeviceGetAttribute(&multi_processor_count, cudaDevAttrMultiProcessorCount, 0);
+unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
+  auto* cuda_stream = stream->As<ep::CudaStream>();
+  const int32_t max_threads_multi_process =
+      cuda_stream->device_properties().maxThreadsPerMultiProcessor;
+  const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   unsigned int blocks_per_sm = max_threads_multi_process / block_size;
   unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
   grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
@@ -353,7 +353,7 @@ template<typename T, bool has_addend>
 void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
                   const T* addend, T* y) {
-  unsigned int grid_size = ComputeGridSize<4>(kBlockSize, elem_cnt);
+  unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
   constexpr int pack_size = GetDropoutPackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   const int64_t tail_offset = pack_num * pack_size;
@@ -412,7 +412,8 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);

@@ -13,6 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/interface_blob_conf.pb.h"
+
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowOpTraits.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
+
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -24,12 +38,15 @@ limitations under the License.
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Parser.h"
+
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -39,29 +56,11 @@ limitations under the License.
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "OneFlow/OneFlowDialect.h"
-#include "OneFlow/OneFlowOps.h"
-#include "OneFlow/MLIROneFlowTranslation.h"
-#include "OneFlow/Passes.h"
-
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/common/util.h"
-
-#include <cstddef>
-#include <cstdint>
 #include <google/protobuf/text_format.h>
-#include <iostream>
-#include <iterator>
-#include <map>
-#include <new>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 namespace mlir {
+
+namespace oneflow {
 
 using PbMessage = google::protobuf::Message;
 
@@ -78,10 +77,23 @@ class JobImporter : Importer {
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                               std::vector<NamedAttribute>& attr_vec) override;
   LogicalResult InsertOpResults(const ::oneflow::OperatorConf& op, Operation*) override;
-  LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
+
   LogicalResult ProcessJob();
+  LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op) override;
+  LogicalResult ProcessVariableOp(const ::oneflow::OperatorConf& op);
+  LogicalResult ProcessInputOp(const ::oneflow::OperatorConf& op_conf, Block* entry_block,
+                               size_t& input_count);
+  LogicalResult ProcessOutputOp(const ::oneflow::OperatorConf& op_conf);
+
   LogicalResult TryToUpdateJob();
+  LogicalResult ConvertUserOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertSystemOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertVariableOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertInputOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertOutputOp(Operation* op, ::oneflow::Job& job);
+
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
+  Type GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf);
 
  private:
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
@@ -177,6 +189,8 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
     GetModule().emitError("Not a sys op. op name: " + op.name());
     return failure();
   }
+  if (op.has_variable_conf()) { return ProcessVariableOp(op); }
+
   auto input_bns_lbns = job_wrapper_.InputBns4OpName(op.name());
   auto input_bns = input_bns_lbns.first;
   auto input_lbns = input_bns_lbns.second;
@@ -192,7 +206,8 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
       OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(),
       GetBuilder().getStrArrayAttr(
           std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
-  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0), "oneflow.system");
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op.name(), 0, 0),
+                       SystemOp::getOperationName());
   attr_vec.push_back(
       GetBuilder().getNamedAttr("op_type_case", GetBuilder().getI32IntegerAttr(op.op_type_case())));
   if (failed(AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(),
@@ -222,28 +237,334 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   return success();
 }
 
-LogicalResult JobImporter::ProcessJob() {
-  auto func_type = GetBuilder().getFunctionType(llvm::None, llvm::None);
-  auto function = mlir::FuncOp::create(GetRootLocation(), job_->job_conf().job_name(), func_type);
-  auto& entryBlock = *function.addEntryBlock();
-  GetBuilder().setInsertionPointToStart(&entryBlock);
+LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_conf) {
+  if (!op_conf.has_variable_conf()) {
+    GetModule().emitError("Not a variable op. op name: " + op_conf.name());
+    return failure();
+  }
 
+  if (op_conf.variable_conf().has_tick()) {
+    GetModule().emitError("variable op has tick input. op name: " + op_conf.name());
+    return failure();
+  }
+
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op_conf.name(), 0, 0),
+                       "oneflow.variable");
+  // attrs
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(AddOpConf(op_conf, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
+  // attr output_lbns
+  auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
+  attr_vec.emplace_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
+  // attr shape
+  auto shape_attr = GetAttrFromShape(op_conf.variable_conf().shape());
+  auto shape_named_attr =
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr);
+  attr_vec.emplace_back(shape_named_attr);
+  // attr data_type
+  if (op_conf.variable_conf().has_data_type()) {
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getDataTypeAttrName(),
+        GetDataTypeAttr(GetMLIRContext(), op_conf.variable_conf().data_type()).getValue()));
+  }
+  // attr model_name
+  if (op_conf.variable_conf().has_model_name()) {
+    const std::string& model_name = op_conf.variable_conf().model_name();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("model_name", GetBuilder().getStringAttr(model_name)));
+  }
+  // attr l1 l2 regularization
+  if (op_conf.variable_conf().has_regularizer()
+      && op_conf.variable_conf().regularizer().has_l1_l2_conf()) {
+    if (op_conf.variable_conf().regularizer().l1_l2_conf().has_l1()) {
+      float l1_regularization = op_conf.variable_conf().regularizer().l1_l2_conf().l1();
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(
+          "l1_regularization", GetBuilder().getF32FloatAttr(l1_regularization)));
+    }
+    if (op_conf.variable_conf().regularizer().l1_l2_conf().has_l2()) {
+      float l2_regularization = op_conf.variable_conf().regularizer().l1_l2_conf().l2();
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(
+          "l2_regularization", GetBuilder().getF32FloatAttr(l2_regularization)));
+    }
+  }
+  // attr trainable
+  if (op_conf.variable_conf().has_trainable()) {
+    bool trainable = op_conf.variable_conf().trainable();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("trainable", GetBuilder().getBoolAttr(trainable)));
+  }
+  // attr nd_sbp
+  const std::vector<StringRef> nd_sbp_str_vec{op_conf.variable_conf().nd_sbp().begin(),
+                                              op_conf.variable_conf().nd_sbp().end()};
+  auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_str_vec));
+  attr_vec.emplace_back(
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
+  // add attrs
+  state.addAttributes(attr_vec);
+  // operands
+  std::vector<::mlir::Value> operand_vec;
+  if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
+  state.addOperands(operand_vec);
+  // result types
+  llvm::SmallVector<Type, 8> out_types;
+  auto output_lbn = op_conf.name() + "/out";
+  out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  state.addTypes(out_types);
+  // create op
+  auto op = GetBuilder().createOperation(state);
+  if (!op) {
+    GetModule()->emitError("fail to create op, name: " + op_conf.name());
+    return failure();
+  }
+  // record result
+  if (op->getNumResults() != 2) {
+    op->emitError("variable op should has two results (out and ctrl_output), but got "
+                  + std::to_string(op->getNumResults()) + "\n");
+    return failure();
+  }
+  if (!lbn2result_.emplace(output_lbn, op->getResult(0)).second) {
+    op->emitError("lbn already exists, lbn: ") << output_lbn;
+    return failure();
+  }
+  if (!op_name2ctrl_result_.emplace(op_conf.name(), op->getResult(1)).second) {
+    op->emitError("ctrl output already exists, op_name: ") << op_conf.name();
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf,
+                                          Block* entry_block, size_t& input_count) {
+  if (!op_conf.has_input_conf()) {
+    GetModule().emitError("Not a input op. op name: " + op_conf.name());
+    return failure();
+  }
+
+  if (op_conf.input_conf().has_tick()) {
+    GetModule().emitError("input op has tick input. op name: " + op_conf.name());
+    return failure();
+  }
+
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op_conf.name(), 0, 0),
+                       "oneflow.input");
+  // attrs
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(AddOpConf(op_conf, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
+  // attr output_lbns
+  auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
+  attr_vec.emplace_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
+  // attr shape
+  if (op_conf.input_conf().blob_conf().has_shape()) {
+    auto shape_attr = GetAttrFromShape(op_conf.input_conf().blob_conf().shape());
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr));
+  }
+  // attr data_type
+  if (op_conf.input_conf().blob_conf().has_data_type()) {
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getDataTypeAttrName(),
+        GetDataTypeAttr(GetMLIRContext(), op_conf.input_conf().blob_conf().data_type())
+            .getValue()));
+  }
+  // attr is_dynamic
+  if (op_conf.input_conf().blob_conf().has_is_dynamic()) {
+    bool is_dynamic = op_conf.input_conf().blob_conf().is_dynamic();
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getIsDynamicAttrName(), GetBuilder().getBoolAttr(is_dynamic)));
+  }
+  // attr nd_sbp
+  if (op_conf.input_conf().blob_conf().has_nd_sbp()) {
+    auto nd_sbp_attr = ConvertNdSbpToAttr(GetBuilder(), op_conf.input_conf().blob_conf().nd_sbp());
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
+  }
+  // attr job_name
+  if (op_conf.input_conf().has_job_name()) {
+    const std::string& job_name = op_conf.input_conf().job_name();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("job_name", GetBuilder().getStringAttr(job_name)));
+  }
+  // add attrs
+  state.addAttributes(attr_vec);
+  // operands
+  std::vector<::mlir::Value> operand_vec;
+  operand_vec.emplace_back(entry_block->getArgument(input_count++));
+  if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
+  state.addOperands(operand_vec);
+  // result types
+  llvm::SmallVector<Type, 8> out_types;
+  auto output_lbn = op_conf.name() + "/out";
+  out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  state.addTypes(out_types);
+  // create op
+  auto op = GetBuilder().createOperation(state);
+  if (!op) {
+    GetModule()->emitError("fail to create op, name: " + op_conf.name());
+    return failure();
+  }
+  // record result
+  if (op->getNumResults() != 2) {
+    op->emitError("input op should has two results (out and ctrl_output), but got "
+                  + std::to_string(op->getNumResults()) + "\n");
+    return failure();
+  }
+  if (!lbn2result_.emplace(output_lbn, op->getResult(0)).second) {
+    op->emitError("lbn already exists, lbn: ") << output_lbn;
+    return failure();
+  }
+  if (!op_name2ctrl_result_.emplace(op_conf.name(), op->getResult(1)).second) {
+    op->emitError("ctrl output already exists, op_name: ") << op_conf.name();
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_conf) {
+  if (!op_conf.has_output_conf()) {
+    GetModule().emitError("Not a output op. op name: " + op_conf.name());
+    return failure();
+  }
+
+  OperationState state(FileLineColLoc::get(GetMLIRContext(), op_conf.name(), 0, 0),
+                       "oneflow.output");
+  // attrs
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(AddOpConf(op_conf, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op_conf, attr_vec))) { return failure(); }
+  // attr output_lbns
+  auto output_lbns_attr = GetBuilder().getStrArrayAttr({op_conf.name() + "/out"});
+  attr_vec.emplace_back(GetBuilder().getNamedAttr(
+      OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr));
+  // attr shape
+  if (op_conf.output_conf().blob_conf().has_shape()) {
+    auto shape_attr = GetAttrFromShape(op_conf.output_conf().blob_conf().shape());
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getShapeAttrName(), shape_attr));
+  }
+  // attr data_type
+  if (op_conf.output_conf().blob_conf().has_data_type()) {
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getDataTypeAttrName(),
+        GetDataTypeAttr(GetMLIRContext(), op_conf.output_conf().blob_conf().data_type())
+            .getValue()));
+  }
+  // attr is_dynamic
+  if (op_conf.output_conf().blob_conf().has_is_dynamic()) {
+    bool is_dynamic = op_conf.output_conf().blob_conf().is_dynamic();
+    attr_vec.emplace_back(GetBuilder().getNamedAttr(
+        OpTrait::TensorSource<void>::getIsDynamicAttrName(), GetBuilder().getBoolAttr(is_dynamic)));
+  }
+  // attr nd_sbp
+  if (op_conf.output_conf().blob_conf().has_nd_sbp()) {
+    auto nd_sbp_attr = ConvertNdSbpToAttr(GetBuilder(), op_conf.output_conf().blob_conf().nd_sbp());
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
+  }
+  // attr job_name
+  if (op_conf.output_conf().has_job_name()) {
+    const std::string& job_name = op_conf.output_conf().job_name();
+    attr_vec.emplace_back(
+        GetBuilder().getNamedAttr("job_name", GetBuilder().getStringAttr(job_name)));
+  }
+  // add attrs
+  state.addAttributes(attr_vec);
+  // operands
+  std::vector<::mlir::Value> operand_vec;
+  auto input_bns_lbns = job_wrapper_.InputBns4OpName(op_conf.name());
+  if (input_bns_lbns.second.size() != 1) {
+    GetModule()->emitError("output op should has only one input, op_name: " + op_conf.name());
+    return failure();
+  }
+  if (failed(AppendDataInOperand(input_bns_lbns.second[0], operand_vec))) { return failure(); }
+  if (failed(AppendCtrlInOperand(op_conf, operand_vec))) { return failure(); }
+  state.addOperands(operand_vec);
+  // result types
+  llvm::SmallVector<Type, 8> out_types;
+  auto output_lbn = op_conf.name() + "/out";
+  out_types.push_back(GetTensorTypeOfLbn(output_lbn));
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
+  state.addTypes(out_types);
+  // create op
+  auto op = GetBuilder().createOperation(state);
+  if (!op) {
+    GetModule()->emitError("fail to create op, name: " + op_conf.name());
+    return failure();
+  }
+  // record result
+  if (op->getNumResults() != 2) {
+    op->emitError("output_conf op should has two results (out and ctrl_output), but got "
+                  + std::to_string(op->getNumResults()) + "\n");
+    return failure();
+  }
+  if (!lbn2result_.emplace(output_lbn, op->getResult(0)).second) {
+    op->emitError("lbn already exists, lbn: ") << output_lbn;
+    return failure();
+  }
+  if (!op_name2ctrl_result_.emplace(op_conf.name(), op->getResult(1)).second) {
+    op->emitError("ctrl output already exists, op_name: ") << op_conf.name();
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult JobImporter::ProcessJob() {
+  llvm::SmallVector<Type, 8> input_types;
+  llvm::SmallVector<Type, 4> result_types;
+  llvm::SmallVector<Value, 4> results;
   bool is_succeeded = true;
+
   job_wrapper_.TopoForEachOpConf([&](const ::oneflow::OperatorConf* op_conf) {
-    const auto op = *op_conf;
+    if (op_conf->has_input_conf()) {
+      auto type = GetInterfaceBlobConfType(op_conf->input_conf().blob_conf());
+      if (type) {
+        input_types.emplace_back(type);
+      } else {
+        is_succeeded = false;
+      }
+    }
+  });
+  if (!is_succeeded) { return failure(); }
+
+  auto func_type = GetBuilder().getFunctionType(input_types, llvm::None);
+  auto job_op =
+      GetBuilder().create<oneflow::Job>(GetRootLocation(), job_->job_conf().job_name(), func_type);
+  auto* entryBlock = job_op.addEntryBlock();
+  GetBuilder().setInsertionPointToStart(entryBlock);
+
+  is_succeeded = true;
+  size_t input_count = 0;
+  job_wrapper_.TopoForEachOpConf([&](const ::oneflow::OperatorConf* op_conf) {
     if (is_succeeded == false) { return; }
-    if (op.has_user_conf()) {
-      is_succeeded = succeeded(ProcessUserOp(op));
+    if (op_conf->has_user_conf()) {
+      is_succeeded = succeeded(ProcessUserOp(*op_conf));
+    } else if (op_conf->has_input_conf()) {
+      is_succeeded = succeeded(ProcessInputOp(*op_conf, entryBlock, input_count));
+    } else if (op_conf->has_output_conf()) {
+      is_succeeded = succeeded(ProcessOutputOp(*op_conf));
+      if (is_succeeded) {
+        auto result = entryBlock->back().getResult(0);
+        results.emplace_back(result);
+        result_types.emplace_back(result.getType());
+      }
     } else {
-      is_succeeded = succeeded(ProcessSystemOp(op));
+      is_succeeded = succeeded(ProcessSystemOp(*op_conf));
     }
   });
   if (is_succeeded == false) { return failure(); }
 
-  ReturnOp returnOp;
-  if (!entryBlock.empty()) { returnOp = dyn_cast<ReturnOp>(entryBlock.back()); }
-  if (!returnOp) { GetBuilder().create<ReturnOp>(GetRootLocation()); }
-  GetModule().push_back(function);
+  mlir::oneflow::ReturnOp return_op;
+  if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
+  if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
+
+  func_type = GetBuilder().getFunctionType(input_types, result_types);
+  job_op.getOperation()->setAttr(oneflow::Job::getTypeAttrName(), TypeAttr::get(func_type));
+  GetModule().push_back(job_op);
   return success();
 }
 
@@ -269,64 +590,151 @@ LogicalResult JobImporter::TryToUpdateJob() {
   new_job.CopyFrom(*job_);
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
-  auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
-      oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, system_op_adaptor, new_job);
-      auto op_name = system_op_adaptor.op_name().getValue().str();
-      ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
-      for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
-        auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
-        std::string new_val = GetOutputLbn(result).getValue();
-        job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
-            &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
-      }
-      if (succeeded(ConvertCtrlInputs(op, op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
+
+  Operation* job_op = nullptr;
+  llvm::SmallVector<Value, 4> outputs;
+
+  auto find_first_job = [&](oneflow::Job job) -> WalkResult {
+    job_op = job.getOperation();
+    new_job.mutable_job_conf()->set_job_name(job.sym_name().str());
+    return WalkResult::interrupt();
+  };
+
+  GetModule().getOperation()->walk(find_first_job);
+  if (!job_op) {
+    GetModule()->emitError("job not found. module op: ") << *GetModule();
+    return failure();
+  }
+
+  auto ConvertOp = [&](Operation* op) -> WalkResult {
+    if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+      if (llvm::dyn_cast<oneflow::UserOp>(op)) {
+        op->emitError("excepted concrete UserOp, but got generic UserOp: ") << *op;
         return WalkResult::interrupt();
+      } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+        if (failed(ConvertSystemOp(op, new_job))) {
+          op->emitError("failed to process SystemOp: ") << *op;
+          return WalkResult::interrupt();
+        }
+      } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
+        if (failed(ConvertVariableOp(op, new_job))) {
+          op->emitError("failed to process VariableOp: ") << *op;
+          return WalkResult::interrupt();
+        }
+      } else if (llvm::dyn_cast<oneflow::InputOp>(op) || llvm::dyn_cast<oneflow::OutputOp>(op)) {
+        // do nothing and advance
+      } else {
+        if (!dyn_cast<UserOpCompatible>(op)) {
+          op->emitError("op is not UserOpCompatible ") << *op;
+          return WalkResult::interrupt();
+        }
+        if (failed(ConvertUserOp(op, new_job))) {
+          op->emitError("failed to process UserOp: ") << *op;
+          return WalkResult::interrupt();
+        }
       }
-    } else if (llvm::dyn_cast<ReturnOp>(op) || llvm::dyn_cast<FuncOp>(op)
-               || llvm::dyn_cast<ModuleOp>(op)) {
-      return WalkResult::advance();
+    } else if (llvm::dyn_cast<mlir::oneflow::Job>(op)) {
+      // do nothing and advance
+    } else if (auto return_op = llvm::dyn_cast<mlir::oneflow::ReturnOp>(op)) {
+      for (auto operand : return_op->getOperands()) { outputs.emplace_back(operand); }
     } else {
-      oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-      UpdatePlacement(op, user_op_adaptor, new_job);
-      ::oneflow::OperatorConf op_conf;
-      const std::string op_name = user_op_adaptor.op_name().getValue().str();
-      auto user_conf = op_conf.mutable_user_conf();
-      if (succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))
-          && succeeded(ConvertUserOpAttributes(op, user_op_adaptor, op_conf))
-          && succeeded(ConvertCtrlInputs(op, op_conf))) {
-        *(new_job.mutable_net()->add_op()) = op_conf;
-      } else {
-        return WalkResult::interrupt();
-      }
-    } /* convert op conf */
+      op->emitError("unexcepted op: ") << *op;
+      return WalkResult::interrupt();
+    }
     return WalkResult::advance();
   };
-  SymbolTable symbol_table(GetModule());
-  if (symbol_table.lookup(job_wrapper_.job()->job_conf().job_name())
-          ->walk(convertOps)
-          .wasInterrupted()) {
-    return failure();
-  } else {
-    job_wrapper_.UpdateJob(&new_job);
+  if (job_op->walk(ConvertOp).wasInterrupted()) { return failure(); }
+
+  // add input op
+  auto arguments = llvm::dyn_cast<oneflow::Job>(job_op).body().front().getArguments();
+  for (BlockArgument argument : arguments) {
+    for (auto& use : argument.getUses()) {
+      Operation* owner = use.getOwner();
+      if (!dyn_cast<oneflow::InputOp>(owner)) { return failure(); }
+      if (failed(ConvertInputOp(owner, new_job))) { return failure(); }
+    }
   }
+  // add output op
+  for (auto output : outputs) {
+    Operation* owner = output.getDefiningOp();
+    if (!dyn_cast<oneflow::OutputOp>(owner)) { return failure(); }
+    if (failed(ConvertOutputOp(owner, new_job))) { return failure(); }
+  }
+
+  job_wrapper_.UpdateJob(&new_job);
   return success();
+}
+
+LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
+  // TODO: concrete user op should not use generic UserOpAdaptor
+  oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, user_op_adaptor, job);
+
+  auto* op_conf = job.mutable_net()->add_op();
+  auto* user_conf = op_conf->mutable_user_conf();
+  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) { return failure(); }
+  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) { return failure(); }
+  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) { return failure(); }
+  if (!succeeded(ConvertCtrlInputs(op, *op_conf))) { return failure(); }
+  return success();
+}
+
+LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, system_op_adaptor, job);
+  auto op_name = system_op_adaptor.op_name().getValue().str();
+  ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
+  for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
+    auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
+    std::string new_val = GetOutputLbn(result).getValue();
+    job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
+        &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
+  }
+  if (failed(ConvertCtrlInputs(op, op_conf))) { return failure(); }
+  *(job.mutable_net()->add_op()) = op_conf;
+  return success();
+}
+
+LogicalResult JobImporter::ConvertVariableOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::VariableOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, op_adaptor, job);
+  auto* op_conf = job.mutable_net()->add_op();
+  return ConvertVariableOpConf(op, op_adaptor, op_conf);
+}
+
+LogicalResult JobImporter::ConvertInputOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::InputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, op_adaptor, job);
+  auto* op_conf = job.mutable_net()->add_op();
+  return ConvertInputOpConf(op, op_adaptor, op_conf);
+}
+
+LogicalResult JobImporter::ConvertOutputOp(Operation* op, ::oneflow::Job& job) {
+  oneflow::OutputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, op_adaptor, job);
+  auto* op_conf = job.mutable_net()->add_op();
+  return ConvertOutputOpConf(op, op_adaptor, op_conf);
+}
+
+Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
+  if (!blob_conf.has_data_type()) { return Type{}; }
+  if (!blob_conf.has_shape()) { return Type{}; }
+  auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type());
+  if (!data_type.hasValue()) { return Type{}; }
+  return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
+                               *data_type);
 }
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningModuleRef& module) {
   mlir::PassManager pm(context);
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addPass(createCanonicalizerPass());
   std::string graphviz;
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
-  pm.addNestedPass<mlir::FuncOp>(oneflow::createFuseIntoExistingOpPass());
-  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
@@ -375,9 +783,55 @@ void RoundTripOneFlowJob(
                    << job->job_conf().job_name() << "\n";
       exit(EXIT_FAILURE);
     }
-
   } else {
     llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
+void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
+  const ::oneflow::Job* job = job_wrapper.job();
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+
+  OwningModuleRef module(
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.ProcessJob())) {
+    mlir::PassManager pm(&context);
+    pm.addPass(createCanonicalizerPass());
+    if (mlir::failed(pm.run(*module))) {
+      module->emitError("Failed to run canonicalizer pass");
+      exit(EXIT_FAILURE);
+    }
+
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    std::string filename = path + "/model.mlir";
+    std::ofstream fs(filename, std::ios::trunc);
+    if (!fs.is_open()) {
+      llvm::errs() << "fail to open file " << filename;
+      exit(EXIT_FAILURE);
+    }
+    fs << mlir;
+    fs.close();
+  } else {
+    const auto& job_name = job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job_name << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
+void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
+  MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+  OwningModuleRef module = parseSourceFile<ModuleOp>(path, &context);
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (failed(imp.TryToUpdateJob())) {
+    llvm::errs() << "fail to load job from IR";
     exit(EXIT_FAILURE);
   }
 }
@@ -388,5 +842,7 @@ void registerFromOneFlowJobTranslation() {
                                                return TranslateOneFlowJobToModule(str, context);
                                              });
 }
+
+}  // namespace oneflow
 
 }  // namespace mlir

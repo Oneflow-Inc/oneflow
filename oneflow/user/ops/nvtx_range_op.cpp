@@ -13,67 +13,103 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+#ifdef WITH_CUDA
 
-REGISTER_USER_OP("nvtx_start")
-    .Input("in")
-    .Output("out")
-    .Attr<std::string>("mark_prefix")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> NvtxStartOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("nvtx_end")
-    .Input("in")
-    .Output("out")
-    .Attr<std::string>("mark_prefix")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> NvtxStartOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NvtxStartOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> NvtxStartOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> NvtxEndOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> NvtxEndOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NvtxEndOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> NvtxEndOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+#else
+
+/* static */ Maybe<void> NvtxStartOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/*static*/ Maybe<void> NvtxStartOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NvtxStartOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxStartOp::InferDataType(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxEndOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/*static*/ Maybe<void> NvtxEndOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxEndOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+/* static */ Maybe<void> NvtxEndOp::InferDataType(user_op::InferContext* ctx) {
+  return Error::UnimplementedError() << "require CUDA to use NVTX";
+}
+
+#endif  // WITH_CUDA
 
 REGISTER_USER_OP_GRAD("nvtx_start")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -108,6 +144,5 @@ REGISTER_USER_OP_GRAD("nvtx_end")
       }
       return Maybe<void>::Ok();
     });
-}  // namespace
 
 }  // namespace oneflow

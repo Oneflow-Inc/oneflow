@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -52,6 +53,8 @@ int32_t GetGpuDeviceNum() {
 #endif
 }
 
+int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
+
 }  // namespace
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
@@ -66,19 +69,16 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       //   In multi-client, user can NOT config gpu_device_num and cpu_device_num.
       //
       //   cpu_device_num is a confusing name, it should be explained as:
-      //       gpu_device corresponding host memory and compute stream.
-      //   When gpu_device_num == 0 (cpu only), cpu device num should be process num.
-      //
+      //       in current rank, assign CPU actor compute stream in this optional range.
+      //       That is, the number of independent CPU devices that can be abstracted from
+      //       this machine and this process.
       //   gpu_device_num is the number of visible GPUs one current machine.
-      //   NOTE: gpu_device_num NOT necessarily equal to the num of process one this machine.
+      //
+      //   NOTE: gpu_device_num and cpu_device_num NOT necessarily equal to the num of process
+      //       on this machine.
       resource.set_machine_num(GlobalProcessCtx::NodeSize());
-      const int32_t gpu_device_num = GetGpuDeviceNum();
-      resource.set_gpu_device_num(gpu_device_num);
-      if (gpu_device_num == 0) {
-        resource.set_cpu_device_num(GlobalProcessCtx::NumOfProcessPerNode());
-      } else {
-        resource.set_cpu_device_num(gpu_device_num);
-      }
+      resource.set_gpu_device_num(GetGpuDeviceNum());
+      resource.set_cpu_device_num(GetCpuDeviceNum());
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
@@ -100,6 +100,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     {
       // NOTE(chengcheng): init runtime global objects
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
       Global<RuntimeCtx>::New();
       Global<MemoryAllocator>::New();
       Global<ChunkMgr>::New();
@@ -144,6 +145,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Global<ChunkMgr>::Delete();
       Global<MemoryAllocator>::Delete();
       Global<RuntimeCtx>::Delete();
+      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
     }
 

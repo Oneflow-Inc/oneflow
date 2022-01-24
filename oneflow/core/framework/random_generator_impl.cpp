@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/register/ofblob.h"
@@ -32,17 +33,6 @@ namespace oneflow {
 namespace one {
 
 namespace {
-
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
 
 Maybe<void> CPUSynchronize() {
   if (Global<EnvGlobalObjectsScope>::Get() != nullptr) { return vm::CurrentRankSync(); }

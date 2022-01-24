@@ -203,11 +203,18 @@ __global__ void CalFreezeScaleZeroPointCambricon(const int64_t elements,
   }
 }
 
+ep::CudaLaunchConfig GetLaunchConfig(ep::CudaStream* stream, size_t thread_num,
+                                     size_t shared_mem_size) {
+  ep::CudaLaunchConfig config;
+  stream->InitLaunchConfigWithWaves(&config, thread_num, kCudaThreadsNumPerBlock, 1);
+  config.shared_mem_size = shared_mem_size;
+  return config;
+}
+
 }  // namespace
 
-#define LAUNCH_CUDA_KERNEL(func, stream_ptr, thread_num, shared_mem_size, ...)         \
-  func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, shared_mem_size, \
-         (stream_ptr)->As<ep::CudaStream>()->cuda_stream()>>>(__VA_ARGS__)
+#define LAUNCH_CUDA_KERNEL(func, stream, thread_num, shared_mem_size, ...) \
+  (stream)->LaunchKernel(func, GetLaunchConfig((stream), thread_num, shared_mem_size), __VA_ARGS__);
 
 template<typename T>
 class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
@@ -242,10 +249,10 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     OF_CUDA_CHECK(cudaMemcpy(host_current_train_step_ptr, current_train_step->dptr<int64_t>(),
                              current_train_step->shape().elem_cnt() * sizeof(int64_t),
                              cudaMemcpyDefault));
-
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     if (*host_current_train_step_ptr <= stop_update_after_iters && is_training) {
-      LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->stream(), 1, 0, 1, max_ptr, min_ptr);
-      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->stream(), elements,
+      LAUNCH_CUDA_KERNEL((InitMaxMin<T>), cuda_stream, 1, 0, 1, max_ptr, min_ptr);
+      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), cuda_stream, elements,
                          kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
                          min_ptr);
     }
@@ -253,23 +260,23 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
         if (moving) {
-          LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->stream(), 1, 0, 1,
+          LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), cuda_stream, 1, 0, 1,
                              static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                              moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
                              scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
         } else {
-          LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointSymmetric<T>), ctx->stream(), 1, 0, 1,
+          LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointSymmetric<T>), cuda_stream, 1, 0, 1,
                              static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                              scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
         }
       } else {  // quantization_scheme == "affine"
         if (moving) {
-          LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->stream(), 1, 0, 1,
+          LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), cuda_stream, 1, 0, 1,
                              static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                              moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
                              scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
         } else {
-          LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointAffine<T>), ctx->stream(), 1, 0, 1,
+          LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointAffine<T>), cuda_stream, 1, 0, 1,
                              static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                              moving_min->dptr<T>(), scale->mut_dptr<T>(),
                              zero_point->mut_dptr<T>());
@@ -277,12 +284,12 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
       }
     } else if (quantization_formula == "cambricon") {
       if (moving) {
-        LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), ctx->stream(), 1, 0, 1,
+        LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), cuda_stream, 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                            moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       } else {
-        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointCambricon<T>), ctx->stream(), 1, 0, 1,
+        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointCambricon<T>), cuda_stream, 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/loss_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
@@ -25,89 +26,91 @@ namespace {
 using namespace loss;
 
 template<typename T>
-__global__ void ComputeSmoothL1Out(int64_t elem_cnt, const T* input, const T* target, T* out,
-                                   const float beta, const float inv_beta) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const T abs_diff = abs(input[i] - target[i]);
-    if (abs_diff < beta) {
-      out[i] = 0.5 * abs_diff * abs_diff * inv_beta;
+struct SmoothL1Functor {
+  float beta_;
+  float inv_beta_;
+  T half_of_one_;
+  SmoothL1Functor(float beta)
+      : beta_(beta), inv_beta_(static_cast<float>(1.0 / beta)), half_of_one_(static_cast<T>(0.5)) {}
+
+  __device__ __forceinline__ T operator()(T input_val, T target_val) const {
+    const T abs_diff = abs(input_val - target_val);
+    if (abs_diff < beta_) {
+      return half_of_one_ * abs_diff * abs_diff * inv_beta_;
     } else {
-      out[i] = abs_diff - 0.5 * beta;
+      return abs_diff - half_of_one_ * beta_;
     }
   }
-}
+};
 
 template<>
-__global__ void ComputeSmoothL1Out(int64_t elem_cnt, const half* input, const half* target,
-                                   half* out, const float beta, const float inv_beta) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  const half half_zero = __float2half(0.0);
-  const half half_one = __float2half(0.5);
-  const half half_beta = __float2half(beta);
-  const half half_inv_beta = __float2half(inv_beta);
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half diff = __hsub(input[i], target[i]);
-    const half abs_diff = __hlt(diff, half_zero) ? __hneg(diff) : diff;
-    if (__hlt(abs_diff, half_beta)) {
-      out[i] = __hmul(__hmul(half_one, abs_diff), __hmul(abs_diff, half_inv_beta));
+struct SmoothL1Functor<half> {
+  half beta_;
+  half inv_beta_;
+  half zero_;
+  half half_of_one_;
+  SmoothL1Functor(float beta)
+      : beta_(__float2half(beta)),
+        inv_beta_(__float2half(static_cast<float>(1.0 / beta))),
+        zero_(__float2half(0.f)),
+        half_of_one_(__float2half(0.5f)) {}
+
+  __device__ __forceinline__ half operator()(half input_val, half target_val) const {
+    const half diff = input_val - target_val;
+    const half abs_diff = diff < zero_ ? __hneg(diff) : diff;
+    if (abs_diff < beta_) {
+      return half_of_one_ * abs_diff * abs_diff * inv_beta_;
     } else {
-      out[i] = __hsub(abs_diff, __hmul(half_one, half_beta));
+      return abs_diff - half_of_one_ * beta_;
     }
   }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
+};
 
 template<typename T>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const T* input, const T* target,
-                                       const T* dy, T* dx, const float beta, const float inv_beta) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const T diff = input[i] - target[i];
+struct SmoothL1GradFunctor {
+  float beta_;
+  float inv_beta_;
+  T zero_;
+  SmoothL1GradFunctor(float beta)
+      : beta_(beta), inv_beta_(static_cast<float>(1.0 / beta)), zero_(GetZeroVal<T>()) {}
+
+  __device__ __forceinline__ T operator()(T input_val, T target_val, T dy_val) const {
+    const T diff = input_val - target_val;
     const T abs_diff = abs(diff);
     T dx_val;
-    if (abs_diff < beta) {
-      dx_val = diff * inv_beta;
+    if (abs_diff < beta_) {
+      dx_val = diff * inv_beta_;
     } else {
-      dx_val = (diff > GetZeroVal<T>()) - (diff < GetZeroVal<T>());
+      dx_val = (diff > zero_) - (diff < zero_);
     }
-    const T dy_val = dy[i];
-    dx_val = dx_val * dy_val;
-    dx[i] = dx_val;
+    return dx_val * dy_val;
   }
-}
+};
 
 template<>
-__global__ void ComputeSmoothL1GradOut(int64_t elem_cnt, const half* input, const half* target,
-                                       const half* dy, half* dx, const float beta,
-                                       const float inv_beta) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  const half half_zero = __float2half(0.0);
-  const half half_one = __float2half(1.0);
-  const half half_beta = __float2half(beta);
-  const half half_inv_beta = __float2half(inv_beta);
+struct SmoothL1GradFunctor<half> {
+  half beta_;
+  half inv_beta_;
+  half zero_;
+  half one_;
+  SmoothL1GradFunctor(float beta)
+      : beta_(__float2half(beta)),
+        inv_beta_(__float2half(static_cast<float>(1.0 / beta))),
+        zero_(__float2half(0.f)),
+        one_(__float2half(1.f)) {}
 
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const half diff = __hsub(input[i], target[i]);
-    const half abs_diff = __hlt(diff, half_zero) ? __hneg(diff) : diff;
+  __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val) const {
+    const half diff = input_val - target_val;
+    const half abs_diff = diff < zero_ ? __hneg(diff) : diff;
     half dx_val;
-    if (__hlt(abs_diff, half_beta)) {
-      dx_val = __hmul(diff, half_inv_beta);
+    if (abs_diff < beta_) {
+      dx_val = diff * inv_beta_;
     } else {
-      const half left = __hgt(diff, half_zero) ? half_one : half_zero;
-      const half right = __hlt(diff, half_zero) ? half_one : half_zero;
-      dx_val = __hsub(left, right);
+      dx_val = (diff > zero_) - (diff < zero_);
     }
-    const half dy_val = dy[i];
-    dx_val = __hmul(dx_val, dy_val);
-    dx[i] = dx_val;
+    return dx_val * dy_val;
   }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
+};
 
 template<typename T>
 class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kCUDA, T, SmoothL1LossKernel<T>> {
@@ -115,9 +118,8 @@ class SmoothL1LossKernel : public SimpleLossKernel<DeviceType::kCUDA, T, SmoothL
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, T* out) const {
     const float beta = ctx->Attr<float>("beta");
-    ComputeSmoothL1Out<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, input, target, out, beta, static_cast<float>(1.0 / beta));
+    OF_CUDA_CHECK((cuda::elementwise::Binary(SmoothL1Functor<T>(beta), elem_cnt, out, input, target,
+                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
 };
 
@@ -128,9 +130,9 @@ class SmoothL1LossGradKernel
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx) const {
     const float beta = ctx->Attr<float>("beta");
-    ComputeSmoothL1GradOut<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, input, target, dy, dx, beta, static_cast<float>(1.0 / beta));
+    OF_CUDA_CHECK(
+        (cuda::elementwise::Ternary(SmoothL1GradFunctor<T>(beta), elem_cnt, dx, input, target, dy,
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
 };
 

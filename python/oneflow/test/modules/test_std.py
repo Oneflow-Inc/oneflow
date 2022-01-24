@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestStd(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False, rtol=0.01, atol=0.01, check_graph=False)
+    @autotest(n=10, auto_backward=False, rtol=0.01, atol=0.01, check_graph=True)
     def test_std_flow_with_random_data(test_case):
         device = random_device()
         all_dim = random().to(int)
@@ -33,7 +33,7 @@ class TestStd(flow.unittest.TestCase):
         )
         return z
 
-    @autotest(n=10, auto_backward=False, rtol=0.01, atol=0.01, check_graph=False)
+    @autotest(n=10, auto_backward=False, rtol=0.01, atol=0.01, check_graph=True)
     def test_std_tensor_with_random_data(test_case):
         device = random_device()
         dim = random(low=0, high=4).to(int)
