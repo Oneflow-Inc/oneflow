@@ -820,14 +820,6 @@ def ceil_op(input):
     return flow._C.ceil(input)
 
 
-@register_tensor_op("ceil")
-def ceil_op_tensor(input):
-    """
-    See :func:`oneflow.ceil`
-    """
-    return flow._C.ceil(input)
-
-
 def expm1_op(input):
     """Returns a new tensor with the exponential of the elements minus 1
     of :attr:`input`.
@@ -880,14 +872,6 @@ def expm1_op(input):
           [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
 
 
-    """
-    return flow._C.expm1(input)
-
-
-@register_tensor_op("expm1")
-def expm1_op_tensor(input):
-    """
-    See :func:`oneflow.expm1`
     """
     return flow._C.expm1(input)
 
