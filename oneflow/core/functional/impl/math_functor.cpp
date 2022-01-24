@@ -1817,7 +1817,7 @@ class CumProdFunctor : public CumBaseFunctor {
 };
 
 class CumGradBaseFunctor {
-  public:
+ public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     // No need to check dim validation here, while CumBaseFunctor handled already
     MutableAttrMap attrs;
@@ -1825,10 +1825,9 @@ class CumGradBaseFunctor {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
-  protected:
+ protected:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class CumsumGradFunctor : public CumGradBaseFunctor {
  public:
@@ -1920,8 +1919,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
-  m.add_functor<CumProdFunctor>("CumProd");
-  m.add_functor<CumProdGradFunctor>("CumProdGrad");
+  m.add_functor<CumProdFunctor>("Cumprod");
+  m.add_functor<CumProdGradFunctor>("CumprodGrad");
 };
 
 }  // namespace functional
