@@ -19,10 +19,9 @@ limitations under the License.
 #include <functional>
 #include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
-
-class LocalDepObject;
 
 namespace one {
 
@@ -37,11 +36,9 @@ class EagerBlobObject;
 class TensorViewOperand : public PhyInstrOperand {
  public:
   TensorViewOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                    const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object,
-                    LocalDepObject* compute_local_dep_object)
+                    const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object)
       : eager_blob_object_(eager_blob_object),
         view_eager_blob_object_(view_eager_blob_object),
-        compute_local_dep_object_(compute_local_dep_object),
         input_dependences_(),
         output_dependences_() {
     ForEachConstMirroredObject(SetInserter(&input_dependences_));
@@ -69,7 +66,6 @@ class TensorViewOperand : public PhyInstrOperand {
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::shared_ptr<vm::EagerBlobObject> view_eager_blob_object_;
-  LocalDepObject* compute_local_dep_object_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };
