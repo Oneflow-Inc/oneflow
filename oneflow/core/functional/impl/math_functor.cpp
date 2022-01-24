@@ -1782,9 +1782,11 @@ class ErfinvInplaceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CumsumFunctor {
+class CumBaseFunctor {
  public:
-  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("x").Output("y").Build()); }
+  explicit CumBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("x").Output("y").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
@@ -1804,45 +1806,38 @@ class CumsumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CumsumGradFunctor {
+class CumsumFunctor : public CumBaseFunctor {
  public:
-  CumsumGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
-  }
+  CumsumFunctor() : CumBaseFunctor("cumsum") {}
+};
+
+class CumProdFunctor : public CumBaseFunctor {
+ public:
+  CumProdFunctor() : CumBaseFunctor("cumprod") {}
+};
+
+class CumGradBaseFunctor {
+  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // No need to check dim validation here, while CumsumFunctor handled already
+    // No need to check dim validation here, while CumBaseFunctor handled already
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
- private:
+  protected:
   std::shared_ptr<OpExpr> op_;
 };
 
-class CumProdFunctor {
+
+class CumsumGradFunctor : public CumGradBaseFunctor {
  public:
-  CumProdFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumprod").Input("x").Output("y").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    auto ndim = input->ndim();
-    if (dim < 0) { dim += ndim; }
-    CHECK_OR_RETURN(dim >= 0 && dim < ndim)
-        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-        << ndim << " ) but got " << dim;
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
-    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  CumsumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
-class CumProdGradFunctor {
+class CumProdGradFunctor : public CumGradBaseFunctor {
  public:
   CumProdGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("cumprod_grad")
@@ -1852,17 +1847,6 @@ class CumProdGradFunctor {
                          .Output("dx")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
-    // No need to check dim validation here, while CumProbFunctor handled already
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
