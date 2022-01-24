@@ -171,7 +171,6 @@ add_docstr(
 add_docstr(
     oneflow.le,
     """le(input, other) -> Tensor
-    
     Returns the truth value of :math:`input <= other` element-wise.
 
     Args:
