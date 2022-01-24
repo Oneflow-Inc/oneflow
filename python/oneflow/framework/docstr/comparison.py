@@ -68,7 +68,7 @@ add_docstr(
 
         >>> out = flow.ge(input1, input2)
         >>> out
-        tensor([1, 1, 0], dtype=oneflow.int8)
+        tensor([ True,  True, False], dtype=oneflow.bool)
 
     """,
 )
@@ -100,7 +100,7 @@ add_docstr(
 
         >>> y = flow.eq(input, other)
         >>> y
-        tensor([1, 1, 1, 0], dtype=oneflow.int8)
+        tensor([ True,  True,  True, False], dtype=oneflow.bool)
 
     """,
 )
@@ -132,7 +132,7 @@ add_docstr(
 
         >>> y = flow.ne(input, other)
         >>> y
-        tensor([0, 0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False, False,  True], dtype=oneflow.bool)
 
     """,
 )
@@ -148,7 +148,7 @@ add_docstr(
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
@@ -162,7 +162,7 @@ add_docstr(
 
         >>> out = flow.lt(input1, input2)
         >>> out
-        tensor([0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False,  True], dtype=oneflow.bool)
 
     """,
 )
@@ -171,6 +171,7 @@ add_docstr(
 add_docstr(
     oneflow.le,
     """le(input, other) -> Tensor
+    
     Returns the truth value of :math:`input <= other` element-wise.
 
     Args:
@@ -178,7 +179,7 @@ add_docstr(
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
@@ -192,7 +193,7 @@ add_docstr(
 
         >>> out = flow.le(input1, input2)
         >>> out
-        tensor([1, 0, 1], dtype=oneflow.int8)
+        tensor([ True, False,  True], dtype=oneflow.bool)
 
     """,
 )
