@@ -6,8 +6,6 @@ FetchContent_Declare(
   tbb
   URL ${ONETBB_URL}
   URL_HASH MD5=${ONETBB_MD5}
-  CMAKE_CACHE_ARGS
-    -DBUILD_SHARED_LIBS:BOOL=ON
 )
 FetchContent_GetProperties(tbb)
 
