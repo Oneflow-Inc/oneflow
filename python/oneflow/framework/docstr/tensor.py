@@ -121,7 +121,7 @@ add_docstr(
     oneflow.Tensor.flip,
     """
     See :func:`oneflow.flip`
-    """
+    """,
 )
 
 add_docstr(

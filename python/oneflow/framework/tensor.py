@@ -734,7 +734,7 @@ def _in_top_k(self, predictions, k):
 
 
 def _index_select(self, dim, index):
-    return flow.index_select(self, dim ,index)
+    return flow.index_select(self, dim, index)
 
 
 def _get_device(self):
