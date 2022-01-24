@@ -343,8 +343,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
-    user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t value_size = 0;  // lookup not need value tmp buffer, so set value_size to 0
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
@@ -364,16 +362,20 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
     CHECK_EQ(*host_num_keys, 0);  // we think keys must be in cache or kv_store.
 
-    const int64_t ndims = unique_values->shape().NumAxes();
-    DimVector src_pos_vec(ndims, 0);
-    DimVector dst_pos_vec(ndims, 0);
-    std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, ndims);
-    CHECK(copy_nd_primitive);
-    copy_nd_primitive->Launch(ctx->stream(), unique_values->data_type(), ndims,
-                              embeddings->mut_dptr(), embeddings->shape().ptr(), dst_pos_vec.data(),
-                              unique_values->dptr(), unique_values->shape().ptr(),
-                              src_pos_vec.data(), embeddings->shape().ptr());
+    if (ctx->has_output("embeddings", 0)) {
+      user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+      const int64_t ndims = unique_values->shape().NumAxes();
+      CHECK_NE(embeddings->shape().At(ndims - 1), unique_values->shape().At(ndims - 1));
+      DimVector src_pos_vec(ndims, 0);
+      DimVector dst_pos_vec(ndims, 0);
+      std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
+          ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, ndims);
+      CHECK(copy_nd_primitive);
+      copy_nd_primitive->Launch(
+          ctx->stream(), unique_values->data_type(), ndims, embeddings->mut_dptr(),
+          embeddings->shape().ptr(), dst_pos_vec.data(), unique_values->dptr(),
+          unique_values->shape().ptr(), src_pos_vec.data(), embeddings->shape().ptr());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -385,7 +387,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
           && (user_op::HobDataType("unique_ids", 0) == GetDataType<k_dtype>::value)       \
-          && (user_op::HobDataType("embeddings", 0) == GetDataType<t_dtype>::value))      \
+          && (user_op::HobDataType("unique_values", 0) == GetDataType<t_dtype>::value))   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                 \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);    \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                        \

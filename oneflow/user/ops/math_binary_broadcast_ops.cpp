@@ -84,7 +84,7 @@ Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
   CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
-  *ctx->OutputDType("z", 0) = DataType::kInt8;
+  *ctx->OutputDType("z", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

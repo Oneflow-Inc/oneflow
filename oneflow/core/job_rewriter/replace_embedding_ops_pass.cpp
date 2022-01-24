@@ -124,7 +124,8 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
-                          const int64_t line_size, const ParallelConf& parallel_conf,
+                          const int64_t line_size, const std::string& optimizer_type,
+                          const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const user_op::UserOpConfWrapper& id_shuffle_op,
                           std::string* embedding_lbn, std::string* unique_values_lbn) {
@@ -154,25 +155,26 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   // embedding lookup op
   user_op::UserOpConfWrapperBuilder embedding_lookup_op_builder(embedding_op.op_name()
                                                                 + "_embedding_lookup");
-  user_op::UserOpConfWrapper embedding_lookup_op =
-      embedding_lookup_op_builder.OpTypeName("embedding_lookup")
-          .Input("num_unique_ids",
-                 AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
-          .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
-          .Input("context", embedding_prefetch_op.output("context", 0))
-          .Output("unique_values")
-          .Output("embeddings")
-          .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
-          .Attr<int64_t>("embedding_size", embedding_size)
-          .Attr<int64_t>("line_size", line_size)
-          .Attr<std::string>("embedding_options",
-                             embedding_op.attr<std::string>("embedding_options"))
-          .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-          .Build();
+  embedding_lookup_op_builder.OpTypeName("embedding_lookup")
+      .Input("num_unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
+      .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
+      .Input("context", embedding_prefetch_op.output("context", 0))
+      .Output("unique_values")
+      .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
+      .Attr<int64_t>("embedding_size", embedding_size)
+      .Attr<int64_t>("line_size", line_size)
+      .Attr<std::string>("embedding_options", embedding_op.attr<std::string>("embedding_options"))
+      .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
+  if (optimizer_type != "sgd") { embedding_lookup_op_builder.Output("embeddings"); }
+  user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
   OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
   embedding_lookup_new_op_conf.set_stream_name_hint("EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_lookup_new_op_conf});
-  *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
+  if (optimizer_type != "sgd") {
+    *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
+  } else {
+    *embedding_lbn = embedding_lookup_op.output("unique_values", 0);
+  }
   *unique_values_lbn = embedding_lookup_op.output("unique_values", 0);
 
   // cast
@@ -409,8 +411,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, options.EmbeddingSize(), options.LineSize(),
-                         op_node->parallel_desc().parallel_conf(), embedding_op, id_shuffle_op,
-                         &embedding_lbn, &unique_values_lbn);
+                         options.Optimizer(), op_node->parallel_desc().parallel_conf(),
+                         embedding_op, id_shuffle_op, &embedding_lbn, &unique_values_lbn);
 
     // embedding shuffle op
     BuildEmbeddingShuffle(job_builder, op_node->parallel_desc().parallel_conf(), embedding_op,
@@ -465,7 +467,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
                                 embedding_scope_symbol_id, embedding_parallel_conf);
   }
-
   return Maybe<void>::Ok();
 }
 
