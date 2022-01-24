@@ -236,7 +236,6 @@ if(CPU_THREADING_RUNTIME STREQUAL "TBB")
   set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
 endif()
 
-add_subdirectory(external)
 include(third_party)
 
 set(ROBIN_HOOD_HASHING_URL https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.4.tar.gz)
