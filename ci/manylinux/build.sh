@@ -1,5 +1,4 @@
 set -ex
-export PATH=/usr/lib64/ccache:$PATH
 gcc --version
 ld --version
 # clean python dir
@@ -22,8 +21,6 @@ cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECU
 # cmake build
 cd ${ONEFLOW_CI_BUILD_DIR}
 cmake --build . -j $(nproc)
-cpack
-rm -rf ./cpack/_CPack_Packages
 
 # build pip
 cd ${ONEFLOW_CI_SRC_DIR}

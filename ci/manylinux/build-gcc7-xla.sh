@@ -1,6 +1,5 @@
 source scl_source enable devtoolset-7
 set -ex
-export PATH=/usr/lib64/ccache:$PATH
 gcc --version
 ld --version
 # clean python dir
