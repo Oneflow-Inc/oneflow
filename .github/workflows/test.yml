@@ -4,22 +4,15 @@ on:
     types: [review_requested]
     branches:
       - "*"
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
 
 jobs:
-  cancel_previous:
-    name: Cancel previous runs
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-      - name: Cancel previous runs of outdated commit
-        uses: styfle/cancel-workflow-action@0.9.0
-        with:
-          access_token: ${{ github.token }}
-          all_but_latest: true
-
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
