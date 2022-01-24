@@ -106,5 +106,44 @@ class TestConstantModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+def _test_consistent_rand(test_case,shape, placement, sbp):
+    x = flow.rand(*shape, placement=placement, sbp=sbp)
+    test_case.assertEqual(x.shape, shape)
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
+def _test_consistent_rand_graph(test_case,shape, placement, sbp):
+    class ConsistentRandGraph(flow.nn.Graph):
+        def __init__(self,):
+            super().__init__()
+
+        def build(self):
+            x = flow.rand(*shape, placement=placement, sbp=sbp)
+            return x
+
+    c_rand_g = ConsistentRandGraph()
+    x = c_rand_g()
+    test_case.assertEqual(x.shape, shape)
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandConsistent(flow.unittest.TestCase):
+    def test_rand_consistent(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_consistent_rand, _test_consistent_rand_graph]
+        arg_dict["shape"] = [(2, 3, 4), (2, 5, 2)]
+        arg_dict["placement"] = [
+            flow.placement("cpu", {0: [0, 1]}),
+            flow.placement("cuda", {0: [0, 1]}),
+        ]
+        arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
 if __name__ == "__main__":
     unittest.main()
