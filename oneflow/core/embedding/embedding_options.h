@@ -56,7 +56,6 @@ class EmbeddingOptions final {
     };
     name_ = GetValue(json_object, "name");
     embedding_dim_ = GetValue(json_object, "embedding_dim");
-    max_query_length_ = GetValue(json_object, "max_query_length");
 
     auto l1_cache = json_object["l1_cache"];
     if (l1_cache != nlohmann::detail::value_t::null) {
@@ -179,7 +178,6 @@ class EmbeddingOptions final {
   std::string Name() const { return name_; }
   int64_t EmbeddingSize() const { return embedding_dim_; }
   int64_t LineSize() const { return line_size_; }
-  int64_t MaxQueryLength() const { return max_query_length_; }
   std::string L1CachePolicy() const { return l1_cache_policy_; }
   int64_t L1CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
   std::string L2CachePolicy() const { return l2_cache_policy_; }
@@ -204,7 +202,6 @@ class EmbeddingOptions final {
   std::string name_;
   int64_t embedding_dim_;
   int64_t line_size_;
-  int64_t max_query_length_;
   std::string l1_cache_policy_;
   int64_t l1_cache_memory_budget_mb_;
   std::string l2_cache_policy_;
