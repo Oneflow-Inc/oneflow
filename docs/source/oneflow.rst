@@ -138,6 +138,7 @@ oneflow
             tile, 
             to, 
             transpose,
+            t,
             tril, 
             unsqueeze, 
             permute,
@@ -147,6 +148,7 @@ oneflow
             zeros, 
             zeros_like,
             is_nonzero,
+            is_tensor,
             no_grad,
             grad_enable,
             inference_mode,
@@ -154,7 +156,6 @@ oneflow
             is_floating_point,
             set_printoptions,
             decode_onerec,
-            read_onerec,
             from_numpy,
             cumsum,
 

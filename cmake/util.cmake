@@ -236,6 +236,12 @@ function(set_compile_options_to_oneflow_target target)
   target_try_compile_options(${target} -Wno-mismatched-tags)
   target_try_compile_options(${target} -Wno-covered-switch-default)
 
+  if(OMP_FLAGS)
+    target_try_compile_options(${target} ${OMP_FLAGS})
+  endif()
+
+  set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+  
   if(BUILD_CUDA)
     if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
       target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
@@ -258,4 +264,21 @@ function(set_compile_options_to_oneflow_target target)
       THRUST_IGNORE_CUB_VERSION_CHECK;
     >)
   endif()
+endfunction()
+
+function(checkDirAndAppendSlash)
+set(singleValues DIR;OUTPUT)
+set(prefix ARG)
+cmake_parse_arguments(
+  PARSE_ARGV 0
+  ${prefix}
+  "${noValues}" "${singleValues}" "${multiValues}"
+)
+
+if("${${prefix}_DIR}" STREQUAL "" OR "${${prefix}_DIR}" STREQUAL "/")
+  message(FATAL_ERROR "emtpy path found: ${${prefix}_DIR}")
+else()
+  set(${${prefix}_OUTPUT} "${${prefix}_DIR}/" PARENT_SCOPE)
+endif()
+
 endfunction()
