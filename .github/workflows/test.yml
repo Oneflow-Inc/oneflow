@@ -553,7 +553,6 @@ jobs:
       - name: Save speed stats
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         continue-on-error: true
-        uses: actions/github-script@v4
         run: |
           mkdir -p ${{ env.METRICS_DIR }}
           echo "{{ steps.speed.outputs.stats }}" >> ${{ env.METRICS_DIR }}/speed_stats.txt
