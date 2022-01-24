@@ -11,9 +11,8 @@ FetchContent_GetProperties(tbb)
 
 set(TBB_EXAMPLES OFF CACHE BOOL "")
 set(TBB_TEST OFF CACHE BOOL "")
-set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
-add_subdirectory(${tbb_SOURCE_DIR} ${tbb_BINARY_DIR})
 set(BUILD_SHARED_LIBS ON)
+set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
 FetchContent_MakeAvailable(tbb)
 set_property(GLOBAL PROPERTY TBB_INCLUDE_DIRS "${tbb_SOURCE_DIR}/cpp/src;${tbb_BINARY_DIR}/src")
