@@ -1817,14 +1817,6 @@ class CumProdFunctor : public CumBaseFunctor {
 };
 
 class CumGradBaseFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // No need to check dim validation here, while CumBaseFunctor handled already
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
-
  protected:
   std::shared_ptr<OpExpr> op_;
 };
@@ -1833,6 +1825,12 @@ class CumsumGradFunctor : public CumGradBaseFunctor {
  public:
   CumsumGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    // No need to check dim validation here, while CumsumFunctor handled already
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 };
 
@@ -1845,6 +1843,14 @@ class CumProdGradFunctor : public CumGradBaseFunctor {
                          .Input("input")
                          .Output("dx")
                          .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
+    // No need to check dim validation here, while CumProdFunctor handled already
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, x}, attrs);
   }
 };
 
