@@ -43,7 +43,7 @@ def eq_op(input, other):
 
         >>> y = flow.eq(input, other)
         >>> y
-        tensor([1, 1, 1, 0], dtype=oneflow.int8)
+        tensor([ True,  True,  True, False], dtype=oneflow.bool)
 
     """
     return flow._C.equal(input, other)
@@ -75,7 +75,7 @@ def ne_op(input, other):
 
         >>> y = flow.ne(input, other)
         >>> y
-        tensor([0, 0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False, False,  True], dtype=oneflow.bool)
 
     """
     return flow._C.not_equal(input, other)
@@ -90,7 +90,7 @@ def less_op(input, other):
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
@@ -104,7 +104,7 @@ def less_op(input, other):
 
         >>> out = flow.lt(input1, input2)
         >>> out
-        tensor([0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False,  True], dtype=oneflow.bool)
 
     """
     return flow._C.less(input, other)
@@ -119,7 +119,7 @@ def less_equal_op(input, other):
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
@@ -133,7 +133,7 @@ def less_equal_op(input, other):
 
         >>> out = flow.le(input1, input2)
         >>> out
-        tensor([1, 0, 1], dtype=oneflow.int8)
+        tensor([ True, False,  True], dtype=oneflow.bool)
 
     """
     return flow._C.less_equal(input, other)
@@ -165,7 +165,7 @@ def ne_op(input, other):
 
         >>> y = flow.ne(input, other)
         >>> y
-        tensor([0, 0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False, False,  True], dtype=oneflow.bool)
 
     """
     return flow._C.not_equal(input, other)
