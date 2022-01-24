@@ -26,8 +26,7 @@ namespace {
 template<typename T, typename K, typename IDX>
 __global__ void GatherForwardGpu(const IDX elem_cnt, NdIndexOffsetHelper<IDX, 3> in_helper,
                                  NdIndexOffsetHelper<IDX, 3> out_helper, const K* indices,
-                                 const IDX num_indices, const T* in, const IDX gather_dim_size,
-                                 const IDX inner_dim_size, T* out, const IDX offset) {
+                                 const T* in, const IDX gather_dim_size, T* out, const IDX offset) {
   IDX index[3];
   CUDA_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
     out_helper.OffsetToNdIndex(i, index);
@@ -55,15 +54,13 @@ void DispatchIndexSize(ep::Stream* stream, int64_t outer_dim_size, int64_t gathe
     NdIndexOffsetHelper<int32_t, 3> out_helper(outer_dim_size, num_indices, inner_dim_size);
     GatherForwardGpu<T, K, int32_t><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock,
                                       0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        out_elem_cnt, in_helper, out_helper, indices, num_indices, in, gather_dim_size,
-        inner_dim_size, out, offset);
+        out_elem_cnt, in_helper, out_helper, indices, in, gather_dim_size, out, offset);
   } else {
     NdIndexOffsetHelper<int64_t, 3> in_helper(outer_dim_size, gather_dim_size, inner_dim_size);
     NdIndexOffsetHelper<int64_t, 3> out_helper(outer_dim_size, num_indices, inner_dim_size);
     GatherForwardGpu<T, K, int64_t><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock,
                                       0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        out_elem_cnt, in_helper, out_helper, indices, num_indices, in, gather_dim_size,
-        inner_dim_size, out, offset);
+        out_elem_cnt, in_helper, out_helper, indices, in, gather_dim_size, out, offset);
   }
 }
 
