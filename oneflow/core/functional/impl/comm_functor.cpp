@@ -142,6 +142,31 @@ class BroadcastFunctor {
 
 namespace {
 
+Maybe<one::UserOpExpr> RawStreamTouchFunctorOpExpr(size_t input_size) {
+  return one::OpBuilder("eager_nccl_touch", *JUST(UniqueStr("eager_nccl_touch")))
+      .Input("in", input_size)
+      .Build();
+}
+
+static constexpr auto* StreamTouchFunctorOpExpr =
+    DECORATE(&RawStreamTouchFunctorOpExpr, ThreadLocal);
+
+}  // namespace
+
+class StreamTouchFunctor {
+ public:
+  StreamTouchFunctor() = default;
+  Maybe<void> operator()(const one::TensorTuple& inputs) const {
+    if (inputs.empty()) { return Maybe<void>::Ok(); }
+    std::shared_ptr<UserOpExpr> op_expr = JUST(StreamTouchFunctorOpExpr(inputs.size()));
+    TensorTuple outputs{};
+    JUST(OpInterpUtil::Dispatch(*op_expr, inputs, &outputs));
+    return Maybe<void>::Ok();
+  }
+};
+
+namespace {
+
 Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
                                                               DeviceType device_type) {
   const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
@@ -372,6 +397,7 @@ class LocalReduceFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
   m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
