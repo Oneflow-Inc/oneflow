@@ -23,13 +23,21 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestCumsum(flow.unittest.TestCase):
+class TestCumOp(flow.unittest.TestCase):
     @autotest(n=30, check_graph=True)
     def test_cumsum(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         dim = random(0, x.ndim.pytorch).to(int)
         z = torch.cumsum(x, dim)
+        return z
+
+    @autotest(check_graph=True)
+    def test_cumprod(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        z = torch.cumprod(x, dim)
         return z
 
 
