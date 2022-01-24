@@ -8920,7 +8920,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
   );
   let output = (outs
     AnyType:$unique_values,
-    AnyType:$embeddings
+    Optional<AnyType>:$embeddings
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,

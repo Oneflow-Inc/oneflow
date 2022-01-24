@@ -122,15 +122,18 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& ids_shape = ctx->InputShape("unique_ids", 0);
-  DimVector out_dim_vec = ids_shape.dim_vec();
+  const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
-  out_dim_vec.push_back(embedding_size);
-  *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
-  out_dim_vec.at(out_dim_vec.size() - 1) = line_size;
-  *ctx->OutputShape("unique_values", 0) = Shape(out_dim_vec);
+  if (ctx->has_output("embeddings", 0)) {
+    DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
+    embeddings_dim_vec.push_back(embedding_size);
+    *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
+  }
+  DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
+  unique_values_dim_vec.push_back(line_size);
+  *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -139,19 +142,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("num_unique_ids", 0), 0)
-      .Split(user_op::OpArg("context", 0), 0)
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("unique_values", 0), 0)
-      .Split(user_op::OpArg("embeddings", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+  if (ctx->has_output("embeddings", 0)) {
+    *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+  }
   return Maybe<void>::Ok();
 }
 
