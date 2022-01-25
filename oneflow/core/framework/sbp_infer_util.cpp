@@ -226,11 +226,8 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   // Same sbp is always supported.
-  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) {
-    return 0.0;
-  } else if (is_same_sbp) {
-    return kUnsupportedBoxing;
-  }
+  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
+  if (is_same_sbp) { return kUnsupportedBoxing; }
 
   int32_t in_dim = in_hierarchy->NumAxes();
   int32_t out_dim = out_hierarchy->NumAxes();
@@ -306,11 +303,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   // Same sbp is always supported.
-  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) {
-    return 0.0;
-  } else if (is_same_sbp) {
-    return kUnsupportedBoxing;
-  }
+  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
+  if (is_same_sbp) { return kUnsupportedBoxing; }
 
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
