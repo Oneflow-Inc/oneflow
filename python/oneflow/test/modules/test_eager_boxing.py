@@ -3324,13 +3324,13 @@ def _test_eager_consistent_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp
     placement0 = flow.placement(device_type, {0: [0]}, (1, 1))
     placement1 = flow.placement(device_type, {0: range(4)}, (2, 2))
 
-    # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0]}, hierarchy=(1, 1))
+    # oneflow.placement(device_type="cuda", device_ids={0 : [0]}, hierarchy=(1, 1))
     # (src_sbp, src_sbp)
     x = flow.tensor(
         np_arr, placement=placement0, sbp=[src_sbp, src_sbp], requires_grad=False,
     )
 
-    # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
+    # oneflow.placement(device_type="cuda", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
     # (dst_sbp, dst_sbp)
     y = x.to_consistent(placement=placement1, sbp=[dst_sbp, dst_sbp])
 
