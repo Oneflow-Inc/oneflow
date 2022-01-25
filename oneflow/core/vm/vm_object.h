@@ -203,7 +203,8 @@ class MirroredObject final : public intrusive::Base {
   void set_global_device_id(int64_t val) { *global_device_id_.mut_key() = val; }
 
   // methods
-  void __Init__() { clear_deleting_access(); }
+  void __Init__();
+  void __Init__(int64_t global_device_id);
   void __Init__(LogicalObject* logical_object, int64_t global_device_id);
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }

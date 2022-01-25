@@ -138,6 +138,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(BoxingExpr("naive-b-to-s"))
                      | JUST(BoxingExpr("naive-p-to-b"))
                      | JUST(BoxingExpr("naive-p-to-s"))
+                     | JUST(BoxingExpr("naive-s-to-p"))
                      | JUST(OneToNBoxingExpr())
                      | JUST(NToOneBoxingExpr())
                      | JUST(GenericBoxingExpr())

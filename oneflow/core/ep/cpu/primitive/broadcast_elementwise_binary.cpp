@@ -111,6 +111,7 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow)
 
 #define NDARRAY_BINARY_TYPE_SEQ \
+  CPU_PRIMITIVE_BOOL_TYPE_SEQ   \
   CPU_PRIMITIVE_INT8_TYPE_SEQ   \
   CPU_PRIMITIVE_UINT8_TYPE_SEQ  \
   CPU_PRIMITIVE_INT32_TYPE_SEQ  \
@@ -351,7 +352,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                     BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ,
-                    CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+                    CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
 #endif
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
