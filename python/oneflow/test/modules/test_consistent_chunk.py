@@ -39,8 +39,6 @@ def _test_flow_chunk_list_with_random_data(test_case, placement, sbp):
 
 @autotest(check_graph=False)
 def _test_flow_chunk_list_with_random_data_negative_dim(test_case, placement, sbp):
-    device = random_device()
-    dim = random(1, 3).to(int)
     x = random_pytorch_tensor(
         ndim=4,
         dim0=random(low=4, high=8).to(int),
