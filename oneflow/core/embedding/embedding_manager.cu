@@ -51,7 +51,13 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   store = NewPersistentTableKeyValueStore(options);
   if (embedding_options.L2CachePolicy() != "none") {
     embedding::CacheOptions cache_options{};
-    cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+    if (embedding_options.L2CacheValueMemoryKind() == "device") {
+      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+    } else if (embedding_options.L2CacheValueMemoryKind() == "host") {
+      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+    } else {
+      UNIMPLEMENTED();
+    }
     if (embedding_options.L2CachePolicy() == "lru") {
       cache_options.policy = embedding::CacheOptions::Policy::kLRU;
     } else if (embedding_options.L2CachePolicy() == "full") {
@@ -70,7 +76,13 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
   }
   if (embedding_options.L1CachePolicy() != "none") {
     embedding::CacheOptions cache_options{};
-    cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+    if (embedding_options.L1CacheValueMemoryKind() == "device") {
+      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kDevice;
+    } else if (embedding_options.L1CacheValueMemoryKind() == "host") {
+      cache_options.value_memory_kind = embedding::CacheOptions::MemoryKind::kHost;
+    } else {
+      UNIMPLEMENTED();
+    }
     if (embedding_options.L1CachePolicy() == "lru") {
       cache_options.policy = embedding::CacheOptions::Policy::kLRU;
     } else if (embedding_options.L1CachePolicy() == "full") {

@@ -62,9 +62,11 @@ class EmbeddingOptions final {
       CHECK(caches.is_array());
       l1_cache_policy_ = GetValue(caches.at(0), "policy");
       l1_cache_memory_budget_mb_ = GetValue(caches.at(0), "cache_memory_budget_mb");
+      l1_cache_value_memory_kind_ = GetValue(caches.at(0), "value_memory_kind");
       if (caches.size() > 1) {
         l2_cache_policy_ = GetValue(caches.at(1), "policy");
         l2_cache_memory_budget_mb_ = GetValue(caches.at(1), "cache_memory_budget_mb");
+        l2_cache_value_memory_kind_ = GetValue(caches.at(1), "value_memory_kind");
       } else {
         l2_cache_policy_ = "none";
       }
@@ -180,8 +182,10 @@ class EmbeddingOptions final {
   int64_t LineSize() const { return line_size_; }
   std::string L1CachePolicy() const { return l1_cache_policy_; }
   int64_t L1CacheMemoryBudgetMb() const { return l1_cache_memory_budget_mb_; }
+  std::string L1CacheValueMemoryKind() const { return l1_cache_value_memory_kind_; }
   std::string L2CachePolicy() const { return l2_cache_policy_; }
   int64_t L2CacheMemoryBudgetMb() const { return l2_cache_memory_budget_mb_; }
+  std::string L2CacheValueMemoryKind() const { return l2_cache_value_memory_kind_; }
   std::string PersistentTablePath() const { return persistent_table_path_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
   std::string Optimizer() const { return optimizer_type_; }
@@ -204,8 +208,10 @@ class EmbeddingOptions final {
   int64_t line_size_;
   std::string l1_cache_policy_;
   int64_t l1_cache_memory_budget_mb_;
+  std::string l1_cache_value_memory_kind_;
   std::string l2_cache_policy_;
   int64_t l2_cache_memory_budget_mb_;
+  std::string l2_cache_value_memory_kind_;
   std::string persistent_table_path_;
   int64_t persistent_table_phisical_block_size_;
   std::string optimizer_type_;
