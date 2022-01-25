@@ -128,6 +128,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import in_top_k
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
@@ -307,6 +308,7 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
@@ -317,7 +319,6 @@ from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
