@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 
 #include <glog/logging.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>

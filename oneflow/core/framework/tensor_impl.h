@@ -28,11 +28,12 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
 
 class MemoryCase;
-class LocalDepObject;
 
 namespace cfg {
 
@@ -235,7 +236,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
+  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
  private:

@@ -498,8 +498,10 @@ def OneFlow_MaskedFillOp : OneFlow_BaseOp<"masked_fill", [NoSideEffect, DeclareO
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -1944,7 +1946,22 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
-    DefaultValuedAttr<SI64Attr, "0">:$root
+    DefaultValuedAttr<SI64Attr, "0">:$root,
+    DefaultValuedAttr<BoolAttr, "true">:$async_launch
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_device_infer_fn = 1;
+}
+
+def OneFlow_EagerNcclTouchOp : OneFlow_BaseOp<"eager_nccl_touch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$in
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "true">:$async_launch
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3168,8 +3185,10 @@ def OneFlow_WhereScalarXOp : OneFlow_BaseOp<"where_scalar_x", [NoSideEffect, Dec
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3190,10 +3209,14 @@ def OneFlow_WhereScalarXyOp : OneFlow_BaseOp<"where_scalar_xy", [NoSideEffect, N
     DefaultValuedAttr<BoolAttr, "false">:$has_x_float_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_y_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_y_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_x_bool_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_y_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$x_int_operand,
     DefaultValuedAttr<F64Attr, "0.">:$x_float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$x_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$y_int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$y_float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$y_float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$y_bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -3213,8 +3236,10 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$has_int_operand,
     DefaultValuedAttr<BoolAttr, "false">:$has_float_operand,
+    DefaultValuedAttr<BoolAttr, "false">:$has_bool_operand,
     DefaultValuedAttr<SI64Attr, "0">:$int_operand,
-    DefaultValuedAttr<F64Attr, "0.">:$float_operand
+    DefaultValuedAttr<F64Attr, "0.">:$float_operand,
+    DefaultValuedAttr<BoolAttr, "0.">:$bool_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4016,6 +4041,40 @@ def OneFlow_CumsumOp : OneFlow_BaseOp<"cumsum", [NoSideEffect, DeclareOpInterfac
 def OneFlow_CumsumGradOp : OneFlow_BaseOp<"cumsum_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CumProdOp : OneFlow_BaseOp<"cumprod", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CumProdGradOp : OneFlow_BaseOp<"cumprod_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$output,
+    OneFlow_Tensor:$input
   );
   let output = (outs
     OneFlow_Tensor:$dx
