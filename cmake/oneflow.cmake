@@ -522,6 +522,9 @@ if(BUILD_CPP_API)
 
   set(LIBONEFLOW_TARGETS)
   list(APPEND LIBONEFLOW_TARGETS oneflow_cpp oneflow of_cfgobj of_protoobj glog ${MLIR_RELATED_TARGETS} ${LLVM_RELATED_TARGETS} ${EXTERNAL_TARGETS})
+  if(BUILD_TESTING)
+    list(APPEND LIBONEFLOW_TARGETS ${oneflow_test_libs})
+  endif(BUILD_TESTING)
 
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)
