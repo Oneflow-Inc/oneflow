@@ -185,10 +185,15 @@ def tensor_getstate(self):
     else:
         # save_load_path is None means setstate/getstate is called inside
         # methods other than flow.save/load, for example, copy.deepcopy
-        assert (
-            self.is_local
-        ), "copy.deepcopy and similar methods only support local tensors"
-        return {"data": self.numpy(), "dtype": self.dtype}
+        if self.is_local:
+            return {"data": self.numpy(), "dtype": self.dtype}
+        else:
+            return {
+                "data": self.numpy(),
+                "dtype": self.dtype,
+                "placement": self.placement,
+                "sbp": self.sbp,
+            }
 
 
 def tensor_setstate(self, pickle_dict):
@@ -198,14 +203,38 @@ def tensor_setstate(self, pickle_dict):
         abs_dir_name = save_load_path / rel_dir_name
         self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank))
     else:
-        return self.__init__(
-            flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
-        )
+        if "placement" in pickle_dict:
+            return self.__init__(
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    placement=pickle_dict["placement"],
+                    sbp=pickle_dict["sbp"],
+                )
+            )
+        else:
+            return self.__init__(
+                flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
+            )
+
+
+def placement_getstate(self):
+    return {
+        "device_type": self.device_type,
+        "device_ids": self.device_ids,
+        "hierarchy": self.hierarchy,
+    }
+
+
+def placement_setstate(self, state):
+    return self.__init__(state["device_type"], state["device_ids"], state["hierarchy"])
 
 
 def RegisterMethods():
     Tensor.__setstate__ = tensor_setstate
     Tensor.__getstate__ = tensor_getstate
+    flow._oneflow_internal.placement.__getstate__ = placement_getstate
+    flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
 def legacy_load(

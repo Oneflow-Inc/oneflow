@@ -28,11 +28,12 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
 
 class MemoryCase;
-class LocalDepObject;
 
 namespace cfg {
 
@@ -166,6 +167,8 @@ class ConsistentTensorImpl : public TensorImpl {
     return Maybe<void>::Ok();
   }
 
+  virtual Maybe<ConsistentTensorImpl> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+
  protected:
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
@@ -233,7 +236,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
+  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
  private:
@@ -254,6 +257,8 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return true; }
+
+  Maybe<ConsistentTensorImpl> detach() const override;
 };
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -276,6 +281,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                                               Symbol<Device> device,
                                               const Optional<int64_t>& parallel_id,
                                               bool requires_grad, bool is_leaf);
+
+  Maybe<ConsistentTensorImpl> detach() const override;
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,

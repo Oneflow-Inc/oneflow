@@ -44,8 +44,8 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
         # world_size = 4, node_size = 1
         import oneflow as flow
         
-        p = flow.env.all_device_placement("cuda") # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
-        p = flow.env.all_device_placement("cpu") # oneflow.placement(device_type="cpu", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+        p = flow.env.all_device_placement("cuda") # oneflow.placement(device_type="cuda", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+        p = flow.env.all_device_placement("cpu") # oneflow.placement(device_type="cpu", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
 
     """
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
@@ -74,12 +74,30 @@ def api_env_init() -> bool:
     return enable_if.unique([env_init, do_nothing])()
 
 
+def check_non_localhost_proxy_and_print_warning():
+    for env_var_name in ["http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"]:
+        env_var_value = os.getenv(env_var_name)
+        if (
+            env_var_value is not None
+            and (not "://localhost" in env_var_value)
+            and (not "://127.0.0.1" in env_var_value)
+            and (not env_var_value.startswith("localhost"))
+            and (not env_var_value.startswith("127.0.0.1"))
+        ):
+            print(
+                f"Proxy through another machine ({env_var_value}) is incompatible with OneFlow. Please unset them by `unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY`"
+            )
+            break
+
+
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def env_init():
     global default_env_proto
     is_multi_client = oneflow._oneflow_internal.IsMultiClient()
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto, is_multi_client)
+    if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
+        check_non_localhost_proxy_and_print_warning()
     c_api_util.InitEnv(default_env_proto, is_multi_client)
     if not is_multi_client:
         if oneflow._oneflow_internal.CurrentMachineId() == 0:
