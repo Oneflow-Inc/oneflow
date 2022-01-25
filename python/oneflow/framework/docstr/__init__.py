@@ -48,6 +48,7 @@ from .swapaxes import *
 from .repeat import *
 from .tile import *
 from .tensor_t import *
+from .masked_fill import *
 from .expand import *
 from .flip import *
 from .in_top_k import *
