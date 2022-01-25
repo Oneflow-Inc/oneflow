@@ -23,9 +23,9 @@ limitations under the License.
 #define OF_RUNTIME_OMP 1
 #define OF_RUNTIME_TBB 2
 
-#if WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
 #include <omp.h>
-#elif WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
 #include <tbb/global_control.h>
@@ -36,11 +36,12 @@ namespace primitive {
 
 inline size_t divup(int64_t x, int64_t y) { return (x + y - 1) / y; }
 
+// params nthr : Maximum number of threads to open
 template<typename F>
 void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size_t nthr) {
   if (begin >= end) { return; }
 
-#if WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
   std::cout << "OF_RUNTIME_OMP " << std::endl;
   if (grain_size > 0) { nthr = std::min(nthr, divup((end - begin), grain_size)); }
 #pragma omp parallel num_threads(nthr)
@@ -53,7 +54,7 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
     if (begin_tid < end) { func(begin_tid, end_tid); }
   }
 
-#elif WITH_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
   tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism, nthr);
   size_t nthr_chunk_size = divup((end - begin), nthr);
   int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
