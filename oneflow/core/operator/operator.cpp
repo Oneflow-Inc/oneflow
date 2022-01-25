@@ -705,7 +705,8 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
           JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
           JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
-          JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetOpParallelDesc()), is_same_sbp));
+          JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
+          is_same_sbp));
     }
     if (total_copy_cost <= min_copy_cost) {
       select_sbp_idx = i;

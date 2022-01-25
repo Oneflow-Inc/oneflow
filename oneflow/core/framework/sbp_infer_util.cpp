@@ -200,7 +200,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
                                                const BlobDesc& logical_blob_desc,
                                                const ParallelDesc& producer_parallel_desc,
                                                const ParallelDesc& consumer_parallel_desc,
-                                               bool is_same_sbp) {
+                                               bool requires_same_sbp) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
@@ -227,13 +227,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   // Same sbp is always supported.
   if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
-
-  // Will directly modify output blob of source op. Requiring data having same sbp_parallel.
-  if (is_same_sbp
-      && !(reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
-           && same_nd_sbp)) {
-    return kUnsupportedBoxing;
-  }
+  if (requires_same_sbp) { return kUnsupportedBoxing; }
 
   int32_t in_dim = in_hierarchy->NumAxes();
   int32_t out_dim = out_hierarchy->NumAxes();
@@ -285,7 +279,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
-                                              bool is_same_sbp) {
+                                              bool requires_same_sbp) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
@@ -308,13 +302,9 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
   }
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
+  // Same sbp is always supported.
   if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
-  // Will directly modify output blob of source op. Requiring data having same sbp_parallel
-  if (is_same_sbp
-      && !(reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)
-           && same_nd_sbp)) {
-    return kUnsupportedBoxing;
-  }
+  if (requires_same_sbp) { return kUnsupportedBoxing; }
 
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
@@ -447,10 +437,10 @@ Maybe<double> ComputeCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_paralle
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
-                                          bool is_same_sbp) {
+                                          bool requires_same_sbp) {
   return JUST(GetComputeCopyCostFunc())(producer_sbp_parallel, consumer_sbp_parallel,
                                         logical_blob_desc, producer_parallel_desc,
-                                        consumer_parallel_desc, is_same_sbp);
+                                        consumer_parallel_desc, requires_same_sbp);
 }
 
 }  // namespace oneflow
