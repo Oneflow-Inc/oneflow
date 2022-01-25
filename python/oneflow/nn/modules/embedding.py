@@ -164,7 +164,8 @@ class OneEmbeddingLookup(Module):
                 assert warmup.__contains__("multiplier")
             else:
                 raise NotImplementedError("unsupported warmup type")
-        self.dtype = flow.float
+        self.dtype = embedding_options["dtype"]
+        del embedding_options["dtype"]
         self.embedding_options = json.dumps(embedding_options)
 
     def forward(self, ids, column_ids):
