@@ -976,7 +976,6 @@ def RegisterMethods():
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
     Tensor.to_consistent = _to_consistent
-    Tensor.to_local = _to_local
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
