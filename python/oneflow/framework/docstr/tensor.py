@@ -90,7 +90,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.expand,
     """
-    expand() -> Tensor
+    Tensor.expand() -> Tensor
 
     See :func:`oneflow.expand`
     """,
@@ -136,7 +136,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.in_top_k,
     """
-    in_top_k(targets, predictions, k) -> Tensor
+    Tensor.in_top_k(targets, predictions, k) -> Tensor
 
     See :func:`oneflow.in_top_k`
     """,
@@ -145,7 +145,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.index_select,
     """
-    input.index_select(dim, index) -> Tensor
+    Tensor.index_select(dim, index) -> Tensor
 
     See :func:`oneflow.index_select`
     """,
@@ -161,7 +161,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.new_ones,
     """
-    new_ones() -> Tensor
+    Tensor.new_ones() -> Tensor
 
     See :func:`oneflow.new_ones`
     """,
@@ -170,7 +170,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_consistent,
     """
-    to_consistent() -> Tensor
+    Tensor.to_consistent() -> Tensor
 
     See :func:`oneflow.to_consistent`
     """,
@@ -179,7 +179,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_local,
     """
-    to_local() -> Tensor
+    Tensor.to_local() -> Tensor
 
     See :func:`oneflow.to_local`
     """,
