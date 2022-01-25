@@ -13,25 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
-from collections import OrderedDict
 
-import oneflow as flow
-import oneflow.unittest
-
-from oneflow.test_utils.automated_test_util import *
+_global_is_consistent = False
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestCumsum(flow.unittest.TestCase):
-    @autotest(n=30, check_graph=True)
-    def test_cumsum(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        dim = random(0, x.ndim.pytorch).to(int)
-        z = torch.cumsum(x, dim)
-        return z
+class ConsistentScope:
+    def __init__(self):
+        pass
+
+    def __enter__(self, *argc, **kwarg):
+        global _global_is_consistent
+        self.last_is_consistent = _global_is_consistent
+        _global_is_consistent = True
+
+    def __exit__(self, *argc, **kwarg):
+        global _global_is_consistent
+        _global_is_consistent = self.last_is_consistent
 
 
-if __name__ == "__main__":
-    unittest.main()
+def is_consistent():
+    return _global_is_consistent
