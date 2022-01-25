@@ -82,39 +82,51 @@ def matmul(
     assert a_num_axes >= 2
     assert b_num_axes >= 2
     if (a_num_axes == 2) and (b_num_axes == 2):
-        return (flow.user_op_builder(name)
-                .Op("matmul")
-                .Input("a", [a])
-                .Input("b", [b])
-                .Output("out")
-                .Attr("transpose_a", transpose_a)
-                .Attr("transpose_b", transpose_b)
-                .Attr("alpha", float(alpha))
-                .Build().InferAndTryRun().SoleOutputBlob())
-                
-    if (a_num_axes == b_num_axes): 
-        if_batch_matmul = True;
-        for i in range(a_num_axes-2):
-            if a.shape[i] != b.shape[i]: 
-                if_batch_matmul = False
-                break
-        if if_batch_matmul: 
-            return (flow.user_op_builder(name)
-                    .Op("batch_matmul")
-                    .Input("a", [a])
-                    .Input("b", [b])
-                    .Output("out")
-                    .Attr("transpose_a", transpose_a)
-                    .Attr("transpose_b", transpose_b)
-                    .Attr("alpha", float(alpha))
-                    .Build().InferAndTryRun().SoleOutputBlob())
-    
-    return (flow.user_op_builder(name)
-            .Op("broadcast_matmul")
+        return (
+            flow.user_op_builder(name)
+            .Op("matmul")
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
             .Attr("transpose_a", transpose_a)
             .Attr("transpose_b", transpose_b)
             .Attr("alpha", float(alpha))
-            .Build().InferAndTryRun().SoleOutputBlob())
+            .Build()
+            .InferAndTryRun()
+            .SoleOutputBlob()
+        )
+
+    if a_num_axes == b_num_axes:
+        if_batch_matmul = True
+        for i in range(a_num_axes - 2):
+            if a.shape[i] != b.shape[i]:
+                if_batch_matmul = False
+                break
+        if if_batch_matmul:
+            return (
+                flow.user_op_builder(name)
+                .Op("batch_matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+                .InferAndTryRun()
+                .SoleOutputBlob()
+            )
+
+    return (
+        flow.user_op_builder(name)
+        .Op("broadcast_matmul")
+        .Input("a", [a])
+        .Input("b", [b])
+        .Output("out")
+        .Attr("transpose_a", transpose_a)
+        .Attr("transpose_b", transpose_b)
+        .Attr("alpha", float(alpha))
+        .Build()
+        .InferAndTryRun()
+        .SoleOutputBlob()
+    )

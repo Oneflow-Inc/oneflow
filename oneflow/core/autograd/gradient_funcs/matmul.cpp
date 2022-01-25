@@ -110,9 +110,9 @@ struct BroadcastMatmulCaptureState : public AutoGradCaptureState {
   bool requires_grad_b;
   size_t a_index;
   size_t b_index;
-  bool broadcast_a; 
-  bool broadcast_b; 
-  int64_t b_num_axes; 
+  bool broadcast_a;
+  bool broadcast_b;
+  int64_t b_num_axes;
 };
 
 class BroadcastMatmul : public OpExprGradFunction<BroadcastMatmulCaptureState> {
@@ -157,30 +157,31 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
   };
   auto GetABatchDim = MakeGetBatchDim(a_num_axes, *a_shape);
   auto GetBBatchDim = MakeGetBatchDim(b_num_axes, *b_shape);
-  bool broadcast_a = false; 
-  bool broadcast_b = false; 
+  bool broadcast_a = false;
+  bool broadcast_b = false;
 
   for (int32_t i = 0; i < num_max_batch_dims; i++) {
     if (GetABatchDim(i) < GetBBatchDim(i) || a_num_axes < b_num_axes) {
-      broadcast_a = true; 
-      break; 
+      broadcast_a = true;
+      break;
     }
   }
 
   for (int32_t i = 0; i < num_max_batch_dims; i++) {
     if (GetBBatchDim(i) < GetABatchDim(i) || b_num_axes < a_num_axes) {
-      broadcast_b = true; 
-      break; 
+      broadcast_b = true;
+      break;
     }
   }
-  
-  if(b_num_axes == 2 && !ctx->transpose_a){
-    // In this case, we can directly use `broadcast_matmul_grad_b` OP to generate Grad instead of broadcast_matmul+reduce_sum_like. 
-    broadcast_b = false; 
+
+  if (b_num_axes == 2 && !ctx->transpose_a) {
+    // In this case, we can directly use `broadcast_matmul_grad_b` OP to generate Grad instead of
+    // broadcast_matmul+reduce_sum_like.
+    broadcast_b = false;
   }
 
-  ctx->broadcast_a = broadcast_a; 
-  ctx->broadcast_b = broadcast_b; 
+  ctx->broadcast_a = broadcast_a;
+  ctx->broadcast_b = broadcast_b;
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a"));
@@ -189,7 +190,7 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
 
   if (ctx->requires_grad_a) {
     ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
-    if(broadcast_a){
+    if (broadcast_a) {
       ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
     }
   }
@@ -197,7 +198,7 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
   if (ctx->requires_grad_b) {
     ctx->b_num_axes = inputs.at(1)->shape()->NumAxes();
     ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
-    if(broadcast_b){
+    if (broadcast_b) {
       ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
     }
   }
@@ -230,7 +231,7 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
       broadcast_grad_a = JUST(
           functional::MatMul(out_grads.at(0), input_b, false, !(ctx->transpose_b), ctx->alpha));
     }
-    if(ctx->broadcast_a){
+    if (ctx->broadcast_a) {
       const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
       const auto a_shape = input_a->shape();
       const int64_t a_num_axes = a_shape->NumAxes();
@@ -245,15 +246,14 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
         }
       }
       in_grads->at(0) = JUST(functional::ReduceSumLike(broadcast_grad_a, input_a, a_reduce_vec));
-    }
-    else{
+    } else {
       in_grads->at(0) = broadcast_grad_a;
     }
   }
 
   if (ctx->requires_grad_b) {
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-    if(ctx->b_num_axes == 2 && !ctx->transpose_a){
+    if (ctx->b_num_axes == 2 && !ctx->transpose_a) {
       if (ctx->transpose_b) {
         in_grads->at(1) =
             JUST(functional::BroadcastMatmulGradB(out_grads.at(0), input_a, ctx->alpha));
@@ -261,16 +261,16 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
         in_grads->at(1) =
             JUST(functional::BroadcastMatmulGradB(input_a, out_grads.at(0), ctx->alpha));
       }
-    }else{
+    } else {
       std::shared_ptr<Tensor> broadcast_grad_b;
       if (ctx->transpose_b) {
         broadcast_grad_b =
             JUST(functional::MatMul(out_grads.at(0), input_a, true, ctx->transpose_a, ctx->alpha));
       } else {
-        broadcast_grad_b =
-            JUST(functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
+        broadcast_grad_b = JUST(
+            functional::MatMul(input_a, out_grads.at(0), !ctx->transpose_a, false, ctx->alpha));
       }
-      if(ctx->broadcast_b){
+      if (ctx->broadcast_b) {
         const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
         const auto b_shape = input_b->shape();
         std::vector<int32_t> b_reduce_vec;
@@ -283,7 +283,7 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulCaptureState* ctx,
           }
         }
         in_grads->at(1) = JUST(functional::ReduceSumLike(broadcast_grad_b, input_b, b_reduce_vec));
-      }else{
+      } else {
         in_grads->at(1) = broadcast_grad_b;
       }
     }
