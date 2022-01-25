@@ -27,22 +27,8 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, check_graph=False)
 def test_floor_impl(test_case, ndim, placement, sbp):
-    dim0 = np.random.randint(1, 5) * 8
-    dim1 = np.random.randint(1, 5) * 8
-    dim2 = np.random.randint(1, 5) * 8
-    dim3 = np.random.randint(1, 5) * 8
-    dim4 = np.random.randint(1, 5) * 8
-    if ndim==1:
-        x = random_pytorch_tensor(1, dim0)
-    elif ndim==2:
-        x = random_pytorch_tensor(2, dim0, dim1)
-    elif ndim==3:
-        x = random_pytorch_tensor(3, dim0, dim1, dim2)
-    elif ndim==4:
-        x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
-    elif ndim==5:
-        x = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
-
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_pytorch_tensor(ndim, *dims)
     y = x.to_consistent(placement=placement, sbp=sbp)
     z = torch.floor(y)
     return z
@@ -50,8 +36,8 @@ def test_floor_impl(test_case, ndim, placement, sbp):
 class TestFloorConsistent(flow.unittest.TestCase):
     @consistent
     def test_floor(test_case):
-        # random ndim in range [1,5]
-        ndim = np.random.randint(1, 6)
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_floor_impl(test_case, ndim, placement, sbp)

@@ -27,36 +27,16 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, check_graph=False)
 def test_flip_impl(test_case, ndim, placement, sbp):
-    dim0 = np.random.randint(1, 5) * 8
-    dim1 = np.random.randint(1, 5) * 8
-    dim2 = np.random.randint(1, 5) * 8
-    dim3 = np.random.randint(1, 5) * 8
-    dim4 = np.random.randint(1, 5) * 8
-    if ndim==1:
-        x = random_pytorch_tensor(1, dim0)
-        dims = constant([0])
-    elif ndim==2:
-        x = random_pytorch_tensor(2, dim0, dim1)
-        dims = constant([0,1])
-    elif ndim==3:
-        x = random_pytorch_tensor(3, dim0, dim1, dim2)
-        dims = constant([0,1,2])
-    elif ndim==4:
-        x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
-        dims = constant([0,1,2,3])
-    elif ndim==5:
-        x = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
-        dims = constant([0,1,2,3,4])
-
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_pytorch_tensor(ndim, *dims)
     y = x.to_consistent(placement=placement, sbp=sbp)
-    z = torch.flip(y, dims)
-    return z
+    z = torch.flip(y, constant([i for i in range(ndim)]))
 
-class TestFlip(flow.unittest.TestCase):
+class TestFlipConsistent(flow.unittest.TestCase):
     @consistent
     def test_flip(test_case):
-        # random ndim in range [1,5]
-        ndim = np.random.randint(1, 6)
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_flip_impl(test_case, ndim, placement, sbp)

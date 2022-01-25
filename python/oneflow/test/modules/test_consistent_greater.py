@@ -27,42 +27,20 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, auto_backward=False, check_graph=False)
 def test_greater_impl(test_case, ndim, placement, sbp):
-    dim0 = np.random.randint(1, 5) * 8
-    dim1 = np.random.randint(1, 5) * 8
-    dim2 = np.random.randint(1, 5) * 8
-    dim3 = np.random.randint(1, 5) * 8
-    dim4 = np.random.randint(1, 5) * 8
-    if ndim==1:
-        x1 = random_pytorch_tensor(1, dim0)
-        x2 = random_pytorch_tensor(1, dim0)
-    elif ndim==2:
-        x1 = random_pytorch_tensor(2, dim0, dim1)
-        x2 = random_pytorch_tensor(2, dim0, dim1)
-    elif ndim==3:
-        x1 = random_pytorch_tensor(3, dim0, dim1, dim2)
-        x2 = random_pytorch_tensor(3, dim0, dim1, dim2)
-    elif ndim==4:
-        x1 = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
-        x2 = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
-    elif ndim==5:
-        x1 = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
-        x2 = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
-
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x1 = random_pytorch_tensor(ndim, *dims)
     x1 = x1.to_consistent(placement=placement, sbp=sbp)
+    x2 = random_pytorch_tensor(ndim, *dims)
     x2 = x2.to_consistent(placement=placement, sbp=sbp)
 
     z = torch.gt(x1, x2)
     return z
 
-    # y1 = x1.gt(oneof(x2, random().to(int), random().to(float)))
-    # y2 = x1 > x2
-    # return (y1, y2)
-
 class TestGreaterConsistent(flow.unittest.TestCase):
     @consistent
     def test_greater(test_case):
-        # random ndim in range [1,5]
-        ndim = np.random.randint(1, 6)
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_greater_impl(test_case, ndim, placement, sbp)

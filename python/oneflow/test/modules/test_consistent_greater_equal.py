@@ -26,40 +26,24 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, auto_backward=False, check_graph=False)
-def test_flip_impl(test_case, ndim, placement, sbp):
-    dim0 = np.random.randint(1, 5) * 8
-    dim1 = np.random.randint(1, 5) * 8
-    dim2 = np.random.randint(1, 5) * 8
-    dim3 = np.random.randint(1, 5) * 8
-    dim4 = np.random.randint(1, 5) * 8
-    if ndim==1:
-        x = random_pytorch_tensor(1, dim0)
-        dims = constant([0])
-    elif ndim==2:
-        x = random_pytorch_tensor(2, dim0, dim1)
-        dims = constant([0,1])
-    elif ndim==3:
-        x = random_pytorch_tensor(3, dim0, dim1, dim2)
-        dims = constant([0,1,2])
-    elif ndim==4:
-        x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
-        dims = constant([0,1,2,3])
-    elif ndim==5:
-        x = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
-        dims = constant([0,1,2,3,4])
+def test_greater_equal_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x1 = random_pytorch_tensor(ndim, *dims)
+    x1 = x1.to_consistent(placement=placement, sbp=sbp)
+    x2 = random_pytorch_tensor(ndim, *dims)
+    x2 = x2.to_consistent(placement=placement, sbp=sbp)
 
-    y = x.to_consistent(placement=placement, sbp=sbp)
-    z = torch.flip(y, dims)
+    z = torch.ge(x1, x2)
     return z
 
-class TestFlip(flow.unittest.TestCase):
+class TestGreaterEqualConsistent(flow.unittest.TestCase):
     @consistent
-    def test_flip(test_case):
-        # random ndim in range [1,5]
-        ndim = np.random.randint(1, 6)
+    def test_greater_equal(test_case):
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_flip_impl(test_case, ndim, placement, sbp)
+                test_greater_equal_impl(test_case, ndim, placement, sbp)
 
 if __name__ == "__main__":
     unittest.main()

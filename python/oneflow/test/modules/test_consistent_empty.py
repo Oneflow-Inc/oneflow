@@ -27,11 +27,11 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, auto_backward=False, check_graph=False)
 def test_empty_impl(test_case, ndim, placement, sbp):
-    dim0 = np.random.randint(1, 5) * 8
-    dim1 = np.random.randint(1, 5) * 8
-    dim2 = np.random.randint(1, 5) * 8
-    dim3 = np.random.randint(1, 5) * 8
-    dim4 = np.random.randint(1, 5) * 8
+    dim0 = random().to(int)
+    dim1 = random().to(int)
+    dim2 = random().to(int)
+    dim3 = random().to(int)
+    dim4 = random().to(int)
     if ndim==1:
         x = torch.empty(dim0)
     elif ndim==2:
@@ -43,8 +43,8 @@ def test_empty_impl(test_case, ndim, placement, sbp):
     elif ndim==5:
         x = torch.empty(dim0, dim1, dim2, dim3, dim4)
 
-    # y = x.to_consistent(placement=placement, sbp=sbp)
-    return x
+    y = x.to_consistent(placement=placement, sbp=sbp)
+    return y.shape
 
 class TestEmptyConsistent(flow.unittest.TestCase):
     @consistent
