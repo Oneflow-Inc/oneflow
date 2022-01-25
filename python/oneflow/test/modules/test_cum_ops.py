@@ -32,8 +32,8 @@ class TestCumOp(flow.unittest.TestCase):
         z = torch.cumsum(x, dim)
         return z
    
-    # TODO(): unchange rtol atol when torch version upgrade
-    # from 1.9.0
+    # TODO(): use default rtol atol when torch version upgrade
+    # from 1.9.0 to 1.11.0
     @autotest(check_graph=True, rtol=0.001, atol=1e-4)
     def test_cumprod(test_case):
         device = random_device()
