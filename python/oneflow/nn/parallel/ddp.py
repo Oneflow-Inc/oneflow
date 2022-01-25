@@ -53,6 +53,12 @@ def DistributedDataParallel(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
+    # The gradient shoule be averaged by all the nodes, so besides allreduce,
+    # a division by world_size is required.
+    # Use x * (1 / world_size) instead of x / world_size for two reasons:
+    # 1. multiplication is faster than division
+    # 2. An inplace operation is needed here (for allreduce grouping)
+    #    But we do not have inplace division in oneflow.
     mul_factor = 1 / world_size
     def inplace_mul_and_return_none(x):
         x.mul_(mul_factor)
