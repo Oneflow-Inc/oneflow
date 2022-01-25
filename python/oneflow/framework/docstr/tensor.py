@@ -617,6 +617,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.reciprocal,
+    """
+    See :func:`oneflow.reciprocal`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`

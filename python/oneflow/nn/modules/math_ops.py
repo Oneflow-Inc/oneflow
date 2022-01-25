@@ -110,27 +110,6 @@ def _div(input, other):
     return flow._C.div(input, other)
 
 
-@register_tensor_op("reciprocal")
-def _reciprocal(x):
-    """Computes the safe reciprocal of x. If x is zero, the reciprocal will
-    be also set to zero.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-        >>> out = flow.reciprocal(x)
-        >>> out.numpy()
-        array([[1.        , 0.5       , 0.33333334],
-               [0.25      , 0.2       , 0.16666667]], dtype=float32)
-    """
-    return flow._C.reciprocal_no_nan(x)
-
-
 @register_tensor_op("add")
 def _add(input, other):
     """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
