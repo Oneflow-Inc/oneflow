@@ -337,7 +337,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
 
-                            if isinstance(oneflow, flow.nn.Module):
+                            if isinstance(oneflow, flow.nn.Module) and testing_graph:
                                 graph_train_oneflow = copy.deepcopy(oneflow)
                                 if not is_consistent():
                                     arg_device_type = "cpu"

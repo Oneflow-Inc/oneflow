@@ -113,13 +113,12 @@ class _BatchNorm(_NormBase):
         if self.training:
             is_training = True
         else:
-            # NOTE(lixiang): In eval mode, missing any one will select the training kernel, because in the functor layer, this check is already done.
-            is_training = (self.running_mean is None) or (self.running_var is None)
+            is_training = (self.running_mean is None) and (self.running_var is None)
         # NOTE(lixiang): If it is training mode, pass running_mean and running_var directly to the functor layer.
         return flow._C.normalization(
             x,
-            self.running_mean if self.track_running_stats else None,
-            self.running_var if self.track_running_stats else None,
+            self.running_mean,
+            self.running_var,
             self.weight,
             self.bias,
             axis=self.channel_axis,
