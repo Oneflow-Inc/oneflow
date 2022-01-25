@@ -255,19 +255,26 @@ Maybe<void> BoxingCollector::AskSbpCombination(
     const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
     const ParallelDesc& consumer_parallel_desc, bool is_customized,
     std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost) {
-  // Check the devices and hierarchy
+  middle_sbps.clear();
   // At this moment, we do not support [2, 3] -> [3, 2]
   // TODO: support [2, 3] -> [3, 2]
-  middle_sbps.clear();
-  // Middle nodes does not support transfer for different machines or devices or hierarchy at this
-  // moment
-  if (producer_parallel_desc != consumer_parallel_desc) { return Maybe<void>::Ok(); }
+  // Middle nodes does not support transfer for different machines or devices or hierarchy
+  if (producer_parallel_desc != consumer_parallel_desc) {
+    CHECK_OR_RETURN(
+        compute_cost
+        || JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
+                                            producer_parallel_desc, consumer_parallel_desc, false))
+               < GetValidMaxCopyCost())
+        << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
+        << NdSbpParallelToString(sbp_consumer) << " for two different placement ";
+    return Maybe<void>::Ok();
+  }
   const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
   // Dealing with 1D sbp
   if (parallel_hierarchy->NumAxes() == 1) {
     CHECK_OR_RETURN(
-        (!compute_cost)
-        && JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
+        compute_cost
+        || JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
                                             producer_parallel_desc, consumer_parallel_desc, false))
                < GetValidMaxCopyCost())
         << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
