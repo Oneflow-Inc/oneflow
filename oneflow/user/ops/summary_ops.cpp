@@ -59,6 +59,7 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> FlushSummaryWriterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  //这里需要改动支持S(0/1)?
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> FlushSummaryWriterOp::InferDataType(user_op::InferContext* ctx) {
