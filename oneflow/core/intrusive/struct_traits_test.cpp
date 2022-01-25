@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "gtest/gtest.h"
 #include "oneflow/core/intrusive/struct_traits.h"
 #include "oneflow/core/common/util.h"
 
@@ -78,7 +79,7 @@ struct Y {
 
 TEST(StructField, compose) {
   using BFieldInY = intrusive::ComposeStructField<INTRUSIVE_FIELD(Y, d), INTRUSIVE_FIELD(X, b)>;
-  Y y;
+  Y y{};
   int* field_b = &y.d.b;
   ASSERT_EQ(BFieldInY::FieldPtr4StructPtr(&y), field_b);
   ASSERT_EQ(BFieldInY::StructPtr4FieldPtr(field_b), &y);
