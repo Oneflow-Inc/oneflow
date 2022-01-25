@@ -702,7 +702,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       bool is_same_sbp =
           (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
           || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
-      total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
+      total_copy_cost += JUST(ComputeCopyCostWithMiddleNodes(
           JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
           JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
           JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),

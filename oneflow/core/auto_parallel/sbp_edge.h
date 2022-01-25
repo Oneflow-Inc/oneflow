@@ -445,7 +445,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
         // compute copy cost for a specific logical blob
         {
           LazyMode::Guard enable_lazy_mode(true);
-          Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputeCopyCostBetweenNdSbp(
+          Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputeCopyCostWithMiddleNodes(
               sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
               consumer_parallel_desc, is_same_sbp));
         }
