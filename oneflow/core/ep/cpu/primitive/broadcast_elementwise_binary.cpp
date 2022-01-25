@@ -242,6 +242,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                                   \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::s8, DataType::kInt8, int8_t)   \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool)   \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kUInt8, uint8_t) \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)  \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f16, DataType::kFloat16, float16)
@@ -362,7 +363,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                 BINARY_LOGICAL_COMPARISION_OP_ONEDNN_UNIMPLEMENTED, NDARRAY_BINARY_TYPE_SEQ,
-                CPU_PRIMITIVE_INT8_TYPE_SEQ)
+                CPU_PRIMITIVE_BOOL_TYPE_SEQ)
             // OneDNN unimplemented data type binary op
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
                                              BINARY_MATH_OP_NDARRAY_PAIR,
@@ -371,7 +372,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                 BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR,
-                CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ, CPU_PRIMITIVE_INT8_TYPE_SEQ)};
+                CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ, CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
 #else
     static const std::map<std::tuple<BinaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
