@@ -7,8 +7,7 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
 
   if(BUILD_PYTHON)
     set(GENERATED_PYBIND_DIR oneflow/api/python/functional)
-    list(APPEND PYBIND_SRCS
-         ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp)
+    list(APPEND PYBIND_SRCS ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp)
   endif(BUILD_PYTHON)
 
   if(BUILD_PYTHON)
@@ -17,11 +16,13 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
       OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.cpp"
              "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.h"
              "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp"
-      COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_API_DIR}
-      COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_PYBIND_DIR}
-      COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ARGS
-              ${PROJECT_SOURCE_DIR}/tools/functional/generate_functional_api.py --project_source_dir
-              ${PROJECT_SOURCE_DIR} --export_pybind
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_API_DIR}
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_PYBIND_DIR}
+      COMMAND ${CODEGEN_PYTHON_EXECUTABLE}
+      ARGS ${PROJECT_SOURCE_DIR}/tools/functional/generate_functional_api.py
+             --project_source_dir ${PROJECT_SOURCE_DIR} --export_pybind
       DEPENDS ${CODEGEN_PYTHON_EXECUTABLE}
               ${PROJECT_SOURCE_DIR}/tools/functional/generate_functional_api.py
               ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
@@ -32,10 +33,11 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
     add_custom_command(
       OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.cpp"
              "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.h"
-      COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_API_DIR}
-      COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ARGS
-              ${PROJECT_SOURCE_DIR}/tools/functional/generate_functional_api.py --project_source_dir
-              ${PROJECT_SOURCE_DIR}
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_API_DIR}
+      COMMAND ${CODEGEN_PYTHON_EXECUTABLE}
+      ARGS ${PROJECT_SOURCE_DIR}/tools/functional/generate_functional_api.py
+              --project_source_dir ${PROJECT_SOURCE_DIR}
       DEPENDS ${CODEGEN_PYTHON_EXECUTABLE}
               ${PROJECT_SOURCE_DIR}/tools/functional/generate_functional_api.py
               ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
@@ -64,18 +66,20 @@ function(GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS R
   list(APPEND PYBIND_SRCS ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/tensor_api.yaml.pybind.cpp)
 
   add_custom_command(
-    OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/tensor_api.yaml.cpp"
-           "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/tensor_api.yaml.h"
-           "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/tensor_api.yaml.pybind.cpp"
-    COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_API_DIR}
-    COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_PYBIND_DIR}
-    COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ARGS
-            ${PROJECT_SOURCE_DIR}/tools/functional/generate_tensor_api.py --project_source_dir
-            ${PROJECT_SOURCE_DIR}
-    DEPENDS ${CODEGEN_PYTHON_EXECUTABLE}
-            ${PROJECT_SOURCE_DIR}/tools/functional/generate_tensor_api.py
-            ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
-    VERBATIM)
+      OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/tensor_api.yaml.cpp"
+                 "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/tensor_api.yaml.h"
+                 "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/tensor_api.yaml.pybind.cpp"
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_API_DIR}
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_PYBIND_DIR}
+      COMMAND ${CODEGEN_PYTHON_EXECUTABLE}
+      ARGS ${PROJECT_SOURCE_DIR}/tools/functional/generate_tensor_api.py
+              --project_source_dir ${PROJECT_SOURCE_DIR}
+      DEPENDS ${CODEGEN_PYTHON_EXECUTABLE}
+              ${PROJECT_SOURCE_DIR}/tools/functional/generate_tensor_api.py
+              ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
+      VERBATIM)
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
   set(${SRCS} ${${SRCS}} PARENT_SCOPE)
@@ -91,22 +95,23 @@ function(GENERATE_FUNCTIONAL_DISPATCH_STATEFUL_OPS_AND_PYBIND11_CPP SRCS HDRS PY
 
   list(APPEND SRCS ${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/dispatch_stateful_ops.yaml.cpp)
   list(APPEND HDRS ${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/dispatch_stateful_ops.yaml.h)
-  list(APPEND PYBIND_SRCS
-       ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/dispatch_stateful_ops.yaml.pybind.cpp)
+  list(APPEND PYBIND_SRCS ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/dispatch_stateful_ops.yaml.pybind.cpp)
 
   add_custom_command(
-    OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/dispatch_stateful_ops.yaml.cpp"
-           "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/dispatch_stateful_ops.yaml.h"
-           "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/dispatch_stateful_ops.yaml.pybind.cpp"
-    COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_API_DIR}
-    COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${GENERATED_PYBIND_DIR}
-    COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ARGS
-            ${PROJECT_SOURCE_DIR}/tools/functional/generate_dispatch_stateful_ops.py
-            --project_source_dir ${PROJECT_SOURCE_DIR}
-    DEPENDS ${CODEGEN_PYTHON_EXECUTABLE}
-            ${PROJECT_SOURCE_DIR}/tools/functional/generate_dispatch_stateful_ops.py
-            ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
-    VERBATIM)
+      OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/dispatch_stateful_ops.yaml.cpp"
+                 "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/dispatch_stateful_ops.yaml.h"
+                 "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/dispatch_stateful_ops.yaml.pybind.cpp"
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_API_DIR}
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -E make_directory ${GENERATED_PYBIND_DIR}
+      COMMAND ${CODEGEN_PYTHON_EXECUTABLE}
+      ARGS ${PROJECT_SOURCE_DIR}/tools/functional/generate_dispatch_stateful_ops.py
+              --project_source_dir ${PROJECT_SOURCE_DIR}
+      DEPENDS ${CODEGEN_PYTHON_EXECUTABLE}
+              ${PROJECT_SOURCE_DIR}/tools/functional/generate_dispatch_stateful_ops.py
+              ${PROJECT_SOURCE_DIR}/tools/functional/generator.py ${YAML_FILE}
+      VERBATIM)
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
   set(${SRCS} ${${SRCS}} PARENT_SCOPE)

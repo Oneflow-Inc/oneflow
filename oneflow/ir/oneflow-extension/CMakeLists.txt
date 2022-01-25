@@ -1,11 +1,9 @@
-oneflow_add_mlir_library(
-  MLIROneFlowExtension
+oneflow_add_mlir_library(MLIROneFlowExtension
   extension.cpp
   ir_pass.cpp
   DEPENDS
-  LINK_LIBS
-  PUBLIC
-  MLIRIR
+	LINK_LIBS PUBLIC
+	MLIRIR
   ${dialect_libs}
   ${translation_libs}
   MLIRIR
@@ -18,6 +16,7 @@ oneflow_add_mlir_library(
   oneflow
   MLIRExecutionEngine
   MLIROneFlowTranslation
-  MLIROneFlowRuntime)
+  MLIROneFlowRuntime
+)
 mlir_check_all_link_libraries(MLIROneFlowExtension)
 add_custom_target(mex DEPENDS MLIROneFlowExtension)
