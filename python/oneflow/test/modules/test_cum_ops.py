@@ -32,7 +32,7 @@ class TestCumOp(flow.unittest.TestCase):
         z = torch.cumsum(x, dim)
         return z
     
-    @autotest(check_graph=True, atol=1e-4)
+    @autotest(check_graph=True, rtol=0.001, atol=1e-4)
     def test_cumprod(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
