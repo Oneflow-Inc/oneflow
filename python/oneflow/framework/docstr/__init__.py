@@ -48,3 +48,8 @@ from .swapaxes import *
 from .repeat import *
 from .tile import *
 from .tensor_t import *
+from .expand import *
+from .flip import *
+from .in_top_k import *
+from .index_select import *
+from .consistent_cast import *
