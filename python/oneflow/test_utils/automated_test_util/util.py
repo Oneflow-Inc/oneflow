@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,14 +12,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "gtest/gtest.h"
-#include "oneflow/core/vm/instruction.h"
+"""
+import pickle
+import oneflow as flow
 
-namespace oneflow {
-namespace vm {
 
-namespace test {}
-
-}  // namespace vm
-}  // namespace oneflow
+def broadcast(obj, src: int = 0):
+    rank = flow.env.get_rank()
+    if src == rank:
+        obj_bytes = pickle.dumps(obj)
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(obj_bytes, src)
+    else:
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(None, src)
+    return pickle.loads(obj_bytes)

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,14 +12,24 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "gtest/gtest.h"
-#include "oneflow/core/vm/instruction.h"
+"""
 
-namespace oneflow {
-namespace vm {
+_global_is_consistent = False
 
-namespace test {}
 
-}  // namespace vm
-}  // namespace oneflow
+class ConsistentScope:
+    def __init__(self):
+        pass
+
+    def __enter__(self, *argc, **kwarg):
+        global _global_is_consistent
+        self.last_is_consistent = _global_is_consistent
+        _global_is_consistent = True
+
+    def __exit__(self, *argc, **kwarg):
+        global _global_is_consistent
+        _global_is_consistent = self.last_is_consistent
+
+
+def is_consistent():
+    return _global_is_consistent
