@@ -22,40 +22,44 @@ namespace py = pybind11;
 namespace oneflow {
 
 class OneEmbeddingHandler final {
-  public:
-
-  OneEmbeddingHandler(const std::string& embedding_option_string, int64_t rank_id, int64_t world_size):rank_id_(rank_id), world_size_(world_size){
+ public:
+  OneEmbeddingHandler(const std::string& embedding_option_string, int64_t rank_id,
+                      int64_t world_size)
+      : rank_id_(rank_id), world_size_(world_size) {
     embedding_option_.reset(new embedding::EmbeddingOptions(embedding_option_string));
-    embedding_name_ = embedding_option_->Name(); 
+    embedding_name_ = embedding_option_->Name();
     CreateKeyValueStore(*embedding_option_, rank_id_, world_size_);
-  }  	
-  
-  void LoadSnapshot(const std::string& snapshot_name){
+  }
+
+  void LoadSnapshot(const std::string& snapshot_name) {
     Global<EmbeddingMgr>::Get()->LoadSnapshot(embedding_name_, rank_id_, snapshot_name);
   }
-  
-  void SaveSnapshot(const std::string& snapshot_name){
-    Global<EmbeddingMgr>::Get()->SaveSnapshot(embedding_name_, rank_id_, snapshot_name); 
+
+  void SaveSnapshot(const std::string& snapshot_name) {
+    Global<EmbeddingMgr>::Get()->SaveSnapshot(embedding_name_, rank_id_, snapshot_name);
   }
-  
-  void CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_option, int64_t num_rank, int64_t world_size){
-    Global<EmbeddingMgr>::Get()->CreateKeyValueStore(embedding_option, rank_id_, world_size_); 
-  }  
-  
-  private: 
-    std::string embedding_name_;
-    std::unique_ptr<embedding::EmbeddingOptions> embedding_option_; 
-    int64_t rank_id_; 
-    int64_t world_size_;  
-}; 
 
+  void CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_option, int64_t num_rank,
+                           int64_t world_size) {
+    Global<EmbeddingMgr>::Get()->CreateKeyValueStore(embedding_option, rank_id_, world_size_);
+  }
 
-ONEFLOW_API_PYBIND11_MODULE("", m){
+ private:
+  std::string embedding_name_;
+  std::unique_ptr<embedding::EmbeddingOptions> embedding_option_;
+  int64_t rank_id_;
+  int64_t world_size_;
+};
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OneEmbeddingHandler, std::shared_ptr<OneEmbeddingHandler>>(m, "OneEmbeddingHandler")
-      .def(py::init([](const std::string& embedding_option_str, const int64_t rank_id, const int64_t world_size){return std::make_shared<OneEmbeddingHandler>(embedding_option_str, rank_id, world_size); })) 
+      .def(py::init([](const std::string& embedding_option_str, const int64_t rank_id,
+                       const int64_t world_size) {
+        return std::make_shared<OneEmbeddingHandler>(embedding_option_str, rank_id, world_size);
+      }))
       .def("SaveSnapshot", &OneEmbeddingHandler::SaveSnapshot)
       .def("LoadSnapshot", &OneEmbeddingHandler::LoadSnapshot)
-      .def("CreateKeyValueStore", &OneEmbeddingHandler::CreateKeyValueStore); 
+      .def("CreateKeyValueStore", &OneEmbeddingHandler::CreateKeyValueStore);
 }
 
 }  // namespace oneflow

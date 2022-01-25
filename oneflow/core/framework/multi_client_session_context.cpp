@@ -110,7 +110,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
       Global<boxing::collective::Scheduler>::New();
-    } 
+    }
     is_inited_ = true;
   }
   return Maybe<void>::Ok();

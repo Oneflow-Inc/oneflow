@@ -23,7 +23,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_inplace_valid
 import json
 import os
-import datetime 
+import datetime
 from oneflow._oneflow_internal import OneEmbeddingHandler
 import numpy as np
 
@@ -136,15 +136,23 @@ class OneEmbeddingLookup(Module):
         # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
         self.parallel_id = flow.env.get_rank()
         self.parallel_num = flow.env.get_world_size()
-        self.handler = OneEmbeddingHandler(self.embedding_options, self.parallel_id, self.parallel_num)
+        self.handler = OneEmbeddingHandler(
+            self.embedding_options, self.parallel_id, self.parallel_num
+        )
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
-        snapshot_timestamp_tensor = flow.tensor(datetime.datetime.now().timestamp(), dtype=flow.float64, device="cuda")
-        # Broadcast timestamp tensor from master rank. 
+        snapshot_timestamp_tensor = flow.tensor(
+            datetime.datetime.now().timestamp(), dtype=flow.float64, device="cuda"
+        )
+        # Broadcast timestamp tensor from master rank.
         flow.comm.broadcast(snapshot_timestamp_tensor, src=0)
         snapshot_timestamp = float(snapshot_timestamp_tensor.numpy())
-        snapshot_timestamp_datetime = datetime.datetime.fromtimestamp(snapshot_timestamp)
-        snapshot_timestamp_str = snapshot_timestamp_datetime.strftime("%Y-%m-%d-%H-%M-%S-%f")
+        snapshot_timestamp_datetime = datetime.datetime.fromtimestamp(
+            snapshot_timestamp
+        )
+        snapshot_timestamp_str = snapshot_timestamp_datetime.strftime(
+            "%Y-%m-%d-%H-%M-%S-%f"
+        )
         self.handler.SaveSnapshot(snapshot_timestamp_str)
         destination[prefix + "OneEmbedding"] = snapshot_timestamp_str
 
@@ -165,8 +173,10 @@ class OneEmbeddingLookup(Module):
                 self.handler.LoadSnapshot(saved_snapshot_name)
             except Exception as ex:
                 error_msgs.append(
-                    'While Loading OneEmbedding Snapshot named "{}" failed, please check whether the Snapshot exist'.format(saved_snapshot_name)
-                )  
+                    'While Loading OneEmbedding Snapshot named "{}" failed, please check whether the Snapshot exist'.format(
+                        saved_snapshot_name
+                    )
+                )
 
     def forward(self, ids, slots):
         return flow._C.embedding_lookup_placeholder(

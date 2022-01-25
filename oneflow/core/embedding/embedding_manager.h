@@ -35,8 +35,9 @@ class EmbeddingMgr final {
   void LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
                     const std::string& snapshot_name);
 
-  embedding::KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t parallel_id);
-  
+  embedding::KeyValueStore* GetKeyValueStore(const std::string& embedding_name,
+                                             int64_t parallel_id);
+
   void CreateKeyValueStore(const embedding::EmbeddingOptions& options, int64_t parallel_id,
                            int64_t parallel_num);
 

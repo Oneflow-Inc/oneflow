@@ -242,7 +242,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
-  Global<EmbeddingMgr>::Delete(); 
+  Global<EmbeddingMgr>::Delete();
   Global<ThreadPool>::Delete();
   Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
