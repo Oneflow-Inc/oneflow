@@ -1,4 +1,5 @@
 set -ex
+ONEFLOW_CI_PARALLEL=${ONEFLOW_CI_PARALLEL:-$(nproc)}
 gcc --version
 ld --version
 # clean python dir
@@ -20,7 +21,7 @@ fi
 cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
 # cmake build
 cd ${ONEFLOW_CI_BUILD_DIR}
-cmake --build . -j $(nproc)
+cmake --build . --parallel ${ONEFLOW_CI_PARALLEL}
 
 # build pip
 cd ${ONEFLOW_CI_SRC_DIR}
