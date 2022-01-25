@@ -34,6 +34,7 @@ endforeach()
 
 if (CPU_THREADING_RUNTIME STREQUAL "TBB") 
   set(ONEDNN_CPU_RUNTIME TBB)
+  set(ONEDNN_DEPENDS install-tbb)
 else()
   set(ONEDNN_CPU_RUNTIME OMP)
 endif()
@@ -41,7 +42,7 @@ endif()
 if(THIRD_PARTY)
 ExternalProject_Add(onednn
     PREFIX onednn
-    DEPENDS install-tbb
+    DEPENDS ${ONEDNN_DEPENDS}
     URL ${ONEDNN_URL}
     URL_MD5 c60ea96acbaccec053be7e3fa81c6184
     UPDATE_COMMAND ""
