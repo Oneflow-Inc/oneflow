@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 
 namespace oneflow {
 
@@ -56,7 +57,6 @@ class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType<Str
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(nullptr);
   }
