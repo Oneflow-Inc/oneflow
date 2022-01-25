@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/cpu/primitive/binary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
@@ -36,8 +37,28 @@ T GetValue(Scalar value) {
 }
 
 template<>
+int8_t GetValue<int8_t>(Scalar value) {
+  return static_cast<int8_t>(GetValue<int64_t>(value));
+}
+
+template<>
+int32_t GetValue<int32_t>(Scalar value) {
+  return static_cast<int32_t>(GetValue<int64_t>(value));
+}
+
+template<>
+uint8_t GetValue<uint8_t>(Scalar value) {
+  return static_cast<uint8_t>(GetValue<uint64_t>(value));
+}
+
+template<>
 float16 GetValue<float16>(Scalar value) {
-  return static_cast<float16>(GetValue<float>(value));
+  return static_cast<float16>(GetValue<double>(value));
+}
+
+template<>
+float GetValue<float>(Scalar value) {
+  return static_cast<float>(GetValue<double>(value));
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst,
@@ -149,7 +170,7 @@ inline void OneDnnBroadcastDims(dnnl::memory::dims& src0, size_t num_src0_dims,
   }
 }
 
-template<dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
+template<typename T, dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
          dnnl::memory::data_type dst_onednn>
 class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
@@ -158,9 +179,17 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   ~OneDnnBroadcastElementwiseBinaryImpl() override = default;
 
   void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
-              const void* src1, void* dst) override {}
+              const void* src1, void* dst) override {
+    T scalar_val = GetValue<T>(src0);
+    const int64_t src0_dims = 1;
+    Launch(stream, num_src1_dims, src1_dims, src1, 1, &src0_dims, &scalar_val, dst);
+  }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
-              Scalar src1, void* dst) override {}
+              Scalar src1, void* dst) override {
+    T scalar_val = GetValue<T>(src1);
+    const int64_t src1_dims = 1;
+    Launch(stream, num_src0_dims, src0_dims, src0, 1, &src1_dims, &scalar_val, dst);
+  }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
@@ -210,12 +239,12 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   }
 };
 
-#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ \
-  CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ         \
-  CPU_PRIMITIVE_ONEDNN_UINT8_TYPE_SEQ        \
-  CPU_PRIMITIVE_ONEDNN_FLOAT_TYPE_SEQ        \
-  CPU_PRIMITIVE_ONEDNN_FLOAT16_TYPE_SEQ      \
-  CPU_PRIMITIVE_ONEDNN_BFLOAT16_TYPE_SEQ
+#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                                   \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::s8, DataType::kInt8, int8_t)   \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kUInt8, uint8_t) \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)  \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f16, DataType::kFloat16, float16)
+
 // OneDNN binary op does not support s32
 // CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ
 
@@ -259,27 +288,27 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr, OR)           \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, XOR)
 
-template<dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
+template<typename T, dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
          dnnl::memory::data_type dst_onednn>
 std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary() {
   return std::unique_ptr<BroadcastElementwiseBinary>(
-      new OneDnnBroadcastElementwiseBinaryImpl<algorithm, src_onednn, dst_onednn>());
+      new OneDnnBroadcastElementwiseBinaryImpl<T, algorithm, src_onednn, dst_onednn>());
 }
 
 #define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
   {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(data_type_pair),         \
                    OF_PP_PAIR_SECOND(data_type_pair)),                                          \
-   NewOneDnnBroadcastElementwiseBinary<OF_PP_PAIR_SECOND(binary_op_pair),                       \
-                                       OF_PP_PAIR_FIRST(data_type_pair),                        \
-                                       OF_PP_PAIR_FIRST(data_type_pair)>},
+   NewOneDnnBroadcastElementwiseBinary<                                                         \
+       OF_PP_PAIR_THIRD(data_type_pair), OF_PP_PAIR_SECOND(binary_op_pair),                     \
+       OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>},
 
 #define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(         \
     binary_op_pair, src_data_type_pair, dst_data_type_pair)                                 \
   {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(src_data_type_pair), \
-                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                                  \
-   NewOneDnnBroadcastElementwiseBinary<OF_PP_PAIR_SECOND(binary_op_pair),                   \
-                                       OF_PP_PAIR_FIRST(src_data_type_pair),                \
-                                       OF_PP_PAIR_FIRST(dst_data_type_pair)>},
+                   OF_PP_PAIR_SECOND(src_data_type_pair)),                                  \
+   NewOneDnnBroadcastElementwiseBinary<                                                     \
+       OF_PP_PAIR_THIRD(src_data_type_pair), OF_PP_PAIR_SECOND(binary_op_pair),             \
+       OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(src_data_type_pair)>},
 
 #endif  // WITH_ONEDNN
 
