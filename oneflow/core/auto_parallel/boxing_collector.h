@@ -30,6 +30,9 @@ class BoxingCollector final {
 
   ~BoxingCollector() = default;
 
+  // A constructor with init, designed for uncustomized boxing collector
+  BoxingCollector(int32_t max_axis);
+
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
 

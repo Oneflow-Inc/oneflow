@@ -15,10 +15,12 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -441,6 +443,45 @@ Maybe<double> ComputeCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_paralle
   return JUST(GetComputeCopyCostFunc())(producer_sbp_parallel, consumer_sbp_parallel,
                                         logical_blob_desc, producer_parallel_desc,
                                         consumer_parallel_desc, requires_same_sbp);
+}
+
+Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_parallel,
+                                             const cfg::NdSbp& consumer_sbp_parallel,
+                                             const BlobDesc& logical_blob_desc,
+                                             const ParallelDesc& producer_parallel_desc,
+                                             const ParallelDesc& consumer_parallel_desc,
+                                             bool requires_same_sbp) {
+  // Initialize boxing collector
+  constexpr static thread_local int32_t kRegularMaxSplitAxes = 6;
+  static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
+  std::vector<cfg::NdSbp> middle_sbps;
+  // Ask for middle nodes
+  boxing_collector.AskSbpCombination(producer_sbp_parallel, consumer_sbp_parallel,
+                                     logical_blob_desc, producer_parallel_desc,
+                                     consumer_parallel_desc, /*is_customized=*/false, middle_sbps,
+                                     /*compute_cost=*/true);
+  double total_cost = 0.0;
+  // Set up the information of the first node in the first connection
+  const cfg::NdSbp* pre_nd_sbp = &producer_sbp_parallel;
+  const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
+  // Connection for the next middle node
+  for (const auto& middle_sbp : middle_sbps) {
+    // We use the parallel description of consumer as the parallel description for all the middle
+    // nodes, following the same procedure in boxing_with_middle_nodes.cpp
+    // TODO: Needs more effort if dealing with different placement
+    total_cost += JUST(ComputeEagerCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
+                                                        *pre_parallel_desc, consumer_parallel_desc,
+                                                        requires_same_sbp));
+    // Set up the information of the first node in the next connection
+    pre_nd_sbp = &middle_sbp;
+    pre_parallel_desc = &consumer_parallel_desc;
+  }
+  // Connection between the last middle node and consumer
+  total_cost += JUST(ComputeEagerCopyCostBetweenNdSbp(*pre_nd_sbp, consumer_sbp_parallel,
+                                                      logical_blob_desc, *pre_parallel_desc,
+                                                      consumer_parallel_desc, requires_same_sbp));
+
+  return total_cost;
 }
 
 }  // namespace oneflow

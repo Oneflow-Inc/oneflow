@@ -42,6 +42,9 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 }
 }  // namespace
 
+// A constructor with init, designed for uncustomized boxing collector
+BoxingCollector::BoxingCollector(int32_t max_axis) { Init(max_axis); }
+
 // Construct a boxing collector with given maximum number of axis
 void BoxingCollector::Init(int32_t max_axis) {
   // Set up at least two split for op graph.
