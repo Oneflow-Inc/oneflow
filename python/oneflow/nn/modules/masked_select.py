@@ -74,16 +74,6 @@ def masked_select_op(input, mask):
     return gather_res.flatten()
 
 
-@register_tensor_op("masked_select")
-def tensor_masked_select_op(input, mask):
-    """
-
-    See :func:`oneflow.masked_select`
-
-    """
-    return masked_select_op(input, mask)
-
-
 if __name__ == "__main__":
     import doctest
 
