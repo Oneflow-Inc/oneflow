@@ -76,6 +76,7 @@ oneflow
             log, 
             log1p, 
             lt, 
+            le, 
             masked_fill, 
             masked_select, 
             matmul, 
@@ -90,6 +91,7 @@ oneflow
             negative, 
             nonzero,
             numel, 
+            ne, 
             empty,
             ones, 
             ones_like, 
@@ -156,8 +158,8 @@ oneflow
             is_floating_point,
             set_printoptions,
             decode_onerec,
-            read_onerec,
             from_numpy,
             cumsum,
+            cumprod,
 
 .. autofunction:: oneflow.relu
