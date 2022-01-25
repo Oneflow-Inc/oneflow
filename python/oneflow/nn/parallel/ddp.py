@@ -54,13 +54,16 @@ def DistributedDataParallel(
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     mul_factor = 1 / world_size
+
     def inplace_mul_and_return_none(x):
         x.mul_(mul_factor)
         return None
 
     for param in module.parameters():
         param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
-        param._register_post_grad_accumulation_hook(allreduce_fn(ddp_state_for_reversed_params, param))
+        param._register_post_grad_accumulation_hook(
+            allreduce_fn(ddp_state_for_reversed_params, param)
+        )
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params

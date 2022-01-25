@@ -170,9 +170,7 @@ class TestDDP(flow.unittest.TestCase):
             y = m(x)
             y.sum().backward()
 
-        test_case.assertTrue(
-            np_allclose_with_shape(m.w.grad.numpy(), np.array([3, 3]))
-        )
+        test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([3, 3])))
 
     def test_ddp_two_iters(test_case):
         for dev_type in test_device:

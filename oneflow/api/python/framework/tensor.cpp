@@ -108,7 +108,8 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
+void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& self,
+                                              const AutogradMeta::Hook& hook) {
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
