@@ -75,32 +75,16 @@ class CosineAnnealingLR(LRScheduler):
         super().__init__(optimizer, last_step, verbose)
 
     def get_lr(self):
-        # if self.last_step == 0:
-        #     lrs = [group["lr"] for group in self._optimizer.param_groups]
-        # elif (self.last_step - 1 - self.T_max) % (2 * self.T_max) == 0:
-        #     lrs = [
-        #         group["lr"]
-        #         + (base_lr - self.eta_min) * (1 - math.cos(math.pi / self.T_max)) / 2
-        #         for base_lr, group in zip(self.base_lrs, self._optimizer.param_groups)
-        #     ]
-        # else:
-        #     lrs = [
-        #         (1 + math.cos(math.pi * self.last_step / self.T_max))
-        #         / (1 + math.cos(math.pi * (self.last_step - 1) / self.T_max))
-        #         * (group["lr"] - self.eta_min)
-        #         + self.eta_min
-        #         for group in self._optimizer.param_groups
-        #     ]
-
         lrs = []
         for base_lr in self.base_lrs:
-            lr = self.eta_min + (base_lr - self.eta_min) * (1 + math.cos(math.pi * self.last_step / self.T_max)) / 2
+            lr = (
+                self.eta_min
+                + (base_lr - self.eta_min)
+                * (1 + math.cos(math.pi * self.last_step / self.T_max))
+                * 0.5
+            )
             lrs.append(lr)
 
-        state_lr = [group["lr"] for group in self._optimizer.param_groups]
-        print(
-            f"CosineAnnealingLR.get_lr(), last_step: {self.last_step}, group['lr']: {state_lr}, lrs: {lrs}"
-        )
         return lrs
 
     def _generate_conf_for_graph(self, opt_confs):

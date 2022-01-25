@@ -15,6 +15,7 @@ limitations under the License.
 """
 import math
 
+from .optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
@@ -66,11 +67,11 @@ class CosineDecayLR(LRScheduler):
 
     def __init__(
         self,
-        optimizer,
+        optimizer: Optimizer,
         decay_steps: int,
         alpha: float = 0.0,
-        last_step=-1,
-        verbose=False,
+        last_step: int = -1,
+        verbose: bool = False,
     ):
         assert (
             decay_steps > 0

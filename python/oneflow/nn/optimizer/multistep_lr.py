@@ -65,7 +65,7 @@ class MultiStepLR(LRScheduler):
 
     def get_lr(self):
         sect = bisect.bisect_right(self.milestones, self.last_step)
-        factor = pow(self.gamma, sect)
+        factor = self.gamma ** sect
         return [base_lr * factor for base_lr in self.base_lrs]
 
     def _generate_conf_for_graph(self, opt_confs):
