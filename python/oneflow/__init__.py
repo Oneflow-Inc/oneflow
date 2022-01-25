@@ -185,10 +185,6 @@ from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 
-<<<<<<< HEAD
-=======
-
->>>>>>> aa9152b7e86a29f31281ebbf8c26d2c3fc6ed9fd
 from . import sbp
 import atexit
 
