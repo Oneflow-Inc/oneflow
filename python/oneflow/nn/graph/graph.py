@@ -259,6 +259,20 @@ class Graph(object):
 
         return self._run(*args)
 
+    def state_dict(
+        self, destination=None, prefix="", keep_vars=False
+    ) -> Dict[str, Tensor]:
+        pass
+
+    def load_state_dict(
+        self,
+        state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
+        strict: bool = True,
+    ):
+        pass
+        # 1 load parameter/buffer to Modules
+        # 2 store other state to CNNGraph, CNNGraph load them after job pass
+
     @property
     def name(self):
         r"""Name auto-generated for this graph.
