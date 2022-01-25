@@ -299,6 +299,14 @@
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
 
+- name: "T"
+  signature: "Tensor (Tensor input) => TransposeAllDimProperty"
+  bind_python: True
+
+- name: "t"
+  signature: "Tensor (Tensor input) => TransposeAllDimFunction"
+  bind_python: True 
+
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
   bind_python: True
@@ -983,13 +991,6 @@
     String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
   bind_python: True
 
-- name: "max_pool2d_nhwc"
-  signature:
-    'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
-    Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
-  bind_python: True
-
 - name: "ctc_loss_grad"
   signature:
     "Tensor (Tensor loss_grad, Tensor log_probs, Tensor targets,
@@ -1452,7 +1453,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Tensor addend=None, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
+  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1639,6 +1640,10 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerPToS"
   bind_python: False
 
+- name: "eager_s_to_p"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerSToP"
+  bind_python: False
+
 - name: "consistent_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False
@@ -1746,8 +1751,8 @@
 
 - name: "split"
   signature: [
-    "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
-    "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+    "TensorTuple (Tensor x, Int64 split_size_or_sections, Int64 dim=0) => Split",
+    "TensorTuple (Tensor x, Int64List split_size_or_sections, Int64 dim=0) => SplitWithSize",
   ]
   bind_python: True
 
@@ -1879,16 +1884,12 @@
   signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
   bind_python: True
 
-- name: "read_onerec"
-  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => ReadOneRec"
-  bind_python: True
-
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
 
 - name: "embedding_lookup_placeholder"
-  signature: "Tensor (Tensor ids, Tensor slots, DataType dtype, String embedding_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor ids, Tensor column_ids, DataType dtype, String embedding_options) => OneEmbeddingLookup"
   bind_python: True
   
 - name: "tensor_buffer_to_tensor"

@@ -15,21 +15,20 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
-#include "oneflow/core/embedding/embedding_options.h"
 
 namespace oneflow {
 
 /* static */ Maybe<void> IdShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
-  const Shape& slots_shape = ctx->InputShape("slots", 0);
-  CHECK_EQ_OR_RETURN(ids_shape, slots_shape);
+  const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
+  CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
   const ParallelDesc& parallel_desc = ctx->parallel_desc();
   const int64_t parallel_num = parallel_desc.parallel_num();
   *ctx->OutputShape("num_unique_ids", 0) = Shape({parallel_num});
   *ctx->OutputShape("ids_reverse_idx", 0) = ids_shape;
   *ctx->OutputShape("cur_rank_num_unique_ids", 0) = Shape({parallel_num});
   *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
-  *ctx->OutputShape("cur_rank_slots", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
+  *ctx->OutputShape("cur_rank_column_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
   *ctx->OutputShape("cur_rank_reverse_idx", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
   *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
   *ctx->OutputShape("partition_index", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
@@ -37,7 +36,7 @@ namespace oneflow {
   *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = false;
-  *ctx->OutputIsDynamic("cur_rank_slots", 0) = false;
+  *ctx->OutputIsDynamic("cur_rank_column_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = false;
   *ctx->OutputIsDynamic("ids_reverse_idx", 0) = ctx->InputIsDynamic("ids", 0);
   *ctx->OutputIsDynamic("num_unique_ids_matrix", 0) = false;
@@ -46,15 +45,15 @@ namespace oneflow {
 
 /* static */ Maybe<void> IdShuffleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
-  const Shape& slots_shape = ctx->InputShape("slots", 0);
-  CHECK_EQ_OR_RETURN(ids_shape, slots_shape);
+  const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
+  CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
   const ParallelDesc& parallel_desc = ctx->parallel_desc();
   const int64_t parallel_num = parallel_desc.parallel_num();
   *ctx->OutputShape("num_unique_ids", 0) = Shape({1});
   *ctx->OutputShape("ids_reverse_idx", 0) = ids_shape;
   *ctx->OutputShape("cur_rank_num_unique_ids", 0) = Shape({1});
   *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
-  *ctx->OutputShape("cur_rank_slots", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
+  *ctx->OutputShape("cur_rank_column_ids", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
   *ctx->OutputShape("cur_rank_reverse_idx", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
   *ctx->OutputShape("num_unique_ids_matrix", 0) = Shape({parallel_num * parallel_num});
   *ctx->OutputShape("partition_index", 0) = Shape({ids_shape.elem_cnt() * parallel_num});
@@ -63,7 +62,7 @@ namespace oneflow {
   *ctx->OutputIsDynamic("num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_num_unique_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_unique_ids", 0) = false;
-  *ctx->OutputIsDynamic("cur_rank_slots", 0) = false;
+  *ctx->OutputIsDynamic("cur_rank_column_ids", 0) = false;
   *ctx->OutputIsDynamic("cur_rank_reverse_idx", 0) = false;
   *ctx->OutputIsDynamic("ids_reverse_idx", 0) = ctx->InputIsDynamic("ids", 0);
   *ctx->OutputIsDynamic("num_unique_ids_matrix", 0) = false;
@@ -73,12 +72,12 @@ namespace oneflow {
 /* static */ Maybe<void> IdShuffleOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
-      .Split(user_op::OpArg("slots", 0), 0)
+      .Split(user_op::OpArg("column_ids", 0), 0)
       .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("ids_reverse_idx", 0), 0)
       .Split(user_op::OpArg("cur_rank_num_unique_ids", 0), 0)
       .Split(user_op::OpArg("cur_rank_unique_ids", 0), 0)
-      .Split(user_op::OpArg("cur_rank_slots", 0), 0)
+      .Split(user_op::OpArg("cur_rank_column_ids", 0), 0)
       .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)
       .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
       .Split(user_op::OpArg("partition_index", 0), 0)
@@ -91,7 +90,7 @@ namespace oneflow {
   *ctx->OutputDType("ids_reverse_idx", 0) = DataType::kInt32;
   *ctx->OutputDType("cur_rank_num_unique_ids", 0) = DataType::kInt32;
   *ctx->OutputDType("cur_rank_unique_ids", 0) = ctx->InputDType("ids", 0);
-  *ctx->OutputDType("cur_rank_slots", 0) = ctx->InputDType("slots", 0);
+  *ctx->OutputDType("cur_rank_column_ids", 0) = ctx->InputDType("column_ids", 0);
   *ctx->OutputDType("cur_rank_reverse_idx", 0) = DataType::kInt32;
   *ctx->OutputDType("num_unique_ids_matrix", 0) = DataType::kInt32;
   *ctx->OutputDType("partition_index", 0) = DataType::kInt32;
@@ -111,7 +110,7 @@ namespace oneflow {
   ctx->NewBuilder()
       .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("slots", 0), 0)
+      .Split(user_op::OpArg("column_ids", 0), 0)
       .Split(user_op::OpArg("context", 0), 0)
       .Build();
   return Maybe<void>::Ok();
@@ -123,23 +122,18 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& ids_shape = ctx->InputShape("unique_ids", 0);
-  DimVector out_dim_vec = ids_shape.dim_vec();
-  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
-  const int64_t embedding_size = options.EmbeddingSize();
+  const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
-  out_dim_vec.push_back(embedding_size);
-  *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
-  if (options.Optimizer() == "sgd") {
-    // do nothing
-  } else if (options.Optimizer() == "momentum") {
-    out_dim_vec.at(out_dim_vec.size() - 1) *= 2;
-  } else if (options.Optimizer() == "adam") {
-    out_dim_vec.at(out_dim_vec.size() - 1) *= 3;
-  } else {
-    UNIMPLEMENTED();
+  if (ctx->has_output("embeddings", 0)) {
+    DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
+    embeddings_dim_vec.push_back(embedding_size);
+    *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
   }
-  *ctx->OutputShape("unique_values", 0) = Shape(out_dim_vec);
+  DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
+  unique_values_dim_vec.push_back(line_size);
+  *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -148,19 +142,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("num_unique_ids", 0), 0)
-      .Split(user_op::OpArg("context", 0), 0)
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("unique_values", 0), 0)
-      .Split(user_op::OpArg("embeddings", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+  if (ctx->has_output("embeddings", 0)) {
+    *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+  }
   return Maybe<void>::Ok();
 }
 
@@ -266,10 +256,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids_reverse_idx", 0);
+  const Shape& cur_rank_embeddings_shape = ctx->InputShape("cur_rank_embeddings", 0);
+  const int64_t embedding_size =
+      cur_rank_embeddings_shape.At(cur_rank_embeddings_shape.NumAxes() - 1);
   DimVector out_dim_vec = ids_shape.dim_vec();
-  embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
-  const int64_t embedding_size = options.EmbeddingSize();
-  CHECK_EQ_OR_RETURN(embedding_size, ParseIntegerFromEnv("EMBEDDING_SIZE", 128));
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   *ctx->OutputIsDynamic("embeddings", 0) = false;
@@ -284,9 +274,7 @@ namespace oneflow {
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
       .Split(user_op::OpArg("cur_rank_embeddings", 0), 0)
-      .Split(user_op::OpArg("cur_rank_num_unique_ids", 0), 0)
       .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)
-      .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("ids_reverse_idx", 0), 0)
       .Split(user_op::OpArg("embeddings", 0), 0)
       .Split(user_op::OpArg("partition_index", 0), 0)
@@ -318,9 +306,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingGradientShuffleOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("num_unique_ids_matrix", 0))
-      .Split(user_op::OpArg("cur_rank_num_unique_ids", 0), 0)
       .Split(user_op::OpArg("cur_rank_reverse_idx", 0), 0)
-      .Split(user_op::OpArg("num_unique_ids", 0), 0)
       .Split(user_op::OpArg("ids_reverse_idx", 0), 0)
       .Split(user_op::OpArg("embedding_diff", 0), 0)
       .Split(user_op::OpArg("cur_rank_unique_embedding_diff", 0), 0)

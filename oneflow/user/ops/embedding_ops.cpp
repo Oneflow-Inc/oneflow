@@ -38,7 +38,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
-      .Split(user_op::OpArg("slots", 0), 0)
+      .Split(user_op::OpArg("column_ids", 0), 0)
       .Split(user_op::OpArg("embeddings", 0), 0)
       .Build();
   return Maybe<void>::Ok();
@@ -49,9 +49,9 @@ namespace oneflow {
   user_op::InputArgModifier* ids = GetInputArgModifierFn("ids", 0);
   CHECK_OR_RETURN(ids != nullptr);
   ids->set_requires_grad(false);
-  user_op::InputArgModifier* slots = GetInputArgModifierFn("slots", 0);
-  CHECK_OR_RETURN(slots != nullptr);
-  slots->set_requires_grad(false);
+  user_op::InputArgModifier* column_ids = GetInputArgModifierFn("column_ids", 0);
+  CHECK_OR_RETURN(column_ids != nullptr);
+  column_ids->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
@@ -60,17 +60,17 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> SgdEmbeddingUpdatePlaceholderOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> SgdEmbeddingUpdatePlaceholderOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> EmbeddingUpdatePlaceholderOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> SgdEmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
       .Split(user_op::OpArg("embedding_diff", 0), 0)
@@ -78,8 +78,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> SgdEmbeddingUpdatePlaceholderOp::InferDataType(
-    user_op::InferContext* ctx) {
+/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
@@ -88,7 +87,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
                                user_op::AddOpFn AddOp) -> Maybe<void> {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_update");
       user_op::UserOpConfWrapper grad_op =
-          builder.Op("sgd_embedding_update_placeholder")
+          builder.Op("embedding_update_placeholder")
               .Input("ids", op.input("ids", 0))
               .Input("embedding_diff", op.GetGradTensorWithOpOutput("embeddings", 0))
               .Attr<std::string>("embedding_options", op.attr<std::string>("embedding_options"))

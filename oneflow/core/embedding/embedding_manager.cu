@@ -94,9 +94,6 @@ void EmbeddingMgr::CreateKeyValueStore(const embedding::EmbeddingOptions& embedd
                << embedding_options.L1CacheMemoryBudgetMb();
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
-
-  store->ReserveQueryLength(embedding_options.MaxQueryLength());
-
   key_value_store_map_.emplace(map_key, std::move(store));
 }
 

@@ -242,27 +242,34 @@ class MaxPool2d(Module):
         self.dilation = _pair(dilation)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
-
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_pos = "channels_last"
         else:
             self.channel_pos = "channels_first"
 
     def forward(self, x):
-        y, indice = flow._C.max_pool2d(
-            x,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            return_indices=True,
-            ceil_mode=self.ceil_mode,
-            data_format=self.channel_pos,
-        )
-        if self.return_indices:
-            return y, indice
+        if not self.return_indices:
+            return flow._C.max_pool2d(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                return_indices=self.return_indices,
+                ceil_mode=self.ceil_mode,
+                data_format=self.channel_pos,
+            )[0]
         else:
-            return y
+            return flow._C.max_pool2d(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                return_indices=self.return_indices,
+                ceil_mode=self.ceil_mode,
+                data_format=self.channel_pos,
+            )
 
     def extra_repr(self) -> str:
         return "kernel_size={}, stride={}, padding={}, dilation={}".format(
@@ -540,6 +547,7 @@ class AvgPool2d(Module):
             )
             self._padding_before = [pad[0] for pad in _pads_list]
             self._padding_after = [pad[1] for pad in _pads_list]
+
         else:
             self.data_format = "NCHW"
             self.channel_pos = "channels_first"

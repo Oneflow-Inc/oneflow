@@ -350,6 +350,31 @@ class PoolingNDFunctor {
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
+    if (x->ndim() == 4 && data_format == "channels_last") {
+      if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
+        // legacy tf style maxpool2d , use cudnn implementation
+        // with high performance but do not support dilation/return_indices
+        MutableAttrMap attrs;
+        std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
+        std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
+
+        JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+        if (stride.has_value()) {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(stride)));
+        } else {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", kernel_size));
+        }
+        JUST(attrs.SetAttr<std::string>("padding", "customized"));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+        JUST(attrs.SetAttr<std::string>("data_format", data_format));
+        JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+        TensorTuple output;
+        output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
+        return output;
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
@@ -368,19 +393,13 @@ class PoolingNDFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
 class TFAvgPool2DFunctor : public PoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
-  }
-};
-
-class TFMaxPool2DFunctor : public PoolNDFunctor {
- public:
-  TFMaxPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -395,6 +414,7 @@ class Maxpool2DFunctor : public PoolingNDFunctor {
  public:
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
+    tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -1450,9 +1470,9 @@ class DropoutFunctor {
                                         .Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& addend, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+                           const bool& training, const Optional<one::Generator>& generator,
+                           const Optional<one::Tensor>& addend) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
@@ -2150,18 +2170,18 @@ class EmbeddingLookupFunctor {
   EmbeddingLookupFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
                          .Input("ids")
-                         .Input("slots")
+                         .Input("column_ids")
                          .Output("embeddings")
                          .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ids,
-                           const std::shared_ptr<one::Tensor>& slots, const Symbol<DType>& dtype,
-                           const std::string& embedding_options) const {
+                           const std::shared_ptr<one::Tensor>& column_ids,
+                           const Symbol<DType>& dtype, const std::string& embedding_options) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<std::string>("embedding_options", embedding_options));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids, slots}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids, column_ids}, attrs);
   }
 
  private:
@@ -2186,7 +2206,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
-  m.add_functor<impl::TFMaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");

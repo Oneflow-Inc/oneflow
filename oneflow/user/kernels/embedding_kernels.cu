@@ -113,15 +113,15 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
 template<typename T, typename K, typename IDX>
 __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int64_t line_size,
-                                const int64_t embedding_size, InitParam param, const IDX* slots,
-                                const uint32_t* num_missing_keys, const uint32_t* missing_indices,
-                                T* values) {
+                                const int64_t embedding_size, InitParam param,
+                                const IDX* column_ids, const uint32_t* num_missing_keys,
+                                const uint32_t* missing_indices, T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   for (int row = blockIdx.x; row < *num_missing_keys; row += gridDim.x) {
     const uint32_t index = missing_indices[row];
-    const int32_t slot_idx = slots[index];
+    const int32_t slot_idx = column_ids[index];
     assert(slot_idx < param.num_columns);
     for (int col = threadIdx.x; col < line_size; col += blockDim.x) {
       const int64_t offset = index * line_size + col;
@@ -194,28 +194,61 @@ class PrefetchTmpBufferManager final {
   void* ptr_;
 };
 
-class EmbeddingKernelState final : public user_op::OpKernelState {
+class EmbeddingPrefetchKernelState final : public user_op::OpKernelState {
  public:
-  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx)
+  explicit EmbeddingPrefetchKernelState(user_op::KernelInitContext* ctx)
       : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
-    options_.reset(new embedding::EmbeddingOptions(ctx->Attr<std::string>("embedding_options")));
+    embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
     key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        options_->Name(), ctx->parallel_ctx().parallel_id());
+        options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+    uint32_t max_query_length =
+        ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
+    key_value_store_->ReserveQueryLength(max_query_length);
+
+    const std::vector<embedding::EmbeddingColumn>& columns = options.Columns();
+    init_param_.reset(new InitParam);
+    CHECK_LE(columns.size(), kMaxColumns);
+    init_param_->num_columns = columns.size();
+    for (int32_t i = 0; i < columns.size(); ++i) {
+      init_param_->initializer[i] = columns.at(i).initializer;
+    }
   }
-  ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
+  ~EmbeddingPrefetchKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
 
   void* HostNumKeys() { return host_num_keys_; }
 
-  embedding::EmbeddingOptions* EmbeddingOptions() { return options_.get(); }
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
   one::Generator* generator() { return generator_.get(); }
 
+  InitParam* InitParams() { return init_param_.get(); }
+
  private:
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
-  std::unique_ptr<embedding::EmbeddingOptions> options_;
+  embedding::KeyValueStore* key_value_store_;
+  std::unique_ptr<InitParam> init_param_;
+};
+
+class EmbeddingKernelState final : public user_op::OpKernelState {
+ public:
+  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx) {
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
+    embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
+    key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
+        options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+    uint32_t max_query_length =
+        ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
+    key_value_store_->ReserveQueryLength(max_query_length);
+  }
+  ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
+
+  void* HostNumKeys() { return host_num_keys_; }
+  embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
+
+ private:
+  void* host_num_keys_;
   embedding::KeyValueStore* key_value_store_;
 };
 
@@ -229,14 +262,14 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingKernelState>(ctx);
+    return std::make_shared<EmbeddingPrefetchKernelState>(ctx);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EmbeddingPrefetchKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const auto& generator = kernel_state->generator();
     CHECK_NOTNULL(generator);
@@ -244,16 +277,15 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
         CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
     uint64_t seed = cuda_generator->current_seed();
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
-
-    embedding::EmbeddingOptions* options = kernel_state->EmbeddingOptions();
     embedding::KeyValueStore* store = kernel_state->KeyValueStore();
-    const std::vector<embedding::EmbeddingColumn>& columns = options->Columns();
+    InitParam* init_param = kernel_state->InitParams();
+    
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    const user_op::Tensor* slots = ctx->Tensor4ArgNameAndIndex("slots", 0);
+    const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t embedding_size = options->EmbeddingSize();
-    const int64_t line_size = options->LineSize();
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
                                                   unique_ids->shape().elem_cnt(), line_size);
     uint32_t* host_num_keys = reinterpret_cast<uint32_t*>(kernel_state->HostNumKeys());
@@ -265,19 +297,13 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     store->Get(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr(),
                buffer_manager.NumStoreMissingPtr(), buffer_manager.StoreMissingIndicesPtr());
 
-    CHECK_LE(columns.size(), kMaxColumns);
-    InitParam init_param;
-    init_param.num_columns = columns.size();
-    for (int32_t i = 0; i < columns.size(); ++i) {
-      init_param.initializer[i] = columns.at(i).initializer;
-    }
     // init values
     const int64_t grid_size = BlocksNum4ThreadsNum(num_keys);
     uint64_t inc_offset = num_keys / grid_size + 1;
     InitValueKernel<T, K, IDX>
         <<<grid_size, line_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, line_size, embedding_size, init_param,
-            slots->dptr<IDX>(), buffer_manager.NumStoreMissingPtr(),
+            seed, cuda_gen_state, inc_offset, line_size, embedding_size, *init_param,
+            column_ids->dptr<IDX>(), buffer_manager.NumStoreMissingPtr(),
             buffer_manager.StoreMissingIndicesPtr(), buffer_manager.StoreValuesPtr());
     store->Put(ctx->stream(), num_keys, unique_ids->dptr(), buffer_manager.StoreValuesPtr());
   }
@@ -291,10 +317,9 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                  \
-        embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));  \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);     \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                         \
-            nullptr, unique_ids.shape().elem_cnt(), options.LineSize());                   \
+            nullptr, unique_ids.shape().elem_cnt(), ctx->Attr<int64_t>("line_size"));      \
         return buffer_manager.TotalBufferSize();                                           \
       });
 
@@ -321,8 +346,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
-    user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t value_size = 0;  // lookup not need value tmp buffer, so set value_size to 0
     PrefetchTmpBufferManager<T, K> buffer_manager(tmp_buffer->mut_dptr(),
@@ -342,16 +365,20 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK_JUST(ctx->stream()->Sync());
     CHECK_EQ(*host_num_keys, 0);  // we think keys must be in cache or kv_store.
 
-    const int64_t ndims = unique_values->shape().NumAxes();
-    DimVector src_pos_vec(ndims, 0);
-    DimVector dst_pos_vec(ndims, 0);
-    std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, ndims);
-    CHECK(copy_nd_primitive);
-    copy_nd_primitive->Launch(ctx->stream(), unique_values->data_type(), ndims,
-                              embeddings->mut_dptr(), embeddings->shape().ptr(), dst_pos_vec.data(),
-                              unique_values->dptr(), unique_values->shape().ptr(),
-                              src_pos_vec.data(), embeddings->shape().ptr());
+    if (ctx->has_output("embeddings", 0)) {
+      user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+      const int64_t ndims = unique_values->shape().NumAxes();
+      CHECK_NE(embeddings->shape().At(ndims - 1), unique_values->shape().At(ndims - 1));
+      DimVector src_pos_vec(ndims, 0);
+      DimVector dst_pos_vec(ndims, 0);
+      std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
+          ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, ndims);
+      CHECK(copy_nd_primitive);
+      copy_nd_primitive->Launch(
+          ctx->stream(), unique_values->data_type(), ndims, embeddings->mut_dptr(),
+          embeddings->shape().ptr(), dst_pos_vec.data(), unique_values->dptr(),
+          unique_values->shape().ptr(), src_pos_vec.data(), embeddings->shape().ptr());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -363,7 +390,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
           && (user_op::HobDataType("unique_ids", 0) == GetDataType<k_dtype>::value)       \
-          && (user_op::HobDataType("embeddings", 0) == GetDataType<t_dtype>::value))      \
+          && (user_op::HobDataType("unique_values", 0) == GetDataType<t_dtype>::value))   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                 \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);    \
         PrefetchTmpBufferManager<t_dtype, k_dtype> buffer_manager(                        \

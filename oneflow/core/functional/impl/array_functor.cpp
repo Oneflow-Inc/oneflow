@@ -299,12 +299,19 @@ class WhereScalarXFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& scalar,
                            const std::shared_ptr<one::Tensor>& y) const {
     MutableAttrMap attrs;
-    if (scalar.IsFloatingPoint()) {
+    if (scalar.IsBool()) {
+      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
     } else {
@@ -326,16 +333,23 @@ class WhereScalarYFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
-    if (scalar.IsFloatingPoint()) {
+    if (scalar.IsBool()) {
+      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
   }
@@ -352,9 +366,20 @@ class WhereScalarXYFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
                            const Scalar& y_scalar) const {
     MutableAttrMap attrs;
-    if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
+    if (x_scalar.IsBool() && y_scalar.IsBool()) {
+      JUST(attrs.SetAttr<bool>("x_bool_operand", JUST(x_scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("y_bool_operand", JUST(y_scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_x_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_y_bool_operand", true));
+      JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
+    } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<double>("x_float_operand", JUST(x_scalar.As<double>())));
       JUST(attrs.SetAttr<double>("y_float_operand", JUST(y_scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_y_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
@@ -362,12 +387,14 @@ class WhereScalarXYFunctor {
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(x_scalar.As<int64_t>())));
       JUST(attrs.SetAttr<int64_t>("y_int_operand", JUST(y_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_int_operand", true));
       JUST(attrs.SetAttr<bool>("has_y_int_operand", true));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {condition}, attrs);
   }
@@ -2050,21 +2077,24 @@ class BroadcastReduceSumLikeFunctor {
 class SplitFunctor {
  public:
   SplitFunctor() {}
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& split_size,
-                                const int64_t& dim) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const int64_t& split_size_or_sections, const int64_t& dim) const {
     int64_t axis = dim;
     if (axis < 0) { axis += x->ndim(); }
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
         << "The dim " << dim << " is out of bound " << x->ndim() - 1;
-    CHECK_GE_OR_RETURN(split_size, 0)
-        << "split expects split_size be non-negative, but got split_size=" << split_size;
+    CHECK_GE_OR_RETURN(split_size_or_sections, 0)
+        << "split expects split_size be non-negative, but got split_size="
+        << split_size_or_sections;
     int64_t dim_size = x->shape()->At(axis);
-    int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
+    int64_t num_splits =
+        std::max<int64_t>((dim_size + split_size_or_sections - 1) / split_size_or_sections, 1);
     TensorTuple splits(num_splits);
-    int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
+    int64_t last_split_size =
+        split_size_or_sections - (split_size_or_sections * num_splits - dim_size);
     for (int i = 0; i < num_splits; ++i) {
-      int64_t length = i < num_splits - 1 ? split_size : last_split_size;
-      splits[i] = JUST(Narrow(x, axis, i * split_size, length));
+      int64_t length = i < num_splits - 1 ? split_size_or_sections : last_split_size;
+      splits[i] = JUST(Narrow(x, axis, i * split_size_or_sections, length));
     }
     return splits;
   }
@@ -2148,17 +2178,18 @@ class SplitWithSizeFunctor {
  public:
   SplitWithSizeFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::vector<int64_t>& split_sizes, const int64_t& dim) const {
+                                const std::vector<int64_t>& split_size_or_sections,
+                                const int64_t& dim) const {
     int64_t axis = dim;
     if (axis < 0) { axis += x->ndim(); }
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
         << "The dim " << dim << " is out of bound " << x->ndim() - 1;
     int64_t dim_size = x->shape()->At(axis);
-    int64_t num_splits = split_sizes.size();
+    int64_t num_splits = split_size_or_sections.size();
     TensorTuple splits(num_splits);
     int64_t start_idx = 0;
     for (int i = 0; i < num_splits; ++i) {
-      int64_t length = split_sizes[i];
+      int64_t length = split_size_or_sections[i];
       CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
                                        "non-negative entries, but split_sizes["
                                     << i << "] = " << length;
@@ -2221,10 +2252,17 @@ class MaskedFillFunctor {
       JUST(attrs.SetAttr<double>("float_operand", JUST(value.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(value.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
+    } else if (IsBoolDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<bool>("bool_operand", JUST(value.As<bool>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
@@ -2523,6 +2561,32 @@ class GenTensorBufferFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TransposeAllDimPropertyFunctor {
+ public:
+  TransposeAllDimPropertyFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    const int64_t ndim = x->ndim();
+    std::vector<int32_t> permute;
+    permute.resize(ndim);
+    std::iota(permute.begin(), permute.end(), 0);
+    std::reverse(permute.begin(), permute.end());
+    return Transpose(x, permute);
+  }
+};
+
+class TransposeAllDimFunctionFunctor {
+ public:
+  TransposeAllDimFunctionFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    const int64_t ndim = x->ndim();
+    CHECK_OR_RETURN(ndim <= 2)
+        << "RuntimeError: t() expects a tensor with <= 2 dimensions, but input tensor is " << ndim
+        << "D";
+    if (ndim == 0 || ndim == 1) { return x; }
+    return Transpose2dim(x, 0, 1);
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2626,6 +2690,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
+  m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
+  m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
 };
 
 }  // namespace functional
