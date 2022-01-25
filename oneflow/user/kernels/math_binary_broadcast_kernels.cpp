@@ -135,12 +135,26 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 // gpu half
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif
+
+#define REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL(math_type_pair, device, data_type_pair) \
+  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                      \
+      .SetCreateFn<MathBinaryBroadcastKernel<                                                 \
+          device, OF_PP_PAIR_FIRST(data_type_pair), bool,                                     \
+          &NdarrayUtil<device, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(                  \
+              Broadcast, OF_PP_PAIR_SECOND(math_type_pair))>>()                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)) \
+                       && (user_op::HobDataType("z", 0) == DataType::kBool));
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_MATH_BINARY_BROADCAST_LOGICAL_KERNEL, MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ,
+    DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

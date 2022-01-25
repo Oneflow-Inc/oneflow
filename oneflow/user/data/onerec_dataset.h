@@ -16,11 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CUSTOMIZED_DATA_ONEREC_DATASET_H_
 #define ONEFLOW_CUSTOMIZED_DATA_ONEREC_DATASET_H_
 
-#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/user/data/dataset.h"
-#include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/common/str_util.h"
+#include "oneflow/user/data/distributed_util.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
 
@@ -80,8 +81,11 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     current_epoch_ = 0;
     shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");
     data_file_paths_ = ctx->Attr<std::vector<std::string>>("files");
-    parallel_id_ = ctx->parallel_ctx().parallel_id();
-    parallel_num_ = ctx->parallel_ctx().parallel_num();
+    size_t world_size = 1;
+    int64_t rank = 0;
+    CHECK_JUST(InitDataSourceDistributedInfo(ctx, world_size, rank));
+    parallel_id_ = rank;
+    parallel_num_ = world_size;
     BalancedSplitter bs(data_file_paths_.size(), parallel_num_);
     range_ = bs.At(parallel_id_);
     ResetInstream();
