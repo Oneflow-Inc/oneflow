@@ -246,12 +246,6 @@ include_directories(${PROJECT_BINARY_DIR})
 # cc obj lib
 oneflow_add_library(oneflow ${of_all_obj_cc})
 
-if (WITH_CPU_THREADING_RUNTIME STREQUAL "TBB") 
-  get_property(TBB_SRC_DIR GLOBAL PROPERTY TBB_SRC_DIR)
-  target_include_directories(oneflow PRIVATE ${TBB_SRC_DIR})
-  target_link_libraries(oneflow tbb)
-endif()
-
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)

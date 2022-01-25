@@ -234,12 +234,6 @@ if(CPU_THREADING_RUNTIME STREQUAL "TBB")
 endif()
 
 add_subdirectory(external)
-if (WITH_CPU_THREADING_RUNTIME STREQUAL "TBB") 
-  set(ONETBB_URL https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
-  use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
-  set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
-endif()
-add_subdirectory(external)
 include(third_party)
 
 if (BUILD_CUDA)
