@@ -31,7 +31,7 @@ class TestCumOp(flow.unittest.TestCase):
         dim = random(0, x.ndim.pytorch).to(int)
         z = torch.cumsum(x, dim)
         return z
-   
+
     # TODO(): use default rtol atol when torch version upgrade
     # from 1.9.0 to 1.11.0
     @autotest(check_graph=True, rtol=0.001, atol=1e-4)
@@ -41,7 +41,6 @@ class TestCumOp(flow.unittest.TestCase):
         dim = random(0, x.ndim.pytorch).to(int)
         z = torch.cumprod(x, dim)
         return z
-
 
     @autotest(check_graph=True)
     def test_cumprod_with_0_size(test_case):
