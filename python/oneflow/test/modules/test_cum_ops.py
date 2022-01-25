@@ -32,11 +32,19 @@ class TestCumOp(flow.unittest.TestCase):
         z = torch.cumsum(x, dim)
         return z
     
-    @unittest.skip("it has bug")
-    @autotest(check_graph=True)
+    @autotest(check_graph=True, atol=1e-4)
     def test_cumprod(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        z = torch.cumprod(x, dim)
+        return z
+
+
+    @autotest(check_graph=True)
+    def test_cumprod_with_0_size(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=0, dim3=4).to(device)
         dim = random(0, x.ndim.pytorch).to(int)
         z = torch.cumprod(x, dim)
         return z
