@@ -28,10 +28,14 @@ namespace oneflow {
 
 class ParallelDesc;
 class MemoryCase;
-class LocalDepObject;
 
-inline size_t GetInstructionHighWaterMark() { return 3000; }
-inline size_t GetInstructionLowWaterMark() { return 1000; }
+namespace vm {
+class MirroredObject;
+}
+using LocalDepObject = vm::MirroredObject;
+
+inline size_t GetInstructionHighWaterMark() { return 40000; }
+inline size_t GetInstructionLowWaterMark() { return 20000; }
 
 class Device final {
  public:
