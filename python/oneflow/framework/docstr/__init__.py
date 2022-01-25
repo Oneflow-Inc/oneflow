@@ -50,6 +50,8 @@ from .tile import *
 from .tensor_t import *
 from .topk import *
 from .nms import *
+from .nonzero import *
+from .reduce_ops import *
 from .expand import *
 from .flip import *
 from .in_top_k import *
