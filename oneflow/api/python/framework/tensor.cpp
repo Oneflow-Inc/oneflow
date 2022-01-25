@@ -112,7 +112,6 @@ void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& sel
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
-
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
