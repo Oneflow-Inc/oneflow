@@ -13,13 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
+add_docstr(
+    oneflow.in_top_k,
+    """
+    in_top_k(targets, predictions, k) -> Tensor
 
-def in_top_k_op(targets, predictions, k):
-    """Says whether the targets are in the top K predictions.
+    Says whether the targets are in the top K predictions.
 
     Args:
         targets (Tensor): the target tensor of type int32 or int64.
@@ -48,24 +50,5 @@ def in_top_k_op(targets, predictions, k):
         >>> out3 = flow.in_top_k(targets2, predictions2, k=1)
         >>> out3
         tensor([1, 0], device='cuda:0', dtype=oneflow.int8)
-
-    """
-    return flow._C.in_top_k(targets, predictions, k=k)
-
-
-@register_tensor_op("in_top_k")
-def in_top_k_op_tensor(targets, predictions, k):
-    """
-
-    in_top_k() -> Tensor
-
-    See :func:`oneflow.in_top_k`
-
-    """
-    return flow._C.in_top_k(targets, predictions, k=k)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
