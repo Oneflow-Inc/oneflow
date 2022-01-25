@@ -424,11 +424,11 @@ class ModuleBlock(Block):
             if name in modules:
                 return modules[name]
         # support get parameter
-        p_state = self.__get_from_states(name, "_parameters")
+        p_state = self._get_from_states(name, "_parameters")
         if p_state is not None:
             return p_state
         # support get buffer
-        b_state = self.__get_from_states(name, "_buffers")
+        b_state = self._get_from_states(name, "_buffers")
         if b_state is not None:
             return b_state
         # support none parameter or buffer
@@ -452,7 +452,7 @@ class ModuleBlock(Block):
             )
         )
 
-    def __get_from_states(self, name, states_name):
+    def _get_from_states(self, name, states_name):
         if states_name not in self.__dict__:
             return None
 
@@ -664,7 +664,7 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
         assert isinstance(idx, int)
         idx = self._get_abs_string_index(idx)
         key = str(idx)
-        p_state = self.__get_from_states(key, "_parameters")
+        p_state = self._get_from_states(key, "_parameters")
         if p_state is not None:
             return p_state
         else:
@@ -682,7 +682,7 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         self._is_executing_forward = True
 
     def __getitem__(self, key: str):
-        p_state = self.__get_from_states(key, "_parameters")
+        p_state = self._get_from_states(key, "_parameters")
         if p_state is not None:
             return p_state
         else:
