@@ -175,7 +175,7 @@ with section("format"):
     disable = False
 
     # How wide to allow formatted cmake files
-    line_width = 80
+    line_width = 100
 
     # How many spaces to tab for indent
     tab_size = 2
@@ -195,7 +195,7 @@ with section("format"):
 
     # If an argument group contains more than this many sub-groups (parg or kwarg
     # groups) then force it to a vertical layout.
-    max_subgroups_hwrap = 2
+    max_subgroups_hwrap = 3
 
     # If a positional argument group contains more than this many arguments, then
     # force it to a vertical layout.
@@ -203,7 +203,7 @@ with section("format"):
 
     # If a cmdline positional group consumes more than this many lines without
     # nesting, then invalidate the layout (and nest)
-    max_rows_cmdline = 2
+    max_rows_cmdline = 3
 
     # If true, separate flow control names from their parentheses with a space
     separate_ctrl_name_with_space = False
@@ -306,7 +306,7 @@ with section("markup"):
     canonicalize_hashrulers = True
 
     # enable comment markup parsing and reflow
-    enable_markup = True
+    enable_markup = False
 
 # ----------------------------
 # Options affecting the linter
