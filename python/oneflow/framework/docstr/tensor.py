@@ -891,3 +891,13 @@ add_docstr(
     If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.fmod,
+    """
+    Tensor.fmod(other) -> Tensor
+    
+    See :func:`oneflow.fmod`
+
+    """,
+)
