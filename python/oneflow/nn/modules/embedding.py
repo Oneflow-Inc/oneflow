@@ -25,111 +25,146 @@ import json
 import os
 import numpy as np
 
-fixed_table_block_size = int(os.environ.get("FIXED_TABLE_BLOCK_SIZE", 4096))
-optimizer = str(os.environ.get("OPTIMIZER", "sgd"))
-slot_size_array = np.array(
-    [
-        227605432,
-        39060,
-        17295,
-        7424,
-        20265,
-        3,
-        7122,
-        1543,
-        63,
-        130229467,
-        3067956,
-        405282,
-        10,
-        2209,
-        11938,
-        155,
-        4,
-        976,
-        14,
-        292775614,
-        40790948,
-        187188510,
-        590152,
-        12973,
-        108,
-        36,
-    ]
-)
-scales = np.sqrt(1 / slot_size_array)
-initializer_list = []
-for i in range(scales.size):
-    initializer_list.append(
-        {"initializer": {"type": "uniform", "low": -scales[i], "high": scales[i],}}
-    )
+
+def _check_initializer(initializer):
+    assert isinstance(initializer, dict)
+    assert initializer.__contains__("type")
+    initializer_type = initializer["type"]
+    assert initializer_type in ["uniform", "normal"]
+    if initializer_type == "uniform":
+        assert initializer.__contains__("low")
+        assert initializer.__contains__("high")
+    else:
+        assert initializer.__contains__("mean")
+        assert initializer.__contains__("std")
+
+
+def _check_cache(cache):
+    assert isinstance(cache, dict)
+    assert cache.__contains__("policy")
+    assert cache["policy"] in ["lru", "full"]
+    assert cache.__contains__("cache_memory_budget_mb")
+    assert cache["cache_memory_budget_mb"] > 0
+    assert cache.__contains__("value_memory_kind")
+    assert cache["value_memory_kind"] in ["device", "host"]
 
 
 class OneEmbeddingLookup(Module):
-    def __init__(self, options):
+    def __init__(self, embedding_options):
         super().__init__()
-        self.dtype = options["dtype"]
-        if options.get("embedding_name") == None:
-            embedding_name = "EmbeddingTest"
-        else:
-            embedding_name = options["embedding_name"]
-        print("embedding_name", embedding_name)
-        if options.get("block_based_path") == None:
-            block_based_path = os.environ.get("BLOCK_BASED_PATH")
-        else:
-            block_based_path = options.get("block_based_path")
-        print("block_based_path", block_based_path)
+        # self.dtype = embedding_options["dtype"]
+        assert embedding_options.__contains__("name")
+        assert embedding_options.__contains__("embedding_dim")
+        embedding_dim = embedding_options["embedding_dim"]
+        assert embedding_dim > 0
+        if embedding_options.__contains__("cache"):
+            cache = embedding_options["cache"]
+            assert isinstance(cache, (dict, list, tuple))
+            if isinstance(cache, dict):
+                _check_cache(cache)
+                cache = [cache]
+            else:
+                assert len(cache) <= 2
+                for i in range(len(cache)):
+                    assert isinstance(cache[i], dict)
+                    _check_cache(cache[i])
 
-        embedding_options = {
-            "name": embedding_name,
-            "embedding_dim": int(os.environ.get("EMBEDDING_SIZE", 128)),
-            "max_query_length": int(65536 * 26),
-            "l1_cache": {
-                "policy": str(os.environ.get("L1_CACHE_POLICY", "lru")),
-                "cache_memory_budget_mb": int(
-                    os.environ.get("L1_CACHE_MEMORY_BUDGET_MB", 16384)
-                ),
-                "device": "device",
-            },
-            "l2_cache": {
-                "policy": str(os.environ.get("L2_CACHE_POLICY", "none")),
-                "cache_memory_budget_mb": int(
-                    os.environ.get("L2_CACHE_MEMORY_BUDGET_MB", 16384)
-                ),
-                "device": "host",
-            },
-            "kv_store": {
-                "persistent_table": {
-                    "path": block_based_path,
-                    "physical_block_size": fixed_table_block_size,
-                },
-            },
-            "default_initializer": {"type": "uniform", "mean": 0, "std": 1},
-            "columns": initializer_list,
-            "optimizer": {
-                "type": optimizer,
-                "beta": 0.9,
-                "beta1": 0.9,
-                "beta2": 0.999,
-                "epsilon": 1e-8,
-                "do_bias_correction": True,
-            },
-            "learning_rate_schedule": {
-                "learning_rate": 24,
-                "learning_rate_decay": {
-                    "type": "polynomial",
-                    "decay_batches": 27772,
-                    "end_learning_rate": 0.0,
-                    "power": 2.0,
-                    "cycle": False,
-                },
-                "warmup": {
-                    "type": "linear",
-                    "warmup_batches": 2750,
-                    "start_multiplier": 0.0,
-                },
-            },
-        }
+        # kv store
+        assert embedding_options.__contains__("kv_store")
+        kv_store = embedding_options["kv_store"]
+        assert isinstance(kv_store, dict)
+        assert kv_store.__contains__("persistent_table")
+        persistent_table = kv_store["persistent_table"]
+        assert isinstance(persistent_table, dict)
+        assert persistent_table.__contains__("path")
+        persistent_table_path = persistent_table["path"]
+        assert isinstance(persistent_table_path, (str, list, tuple))
+        if isinstance(persistent_table_path, str):
+            assert os.path.exists(persistent_table_path)
+        else:
+            assert len(persistent_table_path) == flow.env.get_world_size()
+            for i in range(len(persistent_table_path)):
+                assert os.path.exists(persistent_table_path[i])
+        if persistent_table.__contains__("physical_block_size"):
+            assert persistent_table["physical_block_size"] in [512, 4096]
+        else:
+            persistent_table["physical_block_size"] = 4096
+
+        # initializer
+        assert embedding_options.__contains__("default_initializer")
+        _check_initializer(embedding_options["default_initializer"])
+        if embedding_options.__contains__("columns"):
+            columns = embedding_options["columns"]
+            assert isinstance(columns, (list, tuple))
+            for column in columns:
+                assert isinstance(column, dict)
+                assert column.__contains__("initializer")
+                _check_initializer(column["initializer"])
+
+        # optimizer
+        assert embedding_options.__contains__("optimizer")
+        optimizer = embedding_options["optimizer"]
+        assert isinstance(optimizer, dict)
+        assert optimizer.__contains__("type")
+        optimizer_type = optimizer["type"]
+        assert optimizer_type in ["sgd", "adam"]
+        if optimizer_type == "sgd":
+            if optimizer.__contains__("momentum") and optimizer["momentum"] > 0:
+                optimizer["type"] = "momentum"
+            else:
+                optimizer["momentum"] = 0.0
+        elif optimizer_type == "adam":
+            if optimizer.__contains__("betas"):
+                assert isinstance(optimizer["betas"], (list, tuple))
+            else:
+                optimizer["betas"] = [0.9, 0.999]
+            if optimizer.__contains__("eps"):
+                assert optimizer["eps"] >= 0 and optimizer["eps"] < 1
+            else:
+                optimizer["eps"] = 1e-8
+            if optimizer.__contains__("do_bias_correction"):
+                assert isinstance(optimizer["do_bias_correction"], bool)
+            else:
+                optimizer["do_bias_correction"] = True
+        else:
+            raise NotImplementedError("only support sgd and adam")
+
+        assert optimizer.__contains__("lr")
+        lr_schedule = optimizer["lr"]
+        assert lr_schedule.__contains__("base_lr")
+        if lr_schedule.__contains__("decay"):
+            decay = lr_schedule["decay"]
+            assert isinstance(decay, dict)
+            assert decay.__contains__("type")
+            decay_type = decay["type"]
+            assert decay_type in [
+                "polynomial",
+            ]
+            if decay_type == "polynomial":
+                assert decay.__contains__("decay_batches")
+                if not decay.__contains__("end_lr"):
+                    decay["end_lr"] = 0.0
+                if not decay.__contains__("power"):
+                    decay["power"] = 2.0
+                if not decay.__contains__("cycle"):
+                    decay["cycle"] = False
+            else:
+                raise NotImplementedError("unsupported decay type")
+        if lr_schedule.__contains__("warmup"):
+            warmup = lr_schedule["warmup"]
+            assert isinstance(warmup, dict)
+            assert warmup.__contains__("type")
+            warmup_type = warmup["type"]
+            assert warmup_type in ["linear", "constant"]
+            if warmup_type == "linear":
+                assert warmup.__contains__("warmup_batches")
+                assert warmup.__contains__("start_multiplier")
+            elif warmup_type == "constant":
+                assert warmup.__contains__("warmup_batches")
+                assert warmup.__contains__("multiplier")
+            else:
+                raise NotImplementedError("unsupported warmup type")
+        self.dtype = flow.float
         self.embedding_options = json.dumps(embedding_options)
 
     def forward(self, ids, column_ids):

@@ -57,18 +57,19 @@ class EmbeddingOptions final {
     name_ = GetValue(json_object, "name");
     embedding_dim_ = GetValue(json_object, "embedding_dim");
 
-    auto l1_cache = json_object["l1_cache"];
-    if (l1_cache != nlohmann::detail::value_t::null) {
-      l1_cache_policy_ = GetValue(l1_cache, "policy");  // python检查值范围
-      l1_cache_memory_budget_mb_ = GetValue(l1_cache, "cache_memory_budget_mb");
+    auto caches = json_object["cache"];
+    if (caches != nlohmann::detail::value_t::null) {
+      CHECK(caches.is_array());
+      l1_cache_policy_ = GetValue(caches.at(0), "policy");
+      l1_cache_memory_budget_mb_ = GetValue(caches.at(0), "cache_memory_budget_mb");
+      if (caches.size() > 1) {
+        l2_cache_policy_ = GetValue(caches.at(1), "policy");
+        l2_cache_memory_budget_mb_ = GetValue(caches.at(1), "cache_memory_budget_mb");
+      } else {
+        l2_cache_policy_ = "none";
+      }
     } else {
       l1_cache_policy_ = "none";
-    }
-    auto l2_cache = json_object["l2_cache"];
-    if (l2_cache != nlohmann::detail::value_t::null) {
-      l2_cache_policy_ = GetValue(l2_cache, "policy");  // python检查值范围
-      l2_cache_memory_budget_mb_ = GetValue(l2_cache, "cache_memory_budget_mb");
-    } else {
       l2_cache_policy_ = "none";
     }
     auto kv_store = GetValue(json_object, "kv_store");
@@ -84,21 +85,22 @@ class EmbeddingOptions final {
     if (optimizer_type_ == "sgd") {
       line_size_ = embedding_dim_;
     } else if (optimizer_type_ == "momentum") {
-      beta_ = GetValue(optimizer, "beta");
+      beta_ = GetValue(optimizer, "momentum");
       line_size_ = embedding_dim_ * 2;
     } else if (optimizer_type_ == "adam") {
-      beta1_ = GetValue(optimizer, "beta1");
-      beta2_ = GetValue(optimizer, "beta2");
-      epsilon_ = GetValue(optimizer, "epsilon");
+      auto betas = GetValue(optimizer, "betas");
+      beta1_ = betas.at(0);
+      beta2_ = betas.at(1);
+      epsilon_ = GetValue(optimizer, "eps");
       do_bias_correction_ = GetValue(optimizer, "do_bias_correction");
       line_size_ = embedding_dim_ * 3;
     } else {
       UNIMPLEMENTED();
     }
-    auto learning_rate_schedule = GetValue(json_object, "learning_rate_schedule");
-    learning_rate_ = GetValue(learning_rate_schedule, "learning_rate");
+    auto lr_schedule = GetValue(optimizer, "lr");
+    base_lr_ = GetValue(lr_schedule, "base_lr");
 
-    auto warmup = learning_rate_schedule["warmup"];
+    auto warmup = lr_schedule["warmup"];
     if (warmup != nlohmann::detail::value_t::null) {
       warmup_type_ = GetValue(warmup, "type");
       if (warmup_type_ == "linear") {
@@ -116,23 +118,21 @@ class EmbeddingOptions final {
       warmup_type_ = "none";
     }
 
-    auto learning_rate_decay = learning_rate_schedule["learning_rate_decay"];
-    if (learning_rate_decay != nlohmann::detail::value_t::null) {
-      learning_rate_decay_type_ = GetValue(learning_rate_decay, "type");
-      if (learning_rate_decay_type_ == "polynomial") {
-        learning_rate_decay_conf_.mutable_polynomial_conf()->set_decay_batches(
-            GetValue(learning_rate_decay, "decay_batches"));
-        learning_rate_decay_conf_.mutable_polynomial_conf()->set_end_learning_rate(
-            GetValue(learning_rate_decay, "end_learning_rate"));
-        learning_rate_decay_conf_.mutable_polynomial_conf()->set_power(
-            GetValue(learning_rate_decay, "power"));
-        learning_rate_decay_conf_.mutable_polynomial_conf()->set_cycle(
-            GetValue(learning_rate_decay, "cycle"));
+    auto lr_decay = lr_schedule["decay"];
+    if (lr_decay != nlohmann::detail::value_t::null) {
+      lr_decay_type_ = GetValue(lr_decay, "type");
+      if (lr_decay_type_ == "polynomial") {
+        lr_decay_conf_.mutable_polynomial_conf()->set_decay_batches(
+            GetValue(lr_decay, "decay_batches"));
+        lr_decay_conf_.mutable_polynomial_conf()->set_end_learning_rate(
+            GetValue(lr_decay, "end_lr"));
+        lr_decay_conf_.mutable_polynomial_conf()->set_power(GetValue(lr_decay, "power"));
+        lr_decay_conf_.mutable_polynomial_conf()->set_cycle(GetValue(lr_decay, "cycle"));
       } else {
         UNIMPLEMENTED();
       }
     } else {
-      learning_rate_decay_type_ = "none";
+      lr_decay_type_ = "none";
     }
 
     auto columns = json_object["columns"];
@@ -191,11 +191,11 @@ class EmbeddingOptions final {
   float Epsilon() const { return epsilon_; }
   bool DoBiasCorrection() const { return do_bias_correction_; }
 
-  float LearningRate() const { return learning_rate_; }
+  float LearningRate() const { return base_lr_; }
   std::string WarmupType() const { return warmup_type_; }
   WarmupConf WarmupConfProto() const { return warmup_conf_; }
-  std::string LearningRateDecayType() const { return learning_rate_decay_type_; }
-  LearningRateDecayConf LearningRateDecayConfProto() const { return learning_rate_decay_conf_; }
+  std::string LearningRateDecayType() const { return lr_decay_type_; }
+  LearningRateDecayConf LearningRateDecayConfProto() const { return lr_decay_conf_; }
   std::vector<EmbeddingColumn> Columns() const { return columns_; }
 
  private:
@@ -209,7 +209,7 @@ class EmbeddingOptions final {
   std::string persistent_table_path_;
   int64_t persistent_table_phisical_block_size_;
   std::string optimizer_type_;
-  float learning_rate_;
+  float base_lr_;
   float beta_;
   float beta1_;
   float beta2_;
@@ -217,8 +217,8 @@ class EmbeddingOptions final {
   bool do_bias_correction_;
   std::string warmup_type_;
   WarmupConf warmup_conf_;
-  std::string learning_rate_decay_type_;
-  LearningRateDecayConf learning_rate_decay_conf_;
+  std::string lr_decay_type_;
+  LearningRateDecayConf lr_decay_conf_;
   std::vector<EmbeddingColumn> columns_;
 };
 
