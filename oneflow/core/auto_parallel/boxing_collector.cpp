@@ -250,33 +250,36 @@ void BoxingCollector::PrintBoxingTables() {
 }
 
 // Ask if the boxing algorithm accepts the current sbp combination
-Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
-                                               const cfg::NdSbp& sbp_consumer,
-                                               const BlobDesc& logical_blob_desc,
-                                               const ParallelDesc& producer_parallel_desc,
-                                               const ParallelDesc& consumer_parallel_desc,
-                                               bool customized,
-                                               std::vector<cfg::NdSbp>& middle_sbps) {
+Maybe<void> BoxingCollector::AskSbpCombination(
+    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
+    const ParallelDesc& consumer_parallel_desc, bool is_customized,
+    std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost) {
   // Check the devices and hierarchy
   // At this moment, we do not support [2, 3] -> [3, 2]
   // TODO: support [2, 3] -> [3, 2]
-  CHECK_OR_RETURN(producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc))
-      << "Boxing does not support transfer for different machines or devices or hierarchy";
   middle_sbps.clear();
+  // Middle nodes does not support transfer for different machines or devices or hierarchy at this
+  // moment
+  if (producer_parallel_desc != consumer_parallel_desc) { return Maybe<void>::Ok(); }
   const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
   // Dealing with 1D sbp
   if (parallel_hierarchy->NumAxes() == 1) {
     CHECK_OR_RETURN(
-        JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
-                                         producer_parallel_desc, consumer_parallel_desc, false))
-        < GetValidMaxCopyCost())
+        (!compute_cost)
+        && JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
+                                            producer_parallel_desc, consumer_parallel_desc, false))
+               < GetValidMaxCopyCost())
         << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
         << NdSbpParallelToString(sbp_consumer) << " for 1D sbp";
     return Maybe<void>::Ok();
   }
   // Dealing with nD sbp, n>2
-  CHECK_OR_RETURN(parallel_hierarchy->NumAxes() == 2)
-      << "Boxing does not support a hierarchy with dimension greater than 2";
+  if (parallel_hierarchy->NumAxes() > 2) {
+    CHECK_OR_RETURN(compute_cost)
+        << "Boxing does not support a hierarchy with dimension greater than 2";
+    return Maybe<void>::Ok();
+  }
   // Dealing with 2D sbp
   const auto& it_producer = NdSbpUniverse.find(sbp_producer);
   const auto& it_consumer = NdSbpUniverse.find(sbp_consumer);
@@ -284,9 +287,11 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
     int32_t i = it_producer->second;
     int32_t j = it_consumer->second;
     // Such combination can not be support with limited middle nodes
-    CHECK(minimum_copy_cost[i][j] < GetValidMaxCopyCost())
-        << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
-        << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
+    if (minimum_copy_cost[i][j] > GetValidMaxCopyCost()) {
+      CHECK(compute_cost) << "Boxing does not support " << NdSbpParallelToString(sbp_producer)
+                          << " -> " << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
+      return Maybe<void>::Ok();
+    }
     // Current design can deal with such combination. Do not need to insert middle nodes
     if (middle_nodes[i][j].size() == 0) { return Maybe<void>::Ok(); }
     // Find a list of middle nodes with minimum storage
@@ -317,9 +322,13 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   }
 
   // // If we can not found a list of middle nodes even after customized boxing collector
-  CHECK_OR_RETURN(customized) << "Boxing does not support " << NdSbpParallelToString(sbp_producer)
-                              << " -> " << NdSbpParallelToString(sbp_consumer)
-                              << " for Shape: " << logical_blob_desc.shape();
+  if (is_customized) {
+    CHECK_OR_RETURN(compute_cost) << "Boxing does not support "
+                                  << NdSbpParallelToString(sbp_producer) << " -> "
+                                  << NdSbpParallelToString(sbp_consumer)
+                                  << " for Shape: " << logical_blob_desc.shape();
+    return Maybe<void>::Ok();
+  }
 
   // Customized boxing collector and try the algorithm again
   BoxingCollector customized_boxing_collector;
@@ -331,7 +340,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const cfg::NdSbp& sbp_producer,
   customized_boxing_collector.GenerateCombination(5);
   JUST(customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
                                                      producer_parallel_desc, consumer_parallel_desc,
-                                                     false, middle_sbps));
+                                                     false, middle_sbps, compute_cost));
   return Maybe<void>::Ok();
 }
 
