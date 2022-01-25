@@ -241,6 +241,8 @@ int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
 
+double ParseDoubleFromEnv(const std::string& env_var, double default_value);
+
 #define OF_PREDICT_TRUE likely
 #define OF_PREDICT_FALSE unlikely
 

@@ -160,4 +160,13 @@ std::string GetStringFromEnv(const std::string& env_var, const std::string& defa
   }
 }
 
+double ParseDoubleFromEnv(const std::string& env_var, double default_value) {
+  const char* env_p = std::getenv(env_var.c_str());
+  if (env_p == nullptr) {
+    return default_value;
+  } else {
+    return strtod(env_p, NULL);
+  }
+}
+
 }  // namespace oneflow

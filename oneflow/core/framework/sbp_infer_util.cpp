@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
 
@@ -452,7 +453,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
                                              const ParallelDesc& consumer_parallel_desc,
                                              bool requires_same_sbp) {
   // Initialize boxing collector
-  constexpr static thread_local int32_t kRegularMaxSplitAxes = 6;
+  constexpr int32_t kRegularMaxSplitAxes = 6;
   static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
   std::vector<cfg::NdSbp> middle_sbps;
   // Ask for middle nodes
@@ -460,7 +461,9 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
                                      logical_blob_desc, producer_parallel_desc,
                                      consumer_parallel_desc, /*is_customized=*/false, middle_sbps,
                                      /*compute_cost=*/true);
+  // Parameters
   double total_cost = 0.0;
+  double transfer_cost = ParseDoubleFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
   // Set up the information of the first node in the first connection
   const cfg::NdSbp* pre_nd_sbp = &producer_sbp_parallel;
   const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
@@ -471,7 +474,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
     // TODO: Needs more effort if dealing with different placement
     total_cost += JUST(ComputeEagerCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
                                                         *pre_parallel_desc, consumer_parallel_desc,
-                                                        requires_same_sbp));
+                                                        requires_same_sbp))
+                  + transfer_cost;
     // Set up the information of the first node in the next connection
     pre_nd_sbp = &middle_sbp;
     pre_parallel_desc = &consumer_parallel_desc;
