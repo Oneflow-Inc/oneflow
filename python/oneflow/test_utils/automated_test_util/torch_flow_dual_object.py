@@ -37,6 +37,8 @@ except ImportError:
     )
 
 from .generators import Nothing, generator, random_tensor
+from .consistent_scope import *
+from .util import broadcast
 
 postulate = [".rand", ".Tensor"]
 
@@ -320,30 +322,36 @@ def GetDualObject(name, pytorch, oneflow):
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
-                            graph_args = []
-                            arg_device_type = "cpu"
-                            for arg in oneflow_args:
-                                if flow.is_tensor(arg):
-                                    copy_arg = arg.clone().detach()
-                                    arg_device_type = arg.device.type
-                                else:
-                                    copy_arg = copy.deepcopy(arg)
-                                graph_args.append(copy_arg)
-                            graph_kwargs = {}
-                            for key, value in oneflow_kwargs.items():
-                                if flow.is_tensor(value):
-                                    graph_kwargs[key] = value.clone().detach()
-                                else:
-                                    graph_kwargs[key] = copy.deepcopy(value)
+                            if testing_graph:
+                                graph_args = []
+                                for arg in oneflow_args:
+                                    if flow.is_tensor(arg):
+                                        copy_arg = arg.clone().detach()
+                                    else:
+                                        copy_arg = copy.deepcopy(arg)
+                                    graph_args.append(copy_arg)
+                                graph_kwargs = {}
+                                for key, value in oneflow_kwargs.items():
+                                    if flow.is_tensor(value):
+                                        graph_kwargs[key] = value.clone().detach()
+                                    else:
+                                        graph_kwargs[key] = copy.deepcopy(value)
+
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_oneflow = copy.deepcopy(oneflow).to(
-                                        arg_device_type
-                                    )
+                                    graph_train_oneflow = copy.deepcopy(oneflow)
+                                    if not is_consistent():
+                                        arg_device_type = "cpu"
+                                        for arg in oneflow_args:
+                                            if flow.is_tensor(arg):
+                                                arg_device_type = arg.device.type
+                                        graph_train_oneflow = graph_train_oneflow.to(
+                                            arg_device_type
+                                        )
                                     of_sgd = flow.optim.SGD(
                                         graph_train_oneflow.parameters(),
                                         lr=0.001,
@@ -488,19 +496,22 @@ def GetDualObject(name, pytorch, oneflow):
                                     "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                                 )
                             raise PyTorchDoesNotSupportError(e)
-                        tensor_graph_args = []
-                        for arg in oneflow_args:
-                            if flow.is_tensor(arg):
-                                copy_arg = arg.clone().detach()
-                            else:
-                                copy_arg = copy.deepcopy(arg)
-                            tensor_graph_args.append(copy_arg)
-                        tensor_graph_kwargs = {}
-                        for key, value in oneflow_kwargs.items():
-                            if flow.is_tensor(value):
-                                tensor_graph_kwargs[key] = value.clone().detach()
-                            else:
-                                tensor_graph_kwargs[key] = copy.deepcopy(value)
+
+                        if testing_graph:
+                            tensor_graph_args = []
+                            for arg in oneflow_args:
+                                if flow.is_tensor(arg):
+                                    copy_arg = arg.clone().detach()
+                                else:
+                                    copy_arg = copy.deepcopy(arg)
+                                tensor_graph_args.append(copy_arg)
+                            tensor_graph_kwargs = {}
+                            for key, value in oneflow_kwargs.items():
+                                if flow.is_tensor(value):
+                                    tensor_graph_kwargs[key] = value.clone().detach()
+                                else:
+                                    tensor_graph_kwargs[key] = copy.deepcopy(value)
+
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
 
@@ -640,28 +651,64 @@ def clear_note_fake_program():
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
-        self.pytorch = pytorch
-        self.oneflow = oneflow
         if isinstance(pytorch, torch_original.nn.Module):
+            if is_consistent():
+                pytorch.load_state_dict(broadcast(pytorch).state_dict())
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
             oneflow.load_state_dict(state_dict, strict=False)
+            if is_consistent():
+                oneflow = oneflow.to_consistent(
+                    placement=flow.env.all_device_placement("cpu"),
+                    sbp=[flow.sbp.broadcast,],
+                )
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
             if testing:
                 dual_objects_to_test.append(self)
+        self.pytorch = pytorch
+        self.oneflow = oneflow
 
     def __repr__(self):
         return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
 
     def __getattr__(self, key):
-        pytorch_attr = getattr(self.pytorch, key)
+        if key in ["to_consistent", "to_local"]:
+
+            def identity(*args, **kwargs):
+                if isinstance(self.pytorch, torch_original.Tensor):
+                    return self.pytorch.clone()
+                return self.pytorch
+
+            pytorch_attr = identity
+        elif key in ["placement", "sbp"]:
+            pytorch_attr = "unused"
+        else:
+            pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
+        if pytorch_attr is None:
+            assert (
+                oneflow_attr is None
+            ), f"pytorch value is None for attr {key}, but oneflow is not."
+            return None
         new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
+
+    def __setattr__(self, key, value):
+        if isinstance(value, DualObject):
+            setattr(self.pytorch, key, value.pytorch)
+            setattr(self.oneflow, key, value.oneflow)
+        else:
+            self.__dict__[key] = value
+
+    def __eq__(self, other):
+        if isinstance(other, DualObject):
+            return self.pytorch == other.pytorch and self.oneflow == other.oneflow
+        else:
+            return self.pytorch == other
 
 
 dual_modules_to_test = []
@@ -761,13 +808,13 @@ def autotest(
 
     def deco(f):
         @functools.wraps(f)
-        def new_f(test_case):
-            nonlocal n
-            loop_limit = n * 20
-            loop = 0
-            while n > 0:
+        def new_f(test_case, *args, **kwargs):
+            successful_runs_needed = n
+            loop_limit = successful_runs_needed * 20
+            current_run = 0
+            while successful_runs_needed > 0:
                 clear_note_fake_program()
-                if loop > loop_limit:
+                if current_run > loop_limit:
                     raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
@@ -784,19 +831,21 @@ def autotest(
                     testing = True
                     if check_graph:
                         testing_graph = True
-                    res = f(test_case)
+                    res = f(test_case, *args, **kwargs)
                     testing = False
                     testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
                         print(e)
-                    loop += 1
+                    current_run += 1
                     continue
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
                         res = [res]
                     for x in res:
+                        if x is None:
+                            continue
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
@@ -843,12 +892,21 @@ def autotest(
                 if verbose and check_graph:
                     print(f"{f.__name__} test graph passed.")
 
-                n -= 1
-                loop += 1
+                successful_runs_needed -= 1
+                current_run += 1
 
         return new_f
 
     return deco
+
+
+def consistent(f):
+    @functools.wraps(f)
+    def new_f(*args, **kwargs):
+        with ConsistentScope() as scope:
+            return f(*args, **kwargs)
+
+    return new_f
 
 
 def random_pytorch_tensor(
@@ -870,12 +928,21 @@ def random_pytorch_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
-    flow_tensor = flow.tensor(
-        pytorch_tensor.detach().cpu().numpy(),
-        requires_grad=(requires_grad and dtype != int),
-    )
+    if is_consistent():
+        flow_tensor = flow.tensor(
+            pytorch_tensor.detach().cpu().numpy(),
+            requires_grad=(requires_grad and dtype != int),
+            placement=flow.env.all_device_placement("cpu"),
+            sbp=flow.sbp.broadcast,
+        )
+    else:
+        flow_tensor = flow.tensor(
+            pytorch_tensor.detach().cpu().numpy(),
+            requires_grad=(requires_grad and dtype != int),
+        )
+
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "random_pytorch_tensor"]
+__all__ = ["autotest", "consistent", "random_pytorch_tensor"]
