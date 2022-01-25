@@ -20,7 +20,11 @@ if __name__ == "__main__":
         "--source_dir", default=".", help="Root directory of the source code"
     )
     parser.add_argument(
-        "-j", "--jobs", type=int, default=cpu_count(), help="Specifies the number of jobs (commands) to run simultaneously"
+        "-j",
+        "--jobs",
+        type=int,
+        default=cpu_count(),
+        help="Specifies the number of jobs (commands) to run simultaneously",
     )
 
     args = parser.parse_args()
@@ -42,7 +46,7 @@ if __name__ == "__main__":
         cmd = [args.bin, file]
         cmd.append("-i" if args.fix else "--check")
         return cmd
-    
+
     tp = ThreadPool(args.jobs)
     res = tp.map_async(call, [gen_cmd(file) for file in files])
 
