@@ -498,6 +498,78 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_mul_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_pytorch_tensor(
+            low=-2, high=2, ndim=4, dim0=16, dim1=9, dim2=4, dim3=7
+        ).to(device)
+        y = rand_tensor + 1
+        x = random_pytorch_tensor(
+            low=-2, high=2, ndim=4, dim0=16, dim1=9, dim2=4, dim3=7
+        ).to(device)
+        y.mul_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_broadcast_mul_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_pytorch_tensor(ndim=3, dim0=4, dim1=8, dim2=13).to(device)
+        y = rand_tensor + 1
+        x = random_pytorch_tensor(ndim=2, dim0=8, dim1=13).to(device)
+        y.mul_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_div_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_pytorch_tensor(
+            low=-2, high=2, ndim=4, dim0=26, dim1=7, dim2=4, dim3=17
+        ).to(device)
+        y = rand_tensor + 1
+        x = random_pytorch_tensor(
+            low=-2, high=2, ndim=4, dim0=26, dim1=7, dim2=4, dim3=17
+        ).to(device)
+        y.div_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_broadcast_div_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_pytorch_tensor(ndim=3, dim0=4, dim1=8, dim2=13).to(device)
+        y = rand_tensor + 1
+        x = random_pytorch_tensor(ndim=2, dim0=8, dim1=13).to(device)
+        y.div_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_sub_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_pytorch_tensor(
+            low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17
+        ).to(device)
+        y = rand_tensor + 1
+        x = random_pytorch_tensor(
+            low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17
+        ).to(device)
+        y.sub_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=False)
+    def test_broadcast_sub_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_pytorch_tensor(ndim=3, dim0=5, dim1=9, dim2=23).to(device)
+        y = rand_tensor + 1
+        x = random_pytorch_tensor(ndim=2, dim0=9, dim1=23).to(device)
+        y.sub_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
     def test_add_tensor_method(test_case):
         x = flow.Tensor(np.random.randn(1, 1))
         y = flow.Tensor(np.random.randn(2, 3))
