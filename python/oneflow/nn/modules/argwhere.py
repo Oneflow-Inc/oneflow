@@ -66,18 +66,6 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
         return flow.slice(res, slice_tup_list=slice_tup_list)
 
 
-@register_tensor_op("argwhere")
-def argwhere_tensor_op(input, dtype: Optional[flow.dtype] = flow.int32):
-    """
-
-    argwhere() -> Tensor
-
-    See :func:`oneflow.argwhere`
-
-    """
-    return argwhere_op(input, dtype)
-
-
 if __name__ == "__main__":
     import doctest
 
