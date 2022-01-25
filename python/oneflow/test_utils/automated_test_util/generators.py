@@ -334,18 +334,11 @@ class random_tensor(generator):
         low = self.low.value()
         high = self.high.value()
         dtype = self.dtype.value()
-        if ndim == 0:
-            if dtype == float:
-                np_arr = rng.uniform(low=low, high=high)
-                return torch.tensor(np_arr)
-            elif dtype == int:
-                np_arr = rng.integers(low=low, high=high)
-                return torch.tensor(np_arr, dtype=torch.int64)
-            else:
-                raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
         shape = rng.integers(low=1, high=8, size=ndim)
-        if dim0 is not None:
+        if ndim == 0:
+            shape = []
+        if ndim >= 1 and dim0 is not None:
             shape[0] = dim0
         if ndim >= 2:
             shape[1] = dim1
