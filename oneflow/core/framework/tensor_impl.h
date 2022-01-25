@@ -164,7 +164,6 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<TransportToken> transport_token() const { return JUST(transport_token_); }
 
   Maybe<void> set_transport_token(const TransportToken& transport_token) {
-    CHECK_OR_RETURN(!transport_token_.has_value());
     transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
