@@ -533,15 +533,30 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.mul,
-    """
+    """Tensor.mul(value) -> Tensor
     See :func:`oneflow.mul`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.mul_,
-    """
-    In-place version of :func`oneflow.Tensor.mul`.
+    """Tensor.mul_(value) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.mul`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div_,
+    """Tensor.div_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.div`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub_,
+    """Tensor.sub_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.sub`.
     """,
 )
 
@@ -842,11 +857,29 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.repeat,
+    """
+    Tensor.repeat(*size) -> Tensor
+
+    See :func:`oneflow.repeat`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.t,
     """
     Tensor.t() → Tensor
 
     See :func:`oneflow.t`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.tile,
+    """
+    Tensor.tile(*dims) -> Tensor
+
+    See :func:`oneflow.tile`
     """,
 )
 
