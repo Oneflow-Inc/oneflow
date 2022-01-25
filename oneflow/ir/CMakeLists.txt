@@ -27,9 +27,7 @@ if(LLVM_PROVIDER STREQUAL "in-tree")
 elseif(LLVM_PROVIDER STREQUAL "install")
   include(install-llvm.cmake)
 else()
-  message(
-    FATAL_ERROR
-      "LLVM_PROVIDER should be in-tree or install, but got: ${LLVM_PROVIDER}")
+  message(FATAL_ERROR "LLVM_PROVIDER should be in-tree or install, but got: ${LLVM_PROVIDER}")
 endif()
 
 set_property(GLOBAL PROPERTY LLVM_INSTALL_DIR ${LLVM_INSTALL_DIR})
@@ -37,69 +35,43 @@ set(MLIR_TABLEGEN_EXE mlir-tblgen)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
-set(LLVM_INCLUDE_DIRS
-    ${LLVM_INCLUDE_DIRS}
-    PARENT_SCOPE)
-set(MLIR_INCLUDE_DIRS
-    ${MLIR_INCLUDE_DIRS}
-    PARENT_SCOPE)
-set(ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS
-    ${PROJECT_SOURCE_DIR}/include
-    PARENT_SCOPE)
-set(ONEFLOW_MLIR_BINARY_INCLUDE_DIRS
-    ${PROJECT_BINARY_DIR}/include
-    PARENT_SCOPE)
+set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} PARENT_SCOPE)
+set(MLIR_INCLUDE_DIRS ${MLIR_INCLUDE_DIRS} PARENT_SCOPE)
+set(ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include PARENT_SCOPE)
+set(ONEFLOW_MLIR_BINARY_INCLUDE_DIRS ${PROJECT_BINARY_DIR}/include PARENT_SCOPE)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
 if(LLVM_PROVIDER STREQUAL "in-tree")
-  add_subdirectory(${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen
-                   ${PROJECT_BINARY_DIR}/oneflow-tblgen)
+  add_subdirectory(${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen ${PROJECT_BINARY_DIR}/oneflow-tblgen)
 endif()
 
-set_property(
-  GLOBAL
-  PROPERTY ALL_ONEFLOW_LIBS
-           -Wl,--no-as-needed
-           oneflow
-           -Wl,--as-needed
-           -Wl,--no-as-needed
-           glog::glog
-           -Wl,--as-needed
-           -Wl,--no-as-needed
-           ${oneflow_third_party_libs}
-           -Wl,--as-needed)
+set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
+  -Wl,--no-as-needed oneflow -Wl,--as-needed
+  -Wl,--no-as-needed glog::glog -Wl,--as-needed
+  -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
+)
 
 function(oneflow_add_mlir_library)
   add_mlir_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  set_property(
-    TARGET ${ARGV0}
-    APPEND
-    PROPERTY BUILD_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(
-    TARGET ${ARGV0}
-    APPEND
-    PROPERTY INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(
-    TARGET ${ARGV0}
-    APPEND
-    PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    BUILD_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
 endfunction()
 
 function(oneflow_add_mlir_dialect_library)
   add_mlir_dialect_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  set_property(
-    TARGET ${ARGV0}
-    APPEND
-    PROPERTY INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(
-    TARGET ${ARGV0}
-    APPEND
-    PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY
+    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
 endfunction()
 
 find_package(Threads REQUIRED)
@@ -108,11 +80,11 @@ set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/lib)
 if(WITH_MLIR)
-  add_subdirectory(include)
-  add_subdirectory(lib)
-  add_subdirectory(test)
-  add_subdirectory(oneflow-opt)
-  add_subdirectory(oneflow-translate)
-  add_subdirectory(oneflow-runtime)
-  add_subdirectory(oneflow-extension)
+add_subdirectory(include)
+add_subdirectory(lib)
+add_subdirectory(test)
+add_subdirectory(oneflow-opt)
+add_subdirectory(oneflow-translate)
+add_subdirectory(oneflow-runtime)
+add_subdirectory(oneflow-extension)
 endif(WITH_MLIR)
