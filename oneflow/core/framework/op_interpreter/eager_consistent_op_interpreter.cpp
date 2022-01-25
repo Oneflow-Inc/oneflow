@@ -129,9 +129,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
-        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    if (!outputs->at(i)) {
+      const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+          output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+      outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    }
   }
   // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
   // output is not 0-size, it cannot be judged based on the input, such as flow.cat
