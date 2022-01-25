@@ -26,15 +26,22 @@ EmbeddingMgr::~EmbeddingMgr() {
   for (auto& pair : key_value_store_map_) { pair.second->SaveSnapshot("index"); }
 }
 
-embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
-    const embedding::EmbeddingOptions& embedding_options, int64_t parallel_id,
-    int64_t parallel_num) {
+embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(const std::string& embedding_name,
+                                                         int64_t parallel_id) {
+  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = key_value_store_map_.find(map_key);
+  return it->second.get();
+}
+
+void EmbeddingMgr::CreateKeyValueStore(const embedding::EmbeddingOptions& embedding_options,
+                                       int64_t parallel_id, int64_t parallel_num) {
+  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
   const std::string& name = embedding_options.Name();
   const uint32_t line_size = embedding_options.LineSize();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
   std::unique_lock<std::mutex> lock(mutex_);
-  auto it = key_value_store_map_.find(map_key);
-  if (it != key_value_store_map_.end()) { return it->second.get(); }
 
   std::unique_ptr<embedding::KeyValueStore> store;
   const std::string& path = embedding_options.PersistentTablePath();
@@ -87,10 +94,38 @@ embedding::KeyValueStore* EmbeddingMgr::GetKeyValueStore(
                << embedding_options.L1CacheMemoryBudgetMb();
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
-  if (store->SnapshotExists("index")) { store->LoadSnapshot("index"); }
-  auto pair = key_value_store_map_.emplace(map_key, std::move(store));
-  CHECK(pair.second);
-  return pair.first->second.get();
+  key_value_store_map_.emplace(map_key, std::move(store));
+}
+
+void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                                const std::string& snapshot_name) {
+  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  auto it = key_value_store_map_.find(map_key);
+  if (it != key_value_store_map_.end()) {
+    it->second->SaveSnapshot(snapshot_name);
+  } else {
+    LOG(ERROR) << "Can not find embedding: " << embedding_name << "-" << parallel_id;
+  }
+}
+
+void EmbeddingMgr::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
+                                const std::string& snapshot_name) {
+  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+  auto it = key_value_store_map_.find(map_key);
+  if (it != key_value_store_map_.end()) {
+    if (it->second->SnapshotExists(snapshot_name)) {
+      it->second->LoadSnapshot(snapshot_name);
+    } else {
+      LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << parallel_id
+                 << " but no corresponding snapshot. ";
+    }
+  } else {
+    LOG(ERROR) << "Can not find the embedding: " << embedding_name << "-" << parallel_id;
+  }
 }
 
 }  // namespace oneflow

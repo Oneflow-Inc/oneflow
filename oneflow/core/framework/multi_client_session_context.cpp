@@ -35,7 +35,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
-#include "oneflow/core/embedding/embedding_manager.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -111,9 +110,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
       Global<boxing::collective::Scheduler>::New();
-      Global<EmbeddingMgr>::New();
     }
-
     is_inited_ = true;
   }
   return Maybe<void>::Ok();
@@ -138,7 +135,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     graphs_.clear();
     {
       // NOTE(chengcheng): delete runtime global objects
-      Global<EmbeddingMgr>::Delete();
       Global<boxing::collective::Scheduler>::Delete();
       Global<summary::EventsWriter>::Delete();
       Global<RuntimeJobDescs>::Delete();

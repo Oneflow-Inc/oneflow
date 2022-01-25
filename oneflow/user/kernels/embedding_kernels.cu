@@ -201,7 +201,7 @@ class EmbeddingPrefetchKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
     embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
     key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+        options.Name(), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
@@ -237,7 +237,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, 1 * sizeof(int32_t)));  // TODO: int32_t->IDX
     embedding::EmbeddingOptions options(ctx->Attr<std::string>("embedding_options"));
     key_value_store_ = Global<EmbeddingMgr>::Get()->GetKeyValueStore(
-        options, ctx->parallel_ctx().parallel_id(), ctx->parallel_ctx().parallel_num());
+        options.Name(), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
@@ -279,7 +279,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
     embedding::KeyValueStore* store = kernel_state->KeyValueStore();
     InitParam* init_param = kernel_state->InitParams();
-
+    
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
@@ -343,7 +343,6 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState*>(state);
     CHECK(kernel_state != nullptr);
     embedding::KeyValueStore* store = kernel_state->KeyValueStore();
-
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
