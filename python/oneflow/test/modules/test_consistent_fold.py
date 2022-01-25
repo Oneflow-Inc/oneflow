@@ -38,7 +38,7 @@ def test_fold_impl(test_case, placement, sbp):
     device = random_device()
     m.to(device)
     x = random_pytorch_tensor(
-        ndim=3, dim0=constant(2), dim1=constant(36), dim2=constant(16)
+        ndim=3, dim0=constant(8), dim1=constant(16), dim2=constant(24)
     ).to_consistent(placement=placement, sbp=sbp)
     y = m(x)
     return y
@@ -47,7 +47,7 @@ class TestFold(flow.unittest.TestCase):
     @consistent
     def test_fold(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=3):
+            for sbp in all_sbp(placement, max_dim=2):
                 test_fold_impl(test_case, placement, sbp)
 
 if __name__ == "__main__":

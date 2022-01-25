@@ -27,40 +27,20 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, auto_backward=False, check_graph=False)
 def test_flatten_impl(test_case, ndim, placement, sbp):
-    dim0 = np.random.randint(1, 5) * 8
-    dim1 = np.random.randint(1, 5) * 8
-    dim2 = np.random.randint(1, 5) * 8
-    dim3 = np.random.randint(1, 5) * 8
-    dim4 = np.random.randint(1, 5) * 8
-    if ndim==1:
-        x = random_pytorch_tensor(1, dim0).to_consistent(placement=placement, sbp=sbp)
-        start_dim = np.random.randint(0, 1)
-        end_dim = np.random.randint(start_dim, 1)
-    elif ndim==2:
-        x = random_pytorch_tensor(2, dim0, dim1).to_consistent(placement=placement, sbp=sbp)
-        start_dim = np.random.randint(0, 2)
-        end_dim = np.random.randint(start_dim, 2)
-    elif ndim==3:
-        x = random_pytorch_tensor(3, dim0, dim1, dim2).to_consistent(placement=placement, sbp=sbp)
-        start_dim = np.random.randint(0, 3)
-        end_dim = np.random.randint(start_dim, 3)
-    elif ndim==4:
-        x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3).to_consistent(placement=placement, sbp=sbp)
-        start_dim = np.random.randint(0, 4)
-        end_dim = np.random.randint(start_dim, 4)
-    elif ndim==5:
-        x = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4).to_consistent(placement=placement, sbp=sbp)
-        start_dim = np.random.randint(0, 5)
-        end_dim = np.random.randint(start_dim, 5)
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_pytorch_tensor(ndim, *dims)
+    y = x.to_consistent(placement=placement, sbp=sbp)
+    start_dim = random(0, ndim).to(int).value()
+    end_dim = np.random.randint(start_dim, ndim)
 
-    y = torch.flatten(x, start_dim, end_dim)
-    return y
+    z = torch.flatten(x, start_dim, end_dim)
+    return z
 
 class TestFlattenConsistent(flow.unittest.TestCase):
     @consistent
     def test_flatten(test_case):
-        # random ndim in range [1,5]
-        ndim = np.random.randint(1, 6)
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_flatten_impl(test_case, ndim, placement, sbp)

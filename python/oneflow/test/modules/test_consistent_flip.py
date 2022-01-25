@@ -31,6 +31,7 @@ def test_flip_impl(test_case, ndim, placement, sbp):
     x = random_pytorch_tensor(ndim, *dims)
     y = x.to_consistent(placement=placement, sbp=sbp)
     z = torch.flip(y, constant([i for i in range(ndim)]))
+    return z
 
 class TestFlipConsistent(flow.unittest.TestCase):
     @consistent
