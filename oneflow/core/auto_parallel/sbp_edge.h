@@ -412,8 +412,11 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     if (use_sbp_collector_ && compute_cost && !SearchLbi(lbi)) { return; }
 
     oneflow::OpNode* producer = StartNode->op_node;
-    const oneflow::ParallelDesc& producer_parallel_desc = producer->parallel_desc();
-    const oneflow::ParallelDesc& consumer_parallel_desc = consumer->parallel_desc();
+    const std::string& producer_lbn = *CHECK_JUST(producer->op().obn4lbi(lbi));
+    const oneflow::ParallelDesc& producer_parallel_desc =
+        *CHECK_JUST(producer->op().GetParallelDesc4BnInOp(producer_lbn));
+    const oneflow::ParallelDesc& consumer_parallel_desc =
+        *CHECK_JUST(consumer->op().GetParallelDesc4BnInOp(ibn));
 
     // Need to be careful, the logical blob description should be independent to current
     // SbpParallel. Use producer or op_node?
