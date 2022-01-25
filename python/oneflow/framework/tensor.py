@@ -135,11 +135,11 @@ def _ne(self, other):
 
 
 def _and(self, other):
-    return self.logical_and(other)
+    return flow._C.logical_and(self, other)
 
 
 def _or(self, other):
-    return self.logical_or(other)
+    return flow._C.logical_or(self, other)
 
 
 def _not(self):
@@ -147,7 +147,7 @@ def _not(self):
 
 
 def _xor(self, other):
-    return self.logical_xor(other)
+    return flow._C.logical_xor(self, other)
 
 
 def _contiguous(self):
