@@ -748,6 +748,14 @@
   signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
   bind_python: False
 
+- name: "repeat"
+  signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
+  bind_python: True
+
+- name: "tile"
+  signature: "Tensor (Tensor input, Shape dims) => Tile"
+  bind_python: True
+
 - name: "roll"
   signature: "Tensor (Tensor x, Int32List[1] shifts, Int32List[1] dims=None) => Roll"
   bind_python: True
@@ -989,13 +997,6 @@
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
     String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
-  bind_python: True
-
-- name: "max_pool2d_nhwc"
-  signature:
-    'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
-    Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
   bind_python: True
 
 - name: "ctc_loss_grad"
@@ -1615,6 +1616,10 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
+- name: "stream_touch"
+  signature: "Void (TensorTuple x) => StreamTouch"
+  bind_python: True
+
 - name: "broadcast"
   signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
@@ -1758,8 +1763,8 @@
 
 - name: "split"
   signature: [
-    "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
-    "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+    "TensorTuple (Tensor x, Int64 split_size_or_sections, Int64 dim=0) => Split",
+    "TensorTuple (Tensor x, Int64List split_size_or_sections, Int64 dim=0) => SplitWithSize",
   ]
   bind_python: True
 
@@ -1891,10 +1896,6 @@
   signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
   bind_python: True
 
-- name: "read_onerec"
-  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => ReadOneRec"
-  bind_python: True
-
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
@@ -1926,3 +1927,11 @@
 - name: "cumsum_grad"
   signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
   bind_python: False 
+
+- name: "cumprod"
+  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  bind_python: True
+
+- name: "cumprod_grad"
+  signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
+  bind_python: False
