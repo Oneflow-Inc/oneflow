@@ -31,11 +31,11 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UniformOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-   const Shape& shape = ctx->Attr<Shape>("shape");
-   DimVector dim_vec{shape.dim_vec()};
+  const Shape& shape = ctx->Attr<Shape>("shape");
+  DimVector dim_vec{shape.dim_vec()};
 
-   const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-   if (out_sbp_para.has_split_parallel()) {
+  const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  if (out_sbp_para.has_split_parallel()) {
     const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
     if (parallel_num > 1) {
       const int64_t& split_axis = out_sbp_para.split_parallel().axis();
