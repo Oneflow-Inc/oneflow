@@ -7,7 +7,7 @@ endif()
 
 set(ONEFLOW_INCLUDE_DIRS ${ONEFLOW_INSTALL_PREFIX}/include)
 
-find_library(ONEFLOW_LIBRARY NAMES oneflow PATHS ${ONEFLOW_INSTALL_PREFIX}/lib REQUIRED)
+find_library(ONEFLOW_LIBRARY NAMES oneflow_cpp PATHS ${ONEFLOW_INSTALL_PREFIX}/lib REQUIRED)
 
 if(NOT TARGET OneFlow::liboneflow) 
   add_library(OneFlow::liboneflow INTERFACE IMPORTED)

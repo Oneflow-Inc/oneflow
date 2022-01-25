@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -77,28 +78,32 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
+}  // namespace
+
+/* static */ Maybe<void> BroadcastLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> BroadcastLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLikeOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> BroadcastLikeOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
+  CHECK_OR_RETURN(like_modifier != nullptr);
+  like_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
-}  // namespace
-
-REGISTER_USER_OP("broadcast_like")
-    .Input("x")
-    .Input("like")
-    .Attr<std::vector<int32_t>>("broadcast_axes")
-    .Output("y")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_OR_RETURN(like_modifier != nullptr);
-      like_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetDataTypeInferFn(InferDataType);
+/* static */ Maybe<void> BroadcastLikeOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("broadcast_like")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {

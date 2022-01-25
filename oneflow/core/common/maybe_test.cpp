@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "gtest/gtest.h"
 #include <gtest/gtest-death-test.h>
+#include <memory>
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -66,6 +68,8 @@ TEST(Maybe, CHECK_OK) {
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
   ASSERT_EXIT(CHECK_OK(g(11)), testing::KilledBySignal(SIGABRT), R"(g\(11\) is not OK)");
 }
+
+TEST(Maybe, Noncopyable) { Maybe<std::unique_ptr<int>> a{std::make_unique<int>(1)}; }
 
 }  // namespace test
 }  // namespace oneflow

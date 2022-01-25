@@ -446,8 +446,8 @@ std::string GetCyclicBoxingDebugString(
   CHECK_EQ(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   std::stringstream ss;
   ss << "cyclic split axis boxing are not supported. "
-     << "src_nd_sbp: " << CHECK_JUST(NdSbpToString(src_nd_sbp))
-     << ", dst_nd_sbp: " << CHECK_JUST(NdSbpToString(dst_nd_sbp)) << ". "
+     << "src_nd_sbp: " << NdSbpToString(src_nd_sbp) << ", dst_nd_sbp: " << NdSbpToString(dst_nd_sbp)
+     << ". "
      << "dst_nd_sbp axis to exclusive src_nd_sbp axis: ";
   ss << "[";
   for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
@@ -629,10 +629,36 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNd
   return Maybe<void>::Ok();
 }
 
+Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
+                                                      Symbol<PlacedNdSbp> out,
+                                                      const Shape& logical_shape) {
+  using namespace private_details;
+  Symbol<cfg::NdSbp> src_nd_sbp = in->nd_sbp();
+  Symbol<cfg::NdSbp> dst_nd_sbp = out->nd_sbp();
+  const auto& hierarchy = in->placement()->hierarchy();
+  std::shared_ptr<const Shape> shape;
+
+  std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(CalcDecomposableEquivalentShapeAndNdSbpPair(
+      logical_shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
+
+  std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
+  JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
+                                              dst_nd_sbp));
+  bool is_acyclic = JUST(
+      IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+  CHECK_OR_RETURN(is_acyclic) << Error::UnimplementedError()
+                              << GetCyclicBoxingDebugString(src_nd_sbp, dst_nd_sbp,
+                                                            ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
     DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);
+
+decltype(CheckIsNdSbpBoxingAcyclicWithDecompose) CheckIsNdSbpBoxingAcyclicWithDecompose =
+    DECORATE(&RawCheckIsNdSbpBoxingAcyclicWithDecompose, ThreadLocalCopiable);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc) {

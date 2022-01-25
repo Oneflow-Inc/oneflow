@@ -72,6 +72,8 @@ class CudaStream : public Stream {
   explicit CudaStream(CudaDevice* device);
   ~CudaStream() override;
 
+  static constexpr uint32_t kDefaultBlockSize = 256;
+
   DeviceType device_type() const override;
   Device* device() const override;
   Maybe<void> Sync() override;
@@ -106,7 +108,7 @@ class CudaStream : public Stream {
 
   template<typename... Params, typename... Args>
   void LaunchKernel(void (*kernel)(Params...), size_t elem_cnt, size_t max_waves, Args... args) {
-    constexpr uint32_t block_size = 256;
+    constexpr uint32_t block_size = kDefaultBlockSize;
     CudaLaunchConfig config{};
     InitLaunchConfigWithWaves(&config, elem_cnt, block_size, max_waves);
     LaunchKernel(kernel, config, args...);

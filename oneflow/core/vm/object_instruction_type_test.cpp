@@ -17,6 +17,7 @@ limitations under the License.
 // caused by the following trick
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
+#include "gtest/gtest.h"
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/common/util.h"

@@ -14,70 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const auto axis = ctx->Attr<int64_t>("axis");
-  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  int64_t dynamic_dim_size = 0;
-  int64_t static_dim_size = 0;
-  const int64_t in_num_axes = ctx->InputTensorDesc("in", 0).shape().NumAxes();
-  const int64_t like_num_axes = ctx->InputTensorDesc("like", 0).shape().NumAxes();
-  CHECK_LE_OR_RETURN(like_num_axes, in_num_axes);
-  CHECK_LT_OR_RETURN(axis, like_num_axes);
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
-    CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes);
-    FOR_RANGE(int64_t, j, 0, like_num_axes) {
-      if (j == axis) {
-        if (like_i_desc.is_dynamic()) {
-          dynamic_dim_size += like_i_desc.shape().At(j);
-        } else {
-          static_dim_size += like_i_desc.shape().At(j);
-        }
-      } else {
-        CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j));
-      }
-    }
-    DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
-    FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-      out_i_dim_vec.emplace_back(in_desc.shape().At(j));
-    }
-    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
-    out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
-  }
-  if (dynamic_dim_size == 0) {
-    CHECK_EQ_OR_RETURN(static_dim_size, in_desc.shape().At(axis));
-  } else {
-    CHECK_LE_OR_RETURN(static_dim_size, in_desc.shape().At(axis));
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
-    *out_i_desc->mut_data_type() = in_desc.data_type();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                               const user_op::UserOpConfWrapper& user_op_conf) {
-  FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
-    user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
-    CHECK_NOTNULL_OR_RETURN(like_modifier);
-    like_modifier->set_requires_grad(false);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> SplitLikeOp::GetSbp(user_op::SbpContext* ctx) {
   const auto axis = ctx->Attr<int64_t>("axis");
   const int64_t in_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
@@ -120,6 +61,73 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
       .Build();
   return Maybe<void>::Ok();
 }
+/*static*/ Maybe<void> SplitLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const auto axis = ctx->Attr<int64_t>("axis");
+  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+  int64_t dynamic_dim_size = 0;
+  int64_t static_dim_size = 0;
+  const int64_t in_num_axes = ctx->InputTensorDesc("in", 0).shape().NumAxes();
+  const int64_t like_num_axes = ctx->InputTensorDesc("like", 0).shape().NumAxes();
+  CHECK_LE_OR_RETURN(like_num_axes, in_num_axes);
+  CHECK_LT_OR_RETURN(axis, like_num_axes);
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
+    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes);
+    FOR_RANGE(int64_t, j, 0, like_num_axes) {
+      if (j == axis) {
+        if (like_i_desc.is_dynamic()) {
+          dynamic_dim_size += like_i_desc.shape().At(j);
+        } else {
+          static_dim_size += like_i_desc.shape().At(j);
+        }
+      } else {
+        CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j));
+      }
+    }
+    DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
+    FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
+      out_i_dim_vec.emplace_back(in_desc.shape().At(j));
+    }
+    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
+    out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
+  }
+  if (dynamic_dim_size == 0) {
+    CHECK_EQ_OR_RETURN(static_dim_size, in_desc.shape().At(axis));
+  } else {
+    CHECK_LE_OR_RETURN(static_dim_size, in_desc.shape().At(axis));
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SplitLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SplitLikeOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    *out_i_desc->mut_data_type() = in_desc.data_type();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SplitLikeOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
+                                                   const user_op::UserOpConfWrapper& user_op_conf) {
+  FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
+    user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
+    CHECK_NOTNULL_OR_RETURN(like_modifier);
+    like_modifier->set_requires_grad(false);
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> SplitLikeOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                              const user_op::UserOpConfWrapper& op_conf) {
+  CHECK_OR_RETURN(op_conf.input_size("like") >= 2);
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 2);
+  return Maybe<void>::Ok();
+}
+
+namespace {
 
 Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   const int64_t axis = op.attr<int64_t>("axis");
@@ -157,16 +165,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) 
 }
 
 }  // namespace
-
-REGISTER_USER_OP("split_like")
-    .Input("in")
-    .InputWithMinimum("like", 2)
-    .OutputWithMinimum("out", 2)
-    .Attr<int64_t>("axis")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetInputArgModifyFn(SetLikeArgModifier)
-    .SetGetSbpFn(GetSbpSignature)
-    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
 

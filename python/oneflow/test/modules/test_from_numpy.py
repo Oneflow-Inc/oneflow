@@ -28,6 +28,9 @@ class TestFromNumpy(flow.unittest.TestCase):
         np_arr = np.random.randn(3, 4, 5)
         tensor = flow.from_numpy(np_arr)
         test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
+        test_case.assertEqual(tensor.size(), (3, 4, 5))
+        test_case.assertEqual(tensor.stride(), (20, 5, 1))
+        test_case.assertEqual(tensor.storage_offset(), 0)
 
         np_arr[1:2, 2:3, 3:4] = random.random()
         test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))

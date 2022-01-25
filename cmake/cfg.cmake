@@ -1,8 +1,4 @@
-execute_process(
-  COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
-    --get_message_type=cfg_include_dir
-  OUTPUT_VARIABLE CFG_INCLUDE_DIR)
-
+set(CFG_INCLUDE_DIR tools/cfg/include)
 execute_process(
   COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_convert_python_script
@@ -24,7 +20,6 @@ execute_process(
   OUTPUT_VARIABLE TEMPLATE_FILES)
 
 include_directories(${CFG_INCLUDE_DIR})
-
 
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")

@@ -83,7 +83,7 @@ class TestConstantPad3d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFunctionalConstantPad2d(flow.unittest.TestCase):
-    @autotest(n=20, rtol=0.001, atol=0.001, check_graph=False)
+    @autotest(n=20, rtol=0.001, atol=0.001, check_graph=True)
     def test_functional_constantpad2d(test_case):
         device = random_device()
         padding = random(-1, 6).to(_size_4_t)

@@ -80,7 +80,6 @@ bool ResourceDesc::nccl_use_compute_stream() const {
 }
 
 void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
-  resource_.clear_cudnn_conf();
   auto* cudnn_conf = resource_.mutable_cudnn_conf();
   if (job_conf.has_enable_cudnn()) { cudnn_conf->set_enable_cudnn(job_conf.enable_cudnn()); }
   if (job_conf.has_cudnn_buf_limit_mbyte()) {

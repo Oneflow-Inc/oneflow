@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <mutex>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -105,29 +104,33 @@ const std::vector<Symbol<cfg::SbpParallel>>& GetNoneSbpList() {
   return none;
 }
 
-Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym) {
-  std::string sbp_str = "oneflow.sbp.";
-  if (sbp_sym->has_broadcast_parallel()) {
-    sbp_str += "broadcast";
-  } else if (sbp_sym->has_partial_sum_parallel()) {
-    sbp_str += "partial_sum";
-  } else if (sbp_sym->has_split_parallel()) {
-    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
+std::string SbpToString(Symbol<cfg::SbpParallel> sbp_sym) { return SbpToString(*sbp_sym); }
+
+std::string NdSbpToString(Symbol<cfg::NdSbp> nd_sbp_sym) { return NdSbpToString(*nd_sbp_sym); }
+
+std::string SbpToString(const cfg::SbpParallel& sbp) {
+  std::ostringstream ss;
+  if (sbp.has_broadcast_parallel()) {
+    ss << "B";
+  } else if (sbp.has_partial_sum_parallel()) {
+    ss << "P";
+  } else if (sbp.has_split_parallel()) {
+    ss << "S(" << std::to_string(sbp.split_parallel().axis()) << ")";
   } else {
-    UNIMPLEMENTED_THEN_RETURN();
+    UNIMPLEMENTED();
   }
-  return sbp_str;
+  return ss.str();
 }
 
-Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp) {
-  std::string str = "(";
-  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
-    if (i > 0) { str += ", "; }
-    str += *JUST(SbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
+std::string NdSbpToString(const cfg::NdSbp& nd_sbp) {
+  std::ostringstream ss;
+  ss << "(";
+  for (size_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    if (i > 0) { ss << ", "; }
+    ss << SbpToString(nd_sbp.sbp_parallel(i));
   }
-  if (nd_sbp->sbp_parallel_size() == 1) { str += ","; }
-  str += ")";
-  return str;
+  ss << ")";
+  return ss.str();
 }
 
 }  // namespace oneflow

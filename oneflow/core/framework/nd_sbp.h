@@ -49,8 +49,10 @@ static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, Thread
 static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
 const std::vector<Symbol<cfg::SbpParallel>>& GetNoneSbpList();
 
-Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym);
-Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp);
+std::string SbpToString(Symbol<cfg::SbpParallel> sbp_sym);
+std::string NdSbpToString(Symbol<cfg::NdSbp> nd_sbp_sym);
+std::string SbpToString(const cfg::SbpParallel& sbp);
+std::string NdSbpToString(const cfg::NdSbp& nd_sbp);
 
 }  // namespace oneflow
 

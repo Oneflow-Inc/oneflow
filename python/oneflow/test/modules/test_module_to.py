@@ -90,6 +90,30 @@ class TestModuleTo(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_module_to_with_var_reuse(test_case):
+        class ReuseVarModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear1 = flow.nn.Linear(3, 4)
+                self.linear2 = flow.nn.Linear(3, 4)
+                self.linear2.weight = self.linear1.weight
+
+        reuse_var_m = ReuseVarModule()
+
+        test_case.assertTrue(reuse_var_m.linear1.weight is reuse_var_m.linear2.weight)
+        test_case.assertEqual(reuse_var_m.linear1.weight.device, cpu0_device)
+
+        test_case.assertTrue(reuse_var_m.linear1.bias is not reuse_var_m.linear2.bias)
+        test_case.assertEqual(reuse_var_m.linear1.bias.device, cpu0_device)
+
+        reuse_var_m.to(gpu0_device)
+
+        test_case.assertTrue(reuse_var_m.linear1.weight is reuse_var_m.linear2.weight)
+        test_case.assertEqual(reuse_var_m.linear1.weight.device, gpu0_device)
+
+        test_case.assertTrue(reuse_var_m.linear1.bias is not reuse_var_m.linear2.bias)
+        test_case.assertEqual(reuse_var_m.linear1.bias.device, gpu0_device)
+
 
 if __name__ == "__main__":
     unittest.main()

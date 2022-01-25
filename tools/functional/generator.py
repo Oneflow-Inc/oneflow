@@ -46,7 +46,10 @@ types_allowed = {
     "Placement",
     "Sbp",
     "SbpList",
+    "OpExpr",
     "PyObject*",
+    "ShapeList",
+    "DataTypeList",
 }
 
 mangled_name = {
@@ -77,7 +80,10 @@ mangled_name = {
     "Placement": "P",
     "Sbp": "Sbp",
     "SbpList": "Sbpl",
+    "OpExpr": "Op",
     "PyObject*": "Pyo",
+    "ShapeList": "Shl",
+    "DataTypeList": "Dtl",
 }
 
 generic_type_aliases = {
@@ -110,7 +116,10 @@ argument_type_aliases = {
     "Placement": "const Symbol<ParallelDesc>&",
     "Sbp": "const Symbol<cfg::SbpParallel>&",
     "SbpList": "const std::vector<Symbol<cfg::SbpParallel>>&",
+    "OpExpr": "const std::shared_ptr<one::OpExpr>&",
     "PyObject*": "PyObject*",
+    "ShapeList": "const std::vector<Shape>&",
+    "DataTypeList": "const std::vector<Symbol<DType>>&",
     **generic_type_aliases,
 }
 
@@ -135,7 +144,10 @@ optional_argument_type_aliases = {
     "Placement": "const Optional<Symbol<ParallelDesc>>&",
     "Sbp": "const Optional<Symbol<SbpParallel>>&",
     "SbpList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
+    "OpExpr": "const Optional<one::OpExpr>&",
     "PyObject*": "const Optional<PyObject*>&",
+    "ShapeList": "const Optional<std::vector<Shape>>&",
+    "DataTypeList": "const Optional<std::vector<Symbol<DType>>>&",
     **{k: "const Optional<{0}>&".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -151,6 +163,8 @@ value_aliases = {
     "True": "true",
     "False": "false",
     "kInt": "DType::Int32()",
+    "kInt8": "DType::Int8()",
+    "kUInt8": "DType::UInt8()",
     "kInt32": "DType::Int32()",
     "kInt64": "DType::Int64()",
     "kFloat": "DType::Float()",
@@ -409,12 +423,12 @@ class Generator:
                 fmt += "\n"
                 fmt += signature.to_string(to_cpp=True)
                 fmt += " {\n"
-                fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find<{0}, {1}>("{2}"));\n'.format(
+                fmt += '  static thread_local const auto& __op = CHECK_JUST(FunctionLibrary::Global()->find<{0}, {1}>("{2}"));\n'.format(
                     signature._ret._cpp_type,
                     ", ".join([arg._cpp_type for arg in signature._args]),
                     signature._name,
                 )
-                fmt += "  return op->call({0});\n".format(
+                fmt += "  return __op->call({0});\n".format(
                     ", ".join([arg._name for arg in signature._args]),
                 )
                 fmt += "}\n"

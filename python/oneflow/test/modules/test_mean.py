@@ -79,7 +79,7 @@ class TestMean(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_mean_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)

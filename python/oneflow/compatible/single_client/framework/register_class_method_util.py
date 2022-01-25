@@ -18,12 +18,10 @@ from oneflow.compatible.single_client.eager import eager_blob_util as eager_blob
 from oneflow.compatible.single_client.framework import blob_trait as blob_trait
 from oneflow.compatible.single_client.framework import functional as functional
 from oneflow.compatible.single_client.framework import generator as generator
-from oneflow.compatible.single_client.framework import op_expr_util as op_expr_util
 from oneflow.compatible.single_client.framework import remote_blob as remote_blob_util
 
 
 def RegisterMethod4Class():
-    op_expr_util.RegisterMethod4UserOpExpr()
     eager_blob_util.RegisterMethod4EagerPhysicalBlob()
     blob_trait.RegisterBlobOperatorTraitMethod(
         oneflow._oneflow_internal.EagerPhysicalBlob

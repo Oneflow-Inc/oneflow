@@ -18,9 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/preprocessor.h"
 
-#include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -41,8 +39,6 @@ limitations under the License.
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/cpp_attribute.h"
-
-DECLARE_string(log_dir);
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
@@ -30,12 +31,25 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
+#ifdef WITH_CUDA
+#include <cuda_runtime_api.h>
+#endif  // WITH_CUDA
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 namespace {
+
+int64_t GetGpuDeviceNum() {
+#ifndef WITH_CUDA
+  return 0;
+#else
+  int device_count = 0;
+  cudaGetDeviceCount(&device_count);
+  return device_count;
+#endif
+}
 
 Maybe<Shape> MakeShape(const py::tuple& py_shape) {
   DimVector shape_dims{};
@@ -150,6 +164,12 @@ struct PlacementSymbolExportUtil {
     if (iter == device_tag2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+      if (device_tag == "gpu") {
+        const int64_t gpu_device_num = GetGpuDeviceNum();
+        CHECK_NE(gpu_device_num, 0)
+            << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
+        device_num = std::min(device_num, gpu_device_num);
+      }
       std::vector<std::string> machine_device_ids;
       for (int64_t node_id = 0; node_id < node_size; ++node_id) {
         std::string device_name = std::to_string(node_id) + ":0-" + std::to_string(device_num - 1);
@@ -222,6 +242,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              [](Symbol<ParallelDesc> p) {
                                std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
                                return device_type;
+                             })
+      .def_property_readonly("device_ids",
+                             [](Symbol<ParallelDesc> p) {
+                               std::map<int64_t, py::list> device_ids;
+                               for (int64_t machine_id : p->sorted_machine_ids()) {
+                                 int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
+                                 for (int64_t device_id : p->sorted_dev_phy_ids(machine_id)) {
+                                   device_ids[node_id].append(py::cast(device_id));
+                                 }
+                               }
+                               return device_ids;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)

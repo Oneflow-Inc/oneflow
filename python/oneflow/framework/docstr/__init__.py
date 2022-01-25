@@ -42,3 +42,9 @@ from .chunk import *
 from .broadcast_like import *
 from .arange import *
 from .split import *
+from .clamp import *
+from .erfinv import *
+from .swapaxes import *
+from .repeat import *
+from .tile import *
+from .tensor_t import *
