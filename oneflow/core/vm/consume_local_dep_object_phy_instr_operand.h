@@ -18,18 +18,18 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
-
-class LocalDepObject;
 
 namespace vm {
 
 class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
  public:
-  ConsumeLocalDepObjectPhyInstrOperand(LocalDepObject* compute_local_dep_object,
-                                       const std::string& modifier)
-      : compute_local_dep_object_(compute_local_dep_object),
+  ConsumeLocalDepObjectPhyInstrOperand(
+      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+      const std::string& modifier)
+      : compute_local_dep_objects_(std::move(compute_local_dep_objects)),
         modifier_(modifier),
         input_dependences_(),
         output_dependences_() {
@@ -50,7 +50,7 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
   void ForEachMut2MirroredObject(const std::function<void(MirroredObject* compute)>&) const;
 
  private:
-  LocalDepObject* compute_local_dep_object_;
+  std::vector<intrusive::shared_ptr<LocalDepObject>> compute_local_dep_objects_;
   const std::string modifier_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
