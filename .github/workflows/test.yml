@@ -550,6 +550,7 @@ jobs:
           echo "${{ steps.speed.outputs.stats }}" >> ${{ env.METRICS_DIR }}/speed_stats.txt
       - name: Upload speed stats
         if: ${{ always() && !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        continue-on-error: true
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${{ env.METRICS_DIR }}
