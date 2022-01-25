@@ -426,6 +426,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // B->S cause cudaEventSynchronize in current implementation.
     bool is_same_sbp = (!compute_cost) || IsSameSbp(consumer, ibn);
     int32_t consumer_sbp_size = EndNode->SbpSignatureList.size();
+    LazyMode::Guard enable_lazy_mode(true);
 
     // look through sbp signature in producer
     for (int32_t sbp_id_producer = 0; sbp_id_producer < StartNode->SbpSignatureList.size();
@@ -443,12 +444,9 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
         const cfg::NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         // compute copy cost for a specific logical blob
-        {
-          LazyMode::Guard enable_lazy_mode(true);
-          Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputeCopyCostWithMiddleNodes(
-              sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
-              consumer_parallel_desc, is_same_sbp));
-        }
+        Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputeCopyCostWithMiddleNodes(
+            sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+            consumer_parallel_desc, is_same_sbp));
       }
     }
   }

@@ -695,40 +695,53 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const {
   int32_t select_sbp_idx = -1;
   double min_copy_cost = GetValidMaxCopyCost();
-  for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
-    double total_copy_cost = 0.0;
-    for (const auto& ibn : input_bns()) {
-      const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
-      bool is_same_sbp =
-          (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
-          || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
-      total_copy_cost += JUST(ComputeCopyCostWithMiddleNodes(
-          JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
-          JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
-          JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
-          is_same_sbp));
-    }
-    if (total_copy_cost <= min_copy_cost) {
-      select_sbp_idx = i;
-      min_copy_cost = total_copy_cost;
-    }
-  }
-  // Can't find any available sbp
-  if (select_sbp_idx == -1) {
-    std::ostringstream err;
-    err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
-    err << "Condidate nd sbp signature are: "
-        << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
-    err << ", but inputs sbp are:";
-    {
-      std::ostringstream input_sbp_str;
+  // We notice that we have a lot of inquiries asking for the cost.
+  // If the candidate list only have one entry, select it to reduce the inquiries.
+  // Normally, we support all the sbp combination for boxing. Therefore, we do not need to worry
+  // about the case that we can not transfer to this sbp signature. Even if we do not support such
+  // transfer, a report would be sent in boxing_with_middle_nodes.cpp.
+  if (nd_sbp_sig_list.size() == 1) {
+    select_sbp_idx = 0;
+  } else {
+    for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
+      double total_copy_cost = 0.0;
       for (const auto& ibn : input_bns()) {
-        const cfg::NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
-        input_sbp_str << " " << ibn << ": " << NdSbpToString(nd_sbp) << ";";
+        const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
+        bool is_same_sbp =
+            (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
+            || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
+        total_copy_cost += JUST(ComputeCopyCostWithMiddleNodes(
+            JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
+            JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
+            JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
+            is_same_sbp));
+        // Reduce inquiries
+        if (total_copy_cost > min_copy_cost) { break; }
       }
-      err << input_sbp_str.str() << std::endl;
+      if (total_copy_cost <= min_copy_cost) {
+        select_sbp_idx = i;
+        min_copy_cost = total_copy_cost;
+        // Reduce inquiries
+        if (total_copy_cost == 0.0) { break; }
+      }
     }
-    return Error::RuntimeError() << err.str();
+    // Can't find any available sbp
+    if (select_sbp_idx == -1) {
+      std::ostringstream err;
+      err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
+      err << "Condidate nd sbp signature are: "
+          << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+      err << ", but inputs sbp are:";
+      {
+        std::ostringstream input_sbp_str;
+        for (const auto& ibn : input_bns()) {
+          const cfg::NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+          input_sbp_str << " " << ibn << ": " << NdSbpToString(nd_sbp) << ";";
+        }
+        err << input_sbp_str.str() << std::endl;
+      }
+      return Error::RuntimeError() << err.str();
+    }
   }
   nd_sbp_signature->CopyFrom(nd_sbp_sig_list.at(select_sbp_idx));
   return Maybe<void>::Ok();
