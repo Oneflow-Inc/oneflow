@@ -22,19 +22,17 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 def allreduce_fn(ddp_state_for_reversed_params, param):
     def allreduce(grad):
         ddp_state_for_reversed_params[param][0] = True
-        ret = None
         for cur_param, (ready, deleted) in ddp_state_for_reversed_params.items():
             if deleted:
                 continue
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
                 if cur_param is param:
-                    ret = flow._C.local_all_reduce(grad)
+                    flow._C.local_all_reduce(grad, True)
                 else:
-                    cur_param.grad = flow._C.local_all_reduce(cur_param.grad)
+                    flow._C.local_all_reduce(cur_param.grad, True)
             else:
                 break
-        return ret
 
     return allreduce
 
@@ -55,9 +53,10 @@ def DistributedDataParallel(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
+    mul_factor = 1 / world_size
     for param in module.parameters():
-        param._register_post_grad_accumulation_hook(lambda grad: grad / world_size)
-        param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
+        param._register_post_grad_accumulation_hook(lambda grad: grad.mul_(mul_factor))
+        param._register_post_grad_accumulation_hook(allreduce_fn(ddp_state_for_reversed_params, param))
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params

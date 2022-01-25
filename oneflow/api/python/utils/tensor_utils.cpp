@@ -119,7 +119,7 @@ Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self,
 Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
                                const AutogradMeta::Hook& hook) {
   if (!self->grad_fn_node()) { JUST(AddAccumulateFunctionNode(self)); }
-  self->mut_autograd_meta()->add_post_hook(hook);
+  self->mut_autograd_meta()->add_post_grad_accumulation_hook(hook);
   return Maybe<void>::Ok();
 }
 
