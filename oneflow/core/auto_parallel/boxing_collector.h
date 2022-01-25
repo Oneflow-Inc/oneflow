@@ -32,10 +32,9 @@ class BoxingCollector final {
 
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
-  // Set up the cost incresement after each middle node
-  void SetTransferCost(double transfer_cost_);
+
   // Construct a boxing collector with given maximum number of axis
-  void Init(int32_t max_axis, double transfer_cost_);
+  void Init(int32_t max_axis);
 
   // Generate nd sbp list
   void GenerateNdSbpList();
@@ -75,8 +74,6 @@ class BoxingCollector final {
   std::unordered_map<::oneflow::cfg::NdSbp, int32_t> NdSbpUniverse;
   // Relationship between id and Nd Sbp
   std::vector<cfg::NdSbp> nd_sbp_lists;
-  // The cost incresement after each middle node
-  double transfer_cost;
 };  // class BoxingCollector
 
 }  // namespace oneflow
