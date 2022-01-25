@@ -15,6 +15,7 @@ FetchContent_Declare(
 
 set(WITH_GFLAGS OFF CACHE BOOL "")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+set(WITH_GTEST OFF CACHE BOOL "")
 FetchContent_MakeAvailable(glog)
 
 # just for tensorflow, DO NOT USE IN OTHER PLACE
