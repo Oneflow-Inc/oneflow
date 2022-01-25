@@ -184,8 +184,6 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
-from oneflow._C import top_k as topk
-from oneflow._C import nms
 
 
 from . import sbp
@@ -331,7 +329,9 @@ from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
+from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
+from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow.nn.modules.random_ops import rand_op as rand

@@ -770,112 +770,6 @@ def erfc_op_tensor(input):
     return flow._C.erfc(input)
 
 
-def ceil_op(input):
-    """Returns a new tensor with the ceil of the elements of :attr:`input`,
-    the smallest integer greater than or equal to each element.
-
-    The equation is: 
-
-    .. math::
-        \\text{out}_{i} = \\left\\lceil \\text{input}_{i} \\right\\rceil = \\left\\lfloor \\text{input}_{i} \\right\\rfloor + 1
-
-    Args:
-        input (oneflow.Tensor): A Tensor.
-    
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example: 
-
-
-    .. code-block:: python 
-        
-        >>> import oneflow as flow
-        >>> import numpy as np   
-        >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
-        >>> y = flow.ceil(x)
-        >>> y.shape
-        oneflow.Size([3])
-        >>> y
-        tensor([ 1., -2.,  4.], dtype=oneflow.float32)
-        >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
-        >>> y = x.ceil()
-        >>> y.shape
-        oneflow.Size([2, 3])
-        >>> y
-        tensor([[ 3.,  5.,  1.],
-                [ 8.,  9., 10.]], dtype=oneflow.float32)
-        >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
-        >>> y = flow.ceil(x)
-        >>> y.shape
-        oneflow.Size([2, 2, 3])
-        >>> y
-        tensor([[[ 3.,  5.,  7.],
-                 [ 8.,  9., 10.]],
-        <BLANKLINE>
-                [[11., 12., 13.],
-                 [14., 15., 16.]]], dtype=oneflow.float32)
-
-    """
-    return flow._C.ceil(input)
-
-
-def expm1_op(input):
-    """Returns a new tensor with the exponential of the elements minus 1
-    of :attr:`input`.
-
-
-    The equation is: 
-
-    .. math::
-        y_{i} = e^{x_{i}} - 1
-
-    Args:
-        input (oneflow.Tensor): A Tensor.
-    
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example: 
-
-    .. code-block:: python 
-        
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        >>> y = flow.expm1(x)
-        >>> y.shape
-        oneflow.Size([3])
-        >>> y
-        tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
-
-
-        >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
-        >>> y = x.expm1()
-        >>> y.shape
-        oneflow.Size([2, 3])
-        >>> y
-        tensor([[6.3891e+00, 5.3598e+01, 4.0243e+02],
-                [1.0956e+03, 2.9800e+03, 8.1021e+03]], dtype=oneflow.float32)
-
-
-
-        >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
-        >>> y = flow.expm1(x)
-        >>> print(y.shape)
-        oneflow.Size([2, 2, 3])
-        >>> print(y.numpy())
-        [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
-          [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
-        <BLANKLINE>
-         [[2.2025465e+04 5.9873141e+04 1.6275380e+05]
-          [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
-
-
-    """
-    return flow._C.expm1(input)
-
-
 class Topk(Module):
     def __init__(
         self, k, dim: int = None, largest: bool = True, sorted: bool = True
@@ -909,6 +803,10 @@ class Topk(Module):
                 indices = flow._C.top_k(neg_input, self.k)
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, axis, indices), indices)
+
+
+def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
+    return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
 if __name__ == "__main__":
