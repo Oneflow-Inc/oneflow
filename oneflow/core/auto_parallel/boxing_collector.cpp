@@ -98,7 +98,7 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   // To be noted that the performance of this function are all the same with different hierarchy
   Shape hierarchy44({4, 4});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
-  auto in_parallel_desc = JUST(ParallelDesc::New("cpu", {"0", "1"}, in_hierarchy));
+  auto in_parallel_desc = JUST(ParallelDesc::New("cpu", {"0:0-15"}, in_hierarchy));
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Store the origin transfer cost information
   int32_t n = nd_sbp_lists.size();
