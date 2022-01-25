@@ -42,6 +42,15 @@ class TestReduceProd(flow.unittest.TestCase):
 
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_reduce_prod_bool_without_dim(test_case):
+        device = random_device()
+        ndim = random(1, 5).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device=device, dtype=torch.bool)
+        y = torch.prod(x)
+
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

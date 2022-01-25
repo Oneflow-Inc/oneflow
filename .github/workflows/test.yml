@@ -4,22 +4,15 @@ on:
     types: [review_requested]
     branches:
       - "*"
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
 
 jobs:
-  cancel_previous:
-    name: Cancel previous runs
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-      - name: Cancel previous runs of outdated commit
-        uses: styfle/cancel-workflow-action@0.9.0
-        with:
-          access_token: ${{ github.token }}
-          all_but_latest: true
-
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
@@ -36,8 +29,7 @@ jobs:
           fi
           python3 -m pip install -U pip setuptools wheel
           python3 -m pip install oss2
-          python3 tools/package_mirror.py -i cmake
-          python3 tools/package_mirror.py -i oneflow/ir
+          python3 tools/package_mirror.py -i $PWD
 
   check_license_and_format:
     name: License and format
@@ -261,7 +253,7 @@ jobs:
         if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7-xla.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
@@ -275,18 +267,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
-      - name: Upload bin
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
-        timeout-minutes: 10
-        with:
-          digest: ${{ steps.save-cache.outputs.build-digest }}
-          entry: ${{ matrix.entry }}
-          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
-          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/bin
-          dst-dir: bin
-      - name: Upload liboneflow_cpp library
+      - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
         timeout-minutes: 10
@@ -295,8 +276,8 @@ jobs:
           entry: ${{ matrix.entry }}
           ssh-tank-host: ${{ env.SSH_TANK_HOST }}
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/liboneflow_cpp/lib
-          dst-dir: liboneflow_cpp/lib
+          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
+          dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@remove-single-client
@@ -426,7 +407,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - name: Download wheel, binary and liboneflow_cpp lib
+      - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: Oneflow-Inc/get-oneflow/digest/download@remove-single-client
         id: download-digest
@@ -479,20 +460,17 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
         env:
-          ONEFLOW_BIN_PATH: ${{ steps.download-digest.outputs.entry-dir }}/bin
-          ONEFLOW_CPP_API_LIB_PATH: ${{ steps.download-digest.outputs.entry-dir }}/liboneflow_cpp/lib
+          ONEFLOW_CPACK_PATH: ${{ steps.download-digest.outputs.entry-dir }}/cpack
         run: |
           docker run -d --rm --privileged --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
-            -v ${ONEFLOW_BIN_PATH}:${ONEFLOW_BIN_PATH}:ro \
-            -v ${ONEFLOW_CPP_API_LIB_PATH}:${ONEFLOW_CPP_API_LIB_PATH}:ro \
+            -v ${ONEFLOW_CPACK_PATH}:${ONEFLOW_CPACK_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
-            -e ONEFLOW_BIN_PATH=${ONEFLOW_BIN_PATH} \
             -e ONEFLOW_CI=1 \
             -v $PWD:$PWD \
             -w $PWD \
@@ -516,14 +494,18 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow --doctor
+      - name: Unzip packed liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
+        run: |
+          unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d ${{ steps.download-digest.outputs.entry-dir }}/cpack/
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
         timeout-minutes: 10
         run: |
-          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_testexe
-          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
-          docker exec -e LD_LIBRARY_PATH=${{ steps.download-digest.outputs.entry-dir }}/liboneflow_cpp/lib ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/bin/oneflow_cpp_api_testexe
+          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
+          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Build documentation
         timeout-minutes: 10
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
@@ -534,22 +516,12 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/doctest.sh
-      - name: Custom op test
-        timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
-        run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/1node_custom_op_test.sh
-      - name: Single client dry run test (run without runtime)
-        timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
-        run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/dry_run_test.sh
       - name: Checkout Oneflow-Inc/models
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: test_resnet50_with_ci
+          ref: 96a727f566534151bff2cad445d5661f0ceedf83
           path: oneflow-models-resnet50
       - name: ResNet50 Graph DDP test
         id: models-resnet50
@@ -588,24 +560,28 @@ jobs:
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Module API test (distributed, 1st try)
+        timeout-minutes: 15
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
         continue-on-error: true
         id: new_interface_distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.TEST_IMG_TAG }} --oneflow_wheel_path=${{ env.ONEFLOW_WHEEL_PATH }} --oneflow_wheel_python_version=3.7
       - name: Module API test (distributed, 2nd try)
+        timeout-minutes: 15
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && steps.new_interface_distributed_try_1.outcome=='failure' }}
         continue-on-error: true
         id: new_interface_distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.TEST_IMG_TAG }} --oneflow_wheel_path=${{ env.ONEFLOW_WHEEL_PATH }} --oneflow_wheel_python_version=3.7
       - name: Module API test (distributed, 3rd try)
+        timeout-minutes: 15
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && steps.new_interface_distributed_try_2.outcome=='failure' }}
         continue-on-error: false
         id: new_interface_distributed_try_3
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.TEST_IMG_TAG }} --oneflow_wheel_path=${{ env.ONEFLOW_WHEEL_PATH }} --oneflow_wheel_python_version=3.7
       - name: Upload log (distributed test)
+        timeout-minutes: 10
         if: ${{ always() && (steps.distributed_try_3.outcome=='failure' || steps.new_interface_distributed_try_3.outcome=='failure') && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: ./.github/actions/upload_oss
         with:
@@ -615,6 +591,7 @@ jobs:
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
+        timeout-minutes: 10
         if: ${{ always() && steps.distributed_try_3.outcome=='failure' || steps.new_interface_distributed_try_3.outcome=='failure' }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/print_stack_from_core.sh python3 distributed-tmp

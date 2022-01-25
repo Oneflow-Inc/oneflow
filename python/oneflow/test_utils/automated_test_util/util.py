@@ -13,23 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .mnist import MNIST, FashionMNIST
-from .cifar import CIFAR10, CIFAR100
-from .coco import CocoCaptions, CocoDetection
-from .imagenet import ImageNet
-from .voc import VOCDetection, VOCSegmentation
-from .folder import DatasetFolder, ImageFolder
+import pickle
+import oneflow as flow
 
-__all__ = [
-    "MNIST",
-    "FashionMNIST",
-    "CIFAR10",
-    "CIFAR100",
-    "CocoCaptions",
-    "CocoDetection",
-    "ImageNet",
-    "VOCDetection",
-    "VOCSegmentation",
-    "DatasetFolder",
-    "ImageFolder",
-]
+
+def broadcast(obj, src: int = 0):
+    rank = flow.env.get_rank()
+    if src == rank:
+        obj_bytes = pickle.dumps(obj)
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(obj_bytes, src)
+    else:
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(None, src)
+    return pickle.loads(obj_bytes)
