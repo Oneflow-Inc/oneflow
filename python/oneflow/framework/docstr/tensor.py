@@ -177,15 +177,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.to_local,
-    """
-    Tensor.to_local() -> Tensor
-
-    See :func:`oneflow.to_local`
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.transpose,
     """
     See :func:`oneflow.transpose`
