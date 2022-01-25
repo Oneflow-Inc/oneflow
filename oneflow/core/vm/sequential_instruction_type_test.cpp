@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 #include <thread>
 #include <typeinfo>
+#include "gtest/gtest.h"
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/control/global_process_ctx.h"
