@@ -103,10 +103,7 @@ void EmbeddingMgr::SaveSnapshot(const std::string& embedding_name, int64_t paral
                                 const std::string& snapshot_name) {
   OF_CUDA_CHECK(cudaSetDevice(parallel_id)); 
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
-  std::cout<<"Map key is: "<<embedding_name<<"-"<<parallel_id<<std::endl; 
   std::unique_lock<std::mutex> lock(mutex_);
-  std::cout<<"Here enter SaveSnapshot function"<<std::endl; 
-  OF_CUDA_CHECK(cudaSetDevice(0)); 
 
   auto it = key_value_store_map_.find(map_key);
   if (it != key_value_store_map_.end()) {

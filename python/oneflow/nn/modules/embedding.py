@@ -159,7 +159,6 @@ class OneEmbeddingLookup(Module):
         error_msgs,
     ):
         key = prefix + "OneEmbedding"
-        print("Load here key is:", key)
         if key in state_dict:
             saved_snapshot_name = state_dict[key]
             try:
