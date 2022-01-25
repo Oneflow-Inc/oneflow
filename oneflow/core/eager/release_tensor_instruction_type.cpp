@@ -47,6 +47,13 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   }
 };
 
+COMMAND(
+    vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>("cpu.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>(
+    "comm_net.ReleaseTensor"));
+
+#ifdef WITH_CUDA
+
 template<typename StreamT>
 class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType<StreamT> {
  public:
@@ -62,12 +69,6 @@ class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType<Str
   }
 };
 
-COMMAND(
-    vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>("cpu.ReleaseTensor"));
-COMMAND(vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>(
-    "comm_net.ReleaseTensor"));
-
-#ifdef WITH_CUDA
 COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaStreamType>>(
     "gpu.ReleaseTensor"));
 COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaStreamType>>(
