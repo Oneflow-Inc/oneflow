@@ -129,6 +129,10 @@ __device__ __forceinline__ double AddImpl(double* address, double val) {
   return atomicAdd(address, val);
 }
 
+__device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
+  return atomicAdd(address, val);
+}
+
 #endif  // __CUDA_ARCH__ >= 600
 
 #if __CUDA_ARCH__ >= 700

@@ -279,7 +279,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
     embedding::KeyValueStore* store = kernel_state->KeyValueStore();
     InitParam* init_param = kernel_state->InitParams();
-    
+
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);

@@ -561,31 +561,16 @@ user_op::InferTmpSizeFn GenEmbeddingShuffleInferTmpSizeFn() {
       .SetInferTmpSizeFn(GenEmbeddingShuffleInferTmpSizeFn<t_dtype, idx_dtype>());
 
 REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float, int32_t)
-REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float16, int32_t)
+REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(half, int32_t)
 
 namespace {
 
 template<typename T, typename IDX>
-typename std::enable_if<!std::is_same<T, float16>::value, void>::type UnsortedSegmentSum(
-    ep::Stream* stream, const IDX* idx, const T* data, int64_t num_ids, int64_t embedding_size,
-    T* out, float* tmp_buffer) {
+void UnsortedSegmentSum(ep::Stream* stream, const IDX* idx, const T* data, int64_t num_ids,
+                        int64_t embedding_size, T* out, float* tmp_buffer) {
   Memset<DeviceType::kCUDA>(stream, out, 0, num_ids * embedding_size * sizeof(T));
   UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
       stream, idx, data, num_ids, num_ids, 1, embedding_size, 0, out);
-}
-
-template<typename T, typename IDX>
-typename std::enable_if<std::is_same<T, float16>::value, void>::type UnsortedSegmentSum(
-    ep::Stream* stream, const IDX* idx, const T* data, int64_t num_ids, int64_t embedding_size,
-    T* out, float* tmp_buffer) {
-  Memset<DeviceType::kCUDA>(stream, tmp_buffer, 0, num_ids * embedding_size * sizeof(float));
-  Memset<DeviceType::kCUDA>(stream, out, 0, num_ids * embedding_size * sizeof(T));
-  UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, IDX, T>::UnsortedSegmentSum(
-      stream, idx, data, num_ids, num_ids, 1, embedding_size, 0, tmp_buffer);
-  auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
-      DeviceType::kCUDA, DataType::kFloat, DataType::kFloat16);
-  CHECK(f2h);
-  f2h->Launch(stream, tmp_buffer, out, num_ids * embedding_size);
 }
 
 }  // namespace
@@ -718,6 +703,6 @@ user_op::InferTmpSizeFn GenEmbeddingGradientShuffleInferTmpSizeFn() {
       .SetInferTmpSizeFn(GenEmbeddingGradientShuffleInferTmpSizeFn<t_dtype, idx_dtype>());
 
 REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(float, int32_t)
-REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(float16, int32_t)
+REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(half, int32_t)
 
 }  // namespace oneflow
