@@ -438,6 +438,7 @@ jobs:
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
+          echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
       - name: Set environment variables (environmental flags)
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && fromJson(matrix.is-experimental) }}
         run: |
@@ -456,18 +457,19 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker pull ${{ env.TEST_IMG_TAG }}
+      - name: Unzip packed liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
+        run: |
+          unzip ${{ env.ONEFLOW_CPACK_PATH }}/liboneflow-ci-linux.zip
       - name: Start container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
-        env:
-          ONEFLOW_CPACK_PATH: ${{ steps.download-digest.outputs.entry-dir }}/cpack
         run: |
           docker run -d --rm --privileged --shm-size=8g \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
             -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
-            -v ${ONEFLOW_CPACK_PATH}:${ONEFLOW_CPACK_PATH}:ro \
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
@@ -480,6 +482,12 @@ jobs:
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
             sleep 3600
+      - name: Exe test
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        timeout-minutes: 10
+        run: |
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
+          docker exec ${{ env.TEST_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Test container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -494,18 +502,6 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow --doctor
-      - name: Unzip packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
-        run: |
-          unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d ${{ steps.download-digest.outputs.entry-dir }}/cpack/
-      - name: Exe test
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
-        timeout-minutes: 10
-        run: |
-          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
-          chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Build documentation
         timeout-minutes: 10
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
