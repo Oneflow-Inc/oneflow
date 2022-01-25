@@ -29,15 +29,15 @@ oneflow.placement.__doc__ = r"""
         
         >>> p = flow.placement("cuda", {0:range(4)})
         >>> p
-        oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+        oneflow.placement(device_type="cuda", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
         >>> p = flow.placement("cuda", {0:range(4)}, (2, 2))
         >>> p
-        oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
+        oneflow.placement(device_type="cuda", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
         >>> p = flow.placement("cpu", {0:[0, 1], 1:[2, 3]}, (4,))
         >>> p
-        oneflow.placement(device_type="cpu", machine_device_ids={0 : [0, 1], 1 : [2, 3]}, hierarchy=(4,))
+        oneflow.placement(device_type="cpu", device_ids={0 : [0, 1], 1 : [2, 3]}, hierarchy=(4,))
         >>> p = flow.placement("cpu", {0:[0, 1, 2, 3]}, (2, 2))
         >>> p
-        oneflow.placement(device_type="cpu", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
+        oneflow.placement(device_type="cpu", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
         
     """
