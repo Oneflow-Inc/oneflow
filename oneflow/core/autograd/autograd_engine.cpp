@@ -61,6 +61,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));
   }
+  for (const auto& hook : autograd_meta->post_hooks()) { hook(autograd_meta->acc_grad()); }
+
   return Maybe<void>::Ok();
 }
 

@@ -56,8 +56,8 @@ def DistributedDataParallel(
     )
     module._ddp_state_for_reversed_params = ddp_state_for_reversed_params
     for param in module.parameters():
-        param.register_hook(lambda grad: grad / world_size)
-        param.register_hook(allreduce_fn(ddp_state_for_reversed_params, param))
+        param._register_post_grad_accumulation_hook(lambda grad: grad / world_size)
+        param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params

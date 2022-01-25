@@ -147,6 +147,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);
 
 Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook);
 
+Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook);
+
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,

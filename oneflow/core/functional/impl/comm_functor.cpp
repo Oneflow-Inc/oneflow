@@ -161,7 +161,7 @@ auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
 class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
     const auto& device = JUST(x->device());
     CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
@@ -170,11 +170,16 @@ class LocalAllReduceFunctor {
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
+    auto op_input = x;
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr,
-                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsMirroredTensor()));
+    }
+    if (inplace) {
+      TensorTuple outputs{op_input};
+      JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs));
+      return outputs[0];
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {op_input}, {});
     }
   }
 };
