@@ -88,6 +88,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.expand,
+    """
+    Tensor.expand() -> Tensor
+
+    See :func:`oneflow.expand`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.expand_as,
     """
     expand_as(other) -> Tensor
@@ -118,9 +127,52 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flip,
+    """
+    See :func:`oneflow.flip`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.in_top_k,
+    """
+    Tensor.in_top_k(targets, predictions, k) -> Tensor
+
+    See :func:`oneflow.in_top_k`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.index_select,
+    """
+    Tensor.index_select(dim, index) -> Tensor
+
+    See :func:`oneflow.index_select`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_ones,
+    """
+    Tensor.new_ones() -> Tensor
+
+    See :func:`oneflow.new_ones`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to_consistent,
+    """
+    Tensor.to_consistent() -> Tensor
+
+    See :func:`oneflow.to_consistent`
     """,
 )
 
@@ -533,15 +585,30 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.mul,
-    """
+    """Tensor.mul(value) -> Tensor
     See :func:`oneflow.mul`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.mul_,
-    """
-    In-place version of :func`oneflow.Tensor.mul`.
+    """Tensor.mul_(value) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.mul`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div_,
+    """Tensor.div_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.div`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub_,
+    """Tensor.sub_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.sub`.
     """,
 )
 
@@ -842,11 +909,29 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.repeat,
+    """
+    Tensor.repeat(*size) -> Tensor
+
+    See :func:`oneflow.repeat`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.t,
     """
     Tensor.t() → Tensor
 
     See :func:`oneflow.t`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.tile,
+    """
+    Tensor.tile(*dims) -> Tensor
+
+    See :func:`oneflow.tile`
     """,
 )
 

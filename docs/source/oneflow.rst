@@ -89,6 +89,7 @@ oneflow
             mul, 
             neg, 
             negative, 
+            new_ones,
             nonzero,
             numel, 
             ne, 
@@ -139,6 +140,8 @@ oneflow
             tensor, 
             tile, 
             to, 
+            to_consistent,
+            to_local,
             transpose,
             t,
             tril, 
@@ -162,5 +165,6 @@ oneflow
             cumsum,
             topk,
             nms,
+            cumprod,
 
 .. autofunction:: oneflow.relu

@@ -219,7 +219,7 @@ def _le(self, other):
 
 
 def _mul(self, other):
-    return flow.mul(self, other)
+    return flow._C.mul(self, other)
 
 
 def _mul_(self, other):
@@ -231,11 +231,11 @@ def _rmul(self, other):
 
 
 def _add(self, other):
-    return flow.add(self, other)
+    return flow._C.add(self, other)
 
 
 def _add_inplace(self, other):
-    return flow.add(self, other, inplace=True)
+    return flow._C.add(self, other, inplace=True)
 
 
 def _iadd(self, other):
@@ -247,15 +247,23 @@ def _radd(self, other):
 
 
 def _sub(self, other):
-    return flow.sub(self, other)
+    return flow._C.sub(self, other)
+
+
+def _sub_inplace(self, other):
+    return flow._C.sub(self, other, inplace=True)
 
 
 def _rsub(self, other):
-    return flow.sub(other, self)
+    return flow._C.sub(other, self)
 
 
 def _truediv(self, other):
-    return flow.div(self, other)
+    return flow._C.div(self, other)
+
+
+def _truediv_inplace(self, other):
+    return flow._C.div_(self, other)
 
 
 def _rtruediv(self, other):
@@ -288,6 +296,10 @@ def _abs(self):
 
 def _exp(self):
     return flow.exp(self)
+
+
+def _expand(self, *size):
+    return flow.expand(self, *size)
 
 
 def _expand_as(input, other):
@@ -488,6 +500,18 @@ def _negative(self):
 
 def _neg(self):
     return flow._C.negative(self)
+
+
+def _new_ones(
+    self,
+    size=None,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -721,9 +745,14 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
     if self.is_consistent:
-        assert isinstance(other, Tensor)
-        assert other.is_consistent
-        other = other.to_consistent(placement=self.placement, sbp=self.sbp)
+        if not isinstance(other, Tensor):
+            assert isinstance(other, np.ndarray)
+            other = flow.tensor(
+                other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
+            )
+        else:
+            assert other.is_consistent
+            other = other.to_consistent(placement=self.placement, sbp=self.sbp)
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if not isinstance(other, (Tensor)):
@@ -731,6 +760,18 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             _copy_from_numpy_to_eager_local_tensor(self, other)
         else:
             flow._C.assign_local_tensor(self, other.to(device=self.device))
+
+
+def _flip(self, dims):
+    return flow.flip(self, dims)
+
+
+def _in_top_k(self, predictions, k):
+    return flow._C.in_top_k(self, predictions, k)
+
+
+def _index_select(self, dim, index):
+    return flow.index_select(self, dim, index)
 
 
 def _get_device(self):
@@ -749,8 +790,36 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
+def _to_consistent(self, placement=None, sbp=None, grad_sbp=None):
+    return flow.to_consistent(self, placement, sbp, grad_sbp)
+
+
+def _to_local(self):
+    return flow.to_local(self)
+
+
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
+
+
+def _repeat(self, *sizes):
+    if len(sizes) == 1:
+        new_sizes = sizes[0]
+        if isinstance(new_sizes, int):
+            new_sizes = (new_sizes,)
+    else:
+        new_sizes = sizes
+    return flow._C.repeat(self, new_sizes)
+
+
+def _tile(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.tile(self, new_dims)
 
 
 def _T(self):
@@ -906,10 +975,12 @@ def RegisterMethods():
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
+    Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
     Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
+    Tensor.sub_ = _sub_inplace
     Tensor.asin = _asin
     Tensor.arcsin = _arcsin
     Tensor.asinh = _asinh
@@ -923,6 +994,7 @@ def RegisterMethods():
     Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
@@ -931,9 +1003,13 @@ def RegisterMethods():
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
+    Tensor.flip = _flip
+    Tensor.in_top_k = _in_top_k
+    Tensor.index_select = _index_select
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.new_ones = _new_ones
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
@@ -950,6 +1026,7 @@ def RegisterMethods():
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
+    Tensor.to_consistent = _to_consistent
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
@@ -957,6 +1034,8 @@ def RegisterMethods():
     Tensor.roll = _roll
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
+    Tensor.repeat = _repeat
+    Tensor.tile = _tile
     Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
