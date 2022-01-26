@@ -25,19 +25,19 @@ class TestAsStrided(flow.unittest.TestCase):
     def test_flow_AsStrided(test_case):
         device = random_device()
         ndim = np.random.randint(3, 6)
-        dim0 = np.random.randint(2, 4) 
-        dim1 = np.random.randint(2, 4) 
-        dim2 = np.random.randint(2, 4) 
-        dim3 = np.random.randint(2, 4) 
-        dim4 = np.random.randint(2, 4) 
-        if ndim==3:
+        dim0 = np.random.randint(2, 4)
+        dim1 = np.random.randint(2, 4)
+        dim2 = np.random.randint(2, 4)
+        dim3 = np.random.randint(2, 4)
+        dim4 = np.random.randint(2, 4)
+        if ndim == 3:
             x = random_pytorch_tensor(3, dim0, dim1, dim2)
-        elif ndim==4:
+        elif ndim == 4:
             x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
-        elif ndim==5:
+        elif ndim == 5:
             x = random_pytorch_tensor(5, dim0, dim1, dim2, dim3, dim4)
         x = x.to(device)
-        storage_offset = random(0,3).to(int)
+        storage_offset = random(0, 3).to(int)
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
 
