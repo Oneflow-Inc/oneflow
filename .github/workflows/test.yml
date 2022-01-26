@@ -71,6 +71,17 @@ jobs:
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
+      - name: Check CMake format
+        id: cmake_check
+        run: |
+          python3 -m pip install cmakelang
+          python3 ci/check/run_cmake_format.py --source_dir $PWD
+      - name: Run CMake Format
+        id: cmake_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 -m pip install cmakelang
+          python3 ci/check/run_cmake_format.py --source_dir $PWD --fix
       - name: Git push
         id: git_push
         if: ${{ failure() }}
