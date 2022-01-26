@@ -296,6 +296,14 @@
     ]
   bind_python: True
 
+- name: "as_strided"
+  signature: "Tensor (Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStrided"
+  bind_python: True
+
+- name: "as_strided_grad"
+  signature: "Tensor (Tensor dy, Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStridedGrad"
+  bind_python: False
+
 - name: "swapaxes"
   signature:
     [
