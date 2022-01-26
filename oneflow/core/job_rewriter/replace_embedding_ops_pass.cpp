@@ -494,7 +494,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
         LOG(ERROR) << options.Name() << " "
                    << CHECK_JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey))
-                          .name2conf[options.Name()]
+                          .name2conf.at(options.Name())
                           .DebugString();
         BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(), options,
                              embedding_op, id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
