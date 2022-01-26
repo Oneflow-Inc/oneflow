@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestChunk(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_chunk_list_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
@@ -42,7 +42,7 @@ class TestChunk(flow.unittest.TestCase):
         z = torch.cat(y, dim=dim)
         return z
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_chunk_list_bool_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
@@ -56,7 +56,7 @@ class TestChunk(flow.unittest.TestCase):
         z = torch.cat(y, dim=dim)
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_chunk_list_with_random_data_negative_dim(test_case):
         device = random_device()
         dim = random(1, 3).to(int)
