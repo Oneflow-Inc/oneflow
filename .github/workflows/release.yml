@@ -22,7 +22,6 @@ env:
 jobs:
   generate-build-matrix:
     name: "Generate build matrix"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ubuntu-latest
     env:
       ONEFLOW_SRC: .
