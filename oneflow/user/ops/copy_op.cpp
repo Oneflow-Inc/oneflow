@@ -24,9 +24,9 @@ namespace {
 Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
                                    const Symbol<Device>& out_device) {
   if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
-    return Device::New("cuda_d2h");
+    return Device::New("cuda_d2h", in_device->device_id());
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
-    return Device::New("cuda_h2d");
+    return Device::New("cuda_h2d", out_device->device_id());
   } else {
     return Device::New(out_device->type(), out_device->device_id());
   }

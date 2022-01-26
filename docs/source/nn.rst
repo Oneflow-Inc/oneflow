@@ -103,8 +103,3 @@ Operators for neural networks
 .. autofunction:: oneflow.nn.utils.clip_grad_norm_
 .. autofunction:: oneflow.nn.utils.weight_norm
 .. autofunction:: oneflow.nn.utils.remove_weight_norm
-
-.. autofunction:: oneflow.nn.init.xavier_uniform_
-.. autofunction:: oneflow.nn.init.xavier_normal_
-.. autofunction:: oneflow.nn.init.kaiming_uniform_
-.. autofunction:: oneflow.nn.init.kaiming_normal_

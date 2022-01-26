@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-const int SPLIT_AXIS_FOR_BROADCAST = -1;
+const int SPLIT_AXIS_FOR_NON_SPLIT = -1;
 
 // [start, end)
 int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t step) {
@@ -218,7 +218,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 const bool from_large_to_small) {
   const user_op::Tensor* large = from_large_to_small ? src : dst;
   const user_op::Tensor* small = from_large_to_small ? dst : src;
-  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_BROADCAST) {
+  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_NON_SPLIT) {
     CHECK_EQ(large->shape().At(slice_ctx.split_axis), slice_ctx.upper - slice_ctx.lower);
   }
 
@@ -281,8 +281,8 @@ DEFINE_STATIC_SWITCH_FUNC(
 std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheContext* ctx,
                                                          const std::string& large_tensor_name) {
   if (ctx->parallel_ctx().parallel_num() == 1) {
-    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
-    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+    // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   }
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
   if (in_sbp.has_split_parallel()) {
@@ -294,10 +294,9 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel()) {
-    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+  } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   } else {
-    // TODO(jianhao): support partialsum
     UNIMPLEMENTED();
   }
 }
@@ -315,8 +314,11 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       if (x_sbp.has_split_parallel()) {
         CHECK(y_sbp.has_partial_sum_parallel());
-      } else {
+      } else if (x_sbp.has_broadcast_parallel()) {
         CHECK(y_sbp.has_broadcast_parallel());
+      } else {
+        CHECK(x_sbp.has_partial_sum_parallel());
+        CHECK(y_sbp.has_partial_sum_parallel());
       }
     }
     return CreateSliceCache(ctx, "x");

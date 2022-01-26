@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/device.h"
@@ -32,8 +33,10 @@ namespace oneflow {
   int64_t out_parallel_num = out_parallel_desc->parallel_num();
   if (out_parallel_num > 1) {
     CHECK_LE_OR_RETURN(out_split_axis, shape.NumAxes());
-    CHECK_OR_RETURN(shape.At(out_split_axis) % out_parallel_num == 0);
-    dim_vec[out_split_axis] = shape.At(out_split_axis) / out_parallel_num;
+    BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
+    const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+    int64_t parallel_id = opt_parallel_id->value_or(0);
+    dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
   *ctx->OutputShape("out", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
