@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_RPC_UTIL_H_
 
 #include <atomic>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/transport_token.h"
@@ -108,24 +109,7 @@ class RankGroup;
 
 struct TransportUtil final {
   static int64_t TimeoutSeconds() {
-    constexpr int64_t dft_value = 60 * 5;
-    const auto* tmp = getenv("EAGER_CONSISTENT_TIMEOUT");
-    std::string s(tmp ? tmp : "");
-
-    // clang-format off
-    auto t = dft_value;
-    if (!s.empty()) {
-      try {
-        t = std::stol(s);
-      } catch (const std::invalid_argument) { 
-        t = dft_value; 
-      } catch (const std::out_of_range) { 
-        t = dft_value; 
-      }
-    }
-    // clang-format on 
-
-    return t;
+    return ParseIntegerFromEnv("EAGER_CONSISTENT_TIMEOUT", 60 * 5);
   }
   static int64_t BlockingWarningIntervalSeconds() { return 5; }
 

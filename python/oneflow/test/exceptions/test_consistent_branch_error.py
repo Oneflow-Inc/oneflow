@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import os
 import numpy as np
 
 import oneflow as flow
@@ -43,6 +44,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
             err_msg = "maybe execute different code in different ranks, please check if the code is branched and operates on the global tensor"
             assert err_msg in str(e)
 
-
 if __name__ == "__main__":
+    os.environ['EAGER_CONSISTENT_TIMEOUT']="15"
     unittest.main()
+    del os.environ['EAGER_CONSISTENT_TIMEOUT']
