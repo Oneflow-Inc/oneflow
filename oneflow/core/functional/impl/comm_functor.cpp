@@ -200,6 +200,7 @@ class LocalAllReduceFunctor {
       op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsMirroredTensor()));
     }
     if (inplace) {
+      JUST(CheckInplaceValid(op_input));
       TensorTuple outputs{op_input};
       JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs));
       return outputs[0];

@@ -27,6 +27,7 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
                 continue
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
+                # NOTE(jianhao)(higher-order-grad): local allreduce doesn't have gradient function, higher-order grad may be unsupported
                 if cur_param is param:
                     flow._C.local_all_reduce(grad, True)
                 else:
