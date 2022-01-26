@@ -25,6 +25,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentBranchError(flow.unittest.TestCase):
     @autotest(n=1, check_graph=False)
