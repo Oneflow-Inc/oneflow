@@ -467,7 +467,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
                                      /*compute_cost=*/true);
   // Parameters
   double total_cost = 0.0;
-  double transfer_cost = ParseDoubleFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
+  double transfer_cost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
   // Set up the information of the first node in the first connection
   const cfg::NdSbp* pre_nd_sbp = &producer_sbp_parallel;
   const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
