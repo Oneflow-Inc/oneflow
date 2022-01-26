@@ -133,12 +133,19 @@ std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
   return std::make_shared<Parameter>(data, requires_grad);
 }
 
-void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor, const py::function& hook) {
-  auto packed_hook = [hook]() -> void {
+void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor, const py::function& hook,
+                                  const py::args& args) {
+  auto py_args_ptr = args.ptr();
+  auto py_func_ptr = hook.ptr();
+  auto packed_hook = [py_func_ptr, py_args_ptr]() -> void {
     py::gil_scoped_acquire gil;
-    hook();
+    py::cast<py::function>(py_func_ptr)();
+    Py_DECREF(py_func_ptr);
+    Py_DECREF(py_args_ptr);
   };
-  tensor->RegisterStorageDeleteHook(packed_hook);
+  Py_INCREF(py_args_ptr);
+  Py_INCREF(py_func_ptr);
+  CHECK_JUST(tensor->RegisterStorageDeleteHook(packed_hook));
 }
 
 }  // namespace
