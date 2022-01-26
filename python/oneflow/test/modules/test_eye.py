@@ -38,13 +38,6 @@ def _test_eye_backward(test_case, device, n, m):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones([n, m])))
 
 
-def _test_eye_with_1n2d(test_case, n, m, device):
-    placement = flow.placement(device, {0: range(2)})
-    x = flow.eye(n, m, placement=placement, sbp=flow.sbp.broadcast)
-    test_case.assertTrue(x.placement, placement)
-    test_case.assertTrue(x.sbp, flow.sbp.broadcast)
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestEye(flow.unittest.TestCase):
     def test_eye(test_case):
@@ -96,6 +89,11 @@ class TestEye(flow.unittest.TestCase):
         return x
 
 
+def _test_eye_with_1n2d(test_case, n, m, placement,sbp):
+    x = flow.eye(n, m, placement=placement, sbp=sbp)
+    test_case.assertTrue(x.placement, placement)
+    test_case.assertTrue(x.sbp,sbp)
+
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentEye(flow.unittest.TestCase):
     def test_eye_with_1n2d(test_case):
@@ -103,7 +101,11 @@ class TestConsistentEye(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_eye_with_1n2d]
         arg_dict["n"] = [4, 3, 2]
         arg_dict["m"] = [4, 3, 2]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["placement"] = [
+            flow.placement("cpu", {0: [0, 1]}),
+            flow.placement("cuda", {0: [0, 1]}),
+        ]
+        arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
