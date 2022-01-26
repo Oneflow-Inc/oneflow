@@ -70,6 +70,7 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::string> inputs_tensor_meta_str_;
   std::vector<std::string> outputs_tensor_meta_str_;
   HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name2tensor_;
+  HashMap<std::string, std::shared_ptr<one::Tensor>> wild_variable_op_name2tensor_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
   HashSet<std::string> variable_op_names_;
   Job job_;

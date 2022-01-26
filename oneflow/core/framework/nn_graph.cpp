@@ -165,6 +165,7 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
     CHECK_OR_RETURN(var->is_eager());
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
+    CHECK_OR_RETURN(wild_variable_op_name2tensor_.emplace(var_name, var).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
@@ -187,6 +188,10 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
           variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
           << " ERROR! variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
+      CHECK_OR_RETURN(
+          wild_variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
+          << " ERROR! variable Tensor with op_name: " << var_name
+          << " has been add in nn.Graph: " << name_;
     } else {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
           << " nn.Graph ONLY support variable_op with empty conf,"
@@ -202,11 +207,12 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
+  job_ = job_ctx->job();
+
+  JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
@@ -320,9 +326,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       cfg::NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
       if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
-        LOG(INFO) << "Graph with name " << name_ << " variable with name `" << var_name
-                  << "` changes its' sbp from " << NdSbpToString(*JUST(tensor->nd_sbp())) << " to "
-                  << NdSbpToString(optimized_nd_sbp) << " after compile optimization.";
+        VLOG(2) << "Graph with name " << name_ << " variable with name `" << var_name
+                << "` changes its' sbp from " << NdSbpToString(*JUST(tensor->nd_sbp())) << " to "
+                << NdSbpToString(optimized_nd_sbp) << " after compile optimization.";
         std::vector<Symbol<cfg::SbpParallel>> optimized_sbp_parallels;
         for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
           optimized_sbp_parallels.emplace_back(optimized_nd_sbp.sbp_parallel(i));
