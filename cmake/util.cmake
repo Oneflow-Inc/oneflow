@@ -283,7 +283,7 @@ function(checkDirAndAppendSlash)
 
 endfunction()
 
-function(getResolvedFiles)
+function(get_resolved_files)
   set(singleValues FILES;OUTPUT)
   set(prefix ARG)
   cmake_parse_arguments(PARSE_ARGV 0 ${prefix} "${noValues}" "${singleValues}" "${multiValues}")

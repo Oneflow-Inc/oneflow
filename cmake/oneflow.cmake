@@ -574,7 +574,7 @@ if(BUILD_CPP_API)
     list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
   endif()
   if(NOT CUDNN_STATIC)
-    getresolvedfiles(FILES ${CUDNN_LIBRARIES} OUTPUT ${CUDNN_LIBRARIES_RESOLVED})
+    get_resolved_files(FILES ${CUDNN_LIBRARIES} OUTPUT ${CUDNN_LIBRARIES_RESOLVED})
     install(FILES ${CUDNN_LIBRARIES_RESOLVED} COMPONENT oneflow_cpp_all DESTINATION lib)
   endif()
 
