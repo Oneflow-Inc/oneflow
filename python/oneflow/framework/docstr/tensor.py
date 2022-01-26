@@ -435,6 +435,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.erf,
+    """
+    Tensor.erf() -> Tensor
+
+    See :func:`oneflow.erf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfc,
+    """
+    Tensor.erfc() -> Tensor
+
+    See :func:`oneflow.erfc`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erfinv,
     """
     See :func:`oneflow.erfinv`
