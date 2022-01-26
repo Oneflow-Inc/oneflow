@@ -36,7 +36,6 @@ except ImportError:
 
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     def delete_shm():
-        # print("delete_shm >>>>>>> ", shm.name)
         shm.close()
         shm.unlink()
 
@@ -53,6 +52,10 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
 
 
 def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
+    def delete_shm():
+        shm.close()
+        shm.unlink()
+
     existing_shm = shared_memory.SharedMemory(name=shm.name)
     arr = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
     t = flow.tensor(arr)
@@ -61,6 +64,7 @@ def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
     shm.close()
     shm.unlink()
 
+    t._register_storage_delete_hook(delete_shm, shm)
     return Parameter(t, requires_grad=requires_grad)
 
 
