@@ -25,13 +25,12 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentBranchError(flow.unittest.TestCase):
     @autotest(n=1, check_graph=False)
     def test_add_with_alpha(test_case):
         try:
-            flow.set_transport_timeout(10)
+            flow._oneflow_internal.boxing.set_sync_timeout(10)
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
