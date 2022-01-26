@@ -22,8 +22,6 @@ namespace oneflow {
 
 namespace ep {
 
-#define BUZY_NUM 2
-
 void CpuDevice::SetAsActiveDevice() {}
 
 Stream* CpuDevice::CreateStream() { return new CpuStream(this); }
