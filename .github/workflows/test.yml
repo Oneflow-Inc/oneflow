@@ -4,22 +4,15 @@ on:
     types: [review_requested]
     branches:
       - "*"
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
 
 jobs:
-  cancel_previous:
-    name: Cancel previous runs
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-      - name: Cancel previous runs of outdated commit
-        uses: styfle/cancel-workflow-action@0.9.0
-        with:
-          access_token: ${{ github.token }}
-          all_but_latest: true
-
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
@@ -36,8 +29,7 @@ jobs:
           fi
           python3 -m pip install -U pip setuptools wheel
           python3 -m pip install oss2
-          python3 tools/package_mirror.py -i cmake
-          python3 tools/package_mirror.py -i oneflow/ir
+          python3 tools/package_mirror.py -i $PWD
 
   check_license_and_format:
     name: License and format
@@ -79,6 +71,17 @@ jobs:
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
+      - name: Check CMake format
+        id: cmake_check
+        run: |
+          python3 -m pip install cmakelang
+          python3 ci/check/run_cmake_format.py --source_dir $PWD
+      - name: Run CMake Format
+        id: cmake_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 -m pip install cmakelang
+          python3 ci/check/run_cmake_format.py --source_dir $PWD --fix
       - name: Git push
         id: git_push
         if: ${{ failure() }}
@@ -385,6 +388,7 @@ jobs:
       TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
+      METRICS_DIR: metrics
     steps:
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -507,7 +511,7 @@ jobs:
         run: |
           unzip ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux.zip -d ${{ steps.download-digest.outputs.entry-dir }}/cpack/
       - name: Exe test
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
         run: |
           chmod +x ${{ steps.download-digest.outputs.entry-dir }}/cpack/liboneflow-ci-linux/bin/oneflow_testexe
@@ -529,7 +533,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: test_resnet50_with_ci
+          ref: 96a727f566534151bff2cad445d5661f0ceedf83
           path: oneflow-models-resnet50
       - name: ResNet50 Graph DDP test
         id: models-resnet50
@@ -550,8 +554,22 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
           docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_speed_multi_client.sh
+      - name: Save speed stats
+        if: ${{ always() && !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        run: |
+          mkdir -p ${{ env.METRICS_DIR }}
+          echo "${{ steps.speed.outputs.stats }}" >> ${{ env.METRICS_DIR }}/speed_stats.txt
+      - name: Upload speed stats
+        if: ${{ always() && !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        continue-on-error: true
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: ${{ env.METRICS_DIR }}
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/metrics/pr/${{ github.event.pull_request.number }}/${{ github.event.pull_request.head.sha }}/${{github.run_id}}
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Post speed stats
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        if: ${{ always() && !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         continue-on-error: true
         uses: actions/github-script@v4
         with:
