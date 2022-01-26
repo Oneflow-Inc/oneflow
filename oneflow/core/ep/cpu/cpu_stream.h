@@ -55,22 +55,23 @@ class CpuStream : public Stream {
   void RecordEvent(Event* event) override;
 
   void SetParallelNumberThreads(size_t num_threads) {
-  #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     // Affects omp_get_max_threads() Get the logical core book
     omp_set_num_threads(number_threads);
-  #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism, num_threads);
-  #endif
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+    tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
+                                            num_threads);
+#endif
   }
 
   template<typename F>
   void Parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size_t num_threads) {
-    auto divup = [] (int64_t x, int64_t y) { return (x + y - 1) / y; };
+    auto divup = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
 
     if (begin >= end) { return; }
-  #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     if (grain_size > 0) { num_threads = std::min(num_threads, divup((end - begin), grain_size)); }
-  #pragma omp parallel num_threads(num_threads)
+#pragma omp parallel num_threads(num_threads)
     {
       int64_t chunk_size = divup((end - begin), num_threads);
       int64_t omp_tid = omp_get_thread_num();
@@ -80,7 +81,7 @@ class CpuStream : public Stream {
       if (thread_begin_index < end) { func(thread_begin_index, thread_end_index); }
     }
 
-  #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
     SetParallelNumberThreads(num_threads);
     size_t nthr_chunk_size = divup((end - begin), num_threads);
     int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
@@ -89,9 +90,9 @@ class CpuStream : public Stream {
         tbb::blocked_range<int64_t>(begin, end, chunk_size),
         [func](const tbb::blocked_range<int64_t>& r) { func(r.begin(), r.end()); },
         tbb::static_partitioner{});
-  #else
+#else
     func(begin, end);
-  #endif
+#endif
   }
 
 #ifdef WITH_ONEDNN

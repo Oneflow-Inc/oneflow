@@ -25,7 +25,8 @@ namespace ep {
 class CpuDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDevice);
-  explicit CpuDevice(DeviceManager* device_manager): device_manager_(device_manager), num_parallel_(1) {}
+  explicit CpuDevice(DeviceManager* device_manager)
+      : device_manager_(device_manager), num_parallel_(1) {}
   ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
