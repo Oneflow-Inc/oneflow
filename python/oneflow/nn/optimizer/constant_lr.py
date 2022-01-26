@@ -59,8 +59,8 @@ class ConstantLR(LRScheduler):
                 "Constant multiplicative factor expected to be between 0 and 1."
             )
 
-        self._factor = factor
-        self._total_iters = total_iters
+        self.factor = factor
+        self.total_iters = total_iters
         super().__init__(optimizer, last_step, verbose)
 
     def get_lr(self):
@@ -70,4 +70,8 @@ class ConstantLR(LRScheduler):
             return [base_lr for base_lr in self.base_lrs]
 
     def _generate_conf_for_graph(self, opt_confs):
-        raise NotImplementedError("ConstantLR is not supported in graph mode")
+        for opt_conf in opt_confs:
+            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
+            constant_lr_conf = learning_rate_decay_conf.mutable_constant_lr_conf()
+            constant_lr_conf.set_factor(self.factor)
+            constant_lr_conf.set_total_iters(self.total_iters)

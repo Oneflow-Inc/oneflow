@@ -118,12 +118,12 @@ class WarmupLR(SequentialLR):
 
         if isinstance(scheduler_or_optimizer, LRScheduler):
             opt = scheduler_or_optimizer._optimizer
-            another_scheduler = scheduler_or_optimizer
+            self.successor_scheduler = scheduler_or_optimizer
         else:
             opt = scheduler_or_optimizer
-            another_scheduler = None
+            self.successor_scheduler = None
 
-        if another_scheduler is None and warmup_iters == 0:
+        if self.successor_scheduler is None and warmup_iters == 0:
             raise ValueError(
                 "When 'scheduler_or_optimizer' is an optimizer warmup_iters can't be equal to 0"
             )
@@ -136,87 +136,123 @@ class WarmupLR(SequentialLR):
         self._optimizer = opt
         self.last_step = last_step
         self._init_base_lrs()
+        self._init_warmup_scheduler()
+        self._init_seq_scheduler()
 
-        if warmup_iters > 0:
-            if warmup_method == "linear":
-                if another_scheduler and warmup_prefix is False:
-                    with _scheduler_with_step(
-                        another_scheduler, warmup_iters
-                    ) as scheduler:
-                        lrs = scheduler.get_lr()
+    def _init_warmup_scheduler(self):
+        self.warmup_scheduler = None
 
-                    end_factor = [
-                        lr / base_lr for lr, base_lr in zip(lrs, self.base_lrs)
-                    ]
-                    assert len(end_factor) > 0
-                    assert np.isclose(end_factor, end_factor[0]).all()
-                    end_factor = end_factor[0]
-                else:
-                    end_factor = 1.0
+        if self.warmup_iters <= 0:
+            return
 
-                warmup_scheduler = LinearLR(
-                    opt,
-                    start_factor=warmup_factor,
-                    end_factor=end_factor,
-                    total_iters=warmup_iters,
-                    last_step=last_step,
-                    verbose=verbose,
-                )
-            else:  # "constant"
-                warmup_scheduler = ConstantLR(
-                    opt,
-                    factor=warmup_factor,
-                    total_iters=warmup_iters,
-                    last_step=last_step,
-                    verbose=verbose,
-                )
-        else:
-            warmup_scheduler = None
+        if self.warmup_method == "linear":
+            if self.successor_scheduler and self.warmup_prefix is False:
+                with _scheduler_with_step(
+                    self.successor_scheduler, self.warmup_iters
+                ) as scheduler:
+                    lrs = scheduler.get_lr()
 
-        if warmup_scheduler and another_scheduler:
-            schedulers = [warmup_scheduler, another_scheduler]
-            milestones = [warmup_iters]
-            interval_rescaling = [False, warmup_prefix]
-        elif warmup_scheduler:
-            schedulers = [warmup_scheduler]
+                end_factor = [lr / base_lr for lr, base_lr in zip(lrs, self.base_lrs)]
+                assert len(end_factor) > 0
+                assert np.isclose(end_factor, end_factor[0]).all()
+                end_factor = end_factor[0]
+            else:
+                end_factor = 1.0
+
+            self.warmup_scheduler = LinearLR(
+                self._optimizer,
+                start_factor=self.warmup_factor,
+                end_factor=end_factor,
+                total_iters=self.warmup_iters,
+                last_step=self.last_step,
+                verbose=self.verbose,
+            )
+        else:  # "constant"
+            self.warmup_scheduler = ConstantLR(
+                self._optimizer,
+                factor=self.warmup_factor,
+                total_iters=self.warmup_iters,
+                last_step=self.last_step,
+                verbose=self.verbose,
+            )
+
+    def _init_seq_scheduler(self):
+        if self.warmup_scheduler and self.successor_scheduler:
+            schedulers = [self.warmup_scheduler, self.successor_scheduler]
+            milestones = [self.warmup_iters]
+            interval_rescaling = [False, self.warmup_prefix]
+        elif self.warmup_scheduler:
+            schedulers = [self.warmup_scheduler]
             milestones = []
             interval_rescaling = False
-        elif another_scheduler:
-            schedulers = [another_scheduler]
+        elif self.successor_scheduler:
+            schedulers = [self.successor_scheduler]
             milestones = []
             interval_rescaling = False
         else:
             raise ValueError("No scheduler can work")
 
         super().__init__(
-            opt,
+            self._optimizer,
             schedulers=schedulers,
             milestones=milestones,
             interval_rescaling=interval_rescaling,
-            last_step=last_step,
-            verbose=verbose,
+            last_step=self.last_step,
+            verbose=self.verbose,
         )
 
-    def _generate_conf_for_graph(self, opt_confs):
-        if self._inner_lr_sch is not None:
-            self._inner_lr_sch._generate_conf_for_graph(opt_confs)
+    def state_dict(self):
+        # exclude optimizer and nested schedulers
+        exclude_attrs = (
+            "_optimizer",
+            "schedulers",  # in parent SequentialLR
+            "warmup_scheduler",
+            "successor_scheduler",
+        )
 
-        if self.warmup_method == "linear":
-            for opt_conf in opt_confs:
-                warmup_conf = opt_conf.mutable_warmup_conf()
-                warmup_conf.mutable_linear_conf().set_warmup_batches(self.warmup_iters)
-                warmup_conf.mutable_linear_conf().set_start_multiplier(
-                    self.warmup_factor
-                )
-        elif self.warmup_method == "constant":
-            for opt_conf in opt_confs:
-                warmup_conf = opt_conf.mutable_warmup_conf()
-                warmup_conf.mutable_constant_conf().set_warmup_batches(
-                    self.warmup_iters
-                )
-                warmup_conf.mutable_constant_conf().set_multiplier(self.warmup_factor)
-        else:
-            raise ValueError(
-                "Only 'constant' or 'linear' warmup_method accepted, but "
-                "got {}".format(self.warmup_method)
-            )
+        state_dict = {
+            key: value
+            for key, value in self.__dict__.items()
+            if key not in exclude_attrs
+        }
+
+        state_dict["warmup_scheduler"] = self.warmup_scheduler.state_dict()
+        state_dict["successor_scheduler"] = self.successor_scheduler.state_dict()
+
+        return state_dict
+
+    def load_state_dict(self, state_dict):
+        if "warmup_scheduler" in state_dict:
+            warmup_scheduler_state = state_dict.pop("warmup_scheduler")
+            if self.warmup_scheduler:
+                self.warmup_scheduler.load_state_dict(warmup_scheduler_state)
+
+        if "successor_scheduler" in state_dict:
+            successor_scheduler_state = state_dict.pop("successor_scheduler")
+            if self.successor_scheduler:
+                self.successor_scheduler.load_state_dict(successor_scheduler_state)
+
+        self.__dict__.update(state_dict)
+
+    def _generate_conf_for_graph(self, opt_confs):
+        if self.warmup_scheduler:
+            for op_conf in opt_confs:
+                warmup_conf = op_conf.mutable_warmup_conf()
+                if self.warmup_method == "linear":
+                    warmup_conf.mutable_linear_conf().set_warmup_batches(
+                        self.warmup_iters
+                    )
+                    warmup_conf.mutable_linear_conf().set_start_multiplier(
+                        self.warmup_factor
+                    )
+                else:
+                    warmup_conf.mutable_constant_conf().set_warmup_batches(
+                        self.warmup_iters
+                    )
+                    warmup_conf.mutable_constant_conf().set_multiplier(
+                        self.warmup_factor
+                    )
+                warmup_conf.set_prefix(self.warmup_prefix)
+
+        if self.successor_scheduler:
+            self.successor_scheduler._generate_conf_for_graph(opt_confs)
