@@ -919,6 +919,30 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedInteractionGradFunctor {
+ public:
+  FusedInteractionGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_interaction_grad")
+                         .Input("dy")
+                         .Input("concat_out")
+                         .Output("dense_feature_grad")
+                         .Output("sparse_feature_grad")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& concat_out,
+                                const int64_t embedding_size, const int64_t num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<int64_t>("num_columns", num_columns));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, concat_out}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -953,6 +977,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
+  m.add_functor<impl::FusedInteractionGradFunctor>("FusedInteractionGrad");
 };
 
 }  // namespace functional

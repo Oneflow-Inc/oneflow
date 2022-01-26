@@ -2188,6 +2188,26 @@ class EmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedInteractionFunctor {
+ public:
+  FusedInteractionFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_interaction")
+                         .Input("dense_feature")
+                         .Input("sparse_feature")
+                         .Output("out")
+                         .Output("concat_out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dense_feature,
+                           const std::shared_ptr<one::Tensor>& sparse_feature) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dense_feature, sparse_feature});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2258,6 +2278,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::FusedInteractionFunctor>("FusedInteraction");
 };
 
 }  // namespace functional

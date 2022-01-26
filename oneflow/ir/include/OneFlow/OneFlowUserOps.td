@@ -8877,8 +8877,8 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
 // Group: Embedding
-// embedding_lookup_placeholder, embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update, embedding_put
-// Total: 9
+// embedding_lookup_placeholder, embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update, embedding_put, fused_interaction, fused_interaction_grad
+// Total: 11
 
 #ifdef GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS
 
@@ -9091,6 +9091,40 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
   );
   let attrs = (ins
     StrAttr:$embedding_options
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedInteractionOp : OneFlow_BaseOp<"fused_interaction", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$dense_feature,
+    AnyType:$sparse_feature
+  );
+  let output = (outs
+    AnyType:$out,
+    AnyType:$concat_out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedInteractionGradOp : OneFlow_BaseOp<"fused_interaction_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    AnyType:$dy,
+    AnyType:$concat_out
+  );
+  let output = (outs
+    AnyType:$dense_feature_grad,
+    AnyType:$sparse_feature_grad
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<SI64Attr, "0">:$num_columns
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

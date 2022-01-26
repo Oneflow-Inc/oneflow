@@ -1904,6 +1904,14 @@
   signature: "Tensor (Tensor ids, Tensor column_ids, DataType dtype, String embedding_options) => OneEmbeddingLookup"
   bind_python: True
   
+- name: "fused_interaction"
+  signature: "Tensor (Tensor dense_feature, Tensor sparse_feature) => FusedInteraction"
+  bind_python: True
+
+- name: "fused_interaction_grad"
+  signature: "TensorTuple (Tensor dy, Tensor concat_out, Int64 embedding_size, Int64 num_columns) => FusedInteractionGrad"
+  bind_python: False
+
 - name: "tensor_buffer_to_tensor"
   signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"
   bind_python: True
