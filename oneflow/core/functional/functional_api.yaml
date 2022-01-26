@@ -1641,7 +1641,7 @@
   bind_python: True
 
 - name: "local_all_reduce"
-  signature: "Tensor (Tensor x) => LocalAllReduce"
+  signature: "Tensor (Tensor x, Bool inplace=False) => LocalAllReduce"
   bind_python: True
 
 - name: "local_reduce"
