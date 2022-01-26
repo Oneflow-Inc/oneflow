@@ -268,7 +268,6 @@ TEST(Optional, Compare) {
   ASSERT_GE(x, a);
   ASSERT_GE(x, d);
 
-
   std::set<Optional<int>> s{2, NullOpt, -1, 3, NullOpt, 2};
 
   ASSERT_EQ(s.size(), 4);
