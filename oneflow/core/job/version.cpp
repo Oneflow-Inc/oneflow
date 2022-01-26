@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/version.h"
-#include "oneflow/core/framework/device_registry_manager.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 void DumpVersionInfo() {
   LOG(INFO) << "OneFlow git version: " << GetOneFlowGitVersion();
-  auto dump_info_funcs = DeviceRegistryMgr::Get().DumpVersionInfoFuncs();
-  for (auto dev_func_pair : dump_info_funcs) { dev_func_pair.second(); }
+  ep::DeviceManagerRegistry::DumpVersionInfo();
 }
 
 }  // namespace oneflow

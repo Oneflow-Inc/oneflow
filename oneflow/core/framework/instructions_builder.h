@@ -408,8 +408,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
-  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
+  Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
                              Symbol<Device> op_device);
+  Maybe<void> SoftSyncStream(
+      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+      const std::string& modifier, Symbol<Device> op_device);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
@@ -469,12 +472,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
  private:
   template<typename PhyInstrOperandT>
-  Maybe<intrusive::shared_ptr<LocalDepObject>> MakeCriticalSectionBegin(
-      const one::EagerBlobObjectListPtr& eager_blob_objects);
+  Maybe<void> MakeCriticalSectionBegin(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
   template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                     const std::shared_ptr<SharedEventRecord>& event_record);
+  Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;

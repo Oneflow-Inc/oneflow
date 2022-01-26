@@ -76,7 +76,8 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -102,7 +103,8 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -110,6 +112,7 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in nccl";
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
                                     GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
                                     nccl_comm->comm(),
@@ -129,7 +132,8 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -156,7 +160,8 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -217,7 +222,8 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

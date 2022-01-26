@@ -157,7 +157,7 @@ Maybe<const OperatorConf&> JobBuilder::OpConf4OpName(const std::string& op_name)
   return *JUST(MapAt(op_name2op_conf_, op_name));
 }
 
-const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
+Maybe<const ParallelConf&> JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
   const auto& iter = lbi2blob_parallel_conf_.find(lbi);
   if (iter != lbi2blob_parallel_conf_.end()) { return *iter->second; }
   return ParallelConf4OpName(lbi.op_name());
@@ -316,9 +316,9 @@ Maybe<void> JobBuilder::ForEachOperator(
   return Maybe<void>::Ok();
 }
 
-const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
+Maybe<const ParallelConf&> JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
   const auto& iter = op_name2parallel_conf_.find(op_name);
-  CHECK(iter != op_name2parallel_conf_.end());
+  CHECK_OR_RETURN(iter != op_name2parallel_conf_.end());
   return *iter->second;
 }
 

@@ -29,6 +29,8 @@ import oneflow._oneflow_internal
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
+from oneflow.framework.tensor import Tensor
+import oneflow.nn.graph.graph as graph_util
 import pickle
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
@@ -120,10 +122,6 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
-def _ElemCnt(shape):
-    return np.prod(shape).astype(int).item()
-
-
 def _LoadSingleVariable(
     path: Optional[str], consistent_src_rank: Optional[int] = None
 ) -> "flow.Tensor":
@@ -187,10 +185,15 @@ def tensor_getstate(self):
     else:
         # save_load_path is None means setstate/getstate is called inside
         # methods other than flow.save/load, for example, copy.deepcopy
-        assert (
-            self.is_local
-        ), "copy.deepcopy and similar methods only support local tensors"
-        return {"data": self.numpy(), "dtype": self.dtype}
+        if self.is_local:
+            return {"data": self.numpy(), "dtype": self.dtype}
+        else:
+            return {
+                "data": self.numpy(),
+                "dtype": self.dtype,
+                "placement": self.placement,
+                "sbp": self.sbp,
+            }
 
 
 def tensor_setstate(self, pickle_dict):
@@ -200,9 +203,38 @@ def tensor_setstate(self, pickle_dict):
         abs_dir_name = save_load_path / rel_dir_name
         self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank))
     else:
-        return self.__init__(
-            flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
-        )
+        if "placement" in pickle_dict:
+            return self.__init__(
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    placement=pickle_dict["placement"],
+                    sbp=pickle_dict["sbp"],
+                )
+            )
+        else:
+            return self.__init__(
+                flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
+            )
+
+
+def placement_getstate(self):
+    return {
+        "device_type": self.device_type,
+        "device_ids": self.device_ids,
+        "hierarchy": self.hierarchy,
+    }
+
+
+def placement_setstate(self, state):
+    return self.__init__(state["device_type"], state["device_ids"], state["hierarchy"])
+
+
+def RegisterMethods():
+    Tensor.__setstate__ = tensor_setstate
+    Tensor.__getstate__ = tensor_getstate
+    flow._oneflow_internal.placement.__getstate__ = placement_getstate
+    flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
 def legacy_load(
@@ -302,6 +334,22 @@ def save(
             disk I/O.
     """
     path: Path = Path(path)
+
+    if isinstance(obj, graph_util.Graph):
+        graph: graph_util.Graph = obj
+        if not graph._is_compiled:
+            raise RuntimeError("graph must be compiled first.")
+
+        path.mkdir(exist_ok=True)
+
+        serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
+
+        for x in graph._state():
+            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+
+        return
+
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
     with tensor_pickling_context(path, consistent_dst_rank):
         pickled_bytes = pickle.dumps(obj)
@@ -310,12 +358,6 @@ def save(
         path.mkdir(exist_ok=True)
         pickle_path = path / PICKLE_FILENAME
         pickle_path.write_bytes(pickled_bytes)
-
-
-def generate_values_by_initializer(initializer, shape, dtype):
-    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
-    length = _ElemCnt(shape)
-    return np.array(initializer(length)).astype(np_dtype).reshape(shape)
 
 
 save_load_path = None

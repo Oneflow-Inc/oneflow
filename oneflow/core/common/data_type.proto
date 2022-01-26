@@ -15,7 +15,15 @@ enum DataType {
   kTensorBuffer = 10;
   kBFloat16 = 11;
   kBool = 12;
-  kMaxDataType = 13; 
+  kUInt16 = 13;
+  kUInt32 = 14;
+  kUInt64 = 15;
+  kUInt128 = 16;
+  kInt16 = 17;
+  kInt128 = 18;
+  kComplex32 = 19;
+  kComplex64 = 20;
+  kComplex128 = 21;
 }
 
 message OptInt64 {

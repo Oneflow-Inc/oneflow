@@ -22,6 +22,7 @@ import numpy as np
 import oneflow
 import oneflow as flow
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal._C as _C
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.unittest
@@ -48,7 +49,6 @@ class TestFetchOutputTensor(unittest.TestCase):
             job_conf.set_job_name("cc_test_output_op_expr_job")
             job_conf.mutable_predict_conf()
             c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-            attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
             input_conf = (
                 oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
             )
@@ -65,11 +65,11 @@ class TestFetchOutputTensor(unittest.TestCase):
             output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
                 "cc_Output_0", output_conf, ["in_0"], ["out_0"]
             )
-            lazy_tensor = input_op.apply([x], attrs)[0]
+            lazy_tensor = _C.dispatch_feed_input(input_op, x)
             test_case.assertEqual(lazy_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(lazy_tensor.is_lazy)
             test_case.assertTrue(lazy_tensor.is_local)
-            eager_tensor = output_op.apply([lazy_tensor], attrs)[0]
+            eager_tensor = _C.dispatch_fetch_output(output_op, lazy_tensor)
             test_case.assertEqual(eager_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(not eager_tensor.is_lazy)
             test_case.assertTrue(eager_tensor.is_local)

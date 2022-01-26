@@ -294,3 +294,46 @@ class Optimizer(object):
                 warnings.warn(
                     "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
                 )
+
+    @property
+    def support_sparse(self):
+        return False
+
+    def _check_variables_in_graph(self, vars_conf):
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                if param not in vars_conf:
+                    raise ValueError(
+                        f"Parameter <{param}> is not in the corresponding nn.Graph/nn.Module."
+                        " Please make sure you call the module's to(..)/to_consistent(...) method first,"
+                        " then add the module's parameters into an optimizer."
+                    )
+
+    def _check_variables_optimizer_bound(self, vars_conf):
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                if vars_conf[param].bound_optimizer is None:
+                    vars_conf[param].bound_optimizer = self
+                elif vars_conf[param].bound_optimizer is not self:
+                    raise ValueError(
+                        f"<{vars_conf[param].name}> is already bound to another optimizer."
+                    )
+
+    def _generate_indexed_slices_optimizer_conf(self, job_conf, vars_conf):
+        if not self.support_sparse:
+            raise ValueError(f"{self.__class__} does not support sparse updating.")
+
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                sparse_opt_conf = job_conf.mutable_indexed_slices_optimizer_conf()
+                sparse_variable_op_names = sparse_opt_conf.mutable_include_op_names()
+                sparse_variable_op_names.add_op_name(vars_conf[param].name)

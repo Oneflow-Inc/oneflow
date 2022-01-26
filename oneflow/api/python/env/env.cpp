@@ -37,4 +37,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("IsMultiClient", &IsMultiClient);
   m.def("SetIsMultiClient", &SetIsMultiClient);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+  m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
+  m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
+  m.def("SetFLAGS_v", &SetFLAGS_v);
+  m.def("GetFLAGS_v", &GetFLAGS_v);
 }

@@ -26,90 +26,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-@register_tensor_op("sub")
-def _sub(input, other):
-    """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
-    The formula is:
-
-    .. math::
-        out = input - other
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        # element-wise subtract
-        >>> input = flow.Tensor(np.random.randn(2,3))
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.sub(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # scalar subtract
-        >>> input = 5
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.sub(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # broadcast subtract
-        >>> input = flow.Tensor(np.random.randn(1,1))
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.sub(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-    """
-    return flow._C.sub(input, other)
-
-
-@register_tensor_op("div")
-def _div(input, other):
-    """Computes the division of input by other for each element, scalar and broadcast promotation are supported.
-    The formula is:
-
-    .. math::
-        out = \\frac{input}{other}
-    
-    Args:
-        input (Union[int, float, flow.Tensor]): input.
-        other (Union[int, float, flow.Tensor]): other.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        # element-wise divide
-        >>> input = flow.Tensor(np.random.randn(2,3))
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.div(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # scalar divide
-        >>> input = 5
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.div(input,other).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # broadcast divide
-        >>> input = flow.Tensor(np.random.randn(1,1))
-        >>> other = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.div(input,other).numpy()
-        >>> out.shape 
-        (2, 3)
-
-    """
-    return flow._C.div(input, other)
-
-
 @register_tensor_op("reciprocal")
 def _reciprocal(x):
     """Computes the safe reciprocal of x. If x is zero, the reciprocal will
@@ -467,6 +383,32 @@ def log_op(input):
     return flow._C.log(input)
 
 
+@register_tensor_op("log2")
+def log2_op(input):
+    """
+    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
+    
+    .. math::
+        y_{i} = \\log2_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.random.randn(2, 3, 4, 5)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> output = flow.log2(input)
+
+
+    """
+    return flow._C.log2(input)
+
+
 @register_tensor_op("rsqrt")
 def rsqrt_op(input):
     """Returns a new tensor with the reciprocal of the square-root of each of
@@ -614,124 +556,6 @@ def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     See :func:`oneflow.addmm`
     """
     return addmm(input, mat1, mat2, alpha, beta)
-
-
-class Clamp(Module):
-    def __init__(self, min_value=None, max_value=None) -> None:
-        super().__init__()
-        if min_value is not None:
-            floating_min_value = float(min_value)
-            integral_min_value = int(min_value)
-        if max_value is not None:
-            floating_max_value = float(max_value)
-            integral_max_value = int(max_value)
-        if min_value is not None and max_value is not None:
-            self._op = (
-                flow.builtin_op("clip_by_scalar")
-                .Input("x")
-                .Output("y")
-                .Attr("floating_min", floating_min_value)
-                .Attr("integral_min", integral_min_value)
-                .Attr("floating_max", floating_max_value)
-                .Attr("integral_max", integral_max_value)
-                .Build()
-            )
-        elif min_value is not None:
-            self._op = (
-                flow.builtin_op("clip_by_scalar_min")
-                .Input("x")
-                .Output("y")
-                .Attr("floating_min", floating_min_value)
-                .Attr("integral_min", integral_min_value)
-                .Build()
-            )
-        elif max_value is not None:
-            self._op = (
-                flow.builtin_op("clip_by_scalar_max")
-                .Input("x")
-                .Output("y")
-                .Attr("floating_max", floating_max_value)
-                .Attr("integral_max", integral_max_value)
-                .Build()
-            )
-        else:
-            raise ValueError("min_value and max_value cannot be None at the same time")
-
-    def forward(self, x):
-        return self._op(x)[0]
-
-
-def clamp_op(input, min=None, max=None):
-    """
-    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
-    a resulting tensor:
-
-    .. math::
-        y_i = \\begin{cases}
-            \\text{min} & \\text{if } x_i < \\text{min} \\\\
-            x_i & \\text{if } \\text{min} \\leq x_i \\leq \\text{max} \\\\
-            \\text{max} & \\text{if } x_i > \\text{max}
-        \\end{cases}
-
-    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
-    and :attr:`max` must be real numbers, otherwise they should be integers.
-
-    Args:
-        input (Tensor): the input tensor.
-        min (Number): lower-bound of the range to be clamped to. Defaults to None.
-        max (Number): upper-bound of the range to be clamped to. Defaults to None.
-        out (Tensor, optional): the output tensor.
-
-    For example:
-
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=None, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=None)
-        >>> output
-        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-    """
-    return flow._C.clamp(input, min, max)
-
-
-@register_tensor_op("clamp")
-def clamp_op_tensor(tensor, min=None, max=None):
-    """
-    See :func:`oneflow.clamp`
-    """
-    return Clamp(min, max)(tensor)
-
-
-def clip_op(tensor, min=None, max=None):
-    """
-    Alias for :func:`oneflow.clamp`
-    """
-    return Clamp(min, max)(tensor)
-
-
-@register_tensor_op("clip")
-def clip_op_tensor(tensor, min=None, max=None):
-    """
-    See :func:`oneflow.clamp`
-    """
-    return Clamp(min, max)(tensor)
 
 
 @register_tensor_op("cosh")
@@ -989,14 +813,8 @@ class Topk(Module):
         self, k, dim: int = None, largest: bool = True, sorted: bool = True
     ) -> None:
         super().__init__()
-        self._op_topk_last_dim = (
-            flow.builtin_op("top_k")
-            .Input("in")
-            .Output("out")
-            .Attr("k", k)
-            .Attr("sorted", sorted)
-            .Build()
-        )
+        self.k = k
+        self.sorted = sorted
         self.dim = dim
         self.largest = largest
 
@@ -1008,19 +826,19 @@ class Topk(Module):
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             if self.largest:
-                indices = self._op_topk_last_dim(input)[0]
+                indices = flow._C.top_k(input, self.k)
             else:
                 neg_input = flow.mul(input, -1)
-                indices = self._op_topk_last_dim(neg_input)[0]
+                indices = flow._C.top_k(neg_input, self.k)
             return (flow.gather(input, axis, indices), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow._C.transpose(input, perm=perm)
             if self.largest:
-                indices = self._op_topk_last_dim(x)[0]
+                indices = flow._C.top_k(x, self.k)
             else:
                 neg_input = flow.mul(x, -1)
-                indices = self._op_topk_last_dim(neg_input)[0]
+                indices = flow._C.top_k(neg_input, self.k)
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, axis, indices), indices)
 
@@ -1053,7 +871,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
                 [9., 4., 3.]], dtype=oneflow.float32)
         >>> indices
         tensor([[2, 3, 1],
-                [1, 2, 3]], dtype=oneflow.int32)
+                [1, 2, 3]], dtype=oneflow.int64)
         >>> values.shape
         oneflow.Size([2, 3])
         >>> indices.shape
@@ -1064,7 +882,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
                 [1., 2.]], dtype=oneflow.float32)
         >>> indices
         tensor([[0, 4],
-                [0, 4]], dtype=oneflow.int32)
+                [0, 4]], dtype=oneflow.int64)
         >>> values.shape
         oneflow.Size([2, 2])
         >>> indices.shape

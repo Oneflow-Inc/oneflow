@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
 import inspect
+import os
 import unittest
 from collections import OrderedDict
 
-from test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
+
+from test_util import GenArgList
 
 
 def _run_functional_doctest(
@@ -59,4 +59,5 @@ class TestFunctionalDocstrModule(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
+    flow.set_printoptions(linewidth=80)
     unittest.main()

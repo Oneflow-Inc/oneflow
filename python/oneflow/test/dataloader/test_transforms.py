@@ -16,10 +16,12 @@ limitations under the License.
 import os
 import unittest
 
+import flowvision as vision
+import flowvision.transforms as transforms
+
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.optim as optim
-import oneflow.utils.vision.transforms as transforms
 import oneflow.unittest
 from data_utils import load_data_cifar10
 
@@ -56,7 +58,7 @@ def test(test_case):
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
-    transform = flow.utils.vision.transforms.Compose(
+    transform = transforms.Compose(
         [
             transforms.Pad(10),
             transforms.RandomHorizontalFlip(p=0.5),

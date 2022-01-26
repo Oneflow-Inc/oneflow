@@ -110,7 +110,7 @@ class Adam(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
@@ -136,7 +136,7 @@ class Adam(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
@@ -144,14 +144,12 @@ class Adam(Optimizer):
                 self._state[param] = dict()
 
         self._op = (
-            flow.builtin_op("adam_update")
+            flow.stateful_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
             .Input("max_v")
-            .Attr("l1", 0.0)
-            .Attr("weight_decay", 0.0)
             .Build()
         )
 
@@ -177,9 +175,9 @@ class Adam(Optimizer):
                     )
 
                 kwargs = {
-                    "learning_rate_val": param_group["lr"],
-                    "bias_correction1_val": param_group["bias_correction1"],
-                    "bias_correction2_val": param_group["bias_correction2"],
+                    "learning_rate": param_group["lr"],
+                    "bias_correction1": param_group["bias_correction1"],
+                    "bias_correction2": param_group["bias_correction2"],
                     "l2": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
@@ -199,8 +197,10 @@ class Adam(Optimizer):
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    self._op(
-                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs,
+                    flow._C.dispatch_adam_update(
+                        self._op,
+                        (param, param.grad, m_tensor, v_tensor, max_v_tensor),
+                        **kwargs,
                     )
 
             self._state["step"] += 1
@@ -243,3 +243,7 @@ class Adam(Optimizer):
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs
+
+    @property
+    def support_sparse(self):
+        return True

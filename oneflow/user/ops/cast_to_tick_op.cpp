@@ -15,43 +15,46 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/* static */ Maybe<void> CastToTickOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  *out_shape = Shape({1});
+  return Maybe<void>::Ok();
+}
 
-REGISTER_NO_GRAD_USER_OP("cast_to_tick")
-    .Input("in")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      *out_shape = Shape({1});
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+/*static*/ Maybe<void> CastToTickOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
-      in_distribution->clear_sbp_parallel();
-      out_distribution->clear_sbp_parallel();
-      // in use hint
-      in_distribution->CopyFrom(in_dis_hint);
+/* static */ Maybe<void> CastToTickOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
 
-      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-        // out dim1 = broadcast
-        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/* static */ Maybe<void> CastToTickOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+  CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
 
-}  // namespace
+  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  in_distribution->clear_sbp_parallel();
+  out_distribution->clear_sbp_parallel();
+  // in use hint
+  in_distribution->CopyFrom(in_dis_hint);
+
+  for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+    // out dim1 = broadcast
+    out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CastToTickOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

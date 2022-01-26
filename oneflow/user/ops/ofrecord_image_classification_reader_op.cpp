@@ -14,66 +14,57 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
-    .Output("image")
-    .Output("label")
-    .Attr<std::string>("data_dir")
-    .Attr<int32_t>("data_part_num")
-    .Attr<int32_t>("batch_size")
-    .Attr<std::string>("part_name_prefix", "part-")
-    .Attr<int32_t>("part_name_suffix_length", -1)
-    .Attr<bool>("random_shuffle", false)
-    .Attr<int64_t>("seed", -1)
-    .Attr<int32_t>("shuffle_buffer_size", 1024)
-    .Attr<bool>("shuffle_after_epoch", false)
-    .Attr<std::string>("color_space", "BGR")
-    .Attr<std::string>("image_feature_name", "encoded")
-    .Attr<std::string>("label_feature_name", "class/label")
-    .Attr<int32_t>("decode_buffer_size_per_thread", 8)
-    .Attr<int32_t>("num_decode_threads_per_machine", 0)
-    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
-      user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
-      int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
-      int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      if (sbp.has_split_parallel() && parallel_num > 1) {
-        CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
-        local_batch_size /= parallel_num;
-      }
-      *image_tensor->mut_shape() = Shape({local_batch_size});
-      *label_tensor->mut_shape() = Shape({local_batch_size});
-      return Maybe<void>::Ok();
-    })
-    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
-      user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
-      int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-      *image_tensor->mut_shape() = Shape({batch_size});
-      *label_tensor->mut_shape() = Shape({batch_size});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
-      user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
-      CHECK_OR_RETURN(image_modifier != nullptr);
-      image_modifier->set_header_infered_before_compute(false);
-      user_op::OutputArgModifier* label_modifier = GetOutputArgModifierFn("label", 0);
-      CHECK_OR_RETURN(label_modifier != nullptr);
-      label_modifier->set_header_infered_before_compute(false);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
-      *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
+  user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
+  int32_t batch_size = ctx->Attr<int32_t>("batch_size");
+  *image_tensor->mut_shape() = Shape({batch_size});
+  *label_tensor->mut_shape() = Shape({batch_size});
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
+  user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
+  int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
+  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
+  int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+  if (sbp.has_split_parallel() && parallel_num > 1) {
+    CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
+    local_batch_size /= parallel_num;
+  }
+  *image_tensor->mut_shape() = Shape({local_batch_size});
+  *label_tensor->mut_shape() = Shape({local_batch_size});
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OfrecordImageClassificationReaderOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OfrecordImageClassificationReaderOp::ModifyOutputArg(
+    const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
+  CHECK_OR_RETURN(image_modifier != nullptr);
+  image_modifier->set_header_infered_before_compute(false);
+  user_op::OutputArgModifier* label_modifier = GetOutputArgModifierFn("label", 0);
+  CHECK_OR_RETURN(label_modifier != nullptr);
+  label_modifier->set_header_infered_before_compute(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferDataType(
+    user_op::InferContext* ctx) {
+  *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
+  *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

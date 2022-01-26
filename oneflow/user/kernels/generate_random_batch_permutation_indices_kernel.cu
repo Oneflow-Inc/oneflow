@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -91,7 +91,8 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kCUDA>>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);

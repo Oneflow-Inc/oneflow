@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
 
@@ -38,7 +38,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   ~CastKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input_tensor->shape().elem_cnt();

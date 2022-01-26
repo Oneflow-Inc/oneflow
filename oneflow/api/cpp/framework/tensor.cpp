@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/cpp/framework/tensor.h"
-#include <memory>
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/shape.h"
@@ -42,17 +41,31 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
 }
 Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}
 
-const Shape Tensor::shape() const {
+Tensor::Tensor(const Tensor& tensor) : tensor_(tensor.tensor_) {}
+Tensor::Tensor(Tensor&& tensor) noexcept : tensor_(std::move(tensor.tensor_)) {}
+
+Tensor& Tensor::operator=(const Tensor& tensor) {
+  if (&tensor == this) { return *this; }
+  tensor_ = tensor.tensor_;
+  return *this;
+}
+Tensor& Tensor::operator=(Tensor&& tensor) noexcept {
+  if (&tensor == this) { return *this; }
+  tensor_ = std::move(tensor.tensor_);
+  return *this;
+}
+
+Shape Tensor::shape() const {
   const auto shape_ = tensor_->shape();
   return Shape(std::vector<int64_t>(shape_->dim_vec().begin(), shape_->dim_vec().end()));
 }
 
-const Device Tensor::device() const {
+Device Tensor::device() const {
   const auto device_ = tensor_->device().GetOrThrow();
   return Device(device_->type(), device_->device_id());
 }
 
-const DType Tensor::dtype() const { return static_cast<DType>(tensor_->dtype()->data_type()); }
+DType Tensor::dtype() const { return static_cast<DType>(tensor_->dtype()->data_type()); }
 
 void Tensor::zeros_() {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
@@ -87,7 +100,7 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
 }
 
 template<typename T>
-void Tensor::copy_to(T* buffer) {
+void Tensor::copy_to(T* buffer) const {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor_->AsMirroredTensor().GetPtrOrThrow();
   const auto shape = this->shape();
@@ -117,7 +130,7 @@ void Tensor::copy_to(T* buffer) {
 const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const { return tensor_; }
 
 #define REGISTER_TENSOR_COPY_TO(cpp_dtype) \
-  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer);
+  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer) const;
 
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)

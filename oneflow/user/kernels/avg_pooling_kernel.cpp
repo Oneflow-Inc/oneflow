@@ -17,14 +17,14 @@ limitations under the License.
 
 namespace oneflow {
 
-struct AvgPoolingOpKernelState final : public user_op::OpKernelState {
+struct AvgPoolingOpKernelCache final : public user_op::OpKernelCache {
   AvgPoolingParams3D params_3d;
-  AvgPoolingOpKernelState(AvgPoolingParams3D params_3d) : params_3d(params_3d) {}
-  const AvgPoolingParams3D& GetParams3D() { return params_3d; }
+  explicit AvgPoolingOpKernelCache(const AvgPoolingParams3D& params_3d) : params_3d(params_3d) {}
+  const AvgPoolingParams3D& GetParams3D() const { return params_3d; }
 };
 
-std::shared_ptr<AvgPoolingOpKernelState> DoCreateAvgOpKernelState(
-    user_op::KernelComputeContext* ctx, const int32_t& dim) {
+std::shared_ptr<AvgPoolingOpKernelCache> CreateAvgOpKernelCache(user_op::KernelCacheContext* ctx,
+                                                                const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
@@ -37,8 +37,8 @@ std::shared_ptr<AvgPoolingOpKernelState> DoCreateAvgOpKernelState(
   AvgPoolingParams3D params_3d =
       AvgPoolingParams3D(dim, x_shape, data_format, padding, kernel_size, stride, ceil_mode,
                          count_include_pad, divisor_override);
-  std::shared_ptr<AvgPoolingOpKernelState> state(new AvgPoolingOpKernelState(params_3d));
-  return state;
+  std::shared_ptr<AvgPoolingOpKernelCache> cache(new AvgPoolingOpKernelCache(params_3d));
+  return cache;
 }
 
 template<typename T>
@@ -126,12 +126,18 @@ class AvgPool1dKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 1);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-    const auto& pooling_state = DoCreateAvgOpKernelState(ctx, 1);
-    const AvgPoolingParams3D& params_3d = pooling_state->GetParams3D();
+    const auto* pooling_cache = dynamic_cast<const AvgPoolingOpKernelCache*>(cache);
+    const AvgPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = y->shape().elem_cnt();
     const T* src = x->dptr<T>();
@@ -153,12 +159,18 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 1);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const auto& pooling_state = DoCreateAvgOpKernelState(ctx, 1);
-    const AvgPoolingParams3D& params_3d = pooling_state->GetParams3D();
+    const auto* pooling_cache = dynamic_cast<const AvgPoolingOpKernelCache*>(cache);
+    const AvgPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
@@ -182,12 +194,18 @@ class AvgPool2dKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 2);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-    const auto& pooling_state = DoCreateAvgOpKernelState(ctx, 2);
-    const AvgPoolingParams3D& params_3d = pooling_state->GetParams3D();
+    const auto* pooling_cache = dynamic_cast<const AvgPoolingOpKernelCache*>(cache);
+    const AvgPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = y->shape().elem_cnt();
     const T* src = x->dptr<T>();
@@ -209,12 +227,18 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 2);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const auto& pooling_state = DoCreateAvgOpKernelState(ctx, 2);
-    const AvgPoolingParams3D& params_3d = pooling_state->GetParams3D();
+    const auto* pooling_cache = dynamic_cast<const AvgPoolingOpKernelCache*>(cache);
+    const AvgPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
@@ -238,12 +262,18 @@ class AvgPool3dKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 3);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
 
-    const auto& pooling_state = DoCreateAvgOpKernelState(ctx, 3);
-    const AvgPoolingParams3D& params_3d = pooling_state->GetParams3D();
+    const auto* pooling_cache = dynamic_cast<const AvgPoolingOpKernelCache*>(cache);
+    const AvgPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = y->shape().elem_cnt();
     const T* src = x->dptr<T>();
@@ -265,12 +295,18 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 3);
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const auto& pooling_state = DoCreateAvgOpKernelState(ctx, 3);
-    const AvgPoolingParams3D& params_3d = pooling_state->GetParams3D();
+    const auto* pooling_cache = dynamic_cast<const AvgPoolingOpKernelCache*>(cache);
+    const AvgPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();

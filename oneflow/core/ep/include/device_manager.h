@@ -26,21 +26,21 @@ namespace oneflow {
 
 namespace ep {
 
+class DeviceManagerRegistry;
+
 class DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceManager);
   DeviceManager() = default;
   virtual ~DeviceManager() = default;
 
+  virtual DeviceManagerRegistry* registry() const = 0;
   virtual std::shared_ptr<Device> GetDevice(size_t device_index) = 0;
   virtual size_t GetDeviceCount(size_t primary_device_index) = 0;
   virtual size_t GetDeviceCount() = 0;
   virtual size_t GetActiveDeviceIndex() = 0;
   virtual void SetActiveDeviceByIndex(size_t device_index) = 0;
 };
-
-#define REGISTER_EP_DEVICE_MANAGER(device_type, ManagerType) \
-  REGISTER_CLASS(int32_t, device_type, DeviceManager, ManagerType)
 
 }  // namespace ep
 

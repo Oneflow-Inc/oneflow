@@ -37,20 +37,22 @@ class Shape final {
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
 
-  bool operator==(const Shape& rhs) const;
-  bool operator!=(const Shape& rhs) const;
+  [[nodiscard]] bool operator==(const Shape& rhs) const;
+  [[nodiscard]] bool operator!=(const Shape& rhs) const;
 
-  int64_t elem_cnt() const;
-  int64_t At(int64_t index) const;
   void Set(int64_t index, int64_t val);
-  int64_t NumAxes() const;
 
-  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
-  int64_t Count(int64_t begin_axis) const;
+  [[nodiscard]] int64_t elem_cnt() const;
+  [[nodiscard]] int64_t At(int64_t index) const;
+  [[nodiscard]] int64_t NumAxes() const;
+  [[nodiscard]] int64_t Count(int64_t begin_axis, int64_t end_axis) const;
+  [[nodiscard]] int64_t Count(int64_t begin_axis) const;
 
  private:
   std::shared_ptr<oneflow::Shape> shape_ = nullptr;
+
+  friend std::ostream& operator<<(std::ostream&, const Shape&);
 };
 }  // namespace oneflow_api
 
-#endif  // !ONEFLOW_API_CPP_FRAMEWORK_SHAPE_H_
+#endif  // ONEFLOW_API_CPP_FRAMEWORK_SHAPE_H_

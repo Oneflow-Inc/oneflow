@@ -13,10 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/multi_client.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/data/gpt_dataset.h"
+#include "oneflow/user/data/distributed_util.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -70,26 +69,7 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
     batch_size_ = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
-
-    // NOTE(zwx): GPTDataLoader is not consistent since attr nd_sbp is empty,
-    // we assume that it works in DDP
-    auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-    if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) {
-      num_shards_ = GlobalProcessCtx::WorldSize();
-      shard_index_ = GlobalProcessCtx::Rank();
-    } else {
-      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      const cfg::NdSbp& paral_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
-      CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
-      num_shards_ = GetNumShards(hierarchy, paral_dist);
-      CHECK_EQ(num_samples % num_shards_, 0);
-      shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
-
-      size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
-      CHECK_EQ(logical_batch_size % num_shards_, 0);
-      CHECK_EQ(logical_batch_size / num_shards_, batch_size_);
-    }
-    CHECK_LT(shard_index_, num_shards_);
+    CHECK_JUST(InitDataSourceDistributedInfo(ctx, num_shards_, shard_index_));
   }
   ~GPTDataLoader() = default;
 
@@ -118,7 +98,7 @@ class GPTDataLoader final : public OpKernelState {
   size_t label_len_;
   size_t batch_size_;
   size_t num_shards_;
-  size_t shard_index_;
+  int64_t shard_index_;
   size_t batch_cnt_;
 };
 
@@ -134,7 +114,8 @@ class GPTDataLoaderKernel final : public OpKernel {
   }
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx, OpKernelState* state,
+               const OpKernelCache*) const override {
     auto* loader = dynamic_cast<GPTDataLoader*>(state);
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);

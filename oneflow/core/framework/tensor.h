@@ -288,7 +288,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     return tensor_->consistent_tensor_meta();
   }
-  Maybe<Tensor> data() override { return tensor_; }
+  Maybe<Tensor> data() override { return tensor_->detach(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Parameter.data() in operators.
@@ -417,10 +417,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_cuda() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
-  Maybe<Tensor> data() override {
-    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
-    return std::static_pointer_cast<Tensor>(shared_from_this());
-  }
+  Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -522,10 +519,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
-  Maybe<Tensor> data() override {
-    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
-    return std::static_pointer_cast<Tensor>(shared_from_this());
-  }
+  Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -587,17 +581,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
-  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
-    const auto& consistent_tensor =
-        std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor);
-    bool old_requires_grad = requires_grad();
-    impl_ = consistent_tensor->impl_;
-    set_requires_grad(old_requires_grad);
-    grad_fn_node_ = nullptr;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
   Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override {

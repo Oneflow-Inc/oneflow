@@ -60,4 +60,9 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 
 int64_t Shape::Count(int64_t begin_axis) const { return shape_->Count(begin_axis); }
 
+std::ostream& operator<<(std::ostream& os, const Shape& shape) {
+  os << shape.shape_->DebugStr();
+  return os;
+}
+
 }  // namespace oneflow_api

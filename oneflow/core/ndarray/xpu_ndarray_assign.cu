@@ -22,7 +22,8 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename X, int NDIMS>
-__global__ void NdarrayAssignGpu(XpuVarNdarray<T> y, const XpuReducedNdarray<X, NDIMS> reduced) {
+__global__ void NdarrayAssignReducedGpu(XpuVarNdarray<T> y,
+                                        const XpuReducedNdarray<X, NDIMS> reduced) {
   NdarrayAssignCore<T, X, NDIMS>::Assign(y, reduced);
 }
 
@@ -38,7 +39,7 @@ struct NdarrayAssignCoreWrapper<DeviceType::kCUDA, T, X, NDIMS> final {
   static void Assign(ep::Stream* stream, XpuVarNdarray<T>* y,
                      const XpuReducedNdarray<X, NDIMS>& reduced) {
     size_t n = y->host_shape().HostElemNum();
-    RUN_CUDA_KERNEL((NdarrayAssignGpu<T, X, NDIMS>), stream, n, *y, reduced);
+    RUN_CUDA_KERNEL((NdarrayAssignReducedGpu<T, X, NDIMS>), stream, n, *y, reduced);
   }
   static void Assign(ep::Stream* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const X>& x) {
     size_t n = y.host_shape().HostElemNum();
