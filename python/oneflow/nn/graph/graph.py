@@ -268,18 +268,25 @@ class Graph(object):
         # Get states from sub module block
         for name, block in self._blocks.items():
             assert block.type == BlockType.MODULE
+            sub_destination = OrderedDict()
+            sub_destination._metadata = OrderedDict()
             module = block.origin
             if module is not None:
-                module.state_dict(destination, prefix + name + ".", keep_vars=keep_vars)
+                module.state_dict(sub_destination, prefix + ("." if prefix else ""), keep_vars=keep_vars)
+            destination[name] = sub_destination
         return destination
 
     def load_state_dict(
         self,
-        state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
+        state_dict: Dict[str, Dict[str, Tensor]],
         strict: bool = True,
     ):
-        pass
         # 1 load parameter/buffer to Modules
+        for name, sub_dict in state_dict.items():
+            if name in self._blocks:
+                self._blocks[name].origin.load_state_dict(sub_dict, strict)
+            else:
+                self._print(2, 0, f"Unknown key {name} in state_dict.")
         # 2 store other state to CNNGraph, CNNGraph load them after job pass
 
     @property

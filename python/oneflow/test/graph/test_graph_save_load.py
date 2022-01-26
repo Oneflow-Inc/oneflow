@@ -1,6 +1,7 @@
 import unittest
 import os
 import numpy as np
+import copy
 
 import oneflow as flow
 import oneflow.unittest
@@ -44,8 +45,15 @@ def _test_linear_graph_save_load(test_case, device):
 
         linear_t_g = LinearTrainGraph()
         of_graph_out = linear_t_g(x)
-        state_dict = linear_t_g.state_dict()
-        print(state_dict)
+        iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
+        print("Iter 0 state dict", iter0_state_dict)
+        of_graph_out = linear_t_g(x)
+        iter1_state_dict = linear_t_g.state_dict()
+        print("Iter 1 state dict", iter1_state_dict)
+        print("Iter 0 state dict", iter0_state_dict)
+        linear_t_g.load_state_dict(iter0_state_dict)
+        print("Iter 1 state dict after load iter 0", iter1_state_dict)
+
 
     train_with_graph()
 
@@ -56,7 +64,7 @@ class TestLinearGraphSaveLoad(oneflow.unittest.TestCase):
     def test_linear_graph_save_load_gpu(test_case):
         _test_linear_graph_save_load(test_case, flow.device("cuda"))
 
-    def test_linear_graph_save_load_cpu(test_case):
+    def _test_linear_graph_save_load_cpu(test_case):
         _test_linear_graph_save_load(test_case, flow.device("cpu"))
 
 
