@@ -119,7 +119,7 @@ class Testrandperm(flow.unittest.TestCase):
         return y
 
 def _test_consistent_randperm(test_case, N,placement,sbp,dtype):
-    x = flow.randperm(10, placement=placement, sbp=sbp, dtype=dtype)
+    x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
