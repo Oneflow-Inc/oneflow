@@ -138,10 +138,13 @@ void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor, const p
   auto py_args_ptr = args.ptr();
   auto py_func_ptr = hook.ptr();
   auto packed_hook = [py_func_ptr, py_args_ptr]() -> void {
-    py::gil_scoped_acquire gil;
-    py::cast<py::function>(py_func_ptr)();
-    Py_DECREF(py_func_ptr);
-    Py_DECREF(py_args_ptr);
+    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire(
+        [py_func_ptr, py_args_ptr]() -> Maybe<void> {
+          py::cast<py::function>(py_func_ptr)();
+          Py_DECREF(py_func_ptr);
+          Py_DECREF(py_args_ptr);
+          return Maybe<void>::Ok();
+        }));
   };
   Py_INCREF(py_args_ptr);
   Py_INCREF(py_func_ptr);
