@@ -170,7 +170,8 @@ jobs:
           entries: |
             cu102
             cpu
-            cu101_xla
+            cu102_xla
+            llvm13
 
   build-manylinux:
     name: "Build manylinux"
@@ -217,7 +218,7 @@ jobs:
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
       - uses: Oneflow-Inc/get-oneflow@refactor-release
-        name: Build manylinux cpu only
+        name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
         with:
@@ -238,7 +239,7 @@ jobs:
             3.6
             3.7
       - uses: Oneflow-Inc/get-oneflow@refactor-release
-        name: Build manylinux cu102
+        name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
         with:
@@ -259,9 +260,9 @@ jobs:
             3.6
             3.7
       - uses: Oneflow-Inc/get-oneflow@refactor-release
-        name: Build manylinux cu101_xla
+        name: Build manylinux ${{ matrix.entry }}
         id: build-xla
-        if: ${{ matrix.entry =='cu101_xla' && !matrix.cache-hit }}
+        if: ${{ matrix.entry =='cu102_xla' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7-xla.sh
@@ -278,57 +279,10 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
-      - name: Upload packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@refactor-release
-        timeout-minutes: 10
-        with:
-          digest: ${{ steps.save-cache.outputs.build-digest }}
-          entry: ${{ matrix.entry }}
-          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
-          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
-          dst-dir: cpack
-      - name: Upload whl
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && (steps.build-cpu.outcome == 'success' || steps.build-cuda.outcome == 'success' || steps.build-xla.outcome == 'success') }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@refactor-release
-        timeout-minutes: 10
-        with:
-          digest: ${{ steps.save-cache.outputs.build-digest }}
-          entry: ${{ matrix.entry }}
-          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
-          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-          src-dir: ${{ env.WHEELHOUSE_DIR }}
-          dst-dir: whl
-
-  build-with-clang:
-    name: Build with clang
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    runs-on: [self-hosted, linux, build]
-    env:
-      ONEFLOW_SRC: .
-      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/clang13
-      CUDA_VERSION: "10.1"
-      WHEELHOUSE_DIR: ./wheelhouse
-    steps:
-      - name: Fix permissions
-        run: |
-          set -x
-          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
-      - name: Checkout Oneflow-Inc/oneflow
-        uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refactor-release
-        name: Save cache if successful
-        id: save-cache
-        timeout-minutes: 5
-        with:
-          oneflow-src: .
-          entry: build-with-clang
-          digest-type: build
-          mark-as-completed: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-      - name: Build with Clang
-        uses: Oneflow-Inc/get-oneflow@refactor-release
-        if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
+            - name: Build with Clang
+      - uses: Oneflow-Inc/get-oneflow@refactor-release
+        name: Build ${{ matrix.entry }}
+        if: ${{ matrix.entry == 'llvm13' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/llvm/cuda-75-clang.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/clang/build-llvm.sh
@@ -346,6 +300,28 @@ jobs:
           wheel-audit: false
           python-versions: |
             3.8
+      - name: Upload packed liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
+        uses: Oneflow-Inc/get-oneflow/digest/upload@refactor-release
+        timeout-minutes: 10
+        with:
+          digest: ${{ steps.save-cache.outputs.build-digest }}
+          entry: ${{ matrix.entry }}
+          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
+          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
+          src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
+          dst-dir: cpack
+      - name: Upload whl
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
+        uses: Oneflow-Inc/get-oneflow/digest/upload@refactor-release
+        timeout-minutes: 10
+        with:
+          digest: ${{ steps.save-cache.outputs.build-digest }}
+          entry: ${{ matrix.entry }}
+          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
+          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
+          src-dir: ${{ env.WHEELHOUSE_DIR }}
+          dst-dir: whl
 
   find-test-cache:
     name: "Find test cache"
