@@ -37,14 +37,10 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
-    size_t num_parallel = dynamic_cast<ep::CpuDevice*>(cpu_stream->device())->GetNumParallels();
 
-    cpu_stream->Parallel(
-        0, n,
-        [x, y, z](int64_t begin, int64_t end) {
-          for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
-        },
-        32768, num_parallel);
+    cpu_stream->Parallel(0, n, [x, y, z](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
