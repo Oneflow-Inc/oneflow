@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
-from torch import Tensor
+
 
 add_docstr(
     oneflow.to_consistent,
