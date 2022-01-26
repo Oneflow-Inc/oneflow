@@ -674,11 +674,8 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
   };
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
-    // Remove the Nd SBP candidate
-    // TODO(wyg): filter output blob which can not split,
-    //            but LogicalBlobDesc4Ibn not has output blob names
-    if (JUST(FilterSbp4Blobs(input_bns(), nd_sbp_sig_list->at(sbp_id)))
-        /*|| JUST(FilterSbp4Blobs(output_bns(), nd_sbp_sig_list[sbp_id]))*/) {
+    if (JUST(FilterSbp4Blobs(input_bns(), nd_sbp_sig_list->at(sbp_id)))) {
+      // Remove the Nd SBP candidate
       nd_sbp_sig_list->at(sbp_id) = nd_sbp_sig_list->at(nd_sbp_sig_list->size() - 1);
       nd_sbp_sig_list->pop_back();
     }
