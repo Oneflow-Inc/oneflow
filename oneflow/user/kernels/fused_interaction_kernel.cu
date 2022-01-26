@@ -106,37 +106,6 @@ void BatchMatmul(ep::Stream* stream, DataType data_type, const bool transpose_b,
 }
 
 template<typename T>
-__global__ void gather_concat_fprop_kernel(T* out, const T* in0, const T* mat, const int h,
-                                           const int n_pad, const int n_ins, const int w) {
-  extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
-  auto* s_buf = reinterpret_cast<T*>(shared_buf);
-  // extern __shared__ T s_buf[];
-  for (int bid = blockIdx.x; bid < h; bid += gridDim.x) {
-    int g_in_idx_base = bid * n_pad * n_pad;
-    for (int row = threadIdx.y; row < n_ins; row += blockDim.y) {
-      for (int col = threadIdx.x; col < n_ins; col += blockDim.x) {
-        if (col > row) {
-          int idx_in_blk = row * n_pad + col;
-          int g_in_idx = g_in_idx_base + idx_in_blk;
-          int s_idx = (col * (col - 1) / 2) + row;
-          s_buf[s_idx] = mat[g_in_idx];
-        }
-      }
-    }
-    __syncthreads();
-    int tid_base = threadIdx.y * blockDim.x + threadIdx.x;
-    int out_len = w + (n_ins * (n_ins + 1) / 2 - n_ins) + 1;
-    int g_out_idx_base = bid * out_len;
-    for (int tid = tid_base; tid < out_len - 1; tid += blockDim.y * blockDim.x) {
-      int g_out_idx = g_out_idx_base + tid;
-      T value = (tid < w) ? in0[bid * w + tid] : s_buf[tid - w];
-      out[g_out_idx] = value;
-    }
-    __syncthreads();
-  }
-}
-
-template<typename T>
 __global__ void gather_concat_bprop_kernel(const T* out, T* in0, T* mat, const int h,
                                            const int n_pad, const int n_ins, const int w) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
@@ -169,28 +138,90 @@ __global__ void gather_concat_bprop_kernel(const T* out, T* in0, T* mat, const i
   }
 }
 
-template<typename T>
-void GatherConcatKernel(ep::Stream* stream, int64_t batch_size, int64_t pad_dim, int64_t concat_dim,
-                        int64_t embedding_size, const T* matmul_out, const T* dense_feature_ptr,
-                        T* out_ptr) {
-  dim3 grid1(80 * 8, 1, 1);
-  dim3 block1(16, 16, 1);
-  size_t smem_size = sizeof(T) * (concat_dim * (concat_dim + 1) / 2 - concat_dim);
-  gather_concat_fprop_kernel<<<grid1, block1, smem_size,
-                               stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      out_ptr, dense_feature_ptr, matmul_out, batch_size, pad_dim, concat_dim, embedding_size);
+__global__ void GenerateTrilIndicesGpu(const int32_t concat_dim, const int32_t pad_dim,
+                                       int32_t* tril_indices) {
+  for (int row = threadIdx.y; row < concat_dim; row += blockDim.y) {
+    for (int col = threadIdx.x; col < concat_dim; col += blockDim.x) {
+      if (col > row) {
+        int in_index = row * pad_dim + col;
+        int idx = (col * (col - 1) / 2) + row;
+        tril_indices[idx] = in_index;
+      }
+    }
+  }
 }
 
 template<typename T>
-void ScatterSplitKernel(ep::Stream* stream, int64_t batch_size, int64_t pad_dim, int64_t concat_dim,
-                        int64_t embedding_size, const T* dy, T* dense_feature_grad,
-                        T* matmul_out_grad_ptr) {
-  dim3 grid1(80 * 8, 1, 1);
-  dim3 block1(16, 16, 1);
-  size_t smem_size = sizeof(T) * (concat_dim * (concat_dim + 1) / 2 - concat_dim);
-  gather_concat_bprop_kernel<<<grid1, block1, smem_size,
-                               stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      dy, dense_feature_grad, matmul_out_grad_ptr, batch_size, pad_dim, concat_dim, embedding_size);
+__global__ void GatherConcatGpu(int64_t batch_size, int64_t out_dim, int64_t tril_dim,
+                                int64_t pad_dim, int64_t embedding_size,
+                                const int32_t* tril_indices, const T* matmul_out,
+                                const T* dense_feature_ptr, T* out_ptr) {
+  for (int row = blockIdx.x; row < batch_size; row += gridDim.x) {
+    const T* row_matmul = matmul_out + row * pad_dim * pad_dim;
+    const T* row_dense_feature = dense_feature_ptr + row * embedding_size;
+    T* row_out = out_ptr + row * out_dim;
+    for (int col = threadIdx.x; col < out_dim; col += blockDim.x) {
+      T out_val = 0;
+      if (col < embedding_size) {
+        out_val = row_dense_feature[col];
+      } else if (col < embedding_size + tril_dim) {
+        int32_t index = tril_indices[col - embedding_size];
+        out_val = row_matmul[index];
+      }
+      row_out[col] = out_val;
+    }
+  }
+}
+
+template<typename T>
+__global__ void ScatterSplitGpu(int64_t batch_size, int64_t out_dim, int64_t pad_dim,
+                                int64_t embedding_size, const T* dy, T* dense_feature_grad,
+                                T* matmul_out_grad) {
+  for (int row = blockIdx.x; row < batch_size; row += gridDim.x) {
+    const T* row_dy = dy + row * out_dim;
+    T* row_dense_feature_grad = dense_feature_grad + row * embedding_size;
+    T* row_matmul_out_grad = matmul_out_grad + row * pad_dim * pad_dim;
+    for (int col = threadIdx.x; col < embedding_size + pad_dim * pad_dim; col += blockDim.x) {
+      if (col < embedding_size) {
+        row_dense_feature_grad[col] = row_dy[col];
+      } else {
+        int sparse_col_id = col - embedding_size;
+        int i = sparse_col_id / pad_dim;
+        int j = sparse_col_id - i * pad_dim;
+        T sparse_grad = 0;
+        if (j > i) {
+          int dy_idx = (j * (j - 1) / 2) + i;
+          sparse_grad = row_dy[embedding_size + dy_idx];
+        }
+        row_matmul_out_grad[sparse_col_id] = sparse_grad;
+      }
+    }
+  }
+}
+
+void GenerateTrilIndices(ep::Stream* stream, const int32_t concat_dim, const int32_t pad_dim,
+                         int32_t* tril_indices) {
+  GenerateTrilIndicesGpu<<<1, (32, 32), 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      concat_dim, pad_dim, tril_indices);
+}
+
+// out_dim 480 tril_dim 351 pad_dim 32 concat_dim 27
+template<typename T>
+void GatherConcatKernel(ep::Stream* stream, int64_t batch_size, int64_t out_dim, int64_t tril_dim,
+                        int64_t pad_dim, int64_t concat_dim, int64_t embedding_size,
+                        const int32_t* tril_indices, const T* matmul_out,
+                        const T* dense_feature_ptr, T* out_ptr) {
+  GatherConcatGpu<<<batch_size, 256, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      batch_size, out_dim, tril_dim, pad_dim, embedding_size, tril_indices, matmul_out,
+      dense_feature_ptr, out_ptr);
+}
+
+template<typename T>
+void ScatterSplitKernel(ep::Stream* stream, int64_t batch_size, int64_t out_dim, int64_t pad_dim,
+                        int64_t concat_dim, int64_t embedding_size, const T* dy,
+                        T* dense_feature_grad, T* matmul_out_grad_ptr) {
+  ScatterSplitGpu<<<batch_size, 256, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      batch_size, out_dim, pad_dim, embedding_size, dy, dense_feature_grad, matmul_out_grad_ptr);
 }
 
 template<typename T>
@@ -244,7 +275,8 @@ class FusedInteractionKernel final : public user_op::OpKernel {
     CHECK_EQ(dense_feature->shape().NumAxes(), 2);
     CHECK_EQ(sparse_feature->shape().NumAxes(), 3);
     const int64_t batch_size = dense_feature->shape().At(0);
-    const int64_t concat_dim = sparse_feature->shape().At(1) + 1;
+    const int64_t num_columns = sparse_feature->shape().At(1);
+    const int64_t concat_dim = num_columns + 1;
     const int64_t embedding_size = dense_feature->shape().At(1);
 
     const int64_t pad_dim = GetPadDim(concat_dim);
@@ -258,6 +290,13 @@ class FusedInteractionKernel final : public user_op::OpKernel {
     T* matmul_out =
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + pad_tensor_size + concat_out_size);
     size_t matmul_out_size = GetCudaAlignedSize(batch_size * pad_dim * pad_dim * sizeof(T));
+
+    const int64_t tril_dim = num_columns * (num_columns + 1) / 2;
+    const int64_t out_dim = out->shape().At(1);
+    int32_t* tril_indices_ptr = reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>()
+                                                           + pad_tensor_size + matmul_out_size);
+    size_t tril_indices_size = GetCudaAlignedSize(tril_dim * sizeof(int32_t));
+    GenerateTrilIndices(ctx->stream(), concat_dim, pad_dim, tril_indices_ptr);
 
     std::vector<int64_t> in_cols;
     in_cols.push_back(1 * embedding_size);
@@ -274,8 +313,9 @@ class FusedInteractionKernel final : public user_op::OpKernel {
     BatchMatmul(ctx->stream(), dense_feature->data_type(), true, batch_size, pad_dim, pad_dim,
                 embedding_size, concat_out, concat_out, matmul_out);
 
-    GatherConcatKernel<T>(ctx->stream(), batch_size, pad_dim, concat_dim, embedding_size,
-                          matmul_out, dense_feature->dptr<T>(), out->mut_dptr<T>());
+    GatherConcatKernel<T>(ctx->stream(), batch_size, out_dim, tril_dim, pad_dim, concat_dim,
+                          embedding_size, tril_indices_ptr, matmul_out, dense_feature->dptr<T>(),
+                          out->mut_dptr<T>());
 
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   }
@@ -287,14 +327,16 @@ user_op::InferTmpSizeFn GenFusedInteractionInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const user_op::TensorDesc& sparse_feature = ctx->InputTensorDesc("sparse_feature", 0);
     const int64_t batch_size = sparse_feature.shape().At(0);
-    const int64_t concat_dim = sparse_feature.shape().At(1) + 1;
+    const int64_t num_columns = sparse_feature.shape().At(1);
+    const int64_t concat_dim = num_columns + 1;
     const int64_t embedding_size = sparse_feature.shape().At(2);
     const int64_t pad_dim = GetPadDim(concat_dim);
     size_t pad_tensor_size =
         GetCudaAlignedSize(batch_size * (pad_dim - concat_dim) * embedding_size * sizeof(T));
-    size_t concat_out_size = GetCudaAlignedSize(batch_size * pad_dim * embedding_size * sizeof(T));
     size_t matmul_out_size = GetCudaAlignedSize(batch_size * pad_dim * pad_dim * sizeof(T));
-    return pad_tensor_size + concat_out_size + matmul_out_size;
+    size_t tril_indices_size =
+        GetCudaAlignedSize(num_columns * (num_columns + 1) / 2 * sizeof(int32_t));
+    return pad_tensor_size + matmul_out_size + tril_indices_size;
   };
 }
 
@@ -326,6 +368,7 @@ class FusedInteractionGradKernel final : public user_op::OpKernel {
     const int64_t concat_dim = sparse_feature_grad->shape().At(1) + 1;
     const int64_t embedding_size = dense_feature_grad->shape().At(1);
     const int64_t pad_dim = GetPadDim(concat_dim);
+    const int64_t out_dim = dy->shape().At(1);
     T* matmul_out_grad_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
     size_t matmul_out_grad_size = GetCudaAlignedSize(batch_size * pad_dim * pad_dim * sizeof(T));
     T* transposed_matmul_out_grad_ptr =
@@ -336,9 +379,8 @@ class FusedInteractionGradKernel final : public user_op::OpKernel {
     size_t concat_out_grad_size =
         GetCudaAlignedSize(batch_size * pad_dim * embedding_size * sizeof(T));
 
-    ScatterSplitKernel(ctx->stream(), batch_size, pad_dim, concat_dim, embedding_size,
+    ScatterSplitKernel(ctx->stream(), batch_size, out_dim, pad_dim, concat_dim, embedding_size,
                        dy->dptr<T>(), dense_feature_grad->mut_dptr<T>(), matmul_out_grad_ptr);
-
     const int64_t num_dims = 3;
     DimVector transpose_dims = {batch_size, pad_dim, pad_dim};
     std::vector<int32_t> perm = {0, 2, 1};
