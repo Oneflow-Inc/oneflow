@@ -121,7 +121,7 @@ jobs:
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
-    needs: [build-manylinux]
+    needs: [build-oneflow]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     continue-on-error: true
     steps:
@@ -173,8 +173,8 @@ jobs:
             cu102_xla
             llvm13
 
-  build-manylinux:
-    name: "Build manylinux"
+  build-oneflow:
+    name: "Build OneFlow"
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache]
@@ -327,7 +327,7 @@ jobs:
     name: "Find test cache"
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     runs-on: ubuntu-latest
-    needs: [build-manylinux]
+    needs: [build-oneflow]
     env:
       ONEFLOW_SRC: .
     outputs:
