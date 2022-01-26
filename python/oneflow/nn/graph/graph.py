@@ -262,7 +262,16 @@ class Graph(object):
     def state_dict(
         self, destination=None, prefix="", keep_vars=False
     ) -> Dict[str, Tensor]:
-        pass
+        if destination is None:
+            destination = OrderedDict()
+            destination._metadata = OrderedDict()
+        # Get states from sub module block
+        for name, block in self._blocks.items():
+            assert block.type == BlockType.MODULE
+            module = block.origin
+            if module is not None:
+                module.state_dict(destination, prefix + name + ".", keep_vars=keep_vars)
+        return destination
 
     def load_state_dict(
         self,
