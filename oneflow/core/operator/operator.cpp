@@ -641,7 +641,7 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
             // 0dim tensor can not split
             // and nd_sbp must have same shape in each device
             if (logical_shape.At(axis) == 0
-                && logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) != 0) {
+                || logical_shape.At(axis) % parallel_hierarchy->At(dim_sbp) != 0) {
               return true;
             }
             logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy->At(dim_sbp));
