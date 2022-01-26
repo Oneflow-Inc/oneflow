@@ -135,11 +135,11 @@ def _ne(self, other):
 
 
 def _and(self, other):
-    return self.logical_and(other)
+    return flow._C.logical_and(self, other)
 
 
 def _or(self, other):
-    return self.logical_or(other)
+    return flow._C.logical_or(self, other)
 
 
 def _not(self):
@@ -147,7 +147,7 @@ def _not(self):
 
 
 def _xor(self, other):
-    return self.logical_xor(other)
+    return flow._C.logical_xor(self, other)
 
 
 def _contiguous(self):
@@ -219,7 +219,7 @@ def _le(self, other):
 
 
 def _mul(self, other):
-    return flow.mul(self, other)
+    return flow._C.mul(self, other)
 
 
 def _mul_(self, other):
@@ -231,11 +231,11 @@ def _rmul(self, other):
 
 
 def _add(self, other):
-    return flow.add(self, other)
+    return flow._C.add(self, other)
 
 
 def _add_inplace(self, other):
-    return flow.add(self, other, inplace=True)
+    return flow._C.add(self, other, inplace=True)
 
 
 def _iadd(self, other):
@@ -247,15 +247,23 @@ def _radd(self, other):
 
 
 def _sub(self, other):
-    return flow.sub(self, other)
+    return flow._C.sub(self, other)
+
+
+def _sub_inplace(self, other):
+    return flow._C.sub(self, other, inplace=True)
 
 
 def _rsub(self, other):
-    return flow.sub(other, self)
+    return flow._C.sub(other, self)
 
 
 def _truediv(self, other):
-    return flow.div(self, other)
+    return flow._C.div(self, other)
+
+
+def _truediv_inplace(self, other):
+    return flow._C.div_(self, other)
 
 
 def _rtruediv(self, other):
@@ -288,6 +296,10 @@ def _abs(self):
 
 def _exp(self):
     return flow.exp(self)
+
+
+def _expand(self, *size):
+    return flow.expand(self, *size)
 
 
 def _expand_as(input, other):
@@ -488,6 +500,18 @@ def _negative(self):
 
 def _neg(self):
     return flow._C.negative(self)
+
+
+def _new_ones(
+    self,
+    size=None,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -738,6 +762,18 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             flow._C.assign_local_tensor(self, other.to(device=self.device))
 
 
+def _flip(self, dims):
+    return flow.flip(self, dims)
+
+
+def _in_top_k(self, predictions, k):
+    return flow._C.in_top_k(self, predictions, k)
+
+
+def _index_select(self, dim, index):
+    return flow.index_select(self, dim, index)
+
+
 def _get_device(self):
     if self.device.type == "cuda":
         return self.device.index
@@ -752,6 +788,14 @@ def _format(self, format_spec):
 
 def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
+
+
+def _to_consistent(self, placement=None, sbp=None, grad_sbp=None):
+    return flow.to_consistent(self, placement, sbp, grad_sbp)
+
+
+def _to_local(self):
+    return flow.to_local(self)
 
 
 def _gather(self, dim, index):
@@ -784,6 +828,14 @@ def _T(self):
 
 def _t(self):
     return flow._C.t(self)
+
+
+def _masked_fill(self, mask, fill_value):
+    return flow.masked_fill(self, mask, fill_value)
+
+
+def _masked_select(self, mask):
+    return flow.masked_select(self, mask)
 
 
 def _numpy(self):
@@ -895,10 +947,12 @@ def RegisterMethods():
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
+    Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
     Tensor.mul_ = _mul_
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
+    Tensor.sub_ = _sub_inplace
     Tensor.asin = _asin
     Tensor.arcsin = _arcsin
     Tensor.asinh = _asinh
@@ -912,6 +966,7 @@ def RegisterMethods():
     Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
     Tensor.erfc = _erfc
@@ -920,9 +975,13 @@ def RegisterMethods():
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.flatten = _flatten
+    Tensor.flip = _flip
+    Tensor.in_top_k = _in_top_k
+    Tensor.index_select = _index_select
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.new_ones = _new_ones
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
@@ -939,10 +998,14 @@ def RegisterMethods():
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
+    Tensor.to_consistent = _to_consistent
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
+    Tensor.logical_and = _and
+    Tensor.logical_or = _or
     Tensor.logical_not = _not
+    Tensor.logical_xor = _xor
     Tensor.roll = _roll
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
@@ -961,6 +1024,8 @@ def RegisterMethods():
     Tensor.any = _any
     Tensor.T = property(_T)
     Tensor.t = _t
+    Tensor.masked_fill = _masked_fill
+    Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.ne = _ne
     Tensor.lt = _lt

@@ -148,6 +148,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::shared_ptr<one::Tensor>& var = variable_tensors.at(i);
     CHECK_OR_RETURN(var->is_eager());
     const std::string& var_name = variable_op_names.at(i);
+    if (var_name.find("one_embedding_optimizer_placeholder::") != std::string::npos) { continue; }
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
@@ -269,6 +270,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
     if (/*is_null=*/!tensor) {
+      const auto& op_attribute_it =
+          plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
       const auto& op_attribute =
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
 

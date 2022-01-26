@@ -56,6 +56,7 @@ class OneEmbeddingLookup(Module):
         super().__init__()
         # self.dtype = embedding_options["dtype"]
         assert embedding_options.__contains__("name")
+        self.name = embedding_options["name"]
         assert embedding_options.__contains__("embedding_dim")
         embedding_dim = embedding_options["embedding_dim"]
         assert embedding_dim > 0
@@ -174,6 +175,10 @@ class OneEmbeddingLookup(Module):
         self.parallel_num = flow.env.get_world_size()
         self.handler = OneEmbeddingHandler(
             self.embedding_options, self.parallel_id, self.parallel_num
+        )
+        self.register_parameter(
+            "one_embedding_optimizer_placeholder::" + self.name,
+            flow.nn.Parameter(flow.Tensor(1)),
         )
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
