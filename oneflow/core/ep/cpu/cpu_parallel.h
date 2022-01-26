@@ -32,17 +32,8 @@ limitations under the License.
 #endif
 namespace oneflow {
 namespace ep {
-namespace primitive {
 
-
-void set_num_threads(int nthr) {
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-  // Affects omp_get_max_threads() Get the logical core book
-  omp_set_num_threads(nthr);
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-  tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism, nthr);
-#endif
-}
+void set_num_threads(int nthr);
 
 inline size_t divup(int64_t x, int64_t y) { return (x + y - 1) / y; }
 
@@ -82,7 +73,6 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
 #endif
 }
 
-}  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_EP_EVENT_H_

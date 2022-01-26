@@ -46,14 +46,14 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
     parallel(
         0, count,
         [=](int64_t begin, int64_t end) {
-          int cpu = sched_getcpu();
+          // int cpu = sched_getcpu();
           // int node = numa_node_of_cpu(cpu);
-          printf("cpu = %d start tid=%ld\n", cpu, syscall(__NR_gettid));
+          // printf("cpu = %d start tid=%ld\n", cpu, syscall(__NR_gettid));
           // printf("node = %d, cpu = %d \n", node, cpu);
           for (int64_t i = begin; i < end; i++) {
             dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
           }
-          printf("end tid=%ld\n", syscall(__NR_gettid));
+          // printf("end tid=%ld\n", syscall(__NR_gettid));
         },
         32768, logical_cores);
     auto t2 = std::chrono::high_resolution_clock::now();

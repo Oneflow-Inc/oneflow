@@ -42,7 +42,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
             ->local_logical_cores();
     auto t1 = std::chrono::high_resolution_clock::now();
     // for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
-    ep::primitive::parallel(
+    ep::parallel(
         0, n,
         [=](int64_t begin, int64_t end) {
           // int cpu = sched_getcpu();
