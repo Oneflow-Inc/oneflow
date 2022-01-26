@@ -87,6 +87,7 @@ class generator:
 
     def _init(self):
         self._value = None
+        self._has_value = False
         for x in self.children:
             x._init()
 
@@ -333,8 +334,11 @@ class random_tensor(generator):
         low = self.low.value()
         high = self.high.value()
         dtype = self.dtype.value()
+
         shape = rng.integers(low=1, high=8, size=ndim)
-        if dim0 is not None:
+        if ndim == 0:
+            shape = []
+        if ndim >= 1 and dim0 is not None:
             shape[0] = dim0
         if ndim >= 2:
             shape[1] = dim1
