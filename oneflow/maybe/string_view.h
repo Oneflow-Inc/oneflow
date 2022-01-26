@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_MAYBE_STRING_VIEW_H_
 #define ONEFLOW_MAYBE_STRING_VIEW_H_
 
-#include "external/string_view.hpp"
+#include "nonstd/string_view.hpp"
 
 template<typename T>
 using BasicStringView = nonstd::basic_string_view<T>;
