@@ -281,6 +281,18 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
   return total_cost;
 }
 
+using CopyCostFunc = Maybe<double>(const cfg::NdSbp&, const cfg::NdSbp&, const BlobDesc&,
+                                   const ParallelDesc&, const ParallelDesc&, bool);
+Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
+  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+    return &ComputeCopyCostWithMiddleNodes;
+  } else {
+    return &ComputeEagerCopyCostBetweenNdSbp;
+  }
+}
+
+}  // namespace
+
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
                                               const cfg::NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
@@ -352,18 +364,6 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
          "sbp_util.cpp.";
   return kUnsupportedBoxing;
 }
-
-using CopyCostFunc = Maybe<double>(const cfg::NdSbp&, const cfg::NdSbp&, const BlobDesc&,
-                                   const ParallelDesc&, const ParallelDesc&, bool);
-Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
-  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
-    return &ComputeCopyCostWithMiddleNodes;
-  } else {
-    return &ComputeEagerCopyCostBetweenNdSbp;
-  }
-}
-
-}  // namespace
 
 double GetValidMaxCopyCost() {
   // We suppose that valid copy cost range is [0, FloatMax*0.8]

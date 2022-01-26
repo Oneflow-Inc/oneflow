@@ -105,7 +105,7 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
     for (int32_t j = 0; j < n; j++) {
       // Get copy cost in lazy mode
       LazyMode::Guard enable_lazy_mode(true);
-      minimum_copy_cost[i][j] = JUST(ComputeCopyCostBetweenNdSbp(
+      minimum_copy_cost[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists[i], nd_sbp_lists[j], blob_desc, *in_parallel_desc, *in_parallel_desc,
           /*is_same_sbp=*/false));
     }
@@ -255,11 +255,11 @@ Maybe<void> BoxingCollector::AskSbpCombination(
   // TODO: support [2, 3] -> [3, 2]
   // Middle nodes does not support transfer for different machines or devices or hierarchy
   if (producer_parallel_desc != consumer_parallel_desc) {
-    CHECK_OR_RETURN(
-        compute_cost
-        || JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
-                                            producer_parallel_desc, consumer_parallel_desc, false))
-               < GetValidMaxCopyCost())
+    CHECK_OR_RETURN(compute_cost
+                    || JUST(ComputeLazyCopyCostBetweenNdSbp(
+                           sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+                           consumer_parallel_desc, false))
+                           < GetValidMaxCopyCost())
         << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
         << NdSbpParallelToString(sbp_consumer) << " for two different placement ";
     return Maybe<void>::Ok();
@@ -267,11 +267,11 @@ Maybe<void> BoxingCollector::AskSbpCombination(
   const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
   // Dealing with 1D sbp
   if (parallel_hierarchy->NumAxes() == 1) {
-    CHECK_OR_RETURN(
-        compute_cost
-        || JUST(ComputeCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
-                                            producer_parallel_desc, consumer_parallel_desc, false))
-               < GetValidMaxCopyCost())
+    CHECK_OR_RETURN(compute_cost
+                    || JUST(ComputeLazyCopyCostBetweenNdSbp(
+                           sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+                           consumer_parallel_desc, false))
+                           < GetValidMaxCopyCost())
         << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
         << NdSbpParallelToString(sbp_consumer) << " for 1D sbp";
     return Maybe<void>::Ok();
