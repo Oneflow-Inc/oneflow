@@ -45,6 +45,12 @@ struct OptionalStorage {
   using Type = std::remove_const_t<T>;
 
  public:
+  OptionalStorage() = default;
+  ~OptionalStorage() = default;
+
+  OptionalStorage(const OptionalStorage&) = delete;
+  OptionalStorage& operator=(const OptionalStorage&) = delete;
+
   void Init() { has_ = false; }
 
   T& Value() & { return *reinterpret_cast<T*>(value_); }
@@ -112,7 +118,7 @@ struct OptionalStorage {
   }
 };
 
-template<typename T>
+template<typename T>  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct OptionalStorage<T, std::enable_if_t<std::is_scalar<T>::value>> {
  private:
   using Type = std::remove_const_t<T>;
@@ -121,6 +127,12 @@ struct OptionalStorage<T, std::enable_if_t<std::is_scalar<T>::value>> {
   Type value_;
 
  public:
+  OptionalStorage() = default;
+  ~OptionalStorage() = default;
+
+  OptionalStorage(const OptionalStorage&) = delete;
+  OptionalStorage& operator=(const OptionalStorage&) = delete;
+
   void Init() { has_ = false; }
 
   T& Value() & { return value_; }
@@ -165,6 +177,12 @@ struct OptionalStorage<T, std::enable_if_t<std::is_reference<T>::value>> {
   Type* value_;
 
  public:
+  OptionalStorage() = default;
+  ~OptionalStorage() = default;
+
+  OptionalStorage(const OptionalStorage&) = delete;
+  OptionalStorage& operator=(const OptionalStorage&) = delete;
+
   void Init() { value_ = nullptr; }
 
   T Value() { return *value_; }
