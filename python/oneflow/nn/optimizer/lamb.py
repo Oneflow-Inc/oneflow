@@ -24,8 +24,7 @@ from oneflow.nn.parameter import Parameter
 class LAMB(Optimizer):
     """Implements LAMB algorithm.
 
-    LAMB was proposed in `Large Batch Optimization for Deep Learning: Training BERT in 76 minutes.
-    https://arxiv.org/abs/1904.00962
+    LAMB was proposed in `Large Batch Optimization for Deep Learning: Training BERT in 76 minutes`_.
 
     Args:
         parameters (iterable): iterable of parameters to optimize or dicts defining
@@ -39,7 +38,11 @@ class LAMB(Optimizer):
         adam_w_mode (bool, optional): apply L2 regularization or weight decay True for
             decoupled weight decay (also known as AdamW) (default: True)
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
-        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. NOT SUPPORTED now! (default: False)
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. 
+        NOT SUPPORTED now! (default: False)
+        
+    .. _Large Batch Optimization for Deep Learning\\: Training BERT in 76 minutes:
+        https://arxiv.org/abs/1904.00962
 
     For example:
 
@@ -84,7 +87,6 @@ class LAMB(Optimizer):
     If you want to use clip_grad, you can refer this example.
 
     For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`.
-
     """
 
     def __init__(
