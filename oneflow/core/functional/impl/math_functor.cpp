@@ -220,6 +220,14 @@ class ScalarDiv2Functor {
   }
 };
 
+class InplaceScalarDivFunctor : public ScalarMathBaseFunctor {
+ public:
+  InplaceScalarDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_mul") {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMathBaseFunctor::operator()(x, Scalar(1.0) / scalar, true);
+  }
+};
+
 class ScalarPowFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
@@ -1637,7 +1645,7 @@ class StandardDeviationFunctor {
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square));
+      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
             sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
@@ -1670,7 +1678,7 @@ class StandardDeviationFunctor {
       const auto& square = JUST(functional::Square(
           JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
                                      Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square));
+      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
@@ -1916,6 +1924,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");

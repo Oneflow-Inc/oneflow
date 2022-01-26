@@ -235,6 +235,8 @@ bool ParseBooleanFromEnv(const std::string& env_var, bool default_value);
 
 int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
 
+double ParseFloatFromEnv(const std::string& env_var, double default_value);
+
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
 
 #define OF_PREDICT_TRUE likely
