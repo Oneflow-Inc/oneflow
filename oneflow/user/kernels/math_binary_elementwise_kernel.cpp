@@ -39,7 +39,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     size_t logical_cores =
         dynamic_cast<ep::CpuDevice*>(ctx->stream()->As<ep::CpuStream>()->device())
-            ->local_logical_cores();  
+            ->local_logical_cores();
     ep::parallel(
         0, n,
         [=](int64_t begin, int64_t end) {
