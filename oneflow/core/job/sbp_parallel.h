@@ -53,15 +53,19 @@ void SortSbpSignatureListByCopyCost(
 bool IsValidSbpParallelString(const std::string& sbp_str);
 bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
+std::string NdSbpParallelToString(const cfg::NdSbp& nd_sbp_parallel);
 
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                                   cfg::NdSbpSignature* nd_sbp_signature);
+
 template<typename NdSbpSignatureT>
 void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
                                   cfg::SbpSignature* sbp_signature);
 void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
                                      const cfg::NdSbpSignature& nd_sbp_sig);
-
+Maybe<std::string> NdSbpSignatureListAsString(
+    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list, const PbRpf<std::string>& inputs,
+    const PbRpf<std::string>& outputs);
 }  // namespace oneflow
 
 namespace std {
