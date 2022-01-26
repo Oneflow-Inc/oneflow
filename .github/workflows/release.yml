@@ -90,7 +90,7 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: true
-          nightly: ${{ github.event.schedule }}
+          nightly: ${{ github.event_name == 'schedule' }}
           python-versions: |
             3.6
             3.7
