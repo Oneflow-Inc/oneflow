@@ -357,7 +357,7 @@ using CopyCostFunc = Maybe<double>(const cfg::NdSbp&, const cfg::NdSbp&, const B
                                    const ParallelDesc&, const ParallelDesc&, bool);
 Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
   if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
-    return &ComputeLazyCopyCostBetweenNdSbp;
+    return &ComputeCopyCostWithMiddleNodes;
   } else {
     return &ComputeEagerCopyCostBetweenNdSbp;
   }
@@ -476,18 +476,18 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
     // We use the parallel description of consumer as the parallel description for all the middle
     // nodes, following the same procedure in boxing_with_middle_nodes.cpp
     // TODO: Needs more effort if dealing with different placement
-    total_cost += JUST(ComputeCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
-                                                   *pre_parallel_desc, consumer_parallel_desc,
-                                                   requires_same_sbp))
+    total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
+                                                       *pre_parallel_desc, consumer_parallel_desc,
+                                                       requires_same_sbp))
                   + transfer_cost;
     // Set up the information of the first node in the next connection
     pre_nd_sbp = &middle_sbp;
     pre_parallel_desc = &consumer_parallel_desc;
   }
   // Connection between the last middle node and consumer
-  total_cost += JUST(ComputeCopyCostBetweenNdSbp(*pre_nd_sbp, consumer_sbp_parallel,
-                                                 logical_blob_desc, *pre_parallel_desc,
-                                                 consumer_parallel_desc, requires_same_sbp));
+  total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, consumer_sbp_parallel,
+                                                     logical_blob_desc, *pre_parallel_desc,
+                                                     consumer_parallel_desc, requires_same_sbp));
 
   return total_cost;
 }
