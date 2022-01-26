@@ -16,7 +16,6 @@ limitations under the License.
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
-
 add_docstr(
     oneflow.to_consistent,
     """
