@@ -220,6 +220,14 @@ class ScalarDiv2Functor {
   }
 };
 
+class InplaceScalarDivFunctor : public ScalarMathBaseFunctor {
+ public:
+  InplaceScalarDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_mul") {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMathBaseFunctor::operator()(x, Scalar(1.0) / scalar, true);
+  }
+};
+
 class ScalarPowFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
@@ -1619,7 +1627,7 @@ class StandardDeviationFunctor {
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square));
+      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
             sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
@@ -1652,7 +1660,7 @@ class StandardDeviationFunctor {
       const auto& square = JUST(functional::Square(
           JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
                                      Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square));
+      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
@@ -1815,9 +1823,11 @@ class ErfinvInplaceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CumsumFunctor {
+class CumBaseFunctor {
  public:
-  CumsumFunctor() { op_ = CHECK_JUST(one::OpBuilder("cumsum").Input("x").Output("y").Build()); }
+  explicit CumBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("x").Output("y").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
@@ -1837,7 +1847,22 @@ class CumsumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CumsumGradFunctor {
+class CumsumFunctor : public CumBaseFunctor {
+ public:
+  CumsumFunctor() : CumBaseFunctor("cumsum") {}
+};
+
+class CumProdFunctor : public CumBaseFunctor {
+ public:
+  CumProdFunctor() : CumBaseFunctor("cumprod") {}
+};
+
+class CumGradBaseFunctor {
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CumsumGradFunctor : public CumGradBaseFunctor {
  public:
   CumsumGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
@@ -1848,10 +1873,28 @@ class CumsumGradFunctor {
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
+
+class CumProdGradFunctor : public CumGradBaseFunctor {
+ public:
+  CumProdGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cumprod_grad")
+                         .Input("dy")
+                         .Input("output")
+                         .Input("input")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
+    // No need to check dim validation here, while CumProdFunctor handled already
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, x}, attrs);
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -1863,6 +1906,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
@@ -1923,6 +1967,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
+  m.add_functor<CumProdFunctor>("Cumprod");
+  m.add_functor<CumProdGradFunctor>("CumprodGrad");
 };
 
 }  // namespace functional
