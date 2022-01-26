@@ -796,7 +796,7 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
   SbpEdge<SbpSignature>* merging_edge = nullptr;
   for (int32_t i = 0; i < NodeList.size(); i++) {
     for (SbpEdge<SbpSignature>* edge_in : NodeList[i]->EdgesIn) {
-      curr_cut_ratio = edge_in->FindCutRatio(Threshold * 10);
+      curr_cut_ratio = edge_in->FindCutRatio(Threshold);
       if (curr_cut_ratio < min_cut_ratio) {
         min_cut_ratio = curr_cut_ratio;
         merging_edge = edge_in;
