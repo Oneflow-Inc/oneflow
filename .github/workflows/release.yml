@@ -9,6 +9,11 @@ on:
     # beijing: 2 am.
     # utc: 6 pm.
     - cron: "0 18 * * *"
+  workflow_dispatch:
+    inputs:
+      placeholder:
+        description: "update .github/workflows/release.yml to config your build"
+        required: false
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
