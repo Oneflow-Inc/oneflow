@@ -235,7 +235,7 @@ struct OptionalPrivateScope {
 }  // namespace details
 
 // unlike Variant, type arguments can be cv qualified or lvalue referenced
-// this Optional DO NOT guarantee exception safty
+// this Optional DO NOT guarantee exception safety
 template<typename T>
 struct OF_MAYBE_NODISCARD_TYPE Optional {
  protected:
