@@ -129,6 +129,7 @@ class CpuDiagonalBackwardKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
+REGISTER_DIAGONAL_KERNELS(bool);
 REGISTER_DIAGONAL_KERNELS(float);
 REGISTER_DIAGONAL_KERNELS(double);
 REGISTER_DIAGONAL_KERNELS(int8_t);

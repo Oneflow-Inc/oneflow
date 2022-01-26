@@ -1364,7 +1364,9 @@ add_docstr(
 
 add_docstr(
     oneflow.cumsum,
-    r"""This operator computes the cumulative sum of input elements in the given dimension.
+    r"""oneflow.cumsum(input, dim) -> Tensor
+    
+    This operator computes the cumulative sum of input elements in the given dimension.
 
     The equation is:
 
@@ -1384,11 +1386,41 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input=flow.ones(3,3)
-        >>> dim=1
-        >>> flow.cumsum(input,dim)
+        >>> input = flow.ones(3, 3)
+        >>> dim = 1
+        >>> flow.cumsum(input, dim)
         tensor([[1., 2., 3.],
                 [1., 2., 3.],
                 [1., 2., 3.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.cumprod,
+    """oneflow.cumprod(input, dim) -> Tensor
+
+    This operator computes the cumulative product of input elements in the given dimension.
+
+    The equation is:
+
+	$$
+        y_{i}=x_{0}*x_{1}*...*x_{i}
+	$$
+
+    Args:
+        input (Tensor):  the input tensor.
+        dim (int):  the dimension to do cumsum whose valid range is [-N, N-1), and the N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cumprod result.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input=flow.tensor([1, 2, 3])
+        >>> flow.cumprod(input, dim=0)
+        tensor([1, 2, 6], dtype=oneflow.int64)
     """,
 )

@@ -86,6 +86,19 @@ class TestLogicalAndModule(flow.unittest.TestCase):
         y = torch.logical_and(x1, x2)
         return y
 
+    @autotest(n=10, auto_backward=False, check_graph=False)
+    def test_logical_and_bool_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device=device, dtype=torch.bool
+        )
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device=device, dtype=torch.bool
+        )
+        y = torch.logical_and(x1, x2)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

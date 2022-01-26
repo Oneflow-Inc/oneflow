@@ -140,7 +140,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=20, auto_backward=True, rtol=1.0, atol=1.0)
     def test_layernorm_with_random_data_warp(test_case):
         device = random_device()
         channel = random(1, 200).to(int)

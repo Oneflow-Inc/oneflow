@@ -193,6 +193,13 @@ class TestLinspace(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
 
+    def test_linspace_start_equal_end_bug(test_case):
+        flow_res = flow.linspace(0, 0.0, 12).numpy()
+        torch_res = np.array(
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        )
+        test_case.assertTrue(np.allclose(flow_res, torch_res, atol=1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()

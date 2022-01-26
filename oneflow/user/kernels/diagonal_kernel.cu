@@ -150,6 +150,7 @@ class GpuDiagonalBackwardKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
+REGISTER_DIAGONAL_KERNELS(bool);
 REGISTER_DIAGONAL_KERNELS(half);
 REGISTER_DIAGONAL_KERNELS(float);
 REGISTER_DIAGONAL_KERNELS(double);
