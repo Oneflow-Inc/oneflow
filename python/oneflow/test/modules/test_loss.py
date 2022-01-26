@@ -33,8 +33,8 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
     )
     extra_dim = [random().to(int) for _ in range(dim - 2)]
     return (
-        random_pytorch_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
-        random_pytorch_tensor(
+        random_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        random_tensor(
             dim - 1,
             batch_size,
             *extra_dim,
@@ -43,7 +43,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
             dtype=int,
             requires_grad=False,
         ).to(device),
-        random_pytorch_tensor(1, num_classes, low=0, high=3, requires_grad=False).to(
+        random_tensor(1, num_classes, low=0, high=3, requires_grad=False).to(
             device
         ),
         ignore_index,
@@ -59,8 +59,8 @@ def generate_necessity_for_bce_loss(dim: int):
     batch_size = random(low=10, high=100).to(int)
     extra_dim = [random().to(int) for _ in range(dim - 2)]
     return (
-        random_pytorch_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
-        random_pytorch_tensor(
+        random_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        random_tensor(
             dim,
             batch_size,
             num_classes,
@@ -69,10 +69,10 @@ def generate_necessity_for_bce_loss(dim: int):
             high=num_classes,
             requires_grad=False,
         ).to(device),
-        random_pytorch_tensor(
+        random_tensor(
             dim, batch_size, num_classes, *extra_dim, low=0, high=3, requires_grad=False
         ).to(device),
-        random_pytorch_tensor(
+        random_tensor(
             1,
             extra_dim[-1] if dim > 2 else num_classes,
             low=1,
@@ -224,10 +224,10 @@ class TestL1LossModule(flow.unittest.TestCase):
     @autotest()
     def test_l1_loss_with_random_data(test_case):
         device = random_device()
-        shape = random_tensor().value().shape
+        shape = random_tensor().oneflow.shape
 
-        x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(
             device
         )
 
@@ -244,10 +244,10 @@ class TestSmoothL1LossModule(flow.unittest.TestCase):
     @autotest()
     def test_smooth_l1_loss_with_random_data(test_case):
         device = random_device()
-        shape = random_tensor().value().shape
+        shape = random_tensor().oneflow.shape
 
-        x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(
             device
         )
 
@@ -266,10 +266,10 @@ class TestMSELossModule(flow.unittest.TestCase):
     @autotest()
     def test_mse_loss_with_random_data(test_case):
         device = random_device()
-        shape = random_tensor().value().shape
+        shape = random_tensor().oneflow.shape
 
-        x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(
             device
         )
 
@@ -286,10 +286,10 @@ class TestKLDivLossModule(flow.unittest.TestCase):
     @autotest()
     def test_kldiv_loss_with_random_data(test_case):
         device = random_device()
-        shape = random_tensor().value().shape
+        shape = random_tensor().oneflow.shape
 
-        x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(
             device
         )
 
@@ -309,11 +309,11 @@ class TestMarginRankingLossModule(flow.unittest.TestCase):
     @autotest()
     def test_margin_ranking_loss_with_random_data(test_case):
         device = random_device()
-        shape = random_tensor().value().shape
+        shape = random_tensor().oneflow.shape
 
-        x1 = random_pytorch_tensor(len(shape), *shape).to(device)
-        x2 = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+        x1 = random_tensor(len(shape), *shape).to(device)
+        x2 = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(
             device
         )
 

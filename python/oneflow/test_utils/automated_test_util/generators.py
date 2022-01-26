@@ -276,7 +276,7 @@ def random_or_nothing(low, high):
 
 
 @data_generator(torch.Tensor)
-class random_tensor(generator):
+class random_pytorch_tensor(generator):
     def __init__(
         self,
         ndim=None,
@@ -828,7 +828,7 @@ def test_tensor_against_pytorch(
 
 
 __all__ = [
-    "random_tensor",
+    "random_pytorch_tensor",
     "random_bool",
     "random_device",
     "cpu_device",
