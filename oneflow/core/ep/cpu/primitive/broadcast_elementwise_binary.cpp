@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_parallel.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
@@ -89,6 +91,11 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
+
+    size_t logical_cores =
+    dynamic_cast<CpuDevice*>(stream->As<CpuStream>()->device())->local_logical_cores();
+    set_num_threads(logical_cores);
+
     DimVector src0_dim_vec;
     DimVector src1_dim_vec;
     DimVector dst_dim_vec;
@@ -310,7 +317,7 @@ std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary(
                    OF_PP_PAIR_SECOND(src_data_type_pair)),                                  \
    NewOneDnnBroadcastElementwiseBinary<                                                     \
        OF_PP_PAIR_THIRD(src_data_type_pair), OF_PP_PAIR_SECOND(binary_op_pair),             \
-       OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(src_data_type_pair)>},
+       OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>},
 
 #endif  // WITH_ONEDNN
 
@@ -354,7 +361,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                 BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR, CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ,
-                CPU_PRIMITIVE_ONEDNN_INT8_TYPE_SEQ)
+                CPU_PRIMITIVE_ONEDNN_BOOl_TYPE_SEQ)
             // OneDNN unimplemented binary op
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
                                              OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow),
