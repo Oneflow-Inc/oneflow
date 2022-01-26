@@ -16,125 +16,109 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_TENSOR_BUFFER_H_
 #define ONEFLOW_CORE_COMMON_TENSOR_BUFFER_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
-inline void CheckTensorBufferDataType(DataType val) {
-  CHECK(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
-      << "TensorBuffer only support POD as internal data type.";
-}
+namespace detail {
 
-class TensorBuffer {
+class TensorBufferImpl final {
  public:
-  struct Deleter {
-    void operator()(void* ptr) { MemoryAllocatorImpl::DeallocateUnPinnedHostMem(ptr); }
-  };
-  typedef std::unique_ptr<void, Deleter> BufferType;
+  TensorBufferImpl()
+      : shape_(Shape()),
+        data_type_(DataType::kInvalidDataType),
+        buffer_(nullptr),
+        buffer_size_(0) {}
+  TensorBufferImpl(const Shape& shape, DataType dtype)
+      : shape_(Shape()), data_type_(DataType::kInvalidDataType), buffer_(nullptr), buffer_size_(0) {
+    Reset(shape, dtype);
+  }
+  ~TensorBufferImpl() { DeallocateBuffer(); }
+  OF_DISALLOW_COPY_AND_MOVE(TensorBufferImpl);
 
-  OF_DISALLOW_COPY_AND_MOVE(TensorBuffer);
-  TensorBuffer()
-      : data_(nullptr), num_bytes_(0), shape_(Shape()), data_type_(DataType::kInvalidDataType) {}
-  virtual ~TensorBuffer() = default;
+  void Reset(const Shape& shape, DataType dtype);
+  void Reset(const Shape& shape);
+  void Reset(DataType dtype);
+  void Reset();
+
+  void CopyFrom(const TensorBufferImpl* src);
+  void Swap(TensorBufferImpl* other);
 
   const Shape& shape() const { return shape_; }
-
   DataType data_type() const { return data_type_; }
 
-  void set_data_type(DataType val) {
-    CheckTensorBufferDataType(val);
-    if (data_type_ == val) { return; }
-    if (val == DataType::kInvalidDataType) {
-      data_type_ = val;
-      return;
-    } else {
-      Resize(shape_, val);
-    }
+  void* buffer() { return buffer_; }
+  const void* buffer() const { return buffer_; }
+  size_t buffer_size() const { return buffer_size_; }
+
+ private:
+  void AllocateBuffer(size_t size);
+  void DeallocateBuffer();
+  void Reserve(size_t new_size);
+
+  Shape shape_;
+  DataType data_type_;
+
+  void* buffer_;
+  size_t buffer_size_;
+};
+
+}  // namespace detail
+
+class TensorBuffer final {
+ public:
+  TensorBuffer() = default;
+  ~TensorBuffer();
+
+  TensorBuffer(const Shape& shape, DataType dtype);
+
+  TensorBuffer(const TensorBuffer&) = delete;
+  TensorBuffer& operator=(const TensorBuffer&) = delete;
+
+  TensorBuffer(TensorBuffer&& other) noexcept : impl_(std::move(other.impl_)) {}
+  TensorBuffer& operator=(TensorBuffer&& other) noexcept;
+
+  bool is_allocated() const { return bool(impl_); }
+  const Shape& shape() const;
+  DataType data_type() const;
+  int64_t elem_cnt() const { return shape().elem_cnt(); }
+  size_t nbytes() const { return elem_cnt() * GetSizeOfDataType(data_type()); }
+
+  void Reset(const Shape& shape, DataType dtype);
+  void Reset(const Shape& shape);
+  void Reset(DataType dtype);
+  void Reset();
+
+  // backward compatible interface and will be deprecated in future
+  void Resize(const Shape& shape, DataType dtype) { Reset(shape, dtype); }
+
+  void CopyFrom(const TensorBuffer& src);
+  void Swap(TensorBuffer& other);
+
+  template<typename T = void>
+  T* mut_data() {
+    if (raw_data() == nullptr) { return nullptr; }
+    CheckDataType<T>(data_type());
+    return static_cast<T*>(raw_data());
   }
 
   template<typename T = void>
-  inline T* mut_data() {
-    if (data_ == nullptr) { return nullptr; }
-    CheckDataType<T>(data_type_);
-    return static_cast<T*>(data_.get());
-  }
-
-  template<typename T = void>
-  inline const T* data() const {
-    if (data_ == nullptr) { return nullptr; }
-    CheckDataType<T>(data_type_);
-    return static_cast<const T*>(data_.get());
-  }
-
-  void reset() {
-    shape_ = Shape();
-    data_.reset();
-    data_type_ = DataType::kInvalidDataType;
-    num_bytes_ = 0;
-  }
-
-  void reserve(size_t new_num_bytes) {
-    if (new_num_bytes <= num_bytes_) { return; }
-    data_.reset();
-    data_.reset(MemoryAllocatorImpl::AllocateUnPinnedHostMem(new_num_bytes));
-    num_bytes_ = new_num_bytes;
-  }
-
-  int64_t elem_cnt() const { return shape_.elem_cnt(); }
-
-  size_t nbytes() const { return elem_cnt() * GetSizeOfDataType(data_type_); }
-
-  size_t capacity() const { return num_bytes_; }
-
-  void Resize(const Shape& new_shape) { Resize(new_shape, data_type_); }
-
-  void Resize(const Shape& new_shape, DataType new_type) {
-    int64_t elem_cnt = new_shape.elem_cnt();
-    if (new_type == DataType::kInvalidDataType || elem_cnt == 0) { return; }
-    CheckTensorBufferDataType(new_type);
-
-    data_type_ = new_type;
-    shape_ = new_shape;
-
-    size_t new_num_bytes = elem_cnt * GetSizeOfDataType(new_type);
-    new_num_bytes = RoundUp(new_num_bytes, kTensorBufferAlignedSize);
-    if (new_num_bytes > num_bytes_) {
-      new_num_bytes =
-          std::max(new_num_bytes, RoundUp(num_bytes_ * growth_factor_, kTensorBufferAlignedSize));
-      reserve(new_num_bytes);
-    } else if (new_num_bytes < num_bytes_ * shrink_threshold_) {
-      data_.reset();
-      num_bytes_ = 0;
-      reserve(new_num_bytes);
-    }
-  }
-
-  void CopyFrom(const TensorBuffer& src) {
-    if (&src == this) { return; }
-    Resize(src.shape(), src.data_type());
-    memcpy(mut_data(), src.data(), nbytes());
-  }
-
-  void Swap(TensorBuffer* lhs) {
-    data_.swap(lhs->data_);
-    std::swap(num_bytes_, lhs->num_bytes_);
-    std::swap(shape_, lhs->shape_);
-    std::swap(data_type_, lhs->data_type_);
+  const T* data() const {
+    if (raw_data() == nullptr) { return nullptr; }
+    CheckDataType<T>(data_type());
+    return static_cast<const T*>(raw_data());
   }
 
  private:
-  // TODO(chengcheng)
-  static double growth_factor_;
-  static double shrink_threshold_;
-  static constexpr size_t kTensorBufferAlignedSize = 1024;
+  friend class TensorBufferPool;
 
-  BufferType data_;
-  size_t num_bytes_;
-  Shape shape_;
-  DataType data_type_;
+  void Allocate(const Shape& shape, DataType dtype);
+  void* raw_data();
+  const void* raw_data() const;
+
+  std::unique_ptr<detail::TensorBufferImpl> impl_;
 };
 
 #define BUFFER_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
@@ -144,6 +128,62 @@ struct GetDataType<TensorBuffer> : std::integral_constant<DataType, DataType::kT
 inline TensorBuffer GetTypeByDataType(std::integral_constant<DataType, DataType::kTensorBuffer>) {
   return {};
 }
+
+class TensorBufferPool final {
+ public:
+  using ItemT = std::unique_ptr<detail::TensorBufferImpl>;
+  using ListT = std::vector<ItemT>;
+
+  static TensorBufferPool* Get() {
+    auto& ptr = GetPtr();
+    CHECK(ptr) << "TensorBufferPool has not been created";
+    return ptr.get();
+  }
+
+  static TensorBufferPool* TryGet() {
+    auto& ptr = GetPtr();
+    return ptr.get();
+  }
+
+  static void New() {
+    auto& ptr = GetPtr();
+    CHECK(!ptr) << "TensorBufferPool is already New";
+    ptr.reset(new TensorBufferPool());
+  }
+
+  static void Delete() {
+    auto& ptr = GetPtr();
+    if (ptr) { ptr.reset(); }
+  }
+
+  ~TensorBufferPool() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TensorBufferPool);
+
+  void Allocate(ItemT* item, const Shape& shape, DataType dtype);
+  void Deallocate(ItemT* item);
+
+  void IncreasePoolSizeByBase(size_t base);
+  void DecreasePoolSizeByBase(size_t base);
+
+ private:
+  static std::unique_ptr<TensorBufferPool>& GetPtr() {
+    static std::unique_ptr<TensorBufferPool> ptr;
+    return ptr;
+  }
+
+  static ListT& ThreadLocalCache() {
+    thread_local ListT thread_local_cache;
+    return thread_local_cache;
+  }
+
+  TensorBufferPool();
+
+  size_t thread_local_cache_size_;
+  size_t pool_size_;
+
+  ListT global_free_list_;
+  std::mutex mtx_;
+};
 
 }  // namespace oneflow
 
