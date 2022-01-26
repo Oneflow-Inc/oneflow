@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_binary_elementwise_func.h"
-#include "oneflow/core/ep/cpu/cpu_parallel.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
@@ -42,7 +41,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
 
     cpu_stream->Parallel(
         0, n,
-        [=](int64_t begin, int64_t end) {
+        [x, y, z](int64_t begin, int64_t end) {
           for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
         },
         32768, num_parallel);
