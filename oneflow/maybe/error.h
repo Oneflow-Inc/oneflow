@@ -243,6 +243,8 @@ struct NoStackError {
   using ErrorType = E;
   using StackEntryType = void;
 
+  static_assert(!std::is_reference<E>::value, "the underlying value type cannot be reference");
+
   NoStackError(ErrorType error)  // NOLINT(google-explicit-constructor)
       : error_(std::move(error)) {}
 
