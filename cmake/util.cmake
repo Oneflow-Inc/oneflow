@@ -286,11 +286,7 @@ endfunction()
 function(getResolvedFiles)
   set(singleValues FILES;OUTPUT)
   set(prefix ARG)
-  cmake_parse_arguments(
-    PARSE_ARGV 0
-    ${prefix}
-    "${noValues}" "${singleValues}" "${multiValues}"
-  )
+  cmake_parse_arguments(PARSE_ARGV 0 ${prefix} "${noValues}" "${singleValues}" "${multiValues}")
 
   foreach(_file "${${prefix}_FILES}")
     if(NOT EXISTS "${_file}")
