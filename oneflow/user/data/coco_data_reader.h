@@ -27,11 +27,14 @@ namespace data {
 class COCODataReader final : public DataReader<COCOImage> {
  public:
   COCODataReader(user_op::KernelInitContext* ctx);
-  ~COCODataReader() = default;
+  ~COCODataReader() override;
 
  protected:
   using DataReader<COCOImage>::loader_;
   using DataReader<COCOImage>::parser_;
+
+ private:
+  size_t batch_size_;
 };
 
 class COCOMeta final {

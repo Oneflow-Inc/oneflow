@@ -2562,6 +2562,75 @@ class GenTensorBufferFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RepeatFunctor {
+ public:
+  RepeatFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Shape& repeat_shape) const {
+    Shape input_shape = *(input->shape());
+    std::vector<int32_t> input_reshape_vec;
+    std::vector<int32_t> expand_shape_vec;
+    std::vector<int32_t> output_reshape_vec;
+
+    int32_t numaxes_diff = repeat_shape.NumAxes() - input_shape.NumAxes();
+    CHECK_GE_OR_RETURN(numaxes_diff, 0)
+        << "RuntimeError: Number of dimensions of repeat dims can not be "
+           "smaller than number of dimensions of tensor";
+
+    for (int32_t i = repeat_shape.NumAxes() - 1; i >= 0; i--) {
+      if (i >= numaxes_diff) {
+        int32_t input_shape_val = input_shape.At(i - numaxes_diff);
+        int32_t repeat_shape_val = repeat_shape.At(i);
+        if (repeat_shape_val > 1) {
+          if (input_shape_val > 1) {
+            input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
+            input_reshape_vec.insert(input_reshape_vec.begin(), 1);
+            expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
+            expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape_val);
+            output_reshape_vec.insert(output_reshape_vec.begin(),
+                                      repeat_shape_val * input_shape_val);
+          } else {
+            input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
+            expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape_val);
+            output_reshape_vec.insert(output_reshape_vec.begin(), repeat_shape_val);
+          }
+        } else {
+          input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
+          expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
+          output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+        }
+      } else {
+        expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape.At(i));
+        output_reshape_vec.insert(output_reshape_vec.begin(), repeat_shape.At(i));
+      }
+    }
+    Shape input_reshape(DimVector(input_reshape_vec.begin(), input_reshape_vec.end()));
+    Shape expand_shape(DimVector(expand_shape_vec.begin(), expand_shape_vec.end()));
+    Shape output_reshape(DimVector(output_reshape_vec.begin(), output_reshape_vec.end()));
+    std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
+    std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
+    std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
+    return result;
+  }
+};
+
+class TileFunctor {
+ public:
+  TileFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Shape& dims) const {
+    std::vector<int32_t> new_dims_vec;
+    int32_t numaxes_diff = input->shape()->NumAxes() - dims.NumAxes();
+    for (int32_t i = dims.NumAxes() - 1; i >= 0; i--) {
+      CHECK_GE_OR_RETURN(dims.At(i), 0)
+          << "RuntimeError: Tring to create tensor with negative dimension " << dims.At(i);
+      new_dims_vec.insert(new_dims_vec.begin(), dims.At(i));
+    }
+    for (int32_t i = 0; i < numaxes_diff; i++) { new_dims_vec.insert(new_dims_vec.begin(), 1); }
+    Shape new_dims(DimVector(new_dims_vec.begin(), new_dims_vec.end()));
+    return JUST(Repeat(input, new_dims));
+  }
+};
+
 class TransposeAllDimPropertyFunctor {
  public:
   TransposeAllDimPropertyFunctor() {}
@@ -2691,6 +2760,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
+  m.add_functor<impl::RepeatFunctor>("Repeat");
+  m.add_functor<impl::TileFunctor>("Tile");
   m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
 };
