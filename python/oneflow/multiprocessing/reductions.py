@@ -13,7 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from multiprocessing import shared_memory
 from multiprocessing.reduction import ForkingPickler
+
+import numpy as np
 
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
@@ -31,32 +34,55 @@ except ImportError:
     pass
 
 
-def rebuild_tensor(cls, tensor_data, requires_grad):
-    t = flow.tensor(tensor_data)
-    if cls == Parameter:
-        # we have to pass requires_grad into constructor, rather than set it as an
-        # attribute later, because it's an important check for Integer Tensors to
-        # have requires_grad=False (or else they raise an error)
-        t = Parameter(t, requires_grad=requires_grad)
-    else:
-        t.requires_grad = requires_grad
+def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
+    existing_shm = shared_memory.SharedMemory(name=shm.name)
+    arr = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
+    t = flow.tensor(arr)
+
+    existing_shm.close()
+    shm.close()
+    shm.unlink()
+
+    t.requires_grad = requires_grad
     return t
+
+
+def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
+    existing_shm = shared_memory.SharedMemory(name=shm.name)
+    arr = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
+    t = flow.tensor(arr)
+
+    existing_shm.close()
+    shm.close()
+    shm.unlink()
+
+    return Parameter(t, requires_grad=requires_grad)
 
 
 def reduce_tensor(tensor):
     tensor_data = tensor.numpy()
+
+    shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
+    shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
+    shm_numpy[:] = tensor_data[:]
+
     requires_grad = tensor.requires_grad
-    return (rebuild_tensor, (type(tensor), tensor_data, requires_grad))
+    return (rebuild_shm_tensor, (shm, tensor_data.shape, tensor_data.dtype, requires_grad))
 
 
-def reduce_local_tensor(tensor):
+def reduce_parameter(tensor):
     tensor_data = tensor.numpy()
     requires_grad = tensor.requires_grad
-    return (rebuild_tensor, (type(tensor), tensor_data, requires_grad))
+
+    shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
+    shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
+    shm_numpy[:] = tensor_data[:]
+
+    return (rebuild_shm_parameter, (shm, tensor_data.shape, tensor_data.dtype, requires_grad))
 
 
 def init_reductions():
     ForkingPickler.register(Tensor, reduce_tensor)
-    ForkingPickler.register(flow._oneflow_internal.Tensor, reduce_local_tensor)
-    ForkingPickler.register(Parameter, reduce_tensor)
-    ForkingPickler.register(flow._oneflow_internal.nn.Parameter, reduce_local_tensor)
+    ForkingPickler.register(flow._oneflow_internal.Tensor, reduce_tensor)
+    ForkingPickler.register(Parameter, reduce_parameter)
+    ForkingPickler.register(flow._oneflow_internal.nn.Parameter, reduce_parameter)
