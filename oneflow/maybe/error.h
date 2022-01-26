@@ -198,6 +198,8 @@ struct StackedError : details::ErrorStackFromContainerBase<StackedError<E, M>> {
   using StackEntryType = ErrorStackEntry<StackMessage>;
   using StackType = std::vector<StackEntryType>;
   using BaseType = details::ErrorStackFromContainerBase<StackedError<E, M>>;
+  
+  static_assert(!std::is_reference<E>::value, "the underlying value type cannot be reference");
 
   StackedError(ErrorType error)  // NOLINT(google-explicit-constructor)
       : error_(std::move(error)) {}
