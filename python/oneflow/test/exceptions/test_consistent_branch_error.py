@@ -31,6 +31,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
     @autotest(n=1, check_graph=False)
     def test_add_with_alpha(test_case):
         try:
+            flow.set_transport_timeout(3)
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
@@ -44,7 +45,6 @@ class TestConsistentBranchError(flow.unittest.TestCase):
             err_msg = "maybe execute different code in different ranks, please check if the code is branched and operates on the global tensor"
             assert err_msg in str(e)
 
+
 if __name__ == "__main__":
-    os.environ['EAGER_CONSISTENT_TIMEOUT']="15"
     unittest.main()
-    del os.environ['EAGER_CONSISTENT_TIMEOUT']

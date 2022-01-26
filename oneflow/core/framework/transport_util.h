@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_RPC_UTIL_H_
 
 #include <atomic>
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/transport_token.h"
@@ -108,9 +107,8 @@ class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
 class RankGroup;
 
 struct TransportUtil final {
-  static int64_t TimeoutSeconds() {
-    return ParseIntegerFromEnv("EAGER_CONSISTENT_TIMEOUT", 60 * 5);
-  }
+  static int64_t TimeoutSeconds();
+  static void SetTimeoutSeconds(int64_t secs);
   static int64_t BlockingWarningIntervalSeconds() { return 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);

@@ -51,6 +51,7 @@ locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.version import __version__
 from oneflow.version import __git_commit__
+from oneflow._oneflow_internal import set_transport_timeout
 
 _DEPRECATED = set()
 
