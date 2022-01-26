@@ -117,7 +117,7 @@ class TestConstantModule(flow.unittest.TestCase):
             requires_grad=constant(True),
         )
         return y
-    
+
     @autotest(n=10, auto_backward=True)
     def test_full_with_random_data_int(test_case):
         device = random_device()

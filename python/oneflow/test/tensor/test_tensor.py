@@ -479,9 +479,9 @@ class TestTensor(flow.unittest.TestCase):
             low=-2, high=2, ndim=4, dim0=16, dim1=9, dim2=4, dim3=7
         ).to(device)
         y = rand_tensor + 1
-        x = random_tensor(
-            low=-2, high=2, ndim=4, dim0=16, dim1=9, dim2=4, dim3=7
-        ).to(device)
+        x = random_tensor(low=-2, high=2, ndim=4, dim0=16, dim1=9, dim2=4, dim3=7).to(
+            device
+        )
         y.mul_(x)
         return y
 
@@ -503,9 +503,9 @@ class TestTensor(flow.unittest.TestCase):
             low=-2, high=2, ndim=4, dim0=26, dim1=7, dim2=4, dim3=17
         ).to(device)
         y = rand_tensor + 1
-        x = random_tensor(
-            low=-2, high=2, ndim=4, dim0=26, dim1=7, dim2=4, dim3=17
-        ).to(device)
+        x = random_tensor(low=-2, high=2, ndim=4, dim0=26, dim1=7, dim2=4, dim3=17).to(
+            device
+        )
         y.div_(x)
         return y
 
@@ -527,9 +527,9 @@ class TestTensor(flow.unittest.TestCase):
             low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17
         ).to(device)
         y = rand_tensor + 1
-        x = random_tensor(
-            low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17
-        ).to(device)
+        x = random_tensor(low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17).to(
+            device
+        )
         y.sub_(x)
         return y
 

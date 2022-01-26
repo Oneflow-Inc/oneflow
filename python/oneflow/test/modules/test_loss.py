@@ -43,9 +43,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
             dtype=int,
             requires_grad=False,
         ).to(device),
-        random_tensor(1, num_classes, low=0, high=3, requires_grad=False).to(
-            device
-        ),
+        random_tensor(1, num_classes, low=0, high=3, requires_grad=False).to(device),
         ignore_index,
         device,
     )
@@ -227,9 +225,7 @@ class TestL1LossModule(flow.unittest.TestCase):
         shape = random_tensor().oneflow.shape
 
         x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(
-            device
-        )
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.L1Loss(reduction=oneof("none", "sum", "mean", nothing()))
         m.train(random())
@@ -247,9 +243,7 @@ class TestSmoothL1LossModule(flow.unittest.TestCase):
         shape = random_tensor().oneflow.shape
 
         x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(
-            device
-        )
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.SmoothL1Loss(
             reduction=oneof("none", "sum", "mean", nothing()), beta=oneof(0, 0.5, 1)
@@ -269,9 +263,7 @@ class TestMSELossModule(flow.unittest.TestCase):
         shape = random_tensor().oneflow.shape
 
         x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(
-            device
-        )
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.MSELoss(reduction=oneof("none", "sum", "mean", nothing()))
         m.train(random())
@@ -289,9 +281,7 @@ class TestKLDivLossModule(flow.unittest.TestCase):
         shape = random_tensor().oneflow.shape
 
         x = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(
-            device
-        )
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.KLDivLoss(
             reduction=oneof("none", "sum", "mean", nothing()),
@@ -313,9 +303,7 @@ class TestMarginRankingLossModule(flow.unittest.TestCase):
 
         x1 = random_tensor(len(shape), *shape).to(device)
         x2 = random_tensor(len(shape), *shape).to(device)
-        target = random_tensor(len(shape), *shape, requires_grad=False).to(
-            device
-        )
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.MarginRankingLoss(
             margin=oneof(0.0, 0.3, 10),
