@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include <set>
 #include <vector>
+#include <memory>
 #include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {

@@ -68,14 +68,14 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   }
   {
     // reset tensor_storage_;
+    const auto& Free = [allocator, required_body_bytes](char* dptr) {
+      if (IsShuttingDown()) { return; }
+      allocator->Deallocate(dptr, required_body_bytes);
+    };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    tensor_storage_->set_blob_dptr(dptr, required_body_bytes,
-                                   [allocator, required_body_bytes](char* dptr) {
-                                     if (!IsShuttingDown()) {
-                                       allocator->Deallocate(dptr, required_body_bytes);
-                                     }
-                                   });
+    tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
+                                   required_body_bytes);
 
     int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
     blob->reset_dptr(dptr + storage_offset_bytes);

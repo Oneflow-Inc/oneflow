@@ -30,6 +30,13 @@ class TestRepeat(flow.unittest.TestCase):
         y = x.repeat(sizes)
         return y
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_flow_tensor_repeat_bool_with_random_data(test_case):
+        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2).to(torch.bool)
+        sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
+        y = x.repeat(sizes)
+        return y
+
     @autotest(check_graph=True)
     def test_flow_tensor_repeat_with_0dim_data(test_case):
         x = random_pytorch_tensor(ndim=0)
