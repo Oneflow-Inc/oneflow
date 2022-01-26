@@ -637,6 +637,11 @@ class AsStridedFunctor {
                            const std::vector<int32_t>& size,
                            const std::vector<int32_t>& stride,
                            const int32_t& storage_offset) const {
+    CHECK_OR_RETURN(size.size()==stride.size())<<"mismatch in length of strides and shape";
+    for(size_t i = 0; i < size.size(); i++){
+      CHECK_OR_RETURN(size[i]>=0)<<"Trying to create tensor with negative dimension"<<size[i];
+      CHECK_OR_RETURN(stride[i]>=0)<<"as_strided: Negative strides are not supported at the moment, got strides:" << stride[i];
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));

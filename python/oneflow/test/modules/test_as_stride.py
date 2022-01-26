@@ -24,17 +24,13 @@ class TestAsStrided(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_AsStrided(test_case):
         device = random_device()
-        ndim = np.random.randint(1, 6)
-        dim0 = np.random.randint(4, 10) * 8
-        dim1 = np.random.randint(4, 10) * 8
-        dim2 = np.random.randint(4, 10) * 8
-        dim3 = np.random.randint(4, 10) * 8
-        dim4 = np.random.randint(4, 10) * 8
-        if ndim==1:
-            x = random_pytorch_tensor(1, dim0)
-        elif ndim==2:
-            x = random_pytorch_tensor(2, dim0, dim1)
-        elif ndim==3:
+        ndim = np.random.randint(3, 6)
+        dim0 = np.random.randint(2, 4) 
+        dim1 = np.random.randint(2, 4) 
+        dim2 = np.random.randint(2, 4) 
+        dim3 = np.random.randint(2, 4) 
+        dim4 = np.random.randint(2, 4) 
+        if ndim==3:
             x = random_pytorch_tensor(3, dim0, dim1, dim2)
         elif ndim==4:
             x = random_pytorch_tensor(4, dim0, dim1, dim2, dim3)
