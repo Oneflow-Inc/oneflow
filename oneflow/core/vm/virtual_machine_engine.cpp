@@ -53,6 +53,10 @@ bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
 }  // namespace
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
+  OF_PROFILER_RANGE_PUSH(
+      "R:"
+      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
+      + ":" + instruction->instr_msg().instr_type_name());
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
@@ -74,8 +78,17 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     // Edges are erased only if the instruction is completed.
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
-    if (Dispatchable(out_instruction)) { mut_ready_instruction_list()->PushBack(out_instruction); }
+    if (Dispatchable(out_instruction)) {
+      OF_PROFILER_RANGE_PUSH(
+          "E:"
+          + out_instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(
+              out_instruction)
+          + ":" + out_instruction->instr_msg().instr_type_name());
+      mut_ready_instruction_list()->PushBack(out_instruction);
+      OF_PROFILER_RANGE_POP();
+    }
   }
+  OF_PROFILER_RANGE_POP();
 }
 
 // Handle pending instructions, and try schedule them to ready list.
@@ -92,7 +105,6 @@ void VirtualMachineEngine::HandlePending() {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
   }
-  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
     if (likely(Dispatchable(instruction))) {
@@ -130,11 +142,9 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
       if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
-      OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
       stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
-      OF_PROFILER_RANGE_POP();
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
@@ -490,29 +500,36 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
-  OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
+    OF_PROFILER_RANGE_PUSH(
+        "D:"
+        + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(
+            instruction.Mutable())
+        + ":" + instruction->instr_msg().instr_type_name());
     DispatchInstruction(instruction.Mutable());
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
-      if (Dispatchable(edge->mut_dst_instruction())) {
-        mut_ready_instruction_list()->PushBack(edge->mut_dst_instruction());
+      auto* out_instruction = edge->mut_dst_instruction();
+      if (Dispatchable(out_instruction)) {
+        OF_PROFILER_RANGE_PUSH(
+            "P:"
+            + out_instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(
+                out_instruction)
+            + ":" + out_instruction->instr_msg().instr_type_name());
+        mut_ready_instruction_list()->PushBack(out_instruction);
+        OF_PROFILER_RANGE_POP();
       }
     }
+    OF_PROFILER_RANGE_POP();
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH(
-      "D:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
-      + ":" + instruction->instr_msg().instr_type_name());
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
@@ -522,7 +539,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {

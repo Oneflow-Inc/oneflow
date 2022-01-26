@@ -114,12 +114,11 @@ class _BatchNorm(_NormBase):
             is_training = True
         else:
             is_training = (self.running_mean is None) and (self.running_var is None)
+        # NOTE(lixiang): If it is training mode, pass running_mean and running_var directly to the functor layer.
         return flow._C.normalization(
             x,
-            self.running_mean
-            if not self.training or self.track_running_stats
-            else None,
-            self.running_var if not self.training or self.track_running_stats else None,
+            self.running_mean,
+            self.running_var,
             self.weight,
             self.bias,
             axis=self.channel_axis,

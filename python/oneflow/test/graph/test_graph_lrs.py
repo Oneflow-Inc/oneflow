@@ -178,6 +178,19 @@ class TestGraphLRs(flow.unittest.TestCase):
         _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cuda"), _lr_fn)
         _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cpu"), _lr_fn)
 
+    def test_polynomial_lr(test_case):
+        def _lr_fn(parameters):
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+
+            lr = flow.optim.lr_scheduler.PolynomialLR(
+                of_sgd, steps=10, end_learning_rate=0.00001, power=2, cycle=True
+            )
+            return of_sgd, lr
+
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cuda"), _lr_fn)
+
+        _test_linear_graph_train_with_lr_sch(test_case, 21, flow.device("cpu"), _lr_fn)
+
 
 if __name__ == "__main__":
     unittest.main()

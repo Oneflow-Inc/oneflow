@@ -93,6 +93,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in nccl";
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclSum, kernel_cache->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -144,6 +145,23 @@ REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerNcclBroadcastKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
+class EagerNcclTouchKernel final : public user_op::OpKernel {
+ public:
+  EagerNcclTouchKernel() = default;
+  ~EagerNcclTouchKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override{
+      // Do nothing.
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_touch")
+    .SetCreateFn<EagerNcclTouchKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+
 class EagerNcclReduceKernel final : public user_op::OpKernel {
  public:
   EagerNcclReduceKernel() = default;
@@ -170,6 +188,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
       CHECK_EQ(in->data_type(), out->data_type());
       out_ptr = out->mut_dptr();
     }
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in nccl";
     OF_NCCL_CHECK(ncclReduce(in->dptr(), out_ptr, in->shape().elem_cnt(),
                              GetNcclDataType(in->data_type()), ncclSum, root, kernel_cache->comm(),
                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -201,6 +220,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in nccl";
     const auto& op_type = ctx->Attr<std::string>("op_type");
     OF_NCCL_CHECK(ncclReduceScatter(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), GetNcclDataType(in->data_type()),
@@ -374,6 +394,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 REGISTER_EAGER_NCCL_S2S_KERNEL(int8_t)
 REGISTER_EAGER_NCCL_S2S_KERNEL(int32_t)
 REGISTER_EAGER_NCCL_S2S_KERNEL(int64_t)
+REGISTER_EAGER_NCCL_S2S_KERNEL(bool)
 REGISTER_EAGER_NCCL_S2S_KERNEL(float)
 REGISTER_EAGER_NCCL_S2S_KERNEL(double)
 REGISTER_EAGER_NCCL_S2S_KERNEL(float16)
