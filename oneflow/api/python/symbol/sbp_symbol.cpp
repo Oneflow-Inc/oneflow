@@ -60,6 +60,31 @@ Maybe<Symbol<cfg::SbpParallel>> GetPartialSumSbpParallel() {
   return partial_sum_sbp;
 }
 
+Maybe<std::pair<std::string, int>> SbpGetState(const Symbol<cfg::SbpParallel>& sbp) {
+  if (sbp->has_broadcast_parallel()) {
+    return std::make_shared<std::pair<std::string, int>>("B", -1);
+  } else if (sbp->has_partial_sum_parallel()) {
+    return std::make_shared<std::pair<std::string, int>>("P", -1);
+  } else if (sbp->has_split_parallel()) {
+    return std::make_shared<std::pair<std::string, int>>("S", sbp->split_parallel().axis());
+  } else {
+    return Error::RuntimeError() << "Invalid sbp signature: " << sbp->DebugString();
+  }
+}
+
+Maybe<Symbol<cfg::SbpParallel>> GetSbpFromState(const std::pair<std::string, int>& state) {
+  if (state.first == "B") {
+    return GetBroadcastSbpParallel();
+  } else if (state.first == "P") {
+    return GetPartialSumSbpParallel();
+  } else if (state.first == "S") {
+    return GetSplitSbpParallel(state.second);
+  } else {
+    return Error::RuntimeError() << "Invalid sbp signature state: (" << state.first << ", "
+                                 << state.second << ");";
+  }
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
@@ -71,7 +96,14 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def("_ToAttrStr",
-           [](const Symbol<cfg::SbpParallel>& sbp_sym) { return SbpParallelToString(*sbp_sym); });
+           [](const Symbol<cfg::SbpParallel>& sbp_sym) { return SbpParallelToString(*sbp_sym); })
+      .def(py::pickle(
+          [](const Symbol<cfg::SbpParallel>& sbp) {  // __getstate__
+            return SbpGetState(sbp).GetOrThrow();
+          },
+          [](const std::pair<std::string, int>& state) {  // __setstate__
+            return GetSbpFromState(state).GetOrThrow();
+          }));
   m.def(
       "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });

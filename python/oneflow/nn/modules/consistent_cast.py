@@ -34,31 +34,7 @@ class ToConsistent(Module):
         return flow._C.to_consistent(x, placement=placement, sbp=sbp)
 
 
-@register_tensor_op("to_consistent")
 def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
-    """Cast a local tensor to consistent tensor or cast a
-    consistent tensor to another consistent tensor with
-    different sbp or placement
-
-
-    Args:
-        input (Tensor): the input tensor.
-        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
-        >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> output_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
-        >>> output_tensor.is_consistent
-        True
-    """
     assert isinstance(input, Tensor)
 
     def _check_sbp(sbp):
@@ -111,26 +87,6 @@ class ToLocal(Module):
         return flow._C.to_local(x)
 
 
-@register_tensor_op("to_local")
 def to_local_op(input):
-    """Returns the local tensor of a consistent tensor.
-
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        >>> input = flow.tensor(np_arr, dtype=flow.float32)
-        >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
-        >>> consistent_tensor.to_local()
-        tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
-    """
     assert input.is_consistent, "input must be a consistent tensor!"
     return flow._C.to_local(input)

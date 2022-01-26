@@ -20,18 +20,14 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.cc"
              "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.h"
              "${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py"
-      COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
-      ARGS --cpp_out  ${CMAKE_CURRENT_BINARY_DIR} -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
-
-      COMMAND  ${PROTOBUF_PROTOC_EXECUTABLE}
-      ARGS --python_out  ${of_proto_python_dir} -I ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
-
-      COMMAND ${CMAKE_COMMAND}
-      ARGS -E touch ${of_proto_python_dir}/${REL_DIR}/__init__.py
-
+      COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ARGS --cpp_out ${CMAKE_CURRENT_BINARY_DIR} -I
+              ${ROOT_DIR} ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
+      COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ARGS --python_out ${of_proto_python_dir} -I ${ROOT_DIR}
+              ${ABS_FIL} -I ${PROTOBUF_INCLUDE_DIR}
+      COMMAND ${CMAKE_COMMAND} ARGS -E touch ${of_proto_python_dir}/${REL_DIR}/__init__.py
       DEPENDS ${ABS_FIL} protobuf
       COMMENT "Running Protocol Buffer Compiler on ${FIL}"
-      VERBATIM )
+      VERBATIM)
   endforeach()
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} PROPERTIES GENERATED TRUE)

@@ -35,7 +35,7 @@ namespace oneflow {
     return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                   \
-    *ctx->OutputDType("out", 0) = DataType::kInt8;                                               \
+    *ctx->OutputDType("out", 0) = DataType::kBool;                                               \
     return Maybe<void>::Ok();                                                                    \
   }
 
