@@ -732,14 +732,11 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       err << "Condidate nd sbp signature are: "
           << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
       err << ", but inputs sbp are:";
-      {
-        std::ostringstream input_sbp_str;
-        for (const auto& ibn : input_bns()) {
-          const cfg::NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
-          input_sbp_str << " " << ibn << ": " << NdSbpToString(nd_sbp) << ";";
-        }
-        err << input_sbp_str.str() << std::endl;
+      for (const auto& ibn : input_bns()) {
+        const cfg::NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+        err << " " << ibn << ": " << NdSbpToString(nd_sbp) << ";";
       }
+
       return Error::RuntimeError() << err.str();
     }
   }
