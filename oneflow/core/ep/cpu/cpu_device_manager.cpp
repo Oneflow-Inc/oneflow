@@ -13,12 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
 namespace ep {
+
+constexpr size_t kOtherNumThreads = 2;
 
 CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry) : registry_(registry) {}
 
@@ -28,7 +31,14 @@ DeviceManagerRegistry* CpuDeviceManager::registry() const { return registry_; }
 
 std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(device_mutex_);
-  if (!device_) { device_.reset(new CpuDevice(this)); }
+  if (!device_) { 
+    CpuDevice * cpu_device = new CpuDevice(this);
+    int64_t cpu_core = std::thread::hardware_concurrency();
+    int64_t computing_cores = (cpu_core / GlobalProcessCtx::NumOfProcessPerNode()) - kOtherNumThreads;
+    if (computing_cores < 1) { computing_cores = 1; }
+    computing_cores = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_PARALLELS", computing_cores);
+    cpu_device->SetParallelNumbers(computing_cores);
+    device_.reset(cpu_device); }
   return device_;
 }
 

@@ -35,11 +35,11 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ~ElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
-    size_t logical_cores =
-        dynamic_cast<CpuDevice*>(stream->As<CpuStream>()->device())->local_logical_cores();
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+    size_t logical_cores = dynamic_cast<CpuDevice*>(cpu_stream->device())->GetParallelNumbers();
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    parallel(
+    cpu_stream->Parallel(
         0, count,
         [=](int64_t begin, int64_t end) {
           for (int64_t i = begin; i < end; i++) {

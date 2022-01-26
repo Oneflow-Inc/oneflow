@@ -37,10 +37,10 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* z = tensor_z->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    size_t logical_cores =
-        dynamic_cast<ep::CpuDevice*>(ctx->stream()->As<ep::CpuStream>()->device())
-            ->local_logical_cores();
-    ep::parallel(
+    ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
+    size_t logical_cores = dynamic_cast<ep::CpuDevice*>(cpu_stream->device())->GetParallelNumbers();
+
+    cpu_stream->Parallel(
         0, n,
         [=](int64_t begin, int64_t end) {
           for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }

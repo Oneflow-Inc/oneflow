@@ -25,15 +25,16 @@ namespace ep {
 class CpuDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDevice);
-  explicit CpuDevice(DeviceManager* device_manager);
+  explicit CpuDevice(DeviceManager* device_manager): device_manager_(device_manager), parallel_number_(1) {}
   ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
+  void SetParallelNumbers(size_t num) { parallel_number_ = num; }
+  size_t GetParallelNumbers() { return parallel_number_; }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
   size_t device_index() const override { return 0; }
   DeviceManager* device_manager() const override { return device_manager_; }
-  size_t local_logical_cores() { return local_logical_cores_; }
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
@@ -48,7 +49,7 @@ class CpuDevice : public Device {
 
  private:
   DeviceManager* device_manager_;
-  size_t local_logical_cores_;
+  size_t parallel_number_;
 };
 
 }  // namespace ep
