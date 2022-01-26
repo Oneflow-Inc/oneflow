@@ -1060,3 +1060,126 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+   oneflow.Tensor.sort,
+   """
+   See :func:`oneflow.sort`
+   """, 
+)
+
+add_docstr(
+    oneflow.Tensor.type_as,
+    r"""Returns this tensor cast to the type of the given tensor.
+        This is a no-op if the tensor is already of the correct type.
+
+    Args:
+        input  (Tensor): the input tensor.
+        target (Tensor): the tensor which has the desired type.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> target = flow.tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
+        >>> input = input.type_as(target)
+        >>> input.dtype
+        oneflow.int32
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.int,
+    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.int()
+        >>> input.dtype
+        oneflow.int32
+    """,    
+)
+
+add_docstr(
+    oneflow.Tensor.long,
+    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.long()
+        >>> input.dtype
+        oneflow.int64
+    """,    
+)
+
+add_docstr(
+    oneflow.Tensor.float,
+    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.float()
+        >>> input.dtype
+        oneflow.float32
+    """    
+)
+
+add_docstr(
+    oneflow.Tensor.double,
+    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.double()
+        >>> input.dtype
+        oneflow.float64
+    """
+)
+
+add_docstr(
+    oneflow.Tensor.is_floating_point,
+    """
+    See :func:`oneflow.is_floating_point`
+    """,
+)

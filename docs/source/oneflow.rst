@@ -148,7 +148,6 @@ oneflow
             unsqueeze, 
             permute,
             var, 
-            view, 
             where, 
             zeros, 
             zeros_like,
