@@ -23,6 +23,43 @@ namespace oneflow {
 
 namespace {
 
+constexpr char const* kOptimizerConfStateKey = "ONE_EMBEDDING_OPTIMIZE_CONF";
+constexpr char const* kOptimizerConfPlaceholderPrefix = "one_embedding_optimizer_placeholder::";
+
+struct OneEmbeddingOptimizerState : public JobPassState {
+  HashMap<std::string, OptimizerConf> name2conf;
+};
+
+class DumpOneEmbeddingOptimizerConfPass final : public JobPass {
+ public:
+  DumpOneEmbeddingOptimizerConfPass() = default;
+  ~DumpOneEmbeddingOptimizerConfPass() override = default;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
+};
+
+Maybe<void> DumpOneEmbeddingOptimizerConfPass::Apply(Job* job, JobPassCtx* ctx) const {
+  std::unique_ptr<OneEmbeddingOptimizerState> state(new OneEmbeddingOptimizerState);
+  for (auto& opt_conf : *job->mutable_job_conf()->mutable_train_conf()->mutable_optimizer_conf()) {
+    PbRpf<std::string> new_variable_names;
+    for (const auto& name : opt_conf.variable_op_names()) {
+      const size_t pos = name.find(kOptimizerConfPlaceholderPrefix);
+      if (pos == std::string::npos) {
+        *new_variable_names.Add() = name;
+        continue;
+      }
+      const std::string embedding_name = name.substr(pos + strlen(kOptimizerConfPlaceholderPrefix));
+      state->name2conf.emplace(embedding_name, opt_conf);
+      LOG(ERROR) << "Find Embedding " << embedding_name;
+    }
+    *opt_conf.mutable_variable_op_names() = new_variable_names;
+  }
+  JUST(ctx->ResetState(kOptimizerConfStateKey, std::move(state)));
+  return Maybe<void>::Ok();
+}
+
+REGISTER_JOB_PASS("DumpOneEmbeddingOptimizerConfPass", DumpOneEmbeddingOptimizerConfPass);
+
 std::string BuildIdentityOp(JobBuilder* job_builder, const std::string& in_lbn,
                             const ParallelConf& parallel_conf,
                             const user_op::UserOpConfWrapper& embedding_op) {
@@ -455,6 +492,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         const std::string& learning_rate_lbn = AddScheduleOp(
             op_graph, job_builder, options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
+        LOG(ERROR) << options.Name() << " "
+                   << JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey))
+                          .name2conf[options.Name()]
+                          .DebugString();
         BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(), options,
                              embedding_op, id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
                              learning_rate_lbn);
