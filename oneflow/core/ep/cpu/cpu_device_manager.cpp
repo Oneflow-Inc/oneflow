@@ -37,7 +37,7 @@ std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
     int64_t computing_cores = (cpu_core / GlobalProcessCtx::NumOfProcessPerNode()) - kOtherNumThreads;
     if (computing_cores < 1) { computing_cores = 1; }
     computing_cores = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_PARALLELS", computing_cores);
-    cpu_device->SetParallelNumbers(computing_cores);
+    cpu_device->SetNumParallels(computing_cores);
     device_.reset(cpu_device); }
   return device_;
 }
