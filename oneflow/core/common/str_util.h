@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include <string>
+#include <random>
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -108,6 +109,28 @@ std::string GetHashKey(const T&... args) {
 }
 
 std::string ToLower(const std::string& cap);
+
+// https://stackoverflow.com/questions/440133/how-do-i-create-a-random-alpha-numeric-string-in-c
+inline std::string GenAlphaNumericString(size_t len) {
+  static thread_local const std::string alphanum("0123456789"
+                                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                                 "abcdefghijklmnopqrstuvwxyz");
+  std::string tmp_s;
+  tmp_s.reserve(len);
+
+  std::random_device rd{};
+  std::mt19937 mt(rd());
+  std::uniform_int_distribution<> dist(0, 1024);
+  for (int i = 0; i < len; ++i) { tmp_s += alphanum.at(dist(mt) % alphanum.size()); }
+  return tmp_s;
+}
+
+template<typename CallbackT>
+const std::string& ReturnEmptyStr(const CallbackT& Callback) {
+  Callback();
+  static std::string empty{};
+  return empty;
+}
 
 }  // namespace oneflow
 
