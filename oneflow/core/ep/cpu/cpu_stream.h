@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 #define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 #define OF_RUNTIME_SEQ 0u
 #define OF_RUNTIME_OMP 1u
@@ -36,6 +37,8 @@ limitations under the License.
 namespace oneflow {
 
 namespace ep {
+
+constexpr size_t kDefaultGrainSize = 32768;
 
 class CpuStream : public Stream {
  public:
@@ -65,9 +68,9 @@ class CpuStream : public Stream {
   }
 
   template<typename F>
-  void Parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size_t num_threads) {
+  void Parallel(int64_t begin, int64_t end, const F& func, size_t grain_size = kDefaultGrainSize) {
     auto divup = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
-
+    size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumParallels();
     if (begin >= end) { return; }
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     if (grain_size > 0) { num_threads = std::min(num_threads, divup((end - begin), grain_size)); }

@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace ep {
 
-constexpr size_t kOtherNumThreads = 2;
+constexpr size_t kOtherUsedNumThreads = 2;
 
 CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry) : registry_(registry) {}
 
@@ -35,7 +35,7 @@ std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
     CpuDevice* cpu_device = new CpuDevice(this);
     int64_t cpu_core = std::thread::hardware_concurrency();
     int64_t computing_cores =
-        (cpu_core / GlobalProcessCtx::NumOfProcessPerNode()) - kOtherNumThreads;
+        (cpu_core / GlobalProcessCtx::NumOfProcessPerNode()) - kOtherUsedNumThreads;
     if (computing_cores < 1) { computing_cores = 1; }
     computing_cores = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_PARALLELS", computing_cores);
     cpu_device->SetNumParallels(computing_cores);
