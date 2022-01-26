@@ -86,7 +86,6 @@ def compare_with_numpy_lamb(
             loss.backward()
             return loss
 
-    of_res_list = []
     lamb_graph = CustomLambGraph()
 
     for i in range(train_iters):
@@ -96,11 +95,9 @@ def compare_with_numpy_lamb(
             requires_grad=False,
             device=flow.device(device),
         )
-        _ = lamb_graph(mask_tensor)
+        lamb_graph(mask_tensor)
 
-        of_res_list.append(simp_module.param.numpy())
-
-    np_res_list = []
+    of_res = simp_module.param.numpy()
 
     def train_by_numpy():
         x = init_value
@@ -149,12 +146,11 @@ def compare_with_numpy_lamb(
 
         for i in range(train_iters):
             (x, mt, vt) = np_train_one_iter(i, random_grad_seq[i])
-            np_res_list.append(x)
         return x
 
-    train_by_numpy()
+    np_res = train_by_numpy()
 
-    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
+    test_case.assertTrue(np.allclose(of_res.flatten(), np_res.flatten(), rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -170,7 +166,7 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["adam_w_mode"] = [True, False]
-        # NOTE(Lxy): max_norm = -1 means no clip grad
+        # NOTE(l1aoxingyu): max_norm = -1 means no clip grad
         # nn.Graph only support `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`
         arg_dict["clip_grad_max_norm"] = [-1, 1.0]
         arg_dict["clip_grad_norm_type"] = [2.0]

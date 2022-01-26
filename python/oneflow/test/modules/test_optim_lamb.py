@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import tempfile
 import unittest
 from collections import OrderedDict
-import numpy as np
 
-from test_util import GenArgList
+import numpy as np
 from optimizer_test_util import clip_grad_norm_np
+from test_util import GenArgList
 
 import oneflow as flow
 
@@ -36,6 +37,8 @@ def compare_with_numpy_lamb(
     adam_w_mode,
     clip_grad_max_norm,
     clip_grad_norm_type,
+    reload_state_step,
+    save_load_by_pickle,
 ):
 
     np.random.seed(1000)
@@ -44,8 +47,6 @@ def compare_with_numpy_lamb(
     for _ in range(train_iters):
         random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
-
-    of_res_list = []
 
     def train_by_oneflow():
         x = flow.nn.Parameter(flow.Tensor(init_value, device=flow.device(device)))
@@ -80,16 +81,18 @@ def compare_with_numpy_lamb(
                 lamb.clip_grad()
             lamb.step()
             lamb.zero_grad()
-            return x
 
         for i in range(train_iters):
-            param = train_one_iter(random_grad_seq[i])
-
-            of_res_list.append(param.numpy())
-
-    train_by_oneflow()
-
-    np_res_list = []
+            train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = lamb.state_dict()
+                lamb = flow.optim.LAMB([optim_kwargs])
+                if save_load_by_pickle:
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
+                lamb.load_state_dict(state_dict)
+        return x
 
     def train_by_numpy():
         x = init_value
@@ -106,9 +109,7 @@ def compare_with_numpy_lamb(
 
         def np_train_one_iter(step, grad):
             if clip_grad_max_norm != -1:
-                _, grad = clip_grad_norm_np(
-                    grad, clip_grad_max_norm, clip_grad_norm_type
-                )
+                _, grad = clip_grad_norm_np(grad, clip_grad_max_norm, clip_grad_norm_type)
 
             grad = grad + l2 * x
 
@@ -138,12 +139,12 @@ def compare_with_numpy_lamb(
 
         for i in range(train_iters):
             (x, mt, vt) = np_train_one_iter(i, random_grad_seq[i])
-            np_res_list.append(x)
         return x
 
-    train_by_numpy()
+    of_res = train_by_oneflow().numpy()
+    np_res = train_by_numpy()
 
-    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
+    test_case.assertTrue(np.allclose(of_res.flatten(), np_res.flatten(), rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -151,7 +152,7 @@ class TestLamb(flow.unittest.TestCase):
     def test_lamb(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["x_shape"] = [(10,)]
+        arg_dict["x_shape"] = [(1,)]
         arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
@@ -159,10 +160,11 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["eps"] = [1e-8, 1e-6]
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["adam_w_mode"] = [True, False]
-        # NOTE(Lxy): max_norm = -1 means no clip grad
+        # NOTE(l1aoxingyu): max_norm = -1 means no clip grad
         arg_dict["clip_grad_max_norm"] = [-1, 0.0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
-        # TODO(Lxy): add save and load test
+        arg_dict["reload_state_step"] = [5]
+        arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lamb(test_case, *arg)

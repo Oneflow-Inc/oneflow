@@ -128,13 +128,12 @@ class LAMB(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
-        self._lamb_op = (
-            flow.builtin_op("lamb_update")
+        self._op = (
+            flow.stateful_op("lamb_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
-            .Attr("l1", 0.0)
             .Build()
         )
 
@@ -149,6 +148,7 @@ class LAMB(Optimizer):
             loss = None
             if closure is not None:
                 loss = closure()
+
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
                     param_group["bias_correction1"] = 1.0 - math.pow(
@@ -159,9 +159,9 @@ class LAMB(Optimizer):
                     )
 
                 kwargs = {
-                    "learning_rate_val": param_group["lr"],
-                    "bias_correction1_val": param_group["bias_correction1"],
-                    "bias_correction2_val": param_group["bias_correction2"],
+                    "learning_rate": param_group["lr"],
+                    "bias_correction1": param_group["bias_correction1"],
+                    "bias_correction2": param_group["bias_correction2"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
@@ -183,7 +183,11 @@ class LAMB(Optimizer):
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
 
-                    self._lamb_op(param, param.grad, m_tensor, v_tensor, **kwargs)
+                    flow._C.dispatch_lamb_update(
+                        self._op,
+                        (param, param.grad, m_tensor, v_tensor),
+                        **kwargs
+                    )
 
             self._state["step"] += 1
 
