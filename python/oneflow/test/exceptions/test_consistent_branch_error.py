@@ -42,7 +42,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
                 print(consistent_data.mean())
 
         except Exception as e:
-            err_msg = "maybe execute different code in different ranks, please check if the code is branched and operates on the global tensor"
+            err_msg = "Maybe executing different code in different ranks, please check if the code is branched and operates on the global tensor"
             assert err_msg in str(e)
 
 

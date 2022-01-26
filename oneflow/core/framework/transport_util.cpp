@@ -217,7 +217,7 @@ Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
 static int64_t TransportTimeOut = 5 * 60;
 
 /*static*/ int64_t TransportUtil::TimeoutSeconds() {
-  return ParseIntegerFromEnv("TRANSPORT_TIMEOUT", TransportTimeOut);
+  return ParseIntegerFromEnv("ONEFLOW_TRANSPORT_TIMEOUT", TransportTimeOut);
 }
 
 /*static*/ void TransportUtil::SetTimeoutSeconds(int64_t timeout) { TransportTimeOut = timeout; }
