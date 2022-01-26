@@ -526,7 +526,10 @@ if(BUILD_CPP_API)
     list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
   endif()
   if(NOT CUDNN_STATIC)
-    list(APPEND LIBONEFLOW_TARGETS ${CUDNN_LIBRARIES})
+    install(FILES ${CUDNN_LIBRARIES}
+      COMPONENT oneflow_cpp_all
+      DESTINATION lib
+    )
   endif()
 
   if(BUILD_TESTING)
