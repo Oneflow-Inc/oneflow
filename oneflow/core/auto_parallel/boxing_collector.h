@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
-#include "sbp_util.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
 

@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/boxing_collector.h"
-#include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/sbp_parallel.h"
