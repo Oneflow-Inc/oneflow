@@ -838,6 +838,20 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
+def _reshape(self, *shape):
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
+    else:
+        new_shape = shape
+    return flow._C.reshape(self, new_shape)
+
+
+def _view(self, *shape):
+    return flow.view(self, *shape)
+
+
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -1031,6 +1045,8 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
+    Tensor.reshape = _reshape
+    Tensor.view = _view
 
 
 def register_tensor_op(op_name):
