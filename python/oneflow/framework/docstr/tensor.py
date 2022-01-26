@@ -945,6 +945,65 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.logical_and,
+    """
+    logical_and() -> Tensor
+
+    See :func:`oneflow.logical_and`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_or,
+    """
+
+    logical_or() -> Tensor
+
+    See :func:`oneflow.logical_or`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_xor,
+    """
+    logical_xor() -> Tensor
+
+    See :func:`oneflow.logical_xor`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_fill,
+    """
+    See :func:`oneflow.masked_fill`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_select,
+    """
+    See :func:`oneflow.masked_select`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub,
+    """
+    See :func:`oneflow.sub`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div,
+    """
+    See :func:`oneflow.div`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.ceil,
     """
     See :func:`oneflow.ceil`

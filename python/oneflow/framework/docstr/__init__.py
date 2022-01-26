@@ -52,6 +52,7 @@ from .topk import *
 from .nms import *
 from .nonzero import *
 from .reduce_ops import *
+from .masked_fill import *
 from .expand import *
 from .flip import *
 from .in_top_k import *
