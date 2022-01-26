@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - "release/*"
+      - "refactor-release-workflow"
   schedule:
     # beijing: 2 am.
     # utc: 6 pm.
     - cron: "0 18 * * *"
-
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 env:
   ONEFLOW_SRC: .
 jobs:
