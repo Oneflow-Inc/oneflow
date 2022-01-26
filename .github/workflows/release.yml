@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "release/*"
-      - "refactor-release-workflow"
   schedule:
     # beijing: 2 am.
     # utc: 6 pm.
@@ -114,7 +113,7 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: false
-          nightly: ${{ github.event.schedule }}
+          nightly: ${{ github.event_name == 'schedule' }}
           python-versions: |
             3.6
             3.7

@@ -6,7 +6,6 @@ on:
       - master
       - add-refactor-release
       - "canary/*"
-      - "refactor-release-workflow"
   workflow_dispatch:
     inputs:
       oneflow-ref:
