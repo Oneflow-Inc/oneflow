@@ -91,7 +91,7 @@ void BoxingCollector::GenerateNdSbpList() {
 // Generate the transfer rule for different combinations and hierarchies
 Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   // other parameters
-  // To be noted that the performance of this function are all the same with different hierarchy
+  // NOTE: The performance of this function are all the same with different hierarchy
   Shape hierarchy44({4, 4});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
   auto in_parallel_desc = JUST(ParallelDesc::New("cpu", {"0:0-15"}, in_hierarchy));
@@ -291,8 +291,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(
     int32_t j = it_consumer->second;
     // Such combination can not be support with limited middle nodes
     if (minimum_copy_cost[i][j] > GetValidMaxCopyCost()) {
-      CHECK(compute_cost) << "Boxing does not support " << NdSbpParallelToString(sbp_producer)
-                          << " -> " << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
+      CHECK_OR_RETURN(compute_cost)
+          << "Boxing does not support " << NdSbpParallelToString(sbp_producer) << " -> "
+          << NdSbpParallelToString(sbp_consumer) << " for 2D sbp";
       return Maybe<void>::Ok();
     }
     // Current design can deal with such combination. Do not need to insert middle nodes
