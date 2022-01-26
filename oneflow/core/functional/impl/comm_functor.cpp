@@ -157,6 +157,7 @@ class StreamTouchFunctor {
  public:
   StreamTouchFunctor() = default;
   Maybe<void> operator()(const one::TensorTuple& inputs) const {
+    if (inputs.empty()) { return Maybe<void>::Ok(); }
     std::shared_ptr<UserOpExpr> op_expr = JUST(StreamTouchFunctorOpExpr(inputs.size()));
     TensorTuple outputs{};
     JUST(OpInterpUtil::Dispatch(*op_expr, inputs, &outputs));

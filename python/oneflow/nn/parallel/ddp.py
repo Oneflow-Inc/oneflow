@@ -121,7 +121,8 @@ def DistributedDataParallel(
         def pre_forward_hook(module, input):
             with flow.no_grad():
                 buffers = list(module.buffers())
-                flow._C.stream_touch(buffers)  # for reusing soft syncs
+                if len(buffers) > 0:
+                    flow._C.stream_touch(buffers)  # for reusing soft syncs
                 for x in buffers:
                     flow._C.broadcast(x, inplace=True)
 

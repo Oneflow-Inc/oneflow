@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-
-@register_tensor_op("masked_fill")
-def masked_fill_op(input, mask, value):
+add_docstr(
+    oneflow.masked_fill,
     """
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
     The shape of :attr:`mask` must be broadcastable with the shape of the underlying tensor.
@@ -54,12 +53,5 @@ def masked_fill_op(input, mask, value):
         #  [ 8.7654, -0.7051, -0.7648, -0.7323],
         #  [-1.9009,  8.7654,  8.7654,  8.7654]]], dtype=oneflow.float32)
 
-    """
-
-    return flow._C.masked_fill(input, mask, value)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)

@@ -47,6 +47,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -1053,6 +1054,10 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  if (pthread_fork::IsForkedSubProcess() && parallel_desc
+      && parallel_desc->device_type() != DeviceType::kCPU) {
+    return Maybe<void>::Ok();
+  }
   const auto& last_used_device = JUST(eager_blob_object->last_used_device());
   const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
   if (last_used_device != producer_op_device) {
@@ -1098,7 +1103,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       const auto& opt_last_used_device = eager_blob_object->last_used_device();
       if (unlikely(!opt_last_used_device.has_value())) { continue; }
       if (JUST(opt_last_used_device) == last_used_device) {
-        dep_objects.push_back(JUST(eager_blob_object->compute_local_dep_object()));
+        dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
       }
       eager_blob_object->set_last_used_device(op_device);
     }
