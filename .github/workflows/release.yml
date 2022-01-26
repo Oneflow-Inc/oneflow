@@ -121,7 +121,6 @@ jobs:
             3.9
             3.10
       - name: Upload wheel
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${{ env.WHEELHOUSE_DIR }}
@@ -129,16 +128,17 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
-          python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html --index_key=commit/${GITHUB_SHA}/${{ matrix.compute_platform }}/index.html
+          python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging \
+            --index_key=branch/${{ github.ref_name }}/${{ matrix.entry }}/index.html --index_key=${oss_dir}/index.html \
+            --index_key=commit/${github.sha}/${{ matrix.entry }}/index.html
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cpu' && contains(env.compute_platforms, matrix.compute_platform)
+        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu' && contains(env.compute_platforms, matrix.entry)
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
