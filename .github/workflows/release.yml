@@ -36,7 +36,6 @@ jobs:
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refactor-release
         name: find cache
-        if: ${{ github.event.inputs.compute_platforms == '' }}
         id: find-cache
         timeout-minutes: 5
         with:
@@ -50,20 +49,6 @@ jobs:
             cu112
             cu102
             cpu
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refactor-release
-        name: find cache
-        if: ${{ github.event.inputs.compute_platforms != '' }}
-        id: find-cache
-        timeout-minutes: 5
-        with:
-          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          runner-labels: |
-            self-hosted
-            linux
-            build
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          entries: |
-            ${{ github.event.inputs.compute_platforms }}
 
   staging_release:
     env:
