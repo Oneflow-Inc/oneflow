@@ -93,5 +93,5 @@ add_docstr(
         >>> flow.nonzero(flow.tensor(5), as_tuple=True)
         (tensor([0], dtype=oneflow.int32),)
 
-    """    
+    """,
 )

@@ -45,7 +45,7 @@ add_docstr(
         >>> indices
         tensor([2, 1], dtype=oneflow.int64)
 
-    """    
+    """,
 )
 
 add_docstr(
@@ -77,7 +77,7 @@ add_docstr(
         >>> indices
         tensor([1, 0], dtype=oneflow.int64)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -97,7 +97,7 @@ add_docstr(
         >>> flow.sum(input, dim=1)
         tensor([ 6., 15.], dtype=oneflow.float32)
 
-    """    
+    """,
 )
 
 add_docstr(
@@ -117,7 +117,7 @@ add_docstr(
         >>> flow.mean(input, dim=1)
         tensor([2., 5.], dtype=oneflow.float32)
 
-    """   
+    """,
 )
 
 add_docstr(
@@ -143,5 +143,5 @@ add_docstr(
         >>> flow.prod(input, dim=1)
         tensor([  6., 120.], dtype=oneflow.float32)
 
-    """
+    """,
 )

@@ -61,5 +61,5 @@ add_docstr(
         >>> indices.shape
         oneflow.Size([2, 2])
 
-    """,    
+    """,
 )
