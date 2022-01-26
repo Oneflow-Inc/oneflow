@@ -5,7 +5,7 @@ on:
     branches:
       - master
       - add-refactor-release
-      - "canary*"
+      - "canary/*"
   workflow_dispatch:
     inputs:
       oneflow-ref:
