@@ -20,8 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace data {
 
-void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
-                       user_op::KernelComputeContext* ctx) {
+void COCOParser::Parse(BatchType& batch_data, user_op::KernelComputeContext* ctx) {
   user_op::Tensor* image_tensor = ctx->Tensor4ArgNameAndIndex("image", 0);
   CHECK_NOTNULL(image_tensor);
   user_op::Tensor* image_id_tensor = ctx->Tensor4ArgNameAndIndex("image_id", 0);
@@ -31,22 +30,22 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
   user_op::Tensor* segm_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm", 0);
   user_op::Tensor* segm_index_tensor = ctx->Tensor4ArgNameAndIndex("gt_segm_index", 0);
 
-  MultiThreadLoop(batch_data->size(), [&](size_t i) {
+  MultiThreadLoop(batch_data.size(), [&](size_t i) {
     TensorBuffer* image_buffer = image_tensor->mut_dptr<TensorBuffer>() + i;
-    COCOImage* image = batch_data->at(i).get();
-    image_buffer->Swap(&image->data);
+    COCOImage& image = batch_data[i];
+    image_buffer->Swap(image.data);
     if (image_size_tensor) {
       auto* image_size_ptr = image_size_tensor->mut_dptr<int32_t>() + i * 2;
-      image_size_ptr[0] = meta_->GetImageHeight(image->index);
-      image_size_ptr[1] = meta_->GetImageWidth(image->index);
+      image_size_ptr[0] = meta_->GetImageHeight(image.index);
+      image_size_ptr[1] = meta_->GetImageWidth(image.index);
     }
     if (image_id_tensor) {
       auto* image_id_ptr = image_id_tensor->mut_dptr<int64_t>();
-      image_id_ptr[i] = image->id;
+      image_id_ptr[i] = image.id;
     }
     if (bbox_tensor) {
       TensorBuffer* bbox_buffer = bbox_tensor->mut_dptr<TensorBuffer>() + i;
-      const auto& bbox_vec = meta_->GetBboxVec<float>(image->index);
+      const auto& bbox_vec = meta_->GetBboxVec<float>(image.index);
       CHECK_EQ(bbox_vec.size() % 4, 0);
       int64_t num_bboxes = bbox_vec.size() / 4;
       bbox_buffer->Resize(Shape({num_bboxes, 4}), DataType::kFloat);
@@ -54,41 +53,41 @@ void COCOParser::Parse(std::shared_ptr<LoadTargetShdPtrVec> batch_data,
     }
     if (label_tensor) {
       TensorBuffer* label_buffer = label_tensor->mut_dptr<TensorBuffer>() + i;
-      const auto& label_vec = meta_->GetLabelVec<int32_t>(image->index);
+      const auto& label_vec = meta_->GetLabelVec<int32_t>(image.index);
       label_buffer->Resize(Shape({static_cast<int64_t>(label_vec.size())}), DataType::kInt32);
       std::copy(label_vec.begin(), label_vec.end(), label_buffer->mut_data<int32_t>());
     }
     if (segm_tensor && segm_index_tensor) {
       TensorBuffer* segm_buffer = segm_tensor->mut_dptr<TensorBuffer>() + i;
       TensorBuffer* segm_index_buffer = segm_index_tensor->mut_dptr<TensorBuffer>() + i;
-      meta_->ReadSegmentationsToTensorBuffer<float>(image->index, segm_buffer, segm_index_buffer);
+      meta_->ReadSegmentationsToTensorBuffer<float>(image.index, segm_buffer, segm_index_buffer);
     }
   });
   // dynamic batch size
-  if (image_tensor->shape().elem_cnt() != batch_data->size()) {
+  if (image_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(image_tensor->shape().NumAxes(), 1);
-    image_tensor->mut_shape()->Set(0, batch_data->size());
+    image_tensor->mut_shape()->Set(0, batch_data.size());
   }
-  if (image_id_tensor && image_id_tensor->shape().At(0) != batch_data->size()) {
-    image_id_tensor->mut_shape()->Set(0, batch_data->size());
+  if (image_id_tensor && image_id_tensor->shape().At(0) != batch_data.size()) {
+    image_id_tensor->mut_shape()->Set(0, batch_data.size());
   }
-  if (image_size_tensor && image_size_tensor->shape().At(0) != batch_data->size()) {
-    image_size_tensor->mut_shape()->Set(0, batch_data->size());
+  if (image_size_tensor && image_size_tensor->shape().At(0) != batch_data.size()) {
+    image_size_tensor->mut_shape()->Set(0, batch_data.size());
   }
-  if (bbox_tensor && bbox_tensor->shape().elem_cnt() != batch_data->size()) {
+  if (bbox_tensor && bbox_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(bbox_tensor->shape().NumAxes(), 1);
-    bbox_tensor->mut_shape()->Set(0, batch_data->size());
+    bbox_tensor->mut_shape()->Set(0, batch_data.size());
   }
-  if (label_tensor && label_tensor->shape().elem_cnt() != batch_data->size()) {
+  if (label_tensor && label_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(label_tensor->shape().NumAxes(), 1);
-    label_tensor->mut_shape()->Set(0, batch_data->size());
+    label_tensor->mut_shape()->Set(0, batch_data.size());
   }
-  if (segm_tensor && segm_index_tensor && segm_tensor->shape().elem_cnt() != batch_data->size()) {
+  if (segm_tensor && segm_index_tensor && segm_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(segm_tensor->shape().NumAxes(), 1);
     CHECK_EQ(segm_index_tensor->shape().NumAxes(), 1);
     CHECK_EQ(segm_tensor->shape().elem_cnt(), segm_index_tensor->shape().elem_cnt());
-    segm_tensor->mut_shape()->Set(0, batch_data->size());
-    segm_index_tensor->mut_shape()->Set(0, batch_data->size());
+    segm_tensor->mut_shape()->Set(0, batch_data.size());
+    segm_index_tensor->mut_shape()->Set(0, batch_data.size());
   }
 }
 
