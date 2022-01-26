@@ -337,21 +337,23 @@ def GetDualObject(name, pytorch, oneflow):
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
 
+                            if isinstance(oneflow, flow.nn.Module) and testing_graph:
+                                graph_train_oneflow = copy.deepcopy(oneflow)
+                                if not is_consistent():
+                                    arg_device_type = "cpu"
+                                    for arg in oneflow_args:
+                                        if flow.is_tensor(arg):
+                                            arg_device_type = arg.device.type
+                                    graph_train_oneflow = graph_train_oneflow.to(
+                                        arg_device_type
+                                    )
+
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_oneflow = copy.deepcopy(oneflow)
-                                    if not is_consistent():
-                                        arg_device_type = "cpu"
-                                        for arg in oneflow_args:
-                                            if flow.is_tensor(arg):
-                                                arg_device_type = arg.device.type
-                                        graph_train_oneflow = graph_train_oneflow.to(
-                                            arg_device_type
-                                        )
                                     of_sgd = flow.optim.SGD(
                                         graph_train_oneflow.parameters(),
                                         lr=0.001,
