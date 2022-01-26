@@ -90,7 +90,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: Oneflow-Inc/get-oneflow@refactor-release
         name: Build ${{ matrix.entry }}
-        id: build-${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
@@ -115,7 +114,6 @@ jobs:
             3.10
       - uses: Oneflow-Inc/get-oneflow@refactor-release
         name: Build ${{ matrix.entry }}
-        id: build-${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cpu.cmake
