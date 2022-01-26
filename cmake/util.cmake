@@ -241,7 +241,7 @@ function(set_compile_options_to_oneflow_target target)
   endif()
 
   set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-  
+
   if(BUILD_CUDA)
     if ("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
       target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
@@ -281,4 +281,23 @@ else()
   set(${${prefix}_OUTPUT} "${${prefix}_DIR}/" PARENT_SCOPE)
 endif()
 
+endfunction()
+
+function(getResolvedFiles)
+  set(singleValues FILES;OUTPUT)
+  set(prefix ARG)
+  cmake_parse_arguments(
+    PARSE_ARGV 0
+    ${prefix}
+    "${noValues}" "${singleValues}" "${multiValues}"
+  )
+
+  foreach(_file "${${prefix}_FILES}")
+    if(NOT EXISTS "${_file}")
+      message(FATAL_ERROR "file not found: ${_file}")
+    else()
+      get_filename_component(_resolvedFile "${_file}" REALPATH)
+      list(APPEND ${${prefix}_OUTPUT} "${_resolvedFile}")
+    endif()
+  endforeach()
 endfunction()
