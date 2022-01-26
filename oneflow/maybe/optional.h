@@ -272,7 +272,8 @@ struct OF_MAYBE_NODISCARD_TYPE Optional {
   friend struct details::JustPrivateScope;
 
  public:
-  static_assert(!std::is_same<Type, NullOptType>::value, "NullOptType is not allowed in Optional");
+  static_assert(!std::is_same<std::remove_reference_t<Type>, NullOptType>::value,
+                "NullOptType is not allowed in Optional");
 
   using ValueType = T;
 
