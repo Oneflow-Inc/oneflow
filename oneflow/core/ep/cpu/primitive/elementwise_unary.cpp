@@ -39,7 +39,6 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
         dynamic_cast<CpuDevice*>(stream->As<CpuStream>()->device())->local_logical_cores();
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    auto t1 = std::chrono::high_resolution_clock::now();
     parallel(
         0, count,
         [=](int64_t begin, int64_t end) {
@@ -48,9 +47,6 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
           }
         },
         32768, logical_cores);
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    printf("ep time=%ld \n", time);
   }
 };
 
