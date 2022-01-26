@@ -943,3 +943,62 @@ add_docstr(
     If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.logical_and,
+    """
+    logical_and() -> Tensor
+
+    See :func:`oneflow.logical_and`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_or,
+    """
+
+    logical_or() -> Tensor
+
+    See :func:`oneflow.logical_or`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_xor,
+    """
+    logical_xor() -> Tensor
+
+    See :func:`oneflow.logical_xor`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_fill,
+    """
+    See :func:`oneflow.masked_fill`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_select,
+    """
+    See :func:`oneflow.masked_select`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub,
+    """
+    See :func:`oneflow.sub`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div,
+    """
+    See :func:`oneflow.div`
+    """,
+)
