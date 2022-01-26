@@ -250,6 +250,25 @@ TEST(Optional, Compare) {
   ASSERT_GE(c, b);
   ASSERT_GE(a, b);
 
+  int x = 0, y = 1, z = -1;
+  ASSERT_NE(a, x);
+  ASSERT_EQ(d, x);
+  ASSERT_NE(x, c);
+  ASSERT_EQ(z, c);
+  ASSERT_LT(a, x);
+  ASSERT_LT(c, x);
+  ASSERT_LT(d, y);
+  ASSERT_LT(z, f);
+  ASSERT_LE(a, x);
+  ASSERT_LE(d, x);
+  ASSERT_GT(x, a);
+  ASSERT_GT(x, c);
+  ASSERT_GT(y, d);
+  ASSERT_GT(f, z);
+  ASSERT_GE(x, a);
+  ASSERT_GE(x, d);
+
+
   std::set<Optional<int>> s{2, NullOpt, -1, 3, NullOpt, 2};
 
   ASSERT_EQ(s.size(), 4);
