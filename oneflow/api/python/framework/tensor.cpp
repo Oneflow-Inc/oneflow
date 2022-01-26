@@ -133,6 +133,14 @@ std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
   return std::make_shared<Parameter>(data, requires_grad);
 }
 
+void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor, const py::function& hook) {
+  auto packed_hook = [hook]() -> void {
+    py::gil_scoped_acquire gil;
+    hook();
+  };
+  tensor->RegisterStorageDeleteHook(packed_hook);
+}
+
 }  // namespace
 
 using namespace pybind11::literals;
@@ -206,10 +214,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const one::Tensor& tensor) -> int64_t {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
-      .def("check_meta_consistency",
-           [](const std::shared_ptr<one::Tensor>& tensor) {
-             return CheckMetaConsistency(tensor).GetOrThrow();
-           })
+      .def("check_meta_consistency", &ApiRegisterTensorHook)
       .def("to_numpy", &ApiEagerTensorToNumpy, py::return_value_policy::move)
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
@@ -219,6 +224,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_get_copy_mirrored_tensor_to_numpy_func_name", &ApiGetCopyMirroredTensorToNumpyFuncName)
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
+      .def("_register_storage_delete_hook", &ApiRegisterStorageDeleteHook)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
       .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
