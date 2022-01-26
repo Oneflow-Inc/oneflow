@@ -525,6 +525,7 @@ class StackFunctor {
     CHECK_OR_RETURN(stack_dim >= 0 && stack_dim <= ndims)
         << "Index Error: Dimension out of range (expected in range of [" << -ndims - 1 << ", "
         << ndims << "], but got " << stack_dim;
+    if (ninput == 1) { return ExpandDims(inputs[0], dim); }
     const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
     for (const auto& input : inputs) {
       for (int i = 0; i < ndims; ++i) {
