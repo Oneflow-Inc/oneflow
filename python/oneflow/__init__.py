@@ -15,12 +15,6 @@ limitations under the License.
 """
 
 import os
-
-if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
-    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
-    gpu_id = vram_str.split(",")[0].split(":")[-1]
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
-
 import sys
 import collections
 
@@ -136,6 +130,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import in_top_k
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
@@ -179,13 +174,13 @@ from oneflow._C import cumsum
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
 from oneflow._C import t
+from oneflow._C import masked_fill
 from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
-
 
 from . import sbp
 import atexit
@@ -315,6 +310,7 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
@@ -325,9 +321,7 @@ from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
-from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk

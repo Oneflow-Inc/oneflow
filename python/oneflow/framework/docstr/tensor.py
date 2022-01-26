@@ -88,6 +88,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.expand,
+    """
+    Tensor.expand() -> Tensor
+
+    See :func:`oneflow.expand`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.expand_as,
     """
     expand_as(other) -> Tensor
@@ -118,9 +127,52 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flip,
+    """
+    See :func:`oneflow.flip`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.in_top_k,
+    """
+    Tensor.in_top_k(targets, predictions, k) -> Tensor
+
+    See :func:`oneflow.in_top_k`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.index_select,
+    """
+    Tensor.index_select(dim, index) -> Tensor
+
+    See :func:`oneflow.index_select`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_ones,
+    """
+    Tensor.new_ones() -> Tensor
+
+    See :func:`oneflow.new_ones`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to_consistent,
+    """
+    Tensor.to_consistent() -> Tensor
+
+    See :func:`oneflow.to_consistent`
     """,
 )
 
@@ -916,6 +968,66 @@ add_docstr(
     Tensor.fmod(other) -> Tensor
     
     See :func:`oneflow.fmod`
+    
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_and,
+    """
+    logical_and() -> Tensor
+
+    See :func:`oneflow.logical_and`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_or,
+    """
+
+    logical_or() -> Tensor
+
+    See :func:`oneflow.logical_or`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_xor,
+    """
+    logical_xor() -> Tensor
+
+    See :func:`oneflow.logical_xor`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_fill,
+    """
+    See :func:`oneflow.masked_fill`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_select,
+    """
+    See :func:`oneflow.masked_select`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub,
+    """
+    See :func:`oneflow.sub`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div,
+    """
+    See :func:`oneflow.div`
 
     """,
 )
