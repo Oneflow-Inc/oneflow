@@ -43,7 +43,6 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
   if (begin >= end) { return; }
 
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-  std::cout << "OF_RUNTIME_OMP " << std::endl;
   if (grain_size > 0) { nthr = std::min(nthr, divup((end - begin), grain_size)); }
 #pragma omp parallel num_threads(nthr)
   {
@@ -59,16 +58,12 @@ void parallel(int64_t begin, int64_t end, const F& func, size_t grain_size, size
   tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism, nthr);
   size_t nthr_chunk_size = divup((end - begin), nthr);
   int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
-  size_t num = tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism);
 
-  printf("max_allowed_parallelism = %ld \n", num);
-  printf("nthr = %ld chunk_size = %ld, begin=%ld, end=%ld \n", nthr, chunk_size, begin, end);
   tbb::parallel_for(
       tbb::blocked_range<int64_t>(begin, end, chunk_size),
       [func](const tbb::blocked_range<int64_t>& r) { func(r.begin(), r.end()); },
       tbb::static_partitioner{});
 #else
-  std::cout << "OF_RUNTIME_SEQ " << std::endl;
   func(begin, end);
 #endif
 }

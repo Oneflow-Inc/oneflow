@@ -39,24 +39,13 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     size_t logical_cores =
         dynamic_cast<ep::CpuDevice*>(ctx->stream()->As<ep::CpuStream>()->device())
-            ->local_logical_cores();
-    auto t1 = std::chrono::high_resolution_clock::now();
-    // for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+            ->local_logical_cores();  
     ep::parallel(
         0, n,
         [=](int64_t begin, int64_t end) {
-          // int cpu = sched_getcpu();
-          // int node = numa_node_of_cpu(cpu);
-          // printf("cpu = %d start tid=%ld\n", cpu, syscall(__NR_gettid));
-          // printf("node = %d, cpu = %d \n", node, cpu);
           for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
-          // printf("end tid=%ld\n", syscall(__NR_gettid));
         },
         32768, logical_cores);
-
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-    printf("MathBinary time=%ld \n", time);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
