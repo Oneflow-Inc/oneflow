@@ -25,7 +25,7 @@ namespace ep {
 class CpuDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDevice);
-  explicit CpuDevice(DeviceManager* device_manager) : device_manager_(device_manager) {}
+  explicit CpuDevice(DeviceManager* device_manager);
   ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
@@ -33,6 +33,7 @@ class CpuDevice : public Device {
   DeviceType device_type() const override { return DeviceType::kCPU; }
   size_t device_index() const override { return 0; }
   DeviceManager* device_manager() const override { return device_manager_; }
+  size_t local_logical_cores() { return local_logical_cores_; }
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
@@ -47,6 +48,7 @@ class CpuDevice : public Device {
 
  private:
   DeviceManager* device_manager_;
+  size_t local_logical_cores_;
 };
 
 }  // namespace ep

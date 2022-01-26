@@ -16,6 +16,12 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
+#include "oneflow/core/ep/cpu/cpu_parallel.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
+
+#include <unistd.h>
+#include <sys/syscall.h>
 
 namespace oneflow {
 
@@ -32,11 +38,27 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ~ElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
+    size_t logical_cores =
+        dynamic_cast<CpuDevice*>(stream->As<CpuStream>()->device())->local_logical_cores();
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    for (size_t i = 0; i < count; ++i) {
-      dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
-    }
+    auto t1 = std::chrono::high_resolution_clock::now();
+    parallel(
+        0, count,
+        [=](int64_t begin, int64_t end) {
+          // int cpu = sched_getcpu();
+          // int node = numa_node_of_cpu(cpu);
+          // printf("cpu = %d start tid=%ld\n", cpu, syscall(__NR_gettid));
+          // printf("node = %d, cpu = %d \n", node, cpu);
+          for (int64_t i = begin; i < end; i++) {
+            dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
+          }
+          // printf("end tid=%ld\n", syscall(__NR_gettid));
+        },
+        32768, logical_cores);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    printf("ep time=%ld \n", time);
   }
 };
 

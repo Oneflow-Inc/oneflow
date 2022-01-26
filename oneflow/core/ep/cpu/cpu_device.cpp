@@ -13,14 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <sys/sysinfo.h>
 #include "oneflow/core/ep/cpu/cpu_device.h"
 #include "oneflow/core/ep/cpu/cpu_event.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 namespace ep {
+
+#define BUZY_NUM 2
+
+CpuDevice::CpuDevice(DeviceManager* device_manager) : device_manager_(device_manager) {
+  int64_t _computing_cores = 0;
+  auto envar = std::getenv("ONEFLOW_CPU_CORES");
+  if (envar) {
+    _computing_cores = std::stoi(envar);
+  } else {
+    int64_t cpu_core = get_nprocs();
+    _computing_cores = (cpu_core / GlobalProcessCtx::NumOfProcessPerNode()) - BUZY_NUM;
+  }
+
+  if (_computing_cores < 1) { _computing_cores = 1; }
+  local_logical_cores_ = _computing_cores;
+}
 
 void CpuDevice::SetAsActiveDevice() {}
 
