@@ -30,6 +30,9 @@ class BoxingCollector final {
 
   ~BoxingCollector() = default;
 
+  // A constructor with init, designed for uncustomized boxing collector
+  BoxingCollector(int32_t max_axis);
+
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
 
@@ -43,12 +46,14 @@ class BoxingCollector final {
   // Print the cost and middle nodes
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
-  // If customized is true and we can not find a middle node list with
+  // If is_customized is true and we can not find a middle node list with
+  // resonable cost, error occurs.
+  // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
   Maybe<void> AskSbpCombination(const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
                                 const BlobDesc& logical_blob_desc,
                                 const ParallelDesc& producer_parallel_desc,
-                                const ParallelDesc& consumer_parallel_desc, bool customized,
-                                std::vector<cfg::NdSbp>& middle_sbps);
+                                const ParallelDesc& consumer_parallel_desc, bool is_customized,
+                                std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost);
   // Filter nd sbp from nd_sbp_lists with given logical shape
   Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
                                            const Shape& parallel_hierarchy);

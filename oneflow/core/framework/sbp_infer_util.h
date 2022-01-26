@@ -40,13 +40,22 @@ double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
 Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
                                       const Shape& parallel_hierarchy);
 
-// TODO: unified lazy and eager boxing
+// TODO: Unify lazy and eager boxing
 Maybe<double> ComputeCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
                                           const cfg::NdSbp& consumer_sbp_parallel,
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
                                           bool is_same_sbp);
+
+// The public interface for computing cost
+// It uses the middle nodes algorithm.
+Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_parallel,
+                                             const cfg::NdSbp& consumer_sbp_parallel,
+                                             const BlobDesc& logical_blob_desc,
+                                             const ParallelDesc& producer_parallel_desc,
+                                             const ParallelDesc& consumer_parallel_desc,
+                                             bool requires_same_sbp);
 
 }  // namespace oneflow
 
