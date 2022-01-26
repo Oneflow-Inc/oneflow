@@ -107,7 +107,26 @@ class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
 class RankGroup;
 
 struct TransportUtil final {
-  static int64_t TimeoutSeconds() { return 60 * 5; }
+  static int64_t TimeoutSeconds() {
+    constexpr int64_t dft_value = 60 * 5;
+    const auto* tmp = getenv("EAGER_CONSISTENT_TIMEOUT");
+    std::string s(tmp ? tmp : "");
+
+    // clang-format off
+    auto t = dft_value;
+    if (!s.empty()) {
+      try {
+        t = std::stol(s);
+      } catch (const std::invalid_argument) { 
+        t = dft_value; 
+      } catch (const std::out_of_range) { 
+        t = dft_value; 
+      }
+    }
+    // clang-format on 
+
+    return t;
+  }
   static int64_t BlockingWarningIntervalSeconds() { return 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);
