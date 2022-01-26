@@ -493,7 +493,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             op_graph, job_builder, options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
         LOG(ERROR) << options.Name() << " "
-                   << JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey))
+                   << CHECK_JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey))
                           .name2conf[options.Name()]
                           .DebugString();
         BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(), options,
