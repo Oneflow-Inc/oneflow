@@ -91,8 +91,8 @@ class CpuStream : public Stream {
   void RecordEvent(Event* event) override;
 
   template<typename F>
-  void Parallel_for(int64_t begin, int64_t end, const F& func) {
-    Parallel_for(begin, end, func, kDefaultGrainSize);
+  void ParallelFor(int64_t begin, int64_t end, const F& func) {
+    ParallelFor(begin, end, func, kDefaultGrainSize);
   }
 
   template<typename F>
