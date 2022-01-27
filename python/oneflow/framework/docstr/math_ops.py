@@ -1297,6 +1297,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.as_strided,
+    r"""
+    Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
+
+    Args:
+        input (Tensor): the input tensor.
+        size (tuple or ints): the shape of the output tensor.
+        stride (tuple or ints): the stride of the output tensor.
+        storage_offset (int): the offset in the underlying storage of the output tensor
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(2,3,5)
+        >>> output = flow.as_strided(input, (2,3,3), (1,2,3), 1)
+        >>> output.size()
+        oneflow.Size([2, 3, 3])
+    """,
+)
+
+add_docstr(
     oneflow.eye,
     """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
 
