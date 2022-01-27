@@ -33,6 +33,7 @@ def test_diag_impl(test_case, ndim, placement, sbp):
     y = x.to_consistent(placement=placement, sbp=sbp)
     return torch.diag(y)
 
+
 class TestDiagConsistent(flow.unittest.TestCase):
     @consistent
     def test_diag(test_case):
@@ -42,6 +43,6 @@ class TestDiagConsistent(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_diag_impl(test_case, ndim, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
-

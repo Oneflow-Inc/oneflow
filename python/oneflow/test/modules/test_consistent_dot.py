@@ -24,13 +24,19 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=10, check_graph=False)
 def test_dot_impl(test_case, placement, sbp):
     k = random(100, 1000) * 8
-    x = random_pytorch_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
-    y = random_pytorch_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
+    x = random_pytorch_tensor(ndim=1, dim0=k).to_consistent(
+        placement=placement, sbp=sbp
+    )
+    y = random_pytorch_tensor(ndim=1, dim0=k).to_consistent(
+        placement=placement, sbp=sbp
+    )
     z = torch.dot(x, y)
     return z
+
 
 class TestDotConsistent(flow.unittest.TestCase):
     @consistent
@@ -39,6 +45,6 @@ class TestDotConsistent(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=1):
                 test_dot_impl(test_case, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
-

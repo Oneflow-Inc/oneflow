@@ -25,6 +25,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=10, check_graph=False)
 def test_erf_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
@@ -32,6 +33,7 @@ def test_erf_impl(test_case, ndim, placement, sbp):
     y = x.to_consistent(placement=placement, sbp=sbp)
     z = torch.erf(y)
     return z
+
 
 class TestErfConsistent(flow.unittest.TestCase):
     @consistent
@@ -42,6 +44,6 @@ class TestErfConsistent(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_erf_impl(test_case, ndim, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
-

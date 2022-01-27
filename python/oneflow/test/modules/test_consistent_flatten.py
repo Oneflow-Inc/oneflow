@@ -25,6 +25,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=10, auto_backward=False, check_graph=False)
 def test_flatten_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
@@ -36,6 +37,7 @@ def test_flatten_impl(test_case, ndim, placement, sbp):
     z = torch.flatten(x, start_dim, end_dim)
     return z
 
+
 class TestFlattenConsistent(flow.unittest.TestCase):
     @consistent
     def test_flatten(test_case):
@@ -45,6 +47,6 @@ class TestFlattenConsistent(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_flatten_impl(test_case, ndim, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
-
