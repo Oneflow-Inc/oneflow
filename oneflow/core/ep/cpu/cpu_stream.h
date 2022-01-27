@@ -68,7 +68,12 @@ class CpuStream : public Stream {
   }
 
   template<typename F>
-  void Parallel(int64_t begin, int64_t end, const F& func, size_t grain_size = kDefaultGrainSize) {
+  void Parallel_for(int64_t begin, int64_t end, const F& func) {
+    Parallel_for(begin, end, func, kDefaultGrainSize);
+  }
+
+  template<typename F>
+  void Parallel_for(int64_t begin, int64_t end, const F& func, size_t grain_size) {
     auto divup = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
     size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();
     if (begin >= end) { return; }

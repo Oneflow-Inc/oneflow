@@ -34,7 +34,7 @@ class CpuDeviceManager : public DeviceManager {
   size_t GetDeviceCount() override;
   size_t GetActiveDeviceIndex() override;
   void SetActiveDeviceByIndex(size_t device_index) override;
-  void SetDeviceNumThreads(size_t num_threads);\
+  void SetDeviceNumThreads(size_t num_threads);
 
  private:
   size_t device_num_threads_;

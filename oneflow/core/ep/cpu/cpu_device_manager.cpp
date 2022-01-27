@@ -21,7 +21,8 @@ namespace oneflow {
 
 namespace ep {
 
-CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry) : device_num_threads_(1), registry_(registry) {}
+CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry)
+    : device_num_threads_(1), registry_(registry) {}
 
 CpuDeviceManager::~CpuDeviceManager() = default;
 
@@ -45,7 +46,9 @@ size_t CpuDeviceManager::GetActiveDeviceIndex() { return 0; }
 
 void CpuDeviceManager::SetActiveDeviceByIndex(size_t device_index) {}
 
-void CpuDeviceManager::SetDeviceNumThreads(size_t num_threads) { device_num_threads_ = num_threads;}
+void CpuDeviceManager::SetDeviceNumThreads(size_t num_threads) {
+  device_num_threads_ = num_threads;
+}
 
 }  // namespace ep
 
