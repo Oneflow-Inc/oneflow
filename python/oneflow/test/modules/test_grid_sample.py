@@ -67,9 +67,7 @@ class TestGridSample(flow.unittest.TestCase):
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(
-            device
-        )
+        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(device)
         output = torch.nn.functional.grid_sample(
             input,
             grid,
@@ -103,9 +101,7 @@ class TestGridSample(flow.unittest.TestCase):
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(
-            device
-        )
+        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(device)
         output = torch.nn.functional.grid_sample(
             input,
             grid,

@@ -160,9 +160,7 @@ class TestModule(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=False)
     def test_cat_bool_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(
-            device, torch.bool
-        )
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device, torch.bool)
         return torch.cat((x, x, x), random(0, 2).to(int))
 
     @autotest(n=10, check_graph=False)

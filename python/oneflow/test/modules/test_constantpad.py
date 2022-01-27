@@ -36,9 +36,7 @@ class TestConstantPad1d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6)).to(
-            device
-        )
+        x = random_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6)).to(device)
         y = m(x)
         return y
 

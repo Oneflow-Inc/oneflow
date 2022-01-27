@@ -53,9 +53,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
-            device
-        )
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = m(x)
         return y
 
@@ -98,9 +96,7 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_avgpool2d_functional(test_case):
         device = random_device()
-        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
-            device
-        )
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = torch.nn.functional.avg_pool2d(
             x,
             kernel_size=random(1, 6).to(int),

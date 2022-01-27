@@ -98,9 +98,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
-            device
-        )
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = m(x)
 
         if return_indices:
@@ -172,9 +170,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
-        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
-            device
-        )
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = torch.nn.functional.max_pool2d(
             x,
             kernel_size=random(4, 6).to(int),

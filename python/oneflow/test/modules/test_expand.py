@@ -190,9 +190,7 @@ class TestExpand(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=False)
     def test_flow_tensor_expand_bool_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
-        x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1).to(
-            torch.bool
-        )
+        x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1).to(torch.bool)
         return random_expand(x, ndim=5, expand_size=random_expand_size)
 
     def test_expand_compare_with_numpy(test_case):
