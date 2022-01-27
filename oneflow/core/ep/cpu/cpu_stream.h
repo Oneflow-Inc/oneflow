@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 #define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
@@ -52,7 +53,7 @@ class ManagerParallelNumberThreads {
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
 // TODO
 #else
-#error OF_CPU_THREADING_RUNTIME Error etting
+#error OF_CPU_THREADING_RUNTIME Error setting
 #endif
   }
 
@@ -63,9 +64,9 @@ class ManagerParallelNumberThreads {
     tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
                                             num_threads_);
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-    // TODO
-    else
-#error OF_CPU_THREADING_RUNTIME Error etting
+// TODO
+#else
+#error OF_CPU_THREADING_RUNTIME Error setting
 #endif
   }
 
@@ -125,7 +126,7 @@ class CpuStream : public Stream {
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
     func(begin, end);
 #else
-#error OF_CPU_THREADING_RUNTIME Error etting
+#error OF_CPU_THREADING_RUNTIME Error setting
 #endif
   }
 
