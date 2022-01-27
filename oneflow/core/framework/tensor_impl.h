@@ -89,6 +89,10 @@ class TensorImpl {
   }
   bool has_autograd_meta() const { return autograd_meta_.get(); }
 
+  virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    OF_UNIMPLEMENTED();
+  }
+
  protected:
   TensorImpl(bool requires_grad, bool is_leaf) : requires_grad_(requires_grad), is_leaf_(is_leaf) {}
 
@@ -162,7 +166,6 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<TransportToken> transport_token() const { return JUST(transport_token_); }
 
   Maybe<void> set_transport_token(const TransportToken& transport_token) {
-    CHECK_OR_RETURN(!transport_token_.has_value());
     transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
@@ -238,6 +241,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
+
+  Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;
 
  private:
   Maybe<void> UpdateTensorStorage();
