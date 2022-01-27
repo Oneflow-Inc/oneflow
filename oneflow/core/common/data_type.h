@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
+#include <cfloat>
 #include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
@@ -91,8 +92,7 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
-                     ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
@@ -231,6 +231,7 @@ struct DevDType<DeviceType::kCUDA, float16> {
 
 // Func
 
+bool IsBoolDataType(DataType data_type);
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);

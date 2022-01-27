@@ -65,7 +65,7 @@ class Adam(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
@@ -91,10 +91,10 @@ class Adam(Optimizer):
         self._default_options["weight_decay"] = weight_decay
         self._default_options["amsgrad"] = amsgrad
         self._default_options["scale"] = scale
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
+        if isinstance(params, collections.abc.Iterator):
+            self.param_groups.append(ParamGroup(params, self._default_options))
         else:
-            for param in parameters:
+            for param in params:
                 self.param_groups.append(ParamGroup(param, self._default_options))
         for param_group in self.param_groups:
             for param in param_group.parameters:

@@ -45,7 +45,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           oneflow::NumPyArrayPtr array_ptr(array.ptr());     \
           OfBlob_CopyFromBuffer_##T(of_blob_ptr, array_ptr); \
         });
-  OF_PP_FOR_EACH_TUPLE(EXPORT_COPY_DATA_API, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
+  OF_PP_FOR_EACH_TUPLE(EXPORT_COPY_DATA_API, POD_DATA_TYPE_SEQ);
 
 #undef EXPORT_COPY_DATA_API
 }

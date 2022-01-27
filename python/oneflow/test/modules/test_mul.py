@@ -190,7 +190,7 @@ class TestMulModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(check_graph=False)
-    def test_boardcast_mul(test_case):
+    def test_broadcast_mul(test_case):
         device = random_device()
         x_0 = random_pytorch_tensor(ndim=3, dim0=4, dim1=2, dim2=3).to(device)
         y = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
