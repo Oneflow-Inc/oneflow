@@ -670,5 +670,86 @@ class WarmupLRTestCase(flow.unittest.TestCase):
         )
 
 
+@flow.unittest.skip_unless_1n1d()
+class ConstantLRTestCase(flow.unittest.TestCase):
+    def test(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.01)
+        constant_lr = flow.optim.lr_scheduler.ConstantLR(optimizer, 0.1, 10)
+        expected_lrs = [
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.001,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+            0.01,
+        ]
+        lrs = [constant_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            constant_lr.step()
+            lrs.append(constant_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+
+@flow.unittest.skip_unless_1n1d()
+class LinearLRTestCase(flow.unittest.TestCase):
+    def test(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.1)
+        linear_lr = flow.optim.lr_scheduler.LinearLR(optimizer, 0.1, 1, 10)
+        expected_lrs = [
+            0.01,
+            0.019,
+            0.028,
+            0.037,
+            0.046,
+            0.055,
+            0.064,
+            0.073,
+            0.082,
+            0.091,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+        ]
+        lrs = [linear_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            linear_lr.step()
+            lrs.append(linear_lr.get_last_lr()[0])
+
+        lrs = lrs[:-1]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
