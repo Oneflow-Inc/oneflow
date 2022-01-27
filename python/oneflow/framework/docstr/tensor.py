@@ -1009,3 +1009,82 @@ add_docstr(
     See :func:`oneflow.div`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.ceil,
+    """
+    See :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.expm1,
+    """
+    See :func:`oneflow.expm1`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.topk,
+    """
+    See :func:`oneflow.topk`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nms,
+    """
+    See :func:`oneflow.nms`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nonzero,
+    """
+
+    nonzero(input, as_tuple=False) -> Tensor
+
+    See :func:`oneflow.nonzero`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.max,
+    """
+    input.max(dim, index) -> Tensor
+    See :func:`oneflow.max`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.min,
+    """
+    input.min(dim, index) -> Tensor
+    See :func:`oneflow.min`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sum,
+    """
+    input.sum(dim, index) -> Tensor
+    See :func:`oneflow.sum`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mean,
+    """
+    input.mean(dim, index) -> Tensor
+    See :func:`oneflow.mean`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.prod,
+    """
+    input.prod(dim, index) -> Tensor
+    See :func:`oneflow.prod`
+    """,
+)
