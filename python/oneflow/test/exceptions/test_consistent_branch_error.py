@@ -29,6 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentBranchError(flow.unittest.TestCase):
     @autotest(n=1, check_graph=False)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_add_with_alpha(test_case):
         try:
             flow._oneflow_internal.global_view.set_sync_timeout(10)
