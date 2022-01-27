@@ -42,8 +42,8 @@ namespace {
 
 double ConstantLearningRate(double base_lr, double factor, int64_t total_step, int64_t cur_step) {
   CHECK_GE(total_step, 0);
-  CHECK_GT(factor, 0.0);
-  CHECK_LT(factor, 1.0);
+  CHECK_GE(factor, 0.0);
+  CHECK_LE(factor, 1.0);
   if (cur_step < total_step) { return base_lr * factor; }
   return base_lr;
 }
@@ -52,14 +52,14 @@ double LinearLearningRate(double base_lr, double start_factor, double end_factor
                           int64_t total_step, int64_t cur_step) {
   CHECK_GE(total_step, 0);
   CHECK_GE(start_factor, 0.0);
-  CHECK_LT(start_factor, 1.0);
+  CHECK_LE(start_factor, 1.0);
   CHECK_GE(end_factor, 0.0);
-  CHECK_LT(end_factor, 1.0);
+  CHECK_LE(end_factor, 1.0);
   double multiplier = 1.0;
   double c_step_f = float(cur_step);
   double t_step_f = float(total_step);
   if (cur_step < total_step) {
-    multiplier = start_factor + (1.0 - start_factor) * (c_step_f / t_step_f);
+    multiplier = start_factor + (end_factor - start_factor) * (c_step_f / t_step_f);
   }
   return base_lr * multiplier;
 }
@@ -69,16 +69,6 @@ bool TriggerWarmup(const LearningRateScheduleOpConf& conf, double lr, int64_t tr
   const WarmupConf& warmup_conf = conf.warmup_conf();
   if (warmup_conf.warmup_batches() == 0) { return false; }
   return train_step < warmup_conf.warmup_batches();
-}
-
-double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t train_step) {
-  if (conf.has_constant_conf()) {
-    return ConstantLearningRate(lr, conf.warmup_factor(), conf.warmup_batches(), train_step);
-  } else if (conf.has_linear_conf()) {
-    return LinearLearningRate(lr, conf.warmup_factor(), 1.0, conf.warmup_batches(), train_step);
-  } else {
-    UNIMPLEMENTED();
-  }
 }
 
 double ExponentialDecayedLearningRate(const ExponentialDecayConf& conf, double lr,
@@ -235,6 +225,13 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return StepLearningRate(conf.step_conf(), lr, cur_batch_num);
   } else if (conf.has_multi_step_conf()) {
     return MultiStepLearningRate(conf.multi_step_conf(), lr, cur_batch_num);
+  } else if (conf.has_constant_lr_conf()) {
+    return ConstantLearningRate(lr, conf.constant_lr_conf().factor(),
+                                conf.constant_lr_conf().total_iters(), cur_batch_num);
+  } else if (conf.has_linear_lr_conf()) {
+    return LinearLearningRate(lr, conf.linear_lr_conf().start_factor(),
+                              conf.linear_lr_conf().end_factor(),
+                              conf.linear_lr_conf().total_iters(), cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
@@ -247,13 +244,23 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   const int64_t train_step = *ctx->BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();
   if (TriggerWarmup(conf, learning_rate, train_step)) {
-    double end_lr = learning_rate;
-    if (conf.warmup_conf().has_prefix() && !conf.warmup_conf().prefix()
-        && conf.has_learning_rate_decay()) {
-      end_lr = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate,
-                                      conf.warmup_conf().warmup_batches());
+    const auto& warmup_conf = conf.warmup_conf();
+    if (warmup_conf.has_constant_conf()) {
+      learning_rate = ConstantLearningRate(learning_rate, warmup_conf.warmup_factor(),
+                                           warmup_conf.warmup_batches(), train_step);
+    } else if (warmup_conf.has_linear_conf()) {
+      double end_lr = learning_rate;
+      if (conf.warmup_conf().has_prefix() && !conf.warmup_conf().prefix()
+          && conf.has_learning_rate_decay()) {
+        end_lr = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate,
+                                        conf.warmup_conf().warmup_batches());
+      }
+      learning_rate =
+          LinearLearningRate(learning_rate, warmup_conf.warmup_factor(), end_lr / learning_rate,
+                             warmup_conf.warmup_batches(), train_step);
+    } else {
+      UNIMPLEMENTED();
     }
-    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), end_lr, train_step);
   } else if (conf.has_learning_rate_decay()) {
     int64_t cur_step = train_step;
     if (conf.has_warmup_conf() && conf.warmup_conf().has_prefix() && conf.warmup_conf().prefix()) {

@@ -50,4 +50,5 @@ class ExponentialLR(LRScheduler):
     def _generate_conf_for_graph(self, opt_confs):
         for opt_conf in opt_confs:
             learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
+            learning_rate_decay_conf.mutable_step_conf().set_step_size(1)
             learning_rate_decay_conf.mutable_step_conf().set_gamma(self.gamma)
