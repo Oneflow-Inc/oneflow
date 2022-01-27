@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
-#include "oneflow/core/ep/cpu/cpu_parallel.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
@@ -91,10 +90,6 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-
-    size_t logical_cores =
-    dynamic_cast<CpuDevice*>(stream->As<CpuStream>()->device())->local_logical_cores();
-    set_num_threads(logical_cores);
 
     DimVector src0_dim_vec;
     DimVector src1_dim_vec;
@@ -201,6 +196,10 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+    size_t num_threads = dynamic_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    cpu_stream->SetParallelNumberThreads(num_threads);
+
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
