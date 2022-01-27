@@ -261,6 +261,39 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
+class FusedMatMulBiasAddReluFunctor {
+ public:
+  FusedMatMulBiasAddReluFunctor() {
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu").Input("a")
+                                                                       .Input("b")
+                                                                       .Input("bias")
+                                                                       .Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, 
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const bool& transpose_a,
+                           const bool& transpose_b, const double& alpha) const {
+    const auto& a_shape = a->shape();
+    const auto& b_shape = b->shape();
+
+    // TODO(): Support 1-d tensor by dot.
+    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should >= 2";
+    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should >= 2";
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+    // JUST(attrs.SetAttr<double>("alpha", alpha));
+    // Add check. 
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {a, b, bias}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fused_op_;
+};
+
+
 class LayerNormFunctor {
  public:
   LayerNormFunctor() {
@@ -2183,6 +2216,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::FusedMatMulBiasAddReluFunctor>("FusedMatmulBiasAddRelu"); 
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");

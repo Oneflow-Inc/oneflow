@@ -135,7 +135,7 @@ class CudaStream : public Stream {
   cublasLtHandle_t cublas_lt_handle_{}; 
   cudnnHandle_t cudnn_handle_{};
   int device_index_;
-#if CUBLAS_VERSION >= 11200
+#if CUBLAS_VERSION >= 11200 // maybe remove cuda11 limitation. 
   void* workspace_{};
   size_t workspace_size_{};
 #endif  // CUBLAS_VERSION >= 11200
