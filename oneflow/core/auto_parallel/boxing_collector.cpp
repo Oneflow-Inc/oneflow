@@ -42,15 +42,16 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 }  // namespace
 
 // A constructor with init, designed for uncustomized boxing collector
-BoxingCollector::BoxingCollector(int32_t max_axis) { Init(max_axis); }
+BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis)); }
 
 // Construct a boxing collector with given maximum number of axis
-void BoxingCollector::Init(int32_t max_axis) {
+Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
   GenerateNdSbpList();
-  GenerateCombination(2);
+  JUST(GenerateCombination(2));
+  return Maybe<void>::Ok();
 }
 
 // Collect Sbp Parallel
@@ -337,8 +338,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(
   customized_boxing_collector.CollectUniverse(logical_blob_desc.shape().NumAxes());
   customized_boxing_collector.GenerateNdSbpList();
   // Filter out unsuitable middle nodes before computing minimum cost.
-  customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_hierarchy);
-  customized_boxing_collector.GenerateCombination(5);
+  JUST(customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc,
+                                                                *parallel_hierarchy));
+  JUST(customized_boxing_collector.GenerateCombination(5));
   JUST(customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
                                                      producer_parallel_desc, consumer_parallel_desc,
                                                      false, middle_sbps, compute_cost));

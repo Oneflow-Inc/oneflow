@@ -31,7 +31,7 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
   // We assemble the boxing table from S(0) to S(5).
   // Those splitting in higher axes are considered in the customized boxing.
   constexpr int32_t kRegularMaxSplitAxes = 6;
-  boxing_collector.Init(kRegularMaxSplitAxes);
+  JUST(boxing_collector.Init(kRegularMaxSplitAxes));
   std::vector<cfg::NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations

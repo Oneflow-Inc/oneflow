@@ -37,7 +37,7 @@ class BoxingCollector final {
   void CollectUniverse(int32_t max_axis);
 
   // Construct a boxing collector with given maximum number of axis
-  void Init(int32_t max_axis);
+  Maybe<void> Init(int32_t max_axis);
 
   // Generate nd sbp list
   void GenerateNdSbpList();
