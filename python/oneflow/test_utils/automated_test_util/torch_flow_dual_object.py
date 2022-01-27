@@ -348,16 +348,23 @@ def GetDualObject(name, pytorch, oneflow):
                                         arg_device_type
                                     )
                             if verbose:
-                                print("Before running eager mode: ", repr(oneflow))
+                                print(
+                                    "Before running eager module or functional: ",
+                                    repr(oneflow),
+                                )
                             graph_functional_oneflow = copy.deepcopy(oneflow)
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if verbose:
                                 print(
-                                    "The result after running eager mode: ", oneflow_res
+                                    "The result after running eager module or functional: ",
+                                    oneflow_res,
                                 )
                             if testing_graph:
                                 if verbose:
-                                    print("After running eager mode: ", repr(oneflow))
+                                    print(
+                                        "After running eager module or functional: ",
+                                        repr(oneflow),
+                                    )
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
@@ -401,7 +408,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g_res = test_g(*graph_args)
                                     if verbose:
                                         print(
-                                            "The result after running graph mode: ",
+                                            "The result after running graph module or functional: ",
                                             test_g_res,
                                         )
                                 elif oneflow.__name__ in ignore_apis_list:
@@ -530,19 +537,19 @@ def GetDualObject(name, pytorch, oneflow):
                                     tensor_graph_kwargs[key] = copy.deepcopy(value)
                         if verbose:
                             print(
-                                "Before running tensor eager mode: ",
+                                "Before running tensor eager tensor method: ",
                                 repr(oneflow_method),
                             )
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if verbose:
                             print(
-                                "The result after running tensor eager mode: ",
+                                "The result after running tensor eager tensor method: ",
                                 oneflow_res,
                             )
                         if testing_graph:
                             if verbose:
                                 print(
-                                    "After running tensor eager mode: ",
+                                    "After running tensor eager tensor method: ",
                                     repr(oneflow_method),
                                 )
 
@@ -563,7 +570,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 test_g_res = test_g()
                                 if verbose:
                                     print(
-                                        "The result after running tensor graph mode: ",
+                                        "The result after running tensor graph tensor method: ",
                                         test_g_res,
                                     )
                             except Exception as e:
