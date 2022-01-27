@@ -16,7 +16,6 @@ limitations under the License.
 
 import math
 import random
-from tabnanny import verbose
 import tempfile
 import unittest
 import numpy as np
