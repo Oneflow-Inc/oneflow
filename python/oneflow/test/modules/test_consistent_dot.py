@@ -26,7 +26,6 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=10, check_graph=False)
 def test_dot_impl(test_case, placement, sbp):
-    # device = random_device()
     k = random(100, 1000) * 8
     x = random_pytorch_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
     y = random_pytorch_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
@@ -42,3 +41,4 @@ class TestDotConsistent(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

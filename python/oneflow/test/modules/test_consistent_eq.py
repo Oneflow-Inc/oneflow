@@ -45,6 +45,6 @@ class TestEqConsistent(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_eq_impl(test_case, ndim, placement, sbp)
 
-
 if __name__ == "__main__":
     unittest.main()
+
