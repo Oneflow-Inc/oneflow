@@ -492,10 +492,11 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         const std::string& learning_rate_lbn = AddScheduleOp(
             op_graph, job_builder, options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
-        LOG(ERROR) << options.Name() << " "
-                   << CHECK_JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey))
-                          .name2conf.at(options.Name())
-                          .DebugString();
+        const auto& name2conf =
+            CHECK_JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey)).name2conf;
+        auto it = name2conf.find(options.Name());
+        CHECK(it != name2conf.end());
+        LOG(ERROR) << options.Name() << " " << it->second.DebugString();
         BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(), options,
                              embedding_op, id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
                              learning_rate_lbn);

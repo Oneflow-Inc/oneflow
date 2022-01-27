@@ -21,9 +21,6 @@ import numpy as np
 import oneflow.nn as nn
 import os
 
-os.environ["L1_CACHE_MEMORY_BUDGET_MB"] = "128"
-os.environ["BLOCK_BASED_PATH"] = "/NVME0/guoran/unittest/test"
-
 placement = flow.placement("cuda", {0: [0, 1]})
 batch_size = 65536
 
@@ -79,22 +76,91 @@ class TrainGraph(flow.nn.Graph):
     def __init__(self,):
         super().__init__()
         self.data_loader = SyntheticDataLoader()
+        column_size_array = [
+            227605432,
+            39060,
+            17295,
+            7424,
+            20265,
+            3,
+            7122,
+            1543,
+            63,
+            130229467,
+            3067956,
+            405282,
+            10,
+            2209,
+            11938,
+            155,
+            4,
+            976,
+            14,
+            292775614,
+            40790948,
+            187188510,
+            590152,
+            12973,
+            108,
+            36,
+        ]
+        scales = np.sqrt(1 / np.array(column_size_array))
+        initializer_list = []
+        for i in range(scales.size):
+            initializer_list.append(
+                {
+                    "initializer": {
+                        "type": "uniform",
+                        "low": -scales[i],
+                        "high": scales[i],
+                    }
+                }
+            )
         options = {
-            "name": "my_embedding",
-            # Can't change the embedding_size 128 because the kv store value_length has been set to 128
-            "embedding_size": 128,
             "dtype": flow.float,
-            "encoder": "invalid",
-            "partitioning": "invalid",
-            "initializer": "invalid",
-            "optimizer": "invalid",
-            "backend": "invalid",
+            "name": "my_embedding",
+            "embedding_dim": 128,
+            "cache": [
+                {
+                    "policy": "lru",
+                    "cache_memory_budget_mb": 16384,
+                    "value_memory_kind": "device",
+                }
+            ],
+            "kv_store": {
+                "persistent_table": {"path": "test", "physical_block_size": 512,},
+            },
+            "default_initializer": {"type": "normal", "mean": 0, "std": 1},
+            "columns": initializer_list,
+            "optimizer": {
+                "lr": {
+                    "base_lr": 24,
+                    "decay": {
+                        "type": "polynomial",
+                        "decay_batches": 27772,
+                        "end_lr": 0.0,
+                        "power": 2.0,
+                        "cycle": False,
+                    },
+                    "warmup": {
+                        "type": "linear",
+                        "warmup_batches": 2750,
+                        "start_multiplier": 0.0,
+                    },
+                },
+                "type": "sgd",
+                "momentum": 0.0,
+                "betas": [0.9, 0.999],
+                "eps": 1e-8,
+            },
         }
-        # Can't change the name 'embedding_lookup' because it is used to generate backward and optimizer
         self.embedding_lookup = flow.nn.OneEmbeddingLookup(options)
         self.dense1 = MatMul(3328, 1)
         self.add_optimizer(
             flow.optim.SGD(self.dense1.parameters(), lr=0.1, momentum=0.9)
+        )
+        self.add_optimizer(
+            flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1, momentum=0.9)
         )
 
     def build(self,):
@@ -111,5 +177,4 @@ class TrainGraph(flow.nn.Graph):
 graph = TrainGraph()
 for i in range(20):
     loss = graph()
-    print(loss)
 print(loss)
