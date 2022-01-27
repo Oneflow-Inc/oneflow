@@ -359,10 +359,9 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
                                          out_hierarchy, on_same_devices);
   }
 
-  CHECK_OR_RETURN(false)
-      << "Should not reach here. Something went wrong in ComputCopyCostBetweenNdSbp() in "
-         "sbp_util.cpp.";
-  return kUnsupportedBoxing;
+  return Error::RuntimeError()
+         << "Should not reach here. Something went wrong in ComputCopyCostBetweenNdSbp() in "
+            "sbp_util.cpp.";
 }
 
 double GetValidMaxCopyCost() {

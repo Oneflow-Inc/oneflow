@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
-#define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
+#ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
+#define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -64,7 +64,7 @@ class BoxingCollector final {
   // Stores all the possible cfg::SbpParallel.
   HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::cfg::SbpParallel> id2SbpParallel;
+  std::vector<::oneflow::cfg::SbpParallel> id2SbpParallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
   std::vector<std::vector<double>> minimum_copy_cost;
@@ -81,4 +81,4 @@ class BoxingCollector final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
+#endif  // ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
