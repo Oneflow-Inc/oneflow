@@ -26,6 +26,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestGridSample(flow.unittest.TestCase):
     def test_grid_sample_4d(test_case):
         input = flow.tensor(
@@ -80,7 +81,7 @@ class TestGridSample(flow.unittest.TestCase):
         return output
 
     # This test may fail due to using ::floor in backward
-    # floor(1.99999988) = 1 和 floor(2.000000) = 2, then select differente images pixel
+    # floor(1.99999988) = 1 and floor(2.000000) = 2, then select differente images pixel
     @autotest(
         auto_backward=False,
         rtol=1e-03,
