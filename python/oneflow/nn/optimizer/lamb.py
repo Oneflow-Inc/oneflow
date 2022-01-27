@@ -115,6 +115,7 @@ class LAMB(Optimizer):
         amsgrad: bool = False,
     ):
         if amsgrad:
+            # TODO: supported amsgrad in Lamb
             raise RuntimeError("LAMB does not support AMSGrad variant.")
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
