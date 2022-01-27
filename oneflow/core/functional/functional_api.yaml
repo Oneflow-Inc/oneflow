@@ -978,6 +978,27 @@
   ]
   bind_python: True
 
+- name: "tensor_split"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections, Int32 dim=0) => TensorSplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections, Int32 dim=0) => TensorSplitVec",
+  ]
+  bind_python: True
+
+- name: "hsplit"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections) => HsplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections) => HsplitVec",
+  ]
+  bind_python: True
+
+- name: "vsplit"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections) => VsplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections) => VsplitVec",
+  ]
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
