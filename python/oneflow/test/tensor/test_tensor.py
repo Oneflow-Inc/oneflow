@@ -302,6 +302,32 @@ class TestTensor(flow.unittest.TestCase):
         w.backward(gradient=grad, retain_graph=True)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_tensor_register_post_grad_accumulation_hook(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape)
+        x.requires_grad = True
+        x._register_post_grad_accumulation_hook(lambda grad: grad * 2 + 1)
+        y = x.sum() + (x * 2).sum()
+        y.backward()
+        test_case.assertTrue(
+            np.allclose(x.grad.numpy(), np.ones(shape) * 7, atol=1e-4, rtol=1e-4)
+        )
+
+        x = flow.Tensor(*shape)
+        x.requires_grad = True
+
+        def inplace_add_and_return_none(x):
+            x.add_(1)
+            return None
+
+        x._register_post_grad_accumulation_hook(inplace_add_and_return_none)
+        y = x.sum() + (x * 2).sum()
+        y.backward()
+        test_case.assertTrue(
+            np.allclose(x.grad.numpy(), np.ones(shape) * 4, atol=1e-4, rtol=1e-4)
+        )
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_register_hook(test_case):
         shape = (2, 3)
         x = flow.Tensor(*shape)
