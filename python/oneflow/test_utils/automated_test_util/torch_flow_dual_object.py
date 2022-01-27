@@ -408,7 +408,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g_res = test_g(*graph_args)
                                     if verbose:
                                         print(
-                                            "The result after running graph module or functional: ",
+                                            "The result after running graph module: ",
                                             test_g_res,
                                         )
                                 elif oneflow.__name__ in ignore_apis_list:
@@ -477,6 +477,11 @@ def GetDualObject(name, pytorch, oneflow):
                                                 )
                                                 test_g.debug(3)
                                             test_g_res = test_g()
+                                            if verbose:
+                                                print(
+                                                    "The result after running graph functional: ",
+                                                    test_g_res,
+                                                )
                                     except Exception as e:
                                         print_note_fake_program()
                                         raise OneFlowGraphBuildOrRunError(e)
