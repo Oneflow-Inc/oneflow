@@ -29,6 +29,10 @@ limitations under the License.
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
 #include <tbb/global_control.h>
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
+// TODO
+#else
+#error OF_CPU_THREADING_RUNTIME Error setting
 #endif
 
 #ifdef WITH_ONEDNN
