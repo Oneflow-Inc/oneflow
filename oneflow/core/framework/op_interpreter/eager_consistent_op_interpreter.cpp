@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
 
 namespace oneflow {
 namespace one {
@@ -75,6 +76,8 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg:
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
       in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
+  Global<const EagerBoxingLogger>::Get()->Log(
+      *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
                                                           in_parallel_desc, out_parallel_desc));
@@ -91,7 +94,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
-    // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
     JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
     const auto& infer_args =
@@ -105,9 +108,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
-        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    if (!outputs->at(i)) {
+      const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+          output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+      outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    }
   }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));

@@ -111,6 +111,23 @@ REGISTER_USER_KERNEL("eager_nccl_broadcast")
     .SetCreateFn<EagerCclBroadcastKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
+class EagerCclTouchKernel final : public user_op::OpKernel {
+ public:
+  EagerCclTouchKernel() = default;
+  ~EagerCclTouchKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override{
+      // Do nothing.
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_touch")
+    .SetCreateFn<EagerCclTouchKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
+
 class EagerCclReduceKernel final : public user_op::OpKernel {
  public:
   EagerCclReduceKernel() = default;
@@ -137,6 +154,7 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
       CHECK_EQ(in->data_type(), out->data_type());
       out_ptr = out->mut_dptr();
     }
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in ccl";
     CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(),
                                              in->data_type(), ccl::kSum, root,
                                              kernel_cache->parallel_desc(), ctx->stream()));
@@ -168,6 +186,7 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in ccl";
 
     CHECK_JUST(ccl::AllReduce<DeviceType::kCPU>(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
@@ -201,6 +220,7 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     const auto& op_type = ctx->Attr<std::string>("op_type");
+    CHECK_NE(in->data_type(), kBool) << "Reduce by boolean is not supported in ccl";
     CHECK_EQ(op_type, "sum");
     CHECK_JUST(ccl::ReduceScatter<DeviceType::kCPU>(
         in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
@@ -382,6 +402,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
 REGISTER_EAGER_CCL_S2S_KERNEL(int8_t)
 REGISTER_EAGER_CCL_S2S_KERNEL(int32_t)
 REGISTER_EAGER_CCL_S2S_KERNEL(int64_t)
+REGISTER_EAGER_CCL_S2S_KERNEL(bool)
 REGISTER_EAGER_CCL_S2S_KERNEL(float)
 REGISTER_EAGER_CCL_S2S_KERNEL(double)
 

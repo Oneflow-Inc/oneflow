@@ -267,7 +267,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(JUST(GetLocalDepObject4Device(*device))));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
     JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
