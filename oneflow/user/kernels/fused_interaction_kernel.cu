@@ -199,6 +199,12 @@ __global__ void ScatterSplitGpu(int64_t batch_size, int64_t out_dim, int64_t pad
   }
 }
 
+constexpr int64_t kFusedInteractionBlockSize = 256;
+
+int GetNumBlocks(const int num_instances) {
+  return std::min(static_cast<int>(num_instances), kCudaMaxBlocksNum);
+}
+
 void GenerateTrilIndices(ep::Stream* stream, const int32_t concat_dim, const int32_t pad_dim,
                          int32_t* tril_indices) {
   GenerateTrilIndicesGpu<<<1, (32, 32), 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -211,7 +217,8 @@ void GatherConcatKernel(ep::Stream* stream, int64_t batch_size, int64_t out_dim,
                         int64_t pad_dim, int64_t concat_dim, int64_t embedding_size,
                         const int32_t* tril_indices, const T* matmul_out,
                         const T* dense_feature_ptr, T* out_ptr) {
-  GatherConcatGpu<<<batch_size, 256, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  GatherConcatGpu<<<GetNumBlocks(batch_size), kFusedInteractionBlockSize, 0,
+                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
       batch_size, out_dim, tril_dim, pad_dim, embedding_size, tril_indices, matmul_out,
       dense_feature_ptr, out_ptr);
 }
@@ -220,7 +227,8 @@ template<typename T>
 void ScatterSplitKernel(ep::Stream* stream, int64_t batch_size, int64_t out_dim, int64_t pad_dim,
                         int64_t concat_dim, int64_t embedding_size, const T* dy,
                         T* dense_feature_grad, T* matmul_out_grad_ptr) {
-  ScatterSplitGpu<<<batch_size, 256, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  ScatterSplitGpu<<<GetNumBlocks(batch_size), kFusedInteractionBlockSize, 0,
+                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
       batch_size, out_dim, pad_dim, embedding_size, dy, dense_feature_grad, matmul_out_grad_ptr);
 }
 
@@ -242,7 +250,8 @@ void SplitAddKernel(ep::Stream* stream, DataType data_type, int64_t batch_size, 
                     int64_t concat_dim, int64_t embedding_size, const T* concat_out_grad_ptr,
                     T* dense_feature_grad, T* sparse_feature_grad) {
   // dense feature grad
-  SliceAddGpu<T><<<batch_size, embedding_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  SliceAddGpu<T><<<GetNumBlocks(batch_size), kFusedInteractionBlockSize, 0,
+                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
       batch_size, pad_dim, embedding_size, concat_out_grad_ptr, dense_feature_grad);
 
   // sparse feature grad
@@ -285,10 +294,7 @@ class FusedInteractionKernel final : public user_op::OpKernel {
         GetCudaAlignedSize(batch_size * (pad_dim - concat_dim) * embedding_size * sizeof(T));
     OF_CUDA_CHECK(cudaMemsetAsync(pad_tensor_ptr, 0, pad_tensor_size,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    // T* concat_out = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + pad_tensor_size);
-    size_t concat_out_size = GetCudaAlignedSize(batch_size * pad_dim * embedding_size * sizeof(T));
-    T* matmul_out =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + pad_tensor_size + concat_out_size);
+    T* matmul_out = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + pad_tensor_size);
     size_t matmul_out_size = GetCudaAlignedSize(batch_size * pad_dim * pad_dim * sizeof(T));
 
     const int64_t tril_dim = num_columns * (num_columns + 1) / 2;
