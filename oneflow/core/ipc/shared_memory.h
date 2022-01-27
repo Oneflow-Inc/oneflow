@@ -25,7 +25,7 @@ class SharedMemory final {
  public:
   SharedMemory(const SharedMemory&) = delete;
   SharedMemory(SharedMemory&&) = delete;
-  ~SharedMemory() = default;
+  ~SharedMemory();
 
   static Maybe<SharedMemory> Open(size_t size);
   static Maybe<SharedMemory> Open(const std::string& name);

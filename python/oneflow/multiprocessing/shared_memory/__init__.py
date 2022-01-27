@@ -19,4 +19,56 @@ __all__ = [
     "SharedMemory",
 ]
 
-SharedMemory = flow._oneflow_internal.multiprocessing.SharedMemory
+
+class SharedMemory:
+    def __init__(self, name=None, create=False, size=0):
+        if not size >= 0:
+            raise ValueError("'size' must be a positive integer")
+        if create:
+            if size == 0:
+                raise ValueError("'size' must be a positive number different from zero")
+        self.shm_ = flow._oneflow_internal.multiprocessing.SharedMemory(
+            name=name if name is not None else "", create=create, size=size
+        )
+
+    def __del__(self):
+        try:
+            self.close()
+        except OSError:
+            pass
+
+    def __reduce__(self):
+        return (
+            self.__class__,
+            (self.name, False, self.size,),
+        )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.name!r}, size={self.size})"
+
+    @property
+    def buf(self):
+        "A memoryview of contents of the shared memory block."
+        return self.shm_.buf
+
+    @property
+    def name(self):
+        "Unique name that identifies the shared memory block."
+        return self.shm_.name
+
+    @property
+    def size(self):
+        "Size in bytes."
+        return self.shm_.size
+
+    def close(self):
+        """Closes access to the shared memory from this instance but does
+        not destroy the shared memory block."""
+        return self.shm_.close()
+
+    def unlink(self):
+        """Requests that the underlying shared memory block be destroyed.
+        In order to ensure proper cleanup of resources, unlink should be
+        called once (and only once) across all processes which have access
+        to the shared memory block."""
+        return self.shm_.unlink()
