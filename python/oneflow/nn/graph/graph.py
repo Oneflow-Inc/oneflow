@@ -287,13 +287,23 @@ class Graph(object):
         state_dict: Dict[str, Dict[str, Tensor]],
         strict: bool = True,
     ):
-        # 1 load parameter/buffer to Modules
+        wild_var_names = list()
+        wild_var_tensors = list()
         for name, sub_dict in state_dict.items():
             if name in self._blocks:
+                # 1 load parameter/buffer to Modules
                 self._blocks[name].origin.load_state_dict(sub_dict, strict)
             else:
+                # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 self._print(2, 0, f"Unknown key {name} in state_dict.")
-        # 2 store other state to CNNGraph, CNNGraph load them after job pass
+                assert isinstance(sub_dict, Tensor)
+                wild_var_names.append(name)
+                wild_var_tensors.append(sub_dict)
+
+        if len(wild_var_names):
+            self._c_nn_graph.register_wild_var_names_and_tensors(
+                wild_var_names, convert_to_tensor_tuple(wild_var_tensors)
+            )
 
     @property
     def name(self):
