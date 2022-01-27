@@ -60,18 +60,6 @@ def logical_and_op(input, other):
     return LogicalAnd()(input, other)
 
 
-@register_tensor_op("logical_and")
-def logical_and_op_tensor(input, other):
-    """
-
-    logical_and() -> Tensor
-
-    See :func:`oneflow.logical_and`
-
-    """
-    return LogicalAnd()(input, other)
-
-
 class LogicalOr(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -114,18 +102,6 @@ def logical_or_op(input, other):
     return LogicalOr()(input, other)
 
 
-@register_tensor_op("logical_or")
-def logical_or_op_tensor(input, other):
-    """
-
-    logical_or() -> Tensor
-
-    See :func:`oneflow.logical_or`
-
-    """
-    return LogicalOr()(input, other)
-
-
 def logical_xor_op(input, other):
     """
     Computes the element-wise logical XOR of the given input tensors. 
@@ -158,17 +134,6 @@ def logical_xor_op(input, other):
         if other.dtype != input.dtype:
             other = flow.cast(other, input.dtype)
     return flow._C.logical_xor(input, other)
-
-
-@register_tensor_op("logical_xor")
-def logical_xor_op_tensor(input, other):
-    """
-    logical_xor() -> Tensor
-
-    See :func:`oneflow.logical_xor`
-
-    """
-    return logical_xor_op(input, other)
 
 
 if __name__ == "__main__":

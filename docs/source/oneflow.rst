@@ -44,6 +44,7 @@ oneflow
             diag, 
             diagonal,
             movedim,
+            as_strided,
             div, 
             dot, 
             eq, 
@@ -89,6 +90,7 @@ oneflow
             mul, 
             neg, 
             negative, 
+            new_ones,
             nonzero,
             numel, 
             ne, 
@@ -139,6 +141,8 @@ oneflow
             tensor, 
             tile, 
             to, 
+            to_consistent,
+            to_local,
             transpose,
             t,
             tril, 
@@ -160,6 +164,8 @@ oneflow
             decode_onerec,
             from_numpy,
             cumsum,
+            topk,
+            nms,
             cumprod,
 
 .. autofunction:: oneflow.relu

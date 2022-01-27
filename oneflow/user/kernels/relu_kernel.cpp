@@ -35,7 +35,6 @@ class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto t1 = std::chrono::high_resolution_clock::now();
     auto primitive = NewReluPrimitive(ctx);
     CHECK(primitive);
 
@@ -44,12 +43,7 @@ class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     const int64_t elem_cnt = x->shape().elem_cnt();
 
     if (elem_cnt != 0) {
-      auto t2 = std::chrono::high_resolution_clock::now();
       primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
-      auto t3 = std::chrono::high_resolution_clock::now();
-      auto all = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t1).count();
-      auto time = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
-      printf("all time=%ld, relu=%ld \n", all, time);
     } else {
       // For 0-d Tensor
       return;
