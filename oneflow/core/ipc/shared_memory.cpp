@@ -35,16 +35,25 @@ namespace {
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd) {
   *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-  return errno;
+  return *fd == -1 ? errno : 0;
+}
+
+int ShmCreate(const std::string& shm_name, int* fd) {
+  int err = 0;
+  while (true) {
+    err = ShmOpen(shm_name, fd);
+    if (err != EAGAIN) { break; }
+  }
+  return err;
 }
 
 // return errno
 int ShmOpen(std::string* shm_name, int* fd) {
   int err = EEXIST;
-  for (int i = 0; i < 32; ++i) {
+  while (true) {
     static constexpr int kNameLength = 8;
-    *shm_name = std::string("ofshm_") + GenAlphaNumericString(kNameLength);
-    err = ShmOpen(*shm_name, fd);
+    *shm_name = std::string("/ofshm_") + GenAlphaNumericString(kNameLength);
+    err = ShmCreate(*shm_name, fd);
     if (err != EEXIST) { return err; }
   }
   return err;
@@ -52,7 +61,7 @@ int ShmOpen(std::string* shm_name, int* fd) {
 
 int ShmMap(int fd, const size_t shm_size, void** ptr) {
   *ptr = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  return errno;
+  return (*ptr == MAP_FAILED) ? errno : 0;
 }
 
 #endif
@@ -88,6 +97,10 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 #endif
 }
 }  // namespace
+
+SharedMemory::~SharedMemory() {
+  if (buf_ != nullptr) { CHECK_JUST(Close()); }
+}
 
 Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
   std::string shm_name;
