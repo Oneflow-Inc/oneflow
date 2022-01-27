@@ -36,7 +36,7 @@ class TestConstantPad1d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6)).to(
+        x = random_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6)).to(
             device
         )
         y = m(x)
@@ -53,7 +53,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4, dim1=random(1, 6), dim2=random(1, 6), dim3=random(1, 6)
         ).to(device)
         y = m(x)
@@ -70,7 +70,7 @@ class TestConstantPad3d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=5,
             dim1=random(1, 6),
             dim2=random(1, 6),
@@ -88,7 +88,7 @@ class TestFunctionalConstantPad2d(flow.unittest.TestCase):
         device = random_device()
         padding = random(-1, 6).to(_size_4_t)
         value = random().to(float)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(1, 6),
             dim1=random(1, 6),

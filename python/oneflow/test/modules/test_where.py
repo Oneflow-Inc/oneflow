@@ -214,9 +214,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.where(cond > 0, x, y)
 
     @autotest(check_graph=True)
@@ -224,9 +224,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=0).to(device)
-        y = random_pytorch_tensor(ndim=0).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = random_tensor(ndim=0).to(device)
         return torch.where(cond > 0, x, y)
 
     @autotest(check_graph=True)
@@ -234,9 +234,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=1).to(device)
         return torch.where(cond > 0, x, y)
 
     @autotest(check_graph=True)
@@ -244,9 +244,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(float)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
             device=device, dtype=torch.float64
         )
         return torch.where(cond > 0, x, y)
@@ -256,9 +256,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
         x = random().to(float)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
             device=device, dtype=torch.float64
         )
         return torch.where(cond > 0, x, y)
@@ -268,9 +268,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(int)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
         return torch.where(cond > 0, x, y)
 
     @autotest(check_graph=True)
@@ -278,8 +278,8 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
             device=device, dtype=torch.float64
         )
         y = random().to(float)
@@ -290,8 +290,8 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
             device=device, dtype=torch.float64
         )
         y = random().to(float)
@@ -302,8 +302,8 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
         y = random().to(int)
         return torch.where(cond > 0, x, y)
 
@@ -312,7 +312,7 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(float)
         y = random().to(float)
         return torch.where(cond > 0, x, y)
@@ -322,7 +322,7 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(int)
         y = random().to(int)
         return torch.where(cond > 0, x, y)
@@ -332,11 +332,11 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(
             device=device, dtype=torch.bool
         )
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(
             device=device, dtype=torch.bool
         )
         return torch.where(cond > 0, x, y)
@@ -346,11 +346,11 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=1, dim1=k2).to(
             device=device, dtype=torch.bool
         )
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=1).to(
             device=device, dtype=torch.bool
         )
         return torch.where(cond > 0, x, y)
@@ -360,9 +360,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(bool)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
             device=device, dtype=torch.bool
         )
         return torch.where(cond > 0, x, y)
@@ -372,9 +372,9 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
         x = random().to(bool)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
             device=device, dtype=torch.bool
         )
         return torch.where(cond > 0, x, y)
@@ -384,8 +384,8 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
             device=device, dtype=torch.bool
         )
         y = random().to(bool)
@@ -396,8 +396,8 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
             device=device, dtype=torch.bool
         )
         y = random().to(bool)
@@ -408,7 +408,7 @@ class TestWhere(flow.unittest.TestCase):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(bool)
         y = random().to(bool)
         return torch.where(cond > 0, x, y)

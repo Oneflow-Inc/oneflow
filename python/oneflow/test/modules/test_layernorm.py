@@ -155,7 +155,7 @@ class TestLayerNorm(flow.unittest.TestCase):
             normalized_shape=get_random_norm_shape(),
             elementwise_affine=random().to(bool),
         ).to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+        x = random_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
             device
         )
         y = m(x)
@@ -176,7 +176,7 @@ class TestLayerNorm(flow.unittest.TestCase):
             normalized_shape=get_random_norm_shape(),
             elementwise_affine=random().to(bool),
         ).to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+        x = random_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
             device
         )
         y = m(x)
@@ -197,7 +197,7 @@ class TestLayerNorm(flow.unittest.TestCase):
             normalized_shape=get_random_norm_shape(),
             elementwise_affine=random().to(bool),
         ).to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+        x = random_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
             device
         )
         y = m(x)
@@ -215,7 +215,7 @@ class TestLayerNorm(flow.unittest.TestCase):
             return tuple((channel.value(), height.value(), width.value())[begin_axis:])
 
         m = torch.nn.LayerNorm(normalized_shape=get_random_norm_shape()).to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+        x = random_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
             device
         )
         y = m(x)

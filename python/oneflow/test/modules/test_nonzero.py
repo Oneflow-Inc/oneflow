@@ -60,14 +60,14 @@ class TestNonzero(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=False)
     def test_nonzero_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(device)
+        x = random_tensor(ndim=random(2, 5).to(int)).to(device)
         y = torch.nonzero(x)
         return y
 
     @autotest(auto_backward=False, check_graph=False)
     def test_nonzero_bool_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(
+        x = random_tensor(ndim=random(2, 5).to(int)).to(
             device=device, dtype=torch.bool
         )
         y = torch.nonzero(x)
@@ -76,7 +76,7 @@ class TestNonzero(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=False)
     def test_nonzero_with_0dim_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         y = torch.nonzero(x)
         return y
 

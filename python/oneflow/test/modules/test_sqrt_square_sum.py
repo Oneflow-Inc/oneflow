@@ -27,7 +27,7 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
     @autotest(n=30, auto_backward=False, check_graph=True, rtol=0.5, atol=0.5)
     def test_sqrt_sum_with_cpu_random_data(test_case):
         device = cpu_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4, dim1=30, dim2=40, dim3=50, requires_grad=False
         ).to(device)
         y = torch.linalg.norm(x)
@@ -37,7 +37,7 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
     @autotest(n=30, auto_backward=False, check_graph=True)
     def test_sqrt_sum_with_cuda_random_data(test_case):
         device = gpu_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4, dim1=100, dim2=100, dim3=100, requires_grad=False
         ).to(device)
         y = torch.linalg.norm(x)
@@ -46,7 +46,7 @@ class TestLinalgVectorNorm2D(flow.unittest.TestCase):
     @autotest(n=30, auto_backward=False, check_graph=True, rtol=0.5, atol=0.5)
     def test_scalar_print_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4, dim1=30, dim2=40, dim3=50, requires_grad=False
         ).to(device)
         y = torch.linalg.norm(x)

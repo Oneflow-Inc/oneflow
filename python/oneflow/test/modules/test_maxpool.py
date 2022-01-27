@@ -77,7 +77,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
+        x = random_tensor(ndim=3, dim2=random(20, 22)).to(device)
         y = m(x)
         if return_indices:
             return unpack_indices(y)
@@ -98,7 +98,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
             device
         )
         y = m(x)
@@ -122,7 +122,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
         ).to(device)
         y = m(x)
@@ -152,7 +152,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
+        x = random_tensor(ndim=3, dim2=random(20, 22)).to(device)
         y = torch.nn.functional.max_pool1d(
             x,
             kernel_size=random(4, 6).to(int),
@@ -172,7 +172,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
             device
         )
         y = torch.nn.functional.max_pool2d(
@@ -194,7 +194,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
         ).to(device)
         y = torch.nn.functional.max_pool3d(
