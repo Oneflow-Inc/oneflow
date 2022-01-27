@@ -117,7 +117,7 @@ class TestGather(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(check_graph=False)
     def test_flow_gather_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)

@@ -60,6 +60,9 @@ class TestIndexSelect(flow.unittest.TestCase):
 
         return y
 
+    # Not check graph because of one reason:
+    # Reason 1, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(auto_backward=False, check_graph="ValidatedFlase")
     def test_index_select_bool_by_random(test_case):
         device = random_device()
