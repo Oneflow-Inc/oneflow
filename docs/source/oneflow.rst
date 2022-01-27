@@ -44,6 +44,7 @@ oneflow
             diag, 
             diagonal,
             movedim,
+            as_strided,
             div, 
             dot, 
             eq, 
@@ -163,6 +164,8 @@ oneflow
             decode_onerec,
             from_numpy,
             cumsum,
+            topk,
+            nms,
             cumprod,
 
 .. autofunction:: oneflow.relu
