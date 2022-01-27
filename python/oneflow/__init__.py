@@ -15,12 +15,6 @@ limitations under the License.
 """
 
 import os
-
-if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
-    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
-    gpu_id = vram_str.split(",")[0].split(":")[-1]
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
-
 import sys
 import collections
 
@@ -94,8 +88,11 @@ from oneflow._C import logical_xor
 from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
+from oneflow._C import repeat
+from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
+from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softsign
@@ -105,7 +102,7 @@ from oneflow._C import zeros_like
 from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
-from oneflow._C import div
+from oneflow._C import div, div_
 from oneflow._C import floor, floor_
 from oneflow._C import floor_divide
 from oneflow._C import mul
@@ -132,6 +129,7 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
+from oneflow._C import in_top_k
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
@@ -170,14 +168,21 @@ from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
-from oneflow._C import read_onerec
 from oneflow._C import decode_onerec
 from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
+from oneflow._C import cumprod
 from oneflow._C import swapaxes
-
+from oneflow._C import t
+from oneflow._C import masked_fill
+from oneflow._C import equal
+from oneflow._C import equal as eq
+from oneflow._C import not_equal
+from oneflow._C import not_equal as ne
+from oneflow._C import less as lt
+from oneflow._C import less_equal as le
 
 from . import sbp
 import atexit
@@ -299,6 +304,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
@@ -306,25 +312,18 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.comparison import eq_op as eq
-from oneflow.nn.modules.comparison import eq_op as equal
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
-from oneflow.nn.modules.comparison import less_op as lt
-from oneflow.nn.modules.comparison import less_equal_op as le
-from oneflow.nn.modules.comparison import ne_op as ne
-from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
-from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
@@ -343,7 +342,6 @@ from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.reduce_ops import all_op as all
 from oneflow.nn.modules.reduce_ops import any_op as any
-from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
@@ -357,7 +355,6 @@ from oneflow.nn.modules.tensor_buffer import (
 )
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
-from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
@@ -394,7 +391,6 @@ from . import (
     amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
-import oneflow.utils.vision
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda

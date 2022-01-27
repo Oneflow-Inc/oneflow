@@ -94,7 +94,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
-    // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
     JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
     const auto& infer_args =
@@ -108,9 +108,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
-        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    if (!outputs->at(i)) {
+      const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+          output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+      outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    }
   }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));

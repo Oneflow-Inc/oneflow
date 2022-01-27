@@ -94,11 +94,11 @@ std::shared_ptr<const OperatorConf> Operator::shared_op_conf() const { return op
 DeviceType Operator::device_type() const { return device_type_; }
 
 const std::string& Operator::SoleIbn() const {
-  CHECK_EQ(input_bns().size(), 1);
+  CHECK_EQ(input_bns().size(), 1) << ", op_name " << op_name();
   return input_bns().Get(0);
 }
 const std::string& Operator::SoleObn() const {
-  CHECK_EQ(output_bns().size(), 1);
+  CHECK_EQ(output_bns().size(), 1) << ", op_name " << op_name();
   return output_bns().Get(0);
 }
 const std::string& Operator::SoleTbn() const {
