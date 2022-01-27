@@ -425,7 +425,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
-  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
+  //CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
   for (int i = 0; i < inputs.size(); ++i) {
     // TODO(chengcheng, liufengwei):
     //   use TensorMeta.to_string and equal.
