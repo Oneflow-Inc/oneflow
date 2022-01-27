@@ -271,7 +271,7 @@ jobs:
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
           self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: "10.1"
+          cuda-version: "10.2"
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: true
           docker-run-use-lld: true
