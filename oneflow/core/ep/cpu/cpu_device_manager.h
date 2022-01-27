@@ -25,7 +25,7 @@ namespace ep {
 class CpuDeviceManager : public DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceManager);
-  CpuDeviceManager(DeviceManagerRegistry* registry);
+  explicit CpuDeviceManager(DeviceManagerRegistry* registry);
   ~CpuDeviceManager() override;
 
   DeviceManagerRegistry* registry() const override;
