@@ -44,6 +44,7 @@ oneflow
             diag, 
             diagonal,
             movedim,
+            as_strided,
             div, 
             dot, 
             eq, 
