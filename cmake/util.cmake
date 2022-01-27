@@ -258,7 +258,6 @@ function(set_compile_options_to_oneflow_target target)
         PRIVATE
           $<$<COMPILE_LANGUAGE:CUDA>:
           -Werror=return-type;
-          -Wno-error=unknown-cuda-version;
           # Suppress warning from cub library -- marking as system header seems not working for .cuh files
           -Wno-pass-failed;
           >)
