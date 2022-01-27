@@ -14,7 +14,6 @@ on:
         required: true
 concurrency:
   group: canary-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   canary_release:
     name: Canary Release

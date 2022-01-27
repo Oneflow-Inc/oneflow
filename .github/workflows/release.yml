@@ -15,7 +15,6 @@ on:
         required: false
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
 env:
   ONEFLOW_SRC: .
 jobs:
