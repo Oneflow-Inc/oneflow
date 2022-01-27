@@ -31,8 +31,9 @@ class TestTorchSplitVec(flow.unittest.TestCase):
             dim4=random(3, 6),
         ).to(device)
         dim = random(-3, 3).to(int)
-        z = torch.tensor_split(x, (1,2),dim)
+        z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
+
 
 class TestTorchSplitInt(flow.unittest.TestCase):
     @autotest(check_graph=False)
@@ -47,7 +48,7 @@ class TestTorchSplitInt(flow.unittest.TestCase):
         ).to(device)
         split = random(-3, 3).to(int)
         dim = random(-3, 3).to(int)
-        z = torch.tensor_split(x, split,dim)
+        z = torch.tensor_split(x, split, dim)
         return z[0]
 
 

@@ -30,8 +30,9 @@ class TestVsplitVec(flow.unittest.TestCase):
             dim3=random(3, 6),
             dim4=random(3, 6),
         ).to(device)
-        z = torch.vsplit(x, (1,2))
+        z = torch.vsplit(x, (1, 2))
         return z[0]
+
 
 class TestVsplitInt(flow.unittest.TestCase):
     @autotest(check_graph=False)
