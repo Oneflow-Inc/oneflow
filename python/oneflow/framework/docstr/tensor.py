@@ -1137,10 +1137,10 @@ add_docstr(
 )
 
 add_docstr(
-   oneflow.Tensor.sort,
-   """
+    oneflow.Tensor.sort,
+    """
    See :func:`oneflow.sort`
-   """, 
+   """,
 )
 
 add_docstr(
@@ -1185,7 +1185,7 @@ add_docstr(
         >>> input = input.int()
         >>> input.dtype
         oneflow.int32
-    """,    
+    """,
 )
 
 add_docstr(
@@ -1206,7 +1206,7 @@ add_docstr(
         >>> input = input.long()
         >>> input.dtype
         oneflow.int64
-    """,    
+    """,
 )
 
 add_docstr(
@@ -1227,7 +1227,7 @@ add_docstr(
         >>> input = input.float()
         >>> input.dtype
         oneflow.float32
-    """    
+    """,
 )
 
 add_docstr(
@@ -1248,7 +1248,7 @@ add_docstr(
         >>> input = input.double()
         >>> input.dtype
         oneflow.float64
-    """
+    """,
 )
 
 add_docstr(

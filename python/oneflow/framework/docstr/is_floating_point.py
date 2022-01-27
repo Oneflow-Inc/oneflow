@@ -33,5 +33,5 @@ add_docstr(
         >>> output = flow.is_floating_point(input)
         >>> output
         False
-    """,  
+    """,
 )
