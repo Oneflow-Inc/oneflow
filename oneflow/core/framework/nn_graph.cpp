@@ -171,6 +171,22 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   return Maybe<void>::Ok();
 }
 
+Maybe<const std::vector<std::string>> NNGraph::GetWildVarOpNames() const{
+  std::vector<std::string> names;
+  for (const auto& iter : wild_variable_op_name2tensor_) {
+    names.emplace_back(iter.first);
+  }
+  return names;
+}
+
+Maybe<const std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetWildVarOpTensors() const {
+  std::vector<std::shared_ptr<one::Tensor>> tensors;
+  for (const auto& iter : wild_variable_op_name2tensor_) {
+    tensors.emplace_back(iter.second);
+  }
+  return tensors;
+}
+
 Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -275,6 +291,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
     if (/*is_null=*/!tensor) {
+      // Deal with tensors which need to be created.
       const auto& op_attribute =
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
 
@@ -311,12 +328,16 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       }
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-
+      auto find_iter = wild_variable_op_name2tensor_.find(var_name);
+      if (find_iter != wild_variable_op_name2tensor_.end()) {
+        wild_variable_op_name2tensor_[var_name] = tensor;
+      }
       VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
               << std::endl
               << var_conf.DebugString()
               << " created in JobPass, nn.Graph will new EagerTensor for this variable.\n";
     } else if (tensor->is_consistent()) {
+      // Deal with tensors which need to change sbp.
       cfg::NdSbpSignature var_nd_sbp_signature =
           cfg::NdSbpSignature(plan_.job_id2op_attribute_ref_table()
                                   .at(job_id)

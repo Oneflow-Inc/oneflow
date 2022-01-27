@@ -51,6 +51,8 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> RegisterVariableOpNamesAndTensors(
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
+  Maybe<const std::vector<std::string>> GetWildVarOpNames() const;
+  Maybe<const std::vector<std::shared_ptr<one::Tensor>>> GetWildVarOpTensors() const;
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
 

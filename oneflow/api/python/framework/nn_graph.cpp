@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <memory>
 #include <string>
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -28,6 +29,16 @@ limitations under the License.
 namespace py = pybind11;
 
 namespace oneflow {
+namespace {
+py::tuple APINNGraphWildVarNames(const std::shared_ptr<NNGraph>& graph) {
+  const auto& names = *graph->GetWildVarOpNames().GetPtrOrThrow();
+  const auto& tuple = std::make_shared<py::tuple>(names.size());
+  for (int i = 0; i < names.size(); ++i) {
+    (*tuple)[i] = py::cast(names[i]);
+  }
+  return *tuple;
+}
+}   // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
@@ -52,6 +63,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
              return graph.RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors)
                  .GetOrThrow();
            })
+      .def_property_readonly("wild_var_names", &APINNGraphWildVarNames)
       .def("complie_and_init_runtime",
            [](NNGraph& graph) { return graph.CompileAndInitRuntime().GetOrThrow(); });
 
