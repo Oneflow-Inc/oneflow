@@ -38,22 +38,13 @@ int ShmOpen(const std::string& shm_name, int* fd) {
   return *fd == -1 ? errno : 0;
 }
 
-int ShmCreate(const std::string& shm_name, int* fd) {
-  int err = 0;
-  while (true) {
-    err = ShmOpen(shm_name, fd);
-    if (err != EAGAIN) { break; }
-  }
-  return err;
-}
-
 // return errno
 int ShmOpen(std::string* shm_name, int* fd) {
   int err = EEXIST;
   while (true) {
     static constexpr int kNameLength = 8;
     *shm_name = std::string("/ofshm_") + GenAlphaNumericString(kNameLength);
-    err = ShmCreate(*shm_name, fd);
+    err = ShmOpen(*shm_name, fd);
     if (err != EEXIST) { return err; }
   }
   return err;
