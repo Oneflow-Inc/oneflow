@@ -1334,37 +1334,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.cumsum,
-    r"""This operator computes the cumulative sum of input elements in the given dimension.
-
-    The equation is:
-
-	$$
-        y_{i}=x_{0}+x_{1}+...+x_{i}
-	$$
-
-    Args:
-        input (Tensor):  the input ND tensor.
-        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
-
-    Returns:
-        oneflow.Tensor: The result tensor with cumsum result.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> input=flow.ones(3,3)
-        >>> dim=1
-        >>> flow.cumsum(input,dim)
-        tensor([[1., 2., 3.],
-                [1., 2., 3.],
-                [1., 2., 3.]], dtype=oneflow.float32)
-    """,
-)
-
-add_docstr(
     oneflow.tensor_split,
     r"""
     Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
@@ -1483,5 +1452,36 @@ add_docstr(
         >>> output[2].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[3].size()
+    """,
+)
+
+add_docstr(
+    oneflow.cumsum,
+    r"""This operator computes the cumulative sum of input elements in the given dimension.
+
+    The equation is:
+
+	$$
+        y_{i}=x_{0}+x_{1}+...+x_{i}
+	$$
+
+    Args:
+        input (Tensor):  the input ND tensor.
+        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cumsum result.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input=flow.ones(3,3)
+        >>> dim=1
+        >>> flow.cumsum(input,dim)
+        tensor([[1., 2., 3.],
+                [1., 2., 3.],
+                [1., 2., 3.]], dtype=oneflow.float32)
     """,
 )
