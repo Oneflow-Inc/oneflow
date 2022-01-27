@@ -26,6 +26,20 @@ class LAMB(Optimizer):
 
     LAMB was proposed in `Large Batch Optimization for Deep Learning: Training BERT in 76 minutes`_.
 
+    The equation of parameters updating is:
+
+    .. math::
+
+        & V_t = \\beta_1*V_{t-1} + (1-\\beta_1)*grad
+
+        & S_t = \\beta_2*S_{t-1} + (1-\\beta_2)*{grad} \\odot {grad}
+
+        & \\hat{u} = \\frac{{V_t}}{\\sqrt{{S_t}}+\\epsilon}
+        
+        & \\hat{r} = learning\\_rate * \\frac{||param_{old}||_2}{||\\hat{u}||_2}
+
+        & param_{new} = param_{old} - \\hat{r} * \\hat{u}
+
     Args:
         parameters (iterable): iterable of parameters to optimize or dicts defining
             parameter groups
