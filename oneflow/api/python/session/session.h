@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
+#include "oneflow/api/python/session/session_api.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -128,8 +129,18 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   return Maybe<void>::Ok();
 }
 
+inline Maybe<void> MultiClientSessionContextUpdateResource(const std::string& resource_proto_str) {
+  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
+  Resource reso_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(resource_proto_str, &reso_proto))
+      << "failed to parse config_proto: " << resource_proto_str;
+  JUST(Global<MultiClientSessionContext>::Get()->UpdateResource(reso_proto));
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> MultiClientSessionContextAddCGraph(
     const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
   JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
   return Maybe<void>::Ok();
 }
