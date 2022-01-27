@@ -691,6 +691,74 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.add,
+    """
+    See :func:`oneflow.add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add_,
+    """
+    In-place version of :func:`oneflow.Tensor.add`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.asin,
+    """
+    See :func:`oneflow.asin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsin,
+    """
+    See :func:`oneflow.arcsin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsinh,
+    """
+    See :func:`oneflow.arcsinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sin,
+    """
+    sin() -> Tensor
+
+    See :func:`oneflow.sin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cos,
+    """
+    
+    See :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atan,
+    """
+    
+    See :func:`oneflow.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctan,
+    """
+    
+    See :func:`oneflow.arctan`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`
