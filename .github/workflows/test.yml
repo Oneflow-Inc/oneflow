@@ -257,7 +257,6 @@ jobs:
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
-            3.6
             3.7
       - uses: Oneflow-Inc/get-oneflow@refactor-release
         name: Build manylinux ${{ matrix.entry }}
