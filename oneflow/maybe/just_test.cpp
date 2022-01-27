@@ -44,10 +44,11 @@ TEST(Just, MaybeBasic) {
   ASSERT_EQ(CHECK_JUST(h(0)), 22);
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(h(11)), R"(not in range.*lambda.*f\(x\).*lambda.*g\(x\).*TestBody.*h\(11\))");
+      CHECK_JUST(h(11)),
+      R"(not in range.*(lambda|operator\(\)).*f\(x\).*(lambda|operator\(\)).*g\(x\).*TestBody.*h\(11\))");
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(h(15)), R"(invalid value.*lambda.*g\(x\).*TestBody.*h\(15\))");
+      CHECK_JUST(h(15)), R"(invalid value.*(lambda|operator\(\)).*g\(x\).*TestBody.*h\(15\))");
 
   ASSERT_EQ(details::JustPrivateScope::StackedError(h(12)).StackSize(), 2);
   ASSERT_EQ(details::JustPrivateScope::StackedError(h(15)).StackSize(), 1);
@@ -84,12 +85,14 @@ TEST(Just, MaybeVoid) {
 
   x = 11;
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(h(x)), R"(not in range.*lambda.*f\(x\).*lambda.*g\(x\).*TestBody.*h\(x\))");
+      CHECK_JUST(h(x)),
+      R"(not in range.*(lambda|operator\(\)).*f\(x\).*(lambda|operator\(\)).*g\(x\).*TestBody.*h\(x\))");
   ASSERT_EQ(x, 11);
 
   x = 8;
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(h(x)), R"(not in range.*lambda.*f\(x\).*lambda.*g\(x\).*TestBody.*h\(x\))");
+      CHECK_JUST(h(x)),
+      R"(not in range.*(lambda|operator\(\)).*f\(x\).*(lambda|operator\(\)).*g\(x\).*TestBody.*h\(x\))");
 
   [[maybe_unused]] auto _ = h(x);  // NOLINT
   ASSERT_EQ(x, 13);
@@ -122,7 +125,7 @@ TEST(Just, MaybeRef) {
   ASSERT_EQ(y, 200);
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(g(11)), R"(not in range.*lambda.*f\(x\).*TestBody.*g\(11\))");
+      CHECK_JUST(g(11)), R"(not in range.*(lambda|operator\(\)).*f\(x\).*TestBody.*g\(11\))");
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
       CHECK_JUST(g(2)), R"(invalid value.*TestBody.*g\(2\))");
@@ -150,10 +153,11 @@ TEST(Just, MaybeErrorPtr) {
   ASSERT_EQ(CHECK_JUST(h(0)), 22);
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(h(11)), R"(not in range.*lambda.*f\(x\).*lambda.*g\(x\).*TestBody.*h\(11\))");
+      CHECK_JUST(h(11)),
+      R"(not in range.*(lambda|operator\(\)).*f\(x\).*(lambda|operator\(\)).*g\(x\).*TestBody.*h\(11\))");
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(h(15)), R"(invalid value.*lambda.*g\(x\).*TestBody.*h\(15\))");
+      CHECK_JUST(h(15)), R"(invalid value.*(lambda|operator\(\)).*g\(x\).*TestBody.*h\(15\))");
 
   ASSERT_EQ(details::JustPrivateScope::StackedError(h(12))->StackSize(), 2);
   ASSERT_EQ(details::JustPrivateScope::StackedError(h(15))->StackSize(), 1);
@@ -191,7 +195,7 @@ TEST(Just, Optional) {
   };
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(f(a)), R"(not found.*lambda.*x.*TestBody.*f\(a\))");
+      CHECK_JUST(f(a)), R"(not found.*(lambda|operator\(\)).*x.*TestBody.*f\(a\))");
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
       CHECK_JUST(f(b)), R"(hello.*TestBody.*f\(b\))");
 
@@ -211,7 +215,7 @@ TEST(Just, Ptr) {
   };
 
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
-      CHECK_JUST(f(a)), R"(not found.*lambda.*x.*TestBody.*f\(a\))");
+      CHECK_JUST(f(a)), R"(not found.*(lambda|operator\(\)).*x.*TestBody.*f\(a\))");
   ASSERT_DEATH(  // NOLINT(cppcoreguidelines-avoid-goto)
       CHECK_JUST(f(b)), R"(hello.*TestBody.*f\(b\))");
 

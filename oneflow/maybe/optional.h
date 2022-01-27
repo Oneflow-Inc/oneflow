@@ -133,7 +133,10 @@ struct OptionalStorage<T, std::enable_if_t<std::is_scalar<T>::value>> {
   OptionalStorage(const OptionalStorage&) = delete;
   OptionalStorage& operator=(const OptionalStorage&) = delete;
 
-  void Init() { has_ = false; }
+  void Init() {
+    has_ = false;
+    value_ = {};
+  }
 
   T& Value() & { return value_; }
 

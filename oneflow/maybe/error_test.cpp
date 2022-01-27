@@ -53,7 +53,7 @@ TEST(StackedError, SimpleStackedError) {
 
   ASSERT_EQ(a.StackSize(), 2);
   ASSERT_DEATH(a.Abort(),  // NOLINT(cppcoreguidelines-avoid-goto)
-               "lambda.*hello.*\n.*SomeType::SomeType.*hi");
+               "(lambda|operator\\(\\)).*hello.*\n.*SomeType::SomeType.*hi");
 
   ASSERT_EQ(a.StackElem(0).message, "hello");
   ASSERT_EQ(a.StackElem(1).message, "hi");
