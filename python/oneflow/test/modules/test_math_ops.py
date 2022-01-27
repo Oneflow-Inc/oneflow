@@ -47,7 +47,7 @@ class TestSin(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestInplaceSin(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest()
     def test_flow_inplace_sin_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
