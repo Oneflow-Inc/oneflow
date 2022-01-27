@@ -15,12 +15,6 @@ limitations under the License.
 """
 
 import os
-
-if os.getenv("CTEST_RESOURCE_GROUP_COUNT"):
-    vram_str = os.getenv("CTEST_RESOURCE_GROUP_0_VRAM")
-    gpu_id = vram_str.split(",")[0].split(":")[-1]
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
-
 import sys
 import collections
 
@@ -98,6 +92,7 @@ from oneflow._C import repeat
 from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
+from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softsign
@@ -178,13 +173,13 @@ from oneflow._C import cumsum
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
 from oneflow._C import t
+from oneflow._C import masked_fill
 from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
-
 
 from . import sbp
 import atexit
@@ -326,7 +321,6 @@ from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.index_select import index_select_op as index_select
-from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
