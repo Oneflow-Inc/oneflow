@@ -107,7 +107,8 @@ class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
 class RankGroup;
 
 struct TransportUtil final {
-  static int64_t TimeoutSeconds() { return 60 * 5; }
+  static int64_t TimeoutSeconds();
+  static void SetTimeoutSeconds(int64_t secs);
   static int64_t BlockingWarningIntervalSeconds() { return 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);
