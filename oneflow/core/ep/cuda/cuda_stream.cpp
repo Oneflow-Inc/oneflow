@@ -92,6 +92,8 @@ CudaStream::CudaStream(CudaDevice* device)
   // cublas_handle
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
+  // cublas_lt_handle 
+  OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
 #if CUBLAS_VERSION >= 11000
   if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION", true)) {
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
@@ -120,6 +122,7 @@ CudaStream::~CudaStream() {
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+  OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
 #if CUBLAS_VERSION >= 11200
   OF_CUDA_CHECK(cudaFree(workspace_));
@@ -155,6 +158,8 @@ void CudaStream::RecordEvent(Event* event) {
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
+
+cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }
 
 cudnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
 

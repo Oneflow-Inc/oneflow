@@ -84,6 +84,7 @@ class CudaStream : public Stream {
 
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
+  cublasLtHandle_t cublas_lt_handle() const; 
   cudnnHandle_t cudnn_handle() const;
   const cudaDeviceProp& device_properties() const;
 
@@ -131,6 +132,7 @@ class CudaStream : public Stream {
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
+  cublasLtHandle_t cublas_lt_handle_{}; 
   cudnnHandle_t cudnn_handle_{};
   int device_index_;
 #if CUBLAS_VERSION >= 11200
