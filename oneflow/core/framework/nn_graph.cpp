@@ -148,7 +148,6 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::shared_ptr<one::Tensor>& var = variable_tensors.at(i);
     CHECK_OR_RETURN(var->is_eager());
     const std::string& var_name = variable_op_names.at(i);
-    if (var_name.find("one_embedding_optimizer_placeholder::") != std::string::npos) { continue; }
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
@@ -270,8 +269,6 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
     if (/*is_null=*/!tensor) {
-      const auto& op_attribute_it =
-          plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
       const auto& op_attribute =
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
 
@@ -425,7 +422,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
-  //CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
+  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
   for (int i = 0; i < inputs.size(); ++i) {
     // TODO(chengcheng, liufengwei):
     //   use TensorMeta.to_string and equal.

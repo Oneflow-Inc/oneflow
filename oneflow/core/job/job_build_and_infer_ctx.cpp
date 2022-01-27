@@ -1019,7 +1019,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("DumpOneEmbeddingOptimizerConfPass"));
+    // JUST(DoPass("DumpOneEmbeddingOptimizerConfPass"));
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));

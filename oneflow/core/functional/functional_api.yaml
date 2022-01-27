@@ -1938,7 +1938,7 @@
   bind_python: True
 
 - name: "embedding_lookup_placeholder"
-  signature: "Tensor (Tensor ids, Tensor column_ids, DataType dtype, String embedding_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids, DataType dtype, String embedding_options) => OneEmbeddingLookup"
   bind_python: True
   
 - name: "fused_interaction"
