@@ -363,6 +363,7 @@ jobs:
       TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
+      FLOW_VISION_SRC: flow_vision
       METRICS_DIR: metrics
     steps:
       - name: Fix permissions
@@ -479,12 +480,23 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
+      - name: Checkout Oneflow-Inc/vision
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/vision
+          ref: v0.0.6
+          path: ${{ env.FLOW_VISION_SRC}}
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+      - name: Install Flow Vision
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip -e ${{ env.FLOW_VISION_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |

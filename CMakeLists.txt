@@ -47,7 +47,7 @@ option(TREAT_WARNINGS_AS_ERRORS "" ON)
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
 
-set(ONEFLOW_CURRENT_VERSION 0.7.0 CACHE STRING "")
+set(ONEFLOW_CURRENT_VERSION 0.7.0.dev CACHE STRING "")
 if(BUILD_FOR_CI)
   set(ONEFLOW_CURRENT_VERSION ci)
 endif()
