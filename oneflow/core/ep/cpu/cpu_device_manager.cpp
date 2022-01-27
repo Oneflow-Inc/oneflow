@@ -32,12 +32,13 @@ DeviceManagerRegistry* CpuDeviceManager::registry() const { return registry_; }
 std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(device_mutex_);
   if (!device_) {
-    CpuDevice* cpu_device = new CpuDevice(this);
     int64_t cpu_core = std::thread::hardware_concurrency();
     int64_t computing_cores =
         (cpu_core / GlobalProcessCtx::NumOfProcessPerNode()) - kOtherUsedNumThreads;
     if (computing_cores < 1) { computing_cores = 1; }
     computing_cores = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_PARALLELS", computing_cores);
+    
+    CpuDevice* cpu_device = new CpuDevice(this);
     cpu_device->SetNumParallels(computing_cores);
     device_.reset(cpu_device);
   }
