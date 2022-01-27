@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 #define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#include <cstddef>
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
@@ -40,6 +41,33 @@ namespace ep {
 
 constexpr size_t kDefaultGrainSize = 32768;
 
+class ManagerParallelNumberThreads {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ManagerParallelNumberThreads);
+  explicit ManagerParallelNumberThreads(size_t num_threads) {
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+    num_threads_ = omp_get_max_threads();
+    omp_set_num_threads(num_threads);
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+    num_threads_ = tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism);
+    tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
+                                            num_threads);
+#endif
+  }
+
+  ~ManagerParallelNumberThreads() {
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
+    omp_set_num_threads(num_threads_);
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+    tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
+                                            num_threads_);
+#endif
+  }
+
+ private:
+  size_t num_threads_;
+};
+
 class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
@@ -56,16 +84,6 @@ class CpuStream : public Stream {
   Device* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
-
-  void SetParallelNumberThreads(size_t num_threads) {
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-    // Affects omp_get_max_threads() Get the logical core book
-    omp_set_num_threads(number_threads);
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
-                                            num_threads);
-#endif
-  }
 
   template<typename F>
   void Parallel_for(int64_t begin, int64_t end, const F& func) {
@@ -91,7 +109,7 @@ class CpuStream : public Stream {
     }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    SetParallelNumberThreads(num_threads);
+    ManagerParallelNumberThreads manager(num_threads);
     size_t nthr_chunk_size = divup((end - begin), num_threads);
     int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
 
