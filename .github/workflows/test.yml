@@ -496,11 +496,11 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           ls ${ONEFLOW_WHEEL_PATH}
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip -e ${{ env.FLOW_VISION_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
       - name: Install Flow Vision
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip -e ${{ env.FLOW_VISION_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
