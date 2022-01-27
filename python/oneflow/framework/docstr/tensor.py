@@ -1035,6 +1035,7 @@ add_docstr(
     oneflow.Tensor.nonzero,
     """
     nonzero(input, as_tuple=False) -> Tensor
+
     See :func:`oneflow.nonzero`
     """,
 )
@@ -1043,6 +1044,7 @@ add_docstr(
     oneflow.Tensor.max,
     """
     input.max(dim, index) -> Tensor
+
     See :func:`oneflow.max`
     """,
 )
@@ -1051,6 +1053,7 @@ add_docstr(
     oneflow.Tensor.min,
     """
     input.min(dim, index) -> Tensor
+
     See :func:`oneflow.min`
     """,
 )
@@ -1059,6 +1062,7 @@ add_docstr(
     oneflow.Tensor.sum,
     """
     input.sum(dim, index) -> Tensor
+
     See :func:`oneflow.sum`
     """,
 )
@@ -1067,6 +1071,7 @@ add_docstr(
     oneflow.Tensor.mean,
     """
     input.mean(dim, index) -> Tensor
+
     See :func:`oneflow.mean`
     """,
 )
@@ -1075,6 +1080,7 @@ add_docstr(
     oneflow.Tensor.prod,
     """
     input.prod(dim, index) -> Tensor
+
     See :func:`oneflow.prod`
     """,
 )
@@ -1139,8 +1145,8 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.sort,
     """
-   See :func:`oneflow.sort`
-   """,
+    See :func:`oneflow.sort`
+    """,
 )
 
 add_docstr(
