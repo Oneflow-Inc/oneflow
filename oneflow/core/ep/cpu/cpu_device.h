@@ -26,12 +26,12 @@ class CpuDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDevice);
   explicit CpuDevice(DeviceManager* device_manager)
-      : device_manager_(device_manager), num_parallel_(1) {}
+      : device_manager_(device_manager), num_threads_(1) {}
   ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
-  void SetNumParallels(size_t num_parallel) { num_parallel_ = num_parallel; }
-  size_t GetNumParallels() { return num_parallel_; }
+  void SetNumThreads(size_t num_parallel) { num_threads_ = num_parallel; }
+  size_t GetNumThreads() { return num_threads_; }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
   size_t device_index() const override { return 0; }
@@ -50,7 +50,7 @@ class CpuDevice : public Device {
 
  private:
   DeviceManager* device_manager_;
-  size_t num_parallel_;
+  size_t num_threads_;
 };
 
 }  // namespace ep
