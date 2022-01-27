@@ -665,6 +665,53 @@ class Transpose2dimFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class AsStridedFunctor {
+ public:
+  AsStridedFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
+                           const int32_t& storage_offset) const {
+    CHECK_OR_RETURN(size.size() == stride.size()) << "mismatch in length of strides and shape";
+    for (size_t i = 0; i < size.size(); i++) {
+      CHECK_OR_RETURN(size[i] >= 0) << "Trying to create tensor with negative dimension" << size[i];
+      CHECK_OR_RETURN(stride[i] >= 0)
+          << "as_strided: Negative strides are not supported at the moment, got strides:"
+          << stride[i];
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AsStridedGradFunctor {
+ public:
+  AsStridedGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("as_strided_grad").Input("dy").Input("input").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
+                           const int32_t& storage_offset) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SwapaxesFunctor {
  public:
   SwapaxesFunctor() {}
@@ -1945,6 +1992,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");
+  m.add_functor<AsStridedFunctor>("AsStrided");
+  m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
   m.add_functor<SwapaxesFunctor>("Swapaxes");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
