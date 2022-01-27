@@ -39,10 +39,10 @@ namespace oneflow {
 
 namespace ep {
 
-class CpuNumberThreadsGuard {
+class CpuNumThreadsGuard {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuNumberThreadsGuard);
-  explicit CpuNumberThreadsGuard(size_t num_threads) {
+  OF_DISALLOW_COPY_AND_MOVE(CpuNumThreadsGuard);
+  explicit CpuNumThreadsGuard(size_t num_threads) {
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     num_threads_ = omp_get_max_threads();
     omp_set_num_threads(num_threads);
@@ -57,7 +57,7 @@ class CpuNumberThreadsGuard {
 #endif
   }
 
-  ~CpuNumberThreadsGuard() {
+  ~CpuNumThreadsGuard() {
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     omp_set_num_threads(num_threads_);
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
@@ -115,7 +115,7 @@ class CpuStream : public Stream {
     }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    CpuNumberThreadsGuard manager(num_threads);
+    CpuNumThreadsGuard manager(num_threads);
     size_t nthr_chunk_size = DivUp((end - begin), num_threads);
     int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
 
