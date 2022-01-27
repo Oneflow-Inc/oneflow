@@ -396,7 +396,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     test_g = TestGraphOfModule()
                                     if verbose:
                                         print("Run graph of module: ", repr(oneflow))
-                                        test_g.debug(1)
+                                        test_g.debug(3)
                                     # When testing module methods, kwargs are not considered.
                                     test_g_res = test_g(*graph_args)
                                     if verbose:
@@ -468,7 +468,7 @@ def GetDualObject(name, pytorch, oneflow):
                                                     "Run graph of function: ",
                                                     repr(oneflow),
                                                 )
-                                                test_g.debug(1)
+                                                test_g.debug(3)
                                             test_g_res = test_g()
                                     except Exception as e:
                                         print_note_fake_program()
@@ -559,7 +559,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 test_g = TestGraphOfTensorMethod()
                                 if verbose:
                                     print("Run graph of method: ", repr(oneflow))
-                                    test_g.debug(1)
+                                    test_g.debug(3)
                                 test_g_res = test_g()
                                 if verbose:
                                     print(
