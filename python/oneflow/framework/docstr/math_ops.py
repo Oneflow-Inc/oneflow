@@ -1297,6 +1297,74 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.eye,
+    """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
+
+    This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
+
+    Args:
+        n (int): the number of rows.
+        m (int, optional): the number of colums with default being n. Defaults to None.
+
+    Keyword args:
+        device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
+        placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
+        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
+
+    Returns:
+        oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> out = flow.eye(3, 3)
+        >>> out
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], dtype=oneflow.float32)
+        >>> out = flow.eye(3, 3, device="cuda")
+        >>> out
+        tensor([[1., 0., 0.],
+                [0., 1., 0.],
+                [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.cumsum,
+    r"""This operator computes the cumulative sum of input elements in the given dimension.
+
+    The equation is:
+
+	$$
+        y_{i}=x_{0}+x_{1}+...+x_{i}
+	$$
+
+    Args:
+        input (Tensor):  the input ND tensor.
+        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cumsum result.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input=flow.ones(3,3)
+        >>> dim=1
+        >>> flow.cumsum(input,dim)
+        tensor([[1., 2., 3.],
+                [1., 2., 3.],
+                [1., 2., 3.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
     oneflow.tensor_split,
     r"""
     Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
@@ -1415,75 +1483,5 @@ add_docstr(
         >>> output[2].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[3].size()
-    """,
-)
-
-
-
-add_docstr(
-    oneflow.eye,
-    """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
-
-    This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
-
-    Args:
-        n (int): the number of rows.
-        m (int, optional): the number of colums with default being n. Defaults to None.
-
-    Keyword args:
-        device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
-        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
-        placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
-        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
-
-    Returns:
-        oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> out = flow.eye(3, 3)
-        >>> out
-        tensor([[1., 0., 0.],
-                [0., 1., 0.],
-                [0., 0., 1.]], dtype=oneflow.float32)
-        >>> out = flow.eye(3, 3, device="cuda")
-        >>> out
-        tensor([[1., 0., 0.],
-                [0., 1., 0.],
-                [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
-    """,
-)
-
-add_docstr(
-    oneflow.cumsum,
-    r"""This operator computes the cumulative sum of input elements in the given dimension.
-
-    The equation is:
-
-	$$
-        y_{i}=x_{0}+x_{1}+...+x_{i}
-	$$
-
-    Args:
-        input (Tensor):  the input ND tensor.
-        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
-
-    Returns:
-        oneflow.Tensor: The result tensor with cumsum result.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> input=flow.ones(3,3)
-        >>> dim=1
-        >>> flow.cumsum(input,dim)
-        tensor([[1., 2., 3.],
-                [1., 2., 3.],
-                [1., 2., 3.]], dtype=oneflow.float32)
     """,
 )
