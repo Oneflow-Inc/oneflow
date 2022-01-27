@@ -1411,7 +1411,6 @@ add_docstr(
         oneflow.Size([3, 2, 5, 6])
         >>> output[2].size()
         oneflow.Size([3, 1, 5, 6])
-        >>> output[3].size()
     """,
 )
 
@@ -1451,7 +1450,6 @@ add_docstr(
         oneflow.Size([2, 4, 5, 6])
         >>> output[2].size()
         oneflow.Size([1, 4, 5, 6])
-        >>> output[3].size()
     """,
 )
 
