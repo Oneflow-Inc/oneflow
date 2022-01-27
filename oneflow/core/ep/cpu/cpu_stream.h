@@ -92,7 +92,7 @@ class CpuStream : public Stream {
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func) {
-    ParallelFor(begin, end, func, kDefaultGrainSize);
+    ParallelFor(begin, end, func, kDefaultGrain);
   }
 
   template<typename F>
@@ -140,7 +140,7 @@ class CpuStream : public Stream {
   std::unique_ptr<dnnl::stream> onednn_stream_;
 #endif
   Device* device_;
-  const size_t kDefaultGrainSize = 32768;
+  const size_t kDefaultGrain = 32768;
 };
 
 }  // namespace ep
