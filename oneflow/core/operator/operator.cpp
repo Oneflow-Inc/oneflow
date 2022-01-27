@@ -493,7 +493,7 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
   JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   // Leave those valid Nd SBPs
   JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
-  CHECK(nd_sbp_sig_list->size() > 0) << "Empty sbp signature after filtering for " << op_name();
+  CHECK_OR_RETURN(nd_sbp_sig_list->size() > 0) << "Empty sbp signature after filtering for " << op_name();
   return Maybe<void>::Ok();
 }
 

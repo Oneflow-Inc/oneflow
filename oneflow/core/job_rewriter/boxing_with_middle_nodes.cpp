@@ -50,9 +50,9 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
       if (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp) {
         const auto& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
         // Ask for middle nodes
-        boxing_collector.AskSbpCombination(
+        JUST(boxing_collector.AskSbpCombination(
             producer_nd_sbp, consumer_nd_sbp, logical_blob_desc, producer.parallel_desc(),
-            node->parallel_desc(), /*is_customized=*/false, middle_sbps, /*compute_cost=*/false);
+            node->parallel_desc(), /*is_customized=*/false, middle_sbps, /*compute_cost=*/false));
         // move to the next ibn if no middle nodes needed
         if (middle_sbps.size() <= 0) { continue; }
         LogicalBlobId middle_node_lbi = lbi;

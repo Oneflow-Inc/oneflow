@@ -460,10 +460,10 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
   static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
   std::vector<cfg::NdSbp> middle_sbps;
   // Ask for middle nodes
-  boxing_collector.AskSbpCombination(producer_sbp_parallel, consumer_sbp_parallel,
-                                     logical_blob_desc, producer_parallel_desc,
-                                     consumer_parallel_desc, /*is_customized=*/false, middle_sbps,
-                                     /*compute_cost=*/true);
+  JUST(boxing_collector.AskSbpCombination(
+      producer_sbp_parallel, consumer_sbp_parallel, logical_blob_desc, producer_parallel_desc,
+      consumer_parallel_desc, /*is_customized=*/false, middle_sbps,
+      /*compute_cost=*/true));
   // Parameters
   double total_cost = 0.0;
   double transfer_cost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
