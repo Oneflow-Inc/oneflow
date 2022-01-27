@@ -19,7 +19,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/transport_util.h"
 
-ONEFLOW_API_PYBIND11_MODULE("boxing", m) {
+ONEFLOW_API_PYBIND11_MODULE("global_view", m) {
   using namespace oneflow;
 
   m.def("set_sync_timeout", [](int64_t secs) { TransportUtil::SetTimeoutSeconds(secs); });
