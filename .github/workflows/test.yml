@@ -480,7 +480,7 @@ jobs:
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
       - name: Checkout Oneflow-Inc/vision
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/vision
