@@ -830,6 +830,38 @@ def _t(self):
     return flow._C.t(self)
 
 
+def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
+    return flow.topk(self, k, dim, largest, sorted)
+
+
+def _nms(boxes, scores, iou_threshold: float):
+    return flow.nms(boxes, scores, iou_threshold)
+
+
+def _nonzero(self, as_tuple=False):
+    return flow.nonzero(self, as_tuple)
+
+
+def _max(self, dim=None, keepdim=False):
+    return flow.max(self, dim, keepdim)
+
+
+def _min(self, dim=None, keepdim=False):
+    return flow.min(self, dim, keepdim)
+
+
+def _sum(self, dim=None, keepdim=False):
+    return flow.sum(self, dim, keepdim)
+
+
+def _mean(self, dim=None, keepdim=False):
+    return flow.mean(self, dim, keepdim)
+
+
+def _prod(self, dim=None, keepdim=False):
+    return flow.prod(self, dim, keepdim)
+
+
 def _masked_fill(self, mask, fill_value):
     return flow.masked_fill(self, mask, fill_value)
 
@@ -1082,6 +1114,14 @@ def RegisterMethods():
     Tensor.float = _float
     Tensor.double = _double
     Tensor.is_floating_point = _is_floating_point
+    Tensor.topk = _topk
+    Tensor.nms = _nms
+    Tensor.nonzero = _nonzero
+    Tensor.max = _max
+    Tensor.min = _min
+    Tensor.sum = _sum
+    Tensor.mean = _mean
+    Tensor.prod = _prod
 
 
 def register_tensor_op(op_name):
