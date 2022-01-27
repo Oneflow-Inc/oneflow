@@ -30,7 +30,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
     def test_graph_config(test_case):
         flow.boxing.enable_fusion(True)
 
-        flow.global_view.nccl.set_fusion_threshold_mbytes(800)
+        flow.boxing.nccl.set_fusion_threshold_mbytes(800)
         flow.boxing.nccl.set_fusion_max_ops_num(10)
         flow.boxing.nccl.allow_fuse_all_reduce(True)
         flow.boxing.nccl.allow_fuse_reduce_scatter(True)

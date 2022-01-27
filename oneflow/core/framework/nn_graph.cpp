@@ -171,18 +171,18 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   return Maybe<void>::Ok();
 }
 
-Maybe<const std::vector<std::string>> NNGraph::GetWildVarOpNames() const{
+Maybe<std::vector<std::string>> NNGraph::GetWildVarOpNames() const {
   std::vector<std::string> names;
   for (const auto& iter : wild_variable_op_name2tensor_) {
-    names.emplace_back(iter.first);
+    names.push_back(iter.first);
   }
   return names;
 }
 
-Maybe<const std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetWildVarOpTensors() const {
+Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetWildVarOpTensors() const {
   std::vector<std::shared_ptr<one::Tensor>> tensors;
   for (const auto& iter : wild_variable_op_name2tensor_) {
-    tensors.emplace_back(iter.second);
+    tensors.push_back(iter.second);
   }
   return tensors;
 }

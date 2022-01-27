@@ -30,13 +30,15 @@ namespace py = pybind11;
 
 namespace oneflow {
 namespace {
-py::tuple APINNGraphWildVarNames(const std::shared_ptr<NNGraph>& graph) {
-  const auto& names = *graph->GetWildVarOpNames().GetPtrOrThrow();
-  const auto& tuple = std::make_shared<py::tuple>(names.size());
-  for (int i = 0; i < names.size(); ++i) {
-    (*tuple)[i] = py::cast(names[i]);
-  }
-  return *tuple;
+py::object APINNGraphWildVarNames(const std::shared_ptr<NNGraph>& graph) {
+  const auto names = *graph->GetWildVarOpNames().GetPtrOrThrow();
+  py::list name_list = py::cast(names);
+  return py::cast<py::object>(name_list);
+}
+py::object APINNGraphWildVarTensors(const std::shared_ptr<NNGraph>& graph) {
+  const auto tensors = *graph->GetWildVarOpTensors().GetPtrOrThrow();
+  py::list tensor_list = py::cast(tensors);
+  return py::cast<py::object>(tensor_list);
 }
 }   // namespace
 
@@ -64,6 +66,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
                  .GetOrThrow();
            })
       .def_property_readonly("wild_var_names", &APINNGraphWildVarNames)
+      .def_property_readonly("wild_var_tensors", &APINNGraphWildVarTensors)
       .def("complie_and_init_runtime",
            [](NNGraph& graph) { return graph.CompileAndInitRuntime().GetOrThrow(); });
 

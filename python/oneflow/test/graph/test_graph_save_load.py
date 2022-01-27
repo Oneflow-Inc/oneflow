@@ -44,15 +44,21 @@ def _test_linear_graph_save_load(test_case, device):
                 return out
 
         linear_t_g = LinearTrainGraph()
+
+        print("---Iter 0---")
         of_graph_out = linear_t_g(x)
-        iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
-        print("Iter 0 state dict", iter0_state_dict)
+        iter0_state_dict = linear_t_g.state_dict()
+        print("Iter 0 state dict: ", iter0_state_dict)
+        #iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
+
+        print("---Iter 1---")
         of_graph_out = linear_t_g(x)
         iter1_state_dict = linear_t_g.state_dict()
-        print("Iter 1 state dict", iter1_state_dict)
-        print("Iter 0 state dict", iter0_state_dict)
+        print("Iter 1 state dict: ", iter1_state_dict)
+
+        print("---Load Iter 0 state dict---")
         linear_t_g.load_state_dict(iter0_state_dict)
-        print("Iter 1 state dict after load iter 0", iter1_state_dict)
+        print("Now state dict after load iter 0 state dict: ", linear_t_g.state_dict())
 
 
     train_with_graph()
