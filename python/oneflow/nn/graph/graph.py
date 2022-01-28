@@ -104,6 +104,8 @@ class Graph(object):
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._is_compiled = False
+        # Default is local view
+        self._is_global_view = False
         # forward graph job proto
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
@@ -282,7 +284,10 @@ class Graph(object):
         wild_var_tensors = self._c_nn_graph.wild_var_tensors
         assert len(wild_var_names) == len(wild_var_tensors)
         for i in range(len(wild_var_names)):
-            destination[wild_var_names[i]] = wild_var_tensors[i]
+            wild_tensor = wild_var_tensors[i]
+            if not self._is_global_view:
+                wild_tensor = wild_tensor.to_local()
+            destination[wild_var_names[i]] = wild_tensor
         return destination
 
     def load_state_dict(
@@ -487,6 +492,9 @@ class Graph(object):
 
         for state_block in self._state():
             state_tensor = state_block.origin
+            # If any state tensor is global tensor, graph is in global view.
+            if state_tensor.is_consistent:
+                self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
             op_name = state_block.name_prefix + state_block.name

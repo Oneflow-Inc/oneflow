@@ -288,30 +288,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   NewRuntimeBuffers();
 
-  JUST(LoadWildVariableAfterSyncPlan());
   JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> NNGraph::LoadWildVariableAfterSyncPlan() {
-  // Load wild variable from state dict.
-  for (const auto& iter: wild_variable_op_tobe_loaded_name2tensor_) {
-    auto wild_iter = wild_variable_op_name2tensor_.find(iter.first);
-    if (wild_iter == wild_variable_op_name2tensor_.end()) {
-      LOG(WARNING) << "nn.Graph with name " << name_ << " find unknown wild state loaded with key " << iter.first;
-      continue;
-    }
-    auto var_iter = variable_op_name2tensor_.find(iter.first);
-    if (var_iter == variable_op_name2tensor_.end()) {
-      LOG(WARNING) << "nn.Graph with name " << name_ << " find unknown wild state loaded with key " << iter.first;
-      continue;
-    }
-    wild_iter->second = iter.second;
-    var_iter->second = iter.second;
-    VLOG(2) << "nn.Graph with name " << name_ << " load wild state with key " << iter.first;
-  }
   return Maybe<void>::Ok();
 }
 
@@ -327,10 +306,10 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
     if (/*is_null=*/!tensor) {
-      // Deal with tensors which need to be created, we can call these tensors as wild variables.
+      // Deal with tensors which are not in the nn.Module.
+      // We can call these tensors as wild variables.
       const auto& op_attribute =
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
-
       // NOTE(chengcheng): handle constant variable created by job pass
       Symbol<ParallelDesc> placement(op_attribute.parallel_conf_signature().op_parallel_conf());
       cfg::NdSbp nd_sbp(
@@ -340,37 +319,49 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       DType dtype(blob_desc.data_type());
       std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
           JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
-      Scalar value;
-      VariableOpConf var_conf = op_attribute.op_conf().variable_conf();
-      if (var_conf.initializer().has_constant_conf()) {
-        value = var_conf.initializer().constant_conf().value();
-      } else if (var_conf.initializer().has_constant_int_conf()) {
-        value = var_conf.initializer().constant_int_conf().value();
-      } else {
-        OF_UNIMPLEMENTED();
-      }
-      {
+
+      auto load_tensor_iter = wild_variable_op_tobe_loaded_name2tensor_.find(var_name);
+      if (load_tensor_iter == wild_variable_op_tobe_loaded_name2tensor_.end()) {
+        // Create a wild variable tensor
+        Scalar value;
+        VariableOpConf var_conf = op_attribute.op_conf().variable_conf();
+        if (var_conf.initializer().has_constant_conf()) {
+          value = var_conf.initializer().constant_conf().value();
+        } else if (var_conf.initializer().has_constant_int_conf()) {
+          value = var_conf.initializer().constant_int_conf().value();
+        } else {
+          OF_UNIMPLEMENTED();
+        }
         // NOTE(chengcheng): New EagerTensor need set LazyMode false.
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         tensor = JUST(one::functional::ConsistentConstant(
             blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
-        variable_op_name2tensor_.at(var_name) = tensor;
-        auto find_iter = wild_variable_op_name2tensor_.find(var_name);
-        if (find_iter != wild_variable_op_name2tensor_.end()) {
-          wild_variable_op_name2tensor_[var_name] = tensor;
-        }
-        // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime
-        // valid.
-        Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-            name_, tensor, var_name);
         JUST(vm::CurrentRankSync());
+        VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
+                << " created in JobPass, nn.Graph has created a eager tensor for this variable.\n";
+      } else {
+        // Load a wild variable tensor
+        auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
+        std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+        // To consistent frme a local or consistent tensor.
+        tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple, grad_sbp_tuple));
+        JUST(vm::CurrentRankSync());
+        VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
+                << " created in JobPass, nn.Graph has loaded the tensor from state dict for this variable.\n";
       }
+      // Register
+      variable_op_name2tensor_.at(var_name) = tensor;
+      auto find_iter = wild_variable_op_name2tensor_.find(var_name);
+      if (find_iter != wild_variable_op_name2tensor_.end()) {
+        wild_variable_op_name2tensor_[var_name] = tensor;
+      }
+      // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
+      // valid.
+      Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+          name_, tensor, var_name);
+
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-      VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
-              << std::endl
-              << var_conf.DebugString()
-              << " created in JobPass, nn.Graph will new EagerTensor for this variable.\n";
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
       cfg::NdSbpSignature var_nd_sbp_signature =

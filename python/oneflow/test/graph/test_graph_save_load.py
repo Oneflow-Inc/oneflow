@@ -2,13 +2,14 @@ import unittest
 import os
 import numpy as np
 import copy
+import tempfile
 
 import oneflow as flow
 import oneflow.unittest
 
 
 def _test_linear_graph_save_load(test_case, device):
-    def train_with_graph(call_cnt=0, state_dict=None):
+    def train_with_graph(call_cnt=0, state_dict_dir=None):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -46,8 +47,10 @@ def _test_linear_graph_save_load(test_case, device):
         print(f"===Call count num {call_cnt}===", flush=True)
         linear_t_g = LinearTrainGraph()
         #linear_t_g.debug(2)
-        if (state_dict):
+        if (call_cnt == 1):
             print("---Load state dict---", flush=True)
+            state_dict = flow.load(state_dict_dir)
+            print("---Loaded state dict: ", state_dict)
             linear_t_g.load_state_dict(state_dict)
             # Check state in module has been loaded.
             test_case.assertTrue(np.array_equal(state_dict["linear"]["weight"].numpy(), linear.weight))
@@ -56,23 +59,25 @@ def _test_linear_graph_save_load(test_case, device):
         print("---Iter 0---", flush=True)
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()
-        if (state_dict):
+        if (call_cnt == 1):
             # Check wild variable state initialized in job has been loaded.
-            cur_train_step = iter0_state_dict["System-Train-TrainStep"].to_local().numpy()[0]
+            cur_train_step = iter0_state_dict["System-Train-TrainStep"].numpy()[0]
             test_case.assertTrue(3 == cur_train_step)
         print("Iter 0 state dict: ", iter0_state_dict, flush=True)
-        iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
+        #iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
 
         print("---Iter 1---", flush=True)
         of_graph_out = linear_t_g(x)
         iter1_state_dict = linear_t_g.state_dict()
         print("Iter 1 state dict: ", iter1_state_dict, flush=True)
+        if call_cnt == 0:
+            flow.save(iter1_state_dict, state_dict_dir)
 
-        return iter1_state_dict
 
-
-    state_dict_0 = train_with_graph(0, None)
-    state_dict_1 = train_with_graph(1, state_dict_0)
+    #with tempfile.TemporaryDirectory() as state_dict_dir:
+    state_dict_dir = "./state"
+    train_with_graph(0, state_dict_dir)
+    train_with_graph(1, state_dict_dir)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
