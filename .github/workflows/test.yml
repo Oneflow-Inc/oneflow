@@ -489,7 +489,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/vision
-          ref: v0.0.6
+          # please use a commit here
+          ref: 1a19ffe7ffdc2fa11b806e98b70829fac3a0ba69
           path: ${{ env.FLOW_VISION_SRC}}
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
