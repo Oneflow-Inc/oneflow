@@ -30,7 +30,7 @@ class CpuDevice : public Device {
   ~CpuDevice() override = default;
 
   void SetAsActiveDevice() override;
-  void SetNumThreads(size_t num_parallel) { num_threads_ = num_parallel; }
+  void SetNumThreads(size_t num_threads) { num_threads_ = num_threads; }
   size_t GetNumThreads() { return num_threads_; }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }

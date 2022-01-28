@@ -26,7 +26,7 @@ namespace ep {
 class CpuDeviceManager : public DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceManager);
-  CpuDeviceManager(DeviceManagerRegistry* registry);
+  explicit CpuDeviceManager(DeviceManagerRegistry* registry);
   ~CpuDeviceManager() override;
 
   DeviceManagerRegistry* registry() const override;
@@ -38,6 +38,7 @@ class CpuDeviceManager : public DeviceManager {
   void SetDeviceNumThreads(size_t num_threads);
 
  private:
+  size_t device_num_threads_;
   std::mutex device_mutex_;
   std::shared_ptr<Device> device_;
   size_t device_num_threads_;

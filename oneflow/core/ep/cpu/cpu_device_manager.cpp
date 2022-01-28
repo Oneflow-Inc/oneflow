@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
@@ -21,7 +20,8 @@ namespace oneflow {
 
 namespace ep {
 
-CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry) : device_num_threads_(1), registry_(registry) {}
+CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry)
+    : device_num_threads_(1), registry_(registry) {}
 
 CpuDeviceManager::~CpuDeviceManager() = default;
 
@@ -29,11 +29,8 @@ DeviceManagerRegistry* CpuDeviceManager::registry() const { return registry_; }
 
 std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(device_mutex_);
-  if (!device_) {
-    CpuDevice* cpu_device = new CpuDevice(this);
-    cpu_device->SetNumThreads(device_num_threads_);
-    device_.reset(cpu_device);
-  }
+  if (!device_) { device_.reset(new CpuDevice(this)); }
+  dynamic_cast<CpuDevice*>(device_.get())->SetNumThreads(device_num_threads_);
   return device_;
 }
 
@@ -45,7 +42,9 @@ size_t CpuDeviceManager::GetActiveDeviceIndex() { return 0; }
 
 void CpuDeviceManager::SetActiveDeviceByIndex(size_t device_index) {}
 
-void CpuDeviceManager::SetDeviceNumThreads(size_t num_threads) { device_num_threads_ = num_threads;}
+void CpuDeviceManager::SetDeviceNumThreads(size_t num_threads) {
+  device_num_threads_ = num_threads;
+}
 
 }  // namespace ep
 

@@ -38,7 +38,7 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
 
-    cpu_stream->Parallel(0, n, [x, y, z](int64_t begin, int64_t end) {
+    cpu_stream->ParallelFor(0, n, [x, y, z](int64_t begin, int64_t end) {
       for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
     });
   }

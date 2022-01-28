@@ -38,7 +38,7 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
 
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    cpu_stream->Parallel(0, count, [src, dst](int64_t begin, int64_t end) {
+    cpu_stream->ParallelFor(0, count, [src, dst](int64_t begin, int64_t end) {
       for (int64_t i = begin; i < end; i++) {
         dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
       }
