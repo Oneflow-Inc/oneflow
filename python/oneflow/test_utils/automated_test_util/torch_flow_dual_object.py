@@ -352,7 +352,8 @@ def GetDualObject(name, pytorch, oneflow):
                                     "Before running eager module or functional: ",
                                     repr(oneflow),
                                 )
-                            graph_functional_oneflow = copy.deepcopy(oneflow)
+                            if testing_graph:
+                                graph_functional_oneflow = copy.deepcopy(oneflow)
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if verbose:
                                 print(
