@@ -56,7 +56,8 @@ class EmbeddingOptions final {
     };
     name_ = GetValue(json_object, "name");
     embedding_dim_ = GetValue(json_object, "embedding_dim");
-
+    const int64_t scale_factor = GetValue(json_object, "scale_factor");
+    line_size_ = embedding_dim_ * scale_factor;
     auto caches = json_object["cache"];
     if (caches != nlohmann::detail::value_t::null) {
       CHECK(caches.is_array());
@@ -82,61 +83,6 @@ class EmbeddingOptions final {
     } else {
       UNIMPLEMENTED();
     }
-    auto optimizer = GetValue(json_object, "optimizer");
-    optimizer_type_ = GetValue(optimizer, "type");
-    if (optimizer_type_ == "sgd") {
-      line_size_ = embedding_dim_;
-    } else if (optimizer_type_ == "momentum") {
-      beta_ = GetValue(optimizer, "momentum");
-      line_size_ = embedding_dim_ * 2;
-    } else if (optimizer_type_ == "adam") {
-      auto betas = GetValue(optimizer, "betas");
-      beta1_ = betas.at(0);
-      beta2_ = betas.at(1);
-      epsilon_ = GetValue(optimizer, "eps");
-      do_bias_correction_ = GetValue(optimizer, "do_bias_correction");
-      line_size_ = embedding_dim_ * 3;
-    } else {
-      UNIMPLEMENTED();
-    }
-    auto lr_schedule = GetValue(optimizer, "lr");
-    base_lr_ = GetValue(lr_schedule, "base_lr");
-
-    auto warmup = lr_schedule["warmup"];
-    if (warmup != nlohmann::detail::value_t::null) {
-      warmup_type_ = GetValue(warmup, "type");
-      if (warmup_type_ == "linear") {
-        warmup_conf_.mutable_linear_conf()->set_warmup_batches(GetValue(warmup, "warmup_batches"));
-        warmup_conf_.mutable_linear_conf()->set_start_multiplier(
-            GetValue(warmup, "start_multiplier"));
-      } else if (warmup_type_ == "constant") {
-        warmup_conf_.mutable_constant_conf()->set_warmup_batches(
-            GetValue(warmup, "warmup_batches"));
-        warmup_conf_.mutable_constant_conf()->set_multiplier(GetValue(warmup, "multiplier"));
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else {
-      warmup_type_ = "none";
-    }
-
-    auto lr_decay = lr_schedule["decay"];
-    if (lr_decay != nlohmann::detail::value_t::null) {
-      lr_decay_type_ = GetValue(lr_decay, "type");
-      if (lr_decay_type_ == "polynomial") {
-        lr_decay_conf_.mutable_polynomial_conf()->set_decay_batches(
-            GetValue(lr_decay, "decay_batches"));
-        lr_decay_conf_.mutable_polynomial_conf()->set_end_learning_rate(
-            GetValue(lr_decay, "end_lr"));
-        lr_decay_conf_.mutable_polynomial_conf()->set_power(GetValue(lr_decay, "power"));
-        lr_decay_conf_.mutable_polynomial_conf()->set_cycle(GetValue(lr_decay, "cycle"));
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else {
-      lr_decay_type_ = "none";
-    }
-
     auto columns = json_object["columns"];
     if (columns != nlohmann::detail::value_t::null) {
       for (int32_t i = 0; i < columns.size(); ++i) {
@@ -188,18 +134,6 @@ class EmbeddingOptions final {
   std::string L2CacheValueMemoryKind() const { return l2_cache_value_memory_kind_; }
   std::string PersistentTablePath() const { return persistent_table_path_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
-  std::string Optimizer() const { return optimizer_type_; }
-  float Beta() const { return beta_; }
-  float Beta1() const { return beta1_; }
-  float Beta2() const { return beta2_; }
-  float Epsilon() const { return epsilon_; }
-  bool DoBiasCorrection() const { return do_bias_correction_; }
-
-  float LearningRate() const { return base_lr_; }
-  std::string WarmupType() const { return warmup_type_; }
-  WarmupConf WarmupConfProto() const { return warmup_conf_; }
-  std::string LearningRateDecayType() const { return lr_decay_type_; }
-  LearningRateDecayConf LearningRateDecayConfProto() const { return lr_decay_conf_; }
   std::vector<EmbeddingColumn> Columns() const { return columns_; }
 
  private:
@@ -214,17 +148,6 @@ class EmbeddingOptions final {
   std::string l2_cache_value_memory_kind_;
   std::string persistent_table_path_;
   int64_t persistent_table_phisical_block_size_;
-  std::string optimizer_type_;
-  float base_lr_;
-  float beta_;
-  float beta1_;
-  float beta2_;
-  float epsilon_;
-  bool do_bias_correction_;
-  std::string warmup_type_;
-  WarmupConf warmup_conf_;
-  std::string lr_decay_type_;
-  LearningRateDecayConf lr_decay_conf_;
   std::vector<EmbeddingColumn> columns_;
 };
 

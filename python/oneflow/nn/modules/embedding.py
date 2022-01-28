@@ -59,7 +59,12 @@ class OneEmbeddingLookup(Module):
         self.emb_name = embedding_options["name"]
         assert embedding_options.__contains__("embedding_dim")
         embedding_dim = embedding_options["embedding_dim"]
+        assert embedding_options.__contains__(
+            "scale_factor"
+        ), "you must set line_size scale_factor, if optimizer is sgd, set to 1, momentum set to 2, adam set 3"
+        scale_factor = embedding_options["scale_factor"]
         assert embedding_dim > 0
+        assert scale_factor > 0
         if embedding_options.__contains__("cache"):
             cache = embedding_options["cache"]
             assert isinstance(cache, (dict, list, tuple))
@@ -104,69 +109,6 @@ class OneEmbeddingLookup(Module):
                 assert column.__contains__("initializer")
                 _check_initializer(column["initializer"])
 
-        # optimizer
-        assert embedding_options.__contains__("optimizer")
-        optimizer = embedding_options["optimizer"]
-        assert isinstance(optimizer, dict)
-        assert optimizer.__contains__("type")
-        optimizer_type = optimizer["type"]
-        assert optimizer_type in ["sgd", "adam"]
-        if optimizer_type == "sgd":
-            if optimizer.__contains__("momentum") and optimizer["momentum"] > 0:
-                optimizer["type"] = "momentum"
-            else:
-                optimizer["momentum"] = 0.0
-        elif optimizer_type == "adam":
-            if optimizer.__contains__("betas"):
-                assert isinstance(optimizer["betas"], (list, tuple))
-            else:
-                optimizer["betas"] = [0.9, 0.999]
-            if optimizer.__contains__("eps"):
-                assert optimizer["eps"] >= 0 and optimizer["eps"] < 1
-            else:
-                optimizer["eps"] = 1e-8
-            if optimizer.__contains__("do_bias_correction"):
-                assert isinstance(optimizer["do_bias_correction"], bool)
-            else:
-                optimizer["do_bias_correction"] = True
-        else:
-            raise NotImplementedError("only support sgd and adam")
-
-        assert optimizer.__contains__("lr")
-        lr_schedule = optimizer["lr"]
-        assert lr_schedule.__contains__("base_lr")
-        if lr_schedule.__contains__("decay"):
-            decay = lr_schedule["decay"]
-            assert isinstance(decay, dict)
-            assert decay.__contains__("type")
-            decay_type = decay["type"]
-            assert decay_type in [
-                "polynomial",
-            ]
-            if decay_type == "polynomial":
-                assert decay.__contains__("decay_batches")
-                if not decay.__contains__("end_lr"):
-                    decay["end_lr"] = 0.0
-                if not decay.__contains__("power"):
-                    decay["power"] = 2.0
-                if not decay.__contains__("cycle"):
-                    decay["cycle"] = False
-            else:
-                raise NotImplementedError("unsupported decay type")
-        if lr_schedule.__contains__("warmup"):
-            warmup = lr_schedule["warmup"]
-            assert isinstance(warmup, dict)
-            assert warmup.__contains__("type")
-            warmup_type = warmup["type"]
-            assert warmup_type in ["linear", "constant"]
-            if warmup_type == "linear":
-                assert warmup.__contains__("warmup_batches")
-                assert warmup.__contains__("start_multiplier")
-            elif warmup_type == "constant":
-                assert warmup.__contains__("warmup_batches")
-                assert warmup.__contains__("multiplier")
-            else:
-                raise NotImplementedError("unsupported warmup type")
         self.dtype = embedding_options["dtype"]
         del embedding_options["dtype"]
         self.embedding_options = json.dumps(embedding_options)

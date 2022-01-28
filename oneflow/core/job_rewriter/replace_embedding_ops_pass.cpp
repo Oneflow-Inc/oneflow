@@ -136,8 +136,8 @@ void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
 }
 
 std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
-                          const embedding::EmbeddingOptions& embedding_options,
-                          const std::string& op_name) {
+                          const OptimizerConf& optimizer_conf, const std::string& op_name) {
+  LOG(ERROR) << "embedding optimizer conf\n" << optimizer_conf.DebugString();
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   const class oneflow::OpNode* op_node =
       op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
@@ -147,13 +147,13 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
   schedule_op_conf.set_name(op_name);
   auto* schedule_conf = schedule_op_conf.mutable_learning_rate_schedule_conf();
   schedule_conf->set_train_step(train_conf.train_step_lbn());
-  schedule_conf->set_learning_rate(embedding_options.LearningRate());
+  schedule_conf->set_learning_rate(optimizer_conf.base_learning_rate());
   schedule_conf->set_out("out");
-  if (embedding_options.WarmupType() != "none") {
-    *schedule_conf->mutable_warmup_conf() = embedding_options.WarmupConfProto();
+  if (optimizer_conf.has_warmup_conf()) {
+    *schedule_conf->mutable_warmup_conf() = optimizer_conf.warmup_conf();
   }
-  if (embedding_options.LearningRateDecayType() != "none") {
-    *schedule_conf->mutable_learning_rate_decay() = embedding_options.LearningRateDecayConfProto();
+  if (optimizer_conf.has_learning_rate_decay()) {
+    *schedule_conf->mutable_learning_rate_decay() = optimizer_conf.learning_rate_decay();
   }
   schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {schedule_op_conf});
@@ -161,8 +161,7 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
-                          const int64_t line_size, const std::string& optimizer_type,
-                          const ParallelConf& parallel_conf,
+                          const int64_t line_size, const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const user_op::UserOpConfWrapper& id_shuffle_op,
                           std::string* embedding_lbn, std::string* unique_values_lbn) {
@@ -202,12 +201,12 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
       .Attr<int64_t>("line_size", line_size)
       .Attr<std::string>("embedding_options", embedding_op.attr<std::string>("embedding_options"))
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
-  if (optimizer_type != "sgd") { embedding_lookup_op_builder.Output("embeddings"); }
+  if (line_size != embedding_size) { embedding_lookup_op_builder.Output("embeddings"); }
   user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
   OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
   embedding_lookup_new_op_conf.set_stream_name_hint("EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_lookup_new_op_conf});
-  if (optimizer_type != "sgd") {
+  if (line_size != embedding_size) {
     *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
   } else {
     *embedding_lbn = embedding_lookup_op.output("unique_values", 0);
@@ -309,11 +308,14 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
   }
 }
 
-void BuildEmbeddingUpdate(
-    JobPassCtx* ctx, JobBuilder* job_builder, const ParallelConf& parallel_conf,
-    const embedding::EmbeddingOptions& options, const user_op::UserOpConfWrapper& embedding_op,
-    const user_op::UserOpConfWrapper& id_shuffle_op, const std::string& unique_values_lbn,
-    const std::string& embedding_diff_lbn, const std::string& learning_rate_lbn) {
+void BuildEmbeddingUpdate(JobPassCtx* ctx, JobBuilder* job_builder,
+                          const ParallelConf& parallel_conf, const int64_t embedding_size,
+                          const OptimizerConf& optimizer_conf,
+                          const user_op::UserOpConfWrapper& embedding_op,
+                          const user_op::UserOpConfWrapper& id_shuffle_op,
+                          const std::string& unique_values_lbn,
+                          const std::string& embedding_diff_lbn,
+                          const std::string& learning_rate_lbn) {
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   auto AddIdentityOp = [&](const std::string& in_lbn) -> std::string {
     return BuildIdentityOp(job_builder, in_lbn, parallel_conf, embedding_op);
@@ -333,22 +335,23 @@ void BuildEmbeddingUpdate(
   };
   user_op::UserOpConfWrapperBuilder embedding_update_op_builder(embedding_op.op_name()
                                                                 + "_embedding_update");
-  if (options.Optimizer() == "sgd") {
+  if (optimizer_conf.has_naive_conf()) {
     embedding_update_op_builder.OpTypeName("sgd_embedding_update");
-  } else if (options.Optimizer() == "momentum") {
+  } else if (optimizer_conf.has_momentum_conf()) {
     embedding_update_op_builder.OpTypeName("momentum_embedding_update")
-        .Attr<float>("beta", options.Beta());
-  } else if (options.Optimizer() == "adam") {
+        .Attr<float>("beta", optimizer_conf.momentum_conf().beta());
+  } else if (optimizer_conf.has_adam_conf()) {
+    const AdamModelUpdateConf& adam_conf = optimizer_conf.adam_conf();
     embedding_update_op_builder.OpTypeName("adam_embedding_update")
-        .Attr<float>("beta1", options.Beta1())
-        .Attr<float>("beta2", options.Beta2())
-        .Attr<float>("epsilon", options.Epsilon())
-        .Attr<bool>("do_bias_correction", options.DoBiasCorrection());
-    if (options.DoBiasCorrection()) {
+        .Attr<float>("beta1", adam_conf.beta1())
+        .Attr<float>("beta2", adam_conf.beta2())
+        .Attr<float>("epsilon", adam_conf.epsilon())
+        .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
+    if (adam_conf.do_bias_correction()) {
       const std::string bias_correction1_lbn =
-          AddAdamBiasCorrectionFactorOp(options.Beta1(), "adam_bias_correction_factor1");
+          AddAdamBiasCorrectionFactorOp(adam_conf.beta1(), "adam_bias_correction_factor1");
       const std::string bias_correction2_lbn =
-          AddAdamBiasCorrectionFactorOp(options.Beta2(), "adam_bias_correction_factor2");
+          AddAdamBiasCorrectionFactorOp(adam_conf.beta2(), "adam_bias_correction_factor2");
       embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
           .Input("bias_correction2", bias_correction2_lbn);
     }
@@ -369,7 +372,7 @@ void BuildEmbeddingUpdate(
             .count_not_finite_lbn());
   }
   user_op::UserOpConfWrapper embedding_update_op =
-      embedding_update_op_builder.Attr<int64_t>("embedding_size", options.EmbeddingSize())
+      embedding_update_op_builder.Attr<int64_t>("embedding_size", embedding_size)
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   OperatorConf embedding_update_new_op_conf = embedding_update_op.op_conf();
@@ -421,6 +424,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     if (!op_conf.has_user_conf()) { return; }
     if (!(op_conf.user_conf().op_type_name() == "embedding_lookup_placeholder")) { return; }
     const user_op::UserOpConfWrapper embedding_op(op_node->op().op_conf());
+    const LogicalBlobId& lbi = GenLogicalBlobId(embedding_op.input("shadow", 0));
+    const std::string& shadow_op_name = lbi.op_name();
     embedding::EmbeddingOptions options(embedding_op.attr<std::string>("embedding_options"));
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
@@ -448,8 +453,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, options.EmbeddingSize(), options.LineSize(),
-                         options.Optimizer(), op_node->parallel_desc().parallel_conf(),
-                         embedding_op, id_shuffle_op, &embedding_lbn, &unique_values_lbn);
+                         op_node->parallel_desc().parallel_conf(), embedding_op, id_shuffle_op,
+                         &embedding_lbn, &unique_values_lbn);
 
     // embedding shuffle op
     BuildEmbeddingShuffle(job_builder, op_node->parallel_desc().parallel_conf(), embedding_op,
@@ -489,16 +494,27 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         embedding_scope_symbol_id = embedding_op.op_conf().scope_symbol_id();
         embedding_parallel_conf = op_node->parallel_desc().parallel_conf();
 
-        const std::string& learning_rate_lbn = AddScheduleOp(
-            op_graph, job_builder, options, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
+        OptimizerConf embedding_optimizer_conf;
+        bool found_embedding_optimizer = false;
+        for (const auto& optimizer_conf :
+             job_builder->job().job_conf().train_conf().optimizer_conf()) {
+          for (const auto& name : optimizer_conf.variable_op_names()) {
+            if (name == shadow_op_name) {
+              embedding_optimizer_conf = optimizer_conf;
+              found_embedding_optimizer = true;
+              break;
+            }
+          }
+          if (found_embedding_optimizer == true) { break; }
+        }
+        CHECK_EQ(found_embedding_optimizer, true);
+        const std::string& learning_rate_lbn =
+            AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
+                          "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
-        // const auto& name2conf =
-        //    CHECK_JUST(ctx->GetState<OneEmbeddingOptimizerState>(kOptimizerConfStateKey)).name2conf;
-        // auto it = name2conf.find(options.Name());
-        // CHECK(it != name2conf.end());
-        // LOG(ERROR) << options.Name() << " " << it->second.DebugString();
-        BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(), options,
-                             embedding_op, id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
+        BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(),
+                             options.EmbeddingSize(), embedding_optimizer_conf, embedding_op,
+                             id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
                              learning_rate_lbn);
       }
     }
