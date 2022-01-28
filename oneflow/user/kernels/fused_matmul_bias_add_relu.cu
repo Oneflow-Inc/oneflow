@@ -100,14 +100,14 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 // public: 
 //     explicit FusedMatmulBiasAddReluKernelState(user_op::KernelInitContext* ctx){
 //         OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc_, cublas_dtype));
-//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Adesc_, cublas_dtype, k, m, cublas_lda)); 
-//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Bdesc_, cublas_dtype, n, k, cublas_ldb)); 
+//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc_, cublas_dtype, k, m, cublas_lda)); 
+//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc_, cublas_dtype, n, k, cublas_ldb)); 
 //         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc_, cublas_dtype, n, m, cublas_ldc)); 
 //     }
 //     todo
 //     cublasLtMatmulDesc_t operationDesc_;
-//     cublasLtMatrixLayout_t Adesc_; 
-//     cublasLtMatrixLayout_t Bdesc_;
+//     cublasLtMatrixLayout_t cublas_b_desc_; 
+//     cublasLtMatrixLayout_t cublas_a_desc_;
 //     cublasLtMatrixLayout_t Cdesc_;
 // }; 
 
@@ -123,8 +123,12 @@ public:
 
 private: 
     void Compute(user_op::KernelComputeContext* ctx) const override{
+        // todo: Align use column major. 
         const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0); 
         const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0); 
+        const user_op::Tensor* cublas_a = b; 
+        const user_op::Tensor* cublas_b = a; 
+
         const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0); 
         user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0); 
         const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
@@ -148,34 +152,41 @@ private:
 
         size_t m = 0, n = 0, k = 0;
         InferMatmulMNK(a->shape(), b->shape(), out->shape(), trans_a, trans_b, &m, &n, &k);
+        
+        /*
+        Matmul: A(m, k) x B(k, n) = C(m, n), it follows the row major. 
+        In cublas, it use column major to compute, Bt(n, k) x At(k, m) = Ct(n, m). 
+        And Ct matrix follows the column major is equal to C(m, n) which follows the row major.  
+        */
+        const size_t cublas_m = n;
+        const size_t cublas_n = m;
+        const size_t cublas_k = k;
 
-        const cublasOperation_t cublas_trans_a = GetCublasOperation(trans_a);
-        const cublasOperation_t cublas_trans_b = GetCublasOperation(trans_b);
+        const cublasOperation_t cublas_trans_a = GetCublasOperation(trans_b);
+        const cublasOperation_t cublas_trans_b = GetCublasOperation(trans_a);
         
         const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type); 
         const cudaDataType_t cuda_data_type = GetCudaDataType(data_type); 
         
         int cublas_lda = 0;
-        if (trans_a == ep::primitive::BlasTransposeType::N) {
-            cublas_lda = k;
-            printf("Here is None! \n");
-        } else if (trans_a == ep::primitive::BlasTransposeType::T) {
-            cublas_lda = m;
-        } else {
-            UNIMPLEMENTED();
-        }
-        
-        int cublas_ldb = 0;
         if (trans_b == ep::primitive::BlasTransposeType::N) {
-            cublas_ldb = n;
-            printf("Here is None! \n");
+            cublas_lda = n;
         } else if (trans_b == ep::primitive::BlasTransposeType::T) {
-            cublas_ldb = k;
+            cublas_lda = k;
         } else {
             UNIMPLEMENTED();
         }
 
+        int cublas_ldb = 0;
+        if (trans_a == ep::primitive::BlasTransposeType::N) {
+            cublas_ldb = k;
+        } else if (trans_a == ep::primitive::BlasTransposeType::T) {
+            cublas_ldb = m;
+        } else {
+            UNIMPLEMENTED();
+        }
         const int cublas_ldc = n;
+
         #if CUDA_VERSION >= 11000
         cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
         #else
@@ -185,99 +196,49 @@ private:
 
         cublasLtMatmulDesc_t operationDesc = NULL;
         OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc, cublas_compute_dtype, cuda_data_type));
-        // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSA, &cublas_trans_a, sizeof(cublas_trans_a)));
-        // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSB, &cublas_trans_b, sizeof(cublas_trans_b)));
-        cublasOperation_t trans = CUBLAS_OP_N;
-        OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSA, &trans, sizeof(trans)));
-        OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSB, &trans, sizeof(trans)));
+
+        // For best performance when using the bias vector, specify beta == 0 and CUBLASLT_POINTER_MODE_HOST.(from https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
+        cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST; 
+        OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+        
+        OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSA, &cublas_trans_a, sizeof(cublas_trans_a)));
+        OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_TRANSB, &cublas_trans_b, sizeof(cublas_trans_b)));
         
         // Set as matmul + bias_add + relu. 
         cublasLtEpilogue_t epilogue;
-        // epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
-        epilogue = CUBLASLT_EPILOGUE_RELU;
+        epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
         OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue))); 
         
-        // T* relu_mask_ptr = reinterpret_cast<T*>(relu_mask->mut_dptr()); 
-        // long reluMaskLd = n;
-        // // Set relu mask ptr in cublas aux pointer. 
-        // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER,
-        //     &relu_mask_ptr, sizeof(relu_mask_ptr)));
-        
-        // // Set relu mask leading dimension. 
-        // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(operationDesc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
-        //                                &reluMaskLd, sizeof(reluMaskLd));
-        
         // Set bias ptr
-        // const T* bias_ptr = reinterpret_cast<const T*>(bias->dptr()); 
-        // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-        //     operationDesc, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr, sizeof(bias_ptr)));
+        const T* bias_ptr = reinterpret_cast<const T*>(bias->dptr()); 
+        OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+            operationDesc, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr, sizeof(bias_ptr)));
         
-        cublasLtMatrixLayout_t Adesc = NULL, Bdesc = NULL, Cdesc = NULL;
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Adesc, cuda_data_type, m, k, cublas_lda)); 
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Bdesc, cuda_data_type, k, n, cublas_ldb)); 
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc, cuda_data_type, m, n, cublas_ldc));
-        // todo! 
-
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Adesc, cuda_data_type, k, m, cublas_lda)); 
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Bdesc, cuda_data_type, n, k, cublas_ldb)); 
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc, cuda_data_type, n, m, cublas_ldc)); 
-
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Adesc, cuda_data_type, m, k, k)); 
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Bdesc, cuda_data_type, k, n, n)); 
-        // OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc, cuda_data_type, m, n, n)); 
-        
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Bdesc, cuda_data_type, n, k, n));
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Adesc, cuda_data_type, k, m, k)); 
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc, cuda_data_type, n, m, n)); 
-
-        printf("M is %d \n", m);
-        printf("N is %d \n", n);
-        printf("K is %d \n", k);
-        printf("LDA is %d \n", cublas_lda);
-        printf("LDB is %d \n", cublas_ldb);
-        printf("LDC is %d \n", cublas_ldc);
-
-
-
-        // OF_CUBLAS_CHECK(cublasLtMatmul(ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(),
-        //                                operationDesc,
-        //                                &alpha,
-        //                                reinterpret_cast<const T*>(a->dptr()),
-        //                                 Adesc,
-        //                                 reinterpret_cast<const T*>(b->dptr()),
-        //                                 Bdesc,
-        //                                 &beta,
-        //                                 reinterpret_cast<T*>(out->mut_dptr()),
-        //                                 Cdesc,
-        //                                 reinterpret_cast<T*>(out->mut_dptr()),
-        //                                 Cdesc,
-        //                                 NULL,
-        //                                 NULL,
-        //                                 0,
-        //                                 0));
+        cublasLtMatrixLayout_t cublas_a_desc = NULL, cublas_b_desc = NULL, cublas_c_desc = NULL;
+        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, cuda_data_type, cublas_trans_a == CUBLAS_OP_N ? cublas_m : cublas_k, cublas_trans_a == CUBLAS_OP_N ? cublas_k : cublas_m, cublas_lda));
+        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, cuda_data_type, cublas_trans_b == CUBLAS_OP_N ? cublas_k : cublas_n, cublas_trans_b == CUBLAS_OP_N ? cublas_n : cublas_k, cublas_ldb)); 
+        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, cuda_data_type, cublas_m, cublas_n, cublas_ldc)); 
 
         OF_CUBLAS_CHECK(cublasLtMatmul(ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(),
                                        operationDesc,
                                        &alpha,
-                                        reinterpret_cast<const T*>(b->dptr()),
-                                        Bdesc,
-                                        reinterpret_cast<const T*>(a->dptr()),
-                                        Adesc,
+                                        reinterpret_cast<const T*>(cublas_a->dptr()),
+                                        cublas_a_desc,
+                                        reinterpret_cast<const T*>(cublas_b->dptr()),
+                                        cublas_b_desc,
                                         &beta,
                                         reinterpret_cast<T*>(out->mut_dptr()),
-                                        Cdesc,
+                                        cublas_c_desc,
                                         reinterpret_cast<T*>(out->mut_dptr()),
-                                        Cdesc,
+                                        cublas_c_desc,
                                         NULL,
                                         NULL,
                                         0,
                                         0));
-        // TODO: whether to destroy? 
-        // 放到kernel state. 
         OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operationDesc));
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(Adesc)); 
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(Bdesc)); 
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(Cdesc)); 
+        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc)); 
+        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc)); 
+        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_c_desc)); 
     }
 }; 
 
