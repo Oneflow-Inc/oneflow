@@ -47,7 +47,7 @@ from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm3d,
 )
 from oneflow.nn.modules.linear_fused import (
-    FusedLinearRelu, 
+    FusedLinearReLU, 
 )
 
 from oneflow.nn.modules.container import (

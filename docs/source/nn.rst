@@ -95,7 +95,8 @@ Operators for neural networks
         Quantization, 
         FusedBatchNorm1d, 
         FusedBatchNorm2d, 
-        FusedBatchNorm3d
+        FusedBatchNorm3d, 
+        FusedLinearReLU, 
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 

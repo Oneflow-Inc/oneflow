@@ -20,18 +20,17 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
 from oneflow.nn.module import Module
 
-class FusedLinearRelu(Module):
+class FusedLinearReLU(Module):
     """Applies a linear transformation with relu activation to the incoming data: :math:`y = ReLU(xA^T + b)`
 
     Currently only support in GPU. 
 
     Args:
+        in_features: size of each input sample
 
-        - in_features: size of each input sample
+        out_features: size of each output sample
 
-        - out_features: size of each output sample
-
-        - bias: If set to ``False``, the layer will not learn an additive bias. Default: ``True``
+        bias: If set to ``False``, the layer will not learn an additive bias. Default: ``True``
 
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
@@ -54,7 +53,7 @@ class FusedLinearRelu(Module):
         >>> import oneflow as flow
         
 
-        >>> m = flow.nn.FusedLinearRelu(20, 30).to("cuda")
+        >>> m = flow.nn.FusedLinearReLU(20, 30).to("cuda")
         >>> input = flow.Tensor(np.random.randn(128, 20)).to("cuda")
         >>> output = m(input)
         >>> output.size()
