@@ -78,7 +78,7 @@ TEST(Maybe, NonPOD) {
 
 TEST(Maybe, Reference) {
   using Error = simple::StackedError<std::string>;
-  
+
   const int& n = 1;
   Maybe<const int&, Error> a{n}, b{a}, c{Error("test")}, d{c};
 
