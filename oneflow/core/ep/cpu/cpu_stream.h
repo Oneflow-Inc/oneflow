@@ -128,7 +128,8 @@ class CpuStream : public Stream {
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
     CpuNumThreadsGuard guard(num_threads);
-    int64_t chunk_size = std::max(DivUp((end - begin), num_threads), grain_size);
+    size_t tmp_chunk_size = DivUp((end - begin), num_threads);
+    int64_t chunk_size = std::max(tmp_chunk_size, grain_size);
 
     tbb::parallel_for(
         tbb::blocked_range<int64_t>(begin, end, chunk_size),
