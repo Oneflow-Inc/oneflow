@@ -737,7 +737,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.cos,
     """
-    
     See :func:`oneflow.cos`
     """,
 )
@@ -745,7 +744,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.atan,
     """
-    
     See :func:`oneflow.atan`
     """,
 )
@@ -753,7 +751,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.arctan,
     """
-    
     See :func:`oneflow.arctan`
     """,
 )
