@@ -96,19 +96,39 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
     CHECK_EQ(c_shape.At(num_c_axes - 1), *n);
 }
 
+// TODO: Use OpKernel State. 
 // class FusedMatmulBiasAddReluKernelState final : public user_op::OpKernelState{
 // public: 
 //     explicit FusedMatmulBiasAddReluKernelState(user_op::KernelInitContext* ctx){
-//         OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc_, cublas_dtype));
-//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc_, cublas_dtype, k, m, cublas_lda)); 
-//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc_, cublas_dtype, n, k, cublas_ldb)); 
-//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&Cdesc_, cublas_dtype, n, m, cublas_ldc)); 
+//         const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
+//         const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
+//         size_t m = 0, n = 0, k = 0;
+//         const auto a_shape = ctx->TensorDesc4ArgNameAndIndex("a", 0)->shape();
+//         const auto b_shape = ctx->TensorDesc4ArgNameAndIndex("b", 0)->shape();
+//         const auto c_shape = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape();
+//         InferMatmulMNK(a_shape, b_shape, c_shape, trans_a, trans_b, &m, &n, &k);
+        
+//         const auto GetCublasOperation = [](ep::primitive::BlasTransposeType transpose_type) {
+//             if (transpose_type == ep::primitive::BlasTransposeType::N) {
+//               return CUBLAS_OP_N;
+//             } else if (transpose_type == ep::primitive::BlasTransposeType::T) {
+//               return CUBLAS_OP_T;
+//             } else {
+//               UNIMPLEMENTED();
+//               return CUBLAS_OP_N;
+//             }
+//           };
+        
+
+//         OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(operationDesc_, cublas_dtype));
+//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(cublas_a_desc_, cublas_dtype, n, k, cublas_ldb)); 
+//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(cublas_b_desc_, cublas_dtype, k, m, cublas_lda)); 
+//         OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(cublas_c_desc_, cublas_dtype, n, m, cublas_ldc)); 
 //     }
-//     todo
-//     cublasLtMatmulDesc_t operationDesc_;
-//     cublasLtMatrixLayout_t cublas_b_desc_; 
-//     cublasLtMatrixLayout_t cublas_a_desc_;
-//     cublasLtMatrixLayout_t Cdesc_;
+//     cublasLtMatmulDesc_t* operationDesc_;
+//     cublasLtMatrixLayout_t* cublas_b_desc_; 
+//     cublasLtMatrixLayout_t* cublas_a_desc_;
+//     cublasLtMatrixLayout_t* cublas_c_desc_;
 // }; 
 
 } // namespace
@@ -122,8 +142,8 @@ public:
     bool AlwaysComputeWhenAllOutputsEmpty() const override {return false; }
 
 private: 
+    using user_op::OpKernel::Compute;
     void Compute(user_op::KernelComputeContext* ctx) const override{
-        // todo: Align use column major. 
         const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0); 
         const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0); 
         const user_op::Tensor* cublas_a = b; 
@@ -133,7 +153,7 @@ private:
         user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0); 
         const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
         // TODO: Add check
-        const float alpha = 1.0; 
+        const float alpha = ctx->Attr<float>("alpha"); 
         const float beta = 0.0; 
 
         const auto GetCublasOperation = [](ep::primitive::BlasTransposeType transpose_type) {

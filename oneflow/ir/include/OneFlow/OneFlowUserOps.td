@@ -4262,7 +4262,8 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
-    DefaultValuedAttr<BoolAttr, "false">:$transpose_b
+    DefaultValuedAttr<BoolAttr, "false">:$transpose_b, 
+    DefaultValuedAttr<F32Attr, "1.">:$alpha
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
