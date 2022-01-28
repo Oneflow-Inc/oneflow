@@ -98,7 +98,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-void SetCpuDeviceNumThreads(){
+void SetCpuDeviceManagerNumThreads(){
   ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
       Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
   constexpr size_t kDefaultUsedNumThreads = 2;
@@ -188,7 +188,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   }
   Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
-  SetCpuDeviceNumThreads();
+  SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
