@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
@@ -32,11 +34,15 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ~ElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    for (size_t i = 0; i < count; ++i) {
-      dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
-    }
+    cpu_stream->ParallelFor(0, count, [src, dst](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) {
+        dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
+      }
+    });
   }
 };
 
