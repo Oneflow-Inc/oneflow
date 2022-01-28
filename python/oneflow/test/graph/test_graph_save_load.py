@@ -74,10 +74,9 @@ def _test_linear_graph_save_load(test_case, device):
             flow.save(iter1_state_dict, state_dict_dir)
 
 
-    #with tempfile.TemporaryDirectory() as state_dict_dir:
-    state_dict_dir = "./state"
-    train_with_graph(0, state_dict_dir)
-    train_with_graph(1, state_dict_dir)
+    with tempfile.TemporaryDirectory() as state_dict_dir:
+        train_with_graph(0, state_dict_dir)
+        train_with_graph(1, state_dict_dir)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
