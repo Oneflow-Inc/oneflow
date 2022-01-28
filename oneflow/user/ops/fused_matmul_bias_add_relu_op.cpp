@@ -65,7 +65,55 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluOp::GetSbp(user_op::SbpContext* ctx) {
-  // todo: Add sbp. 
+  // (m, k_a) * (k_b, n) where k_a == k_b
+  int32_t m_axis = -1;
+  int32_t k_a_axis = -1;
+  int32_t k_b_axis = -1;
+  int32_t n_axis = -1;
+  if (ctx->Attr<bool>("transpose_a")) {
+    m_axis = 1;
+    k_a_axis = 0;
+  } else {
+    m_axis = 0;
+    k_a_axis = 1;
+  }
+  if (ctx->Attr<bool>("transpose_b")) {
+    k_b_axis = 1;
+    n_axis = 0;
+  } else {
+    k_b_axis = 0;
+    n_axis = 1;
+  }
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("a", 0), m_axis)
+      .Broadcast(user_op::OpArg("b", 0))
+      .Broadcast(user_op::OpArg("bias", 0))
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
+      .Split(user_op::OpArg("b", 0), n_axis)
+      .Split(user_op::OpArg("bias", 0), 0)
+      .Split(user_op::OpArg("out", 0), 1)
+      .Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("a", 0), k_a_axis)
+      .Split(user_op::OpArg("b", 0), k_b_axis)
+      .PartialSum(user_op::OpArg("bias", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("a", 0))
+      .Broadcast(user_op::OpArg("b", 0))
+      .PartialSum(user_op::OpArg("bias", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
+      .PartialSum(user_op::OpArg("b", 0))
+      .PartialSum(user_op::OpArg("bias", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
