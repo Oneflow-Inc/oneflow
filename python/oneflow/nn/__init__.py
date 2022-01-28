@@ -46,6 +46,10 @@ from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm2d,
     FusedBatchNorm3d,
 )
+from oneflow.nn.modules.linear_fused import (
+    FusedLinearRelu, 
+)
+
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -143,3 +147,4 @@ from . import functional
 from . import parallel
 
 from oneflow.nn.modules.rnn import RNN, LSTM, GRU
+
