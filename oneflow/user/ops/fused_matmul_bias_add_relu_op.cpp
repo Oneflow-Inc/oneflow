@@ -77,7 +77,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("a", 0) || op.NeedGenGradTensor4OpInput("b", 0) || op.NeedGenGradTensor4OpInput("bias", 0)){
-        float alpha = op.attr<float>("alpha");
+        double alpha = op.attr<double>("alpha");
         bool transpose_a = op.attr<bool>("transpose_a");
         bool transpose_b = op.attr<bool>("transpose_b");
         user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name() + "_relu_grad");

@@ -153,8 +153,8 @@ private:
         user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0); 
         const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
         // TODO: Add check
-        const float alpha = ctx->Attr<float>("alpha"); 
-        const float beta = 0.0; 
+        const T alpha = static_cast<T>(ctx->Attr<double>("alpha")); 
+        const T beta = static_cast<T>(0.0); 
 
         const auto GetCublasOperation = [](ep::primitive::BlasTransposeType transpose_type) {
             if (transpose_type == ep::primitive::BlasTransposeType::N) {

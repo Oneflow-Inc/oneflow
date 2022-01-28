@@ -51,7 +51,7 @@ Maybe<void> FusedMatmulBiasAddRelu::Capture(FusedMatmulBiasAddReluCaptureState* 
     ComposedAttrMap composed_attrs(attrs, base_attrs_); 
     ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a")); 
     ctx->transpose_b = JUST(composed_attrs.GetAttr<bool>("transpose_b")); 
-    ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
+    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
 
     if (ctx->requires_grad_a) {
       ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
