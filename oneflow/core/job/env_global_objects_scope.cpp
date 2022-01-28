@@ -98,7 +98,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-void SetCpuDeviceManagerNumThreads(){
+void SetCpuDeviceManagerNumThreads() {
   ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
       Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
   constexpr size_t kDefaultUsedNumThreads = 2;
