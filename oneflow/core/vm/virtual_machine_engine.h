@@ -47,7 +47,7 @@ class VirtualMachineEngine final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(Instruction, lively_instruction_hook_)>;
   using BarrierInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, barrier_instruction_hook_)>;
-  using InstructionMsgMutextList =
+  using InstructionMsgMutexedList =
       intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
   using StreamTypeId2StreamRtDesc =
       intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
@@ -78,7 +78,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
   }
-  const InstructionMsgMutextList& pending_msg_list() const { return pending_msg_list_; }
+  const InstructionMsgMutexedList& pending_msg_list() const { return pending_msg_list_; }
+  const InstructionMsgList& local_pending_msg_list() const { return local_pending_msg_list_; }
   const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const {
     return stream_type_id2stream_rt_desc_;
   }
@@ -94,7 +95,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
-  InstructionMsgMutextList* mut_pending_msg_list() { return &pending_msg_list_; }
+  InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
+  InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
   StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() {
     return &stream_type_id2stream_rt_desc_;
   }
@@ -126,7 +128,6 @@ class VirtualMachineEngine final : public intrusive::Base {
                                    Stream** stream);
 
  private:
-  using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
   using ReadyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
@@ -201,6 +202,7 @@ class VirtualMachineEngine final : public intrusive::Base {
         id2logical_object_(),
         delete_logical_object_list_(),
         pending_msg_list_(),
+        local_pending_msg_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         total_inserted_lively_instruction_cnt_(0),
@@ -218,7 +220,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
   Id2LogicalObject id2logical_object_;
   LogicalObjectDeleteList delete_logical_object_list_;
-  InstructionMsgMutextList pending_msg_list_;
+  InstructionMsgMutexedList pending_msg_list_;
+  InstructionMsgList local_pending_msg_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   size_t total_inserted_lively_instruction_cnt_;
