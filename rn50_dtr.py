@@ -5,10 +5,6 @@ import os
 
 import numpy as np
 from numpy import random
-import oneflow as flow
-import oneflow.nn as nn
-
-import resnet50_model
 
 
 # resnet50 bs 32, use_disjoint_set=False: threshold ~800MB
@@ -24,37 +20,70 @@ import resnet50_model
 # os.environ["OF_DTR_BS"] = "80"
 # os.environ["OF_ITERS"] = "40"
 
-dtr_enabled = os.getenv("OF_DTR", "0") != "0"
+import argparse
 
-batch_size = int(os.environ["OF_DTR_BS"])
-if dtr_enabled:
-    dtr_ee_enabled = os.getenv("OF_DTR_NO_EE", None) is None
-    threshold = os.environ["OF_DTR_THRESHOLD"]
-    debug_level = int(os.getenv("OF_DTR_DEBUG", "0"))
-    left_right = os.getenv("OF_DTR_LR", None) is not None
-    o_one = os.getenv("OF_DTR_O_ONE", None) is None
-else:
-    if any([os.getenv(x) is not None for x in ["OF_DTR_NO_EE", "OF_DTR_THRESHOLD", "OF_DTR_DEBUG", "OF_DTR_LR"]]):
-        print("warning! dtr is not enabled but dtr related env var is set")
-    dtr_ee_enabled = False
-    threshold = "NaN"
-    debug_level = "NaN"
-    left_right = "invalid"
-    o_one = False
+class NegativeArgAction(argparse.Action):
+    def __init__(self, option_strings, dest, env_var_name, **kwargs):
+        assert len(option_strings) == 1
+        assert '--no-' in option_strings[0]
+        dest = dest[3:]
+        super(NegativeArgAction, self).__init__(option_strings, dest, nargs=0, default=True, **kwargs)
+        self.env_var_name = env_var_name
+        os.environ[self.env_var_name] = "True"
+ 
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, False)
+        os.environ[self.env_var_name] = "False"
+
+
+class PositiveArgAction(argparse.Action):
+    def __init__(self, option_strings, dest, env_var_name, **kwargs):
+        super(PositiveArgAction, self).__init__(option_strings, dest, nargs=0, default=True, **kwargs)
+        self.env_var_name = env_var_name
+        os.environ[self.env_var_name] = "False"
+ 
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, False)
+        os.environ[self.env_var_name] = "True"
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('bs', type=int)
+parser.add_argument('threshold', type=str)
+parser.add_argument('iters', type=int)
+parser.add_argument('--no-dtr', action=NegativeArgAction, env_var_name="OF_DTR")
+parser.add_argument('--no-lr', action=NegativeArgAction, env_var_name="OF_DTR_LR")
+parser.add_argument('--no-o-one', action=NegativeArgAction, env_var_name="OF_DTR_O_ONE")
+parser.add_argument('--no-ee', action=NegativeArgAction, env_var_name="OF_DTR_EE")
+parser.add_argument('--no-allocator', action=NegativeArgAction, env_var_name="OF_DTR_ALLO")
+parser.add_argument('--nlr', action=PositiveArgAction, env_var_name="OF_DTR_NLR")
+parser.add_argument('--high-conv', action=PositiveArgAction, env_var_name="OF_DTR_HIGH_CONV")
+parser.add_argument('--high-add-n', action=PositiveArgAction, env_var_name="OF_DTR_HIGH_ADD_N")
+parser.add_argument('--debug-level', type=int, default=0)
+
+args = parser.parse_args()
+
+print(os.environ)
+
+import oneflow as flow
+import oneflow.nn as nn
+
+import resnet50_model
 
 # run forward, backward and update parameters
 WARMUP_ITERS = 2
-ALL_ITERS = int(os.environ["OF_ITERS"])
+ALL_ITERS = args.iters
 
-heuristic = "eq_compute_time_and_last_access"
+# NOTE: it has not effect for dtr allocator
+heuristic = "eq"
 
-if dtr_enabled:
-    print(f'dtr_enabled: {dtr_enabled}, threshold: {threshold}, batch size: {batch_size}, eager eviction: {dtr_ee_enabled}, left and right: {left_right}, debug_level: {debug_level}, heuristic: {heuristic}, o_one: {o_one}')
+if args.dtr:
+    print(f'dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}')
 else:
-    print(f'dtr_enabled: {dtr_enabled}')
+    print(f'dtr_enabled: {args.dtr}')
 
-if dtr_enabled:
-    flow.enable_dtr(dtr_enabled, threshold, debug_level, heuristic)
+if args.dtr:
+    flow.enable_dtr(args.dtr, args.threshold, args.debug_level, heuristic)
 
 seed = 20
 flow.manual_seed(seed)
@@ -63,7 +92,7 @@ random.seed(seed)
 
 def sync():
     flow._oneflow_internal.eager.multi_client.Sync()
-    sync_tensor.numpy()
+    # sync_tensor.numpy()
 
 
 def display():
@@ -137,22 +166,23 @@ optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0)
 
 # generate random data and label
 train_data = flow.tensor(
-    np.random.uniform(size=(batch_size, 3, 224, 224)).astype(np.float32), device=cuda0
+    np.random.uniform(size=(args.bs, 3, 224, 224)).astype(np.float32), device=cuda0
 )
 train_label = flow.tensor(
-    (np.random.uniform(size=(batch_size,)) * 1000).astype(np.int32), dtype=flow.int32, device=cuda0
+    (np.random.uniform(size=(args.bs,)) * 1000).astype(np.int32), dtype=flow.int32, device=cuda0
 )
 
 def temp():
-    sync()
-    print('----------allocator start')
-    flow._oneflow_internal.eager.multi_client.Temp()
-    sync()
-    print('----------allocator end')
+    if args.allocator:
+        sync()
+        # print('----------allocator start')
+        flow._oneflow_internal.eager.multi_client.Temp()
+        sync()
+        # print('----------allocator end')
 
 total_time = 0
 for iter in range(ALL_ITERS):
-    if dtr_enabled:
+    if args.dtr:
         for x in model.parameters():
             x.grad = flow.zeros_like(x).to(cuda0)
 
@@ -161,16 +191,16 @@ for iter in range(ALL_ITERS):
         start_time = time.time()
     logits = model(train_data)
     loss = criterion(logits, train_label)
+    if (iter + 1) % 1 == 0:
+        print('loss: ', loss.numpy())
     loss.backward()
     optimizer.step()
     optimizer.zero_grad(True)
     # sync()
     # exit(2)
-    if dtr_enabled and debug_level > 0:
+    if args.dtr and args.debug_level > 0:
         sync()
         display()
-    # if (epoch + 1) % 1 == 0:
-        # print('loss: ', loss.numpy())
     del logits
     del loss
     sync()

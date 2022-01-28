@@ -27,8 +27,6 @@ class LocalCallOpKernelPhyInstrOperand;
 namespace one {
 
 DTRTensorPool::DTRTensorPool() : duration_(0), total_memory_bytes_(0), num_eviction_(0), num_recomputation_(0), num_destruction_(0) {
-  // candidates_ = std::set<std::weak_ptr<vm::DTREagerBlobObject>>();
-  candidates_ = std::vector<std::weak_ptr<vm::DTREagerBlobObject>>();
   start_time_ = std::chrono::steady_clock::now();
 }
 
@@ -328,6 +326,14 @@ Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj
 void DTRTensorPool::set_total_memory(size_t mem) { total_memory_bytes_ = mem; }
 
 size_t DTRTensorPool::get_total_memory() { return total_memory_bytes_; }
+
+void DTRTensorPool::set_current_op_type_name(std::string op_type_name) {
+  current_op_type_name_ = std::move(op_type_name);
+}
+
+const std::string& DTRTensorPool::current_op_type_name() {
+  return current_op_type_name_;
+}
 
 }  // namespace one
 }  // namespace oneflow

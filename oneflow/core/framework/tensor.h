@@ -498,18 +498,6 @@ class DTRMirroredTensor final : public MirroredTensor {
       : MirroredTensor(impl) {}
   ~DTRMirroredTensor() = default;
 
-  // Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-  //   // 把 grad_fn 也更新
-  //   const auto& dtr_mirrored_tensor = std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(other->detach()));
-  //   CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
-  //   bool old_requires_grad = requires_grad();
-  //   impl_ = dtr_mirrored_tensor->impl_;
-  //   set_requires_grad(old_requires_grad);
-  //   grad_fn_node_ = nullptr;
-  //   // grad_fn_node_ = other->mut_grad_fn_node();
-  //   return Maybe<void>::Ok();
-  // }
-
   Maybe<void> set_tensor_inputs(const TensorTuple& inputs);
 
   Maybe<Tensor> detach() const override;

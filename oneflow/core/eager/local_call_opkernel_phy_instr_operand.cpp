@@ -81,14 +81,16 @@ DTRInstrOperand::DTRInstrOperand(
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx_),
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {
+        if (oneflow::DTRDebugEnabled()) {
           for (const auto &x : *input) {
             for (const auto &y : *output) {
               if (x.get() == y.get()) {
-                std::cout << "inplace!!!!" << std::endl;
-                std::cout << opkernel->user_op_conf_->op_type_name() << std::endl;
+                LOG(INFO) << "inplace!!!!" << std::endl;
+                LOG(INFO) << opkernel->user_op_conf_->op_type_name() << std::endl;
               }
             }
           }
+        }
     // inputs & outputs weak_ptr
     inputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
     for (const auto& in : *input) { inputs_.emplace_back(in); }

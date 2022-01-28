@@ -36,6 +36,7 @@ struct DTRTensorPool {
     std::cout << "Times of eviction: " << num_eviction_ << std::endl;
     std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
     std::cout << "Times of destruction: " << num_destruction_ << std::endl;
+    std::cout << "duration_: " << duration_ << std::endl;
     if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
@@ -44,6 +45,10 @@ struct DTRTensorPool {
 
   Maybe<void> insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object, size_t thres = 0);
   Maybe<void> clear();
+
+  void set_current_op_type_name(std::string op_type_name);
+  const std::string& current_op_type_name();
+  std::string current_op_type_name_;
 
   Maybe<vm::DTREagerBlobObject*> find_best_tensor();
   Maybe<bool> find_best_tensor_and_evict();
@@ -62,6 +67,9 @@ struct DTRTensorPool {
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
   int update_after_pesudo_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object, const char* start_id, const char* end_id);
+
+  std::set<vm::DTRInstrOperand*> operand_visited_;
+  std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;
 
   // TODO: Implementation of disjoint-set data structure
 

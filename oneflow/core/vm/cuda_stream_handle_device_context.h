@@ -42,7 +42,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
         cuda_handler_(new CudaStreamHandle(nullptr)),
-        cuda_allocator_(new ThreadSafeAllocator((std::getenv("OF_DTR") != nullptr)
+        cuda_allocator_(new ThreadSafeAllocator(ParseBooleanFromEnv("OF_DTR_ALLO", true)
                     ? static_cast<Allocator*>(Global<DtrCudaAllocator>::Get())
                     : new CudaAllocator(device_id))),
         device_id_(device_id) {}
