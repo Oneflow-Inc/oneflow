@@ -127,7 +127,7 @@ class CpuStream : public Stream {
     }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    CpuNumThreadsGuard manager(num_threads);
+    CpuNumThreadsGuard guard(num_threads);
     size_t nthr_chunk_size = DivUp((end - begin), num_threads);
     int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
 

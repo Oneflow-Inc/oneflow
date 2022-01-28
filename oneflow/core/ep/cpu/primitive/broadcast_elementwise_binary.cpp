@@ -198,11 +198,10 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
               void* dst) override {
     CpuStream* cpu_stream = stream->As<CpuStream>();
     size_t num_threads = dynamic_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
-    cpu_stream->SetParallelNumberThreads(num_threads);
+    CpuNumThreadsGuard guard(num_threads);
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-
     size_t num_dims = std::max(num_src0_dims, num_src1_dims);
     dnnl::memory::dims src_0_dims(num_dims);
     dnnl::memory::dims src_1_dims(num_dims);

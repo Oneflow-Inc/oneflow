@@ -41,7 +41,6 @@ class CpuDeviceManager : public DeviceManager {
   size_t device_num_threads_;
   std::mutex device_mutex_;
   std::shared_ptr<Device> device_;
-  size_t device_num_threads_;
   DeviceManagerRegistry* registry_;
 };
 
