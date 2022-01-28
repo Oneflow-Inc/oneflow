@@ -45,7 +45,7 @@ def _test_linear_graph_save_load(test_case, device):
 
         print(f"===Call count num {call_cnt}===", flush=True)
         linear_t_g = LinearTrainGraph()
-        linear_t_g.debug(2)
+        #linear_t_g.debug(2)
         if (state_dict):
             print("---Load state dict---", flush=True)
             linear_t_g.load_state_dict(state_dict)
@@ -61,7 +61,7 @@ def _test_linear_graph_save_load(test_case, device):
             cur_train_step = iter0_state_dict["System-Train-TrainStep"].to_local().numpy()[0]
             test_case.assertTrue(3 == cur_train_step)
         print("Iter 0 state dict: ", iter0_state_dict, flush=True)
-        #iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
+        iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
 
         print("---Iter 1---", flush=True)
         of_graph_out = linear_t_g(x)
