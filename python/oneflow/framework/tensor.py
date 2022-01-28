@@ -830,12 +830,86 @@ def _t(self):
     return flow._C.t(self)
 
 
+def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
+    return flow.topk(self, k, dim, largest, sorted)
+
+
+def _nms(boxes, scores, iou_threshold: float):
+    return flow.nms(boxes, scores, iou_threshold)
+
+
+def _nonzero(self, as_tuple=False):
+    return flow.nonzero(self, as_tuple)
+
+
+def _max(self, dim=None, keepdim=False):
+    return flow.max(self, dim, keepdim)
+
+
+def _min(self, dim=None, keepdim=False):
+    return flow.min(self, dim, keepdim)
+
+
+def _sum(self, dim=None, keepdim=False):
+    return flow.sum(self, dim, keepdim)
+
+
+def _mean(self, dim=None, keepdim=False):
+    return flow.mean(self, dim, keepdim)
+
+
+def _prod(self, dim=None, keepdim=False):
+    return flow.prod(self, dim, keepdim)
+
+
 def _masked_fill(self, mask, fill_value):
     return flow.masked_fill(self, mask, fill_value)
 
 
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
+
+
+def _reshape(self, *shape):
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
+    else:
+        new_shape = shape
+    return flow._C.reshape(self, new_shape)
+
+
+def _view(self, *shape):
+    return flow.view(self, *shape)
+
+
+def _sort(self, dim: int = -1, descending: bool = False):
+    return flow.sort(self, dim, descending)
+
+
+def _type_as(self, target):
+    return self.to(dtype=target.dtype)
+
+
+def _int(self):
+    return self.to(dtype=flow.int32)
+
+
+def _long(self):
+    return self.to(dtype=flow.int64)
+
+
+def _float(self):
+    return self.to(dtype=flow.float32)
+
+
+def _double(self):
+    return self.to(dtype=flow.float64)
+
+
+def _is_floating_point(self):
+    return flow.is_floating_point(self)
 
 
 def _numpy(self):
@@ -1031,6 +1105,23 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
+    Tensor.reshape = _reshape
+    Tensor.view = _view
+    Tensor.sort = _sort
+    Tensor.type_as = _type_as
+    Tensor.int = _int
+    Tensor.long = _long
+    Tensor.float = _float
+    Tensor.double = _double
+    Tensor.is_floating_point = _is_floating_point
+    Tensor.topk = _topk
+    Tensor.nms = _nms
+    Tensor.nonzero = _nonzero
+    Tensor.max = _max
+    Tensor.min = _min
+    Tensor.sum = _sum
+    Tensor.mean = _mean
+    Tensor.prod = _prod
 
 
 def register_tensor_op(op_name):

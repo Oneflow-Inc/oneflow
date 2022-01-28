@@ -44,6 +44,9 @@ oneflow
             diag, 
             diagonal,
             movedim,
+            tensor_split,
+            hsplit,
+            vsplit,
             as_strided,
             div, 
             dot, 
@@ -149,7 +152,6 @@ oneflow
             unsqueeze, 
             permute,
             var, 
-            view, 
             where, 
             zeros, 
             zeros_like,
@@ -164,6 +166,8 @@ oneflow
             decode_onerec,
             from_numpy,
             cumsum,
+            topk,
+            nms,
             cumprod,
 
 .. autofunction:: oneflow.relu

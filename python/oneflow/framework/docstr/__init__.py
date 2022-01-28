@@ -48,9 +48,15 @@ from .swapaxes import *
 from .repeat import *
 from .tile import *
 from .tensor_t import *
+from .topk import *
+from .nms import *
+from .nonzero import *
+from .reduce_ops import *
 from .masked_fill import *
 from .expand import *
 from .flip import *
 from .in_top_k import *
 from .index_select import *
 from .consistent_cast import *
+from .sort import *
+from .is_floating_point import *
