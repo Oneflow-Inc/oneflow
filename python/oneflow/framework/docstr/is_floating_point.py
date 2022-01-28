@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,31 +12,26 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
+"""
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
-#define ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+add_docstr(
+    oneflow.is_floating_point,
+    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
 
-#include "oneflow/core/vm/instruction.h"
+    Args:
+        input  (Tensor): the input tensor.
 
-namespace oneflow {
+    For example:
 
-namespace debug {
+    .. code-block:: python
 
-bool RecordingInstructions();
-
-void StartRecordingInstructions();
-
-void EndRecordingInstructions();
-
-void ClearRecordedInstructions();
-
-void RecordInstruction(const intrusive::shared_ptr<vm::InstructionMsg>& instruction);
-
-void ReplayInstructions();
-
-}  // namespace debug
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> output = flow.is_floating_point(input)
+        >>> output
+        False
+    """,
+)
