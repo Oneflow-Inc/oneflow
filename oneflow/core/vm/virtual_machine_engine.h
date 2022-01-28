@@ -63,6 +63,12 @@ class VirtualMachineEngine final : public intrusive::Base {
   std::size_t flying_instruction_cnt() const {
     return pending_msg_list().thread_unsafe_size() + lively_instruction_list_.size();
   }
+  size_t total_inserted_lively_instruction_cnt() const {
+    return total_inserted_lively_instruction_cnt_;
+  }
+  size_t total_erased_lively_instruction_cnt() const {
+    return total_erased_lively_instruction_cnt_;
+  }
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
   const LogicalObjectDeleteList& delete_logical_object_list() const {
@@ -105,6 +111,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void Schedule();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
+  std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
   Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
   MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
   const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
@@ -179,6 +186,9 @@ class VirtualMachineEngine final : public intrusive::Base {
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
 
+  void LivelyInstructionListPushBack(Instruction* instruction);
+  intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction);
+
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
@@ -195,6 +205,8 @@ class VirtualMachineEngine final : public intrusive::Base {
         local_pending_msg_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
+        total_inserted_lively_instruction_cnt_(0),
+        total_erased_lively_instruction_cnt_(0),
         barrier_instruction_list_() {}
   intrusive::Ref intrusive_ref_;
   // fields
@@ -212,6 +224,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   InstructionMsgList local_pending_msg_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
+  size_t total_inserted_lively_instruction_cnt_;
+  size_t total_erased_lively_instruction_cnt_;
   BarrierInstructionList barrier_instruction_list_;
   std::map<std::string, RtInstrTypeId> instr_type_name2rt_instr_type_id_;
   RwMutexedObjectAccess::object_pool_type access_pool_;
