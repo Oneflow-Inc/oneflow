@@ -52,9 +52,7 @@ bool CudaStreamType::QueryInstructionStatusDone(
 }
 
 void CudaStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH(
-      "S:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
+  OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   {
