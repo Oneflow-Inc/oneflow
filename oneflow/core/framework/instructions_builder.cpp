@@ -43,10 +43,10 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/instruction_replay.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -384,14 +384,7 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
     const one::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
   const auto& op_device = JUST(GetCriticalSectionDevice());
-  for (const auto& eager_blob_object : *eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(eager_blob_object->last_used_device());
-    if (blob_last_used_device != op_device) {
-      auto* dep_object = JUST(eager_blob_object->compute_local_dep_object());
-      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
-    }
-    eager_blob_object->set_last_used_device(op_device);
-  }
+  JUST(SoftSyncStream(eager_blob_objects, op_device));
   return Maybe<void>::Ok();
 }
 
@@ -830,14 +823,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Device> op_device) {
   const auto& parallel_desc_sym = JUST(Placement4Device(op_device)).shared_from_symbol();
-  for (const auto& input : *input_eager_blob_objects) {
-    const auto& blob_last_used_device = JUST(input->last_used_device());
-    if (blob_last_used_device != op_device) {
-      auto* dep_object = JUST(input->compute_local_dep_object());
-      JUST(SoftSyncStream(dep_object, "mut", blob_last_used_device));
-    }
-    input->set_last_used_device(op_device);
-  }
+  JUST(SoftSyncStream(output_eager_blob_objects, op_device));
+  JUST(SoftSyncStream(input_eager_blob_objects, op_device));
   auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode()));
@@ -1066,10 +1053,14 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  if (pthread_fork::IsForkedSubProcess() && parallel_desc
+      && parallel_desc->device_type() != DeviceType::kCPU) {
+    return Maybe<void>::Ok();
+  }
   const auto& last_used_device = JUST(eager_blob_object->last_used_device());
   const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
   if (last_used_device != producer_op_device) {
-    JUST(SoftSyncStream(JUST(eager_blob_object->compute_local_dep_object()), "mut",
+    JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, "mut",
                         last_used_device));
   }
   Optional<Symbol<Device>> op_device{};
@@ -1079,6 +1070,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
              && (producer_op_device->type() == "cuda" || producer_op_device->type() == "gpu")) {
     // Disable inter-device instruction sequential for tensor used by nccl stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
+    op_device = Optional<Symbol<Device>>(NullOpt);
+  } else if (producer_op_device->type() == "async_launched_nccl") {
+    // Disable inter-device instruction sequential for tensor produced by nccl stream.
     op_device = Optional<Symbol<Device>>(NullOpt);
   } else {
     op_device = producer_op_device;
@@ -1092,14 +1086,39 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
-                                                const std::string& modifier,
-                                                Symbol<Device> op_device) {
+Maybe<void> InstructionsBuilder::SoftSyncStream(
+    const one::EagerBlobObjectListPtr& eager_blob_objects, Symbol<Device> op_device) {
+  SmallSet<Symbol<Device>> last_used_devices;
+  for (const auto& eager_blob_object : *eager_blob_objects) {
+    const auto& opt_last_used_device = eager_blob_object->last_used_device();
+    if (unlikely(!opt_last_used_device.has_value())) { continue; }
+    const auto& last_used_device = JUST(opt_last_used_device);
+    if (last_used_device != op_device) { SmallSetInsert(&last_used_devices, last_used_device); }
+  }
+  for (const auto& last_used_device : last_used_devices) {
+    std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
+    dep_objects.reserve(eager_blob_objects->size());
+    for (const auto& eager_blob_object : *eager_blob_objects) {
+      const auto& opt_last_used_device = eager_blob_object->last_used_device();
+      if (unlikely(!opt_last_used_device.has_value())) { continue; }
+      if (JUST(opt_last_used_device) == last_used_device) {
+        dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
+      }
+      eager_blob_object->set_last_used_device(op_device);
+    }
+    JUST(SoftSyncStream(std::move(dep_objects), "mut", last_used_device));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::SoftSyncStream(
+    std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+    const std::string& modifier, Symbol<Device> op_device) {
   if (!JUST(op_device->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
   OF_PROFILER_RANGE_PUSH("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(op_device)).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
-      compute_local_dep_object, modifier);
+      std::move(compute_local_dep_objects), modifier);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
       parallel_desc, phy_instr_operand);
@@ -1132,7 +1151,6 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
    * so they can share memory.
    */
   const auto& parallel_desc = GetParallelDesc(input_tensor);
-  LocalDepObject* local_dep_object = JUST(input_tensor->compute_local_dep_object());
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
       JUST(input_tensor->eager_blob_object());
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
@@ -1142,8 +1160,8 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   view_eager_blob_object->set_is_shape_synced(true);
   view_eager_blob_object->set_last_used_device(JUST(input_tensor->device()));
   // prepare instruction operand
-  const auto& phy_instr_operand = std::make_shared<vm::TensorViewOperand>(
-      eager_blob_object, view_eager_blob_object, local_dep_object);
+  const auto& phy_instr_operand =
+      std::make_shared<vm::TensorViewOperand>(eager_blob_object, view_eager_blob_object);
   // prepare instruction
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
@@ -1187,9 +1205,8 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::string& modifier) {
   const auto& parallel_desc = GetParallelDesc(tensor);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
-  const auto& phy_instr_operand = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
-      eager_blob_object, compute_local_dep_object, callback, modifier);
+  const auto& phy_instr_operand =
+      std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(eager_blob_object, callback, modifier);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(),
       parallel_desc->device_tag() + ".AccessBlobByCallback", parallel_desc, phy_instr_operand);
@@ -1858,11 +1875,6 @@ Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& 
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
-  if (debug::RecordingInstructions()) {
-    INTRUSIVE_FOR_EACH(instruction_msg, instructions_builder.mut_instruction_list()) {
-      debug::RecordInstruction(instruction_msg);
-    }
-  }
   JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
