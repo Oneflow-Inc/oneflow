@@ -113,8 +113,7 @@ std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t de
   std::stringstream ss;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
     if (--debug_cnt <= 0) { break; }
-    ss << instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
-       << ":" << instruction->instr_msg().instr_type_name() << "\n";
+    ss << instruction->instr_msg().DebugName() << "\n";
   }
   return ss.str();
 }
