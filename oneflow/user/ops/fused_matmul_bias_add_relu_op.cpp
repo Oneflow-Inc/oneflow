@@ -90,7 +90,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu")
         if(op.NeedGenGradTensor4OpInput("bias", 0)){
           // TODO: Currently Only support 2d fused_matmul. 
           // so here we hard encode bias reduce axis as 0. 
-          std::vector<int64_t> reduce_axes_vec{0}; 
+          std::vector<int32_t> reduce_axes_vec{0}; 
           user_op::UserOpConfWrapperBuilder bias_grad_builder(op.op_name() + "_bias_grad");
           user_op::UserOpConfWrapper bias_grad_op = bias_grad_builder.Op("reduce_sum")
                                                                     .Input("input_tensor", relu_grad_op.output("dx", 0))
