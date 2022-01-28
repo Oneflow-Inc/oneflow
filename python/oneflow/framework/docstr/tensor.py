@@ -1063,11 +1063,9 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.nonzero,
     """
-
     nonzero(input, as_tuple=False) -> Tensor
 
     See :func:`oneflow.nonzero`
-
     """,
 )
 
@@ -1075,6 +1073,7 @@ add_docstr(
     oneflow.Tensor.max,
     """
     input.max(dim, index) -> Tensor
+
     See :func:`oneflow.max`
     """,
 )
@@ -1083,6 +1082,7 @@ add_docstr(
     oneflow.Tensor.min,
     """
     input.min(dim, index) -> Tensor
+
     See :func:`oneflow.min`
     """,
 )
@@ -1091,6 +1091,7 @@ add_docstr(
     oneflow.Tensor.sum,
     """
     input.sum(dim, index) -> Tensor
+
     See :func:`oneflow.sum`
     """,
 )
@@ -1099,6 +1100,7 @@ add_docstr(
     oneflow.Tensor.mean,
     """
     input.mean(dim, index) -> Tensor
+
     See :func:`oneflow.mean`
     """,
 )
@@ -1107,6 +1109,186 @@ add_docstr(
     oneflow.Tensor.prod,
     """
     input.prod(dim, index) -> Tensor
+
     See :func:`oneflow.prod`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.reshape,
+    """
+    See :func:`oneflow.reshape`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.view,
+    """
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
+
+    Returns a new tensor with the same data as the :attr:`self` tensor but of a
+    different :attr:`shape`.
+
+    The returned tensor shares the same data and must have the same number
+    of elements, but may have a different size. For a tensor to be viewed, the new
+    view size must be compatible with its original size and stride, i.e., each new
+    view dimension must either be a subspace of an original dimension, or only span
+    across original dimensions :math:`d, d+1, \\dots, d+k` that satisfy the following
+    contiguity-like condition that :math:`\\forall i = d, \\dots, d+k-1`,
+
+    .. math::
+
+      \\text{stride}[i] = \\text{stride}[i+1] \\times \\text{size}[i+1]
+
+    Otherwise, it will not be possible to view :attr:`self` tensor as :attr:`shape`
+    without copying it (e.g., via :meth:`contiguous`). When it is unclear whether a
+    :meth:`view` can be performed, it is advisable to use :meth:`reshape`, which
+    returns a view if the shapes are compatible, and copies (equivalent to calling
+    :meth:`contiguous`) otherwise.
+
+    Args:
+        input: A Tensor.
+        *shape: flow.Size or int...
+    Returns:
+        A Tensor has the same type as `input`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> x = np.array(
+        ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ... ).astype(np.float32)
+        >>> input = flow.Tensor(x)
+
+        >>> y = input.view(2, 2, 2, -1).numpy().shape
+        >>> y
+        (2, 2, 2, 2)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sort,
+    """
+    See :func:`oneflow.sort`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.type_as,
+    r"""Returns this tensor cast to the type of the given tensor.
+        This is a no-op if the tensor is already of the correct type.
+
+    Args:
+        input  (Tensor): the input tensor.
+        target (Tensor): the tensor which has the desired type.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> target = flow.tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
+        >>> input = input.type_as(target)
+        >>> input.dtype
+        oneflow.int32
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.int,
+    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.int()
+        >>> input.dtype
+        oneflow.int32
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.long,
+    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.long()
+        >>> input.dtype
+        oneflow.int64
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.float,
+    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.float()
+        >>> input.dtype
+        oneflow.float32
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.double,
+    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.double()
+        >>> input.dtype
+        oneflow.float64
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_floating_point,
+    """
+    See :func:`oneflow.is_floating_point`
     """,
 )
