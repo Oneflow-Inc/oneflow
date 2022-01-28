@@ -43,10 +43,10 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/instruction_replay.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 
@@ -1053,6 +1053,10 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  if (pthread_fork::IsForkedSubProcess() && parallel_desc
+      && parallel_desc->device_type() != DeviceType::kCPU) {
+    return Maybe<void>::Ok();
+  }
   const auto& last_used_device = JUST(eager_blob_object->last_used_device());
   const auto& producer_op_device = JUST(eager_blob_object->producer_op_device());
   if (last_used_device != producer_op_device) {
@@ -1871,11 +1875,6 @@ Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& 
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));
-  if (debug::RecordingInstructions()) {
-    INTRUSIVE_FOR_EACH(instruction_msg, instructions_builder.mut_instruction_list()) {
-      debug::RecordInstruction(instruction_msg);
-    }
-  }
   JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
