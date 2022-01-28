@@ -100,7 +100,30 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
+  std::vector<bool> inplace_flag(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
+    // if (oneflow::DTREnabled()) {
+    //   if (!outputs->at(i)) {
+    //     inplace_flag[i] = false;
+    //   } else {
+    //     CHECK_EQ_OR_RETURN(outputs->size(), inputs.size());
+    //     inplace_flag[i] = true;
+    //   }
+    //   const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
+    //   outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
+    //   output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+    // } else {
+    //   if (!outputs->at(i)) {
+    //     const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
+    //     outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
+    //     output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+    //   } else {
+    //     bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+    //     CHECK_OR_RETURN(has_eager_blob_object);
+    //     output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+    //   }
+    // }
+
     if (!outputs->at(i)) {
       if (oneflow::DTREnabled()) {
         const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
@@ -194,6 +217,18 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, op_device);
   }));
+
+  // // if inplace: outputs.size() should equal to inputs.size()
+  // if (oneflow::DTREnabled()) {
+  //   for (int i = 0; i < outputs->size(); i++) {
+  //     if (inplace_flag[i]) {
+  //       // CHECK_NOTNULL_OR_RETURN(inputs.at(i));
+  //       JUST(inputs.at(i)->set_data(outputs->at(i)));
+  //       // set grad_func_node
+  //       inputs.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
+  //     }
+  //   }
+  // }
   return Maybe<void>::Ok();
 }
 

@@ -248,11 +248,11 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-double get_cost(const vm::DTREagerBlobObject* ebo, int coeff) {
+double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
   if (ebo == nullptr) { return 0.; }
   const std::string cost_type = "eq_compute_time_and_last_access";
   double cost = CHECK_JUST(ebo->cost(cost_type));
-  if (std::getenv("OF_DTR_NO_EE") == nullptr) {
+  if (std::getenv("OF_DTR_O_ONE") == nullptr) {
     CHECK(!isinf(cost));
     CHECK(!isnan(cost));
     return cost;
@@ -297,15 +297,18 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       total_size += end->second->size;
       // end_tensor is fakely evicted, update_after_pesudo_evict
       if (end_tensor != nullptr) {
-        CHECK_JUST(Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor));
+        const char* start_id = start->first;
+        const char* end_id = end->first;
+        CHECK_JUST(Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id, end_id));
       }
-      cost += get_cost(end_tensor, -1);
+      int coeff = -1;
+      cost += get_cost(end_tensor, coeff);
       end++;
 
       if (oneflow::DTRDebugEnabled()) {
         LOG(INFO) << "move end, compute op: "
                   << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
-                  << ", total_size: " << total_size << ", cost: " << cost;
+                  << ", total_size: " << total_size << ", cost: " << cost << ", coeff: " << coeff;
       }
     } else {
       if (min_cost > cost) {
@@ -326,7 +329,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (oneflow::DTRDebugEnabled()) {
         LOG(INFO) << "move start, compute op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
-                  << ", total_size: " << total_size << ", cost: " << cost;
+                  << ", total_size: " << total_size << ", cost: " << cost << ", coeff: " << coeff;
       }
       start++;
     }
@@ -341,8 +344,9 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
   }
   for (auto* piece : pieces_to_be_evicted) {
     if (oneflow::DTRDebugEnabled()) {
+      int coeff = -1;
       LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
-                << ", cost: " << get_cost(piece->tensor, -1) << ", compute op: "
+                << ", cost: " << get_cost(piece->tensor, coeff) << ", compute op: "
                 << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no tensor");
     }
     size2 += piece->size;

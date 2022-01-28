@@ -261,9 +261,22 @@ int DTRTensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
   // split start_tensor from the chain
   auto&& pesudo_node = obj->node->pesudo_node();
   auto&& fa = find_father(pesudo_node);
-  fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
-  fa->reduce_cnt();
+  if (fa == pesudo_node) {
+    std::cout << "pesudo compute father" << std::endl;
+  }
+  if (fa->cnt() > 1) {
+    fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
+    std::cout << "fa original cnt: " << fa->cnt() << std::endl;
+    fa->reduce_cnt();
+    std::cout << "fa current cnt: " << fa->cnt() << std::endl;
+  }
   obj->reset_pesudo_node();
+  auto&& pesudo_node_new = obj->node->pesudo_node();
+  auto&& fa_new = find_father(pesudo_node_new);
+  if (fa_new != pesudo_node_new) {
+    std::cout << "PESUDO NODE NEW != ITSELF, ERROR!" << std::endl;
+  }
+  std::cout << "new fa current cnt: " << fa_new->cnt() << "new pesudo node cnt: " << pesudo_node_new->cnt() << ", fa == pesudo_node? " << (fa_new == pesudo_node_new) << std::endl;
   return fa->cnt();
 }
 
@@ -289,7 +302,7 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj) {
+Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, const char* start_id, const char* end_id) {
   // include new end_tensor in the chain
   auto* operand = obj->compute_op();
   const auto& inputs = operand->inputs();
@@ -298,7 +311,7 @@ Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) { pesudo_merge(dtr_blob_object->node, obj->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->blob().dptr() > start_id && obj->blob().dptr() < end_id) { pesudo_merge(dtr_blob_object->node, obj->node); }
     }
   }
 
@@ -306,7 +319,7 @@ Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) { pesudo_merge(obj->node, dtr_blob_object->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->blob().dptr() > start_id && obj->blob().dptr() < end_id) { pesudo_merge(obj->node, dtr_blob_object->node); }
     }
   }
   return Maybe<void>::Ok();
