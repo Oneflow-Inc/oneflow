@@ -38,7 +38,7 @@ class FuseInstructionType : public vm::InstructionType {
 
   void InitInstructionStatus(Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
-    auto* ptr = static_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
+    auto* ptr = static_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());  // NOLINT
     auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
     auto* last_instr_msg = CHECK_NOTNULL(instr_msg_list->Last());
     // init instruction status by last instruction_msg.
@@ -48,7 +48,7 @@ class FuseInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
-    auto* ptr = static_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
+    auto* ptr = static_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());  // NOLINT
     auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
       OF_PROFILER_RANGE_PUSH("F:" + instr_msg->DebugName());
