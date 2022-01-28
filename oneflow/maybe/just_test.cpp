@@ -230,7 +230,7 @@ TEST(Just, WithMsg) {
 
     explicit UniqueInt(int x) : x{x} {}
     UniqueInt(const UniqueInt& i) = delete;
-    UniqueInt(UniqueInt&& i) noexcept : x{i.x} { i.drop(); }
+    UniqueInt(UniqueInt&& i) noexcept : x{i.x} { i.drop(); } // NOLINT
     UniqueInt& operator=(const UniqueInt& i) = delete;
     UniqueInt& operator=(UniqueInt&& i) noexcept {
       x = i.x;
