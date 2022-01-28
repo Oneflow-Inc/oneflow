@@ -109,6 +109,9 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
 
+  virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    OF_UNIMPLEMENTED();
+  };
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
@@ -492,6 +495,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     set_requires_grad(old_requires_grad);
     grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
+  }
+
+  Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override {
+    return impl_->RegisterStorageDeleteHook(hook);
   }
 
   Maybe<MirroredTensor> AsMirroredTensor() override {

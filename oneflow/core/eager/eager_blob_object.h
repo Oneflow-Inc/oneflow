@@ -35,6 +35,10 @@ class TensorStorage {
         producer_op_device_(NullOpt),
         last_used_device_(NullOpt) {}
 
+  ~TensorStorage() {
+    for (const auto& hook : storage_delete_hooks_) { hook(); }
+  }
+
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
@@ -63,12 +67,17 @@ class TensorStorage {
     blob_dptr_.reset();
   }
 
+  void RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    storage_delete_hooks_.emplace_back(hook);
+  }
+
  private:
   size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
   Optional<Symbol<Device>> producer_op_device_;
   Optional<Symbol<Device>> last_used_device_;
+  std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
 class EagerBlobObject final : public BlobObject {
@@ -103,6 +112,9 @@ class EagerBlobObject final : public BlobObject {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
     return Maybe<void>::Ok();
+  }
+  void RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    tensor_storage_->RegisterStorageDeleteHook(hook);
   }
 
   Maybe<LocalDepObject*> compute_local_dep_object() const {
