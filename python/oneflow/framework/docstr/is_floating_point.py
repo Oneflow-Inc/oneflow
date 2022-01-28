@@ -13,14 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
+add_docstr(
+    oneflow.is_floating_point,
+    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
 
-def nms_op(boxes, scores, iou_threshold: float):
-    score_inds = flow.argsort(scores, dim=0, descending=True)
-    boxes = flow._C.gather(boxes, score_inds, axis=0)
-    keep = flow._C.nms(boxes, iou_threshold)
-    index = flow.squeeze(flow.argwhere(keep), dim=[1])
-    return flow._C.gather(score_inds, index, axis=0)
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> output = flow.is_floating_point(input)
+        >>> output
+        False
+    """,
+)
