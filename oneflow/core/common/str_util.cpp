@@ -23,7 +23,7 @@ namespace internal {
 
 std::string JoinPathImpl(std::initializer_list<std::string> paths) {
   std::string result;
-  for (std::string path : paths) {
+  for (const std::string& path : paths) {
     if (path.empty()) continue;
     if (result.empty()) {
       result = path;
