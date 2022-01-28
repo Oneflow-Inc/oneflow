@@ -48,6 +48,9 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     // Sequantialize instructions to avoid explosive memory allocation of source ops
     if (dev_vm_dep_object_consume_mode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
       DoEach(device_schedule_dep_object);
+    } else if (opkernel().input_tuple_indexes4const_ibns().empty()
+               && opkernel().input_tuple_indexes4mut_ibns().empty()) {
+      DoEach(device_schedule_dep_object);
     }
   }
 
