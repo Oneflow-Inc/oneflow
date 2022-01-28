@@ -120,9 +120,9 @@ struct AdagradUpdateFunctor {
 template<typename T, typename G>
 struct LambGradFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* adam_diff, T* model,
-                  T* m, T* v, float scale, float l1, float l2, float beta1, float beta2,
-                  float epsilon, bool do_bias_correction, float bias_correction1, float bias_correction2) const {
+  void operator()(const G* model_diff, T* adam_diff, T* model, T* m, T* v, float scale, float l1,
+                  float l2, float beta1, float beta2, float epsilon, bool do_bias_correction,
+                  float bias_correction1, float bias_correction2) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);

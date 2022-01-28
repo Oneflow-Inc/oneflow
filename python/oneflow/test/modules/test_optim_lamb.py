@@ -109,7 +109,9 @@ def compare_with_numpy_lamb(
 
         def np_train_one_iter(step, grad):
             if clip_grad_max_norm != -1:
-                _, grad = clip_grad_norm_np(grad, clip_grad_max_norm, clip_grad_norm_type)
+                _, grad = clip_grad_norm_np(
+                    grad, clip_grad_max_norm, clip_grad_norm_type
+                )
 
             grad = grad + l2 * x
 
@@ -144,7 +146,9 @@ def compare_with_numpy_lamb(
     of_res = train_by_oneflow().numpy()
     np_res = train_by_numpy()
 
-    test_case.assertTrue(np.allclose(of_res.flatten(), np_res.flatten(), rtol=1e-3, atol=1e-3))
+    test_case.assertTrue(
+        np.allclose(of_res.flatten(), np_res.flatten(), rtol=1e-3, atol=1e-3)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
