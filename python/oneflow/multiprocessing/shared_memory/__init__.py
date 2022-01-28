@@ -23,7 +23,7 @@ __all__ = [
 class SharedMemory:
     def __init__(self, name=None, create=False, size=0):
         if not size >= 0:
-            raise ValueError("'size' must be a positive integer")
+            raise ValueError("'size' must be a non-negative integer")
         if create:
             if size == 0:
                 raise ValueError("'size' must be a positive number different from zero")
