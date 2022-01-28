@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - add-refactor-release
       - "canary/*"
   workflow_dispatch:
     inputs:
