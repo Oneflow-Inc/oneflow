@@ -114,10 +114,6 @@ void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& sel
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
-}
-
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
