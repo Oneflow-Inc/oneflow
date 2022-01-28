@@ -48,9 +48,7 @@ bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
 }
 
 void CpuStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH(
-      "S:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
+  OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
