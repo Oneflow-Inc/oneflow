@@ -64,8 +64,8 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
   if (producer_parallel_desc == consumer_parallel_desc) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
-    // B->B, B->S, B->P
-    if (producer_sbp_parallel.has_broadcast_parallel()) { return 0.0; }
+    // B->S, B->P
+    if (producer_sbp_parallel.has_broadcast_parallel()) { return 1.0; }
     // S->P for eager. It should be 0 as well.
     // NOTE: Similar to B->P, we just make the other part to be 0. You can consider P as S(i) for an
     // arbitrary i.
@@ -192,13 +192,6 @@ Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
           logical_blob_size, hierarchy->At(dim_diff_sbp), on_same_devices);
     }
   }
-  // (1, 2) || (2, 1):
-  // Not support something like S0 -> (B, P)
-  // (2, 2) :
-  // if both dimensions are different, like (S0, S1) -> (S1, S0)
-  // TODO: support it recently!
-  // TODO: support it recently!
-  // TODO: support it recently!
   return kUnsupportedBoxing;
 }
 
@@ -251,6 +244,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
     for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
       const auto& in_sbp = reduced_in_nd_sbp.sbp_parallel(i);
       const auto& out_sbp = reduced_out_nd_sbp.sbp_parallel(i);
+      // Have bugs here. (B, S0) -> (S0, S0) will give a cost 0.
+      // Actually it is (1-1/m)T for hierarchy (n, m)
+      // TODO: Fix that after support all sbp combination for eager.
       total_cost += JUST(ComputCopyCostBetweenTwoSbpParallel(
           in_sbp, out_sbp, logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
     }
