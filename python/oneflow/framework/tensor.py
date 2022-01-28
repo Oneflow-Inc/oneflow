@@ -19,7 +19,6 @@ from oneflow._oneflow_internal.exception import IndexException
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-from torch import device
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
