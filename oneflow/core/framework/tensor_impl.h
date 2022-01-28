@@ -89,6 +89,10 @@ class TensorImpl {
   }
   bool has_autograd_meta() const { return autograd_meta_.get(); }
 
+  virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    OF_UNIMPLEMENTED();
+  }
+
  protected:
   TensorImpl(bool requires_grad, bool is_leaf) : requires_grad_(requires_grad), is_leaf_(is_leaf) {}
 
@@ -237,6 +241,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
+
+  Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;
 
  private:
   Maybe<void> UpdateTensorStorage();

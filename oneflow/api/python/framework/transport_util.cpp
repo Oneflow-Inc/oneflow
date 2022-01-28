@@ -13,24 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/instruction_replay.h"
 
-namespace py = pybind11;
+#include "oneflow/core/framework/transport_util.h"
 
-namespace oneflow {
+ONEFLOW_API_PYBIND11_MODULE("global_view", m) {
+  using namespace oneflow;
 
-namespace debug {
-
-ONEFLOW_API_PYBIND11_MODULE("debug", m) {
-  m.def("start_recording_instructions", &StartRecordingInstructions);
-  m.def("end_recording_instructions", &EndRecordingInstructions);
-  m.def("clear_recorded_instructions", &ClearRecordedInstructions);
-  m.def("replay_instructions", &ReplayInstructions);
+  m.def("set_sync_timeout", [](int64_t secs) { TransportUtil::SetTimeoutSeconds(secs); });
 }
-
-}  // namespace debug
-
-}  // namespace oneflow
