@@ -57,6 +57,7 @@ class CpuNumThreadsGuard {
       tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
                                               set_num_threads_);
     }
+    printf("set_num_threads_ = %ld, saved_num_threads_= %ld \n", set_num_threads_, saved_num_threads_);
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
 // TODO
@@ -127,7 +128,7 @@ class CpuStream : public Stream {
     }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    CpuNumThreadsGuard manager(num_threads);
+    CpuNumThreadsGuard guard(num_threads);
     size_t nthr_chunk_size = DivUp((end - begin), num_threads);
     int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
 
