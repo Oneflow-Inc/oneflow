@@ -223,34 +223,55 @@ TEST(Just, Ptr) {
 }
 
 TEST(Just, WithMsg) {
-  using Error = simple::StackedError<std::string>;
-  using MaybeInt = Maybe<int, Error>;
+  struct UniqueInt {
+    int x;
 
-  auto f = [](int x) -> MaybeInt {
-    if (x > 10) { return Error{"input value " + std::to_string(x)}; }
+    void drop() { x = -333; }
 
-    return 233;
+    explicit UniqueInt(int x) : x{x} {}
+    UniqueInt(const UniqueInt& i) = delete;
+    UniqueInt(UniqueInt&& i) noexcept : x{i.x} { i.drop(); }
+    UniqueInt& operator=(const UniqueInt& i) = delete;
+    UniqueInt& operator=(UniqueInt&& i) noexcept {
+      x = i.x;
+      i.drop();
+      return *this;
+    }
+    ~UniqueInt() { drop(); }
   };
 
-  auto g = [](int x) { return x * x - 5 * x + 3; };
+  using Error = simple::StackedError<std::string>;
+  using MaybeInt = Maybe<UniqueInt, Error>;
 
-  auto h = [&](int x) -> MaybeInt {
-    auto y = g(x);
-    return JUST_MSG(f(y), "input value g(", x, ")");
+  auto f = [](UniqueInt x) -> MaybeInt {
+    if (x.x > 10) { return Error{"input value " + std::to_string(x.x)}; }
+
+    return UniqueInt{233};
+  };
+
+  auto g = [](UniqueInt x) {
+    int y = x.x;
+    return UniqueInt{y * y - 5 * y + 3};
+  };
+
+  auto h = [&](UniqueInt x) -> MaybeInt {
+    int n = x.x;
+    auto y = g(std::move(x));
+    return JUST_MSG(f(std::move(y)), "input value g(", n, ")");
   };
 
   auto i = [&](float x) -> MaybeInt {
-    int y = x;
-    return JUST_MSG(h(y), "input value int(", x, ")");
+    UniqueInt y{int(x)};
+    return JUST_MSG(h(std::move(y)), "input value int(", x, ")");
   };
 
   auto data = CHECK_JUST(i(1));
-  ASSERT_EQ(data, 233);
+  ASSERT_EQ(data.x, 233);
 
   auto err = details::JustPrivateScope::StackedError(i(10.123));
   ASSERT_EQ(err.Error(), "input value 53");
-  ASSERT_EQ(err.StackElem(0).message, "f(y): input value g(10)");
-  ASSERT_EQ(err.StackElem(1).message, "h(y): input value int(10.123)");
+  ASSERT_EQ(err.StackElem(0).message, "f(std::move(y)): input value g(10)");
+  ASSERT_EQ(err.StackElem(1).message, "h(std::move(y)): input value int(10.123)");
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
   ASSERT_EXIT(CHECK_JUST(i(10.234)), testing::KilledBySignal(SIGABRT), R"(input value 53)");
