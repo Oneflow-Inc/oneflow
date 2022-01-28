@@ -65,6 +65,12 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
              return graph.RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors)
                  .GetOrThrow();
            })
+      .def("register_wild_variable_names_and_tensors",
+           [](NNGraph& graph, const std::vector<std::string>& variable_op_names,
+              const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
+             return graph.RegisterWildVarOpNamesAndTensorsToBeLoaded(variable_op_names, variable_tensors)
+                 .GetOrThrow();
+           })
       .def_property_readonly("wild_var_names", &APINNGraphWildVarNames)
       .def_property_readonly("wild_var_tensors", &APINNGraphWildVarTensors)
       .def("complie_and_init_runtime",

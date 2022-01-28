@@ -8,7 +8,7 @@ import oneflow.unittest
 
 
 def _test_linear_graph_save_load(test_case, device):
-    def train_with_graph():
+    def train_with_graph(call_cnt=0, state_dict=None):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -43,25 +43,36 @@ def _test_linear_graph_save_load(test_case, device):
                 out.backward()
                 return out
 
+        print(f"===Call count num {call_cnt}===", flush=True)
         linear_t_g = LinearTrainGraph()
+        linear_t_g.debug(2)
+        if (state_dict):
+            print("---Load state dict---", flush=True)
+            linear_t_g.load_state_dict(state_dict)
+            # Check state in module has been loaded.
+            test_case.assertTrue(np.array_equal(state_dict["linear"]["weight"].numpy(), linear.weight))
+            test_case.assertTrue(np.array_equal(state_dict["linear"]["bias"].numpy(), linear.bias))
 
-        print("---Iter 0---")
+        print("---Iter 0---", flush=True)
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()
-        print("Iter 0 state dict: ", iter0_state_dict)
+        if (state_dict):
+            # Check wild variable state initialized in job has been loaded.
+            cur_train_step = iter0_state_dict["System-Train-TrainStep"].to_local().numpy()[0]
+            test_case.assertTrue(3 == cur_train_step)
+        print("Iter 0 state dict: ", iter0_state_dict, flush=True)
         #iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
 
-        print("---Iter 1---")
+        print("---Iter 1---", flush=True)
         of_graph_out = linear_t_g(x)
         iter1_state_dict = linear_t_g.state_dict()
-        print("Iter 1 state dict: ", iter1_state_dict)
+        print("Iter 1 state dict: ", iter1_state_dict, flush=True)
 
-        print("---Load Iter 0 state dict---")
-        linear_t_g.load_state_dict(iter0_state_dict)
-        print("Now state dict after load iter 0 state dict: ", linear_t_g.state_dict())
+        return iter1_state_dict
 
 
-    train_with_graph()
+    state_dict_0 = train_with_graph(0, None)
+    state_dict_1 = train_with_graph(1, state_dict_0)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

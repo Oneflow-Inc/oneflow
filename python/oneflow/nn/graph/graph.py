@@ -255,7 +255,10 @@ class Graph(object):
         Donot override this function.
         """
         if not self._is_compiled:
-            self._compile(*args)
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level
+            ):
+                self._compile(*args)
 
         return self._run(*args)
 
@@ -287,6 +290,7 @@ class Graph(object):
         state_dict: Dict[str, Dict[str, Tensor]],
         strict: bool = True,
     ):
+        assert not self._is_compiled, "nn.Graph's state dict can only be load before the first call of graph."
         wild_var_names = list()
         wild_var_tensors = list()
         for name, sub_dict in state_dict.items():
@@ -295,13 +299,12 @@ class Graph(object):
                 self._blocks[name].origin.load_state_dict(sub_dict, strict)
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
-                self._print(2, 0, f"Unknown key {name} in state_dict.")
                 assert isinstance(sub_dict, Tensor)
                 wild_var_names.append(name)
                 wild_var_tensors.append(sub_dict)
 
         if len(wild_var_names):
-            self._c_nn_graph.register_wild_var_names_and_tensors(
+            self._c_nn_graph.register_wild_variable_names_and_tensors(
                 wild_var_names, convert_to_tensor_tuple(wild_var_tensors)
             )
 
@@ -546,10 +549,7 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
-            ):
-                eager_outputs = self._build_graph(*args)
+            eager_outputs = self._build_graph(*args)
             build_graph_end = time.perf_counter()
             self._print(
                 0,

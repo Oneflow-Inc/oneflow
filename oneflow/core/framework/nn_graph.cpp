@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <cstddef>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -100,6 +102,18 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 }
 
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
+
+Maybe<void> NNGraph::RegisterWildVarOpNamesAndTensorsToBeLoaded(
+    const std::vector<std::string>& wild_var_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& wild_var_tensors) {
+  CHECK_EQ_OR_RETURN(wild_var_names.size(), wild_var_tensors.size());
+  CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_.empty())
+      << " The wild variables of nn.Graph " << name_ << " are register repeatedly.";
+  FOR_RANGE(size_t, i, 0, wild_var_names.size()) {
+    CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_.emplace(wild_var_names.at(i), wild_var_tensors.at(i)).second);
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
     const std::vector<std::string>& inputs_op_names,
@@ -274,9 +288,30 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   NewRuntimeBuffers();
 
+  JUST(LoadWildVariableAfterSyncPlan());
   JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::LoadWildVariableAfterSyncPlan() {
+  // Load wild variable from state dict.
+  for (const auto& iter: wild_variable_op_tobe_loaded_name2tensor_) {
+    auto wild_iter = wild_variable_op_name2tensor_.find(iter.first);
+    if (wild_iter == wild_variable_op_name2tensor_.end()) {
+      LOG(WARNING) << "nn.Graph with name " << name_ << " find unknown wild state loaded with key " << iter.first;
+      continue;
+    }
+    auto var_iter = variable_op_name2tensor_.find(iter.first);
+    if (var_iter == variable_op_name2tensor_.end()) {
+      LOG(WARNING) << "nn.Graph with name " << name_ << " find unknown wild state loaded with key " << iter.first;
+      continue;
+    }
+    wild_iter->second = iter.second;
+    var_iter->second = iter.second;
+    VLOG(2) << "nn.Graph with name " << name_ << " load wild state with key " << iter.first;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -285,13 +320,14 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   JUST(vm::CurrentRankSync());
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   auto job_id = job_ctx->job_id();
+  // Create or Rebuild variable, then get the real blob.
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
     if (/*is_null=*/!tensor) {
-      // Deal with tensors which need to be created.
+      // Deal with tensors which need to be created, we can call these tensors as wild variables.
       const auto& op_attribute =
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
 
@@ -319,7 +355,10 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         tensor = JUST(one::functional::ConsistentConstant(
             blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
         variable_op_name2tensor_.at(var_name) = tensor;
-
+        auto find_iter = wild_variable_op_name2tensor_.find(var_name);
+        if (find_iter != wild_variable_op_name2tensor_.end()) {
+          wild_variable_op_name2tensor_[var_name] = tensor;
+        }
         // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime
         // valid.
         Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
@@ -328,10 +367,6 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       }
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-      auto find_iter = wild_variable_op_name2tensor_.find(var_name);
-      if (find_iter != wild_variable_op_name2tensor_.end()) {
-        wild_variable_op_name2tensor_[var_name] = tensor;
-      }
       VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
               << std::endl
               << var_conf.DebugString()

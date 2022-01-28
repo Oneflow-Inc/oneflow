@@ -42,6 +42,9 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
 
+  Maybe<void> RegisterWildVarOpNamesAndTensorsToBeLoaded(
+    const std::vector<std::string>& wild_var_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& wild_var_tensors);
   Maybe<void> RegisterInputOpNamesAndTensors(
       const std::vector<std::string>& inputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);
@@ -59,6 +62,7 @@ class NNGraph final : public NNGraphIf {
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
+  Maybe<void> LoadWildVariableAfterSyncPlan();
   Maybe<void> GetVariableRealBlobAfterSyncPlan();
 
   void NewRuntimeBuffers();
@@ -72,6 +76,7 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::string> inputs_tensor_meta_str_;
   std::vector<std::string> outputs_tensor_meta_str_;
   HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name2tensor_;
+  HashMap<std::string, std::shared_ptr<one::Tensor>> wild_variable_op_tobe_loaded_name2tensor_;
   HashMap<std::string, std::shared_ptr<one::Tensor>> wild_variable_op_name2tensor_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
   HashSet<std::string> variable_op_names_;
