@@ -84,8 +84,10 @@ class CudaStream : public Stream {
 
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
-  cublasLtHandle_t cublas_lt_handle() const; 
+  cublasLtHandle_t cublas_lt_handle() const;
   cudnnHandle_t cudnn_handle() const;
+  void* cublas_workspace() const;
+  size_t cublas_workspace_size() const;
   const cudaDeviceProp& device_properties() const;
 
   void InitLaunchConfigWithWaves(CudaLaunchConfig* config, size_t elem_cnt, size_t block_size,
@@ -135,10 +137,8 @@ class CudaStream : public Stream {
   cublasLtHandle_t cublas_lt_handle_{}; 
   cudnnHandle_t cudnn_handle_{};
   int device_index_;
-#if CUBLAS_VERSION >= 11200 // maybe remove cuda11 limitation. 
   void* workspace_{};
   size_t workspace_size_{};
-#endif  // CUBLAS_VERSION >= 11200
 #ifdef WITH_CUDA_GRAPHS
   bool is_graph_capturing_{};
 #endif  // WITH_CUDA_GRAPHS

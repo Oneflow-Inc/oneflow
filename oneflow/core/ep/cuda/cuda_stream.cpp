@@ -161,6 +161,10 @@ cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
 
 cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }
 
+void* CudaStream::cublas_workspace() const { return workspace_; }
+
+size_t CudaStream::cublas_workspace_size() const { return workspace_size_; }
+
 cudnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
 
 const cudaDeviceProp& CudaStream::device_properties() const { return device_->properties(); }

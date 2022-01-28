@@ -207,13 +207,6 @@ private:
         }
         const int cublas_ldc = n;
 
-        #if CUDA_VERSION >= 11000
-        cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
-        #else
-        cublasGemmAlgo_t algo =
-            (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
-        #endif
-
         cublasLtMatmulDesc_t operationDesc = NULL;
         OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc, cublas_compute_dtype, cuda_data_type));
 
@@ -252,9 +245,10 @@ private:
                                         reinterpret_cast<T*>(out->mut_dptr()),
                                         cublas_c_desc,
                                         NULL,
-                                        NULL,
-                                        0,
-                                        0));
+                                        ctx->stream()->As<ep::CudaStream>()->cublas_workspace(),
+                                        ctx->stream()->As<ep::CudaStream>()->cublas_workspace_size(),
+                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+                                        
         OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operationDesc));
         OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc)); 
         OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc)); 
