@@ -54,11 +54,15 @@ __device__ __forceinline__
   return CastCASImpl<T, unsigned long long int>(address, compare, val);
 }
 
+#if __CUDA_ARCH__ >= 700
+
 template<typename T>
 __device__ __forceinline__ typename std::enable_if<sizeof(T) == sizeof(unsigned short int), T>::type
 CASImpl(T* address, T compare, T val) {
   return CastCASImpl<T, unsigned short int>(address, compare, val);
 }
+
+#endif  // __CUDA_ARCH__ >= 700
 
 __device__ __forceinline__ int CASImpl(int* address, int compare, int val) {
   return atomicCAS(address, compare, val);
@@ -75,11 +79,15 @@ __device__ __forceinline__ unsigned long long int CASImpl(unsigned long long int
   return atomicCAS(address, compare, val);
 }
 
+#if __CUDA_ARCH__ >= 700
+
 __device__ __forceinline__ unsigned short int CASImpl(unsigned short int* address,
                                                       unsigned short int compare,
                                                       unsigned short int val) {
   return atomicCAS(address, compare, val);
 }
+
+#endif  // __CUDA_ARCH__ >= 700
 
 template<typename T>
 struct AddOp {
