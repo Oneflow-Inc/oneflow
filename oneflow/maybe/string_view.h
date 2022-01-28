@@ -14,23 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/instruction_replay.h"
+#ifndef ONEFLOW_MAYBE_STRING_VIEW_H_
+#define ONEFLOW_MAYBE_STRING_VIEW_H_
 
-namespace py = pybind11;
+#include "nonstd/string_view.hpp"
 
-namespace oneflow {
+template<typename T>
+using BasicStringView = nonstd::basic_string_view<T>;
 
-namespace debug {
+using StringView = BasicStringView<char>;
 
-ONEFLOW_API_PYBIND11_MODULE("debug", m) {
-  m.def("start_recording_instructions", &StartRecordingInstructions);
-  m.def("end_recording_instructions", &EndRecordingInstructions);
-  m.def("clear_recorded_instructions", &ClearRecordedInstructions);
-  m.def("replay_instructions", &ReplayInstructions);
-}
-
-}  // namespace debug
-
-}  // namespace oneflow
+#endif  // ONEFLOW_MAYBE_STRING_VIEW_H_
