@@ -27,7 +27,6 @@ bool operator==(const BiasCorrectionFactorCacheKey& lhs, const BiasCorrectionFac
   return (lhs.beta == rhs.beta) && (lhs.parallel_conf == rhs.parallel_conf);
 }
 
-
 }  // namespace oneflow
 
 namespace std {
@@ -44,8 +43,8 @@ struct hash<oneflow::BiasCorrectionFactorCacheKey> {
 }  // namespace std
 
 namespace oneflow {
-  
- class BiasCorrectionFactorState final : public JobPassState {
+
+class BiasCorrectionFactorState final : public JobPassState {
  public:
   BiasCorrectionFactorState() {}
   ~BiasCorrectionFactorState() override = default;
@@ -88,7 +87,6 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   return helper_variable_op;
 }
-
 
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                              const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,

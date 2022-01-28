@@ -150,7 +150,9 @@ def compare_with_numpy_lamb(
 
     np_res = train_by_numpy()
 
-    test_case.assertTrue(np.allclose(of_res.flatten(), np_res.flatten(), rtol=1e-3, atol=1e-3))
+    test_case.assertTrue(
+        np.allclose(of_res.flatten(), np_res.flatten(), rtol=1e-3, atol=1e-3)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()

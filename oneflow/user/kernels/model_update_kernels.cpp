@@ -695,7 +695,7 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
-      const user_op::Tensor* bias_correction1= ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
       // Just for Lazy optional input check.
       CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
       bias_correction1_ptr = bias_correction1->dptr<float>();
@@ -729,13 +729,13 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
-    
+
     LambUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, learning_rate_val, do_bias_correction, bias_correction1_val,
-        bias_correction2_val, learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr,
-        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(),
-        m->mut_dptr<T>(), v->mut_dptr<T>(), tbm.NormBufferPtr());
+        ctx->stream(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon, weight_decay,
+        learning_rate_val, do_bias_correction, bias_correction1_val, bias_correction2_val,
+        learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+        v->mut_dptr<T>(), tbm.NormBufferPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

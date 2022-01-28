@@ -201,9 +201,7 @@ class LAMB(Optimizer):
                     v_tensor = self._state[param]["exp_avg_sq"]
 
                     flow._C.dispatch_lamb_update(
-                        self._op,
-                        (param, param.grad, m_tensor, v_tensor),
-                        **kwargs
+                        self._op, (param, param.grad, m_tensor, v_tensor), **kwargs
                     )
 
             self._state["step"] += 1

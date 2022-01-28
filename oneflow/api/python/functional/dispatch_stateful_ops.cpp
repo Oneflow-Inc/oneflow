@@ -480,24 +480,26 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();
       });
-  m.add_functor(
-    "DispatchLambUpdate",
-    [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate, float bias_correction1, float bias_correction2, double scale, float l1, float l2, float beta1, float beta2, float epsilon, float weight_decay, bool do_bias_correction) -> Maybe<void> {
-      MutableAttrMap attrs;
-      JUST(attrs.SetAttr("learning_rate_val", learning_rate));
-      JUST(attrs.SetAttr("bias_correction1_val", bias_correction1));
-      JUST(attrs.SetAttr("bias_correction2_val", bias_correction2));
-      JUST(attrs.SetAttr("scale", scale));
-      JUST(attrs.SetAttr("l1", l1));
-      JUST(attrs.SetAttr("l2", l2));
-      JUST(attrs.SetAttr("beta1", beta1));
-      JUST(attrs.SetAttr("beta2", beta2));
-      JUST(attrs.SetAttr("epsilon", epsilon));
-      JUST(attrs.SetAttr("weight_decay", weight_decay));
-      JUST(attrs.SetAttr("do_bias_correction", do_bias_correction));
-      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
-      return Maybe<void>::Ok();
-    });
+  m.add_functor("DispatchLambUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, float bias_correction1, float bias_correction2,
+                   double scale, float l1, float l2, float beta1, float beta2, float epsilon,
+                   float weight_decay, bool do_bias_correction) -> Maybe<void> {
+                  MutableAttrMap attrs;
+                  JUST(attrs.SetAttr("learning_rate_val", learning_rate));
+                  JUST(attrs.SetAttr("bias_correction1_val", bias_correction1));
+                  JUST(attrs.SetAttr("bias_correction2_val", bias_correction2));
+                  JUST(attrs.SetAttr("scale", scale));
+                  JUST(attrs.SetAttr("l1", l1));
+                  JUST(attrs.SetAttr("l2", l2));
+                  JUST(attrs.SetAttr("beta1", beta1));
+                  JUST(attrs.SetAttr("beta2", beta2));
+                  JUST(attrs.SetAttr("epsilon", epsilon));
+                  JUST(attrs.SetAttr("weight_decay", weight_decay));
+                  JUST(attrs.SetAttr("do_bias_correction", do_bias_correction));
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
+                });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
