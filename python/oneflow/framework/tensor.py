@@ -870,6 +870,48 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
+def _reshape(self, *shape):
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
+    else:
+        new_shape = shape
+    return flow._C.reshape(self, new_shape)
+
+
+def _view(self, *shape):
+    return flow.view(self, *shape)
+
+
+def _sort(self, dim: int = -1, descending: bool = False):
+    return flow.sort(self, dim, descending)
+
+
+def _type_as(self, target):
+    return self.to(dtype=target.dtype)
+
+
+def _int(self):
+    return self.to(dtype=flow.int32)
+
+
+def _long(self):
+    return self.to(dtype=flow.int64)
+
+
+def _float(self):
+    return self.to(dtype=flow.float32)
+
+
+def _double(self):
+    return self.to(dtype=flow.float64)
+
+
+def _is_floating_point(self):
+    return flow.is_floating_point(self)
+
+
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -1063,6 +1105,15 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
+    Tensor.reshape = _reshape
+    Tensor.view = _view
+    Tensor.sort = _sort
+    Tensor.type_as = _type_as
+    Tensor.int = _int
+    Tensor.long = _long
+    Tensor.float = _float
+    Tensor.double = _double
+    Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
