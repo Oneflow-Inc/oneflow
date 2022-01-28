@@ -267,6 +267,8 @@ private:
     (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
     && (user_op::HobDataType("out", 0) == data_type));
 
+REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble); 
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat); 
+REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(half, DataType::kFloat16); 
 
 } // namespace oneflow  

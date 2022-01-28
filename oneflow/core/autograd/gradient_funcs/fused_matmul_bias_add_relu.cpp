@@ -67,7 +67,6 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
                       TensorTuple* in_grads) const {
     in_grads->resize(3);                      
     std::shared_ptr<one::Tensor> relu_grad = JUST(functional::ReluGrad(out_grads.at(0), ctx->SavedTensors().at(ctx->out_index))); 
-
     if(ctx->requires_grad_bias){
         // TODO: Currently Only support 2d fused_matmul. 
         // so here we hard encode bias reduce axis as 0. 
@@ -78,24 +77,25 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
     if(ctx->requires_grad_a){
         const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
         if (ctx->transpose_a) {
-        in_grads->at(0) =
+          in_grads->at(0) =
             JUST(functional::MatMul(input_b, relu_grad, ctx->transpose_b, true, ctx->alpha));
         } else {
-        in_grads->at(0) = JUST(
-            functional::MatMul(relu_grad, input_b, false, !(ctx->transpose_b), ctx->alpha));
+          in_grads->at(0) = 
+            JUST(functional::MatMul(relu_grad, input_b, false, !(ctx->transpose_b), ctx->alpha));
         }
     }
 
     if (ctx->requires_grad_b) {
         const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
         if (ctx->transpose_b) {
-        in_grads->at(1) =
-            JUST(functional::BroadcastMatmulGradB(relu_grad, input_a, ctx->alpha));
+            in_grads->at(1) =
+              JUST(functional::MatMul(relu_grad, input_a, true, ctx->transpose_a, ctx->alpha));
         } else {
-        in_grads->at(1) =
-            JUST(functional::BroadcastMatmulGradB(input_a, relu_grad, ctx->alpha));
+            in_grads->at(1) = JUST(
+              functional::MatMul(input_a, relu_grad, !(ctx->transpose_a), false, ctx->alpha));
         }
     }
+    
     return Maybe<void>::Ok(); 
 }
 
