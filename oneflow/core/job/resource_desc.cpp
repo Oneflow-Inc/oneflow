@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <algorithm>
+#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -107,6 +108,16 @@ void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
   }
   if (job_conf.has_cudnn_conv_enable_pseudo_half()) {
     cudnn_conf->set_cudnn_conv_enable_pseudo_half(job_conf.cudnn_conv_enable_pseudo_half());
+  }
+}
+
+void ResourceDesc::Update(const Resource& reso_conf) {
+  if (reso_conf.has_nccl_use_compute_stream()) {
+    resource_.set_nccl_use_compute_stream(reso_conf.nccl_use_compute_stream());
+  }
+  if (reso_conf.has_disable_group_boxing_by_dst_parallel()) {
+    resource_.set_disable_group_boxing_by_dst_parallel(
+        reso_conf.disable_group_boxing_by_dst_parallel());
   }
 }
 

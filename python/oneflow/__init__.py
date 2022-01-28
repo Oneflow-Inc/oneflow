@@ -92,6 +92,7 @@ from oneflow._C import repeat
 from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
+from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softsign
@@ -158,6 +159,9 @@ from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
+from oneflow._C import tensor_split
+from oneflow._C import hsplit
+from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import to
