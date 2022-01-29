@@ -116,6 +116,13 @@ Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self,
   return Maybe<void>::Ok();
 }
 
+Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
+                                                   const AutogradMeta::Hook& hook) {
+  if (!self->grad_fn_node()) { JUST(AddAccumulateFunctionNode(self)); }
+  self->mut_autograd_meta()->add_post_grad_accumulation_hook(hook);
+  return Maybe<void>::Ok();
+}
+
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
   const auto& nd_sbp = JUST(tensor.nd_sbp());
   const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());

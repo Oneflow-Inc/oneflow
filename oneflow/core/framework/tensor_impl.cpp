@@ -167,6 +167,12 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
+Maybe<void> EagerMirroredTensorImpl::RegisterStorageDeleteHook(const std::function<void()>& hook) {
+  CHECK_OR_RETURN(eager_blob_object_) << "EagerBlobObject has not initialized";
+  eager_blob_object_->RegisterStorageDeleteHook(hook);
+  return Maybe<void>::Ok();
+}
+
 MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),

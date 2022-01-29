@@ -167,6 +167,8 @@ VirtualMachine::~VirtualMachine() {
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
+  auto* vm = Global<VirtualMachine>::Get();
+  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
   return [last_total_erased]() -> Maybe<bool> {
     auto* vm = Global<VirtualMachine>::Get();
     CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
@@ -186,7 +188,7 @@ bool VirtualMachine::NoMoreErasedLivelyInstructions(
 }
 
 std::string VirtualMachine::GetBlockingDebugString() {
-  size_t limit = ThreadLocalEnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
+  size_t limit = EnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
   return vm_->GetLivelyInstructionListDebugString(limit);
 }
 

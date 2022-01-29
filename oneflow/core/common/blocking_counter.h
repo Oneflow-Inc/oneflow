@@ -30,11 +30,10 @@ class BlockingCounter final {
   BlockingCounter(int64_t cnt_val) { cnt_val_ = cnt_val; }
 
   int64_t Increase();
-
   int64_t Decrease();
-  void WaitUntilCntEqualZero();
+  void WaitForeverUntilCntEqualZero();
   Maybe<void> WaitUntilCntEqualZero(size_t timeout_seconds);
-  Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopAfterTimeout);
+  Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopWaitingAfterTimeout);
 
  private:
   std::mutex mtx_;
