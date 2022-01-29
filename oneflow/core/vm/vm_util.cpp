@@ -50,9 +50,7 @@ Maybe<void> ClusterSync() {
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
   return Maybe<void>::Ok();
 }
 
@@ -62,9 +60,7 @@ Maybe<void> CurrentRankSync() {
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
   return Maybe<void>::Ok();
 }
 
