@@ -456,7 +456,9 @@ struct LocalCallOpKernelUtil final {
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    if (operand->user_opkernel()->has_state_or_cache()) {
+      TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
