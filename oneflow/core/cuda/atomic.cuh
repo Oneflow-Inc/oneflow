@@ -54,15 +54,16 @@ __device__ __forceinline__
   return CastCASImpl<T, unsigned long long int>(address, compare, val);
 }
 
-#if __CUDA_ARCH__ >= 700
-
 template<typename T>
 __device__ __forceinline__ typename std::enable_if<sizeof(T) == sizeof(unsigned short int), T>::type
 CASImpl(T* address, T compare, T val) {
+#if __CUDA_ARCH__ >= 700
   return CastCASImpl<T, unsigned short int>(address, compare, val);
-}
-
+#else
+  __trap();
+  return 0;
 #endif  // __CUDA_ARCH__ >= 700
+}
 
 __device__ __forceinline__ int CASImpl(int* address, int compare, int val) {
   return atomicCAS(address, compare, val);
