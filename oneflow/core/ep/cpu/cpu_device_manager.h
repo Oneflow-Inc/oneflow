@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_CPU_CPU_DEVICE_MANAGER_H_
 #define ONEFLOW_CORE_EP_CPU_CPU_DEVICE_MANAGER_H_
 
-#include <cstddef>
 #include "oneflow/core/ep/include/device_manager.h"
 
 namespace oneflow {
