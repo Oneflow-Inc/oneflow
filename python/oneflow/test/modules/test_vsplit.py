@@ -46,7 +46,6 @@ class TestVsplitInt(flow.unittest.TestCase):
             dim3=random(3, 6),
         ).to(device)
         split = oneof(2,4,6)
-        split = random(1, 3).to(int)
         z = torch.vsplit(x, split)
         return z[0]
 
