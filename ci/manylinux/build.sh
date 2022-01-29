@@ -1,5 +1,5 @@
 set -ex
-export PATH=/usr/lib64/ccache:$PATH
+ONEFLOW_CI_BUILD_PARALLEL=${ONEFLOW_CI_BUILD_PARALLEL:-$(nproc)}
 gcc --version
 ld --version
 # clean python dir
@@ -21,9 +21,7 @@ fi
 cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECUTABLE=${ONEFLOW_CI_PYTHON_EXE}
 # cmake build
 cd ${ONEFLOW_CI_BUILD_DIR}
-cmake --build . -j $(nproc)
-cpack
-rm -rf ./cpack/_CPack_Packages
+cmake --build . --parallel ${ONEFLOW_CI_BUILD_PARALLEL}
 
 # build pip
 cd ${ONEFLOW_CI_SRC_DIR}

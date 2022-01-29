@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+
+namespace oneflow {
+
 namespace {
 
 template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::size_t,
@@ -197,14 +200,6 @@ Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
 }
 
 }  // namespace
-
-static int64_t TransportTimeOut = 5 * 60;
-
-/*static*/ int64_t TransportUtil::TimeoutSeconds() {
-  return ParseIntegerFromEnv("ONEFLOW_TRANSPORT_TIMEOUT", TransportTimeOut);
-}
-
-/*static*/ void TransportUtil::SetTimeoutSeconds(int64_t timeout) { TransportTimeOut = timeout; }
 
 /*static*/ Maybe<void> TransportUtil::SendDataToChildrenInHeap(
     const std::vector<int64_t>& rank_heap, const TransportToken& token, AsyncTransportCtx* ctx) {

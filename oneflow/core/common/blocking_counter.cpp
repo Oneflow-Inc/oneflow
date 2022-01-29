@@ -45,17 +45,17 @@ Maybe<void> BlockingCounter::WaitUntilCntEqualZero(size_t timeout_seconds) {
   });
 }
 
-void BlockingCounter::WaitUntilCntEqualZero() {
-  CHECK_JUST(WaitUntilCntEqualZero(60 * 60 * 24 * 30 * 12));
+void BlockingCounter::WaitForeverUntilCntEqualZero() {
+  CHECK_JUST(WaitUntilCntEqualZero([]() -> Maybe<bool> { return false; }));
 }
 
 Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
-    const std::function<Maybe<bool>()>& StopAfterTimeout) {
+    const std::function<Maybe<bool>()>& StopWaitingAfterTimeout) {
   while (true) {
-    auto status = TRY(WaitUntilCntEqualZero(ThreadLocalEnvInteger<ONEFLOW_TIMEOUT_SECONDS>()));
+    auto status = TRY(WaitUntilCntEqualZero(EnvInteger<ONEFLOW_TIMEOUT_SECONDS>()));
     if (status.IsOk()) { return status; }
     if (!status.error()->has_timeout_error()) { return status; }
-    if (JUST(StopAfterTimeout())) { return Maybe<void>::Ok(); }
+    if (JUST(StopWaitingAfterTimeout())) { return Maybe<void>::Ok(); }
   }
   UNIMPLEMENTED_THEN_RETURN();
 }
