@@ -240,6 +240,13 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
 
   double total_cost = 0.0;
   if (reduced_in_parallel_desc == reduced_out_parallel_desc) {
+    // NOTE: After analysis, transfer cost increase if spliting the same dimension.
+    // Example 1: (S(1), S(0), S(1), S(0)) -> (S(0), S(0), S(0), S(0))
+    // Example 2: (B, S(0)) -> (S(0), S(0))
+    // The cost would be (1-1/n)T, where n is the product of hierarchy number in those splitting
+    // dimensions. To give a more precise cost, we add a upper bound of those lost cost back for
+    // simplification.
+    bool normal_case = true;
     // nd to nd
     for (int32_t i = 0; i < reduced_in_parallel_desc.hierarchy()->NumAxes(); ++i) {
       const auto& in_sbp = reduced_in_nd_sbp.sbp_parallel(i);
@@ -249,6 +256,23 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
       // TODO: Fix that after support all sbp combination for eager.
       total_cost += JUST(ComputCopyCostBetweenTwoSbpParallel(
           in_sbp, out_sbp, logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
+      // detect the cases that splits the same dimension before this splitting
+      if (normal_case && in_sbp.has_split_parallel() && in_sbp == out_sbp) {
+        for (int32_t j = 0; j < i; j++) {
+          const auto& in_sbp_j = reduced_in_nd_sbp.sbp_parallel(j);
+          const auto& out_sbp_j = reduced_out_nd_sbp.sbp_parallel(j);
+          // in_sbp == out_sbp in this situation
+          if ((in_sbp_j != out_sbp_j) && (in_sbp_j == in_sbp || out_sbp_j == in_sbp)) {
+            normal_case = false;
+            break;
+          }
+        }
+      }
+    }
+    // Add the cost for the special case
+    if (!normal_case) {
+      total_cost +=
+          logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
     }
   } else {
     double logical_blob_size =
