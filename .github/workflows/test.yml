@@ -156,7 +156,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refactor-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-maybe-dir-to-digest
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -204,7 +204,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refactor-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-maybe-dir-to-digest
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -218,7 +218,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@refactor-release
+      - uses: Oneflow-Inc/get-oneflow@add-maybe-dir-to-digest
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -239,7 +239,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@refactor-release
+      - uses: Oneflow-Inc/get-oneflow@add-maybe-dir-to-digest
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -259,7 +259,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@refactor-release
+      - uses: Oneflow-Inc/get-oneflow@add-maybe-dir-to-digest
         name: Build manylinux ${{ matrix.entry }}
         id: build-xla
         if: ${{ matrix.entry =='cu102_xla' && !matrix.cache-hit }}
@@ -279,7 +279,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
-      - uses: Oneflow-Inc/get-oneflow@refactor-release
+      - uses: Oneflow-Inc/get-oneflow@add-maybe-dir-to-digest
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm13' && !matrix.cache-hit }}
         with:
@@ -301,7 +301,7 @@ jobs:
             3.8
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@refactor-release
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-maybe-dir-to-digest
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -312,7 +312,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@refactor-release
+        uses: Oneflow-Inc/get-oneflow/digest/upload@add-maybe-dir-to-digest
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -337,7 +337,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@refactor-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@add-maybe-dir-to-digest
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -381,7 +381,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refactor-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-maybe-dir-to-digest
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -397,7 +397,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@refactor-release
+        uses: Oneflow-Inc/get-oneflow/digest/download@add-maybe-dir-to-digest
         id: download-digest
         timeout-minutes: 10
         with:
@@ -676,7 +676,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@refactor-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@add-maybe-dir-to-digest
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
