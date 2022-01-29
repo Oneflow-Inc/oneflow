@@ -30,7 +30,7 @@ limitations under the License.
 #include <tbb/parallel_for.h>
 #include <tbb/global_control.h>
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// TODO
+// Nothing
 #else
 #error OF_CPU_THREADING_RUNTIME Error setting
 #endif
@@ -59,7 +59,7 @@ class CpuNumThreadsGuard {
     }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// TODO
+// Nothing
 #else
 #error OF_CPU_THREADING_RUNTIME Error setting
 #endif
@@ -75,7 +75,7 @@ class CpuNumThreadsGuard {
     }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// TODO
+// Nothing
 #else
 #error OF_CPU_THREADING_RUNTIME Error setting
 #endif
@@ -105,7 +105,7 @@ class CpuStream : public Stream {
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func) {
-    ParallelFor(begin, end, func, kDefaultGrain);
+    ParallelFor(begin, end, func, kParallelForDefaultGrain);
   }
 
   template<typename F>
@@ -128,8 +128,8 @@ class CpuStream : public Stream {
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
     CpuNumThreadsGuard guard(num_threads);
-    size_t nthr_chunk_size = DivUp((end - begin), num_threads);
-    int64_t chunk_size = std::max(nthr_chunk_size, grain_size);
+    size_t tmp_chunk_size = DivUp((end - begin), num_threads);
+    int64_t chunk_size = std::max(tmp_chunk_size, grain_size);
 
     tbb::parallel_for(
         tbb::blocked_range<int64_t>(begin, end, chunk_size),
@@ -153,7 +153,7 @@ class CpuStream : public Stream {
   std::unique_ptr<dnnl::stream> onednn_stream_;
 #endif
   Device* device_;
-  const size_t kDefaultGrain = 32768;
+  static constexpr size_t kParallelForDefaultGrain = 32768;
 };
 
 }  // namespace ep

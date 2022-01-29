@@ -98,6 +98,17 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
+void SetCpuDeviceManagerNumThreads() {
+  ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
+      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
+  constexpr size_t kDefaultUsedNumThreads = 2;
+  int64_t cpu_logic_core = std::thread::hardware_concurrency();
+  int64_t default_num_threads =
+      (cpu_logic_core / GlobalProcessCtx::NumOfProcessPerNode()) - kDefaultUsedNumThreads;
+  int64_t num_threads = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_THREADS", default_num_threads);
+  cpu_device_manager->SetDeviceNumThreads(num_threads);
+}
+
 void ClearAllSymbolAndIdCache() {
   Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
   Global<symbol::IdCache<std::string>>::Get()->ClearAll();
@@ -177,15 +188,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   }
   Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
-  ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
-      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
-  constexpr size_t kDefaultUsedNumThreads = 2;
-  int64_t cpu_logic_core = std::thread::hardware_concurrency();
-  int64_t default_num_threads =
-      (cpu_logic_core / GlobalProcessCtx::NumOfProcessPerNode()) - kDefaultUsedNumThreads;
-  int64_t num_threads = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_THREADS", default_num_threads);
-  cpu_device_manager->SetDeviceNumThreads(num_threads);
-
+  SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();

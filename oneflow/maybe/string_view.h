@@ -14,29 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
-#define ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+#ifndef ONEFLOW_MAYBE_STRING_VIEW_H_
+#define ONEFLOW_MAYBE_STRING_VIEW_H_
 
-#include "oneflow/core/vm/instruction.h"
+#include "nonstd/string_view.hpp"
 
-namespace oneflow {
+template<typename T>
+using BasicStringView = nonstd::basic_string_view<T>;
 
-namespace debug {
+using StringView = BasicStringView<char>;
 
-bool RecordingInstructions();
-
-void StartRecordingInstructions();
-
-void EndRecordingInstructions();
-
-void ClearRecordedInstructions();
-
-void RecordInstruction(const intrusive::shared_ptr<vm::InstructionMsg>& instruction);
-
-void ReplayInstructions();
-
-}  // namespace debug
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+#endif  // ONEFLOW_MAYBE_STRING_VIEW_H_
