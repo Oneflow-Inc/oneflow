@@ -575,6 +575,10 @@ if(BUILD_CPP_API)
     ${LLVM_RELATED_TARGETS}
     ${EXTERNAL_TARGETS})
 
+  if(BUILD_TESTING AND BUILD_SHARED_LIBS)
+    list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
+  endif()
+
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)
     list(APPEND LIBONEFLOW_TARGETS oneflow_testexe)
