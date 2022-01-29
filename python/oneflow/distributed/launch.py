@@ -169,7 +169,7 @@ def main():
             try:
                 # Note: use os.kill or process.kill() may only kill current process
                 # use killpg will kill(use signal) this process and all sub-processes
-                # 
+                #
                 # Note: Worker processes launched by data loader will exit automatically
                 # when its parent process exits because of `_prctl_pr_set_pdeathsig`.
                 os.killpg(os.getpid(), signal.SIGTERM)
