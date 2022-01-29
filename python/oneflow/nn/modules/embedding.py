@@ -60,27 +60,31 @@ class OneEmbeddingLookup(Module):
         assert embedding_options.__contains__("embedding_dim")
         embedding_dim = embedding_options["embedding_dim"]
         assert embedding_options.__contains__(
-            "scale_factor"
-        ), "you must set line_size scale_factor, if optimizer is sgd, set to 1, momentum set to 2, adam set 3"
-        scale_factor = embedding_options["scale_factor"]
+            "storage_dim"
+        ), "you must set storage_dim, if optimizer is sgd, set to embedding_dim * 1, momentum set to  embedding_dim * 2, adam set  embedding_dim * 3"
+        storage_dim = embedding_options["storage_dim"]
         assert embedding_dim > 0
-        assert scale_factor > 0
-        if embedding_options.__contains__("cache"):
-            cache = embedding_options["cache"]
-            assert isinstance(cache, (dict, list, tuple))
-            if isinstance(cache, dict):
-                _check_cache(cache)
-                cache = [cache]
-            else:
-                assert len(cache) <= 2
-                for i in range(len(cache)):
-                    assert isinstance(cache[i], dict)
-                    _check_cache(cache[i])
+        assert storage_dim in (
+            embedding_dim,
+            embedding_dim * 2,
+            embedding_dim * 3,
+        ), "you must set storage_dim to embedding_dim * 1 when optimizer is sgd, to embedding_dim * 2 when momentum, set to embedding_dim * 3 when adam"
 
         # kv store
         assert embedding_options.__contains__("kv_store")
         kv_store = embedding_options["kv_store"]
         assert isinstance(kv_store, dict)
+        if kv_store.__contains__("caches"):
+            caches = kv_store["caches"]
+            assert isinstance(caches, (dict, list, tuple))
+            if isinstance(caches, dict):
+                _check_cache(caches)
+                caches = [caches]
+            else:
+                assert len(caches) <= 2
+                for i in range(len(caches)):
+                    assert isinstance(caches[i], dict)
+                    _check_cache(caches[i])
         assert kv_store.__contains__("persistent_table")
         persistent_table = kv_store["persistent_table"]
         assert isinstance(persistent_table, dict)
@@ -109,8 +113,18 @@ class OneEmbeddingLookup(Module):
                 assert column.__contains__("initializer")
                 _check_initializer(column["initializer"])
 
-        self.dtype = embedding_options["dtype"]
-        del embedding_options["dtype"]
+        if embedding_options.__contains__("key_type"):
+            self.key_type = embedding_options["key_type"]
+            del embedding_options["key_type"]
+        else:
+            self.key_type = flow.int64
+
+        if embedding_options.__contains__("value_type"):
+            self.value_type = embedding_options["value_type"]
+            del embedding_options["value_type"]
+        else:
+            self.value_type = flow.float
+
         self.embedding_options = json.dumps(embedding_options)
         # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
         self.parallel_id = flow.env.get_rank()
@@ -159,6 +173,7 @@ class OneEmbeddingLookup(Module):
                 )
 
     def forward(self, ids, column_ids):
+        assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.embedding_lookup_placeholder(
-            self.shadow, ids, column_ids, self.dtype, self.embedding_options,
+            self.shadow, ids, column_ids, self.value_type, self.embedding_options,
         )

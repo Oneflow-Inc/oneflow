@@ -56,9 +56,10 @@ class EmbeddingOptions final {
     };
     name_ = GetValue(json_object, "name");
     embedding_dim_ = GetValue(json_object, "embedding_dim");
-    const int64_t scale_factor = GetValue(json_object, "scale_factor");
-    line_size_ = embedding_dim_ * scale_factor;
-    auto caches = json_object["cache"];
+    const int64_t storage_dim = GetValue(json_object, "storage_dim");
+    line_size_ = storage_dim;
+    auto kv_store = GetValue(json_object, "kv_store");
+    auto caches = kv_store["caches"];
     if (caches != nlohmann::detail::value_t::null) {
       CHECK(caches.is_array());
       l1_cache_policy_ = GetValue(caches.at(0), "policy");
@@ -75,7 +76,6 @@ class EmbeddingOptions final {
       l1_cache_policy_ = "none";
       l2_cache_policy_ = "none";
     }
-    auto kv_store = GetValue(json_object, "kv_store");
     if (kv_store["persistent_table"] != nlohmann::detail::value_t::null) {
       auto persistent_table = kv_store["persistent_table"];
       persistent_table_path_ = GetValue(persistent_table, "path");

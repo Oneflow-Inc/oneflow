@@ -137,7 +137,6 @@ void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
 
 std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
                           const OptimizerConf& optimizer_conf, const std::string& op_name) {
-  LOG(ERROR) << "embedding optimizer conf\n" << optimizer_conf.DebugString();
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   const class oneflow::OpNode* op_node =
       op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
