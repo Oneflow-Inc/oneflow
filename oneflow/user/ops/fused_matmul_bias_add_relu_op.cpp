@@ -6,7 +6,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
+Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   // todo: add bias add check. 
 
   bool transpose_a = ctx->Attr<bool>("transpose_a");
@@ -14,7 +14,10 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
+  const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+
   CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
+  CHECK_EQ_OR_RETURN(bias.shape().NumAxes(), 1);
   CHECK_GE_OR_RETURN(a.shape().NumAxes(), 2);
   size_t num_axes = a.shape().NumAxes();
 
@@ -42,6 +45,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 1));
     n = b.shape().At(num_axes - 2);
   }
+  CHECK_EQ_OR_RETURN(bias.shape().At(0), n);
   out->mut_shape()->Set(num_axes - 2, m);
   out->mut_shape()->Set(num_axes - 1, n);
   return Maybe<void>::Ok();
@@ -50,6 +54,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   const DataType& dtype = ctx->InputDType("a", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("bias", 0), dtype);
   *ctx->OutputDType("out", 0) = dtype;
   return Maybe<void>::Ok();
 }
@@ -57,7 +62,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 }  // namespace
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferTensorDesc4Matmul(ctx);
+  return InferTensorDesc4FusedMatmul(ctx);
 }
 
 /*static*/ Maybe<void> FusedMatmulBiasAddReluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
