@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/common/env_var.h"
 
 namespace oneflow {
 
@@ -150,7 +151,8 @@ void VirtualMachine::ControlSync() {
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
   CHECK_JUST(Receive(&list));
-  bc.WaitUntilCntEqualZero();
+  CHECK_JUST(
+      bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -160,6 +162,33 @@ VirtualMachine::~VirtualMachine() {
   CHECK(!vm_);
   callback_notifier_.Close();
   callback_thread_.join();
+}
+
+std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions() {
+  auto last_total_erased = std::make_shared<size_t>(0);
+  auto* vm = Global<VirtualMachine>::Get();
+  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
+  return [last_total_erased]() -> Maybe<bool> {
+    auto* vm = Global<VirtualMachine>::Get();
+    CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
+    CHECK_OR_RETURN(!vm->NoMoreErasedLivelyInstructions(last_total_erased.get()))
+        << "blocking instructions\n"
+        << vm->GetBlockingDebugString();
+    return false;
+  };
+}
+
+bool VirtualMachine::NoMoreErasedLivelyInstructions(
+    size_t* last_total_erased_lively_instruction_cnt) const {
+  size_t cnt = vm_->total_erased_lively_instruction_cnt();
+  bool no_more_erased = (*last_total_erased_lively_instruction_cnt == cnt);
+  *last_total_erased_lively_instruction_cnt = cnt;
+  return no_more_erased;
+}
+
+std::string VirtualMachine::GetBlockingDebugString() {
+  size_t limit = ThreadLocalEnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
+  return vm_->GetLivelyInstructionListDebugString(limit);
 }
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
