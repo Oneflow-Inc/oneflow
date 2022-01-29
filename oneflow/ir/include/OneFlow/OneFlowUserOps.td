@@ -9062,12 +9062,14 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
     AnyType:$unique_embeddings,
     AnyType:$embedding_diff,
     Optional<AnyType>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<AnyType>:$skip_if
   );
   let output = (outs
     AnyType:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9082,12 +9084,14 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
     AnyType:$unique_embeddings,
     AnyType:$embedding_diff,
     Optional<AnyType>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<AnyType>:$skip_if
   );
   let output = (outs
     AnyType:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<F32Attr, "0.9">:$beta
   );
@@ -9103,6 +9107,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
     AnyType:$unique_embeddings,
     AnyType:$embedding_diff,
     Optional<AnyType>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<AnyType>:$skip_if,
     Optional<OneFlow_Tensor>:$bias_correction1,
     Optional<OneFlow_Tensor>:$bias_correction2
@@ -9112,6 +9117,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.9">:$beta1,
     DefaultValuedAttr<F32Attr, "0.999">:$beta2,
     DefaultValuedAttr<F32Attr, "0.">:$epsilon,

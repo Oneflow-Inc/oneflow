@@ -36,26 +36,29 @@ struct InitParam {
   embedding::EmbeddingInitializer initializer[kMaxColumns];
 };
 
-template<typename T, typename IDX>
-__global__ void SGDUpdateKernel(const int64_t embedding_size, const IDX* num_unique_ids,
-                                const float* learning_rate, const int64_t* skip_if,
-                                const T* model_diff, const T* model, T* updated_model) {
+template<typename T, typename G, typename IDX>
+__global__ void SGDUpdateKernel(const int64_t embedding_size, T scale, const IDX* num_unique_ids,
+                                const float* learning_rate, const T* scale_by_ptr,
+                                const int64_t* skip_if, const G* model_diff, const T* model,
+                                T* updated_model) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   float learning_rate_val = *learning_rate;
   const int64_t n = *num_unique_ids * embedding_size;
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T model_val = model[i];
-    updated_model[i] = model_val - learning_rate_val * model_diff[i];
+    updated_model[i] = model_val - learning_rate_val * (scale * static_cast<T>(model_diff[i]));
   }
 }
 
-template<typename T, typename IDX>
-__global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embedding_size,
+template<typename T, typename G, typename IDX>
+__global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embedding_size, T scale,
                                      float beta, const IDX* num_unique_ids,
-                                     const float* learning_rate, const int64_t* skip_if,
-                                     const T* model_diff, const T* unique_values,
-                                     T* updated_unique_values) {
+                                     const float* learning_rate, const T* scale_by_ptr,
+                                     const int64_t* skip_if, const G* model_diff,
+                                     const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   float learning_rate_val = *learning_rate;
   const int64_t rows = *num_unique_ids;
   for (int row = blockIdx.x; row < rows; row += gridDim.x) {
@@ -65,7 +68,7 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
       const int64_t momentum_offset = row_offset + embedding_size + col;
       const T model_val = unique_values[offset];
       const T momentum = unique_values[momentum_offset];
-      const T model_diff_val = model_diff[offset];
+      const T model_diff_val = scale * static_cast<T>(model_diff[offset]);
       const T next_momentum = beta * momentum - learning_rate_val * model_diff_val;
       const T next_model = model_val + next_momentum;
       updated_unique_values[offset] = next_model;
@@ -74,14 +77,16 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
   }
 }
 
-template<typename T, typename IDX>
-__global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embedding_size, float beta1,
-                                 float beta2, float epsilon, const float* bias_correction1_ptr,
+template<typename T, typename G, typename IDX>
+__global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embedding_size, T scale,
+                                 float beta1, float beta2, float epsilon,
+                                 const float* bias_correction1_ptr,
                                  const float* bias_correction2_ptr, const IDX* num_unique_ids,
-                                 const float* learning_rate, const int64_t* skip_if,
-                                 const T* model_diff, const T* unique_values,
-                                 T* updated_unique_values) {
+                                 const float* learning_rate, const T* scale_by_ptr,
+                                 const int64_t* skip_if, const G* model_diff,
+                                 const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   float learning_rate_val = *learning_rate;
   float bias_correction1_val = 1.0;
   float bias_correction2_val = 1.0;
@@ -98,7 +103,7 @@ __global__ void AdamUpdateKernel(const int64_t line_size, const int64_t embeddin
       const T model_val = unique_values[offset];
       const T m = unique_values[m_offset];
       const T v = unique_values[v_offset];
-      const T model_diff_value = model_diff[offset];
+      const T model_diff_value = scale * static_cast<T>(model_diff[offset]);
       const T next_m = beta1 * m + (1 - beta1) * model_diff_value;
       const T next_v = beta2 * v + (1 - beta2) * model_diff_value * model_diff_value;
       T denom = (sqrt(next_v) / sqrt(bias_correction2_val)) + epsilon;
@@ -400,7 +405,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
 
 REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL(float, int64_t, int32_t)
 
-template<typename T, typename IDX>
+template<typename T, typename G, typename IDX>
 class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   SgdEmbeddingUpdateKernel() = default;
@@ -415,9 +420,17 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const auto scale = ctx->Attr<double>("scale");
 
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float* learning_rate_ptr = learning_rate->dptr<float>();
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
@@ -425,27 +438,29 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
-    SGDUpdateKernel<T, IDX>
+    SGDUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_diff->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            embedding_size, num_unique_ids->dptr<IDX>(), learning_rate_ptr, skip_if_ptr,
-            embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(),
+            embedding_size, scale, num_unique_ids->dptr<IDX>(), learning_rate_ptr, scale_by_ptr,
+            skip_if_ptr, embedding_diff->dptr<G>(), unique_embeddings->dptr<T>(),
             updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                     \
+#define REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(t_dtype, g_type, idx_dtype)             \
   REGISTER_USER_KERNEL("sgd_embedding_update")                                            \
-      .SetCreateFn<SgdEmbeddingUpdateKernel<t_dtype, idx_dtype>>()                        \
+      .SetCreateFn<SgdEmbeddingUpdateKernel<t_dtype, g_type, idx_dtype>>()                \
       .SetIsMatchedHob(                                                                   \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
+          && (user_op::HobDataType("embedding_diff", 0) == GetDataType<g_type>::value)    \
           && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value));
 
-REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(float, int32_t)
+REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(float, half, int32_t)
+REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(float, float, int32_t)
 
-template<typename T, typename IDX>
+template<typename T, typename G, typename IDX>
 class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   MomentumEmbeddingUpdateKernel() = default;
@@ -465,7 +480,14 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     CHECK_EQ(line_size, embedding_size * 2);
     const auto beta = ctx->Attr<float>("beta");
-
+    const auto scale = ctx->Attr<double>("scale");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float* learning_rate_ptr = learning_rate->dptr<float>();
     const int64_t* skip_if_ptr = nullptr;
@@ -475,26 +497,28 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
-    MomentumUpdateKernel<T, IDX>
+    MomentumUpdateKernel<T, G, IDX>
         <<<num_keys, embedding_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            line_size, embedding_size, beta, num_unique_ids->dptr<IDX>(), learning_rate_ptr,
-            skip_if_ptr, embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(),
+            line_size, embedding_size, scale, beta, num_unique_ids->dptr<IDX>(), learning_rate_ptr,
+            scale_by_ptr, skip_if_ptr, embedding_diff->dptr<G>(), unique_embeddings->dptr<T>(),
             updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                \
+#define REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(t_dtype, g_type, idx_dtype)        \
   REGISTER_USER_KERNEL("momentum_embedding_update")                                       \
-      .SetCreateFn<MomentumEmbeddingUpdateKernel<t_dtype, idx_dtype>>()                   \
+      .SetCreateFn<MomentumEmbeddingUpdateKernel<t_dtype, g_type, idx_dtype>>()           \
       .SetIsMatchedHob(                                                                   \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
+          && (user_op::HobDataType("embedding_diff", 0) == GetDataType<g_type>::value)    \
           && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value));
 
-REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(float, int32_t)
+REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(float, half, int32_t)
+REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(float, float, int32_t)
 
-template<typename T, typename IDX>
+template<typename T, typename G, typename IDX>
 class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   AdamEmbeddingUpdateKernel() = default;
@@ -518,7 +542,14 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
-
+    const auto scale = ctx->Attr<double>("scale");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float* learning_rate_ptr = learning_rate->dptr<float>();
     const int64_t* skip_if_ptr = nullptr;
@@ -536,25 +567,27 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
       bias_correction2_ptr = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0)->dptr<float>();
     }
     // update kernel
-    AdamUpdateKernel<T, IDX>
+    AdamUpdateKernel<T, G, IDX>
         <<<num_keys, embedding_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            line_size, embedding_size, beta1, beta2, epsilon, bias_correction1_ptr,
-            bias_correction2_ptr, num_unique_ids->dptr<IDX>(), learning_rate_ptr, skip_if_ptr,
-            embedding_diff->dptr<T>(), unique_embeddings->dptr<T>(),
-            updated_unique_embeddings->mut_dptr<T>());
+            line_size, embedding_size, static_cast<T>(scale), beta1, beta2, epsilon,
+            bias_correction1_ptr, bias_correction2_ptr, num_unique_ids->dptr<IDX>(),
+            learning_rate_ptr, scale_by_ptr, skip_if_ptr, embedding_diff->dptr<G>(),
+            unique_embeddings->dptr<T>(), updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(t_dtype, idx_dtype)                    \
+#define REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(t_dtype, g_type, idx_dtype)            \
   REGISTER_USER_KERNEL("adam_embedding_update")                                           \
-      .SetCreateFn<AdamEmbeddingUpdateKernel<t_dtype, idx_dtype>>()                       \
+      .SetCreateFn<AdamEmbeddingUpdateKernel<t_dtype, g_type, idx_dtype>>()               \
       .SetIsMatchedHob(                                                                   \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                 \
           && (user_op::HobDataType("num_unique_ids", 0) == GetDataType<idx_dtype>::value) \
+          && (user_op::HobDataType("embedding_diff", 0) == GetDataType<g_type>::value)    \
           && (user_op::HobDataType("unique_embeddings", 0) == GetDataType<t_dtype>::value));
 
-REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(float, int32_t)
+REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(float, half, int32_t)
+REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(float, float, int32_t)
 
 template<typename IDX>
 class EmbeddingPutKernel final : public user_op::OpKernel {

@@ -347,20 +347,6 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   }
 }
 
-Maybe<void> MakeGetterLossOpNode4OpName(
-    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName) {
-  std::list<OpNode*> loss_nodes;
-  JUST(GetLossOpNodes(op_graph, &loss_nodes));
-  auto loss_op_name2op_node = std::make_shared<HashMap<std::string, OpNode*>>();
-  for (OpNode* op_node : loss_nodes) {
-    CHECK(loss_op_name2op_node->emplace(op_node->op().op_name(), op_node).second);
-  }
-  *LossOpNode4OpName = [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
-    return loss_op_name2op_node->at(op_name);
-  };
-  return Maybe<void>::Ok();
-}
-
 bool AllSplitDistribution(const cfg::NdSbp& nd_sbp) {
   for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
     if (!nd_sbp.sbp_parallel(i).has_split_parallel()) { return false; }
@@ -698,6 +684,20 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 }  // namespace
+
+Maybe<void> MakeGetterLossOpNode4OpName(
+    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName) {
+  std::list<OpNode*> loss_nodes;
+  JUST(GetLossOpNodes(op_graph, &loss_nodes));
+  auto loss_op_name2op_node = std::make_shared<HashMap<std::string, OpNode*>>();
+  for (OpNode* op_node : loss_nodes) {
+    CHECK(loss_op_name2op_node->emplace(op_node->op().op_name(), op_node).second);
+  }
+  *LossOpNode4OpName = [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
+    return loss_op_name2op_node->at(op_name);
+  };
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
                                          std::function<bool(OpNode*)>* NeedBackwardOp) {

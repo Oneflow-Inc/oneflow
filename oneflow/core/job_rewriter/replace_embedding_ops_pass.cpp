@@ -295,7 +295,8 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
       embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0);
 
   if (ctx->job_desc().enable_auto_mixed_precision()
-      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", false)) {
+      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", false)
+      && ParseBooleanFromEnv("NOT_FUSE_CAST_TO_UPDATE", false)) {
     auto cast_op = user_op::UserOpConfWrapperBuilder(embedding_op.op_name() + "_cast_h2f")
                        .Op("cast")
                        .Input("in", *cur_rank_unique_embedding_diff_lbn)
@@ -308,7 +309,60 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
   }
 }
 
-void BuildEmbeddingUpdate(JobPassCtx* ctx, JobBuilder* job_builder,
+double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_builder) {
+  double scale_factor = 1;
+  std::function<OpNode*(const std::string&)> LossOpNode4OpName;
+  CHECK_JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
+  const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
+  HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
+  for (const auto& loss_lbn : train_conf.loss_lbn()) {
+    const auto& lbi = GenLogicalBlobId(loss_lbn);
+    CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
+  }
+  const Shape src_time_shape({1, 1});
+  const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
+  bool all_loss_time_shape_eq_src = true;
+  for (const auto& pair : loss_lbi2op_node) {
+    const int64_t time_shape_elem_cnt = CHECK_JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
+    if (time_shape_elem_cnt != source_time_shape_elem_cnt) {
+      CHECK_EQ(time_shape_elem_cnt % source_time_shape_elem_cnt, 0);
+      all_loss_time_shape_eq_src = false;
+    }
+  }
+  if (all_loss_time_shape_eq_src) {
+    const BlobDesc* blob_desc = nullptr;
+    for (const auto& pair : loss_lbi2op_node) {
+      const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
+      if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
+      blob_desc = cur_blob_desc;
+    }
+    CHECK(!blob_desc->is_dynamic());
+    scale_factor = 1.0f / static_cast<float>(blob_desc->shape().elem_cnt());
+  } else {
+    std::unique_ptr<BlobDesc> blob_desc;
+    for (const auto& pair : loss_lbi2op_node) {
+      const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
+      // TODO: support dynamic
+      CHECK(!cur_blob_desc->is_dynamic());
+      const DataType loss_data_type = cur_blob_desc->data_type();
+      const int64_t time_shape_elem_cnt =
+          CHECK_JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
+      // TODO: consider sbp
+      const int64_t loss_elem_cnt =
+          cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
+      if (blob_desc) {
+        CHECK_EQ(blob_desc->data_type(), loss_data_type);
+        CHECK_EQ(blob_desc->shape().elem_cnt(), loss_elem_cnt);
+      } else {
+        blob_desc.reset(new BlobDesc(Shape({loss_elem_cnt}), loss_data_type));
+      }
+    }
+    scale_factor = 1.0f / static_cast<float>(blob_desc->shape().elem_cnt());
+  }
+  return scale_factor;
+}
+
+void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                           const ParallelConf& parallel_conf, const int64_t embedding_size,
                           const OptimizerConf& optimizer_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
@@ -364,13 +418,18 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, JobBuilder* job_builder,
       .Input("embedding_diff", embedding_diff_lbn)
       .Input("learning_rate", learning_rate_lbn)
       .Output("updated_unique_embeddings");
-
+  double scale = GetLossInstanceNumScaleFactor(op_graph, job_builder);
   if (train_conf.has_dynamic_loss_scale_policy()) {
-    embedding_update_op_builder.Input(
-        "skip_if",
-        CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
-            .count_not_finite_lbn());
+    const auto& dynamic_loss_scale_state =
+        CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+    embedding_update_op_builder.Input("skip_if", dynamic_loss_scale_state.count_not_finite_lbn());
+    std::string down_scale_factor_lbn = dynamic_loss_scale_state.loss_scale_val_lbn();
+    embedding_update_op_builder.Input("scale_by_tensor", down_scale_factor_lbn);
+  } else if (train_conf.has_loss_scale_factor()) {
+    double down_scale_factor = 1.0f / train_conf.loss_scale_factor();
+    scale *= down_scale_factor;
   }
+  embedding_update_op_builder.Attr<double>("scale", scale);
   user_op::UserOpConfWrapper embedding_update_op =
       embedding_update_op_builder.Attr<int64_t>("embedding_size", embedding_size)
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
@@ -479,15 +538,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(), embedding_op,
             id_shuffle_op, update_op_conf.input("embedding_diff", 0), &embedding_diff_lbn);
 
-        HashMap<LogicalBlobId, LogicalBlobId> embedding_lbi2embedding_diff_lbi;
-        embedding_lbi2embedding_diff_lbi.emplace(
-            GenLogicalBlobId(embedding_op.output("embeddings", 0)),
-            GenLogicalBlobId(embedding_diff_lbn));
-        CHECK_JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder,
-                                                   &embedding_lbi2embedding_diff_lbi));
-        ScaleModelDiffByLossScale(ctx, op_graph, job_builder, &embedding_lbi2embedding_diff_lbi);
-        embedding_diff_lbn = GenLogicalBlobName(embedding_lbi2embedding_diff_lbi.begin()->second);
-
         // dynamic loss scale
         gradient_lbns.push_back(embedding_diff_lbn);
         // assert all embeddings same placement
@@ -512,7 +562,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
-        BuildEmbeddingUpdate(ctx, job_builder, op_node->parallel_desc().parallel_conf(),
+        BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
                              options.EmbeddingSize(), embedding_optimizer_conf, embedding_op,
                              id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
                              learning_rate_lbn);
