@@ -37,8 +37,8 @@ def test_diag_impl(test_case, ndim, placement, sbp):
 class TestDiagConsistent(flow.unittest.TestCase):
     @consistent
     def test_diag(test_case):
-        # random ndim in range [1,2]
-        ndim = np.random.randint(1, 3)
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_diag_impl(test_case, ndim, placement, sbp)
