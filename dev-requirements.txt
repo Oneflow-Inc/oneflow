@@ -11,4 +11,3 @@ PyYAML>=5.1
 pillow
 dataclasses; python_version<"3.7"
 cmakelang==0.6.13
-flowvision==0.0.6

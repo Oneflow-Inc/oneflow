@@ -2,13 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.209.6/containers/cpp
 {
 	"name": "oneflow-devel",
-	"build": {
-		"dockerfile": "Dockerfile",
-		// Update 'VARIANT' to pick an version: llvm12 llvm13 cuda11.1
-		"args": {
-			"VARIANT": "llvm13"
-		}
-	},
+	"image": "oneflowinc/manylinux2014_x86_64_cuda11.2",
 	// Add '"--gpus", "all"' if running a CUDA image
 	"runArgs": [
 		"--cap-add=SYS_PTRACE",
