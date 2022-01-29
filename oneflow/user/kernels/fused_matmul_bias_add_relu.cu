@@ -37,23 +37,6 @@ cudaDataType_t GetCudaDataType(DataType data_type) {
     return cuda_data_type.value_or(CUDA_R_32F);
 }
 
-union CublasScalarParameter {
-    double d;
-    float s;
-};
-
-CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
-    CublasScalarParameter sp{};
-    if (compute_type == CUDA_R_64F) {
-    sp.d = scalar.Value<double>();
-    } else if (compute_type == CUDA_R_32F) {
-    sp.s = scalar.Value<float>();
-    } else {
-    UNIMPLEMENTED();
-    }
-    return sp;
-}
-
 cublasComputeType_t GetComputeType(DataType data_type) {
     switch (data_type) {
     case kFloat: return CUBLAS_COMPUTE_32F;
@@ -152,7 +135,6 @@ private:
         const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0); 
         user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0); 
         const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-        // TODO: Add check
         const T alpha = static_cast<T>(ctx->Attr<double>("alpha")); 
         const T beta = static_cast<T>(0.0); 
 

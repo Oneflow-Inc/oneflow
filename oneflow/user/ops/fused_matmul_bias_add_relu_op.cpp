@@ -16,14 +16,10 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
   const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
 
-  CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
-  CHECK_EQ_OR_RETURN(bias.shape().NumAxes(), 1);
-  CHECK_GE_OR_RETURN(a.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes())<<"Num axes size of a and b should be equal.";
+  CHECK_EQ_OR_RETURN(bias.shape().NumAxes(), 1)<<"Bias num axes size should be 1.";
+  CHECK_EQ_OR_RETURN(a.shape().NumAxes(), 2);
   size_t num_axes = a.shape().NumAxes();
-
-  if (num_axes > 2) {
-    for (int i = 0; i < num_axes - 2; ++i) { CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i)); }
-  }
 
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
@@ -45,7 +41,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 1));
     n = b.shape().At(num_axes - 2);
   }
-  CHECK_EQ_OR_RETURN(bias.shape().At(0), n);
+  CHECK_EQ_OR_RETURN(bias.shape().At(0), n)<<"Bias shape cannot be added ("<<bias.shape().At(0)<<") and ("<<n<<")";
   out->mut_shape()->Set(num_axes - 2, m);
   out->mut_shape()->Set(num_axes - 1, n);
   return Maybe<void>::Ok();
