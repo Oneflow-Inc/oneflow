@@ -38,7 +38,7 @@ class TestLogicalReduce(flow.unittest.TestCase):
     def test_all_bool_input_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(ndim=4, dtype=float, requires_grad=False).to(
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
             device, dtype=torch.bool
         )
         return torch.all(x, dim)
@@ -54,7 +54,7 @@ class TestLogicalReduce(flow.unittest.TestCase):
     def test_any_bool_input_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(ndim=4, dtype=float, requires_grad=False).to(
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
             device, dtype=torch.bool
         )
         return torch.any(x, dim)
