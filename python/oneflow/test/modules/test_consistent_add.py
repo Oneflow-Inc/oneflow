@@ -28,22 +28,10 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_add_with_alpha(test_case, placement, sbp):
-    x1 = (
-        random_pytorch_tensor(2, 8, 8)
-        .to_consistent(placement=placement, sbp=sbp)
-        .mean()
-    )
-    x2 = (
-        random_pytorch_tensor(2, 8, 8)
-        .to_consistent(placement=placement, sbp=sbp)
-        .mean()
-    )
-    x3 = (
-        random_pytorch_tensor(2, 8, 8)
-        .to_consistent(placement=placement, sbp=sbp)
-        .mean()
-    )
-    y = random_pytorch_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
+    x1 = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp).mean()
+    x2 = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp).mean()
+    x3 = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp).mean()
+    y = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
     s = random().to(float)
     alpha = random().to(float)
     z1 = torch.add(x1, y, alpha=alpha)
