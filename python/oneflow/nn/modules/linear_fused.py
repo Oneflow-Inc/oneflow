@@ -20,6 +20,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.init import _calculate_fan_in_and_fan_out
 from oneflow.nn.module import Module
 
+
 class FusedLinearReLU(Module):
     """Applies a linear transformation with relu activation to the incoming data: :math:`y = ReLU(xA^T + b)`
 
@@ -77,7 +78,9 @@ class FusedLinearReLU(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        res = flow._C.fused_matmul_bias_add_relu(x, self.weight, self.bias, transpose_a=False, transpose_b=True)
+        res = flow._C.fused_matmul_bias_add_relu(
+            x, self.weight, self.bias, transpose_a=False, transpose_b=True
+        )
         return res
 
     def extra_repr(self) -> str:

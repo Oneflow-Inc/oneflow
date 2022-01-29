@@ -264,15 +264,16 @@ class BatchMatMulFunctor {
 class FusedMatMulBiasAddReluFunctor {
  public:
   FusedMatMulBiasAddReluFunctor() {
-    fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu").Input("a")
-                                                                       .Input("b")
-                                                                       .Input("bias")
-                                                                       .Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
+                               .Input("a")
+                               .Input("b")
+                               .Input("bias")
+                               .Output("out")
+                               .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
-                           const std::shared_ptr<one::Tensor>& b, 
-                           const std::shared_ptr<one::Tensor>& bias,
-                           const bool& transpose_a,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const std::shared_ptr<one::Tensor>& bias, const bool& transpose_a,
                            const bool& transpose_b, const double& alpha) const {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
@@ -282,27 +283,29 @@ class FusedMatMulBiasAddReluFunctor {
     CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should == 2";
 
     int64_t m, n, k_a, k_b;  // tensor a (no trans): m*k, tensor b (no trans): k*n
-    
+
     if (!transpose_a) {
-      m = a->shape()->At(0); 
-      k_a = a->shape()->At(1); 
+      m = a->shape()->At(0);
+      k_a = a->shape()->At(1);
     } else {
-      m = a->shape()->At(1); 
-      k_a = a->shape()->At(0); 
+      m = a->shape()->At(1);
+      k_a = a->shape()->At(0);
     }
 
     if (!transpose_b) {
-      k_b = b->shape()->At(0); 
-      n = b->shape()->At(1); 
+      k_b = b->shape()->At(0);
+      n = b->shape()->At(1);
     } else {
-      k_b = b->shape()->At(1); 
+      k_b = b->shape()->At(1);
       n = b->shape()->At(0);
     }
 
-    CHECK_EQ_OR_RETURN(k_a, k_b)<<"RuntimeError: mat1 and mat2 shapes cannot be multiplied "<<"("<<m<<"x"<<k_a<<") and ("<<k_b<<"x"<<n<<")";
-    CHECK_EQ_OR_RETURN(bias->shape()->NumAxes(), 1)<<"Bias num axes size should be 1.";
-    CHECK_EQ_OR_RETURN(bias->shape()->At(0), n)<<"Bias shape cannot be added ("<<bias->shape()->At(0)<<") and ("<<n<<")";
-    
+    CHECK_EQ_OR_RETURN(k_a, k_b) << "RuntimeError: mat1 and mat2 shapes cannot be multiplied "
+                                 << "(" << m << "x" << k_a << ") and (" << k_b << "x" << n << ")";
+    CHECK_EQ_OR_RETURN(bias->shape()->NumAxes(), 1) << "Bias num axes size should be 1.";
+    CHECK_EQ_OR_RETURN(bias->shape()->At(0), n)
+        << "Bias shape cannot be added (" << bias->shape()->At(0) << ") and (" << n << ")";
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
@@ -313,7 +316,6 @@ class FusedMatMulBiasAddReluFunctor {
  private:
   std::shared_ptr<OpExpr> fused_op_;
 };
-
 
 class LayerNormFunctor {
  public:
@@ -2237,7 +2239,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
-  m.add_functor<impl::FusedMatMulBiasAddReluFunctor>("FusedMatmulBiasAddRelu"); 
+  m.add_functor<impl::FusedMatMulBiasAddReluFunctor>("FusedMatmulBiasAddRelu");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");

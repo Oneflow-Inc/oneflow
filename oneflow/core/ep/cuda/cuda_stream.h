@@ -134,7 +134,7 @@ class CudaStream : public Stream {
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
-  cublasLtHandle_t cublas_lt_handle_{}; 
+  cublasLtHandle_t cublas_lt_handle_{};
   cudnnHandle_t cudnn_handle_{};
   int device_index_;
   void* workspace_{};
