@@ -797,7 +797,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
         });
       }
     }
-    counter.WaitUntilCntEqualZero();
+    counter.WaitForeverUntilCntEqualZero();
   }
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
