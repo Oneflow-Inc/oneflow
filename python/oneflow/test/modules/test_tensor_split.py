@@ -31,8 +31,6 @@ class TestTensorSplitVec(flow.unittest.TestCase):
             dim3=random(3, 6),
         ).to(device)
         dim = random(-3, 3).to(int)
-        print(x.shape)
-        print(dim)
         z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
 
