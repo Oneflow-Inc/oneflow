@@ -155,6 +155,18 @@ def _contiguous(self):
     return self
 
 
+def _cpu(self):
+    return self.to(device="cpu")
+
+
+def _cuda(self, device: Union[int, str, flow.device] = None):
+    if device is None:
+        device = "cuda"
+    elif device is isinstance(int):
+        device = "cuda:" + str(device)
+    return self.to(device=device)
+
+
 def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
     return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
 
@@ -490,6 +502,11 @@ def _flatten(self, start_dim: int = 0, end_dim: int = -1):
     return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
 
 
+def _item(self):
+    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return self.numpy().item()
+
+
 def _log(self):
     return flow.log(self)
 
@@ -806,6 +823,12 @@ def _to_local(self):
     return flow.to_local(self)
 
 
+def _tolist(self):
+    if self.numel() == 1 and self.ndim == 0:
+        return self.item()
+    return self.numpy().tolist()
+
+
 def _gather(self, dim, index):
     return flow._C.dim_gather(self, dim, index, False)
 
@@ -914,6 +937,10 @@ def _float(self):
 
 def _double(self):
     return self.to(dtype=flow.float64)
+
+
+def _where(self, x=None, y=None):
+    return flow.where(self, x, y)
 
 
 def _is_floating_point(self):
@@ -1048,6 +1075,8 @@ def RegisterMethods():
     Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.cpu = _cpu
+    Tensor.cuda = _cuda
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
@@ -1075,6 +1104,7 @@ def RegisterMethods():
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
+    Tensor.where = _where
     Tensor.contiguous = _contiguous
     Tensor.norm = _norm
     Tensor.vector_norm = _vector_norm
@@ -1110,6 +1140,7 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.ne = _ne
+    Tensor.item = _item
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
@@ -1117,6 +1148,7 @@ def RegisterMethods():
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as
+    Tensor.tolist = _tolist
     Tensor.int = _int
     Tensor.long = _long
     Tensor.float = _float
