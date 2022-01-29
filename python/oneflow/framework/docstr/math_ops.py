@@ -1383,7 +1383,7 @@ add_docstr(
         dim (int): dimension along which to split the tensor.
 
     Returns:
-        oneflow.TensorTuple: the output Tensor.
+        oneflow.TensorTuple: the output TensorTuple.
 
     For example:
 
@@ -1411,6 +1411,8 @@ add_docstr(
     (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
     torch.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
     is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.hsplit.html#torch.hsplit
 
     Args:
         input (Tensor): the input tensor.
@@ -1424,7 +1426,7 @@ add_docstr(
             one-dimensional long tensor on the CPU.
 
     Returns:
-        oneflow.TensorTuple: the output Tensor.
+        oneflow.TensorTuple: the output TensorTuple.
 
     For example:
 
@@ -1450,6 +1452,8 @@ add_docstr(
     Each split is a view of input.
     This is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
     except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.vsplit.html#torch.vsplit
 
     Args:
         input (Tensor): the input tensor.
@@ -1463,7 +1467,7 @@ add_docstr(
             one-dimensional long tensor on the CPU.
 
     Returns:
-        oneflow.TensorTuple: the output Tensor.
+        oneflow.TensorTuple: the output TensorTuple.
 
     For example:
 

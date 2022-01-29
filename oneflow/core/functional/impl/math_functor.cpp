@@ -1916,12 +1916,12 @@ class HsplitIntFunctor {
                                 const int32_t& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 1)
-        << "torch.hsplit requires a tensor with at least 1 dimension, but got a tensor with "
+        << "flow.hsplit requires a tensor with at least 1 dimension, but got a tensor with "
         << ndim << " dimensions!";
     CHECK_OR_RETURN(indices_or_sections > 0) << "indices_or_sections must greater than 0";
     int32_t dim = (ndim == 1) ? 0 : 1;
     CHECK_OR_RETURN(input->dim(dim) % indices_or_sections == 0)
-        << "torch.hsplit attempted to split along dimension " << dim
+        << "flow.hsplit attempted to split along dimension " << dim
         << ", but the size of the dimension " << input->shape()->At(dim)
         << " is not divisible by the split_size " << indices_or_sections << "!";
     return TensorSplitInt(input, indices_or_sections, dim);
@@ -1935,7 +1935,7 @@ class HsplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 1)
-        << "torch.hsplit requires a tensor with at least 1 dimension, but got a tensor with "
+        << "flow.hsplit requires a tensor with at least 1 dimension, but got a tensor with "
         << ndim << " dimensions!";
     int32_t dim = (ndim == 1) ? 0 : 1;
     return TensorSplitVec(input, indices_or_sections, dim);
@@ -1949,11 +1949,11 @@ class VsplitIntFunctor {
                                 const int32_t& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 2)
-        << "torch.vsplit requires a tensor with at least 2 dimension, but got a tensor with "
+        << "flow.vsplit requires a tensor with at least 2 dimension, but got a tensor with "
         << ndim << " dimensions!";
     CHECK_OR_RETURN(indices_or_sections > 0) << "indices_or_sections must greater than 0";
     CHECK_OR_RETURN(input->dim(0) % indices_or_sections == 0)
-        << "torch.vsplit attempted to split along dimension " << 0
+        << "flow.vsplit attempted to split along dimension " << 0
         << ", but the size of the dimension " << input->dim(0)
         << " is not divisible by the split_size " << indices_or_sections << "!";
     return TensorSplitInt(input, indices_or_sections, 0);
@@ -1967,7 +1967,7 @@ class VsplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections) const {
     int32_t ndim = input->shape()->NumAxes();
     CHECK_OR_RETURN(ndim >= 2)
-        << "torch.vsplit requires a tensor with at least 1 dimension, but got a tensor with "
+        << "flow.vsplit requires a tensor with at least 1 dimension, but got a tensor with "
         << ndim << " dimensions!";
     return TensorSplitVec(input, indices_or_sections, 0);
   }
