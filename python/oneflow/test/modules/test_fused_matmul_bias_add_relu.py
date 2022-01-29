@@ -70,6 +70,7 @@ def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b):
                 origin_b_tensor,
                 transpose_a=transpose_a,
                 transpose_b=transpose_b,
+                alpha=alpha
             ),
             origin_bias_tensor,
             axis=1,
@@ -116,8 +117,6 @@ class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
         args_dict["test_fun"] = [_test_fused_matmul_bias_add_relu]
         args_dict["transpose_a"] = [False, True]
         args_dict["transpose_b"] = [False, True]
-        # args_dict["transpose_a"] = [True, False]
-        # args_dict["transpose_b"] = [False]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
