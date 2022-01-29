@@ -264,7 +264,7 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
   };
   std::string update_embedding_diff_lbn = update_embedding_diff;
   if (ctx->job_desc().enable_auto_mixed_precision()
-      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", false)) {
+      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", true)) {
     LogicalBlobId embedding_diff_lbi = GenLogicalBlobId(update_embedding_diff_lbn);
     const OpNode* cast_node = op_graph.OpNode4OpName(embedding_diff_lbi.op_name());
     if (cast_node->op().op_conf().has_user_conf()) {
@@ -295,7 +295,7 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
       embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_diff", 0);
 
   if (ctx->job_desc().enable_auto_mixed_precision()
-      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", false)
+      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", true)
       && ParseBooleanFromEnv("NOT_FUSE_CAST_TO_UPDATE", false)) {
     auto cast_op = user_op::UserOpConfWrapperBuilder(embedding_op.op_name() + "_cast_h2f")
                        .Op("cast")
