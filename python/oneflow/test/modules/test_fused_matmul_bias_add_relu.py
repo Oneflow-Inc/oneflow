@@ -70,7 +70,7 @@ def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b):
                 origin_b_tensor,
                 transpose_a=transpose_a,
                 transpose_b=transpose_b,
-                alpha=alpha
+                alpha=alpha,
             ),
             origin_bias_tensor,
             axis=1,

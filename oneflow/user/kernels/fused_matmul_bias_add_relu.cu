@@ -95,41 +95,44 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 }
 
 class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
-public:    
-    explicit FusedMatmulBiasAddReluKernelCache() {
-        OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
-        // Just for init. 
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(
-            &cublas_a_desc, CUDA_R_32F, 1, 1, 1));
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(
-            &cublas_b_desc, CUDA_R_32F, 1, 1, 1));
-        OF_CUBLAS_CHECK(
-            cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
-    }
-    ~FusedMatmulBiasAddReluKernelCache() override {
-        OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operationDesc));
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
-        OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_c_desc));
-    }
-    cublasLtMatmulDesc_t operationDesc;
-    cublasLtMatrixLayout_t cublas_a_desc;
-    cublasLtMatrixLayout_t cublas_b_desc;
-    cublasLtMatrixLayout_t cublas_c_desc;
+ public:
+  explicit FusedMatmulBiasAddReluKernelCache() {
+    OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
+    // Just for init.
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
+  }
+  ~FusedMatmulBiasAddReluKernelCache() override {
+    OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operationDesc));
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
+    OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_c_desc));
+  }
+  cublasLtMatmulDesc_t operationDesc;
+  cublasLtMatrixLayout_t cublas_a_desc;
+  cublasLtMatrixLayout_t cublas_b_desc;
+  cublasLtMatrixLayout_t cublas_c_desc;
 };
 
-
 std::shared_ptr<FusedMatmulBiasAddReluKernelCache> CreateFusedMatmulBiasAddReluKernelCache() {
-    std::shared_ptr<FusedMatmulBiasAddReluKernelCache> cache(new FusedMatmulBiasAddReluKernelCache());
-    return cache;
+  std::shared_ptr<FusedMatmulBiasAddReluKernelCache> cache(new FusedMatmulBiasAddReluKernelCache());
+  return cache;
 }
 
-void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cuda_data_type, cublasOperation_t cublas_trans, 
-                           const size_t cublas_m, const size_t cublas_n, int64_t cublas_ld){
-    OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(layout_desc, CUBLASLT_MATRIX_LAYOUT_TYPE, &cuda_data_type, sizeof(cuda_data_type)));
-    OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(layout_desc, CUBLASLT_MATRIX_LAYOUT_ROWS, cublas_trans == CUBLAS_OP_N ? &cublas_m : &cublas_n, sizeof(cublas_m)));
-    OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(layout_desc, CUBLASLT_MATRIX_LAYOUT_COLS, cublas_trans == CUBLAS_OP_N ? &cublas_n : &cublas_m, sizeof(cublas_m)));
-    OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(layout_desc, CUBLASLT_MATRIX_LAYOUT_LD, &cublas_ld, sizeof(cublas_ld)));
+void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cuda_data_type,
+                           cublasOperation_t cublas_trans, const size_t cublas_m,
+                           const size_t cublas_n, int64_t cublas_ld) {
+  OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(layout_desc, CUBLASLT_MATRIX_LAYOUT_TYPE,
+                                                   &cuda_data_type, sizeof(cuda_data_type)));
+  OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(
+      layout_desc, CUBLASLT_MATRIX_LAYOUT_ROWS, cublas_trans == CUBLAS_OP_N ? &cublas_m : &cublas_n,
+      sizeof(cublas_m)));
+  OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(
+      layout_desc, CUBLASLT_MATRIX_LAYOUT_COLS, cublas_trans == CUBLAS_OP_N ? &cublas_n : &cublas_m,
+      sizeof(cublas_m)));
+  OF_CUBLAS_CHECK(cublasLtMatrixLayoutSetAttribute(layout_desc, CUBLASLT_MATRIX_LAYOUT_LD,
+                                                   &cublas_ld, sizeof(cublas_ld)));
 }
 
 }  // namespace
@@ -148,7 +151,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
   }
 
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*, const user_op::OpKernelCache* cache) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     const user_op::Tensor* cublas_a = b;
@@ -213,42 +217,50 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     }
     const int64_t cublas_ldc = n;
 
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype, sizeof(cublas_compute_dtype)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
+        sizeof(cublas_compute_dtype)));
     // For best performance when using the bias vector, specify beta == 0 and
     // CUBLASLT_POINTER_MODE_HOST.(from
     // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
     cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_POINTER_MODE,
-        &mode, sizeof(mode)));
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_TRANSA,
-        &cublas_trans_a, sizeof(cublas_trans_a)));
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_TRANSB,
-        &cublas_trans_b, sizeof(cublas_trans_b)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc,
+                                                   CUBLASLT_MATMUL_DESC_TRANSA, &cublas_trans_a,
+                                                   sizeof(cublas_trans_a)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc,
+                                                   CUBLASLT_MATMUL_DESC_TRANSB, &cublas_trans_b,
+                                                   sizeof(cublas_trans_b)));
 
     // Set as matmul + bias_add + relu.
     cublasLtEpilogue_t epilogue;
     epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_EPILOGUE,
-                                                   &epilogue, sizeof(epilogue)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
 
     // Set bias ptr
     const T* bias_ptr = reinterpret_cast<const T*>(bias->dptr());
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_BIAS_POINTER,
-        &bias_ptr, sizeof(bias_ptr)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc,
+                                                   CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+                                                   sizeof(bias_ptr)));
 
-    SetCublasMatrixLayout(matmul_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m, cublas_k, cublas_lda); 
-    SetCublasMatrixLayout(matmul_cache->cublas_b_desc, cuda_data_type, cublas_trans_b, cublas_k, cublas_n, cublas_ldb); 
-    SetCublasMatrixLayout(matmul_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m, cublas_n, cublas_ldc); 
+    SetCublasMatrixLayout(matmul_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
+                          cublas_k, cublas_lda);
+    SetCublasMatrixLayout(matmul_cache->cublas_b_desc, cuda_data_type, cublas_trans_b, cublas_k,
+                          cublas_n, cublas_ldb);
+    SetCublasMatrixLayout(matmul_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m,
+                          cublas_n, cublas_ldc);
 
     OF_CUBLAS_CHECK(cublasLtMatmul(
-            ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operationDesc, &alpha,
-            reinterpret_cast<const T*>(cublas_a->dptr()), matmul_cache->cublas_a_desc,
-            reinterpret_cast<const T*>(cublas_b->dptr()), matmul_cache->cublas_b_desc, &beta,
-            reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc, reinterpret_cast<T*>(out->mut_dptr()),
-            matmul_cache->cublas_c_desc, NULL, ctx->stream()->As<ep::CudaStream>()->cublas_workspace(),
-            ctx->stream()->As<ep::CudaStream>()->cublas_workspace_size(),
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-        
+        ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operationDesc,
+        &alpha, reinterpret_cast<const T*>(cublas_a->dptr()), matmul_cache->cublas_a_desc,
+        reinterpret_cast<const T*>(cublas_b->dptr()), matmul_cache->cublas_b_desc, &beta,
+        reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc,
+        reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc, NULL,
+        ctx->stream()->As<ep::CudaStream>()->cublas_workspace(),
+        ctx->stream()->As<ep::CudaStream>()->cublas_workspace_size(),
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 

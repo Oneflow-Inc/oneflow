@@ -25,7 +25,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "broadcast_matmul",
                                "fused_self_attention_query_mul_key_and_value",
                                "prelu",
-                               "tf_prelu", 
+                               "tf_prelu",
                                "fused_matmul_bias_add_relu"};
   return white_list;
 }
