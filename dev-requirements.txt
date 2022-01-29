@@ -1,4 +1,4 @@
-black==19.10b0 ; python_version >= "3.6"
+black==19.10b0; python_version >= "3.6"
 numpy>=1.17.0
 protobuf
 wheel
@@ -10,4 +10,4 @@ opencv-python==4.2.0.34; python_version < '3.9' and sys_platform != 'darwin' and
 PyYAML>=5.1
 pillow
 dataclasses; python_version<"3.7"
-flowvision==0.0.54
+cmakelang==0.6.13

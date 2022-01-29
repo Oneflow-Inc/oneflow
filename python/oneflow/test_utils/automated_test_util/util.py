@@ -13,25 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
-from collections import OrderedDict
-
+import pickle
 import oneflow as flow
-import oneflow.unittest
-
-from oneflow.test_utils.automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestCumsum(flow.unittest.TestCase):
-    @autotest(n=30, check_graph=True)
-    def test_cumsum(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        dim = random(0, x.ndim.pytorch).to(int)
-        z = torch.cumsum(x, dim)
-        return z
-
-
-if __name__ == "__main__":
-    unittest.main()
+def broadcast(obj, src: int = 0):
+    rank = flow.env.get_rank()
+    if src == rank:
+        obj_bytes = pickle.dumps(obj)
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(obj_bytes, src)
+    else:
+        obj_bytes = flow._oneflow_internal.cpu_broadcast(None, src)
+    return pickle.loads(obj_bytes)
