@@ -98,7 +98,6 @@ void VirtualMachineEngine::HandlePending() {
     } else {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
-    mut_local_pending_msg_list()->Erase(instr_msg);
   }
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
