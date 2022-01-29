@@ -342,6 +342,14 @@ def _sinh(self):
     return flow.sinh(self)
 
 
+def _sin(self):
+    return flow.sin(self)
+
+
+def _sin_inplace(self):
+    return flow._C.sin_(self)
+
+
 def _tan(self):
     return flow.tan(self)
 
@@ -1122,6 +1130,8 @@ def RegisterMethods():
     Tensor.sum = _sum
     Tensor.mean = _mean
     Tensor.prod = _prod
+    Tensor.sin = _sin
+    Tensor.sin_ = _sin_inplace
 
 
 def register_tensor_op(op_name):
