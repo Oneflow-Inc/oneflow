@@ -85,6 +85,5 @@ class TestMaxModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-
 if __name__ == "__main__":
     unittest.main()
