@@ -53,10 +53,7 @@ bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
 }  // namespace
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH(
-      "R:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction)
-      + ":" + instruction->instr_msg().instr_type_name());
+  OF_PROFILER_RANGE_PUSH("R:" + instruction->instr_msg().DebugName());
   auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
@@ -79,11 +76,7 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
     if (Dispatchable(out_instruction)) {
-      OF_PROFILER_RANGE_PUSH(
-          "E:"
-          + out_instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(
-              out_instruction)
-          + ":" + out_instruction->instr_msg().instr_type_name());
+      OF_PROFILER_RANGE_PUSH("E:" + out_instruction->instr_msg().DebugName());
       mut_ready_instruction_list()->PushBack(out_instruction);
       OF_PROFILER_RANGE_POP();
     }
@@ -94,16 +87,17 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
 // Handle pending instructions, and try schedule them to ready list.
 void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_PUSH("HandlePending");
-  InstructionMsgList tmp_pending_msg_list;
-  // MoveTo is under a lock.
-  mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
+  constexpr static int kLimit = 10;
+  int cnt = kLimit;
   InstructionList new_instruction_list;
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &tmp_pending_msg_list) {
+  INTRUSIVE_FOR_EACH_PTR(instr_msg, mut_local_pending_msg_list()) {
+    if (cnt-- <= 0) { break; }
     if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
       RunInstructionsInAdvance(instr_msg);
     } else {
       MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     }
+    mut_local_pending_msg_list()->Erase(instr_msg);
   }
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(mut_id2logical_object(), instruction);
@@ -115,6 +109,26 @@ void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_POP();
 }
 
+std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t debug_cnt) {
+  std::stringstream ss;
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
+    if (--debug_cnt <= 0) { break; }
+    ss << instruction->instr_msg().DebugName() << "\n";
+  }
+  return ss.str();
+}
+
+void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instruction) {
+  ++total_inserted_lively_instruction_cnt_;
+  mut_lively_instruction_list()->PushBack(instruction);
+}
+
+intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
+    Instruction* instruction) {
+  ++total_erased_lively_instruction_cnt_;
+  return mut_lively_instruction_list()->Erase(instruction);
+}
+
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
@@ -123,7 +137,7 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
-      stream->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction_ptr));
+      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
@@ -164,7 +178,7 @@ void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
   bool is_barrier_instruction = instruction_type.IsFrontSequential();
   const auto& NewAndMove = [&](Stream* stream, const std::shared_ptr<const ParallelDesc>& pd) {
     intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, pd);
-    mut_lively_instruction_list()->PushBack(instr.Mutable());
+    LivelyInstructionListPushBack(instr.Mutable());
     if (unlikely(is_barrier_instruction)) {
       mut_barrier_instruction_list()->PushBack(instr.Mutable());
     } else {
@@ -485,21 +499,13 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions() {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
-    OF_PROFILER_RANGE_PUSH(
-        "D:"
-        + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(
-            instruction.Mutable())
-        + ":" + instruction->instr_msg().instr_type_name());
+    OF_PROFILER_RANGE_PUSH("D:" + instruction->instr_msg().DebugName());
     DispatchInstruction(instruction.Mutable());
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       auto* out_instruction = edge->mut_dst_instruction();
       if (Dispatchable(out_instruction)) {
-        OF_PROFILER_RANGE_PUSH(
-            "P:"
-            + out_instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(
-                out_instruction)
-            + ":" + out_instruction->instr_msg().instr_type_name());
+        OF_PROFILER_RANGE_PUSH("P:" + out_instruction->instr_msg().DebugName());
         mut_ready_instruction_list()->PushBack(out_instruction);
         OF_PROFILER_RANGE_POP();
       }
@@ -579,6 +585,9 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
   INTRUSIVE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
     if (!compute_instr_msg->phy_instr_operand()) {
       new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
+    } else {
+      OF_PROFILER_RANGE_PUSH(compute_instr_msg->DebugName());
+      OF_PROFILER_RANGE_POP();
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
@@ -688,7 +697,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(this, sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
-  mut_lively_instruction_list()->Erase(sequnential_instruction);
+  LivelyInstructionListErase(sequnential_instruction);
   OF_PROFILER_RANGE_POP();
 }
 
@@ -730,13 +739,20 @@ void VirtualMachineEngine::Schedule() {
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
   //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
-  if (unlikely(pending_msg_list().thread_unsafe_size())) { HandlePending(); }
+  if (unlikely(local_pending_msg_list().size())) {
+    HandlePending();
+  } else if (unlikely(pending_msg_list().thread_unsafe_size())) {
+    // MoveTo is under a lock.
+    mut_pending_msg_list()->MoveTo(mut_local_pending_msg_list());
+    HandlePending();
+  }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
 }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
-  return active_stream_list().empty() && flying_instruction_cnt() == 0;
+  return local_pending_msg_list().empty() && active_stream_list().empty()
+         && flying_instruction_cnt() == 0;
 }
 
 bool VirtualMachineEngine::Empty() const {

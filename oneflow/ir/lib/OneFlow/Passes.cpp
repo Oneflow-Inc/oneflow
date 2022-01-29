@@ -161,9 +161,8 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       SmallVector<Operation*, 4> ops = {cast_op, mul_op};
       auto function =
           GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
-      assert(function);
       auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(), function, attributes, operands);
-      assert(DumpAssembly(rewriter, created).succeeded());
+      if (failed(DumpAssembly(rewriter, created))) { exit(1); }
       cast_op->dropAllUses();
       cast_op.erase();
       return created->getResults();

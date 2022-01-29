@@ -26,75 +26,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-@register_tensor_op("reciprocal")
-def _reciprocal(x):
-    """Computes the safe reciprocal of x. If x is zero, the reciprocal will
-    be also set to zero.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-        >>> out = flow.reciprocal(x)
-        >>> out.numpy()
-        array([[1.        , 0.5       , 0.33333334],
-               [0.25      , 0.2       , 0.16666667]], dtype=float32)
-    """
-    return flow._C.reciprocal_no_nan(x)
-
-
-@register_tensor_op("add")
-def _add(input, other):
-    """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
-
-    .. math::
-        out = input + other
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        # element-wise add
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # scalar add
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # broadcast add
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
-        >>> out.shape
-        (2, 3)
-
-    """
-    return flow._C.add(input, other)
-
-
-@register_tensor_op("add_")
-def _add_inplace(x, y):
-    """
-    In-place version of :func:`oneflow.Tensor.add`.
-    """
-    return flow._C.add(x, y, inplace=True)
-
-
 def asin_op(input):
     """
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
@@ -128,28 +59,10 @@ def asin_op(input):
     return flow._C.asin(input)
 
 
-@register_tensor_op("asin")
-def asin_op_tensor(input):
-    """
-
-    See :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
 def arcsin_op(input):
     """
   
     Alias for :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
-@register_tensor_op("arcsin")
-def arcsin_op_tensor(input):
-    """
-
-    See :func:`oneflow.asin`
     """
     return flow._C.asin(input)
 
@@ -206,27 +119,6 @@ def asinh_op_tensor(input):
     return flow._C.asinh(input)
 
 
-@register_tensor_op("arcsinh")
-def arcsinh_op_tensor(input):
-    """
-
-    See :func:`oneflow.asinh`
-    """
-    return flow._C.asinh(input)
-
-
-@register_tensor_op("sin")
-def sin_op_tensor(input):
-    """
-
-    sin() -> Tensor
-
-    See :func:`oneflow.sin`
-    
-    """
-    return flow._C.sin(input)
-
-
 @register_tensor_op("sin_")
 def inplace_sin_op_tensor(input):
     """
@@ -234,31 +126,6 @@ def inplace_sin_op_tensor(input):
     
     """
     return flow._C.sin_(input)
-
-
-@register_tensor_op("cos")
-def cos_op(input):
-    """
-    Returns a new tensor with the cosine  of the elements of :attr:`input`.
-    
-    .. math::
-        \\text{out}_{i} = \\cos(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.cos(input).numpy()
-
-    """
-    return flow._C.cos(input)
 
 
 def atan_op(input):
@@ -286,29 +153,9 @@ def atan_op(input):
     return flow._C.atan(input)
 
 
-@register_tensor_op("atan")
-def atan_op_tensor(input):
-    """
-
-    See :func:`oneflow.atan`
-    
-    """
-    return flow._C.atan(input)
-
-
 def arctan_op(input):
     """
     Alias for :func:`oneflow.atan`
-    
-    """
-    return flow._C.atan(input)
-
-
-@register_tensor_op("arctan")
-def arctan_op_tensor(input):
-    """
-
-    See :func:`oneflow.arctan`
     
     """
     return flow._C.atan(input)
@@ -686,128 +533,6 @@ def erfc_op_tensor(input):
     return flow._C.erfc(input)
 
 
-def ceil_op(input):
-    """Returns a new tensor with the ceil of the elements of :attr:`input`,
-    the smallest integer greater than or equal to each element.
-
-    The equation is: 
-
-    .. math::
-        \\text{out}_{i} = \\left\\lceil \\text{input}_{i} \\right\\rceil = \\left\\lfloor \\text{input}_{i} \\right\\rfloor + 1
-
-    Args:
-        input (oneflow.Tensor): A Tensor.
-    
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example: 
-
-
-    .. code-block:: python 
-        
-        >>> import oneflow as flow
-        >>> import numpy as np   
-        >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
-        >>> y = flow.ceil(x)
-        >>> y.shape
-        oneflow.Size([3])
-        >>> y
-        tensor([ 1., -2.,  4.], dtype=oneflow.float32)
-        >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
-        >>> y = x.ceil()
-        >>> y.shape
-        oneflow.Size([2, 3])
-        >>> y
-        tensor([[ 3.,  5.,  1.],
-                [ 8.,  9., 10.]], dtype=oneflow.float32)
-        >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
-        >>> y = flow.ceil(x)
-        >>> y.shape
-        oneflow.Size([2, 2, 3])
-        >>> y
-        tensor([[[ 3.,  5.,  7.],
-                 [ 8.,  9., 10.]],
-        <BLANKLINE>
-                [[11., 12., 13.],
-                 [14., 15., 16.]]], dtype=oneflow.float32)
-
-    """
-    return flow._C.ceil(input)
-
-
-@register_tensor_op("ceil")
-def ceil_op_tensor(input):
-    """
-    See :func:`oneflow.ceil`
-    """
-    return flow._C.ceil(input)
-
-
-def expm1_op(input):
-    """Returns a new tensor with the exponential of the elements minus 1
-    of :attr:`input`.
-
-
-    The equation is: 
-
-    .. math::
-        y_{i} = e^{x_{i}} - 1
-
-    Args:
-        input (oneflow.Tensor): A Tensor.
-    
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example: 
-
-    .. code-block:: python 
-        
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        >>> y = flow.expm1(x)
-        >>> y.shape
-        oneflow.Size([3])
-        >>> y
-        tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
-
-
-        >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
-        >>> y = x.expm1()
-        >>> y.shape
-        oneflow.Size([2, 3])
-        >>> y
-        tensor([[6.3891e+00, 5.3598e+01, 4.0243e+02],
-                [1.0956e+03, 2.9800e+03, 8.1021e+03]], dtype=oneflow.float32)
-
-
-
-        >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
-        >>> y = flow.expm1(x)
-        >>> print(y.shape)
-        oneflow.Size([2, 2, 3])
-        >>> print(y.numpy())
-        [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
-          [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
-        <BLANKLINE>
-         [[2.2025465e+04 5.9873141e+04 1.6275380e+05]
-          [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
-
-
-    """
-    return flow._C.expm1(input)
-
-
-@register_tensor_op("expm1")
-def expm1_op_tensor(input):
-    """
-    See :func:`oneflow.expm1`
-    """
-    return flow._C.expm1(input)
-
-
 class Topk(Module):
     def __init__(
         self, k, dim: int = None, largest: bool = True, sorted: bool = True
@@ -843,52 +568,7 @@ class Topk(Module):
             return (flow.gather(input, axis, indices), indices)
 
 
-@register_tensor_op("topk")
 def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
-    """Finds the values and indices of the k largest entries at specified axis.
-
-    Args:
-        input (oneflow.Tensor): Input Tensor
-        k (int): the k in “top-k”
-        dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
-        largest (bool, optional): controls whether to return largest or smallest elements
-        sorted (bool, optional): controls whether to return the elements in sorted order (Only Support True Now!)
-
-    Returns:
-        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
-        the indices are the indices of the elements in the original input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
-        >>> (values, indices) = flow.topk(flow.Tensor(x), k=3, dim=1)
-        >>> values
-        tensor([[8., 7., 3.],
-                [9., 4., 3.]], dtype=oneflow.float32)
-        >>> indices
-        tensor([[2, 3, 1],
-                [1, 2, 3]], dtype=oneflow.int64)
-        >>> values.shape
-        oneflow.Size([2, 3])
-        >>> indices.shape
-        oneflow.Size([2, 3])
-        >>> (values, indices) = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
-        >>> values
-        tensor([[1., 2.],
-                [1., 2.]], dtype=oneflow.float32)
-        >>> indices
-        tensor([[0, 4],
-                [0, 4]], dtype=oneflow.int64)
-        >>> values.shape
-        oneflow.Size([2, 2])
-        >>> indices.shape
-        oneflow.Size([2, 2])
-
-    """
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
