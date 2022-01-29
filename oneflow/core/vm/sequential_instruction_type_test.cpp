@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 #include <thread>
 #include <typeinfo>
+#include "gtest/gtest.h"
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -95,7 +96,7 @@ TEST(SequentialInstruction, front_seq_compute) {
     bc.Decrease();
   });
   CHECK_JUST(vm->Receive(&list));
-  bc.WaitUntilCntEqualZero();
+  bc.WaitForeverUntilCntEqualZero();
   ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());
   t.join();

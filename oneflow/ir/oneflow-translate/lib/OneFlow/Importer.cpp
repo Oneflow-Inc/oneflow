@@ -593,9 +593,10 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   } else {
     std::vector<std::string> def_op_keys{};
     std::vector<int32_t> def_op_sizes{};
-    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(def_op, def_op_keys,
-                                                                           def_op_sizes)
-               .succeeded());
+    if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(def_op, def_op_keys,
+                                                                               def_op_sizes))) {
+      return llvm::None;
+    }
     const auto result_number = result.getResultNumber();
     uint32_t size_sum = 0;
     for (const auto& name_size_tuple : llvm::zip(def_op_keys, def_op_sizes)) {
@@ -617,14 +618,16 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
-             .succeeded());
+  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes))) {
+    return failure();
+  }
   const std::string op_name = user_op_adaptor.op_name().str();
   int32_t input_idx = 0;
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto input_key = std::get<0>(tuple);
     auto input_size = std::get<1>(tuple);
-    assert(input_size > 0);
+    if (input_size <= 0)
+      return op->emitError("input_size <= 0, op: " + op->getName().getStringRef());
     for (int32_t i = 0; i < input_size; i++) {
       if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
         auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
@@ -644,8 +647,8 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
                                    ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  assert(
-      GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes).succeeded());
+  auto result = GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes);
+  if (result.failed()) { return failure(); }
   const std::string op_name = user_op_adaptor.op_name().str();
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
@@ -800,15 +803,17 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   {
     std::vector<std::string> keys{};
     std::vector<int32_t> sizes{};
-    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes)
-               .succeeded());
+    if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes))) {
+      return failure();
+    }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
   }
   {
     std::vector<std::string> keys{};
     std::vector<int32_t> sizes{};
-    assert(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes)
-               .succeeded());
+    if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes))) {
+      return failure();
+    }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
   }
   return success();

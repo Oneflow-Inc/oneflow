@@ -48,11 +48,18 @@ if(LLVM_PROVIDER STREQUAL "in-tree")
   add_subdirectory(${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen ${PROJECT_BINARY_DIR}/oneflow-tblgen)
 endif()
 
-set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
-  -Wl,--no-as-needed oneflow -Wl,--as-needed
-  -Wl,--no-as-needed glog::glog -Wl,--as-needed
-  -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
-)
+set_property(
+  GLOBAL
+  PROPERTY ALL_ONEFLOW_LIBS
+           -Wl,--no-as-needed
+           oneflow
+           -Wl,--as-needed
+           -Wl,--no-as-needed
+           glog::glog
+           -Wl,--as-needed
+           -Wl,--no-as-needed
+           ${oneflow_third_party_libs}
+           -Wl,--as-needed)
 
 function(update_rpath)
   set_property(TARGET ${ARGV0} APPEND PROPERTY
@@ -94,12 +101,12 @@ set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/lib)
 if(WITH_MLIR)
-add_subdirectory(include)
-add_subdirectory(lib)
-add_subdirectory(test)
-add_subdirectory(oneflow-opt)
-add_subdirectory(oneflow-translate)
-add_subdirectory(oneflow-runtime)
-add_subdirectory(oneflow-extension)
-add_subdirectory(oneflow-runner)
+  add_subdirectory(include)
+  add_subdirectory(lib)
+  add_subdirectory(test)
+  add_subdirectory(oneflow-opt)
+  add_subdirectory(oneflow-translate)
+  add_subdirectory(oneflow-runtime)
+  add_subdirectory(oneflow-extension)
+  add_subdirectory(oneflow-runner)
 endif(WITH_MLIR)
