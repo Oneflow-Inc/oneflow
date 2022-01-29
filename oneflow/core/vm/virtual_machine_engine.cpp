@@ -109,6 +109,26 @@ void VirtualMachineEngine::HandlePending() {
   OF_PROFILER_RANGE_POP();
 }
 
+std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t debug_cnt) {
+  std::stringstream ss;
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
+    if (--debug_cnt <= 0) { break; }
+    ss << instruction->instr_msg().DebugName() << "\n";
+  }
+  return ss.str();
+}
+
+void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instruction) {
+  ++total_inserted_lively_instruction_cnt_;
+  mut_lively_instruction_list()->PushBack(instruction);
+}
+
+intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
+    Instruction* instruction) {
+  ++total_erased_lively_instruction_cnt_;
+  return mut_lively_instruction_list()->Erase(instruction);
+}
+
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions() {
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
@@ -117,7 +137,7 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
-      stream->DeleteInstruction(mut_lively_instruction_list()->Erase(instruction_ptr));
+      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
@@ -158,7 +178,7 @@ void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
   bool is_barrier_instruction = instruction_type.IsFrontSequential();
   const auto& NewAndMove = [&](Stream* stream, const std::shared_ptr<const ParallelDesc>& pd) {
     intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, pd);
-    mut_lively_instruction_list()->PushBack(instr.Mutable());
+    LivelyInstructionListPushBack(instr.Mutable());
     if (unlikely(is_barrier_instruction)) {
       mut_barrier_instruction_list()->PushBack(instr.Mutable());
     } else {
@@ -677,7 +697,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(this, sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
-  mut_lively_instruction_list()->Erase(sequnential_instruction);
+  LivelyInstructionListErase(sequnential_instruction);
   OF_PROFILER_RANGE_POP();
 }
 
