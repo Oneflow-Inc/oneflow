@@ -24,7 +24,7 @@ class TestMovedim(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_movedim_with_vector(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),
@@ -37,7 +37,7 @@ class TestMovedim(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_movedim_with_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),
