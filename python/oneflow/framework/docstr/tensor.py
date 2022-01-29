@@ -684,6 +684,78 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.reciprocal,
+    """
+    See :func:`oneflow.reciprocal`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add,
+    """
+    See :func:`oneflow.add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add_,
+    """
+    In-place version of :func:`oneflow.Tensor.add`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.asin,
+    """
+    See :func:`oneflow.asin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsin,
+    """
+    See :func:`oneflow.arcsin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsinh,
+    """
+    See :func:`oneflow.arcsinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sin,
+    """
+    sin() -> Tensor
+
+    See :func:`oneflow.sin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cos,
+    """
+    See :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atan,
+    """
+    See :func:`oneflow.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctan,
+    """
+    See :func:`oneflow.arctan`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`
@@ -907,6 +979,46 @@ add_docstr(
     Alias for :func:`oneflow.Tensor.clamp_`. 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.cpu,
+    r"""Returns a copy of this object in CPU memory.
+    If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
+        >>> output = input.cpu()
+        >>> output.device
+        device(type='cpu', index=0)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cuda,
+    r"""Returns a copy of this object in CUDA memory.
+    If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
+
+    Args:
+        device  (flow.device): The destination GPU device. Defaults to the current CUDA device.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([1, 2, 3, 4, 5])
+        >>> output = input.cuda()
+        >>> output.device
+        device(type='cuda', index=0)
+    """,
+)
+
 
 add_docstr(
     oneflow.Tensor.repeat,
@@ -1261,5 +1373,54 @@ add_docstr(
     oneflow.Tensor.is_floating_point,
     """
     See :func:`oneflow.is_floating_point`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.item,
+    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element. 
+    For other cases, see tolist().
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1.0])
+        >>> x.item()
+        1.0
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.tolist,
+    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned, 
+    just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.tensor([[1,2,3], [4,5,6]])
+        >>> input.tolist()
+        [[1, 2, 3], [4, 5, 6]]
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.where,
+    """
+    See :func:`oneflow.where`
     """,
 )
