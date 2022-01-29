@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -675,9 +676,9 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
   };
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
-    if (JUST(FilterSbp4Blobs(input_bns(), nd_sbp_sig_list->at(sbp_id)))) {
+    if (JUST(FilterSbp4Blobs(input_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))) {
       // Remove the Nd SBP candidate
-      nd_sbp_sig_list->at(sbp_id) = nd_sbp_sig_list->at(nd_sbp_sig_list->size() - 1);
+      (*nd_sbp_sig_list)[sbp_id] = JUST(VectorAt(*nd_sbp_sig_list, nd_sbp_sig_list->size() - 1));
       nd_sbp_sig_list->pop_back();
     }
   }
@@ -705,11 +706,12 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         bool is_same_sbp =
             (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
             || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
-        total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
-            JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(), nd_sbp_sig_list.at(i).bn_in_op2nd_sbp()[ibn],
-            JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
-            JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
-            is_same_sbp));
+        total_copy_cost += JUST(
+            ComputeCopyCostBetweenNdSbp(JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(),
+                                        JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp()[ibn],
+                                        JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
+                                        JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(),
+                                        *JUST(GetParallelDesc4BnInOp(ibn)), is_same_sbp));
         // Reduce inquiries
         if (total_copy_cost > min_copy_cost) { break; }
       }
