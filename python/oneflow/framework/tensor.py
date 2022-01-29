@@ -246,6 +246,10 @@ def _add(self, other):
     return flow._C.add(self, other)
 
 
+def _addmm(self, mat1, mat2, alpha=1, beta=1):
+    return flow.addmm(self, mat1, mat2, alpha, beta)
+
+
 def _add_inplace(self, other):
     return flow._C.add(self, other, inplace=True)
 
@@ -998,6 +1002,7 @@ def RegisterMethods():
     Tensor.__add__ = _add
     Tensor.__iadd__ = _iadd
     Tensor.__radd__ = _radd
+    Tensor.addmm = _addmm
     Tensor.__sub__ = _sub
     Tensor.__rsub__ = _rsub
     Tensor.__truediv__ = _truediv
