@@ -132,7 +132,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
 - #### Option 3: Build on bare metal
 
-  - Install dependencies
+  - Install dependencies (not required if you are using docker):
     - on Ubuntu 20.04, run:
       ```
       sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
