@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <string>
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -171,7 +173,10 @@ Maybe<void> OpGraph::Init(const Job& job) {
   ForEachNode([](OpNode* node) { node->InitLbi2SourceNode(); });
   InferBlobLastUsed();
   InferTimeShape();
-  JUST(InferLogicalBlobDesc(job));
+  {
+    LazyMode::Guard enable_lazy_mode_guard(true);
+    JUST(InferLogicalBlobDesc(job));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -300,7 +305,9 @@ void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
-    const ParallelDesc* parallel_desc = &producer->parallel_desc();
+    const std::string& producer_lbn = *CHECK_JUST(producer->op().obn4lbi(lbi));
+    const ParallelDesc* parallel_desc =
+        CHECK_JUST(producer->op().GetParallelDesc4BnInOp(producer_lbn)).get();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const cfg::NdSbp* nd_sbp = &producer->NdSbp4Lbi(lbi);
     ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(parallel_desc, logical_blob_desc, nd_sbp));
