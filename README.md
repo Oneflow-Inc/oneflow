@@ -122,35 +122,13 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
 - #### Option 2: Build in docker container (recommended)
 
-  - Pull a docker image:
+  - Pull the docker image:
 
-    ```
-    docker pull oneflowinc/oneflow-manylinux2014-cuda10.2:0.1
-    ```
+  ```bash
+  docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
+  ```
 
-    All images available : https://hub.docker.com/u/oneflowinc
-
-  - In the root directory of OneFlow source code, run:
-
-    ```
-    python3 docker/package/manylinux/build_wheel.py --inplace --python_version=3.6
-    ```
-
-    This should produce `.whl` files in the directory `wheelhouse`
-
-  - If you are in China, you might need to add these flags:
-
-    ```
-    --use_tuna --use_system_proxy --use_aliyun_mirror
-    ```
-
-  - You can choose CUDA/Python versions of wheel by adding:
-
-    ```
-    --cuda_version=10.1 --python_version=3.6,3.7
-    ```
-
-  - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
+  - Follow the instruction in the bare metal build guide below.
 
 - #### Option 3: Build on bare metal
 
