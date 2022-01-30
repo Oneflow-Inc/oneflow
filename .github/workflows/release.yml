@@ -55,7 +55,7 @@ jobs:
       OSS_DIR: branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
     needs: [generate-build-matrix]
     name: Staging Release
-    timeout-minutes: 120
+    timeout-minutes: 180
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
