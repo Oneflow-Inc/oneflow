@@ -97,7 +97,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         W = randint(1, 8)
         device = random_device()
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
         output = torch.nn.functional.affine_grid(
             theta, (N, C, H, W), align_corners=align_corners
         ).to(device)
@@ -112,7 +112,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         W = randint(1, 8)
         device = random_device()
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
         output = torch.nn.functional.affine_grid(
             theta, (N, C, D, H, W), align_corners=align_corners
         ).to(device)
