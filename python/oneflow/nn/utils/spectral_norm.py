@@ -90,20 +90,20 @@ class SpectralNorm:
             weight_mat = fn.reshape_weight_to_matrix(weight)
 
             h, w = weight_mat.size()
-            # randomly initialize `u` and `v`
+            # randomly initialize `u` and `v`  
             u = normalize(weight.new_empty(h).normal_(0, 1), dim=0, eps=fn.eps)
-            #u = normalize(weight.new_empty(h).normal_(0, 1), dim=0, eps=fn.eps)
-            #v = normalize(weight.new_empty(w).normal_(0, 1), dim=0, eps=fn.eps)
+            v = normalize(weight.new_empty(w).normal_(0, 1), dim=0, eps=fn.eps)
 
-        delattr(module, fn.name)
+        #delattr(module, str(fn.name))
+        del module._parameters[fn.name]
         module.register_parameter(fn.name + "_orig", weight)
         setattr(module, fn.name, weight.data)
         module.register_buffer(fn.name + "_u", u)
         module.register_buffer(fn.name + "_v", v)
 
         module.register_forward_pre_hook(fn)
-        module._register_state_dict_hook(SpectralNormStateDictHook(fn))
-        module._register_load_state_dict_pre_hook(SpectralNormLoadStateDictPreHook(fn))
+        # module._register_state_dict_hook(SpectralNormStateDictHook(fn))
+        # module._register_load_state_dict_pre_hook(SpectralNormLoadStateDictPreHook(fn))
         return fn
 
 

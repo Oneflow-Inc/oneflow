@@ -166,6 +166,12 @@ def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
 def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
     return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
 
+def _new_empty(self, *size,dtype=None, device=None):
+    if not dtype:
+        dtype = self.dtype
+    if not device:
+        device = self.device
+    return flow.empty(size, dtype=dtype, device = device)
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
@@ -909,6 +915,7 @@ def RegisterMethods():
     Tensor.norm = _norm
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
+    Tensor.new_empty = _new_empty
     Tensor.transpose = _transpose
     Tensor.relu = _relu
     Tensor.softmax = _softmax
