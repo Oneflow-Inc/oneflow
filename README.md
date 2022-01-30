@@ -128,7 +128,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
     docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
     ```
 
-  - Follow the instruction in the bare metal build guide below.
+  - Follow the instructions in the bare metal build guide below.
 
 - #### Option 3: Build on bare metal
 
