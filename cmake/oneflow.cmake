@@ -301,28 +301,18 @@ if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs
-      -Wl,--whole-archive
-      oneflow
-      of_protoobj
-      of_cfgobj
-      of_functional_obj
-      of_op_schema
-      -Wl,--no-whole-archive
-      -ldl
-      -lrt)
+  set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   target_link_libraries(
     oneflow
-    of_protoobj
-    of_cfgobj
-    of_functional_obj
-    ${oneflow_third_party_libs}
-    ${EXTERNAL_TARGETS}
-    -Wl,--no-whole-archive
-    -ldl
-    -lrt)
+    PUBLIC of_protoobj
+           of_cfgobj
+           of_functional_obj
+           ${oneflow_third_party_libs}
+           ${EXTERNAL_TARGETS}
+           dl
+           rt)
   if(BUILD_CUDA)
-    target_link_libraries(oneflow CUDA::cudart_static)
+    target_link_libraries(oneflow PRIVATE CUDA::cudart_static)
   endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)

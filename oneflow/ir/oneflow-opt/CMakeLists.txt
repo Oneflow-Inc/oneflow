@@ -1,6 +1,5 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-get_property(oneflow_libs GLOBAL PROPERTY ALL_ONEFLOW_LIBS)
 add_llvm_executable(oneflow-opt oneflow-opt.cpp)
 
 set(_origin_prefix "\$ORIGIN")
@@ -12,6 +11,6 @@ set_target_properties(
                          INSTALL_RPATH "${_origin_prefix}")
 llvm_update_compile_flags(oneflow-opt)
 target_link_libraries(oneflow-opt PRIVATE ${dialect_libs} ${conversion_libs} MLIROptLib
-                      PUBLIC MLIROneFlow ${oneflow_libs})
+                      PUBLIC MLIROneFlow)
 
 mlir_check_all_link_libraries(oneflow-opt)

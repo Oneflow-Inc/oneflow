@@ -48,32 +48,17 @@ if(LLVM_PROVIDER STREQUAL "in-tree")
   add_subdirectory(${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen ${PROJECT_BINARY_DIR}/oneflow-tblgen)
 endif()
 
-set_property(
-  GLOBAL
-  PROPERTY ALL_ONEFLOW_LIBS
-           -Wl,--no-as-needed
-           oneflow
-           -Wl,--as-needed
-           -Wl,--no-as-needed
-           glog::glog
-           -Wl,--as-needed
-           -Wl,--no-as-needed
-           ${oneflow_third_party_libs}
-           -Wl,--as-needed)
-
 function(update_rpath)
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-  BUILD_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-  BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-  BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-  INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-  INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-  INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY BUILD_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(
+    TARGET ${ARGV0} APPEND
+    PROPERTY BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(
+    TARGET ${ARGV0} APPEND
+    PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
 endfunction(update_rpath)
 
 function(oneflow_add_mlir_library)
