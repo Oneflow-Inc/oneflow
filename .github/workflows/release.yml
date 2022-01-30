@@ -40,7 +40,7 @@ jobs:
           runner-labels: |
             self-hosted
             linux
-            build
+            release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
             cu112
@@ -55,7 +55,7 @@ jobs:
     needs: [generate-build-matrix]
     name: Staging Release
     timeout-minutes: 120
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
       fail-fast: false
@@ -112,7 +112,7 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: false
-          nightly: ${{ github.event_name == 'schedule' }}
+          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
           python-versions: |
             3.6
             3.7
