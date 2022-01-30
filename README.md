@@ -150,6 +150,11 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
     --cuda_version=10.1 --python_version=3.6,3.7
     ```
 
+  - You can create a pure CPU build by adding:
+    ```
+    --cpu
+    ```
+
   - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
 
 - #### Option 3: Build on bare metal
