@@ -29,9 +29,9 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=10, auto_backward=False, check_graph=False)
 def test_greater_equal_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
-    x1 = random_pytorch_tensor(ndim, *dims)
+    x1 = random_tensor(ndim, *dims)
     x1 = x1.to_consistent(placement=placement, sbp=sbp)
-    x2 = random_pytorch_tensor(ndim, *dims)
+    x2 = random_tensor(ndim, *dims)
     x2 = x2.to_consistent(placement=placement, sbp=sbp)
 
     z = torch.ge(x1, x2)

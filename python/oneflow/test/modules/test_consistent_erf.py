@@ -29,7 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=10, check_graph=False)
 def test_erf_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_pytorch_tensor(ndim, *dims)
+    x = random_tensor(ndim, *dims)
     y = x.to_consistent(placement=placement, sbp=sbp)
     z = torch.erf(y)
     return z
