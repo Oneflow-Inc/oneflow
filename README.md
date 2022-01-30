@@ -75,7 +75,7 @@
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
     | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu102, cu102_xla | >= 440.33 | GTX 10xx, RTX 20xx |
+    | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 
 - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
