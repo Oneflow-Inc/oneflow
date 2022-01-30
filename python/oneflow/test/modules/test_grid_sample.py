@@ -63,13 +63,11 @@ class TestGridSample(flow.unittest.TestCase):
         mode = "bilinear"
         padding_mode = "zeros"
         align_corners = True
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_pytorch_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(
-            device
-        )
+        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(device)
         output = torch.nn.functional.grid_sample(
             input,
             grid,
@@ -99,13 +97,11 @@ class TestGridSample(flow.unittest.TestCase):
         mode = choice(["bilinear", "nearest", "bicubic"])
         padding_mode = choice(["zeros", "border", "reflection"])
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_pytorch_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(
-            device
-        )
+        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(device)
         output = torch.nn.functional.grid_sample(
             input,
             grid,
@@ -129,11 +125,11 @@ class TestGridSample(flow.unittest.TestCase):
         mode = choice(["bilinear", "nearest"])
         padding_mode = choice(["zeros", "border", "reflection"])
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_D, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_pytorch_tensor(
+        input = random_tensor(
             ndim=5, dim0=N, dim1=C, dim2=in_D, dim3=in_H, dim4=in_W
         ).to(device)
         output = torch.nn.functional.grid_sample(
