@@ -41,9 +41,16 @@ def _test_boxing_with_random_data(test_case, ndim, placement, sbp_in, sbp_out):
     # NOTE: Consuming a lot of time for transferring. Should use a tensor as small as possible.
     dims = [8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
-    print(sbp_in)
+    # NOTE: Boxing collector (a.k.a. middle nodes algorithm) do not support transferring a 1D sbp to nd sbp at this moment.
+    # We do not support B -> (S(0), S(1)) for lazy.
+    # Thus, we transfer B to (B, B).
+    # TODO: Support 1d to nd sbp transfer using middle nodes.
+    x = x.to_consistent(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+
+    # print("x sbp: ", x.sbp)
+    # print("sbp in: ", sbp_in)
     y = x.to_consistent(placement=placement, sbp=sbp_in)
-    print(sbp_out)
+    # print("sbp out: ", sbp_out)
     z = y.to_consistent(sbp=sbp_out)
     return z
 

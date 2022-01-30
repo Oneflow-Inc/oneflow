@@ -15,25 +15,29 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
-import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, auto_backward=False, check_graph=False)
+@autotest(n=3, auto_backward=False, check_graph=True)
 def test_greater_impl(test_case, ndim, placement):
     dims = [random(1, 3) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
+    # NOTE: Boxing collector (a.k.a. middle nodes algorithm) do not support transferring a 1D sbp to nd sbp at this moment.
+    # We do not support B -> (S(0), S(1)) for lazy.
+    # Thus, we transfer B to (B, B).
+    # TODO: Support 1d to nd sbp transfer using middle nodes.
+    x = x.to_consistent(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
+
     x1 = x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)])
+    # print("x1 sbp: ", x1.sbp)
     x2 = x.to_consistent(placement=placement, sbp=[flow.sbp.split(1), flow.sbp.split(0)])
+    # print("x2 sbp: ", x2.sbp)
 
     y = x1 + x2
+    # print("y sbp: ", y.sbp)
     return y
 
 
