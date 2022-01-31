@@ -51,14 +51,8 @@ endif()
 function(update_rpath)
   set_property(TARGET ${ARGV0} APPEND PROPERTY BUILD_RPATH "${LLVM_LIBRARY_DIR}")
   set_property(TARGET ${ARGV0} APPEND PROPERTY BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
-  set_property(
-    TARGET ${ARGV0} APPEND
-    PROPERTY BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
   set_property(TARGET ${ARGV0} APPEND PROPERTY INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
   set_property(TARGET ${ARGV0} APPEND PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
-  set_property(
-    TARGET ${ARGV0} APPEND
-    PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}/third_party_install/glog/install/lib")
 endfunction(update_rpath)
 
 function(oneflow_add_mlir_library)
