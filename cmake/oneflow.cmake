@@ -260,7 +260,9 @@ include_directories(${PROJECT_BINARY_DIR})
 # cc obj lib
 oneflow_add_library(oneflow ${of_all_obj_cc})
 
-add_dependencies(oneflow install-tbb)
+if(CPU_THREADING_RUNTIME STREQUAL "TBB")
+  add_dependencies(oneflow install-tbb)
+endif()
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
