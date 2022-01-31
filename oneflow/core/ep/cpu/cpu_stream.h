@@ -116,6 +116,8 @@ class CpuStream : public Stream {
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     if (grain_size > 0) {
       num_threads = std::min(num_threads, (size_t)(DivUp((end - begin), grain_size)));
+    } else {
+      num_threads = 1;
     }
 #pragma omp parallel num_threads(num_threads)
     {
