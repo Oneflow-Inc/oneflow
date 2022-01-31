@@ -88,7 +88,7 @@
 
 ```
 docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.1
+docker pull oneflowinc/oneflow:nightly-cuda11.2
 ```
 
 ### Build from Source
