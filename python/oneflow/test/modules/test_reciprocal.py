@@ -31,9 +31,16 @@ class TestReciprocalModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_reciprocal_list_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
         ).to(device)
+        y = torch.reciprocal(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_reciprocal_list_with_0dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
         y = torch.reciprocal(x)
         return y
 

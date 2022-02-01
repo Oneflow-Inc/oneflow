@@ -282,9 +282,13 @@ class Graph(object):
         If in debug mode, logs of computation graph building infos or warnings will be
         printed. Otherwise, only errors will be printed.
 
-        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 1.
-        ``v_level`` 0 will print warning and graph creating stages. ``v_level`` 1 will additionally
-        print graph build info of each module.
+        Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
+
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
+        ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
+        print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
+        info of each operation. ``v_level`` 3 will additionally print more detailed info of each
+        operation.
         
         Use ``ranks`` to choose which rank to print the debug information.
 
@@ -295,12 +299,14 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 1.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
             mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
         """
         assert isinstance(v_level, int)
+        assert v_level >= 0, "The min verbose debug info level is 0."
+        assert v_level <= 3, "The max verbose debug info level is 3."
         assert isinstance(mode, bool)
 
         if ranks is None:
@@ -375,7 +381,7 @@ class Graph(object):
         assert isinstance(msg, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
+                print(msg, flush=True)
 
     @property
     def _config_proto(self):
@@ -494,7 +500,10 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            eager_outputs = self._build_graph(*args)
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level
+            ):
+                eager_outputs = self._build_graph(*args)
             build_graph_end = time.perf_counter()
             self._print(
                 0,

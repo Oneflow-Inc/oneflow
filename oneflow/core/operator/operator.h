@@ -54,6 +54,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
+  const std::string& op_loc() const { return op_conf().loc(); }
   DeviceType device_type() const;
   const OperatorConf& op_conf() const;
   std::shared_ptr<const OperatorConf> shared_op_conf() const;
@@ -167,8 +168,14 @@ class Operator {
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const;
+  virtual Maybe<void> GetNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
+  Maybe<void> GetValidNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
 
-  void ForEachBnInOp(std::function<void(const std::string&)>) const;
+  void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
@@ -277,8 +284,16 @@ class Operator {
   };
   Maybe<void> FilterAndCheckValidSbpSignatureListByLogicalShape(
       const cfg::SbpSignatureList& total_sbp_sig_list,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, cfg::SbpSignatureList* valid_sbp_sig_list) const;
+  // TODO(wyg): 1d and nd sbp use this function to filter and check
+  Maybe<void> FilterNdSbpSignatureListByLogicalShape(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const;
+  Maybe<void> GreedilyFindMinCopyCostNdSbp(
+      cfg::NdSbpSignature* nd_sbp_signature,
+      const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
+      const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list) const;
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;

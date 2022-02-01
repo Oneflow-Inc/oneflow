@@ -107,6 +107,9 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
 
+  virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    OF_UNIMPLEMENTED();
+  };
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
@@ -288,7 +291,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     return tensor_->consistent_tensor_meta();
   }
-  Maybe<Tensor> data() override { return tensor_; }
+  Maybe<Tensor> data() override { return tensor_->detach(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Parameter.data() in operators.
@@ -417,10 +420,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_cuda() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
-  Maybe<Tensor> data() override {
-    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a LocalTensor.");
-    return std::static_pointer_cast<Tensor>(shared_from_this());
-  }
+  Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -484,6 +484,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return Maybe<void>::Ok();
   }
 
+  Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override {
+    return impl_->RegisterStorageDeleteHook(hook);
+  }
+
   Maybe<MirroredTensor> AsMirroredTensor() override {
     return std::dynamic_pointer_cast<MirroredTensor>(shared_from_this());
   }
@@ -522,10 +526,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
-  Maybe<Tensor> data() override {
-    OF_LOG_ONCE(LOG(WARNING) << "You shouldn't call `.data` for a ConsistentTensor.");
-    return std::static_pointer_cast<Tensor>(shared_from_this());
-  }
+  Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {

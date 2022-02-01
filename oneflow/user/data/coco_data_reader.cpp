@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/user/data/coco_data_reader.h"
 #include "oneflow/user/data/coco_dataset.h"
 #include "oneflow/user/data/distributed_training_dataset.h"
 #include "oneflow/user/data/group_batch_dataset.h"
 #include "oneflow/user/data/batch_dataset.h"
+#include "oneflow/user/data/distributed_util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -27,40 +27,36 @@ namespace oneflow {
 namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
+  batch_size_ = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+  if (auto* pool = TensorBufferPool::TryGet()) { pool->IncreasePoolSizeByBase(batch_size_); }
+
   std::shared_ptr<const COCOMeta> meta(new COCOMeta(
       ctx->Attr<int64_t>("session_id"), ctx->Attr<std::string>("annotation_file"),
       ctx->Attr<std::string>("image_dir"), ctx->Attr<bool>("remove_images_without_annotations")));
   std::unique_ptr<RandomAccessDataset<COCOImage>> coco_dataset_ptr(new COCODataset(ctx, meta));
 
-  int64_t parallel_id = 0;
-  int64_t parallel_num = 0;
-  // NOTE(zwx): COCODataReader is not consistent since attr nd_sbp is empty,
-  // we assume that it works in DDP
-  auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-  if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) {
-    parallel_id = GlobalProcessCtx::Rank();
-    parallel_num = GlobalProcessCtx::WorldSize();
-  } else {
-    parallel_id = ctx->parallel_ctx().parallel_id();
-    parallel_num = ctx->parallel_ctx().parallel_num();
-  }
+  size_t world_size = 1;
+  int64_t rank = 0;
+  CHECK_JUST(InitDataSourceDistributedInfo(ctx, world_size, rank));
   loader_.reset(new DistributedTrainingDataset<COCOImage>(
-      parallel_num, parallel_id, ctx->Attr<bool>("stride_partition"),
-      ctx->Attr<bool>("shuffle_after_epoch"), ctx->Attr<int64_t>("random_seed"),
-      std::move(coco_dataset_ptr)));
+      world_size, rank, ctx->Attr<bool>("stride_partition"), ctx->Attr<bool>("shuffle_after_epoch"),
+      ctx->Attr<int64_t>("random_seed"), std::move(coco_dataset_ptr)));
 
-  size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->Attr<bool>("group_by_ratio")) {
-    auto GetGroupId = [](const std::shared_ptr<COCOImage>& sample) {
-      return static_cast<int64_t>(sample->height / sample->width);
+    auto GetGroupId = [](const COCOImage& sample) {
+      return static_cast<int64_t>(sample.height / sample.width);
     };
-    loader_.reset(new GroupBatchDataset<COCOImage>(batch_size, GetGroupId, std::move(loader_)));
+    loader_.reset(new GroupBatchDataset<COCOImage>(batch_size_, GetGroupId, std::move(loader_)));
   } else {
-    loader_.reset(new BatchDataset<COCOImage>(batch_size, std::move(loader_)));
+    loader_.reset(new BatchDataset<COCOImage>(batch_size_, std::move(loader_)));
   }
 
   parser_.reset(new COCOParser(meta));
   StartLoadThread();
+}
+
+COCODataReader::~COCODataReader() {
+  if (auto* pool = TensorBufferPool::TryGet()) { pool->DecreasePoolSizeByBase(batch_size_); }
 }
 
 COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,

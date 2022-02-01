@@ -22,7 +22,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                       const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_GT_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   for (int i = 0; i < out->nd_sbp()->sbp_parallel_size(); ++i) {
@@ -42,7 +43,8 @@ Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSb
 
 }  // namespace
 
-static constexpr auto* CheckUnflattenHierarchy = DECORATE(&RawCheckUnflattenHierarchy, ThreadLocal);
+static constexpr auto* CheckUnflattenHierarchy =
+    DECORATE(&RawCheckUnflattenHierarchy, ThreadLocalCopiable);
 
 Maybe<one::Tensor> UnflattenHierarchy(const std::shared_ptr<one::Tensor>& tensor,
                                       Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
