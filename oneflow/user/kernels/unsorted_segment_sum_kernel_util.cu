@@ -26,8 +26,17 @@ namespace {
 
 template<typename T>
 __device__ __forceinline__ bool IsZero(T v) {
-  constexpr T zero{};
-  return v == zero;
+  return v == 0;
+}
+
+template<>
+__device__ __forceinline__ bool IsZero<half>(half v) {
+  return v == static_cast<half>(0);
+}
+
+template<>
+__device__ __forceinline__ bool IsZero<half2>(half2 v) {
+  return v.x == static_cast<half>(0) && v.y == static_cast<half>(0);
 }
 
 template<typename T, typename K, typename IDX, typename U>
