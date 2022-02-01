@@ -23,6 +23,7 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
+
 enum class BinaryOp {
   // Math
   kAdd,
@@ -32,6 +33,8 @@ enum class BinaryOp {
   kMax,
   kMin,
   kPow,
+  kFloorMod,
+  kFMod,
   // Comparision
   kEqual,
   kNotEqual,
@@ -52,6 +55,22 @@ enum class BinaryOp {
 
 }
 }  // namespace ep
+
+using namespace ep::primitive;
+
+// #define MATH_BINARY_BROADCAST_PRIMITIVE_OP_SEQ                  \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_add", BinaryOp::kAdd)            \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_sub", BinaryOp::kSub)            \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_mul", BinaryOp::kMul)            \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_div", BinaryOp::kDiv)            \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_minimum", BinaryOp::kMin)        \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_maximum", BinaryOp::kMax)        \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", BinaryOp::kFloorMod) \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_fmod", BinaryOp::kFMod)          \
+//   OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", BinaryOp::kPow)
+
+#define MATH_BINARY_BROADCAST_PRIMITIVE_OP_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_pow", BinaryOp::kPow)
 
 }  // namespace oneflow
 

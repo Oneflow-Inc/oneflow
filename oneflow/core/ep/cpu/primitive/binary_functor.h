@@ -33,6 +33,35 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, float16, float16> {
   }
 };
 
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFMod, Src, Dst> {
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return std::fmod(src0, src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFMod, float16, float16> {
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    return static_cast<float16>(std::fmod(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, Src, Dst> {
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { 
+    const Src trunc_mod = std::fmod(src0, src1);
+    return (trunc_mod != 0) && ((src1 < 0) != (trunc_mod < 0)) ? trunc_mod + src1 : trunc_mod;
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float16, float16> {
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    const float trunc_mod = std::fmod(static_cast<float>(src0), static_cast<float>(src1));
+    return (trunc_mod != float(0)) && ((src1 < float(0)) != (trunc_mod < float(0))) ? static_cast<float16>(trunc_mod + src1) : static_cast<float16>(trunc_mod);
+  }
+};
+
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
