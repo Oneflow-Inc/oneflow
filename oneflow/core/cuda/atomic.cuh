@@ -95,6 +95,11 @@ struct AddOp {
   __device__ __forceinline__ T operator()(T a, T b) { return a + b; }
 };
 
+template<>
+struct AddOp<half2> {
+  __device__ __forceinline__ half2 operator()(half2 a, half2 b) { return __hadd2(a, b); }
+};
+
 template<typename T, template<typename> class BinaryOp>
 __device__ __forceinline__ T AtomicCASBinaryImpl(T* address, T val) {
   T old = *address;
