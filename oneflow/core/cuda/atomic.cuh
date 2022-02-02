@@ -95,11 +95,6 @@ struct AddOp {
   __device__ __forceinline__ T operator()(T a, T b) { return a + b; }
 };
 
-template<>
-struct AddOp<half2> {
-  __device__ __forceinline__ half2 operator()(half2 a, half2 b) { return __hadd2(a, b); }
-};
-
 template<typename T, template<typename> class BinaryOp>
 __device__ __forceinline__ T AtomicCASBinaryImpl(T* address, T val) {
   T old = *address;
@@ -162,6 +157,15 @@ __device__ __forceinline__ nv_bfloat16 AddImpl(nv_bfloat16* address, nv_bfloat16
 }
 
 #endif  // __CUDA_ARCH__ >= 800
+
+#if __CUDA_ARCH__ < 530
+
+__device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
+  __trap();
+  return val;
+}
+
+#endif  // __CUDA_ARCH__ < 530
 
 }  // namespace internal
 
