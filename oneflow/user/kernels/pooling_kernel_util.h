@@ -205,53 +205,87 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t n, c, h, w;
-    index_helper.OffsetToNdIndex(num, n, c, h, w);
+    // int64_t n, c, h, w;
+    // index_helper.OffsetToNdIndex(num, n, c, h, w);
 
-    const int64_t start_idx = (n * n_channel + c) * x_width * x_height;
-    int64_t hstart = h * stride_h - padding_h;
-    int64_t wstart = w * stride_w - padding_w;
-    const int64_t hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
+    // const int64_t start_idx = (n * n_channel + c) * x_width * x_height;
+    // int64_t hstart = h * stride_h - padding_h;
+    // int64_t wstart = w * stride_w - padding_w;
+    // const int64_t hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
+    //                          ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
+    //                          : x_height;
+    // const int64_t wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
+    //                          ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
+    //                          : x_width;
+
+    // while (hstart < 0) { hstart += dilation_h; }
+    // while (wstart < 0) { wstart += dilation_w; }
+
+    // /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
+    // int64_t max_index = hstart * x_width + wstart;
+    // int64_t src_idx = 0;
+
+    // /* equal to -std::numeric_limits<T>::infinity(); */
+    // T max_value = detail::numeric_limits<T>::lower_bound();
+
+    // for (int64_t i = hstart; i < hend; i += dilation_h) {
+    //   for (int64_t j = wstart; j < wend; j += dilation_w) {
+    //     const int64_t window_idx = i * x_width + j;
+    //     const int64_t search_idx = start_idx + window_idx;
+    //     T val = src[search_idx];
+    //     /* NOTE:
+    //     std::isnan(val) only supports a few data types, see:
+    //     https://en.cppreference.com/w/cpp/numeric/math/isnan and when use gcc/g++ 4.x to compile,
+    //     the following exception will be throw:
+
+    //     new_kernel_util.cu:24] Check failed: cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
+    //     ctx->cuda_stream() ) : unspecified launch failure (719)
+
+    //     but if use gcc/g++ 7.x to compile, everything is ok! the exact reason is still unknown!
+    //     */
+    //     if (val > max_value || detail::numerics<T>::isnan(val)) {
+    //       max_value = val;
+    //       max_index = window_idx;
+    //       src_idx = search_idx;
+    //     }
+    //   }
+    // }
+
+    int pw = num % kernel_size_w;
+    int ph = (num / kernel_size_w) % kernel_size_h;
+    int c = (num / kernel_size_w / kernel_size_h) % 64;
+    int n = num / kernel_size_w / kernel_size_h / 64;
+    int hstart = ph * stride_h - padding_h;
+    int wstart = pw * stride_w - padding_w;
+    // int hend = min(hstart + (kernel_size_h - 1) * dilation_h + 1, x_height);
+    // int wend = min(wstart + (kernel_size_w - 1) * dilation_w + 1, x_width);
+
+    int hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
                              ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
                              : x_height;
-    const int64_t wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
+    int wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
                              ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
                              : x_width;
 
-    while (hstart < 0) { hstart += dilation_h; }
-    while (wstart < 0) { wstart += dilation_w; }
-
-    /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
-    int64_t max_index = hstart * x_width + wstart;
-    int64_t src_idx = 0;
-
-    /* equal to -std::numeric_limits<T>::infinity(); */
-    T max_value = detail::numeric_limits<T>::lower_bound();
-
-    for (int64_t i = hstart; i < hend; i += dilation_h) {
-      for (int64_t j = wstart; j < wend; j += dilation_w) {
-        const int64_t window_idx = i * x_width + j;
-        const int64_t search_idx = start_idx + window_idx;
-        T val = src[search_idx];
-        /* NOTE:
-        std::isnan(val) only supports a few data types, see:
-        https://en.cppreference.com/w/cpp/numeric/math/isnan and when use gcc/g++ 4.x to compile,
-        the following exception will be throw:
-
-        new_kernel_util.cu:24] Check failed: cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
-        ctx->cuda_stream() ) : unspecified launch failure (719)
-
-        but if use gcc/g++ 7.x to compile, everything is ok! the exact reason is still unknown!
-        */
-        if (val > max_value || detail::numerics<T>::isnan(val)) {
-          max_value = val;
-          max_index = window_idx;
-          src_idx = search_idx;
+    while(hstart < 0)
+      hstart += dilation_h;
+    while(wstart < 0)
+      wstart += dilation_w;
+    
+    T maxval = detail::numeric_limits<T>::lower_bound(); // -Infinity
+    int maxidx = hstart * x_width + wstart;
+    const T* btm_data = src + (n * 64 + c) * x_height * x_width;
+    for (int h = hstart; h < hend; h += dilation_h) {
+      for (int w = wstart; w < wend; w += dilation_w) {
+        T val = btm_data[h * x_width + w];
+        if (val > maxval|| detail::numerics<T>::isnan(val)) {
+          maxidx = h * x_width + w;
+          maxval = static_cast<T>(val);
         }
       }
     }
-    dest[num] = src[src_idx];
-    indice_ptr[num] = max_index;
+    dest[num] = maxval;
+    indice_ptr[num] = maxidx;
   }
 }
 
