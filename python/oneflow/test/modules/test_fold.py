@@ -36,7 +36,7 @@ class TestFold(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=3, dim0=constant(2), dim1=constant(36), dim2=constant(16)
         ).to(device)
         y = m(x)
@@ -54,7 +54,7 @@ class TestFold(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=3, dim0=constant(2), dim1=constant(36), dim2=constant(4)
         ).to(device)
         y = m(x)
@@ -72,7 +72,7 @@ class TestFold(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=3, dim0=constant(2), dim1=constant(72), dim2=constant(16)
         ).to(device)
         y = m(x)
@@ -90,7 +90,7 @@ class TestFold(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=3, dim0=constant(2), dim1=constant(9), dim2=constant(9)
         ).to(device)
         y = m(x)

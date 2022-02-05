@@ -82,7 +82,7 @@ class TestEye(flow.unittest.TestCase):
         x = torch.eye(n=n, m=m)
         device = random_device()
         x.to(device=device, dtype=torch.bool)
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         return x
 
     @autotest(check_graph=True, auto_backward=False)
@@ -92,7 +92,7 @@ class TestEye(flow.unittest.TestCase):
         x = torch.eye(n=n, m=m)
         device = random_device()
         x.to(device)
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         return x
 
 

@@ -32,7 +32,7 @@ class TestChunk(flow.unittest.TestCase):
     def test_flow_chunk_list_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(low=4, high=8).to(int),
             dim2=random(low=4, high=8).to(int),
@@ -47,7 +47,7 @@ class TestChunk(flow.unittest.TestCase):
     def test_flow_chunk_list_bool_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(low=4, high=8).to(int),
             dim2=random(low=4, high=8).to(int),
@@ -61,7 +61,7 @@ class TestChunk(flow.unittest.TestCase):
     def test_flow_chunk_list_with_random_data_negative_dim(test_case):
         device = random_device()
         dim = random(1, 3).to(int)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(low=4, high=8).to(int),
             dim1=random(low=4, high=8).to(int),

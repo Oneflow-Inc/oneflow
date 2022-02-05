@@ -15,6 +15,7 @@ on:
         required: false
 concurrency:
   group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
 jobs:
@@ -31,7 +32,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refactor-release
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@fix-oom
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -40,7 +41,7 @@ jobs:
           runner-labels: |
             self-hosted
             linux
-            build
+            release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
             cu112
@@ -54,8 +55,8 @@ jobs:
       OSS_DIR: branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
     needs: [generate-build-matrix]
     name: Staging Release
-    timeout-minutes: 120
-    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 180
+    runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
       fail-fast: false
@@ -71,7 +72,7 @@ jobs:
           python3 -m pip install -U pip setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@refactor-release
+      - uses: Oneflow-Inc/get-oneflow@fix-oom
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
@@ -81,7 +82,7 @@ jobs:
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
+          self-hosted: true
           compute-platform: ${{ matrix.entry }}
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
@@ -95,7 +96,7 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@refactor-release
+      - uses: Oneflow-Inc/get-oneflow@fix-oom
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -105,14 +106,14 @@ jobs:
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
+          self-hosted: true
           compute-platform: ${{ matrix.entry }}
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: false
-          nightly: ${{ github.event_name == 'schedule' }}
+          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
           python-versions: |
             3.6
             3.7
