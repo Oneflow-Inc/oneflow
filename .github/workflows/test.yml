@@ -120,7 +120,9 @@ jobs:
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
-    runs-on: [self-hosted, scheduler]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build-and-test-wait-for-gpu-slot
     needs: [build-oneflow]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     continue-on-error: true
