@@ -73,7 +73,7 @@ def _test_linear_graph_save_load(test_case, device):
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()
         if call_cnt == 1:
-            # Check wild variable state initialized in job has been loaded.
+            # Check additional variable state initialized in job has been loaded.
             cur_train_step = iter0_state_dict["System-Train-TrainStep"].numpy()[0]
             test_case.assertTrue(3 == cur_train_step)
             test_case.assertTrue(
@@ -199,7 +199,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()
         if call_cnt == 1:
-            # Check wild variable state initialized in job has been loaded.
+            # Check additional variable state initialized in job has been loaded.
             # TrainStep's placement is only on rank 0, so it needs to be broadcast to rank 0 and 1 before check.
             cur_train_step = (
                 iter0_state_dict["System-Train-TrainStep"]

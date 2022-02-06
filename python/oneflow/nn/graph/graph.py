@@ -286,14 +286,15 @@ class Graph(object):
                     keep_vars=keep_vars,
                 )
             destination[name] = sub_destination
-        wild_var_names = self._c_nn_graph.wild_var_names
-        wild_var_tensors = self._c_nn_graph.wild_var_tensors
-        assert len(wild_var_names) == len(wild_var_tensors)
-        for i in range(len(wild_var_names)):
-            wild_tensor = wild_var_tensors[i]
+        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
+        additional_var_names = self._c_nn_graph.additional_var_names
+        additional_var_tensors = self._c_nn_graph.additional_var_tensors
+        assert len(additional_var_names) == len(additional_var_tensors)
+        for i in range(len(additional_var_names)):
+            additional_tensor = additional_var_tensors[i]
             if not self._is_global_view:
-                wild_tensor = wild_tensor.to_local()
-            destination[wild_var_names[i]] = wild_tensor
+                additional_tensor = additional_tensor.to_local()
+            destination[additional_var_names[i]] = additional_tensor
         return destination
 
     def load_state_dict(
@@ -302,8 +303,9 @@ class Graph(object):
         assert (
             not self._is_compiled
         ), "nn.Graph's state dict can only be load before the first call of graph."
-        wild_var_names = list()
-        wild_var_tensors = list()
+        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
+        additional_var_names = list()
+        additional_var_tensors = list()
         for name, sub_dict in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
@@ -311,12 +313,12 @@ class Graph(object):
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 assert isinstance(sub_dict, Tensor)
-                wild_var_names.append(name)
-                wild_var_tensors.append(sub_dict)
+                additional_var_names.append(name)
+                additional_var_tensors.append(sub_dict)
 
-        if len(wild_var_names):
-            self._c_nn_graph.register_wild_variable_names_and_tensors(
-                wild_var_names, convert_to_tensor_tuple(wild_var_tensors)
+        if len(additional_var_names):
+            self._c_nn_graph.register_additional_variable_names_and_tensors(
+                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
             )
 
     @property

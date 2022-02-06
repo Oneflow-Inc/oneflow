@@ -30,13 +30,13 @@ namespace py = pybind11;
 
 namespace oneflow {
 namespace {
-py::object APINNGraphWildVarNames(const std::shared_ptr<NNGraph>& graph) {
-  const auto names = *graph->GetWildVarOpNames().GetPtrOrThrow();
+py::object APINNGraphAdditionalVarNames(const std::shared_ptr<NNGraph>& graph) {
+  const auto names = *graph->GetAdditionalVarOpNames().GetPtrOrThrow();
   py::list name_list = py::cast(names);
   return py::cast<py::object>(name_list);
 }
-py::object APINNGraphWildVarTensors(const std::shared_ptr<NNGraph>& graph) {
-  const auto tensors = *graph->GetWildVarOpTensors().GetPtrOrThrow();
+py::object APINNGraphAdditionalVarTensors(const std::shared_ptr<NNGraph>& graph) {
+  const auto tensors = *graph->GetAdditionalVarOpTensors().GetPtrOrThrow();
   py::list tensor_list = py::cast(tensors);
   return py::cast<py::object>(tensor_list);
 }
@@ -65,15 +65,16 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
              return graph.RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors)
                  .GetOrThrow();
            })
-      .def("register_wild_variable_names_and_tensors",
+      .def("register_additional_variable_names_and_tensors",
            [](NNGraph& graph, const std::vector<std::string>& variable_op_names,
               const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
              return graph
-                 .RegisterWildVarOpNamesAndTensorsToBeLoaded(variable_op_names, variable_tensors)
+                 .RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(variable_op_names,
+                                                                   variable_tensors)
                  .GetOrThrow();
            })
-      .def_property_readonly("wild_var_names", &APINNGraphWildVarNames)
-      .def_property_readonly("wild_var_tensors", &APINNGraphWildVarTensors)
+      .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
+      .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
       .def("complie_and_init_runtime",
            [](NNGraph& graph) { return graph.CompileAndInitRuntime().GetOrThrow(); });
 

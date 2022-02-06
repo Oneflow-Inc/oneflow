@@ -103,15 +103,16 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
 
 int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
 
-Maybe<void> NNGraph::RegisterWildVarOpNamesAndTensorsToBeLoaded(
-    const std::vector<std::string>& wild_var_names,
-    const std::vector<std::shared_ptr<one::Tensor>>& wild_var_tensors) {
-  CHECK_EQ_OR_RETURN(wild_var_names.size(), wild_var_tensors.size());
-  CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_.empty())
-      << " The wild variables of nn.Graph " << name_ << " are register repeatedly.";
-  FOR_RANGE(size_t, i, 0, wild_var_names.size()) {
-    CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_
-                        .emplace(wild_var_names.at(i), wild_var_tensors.at(i))
+Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
+    const std::vector<std::string>& additional_var_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors) {
+  CHECK_EQ_OR_RETURN(additional_var_names.size(), additional_var_tensors.size());
+  CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_.empty())
+      << " The additional variables (states in Optimizer or LRScheduler) of nn.Graph " << name_
+      << " are register repeatedly.";
+  FOR_RANGE(size_t, i, 0, additional_var_names.size()) {
+    CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_
+                        .emplace(additional_var_names.at(i), additional_var_tensors.at(i))
                         .second);
   }
   return Maybe<void>::Ok();
@@ -181,21 +182,21 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
     CHECK_OR_RETURN(var->is_eager());
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
-    CHECK_OR_RETURN(wild_variable_op_name2tensor_.emplace(var_name, var).second);
+    CHECK_OR_RETURN(additional_variable_op_name2tensor_.emplace(var_name, var).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<std::vector<std::string>> NNGraph::GetWildVarOpNames() const {
+Maybe<std::vector<std::string>> NNGraph::GetAdditionalVarOpNames() const {
   std::vector<std::string> names;
-  for (const auto& iter : wild_variable_op_name2tensor_) { names.push_back(iter.first); }
+  for (const auto& iter : additional_variable_op_name2tensor_) { names.push_back(iter.first); }
   return names;
 }
 
-Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetWildVarOpTensors() const {
+Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetAdditionalVarOpTensors() const {
   std::vector<std::shared_ptr<one::Tensor>> tensors;
-  for (const auto& iter : wild_variable_op_name2tensor_) { tensors.push_back(iter.second); }
+  for (const auto& iter : additional_variable_op_name2tensor_) { tensors.push_back(iter.second); }
   return tensors;
 }
 
@@ -217,7 +218,8 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
           << " ERROR! variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
       CHECK_OR_RETURN(
-          wild_variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
+          additional_variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()})
+              .second)
           << " ERROR! variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
     } else {
@@ -305,7 +307,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     Blob* var_blob = nullptr;
     if (/*is_null=*/!tensor) {
       // Deal with tensors which are not in the nn.Module.
-      // We can call these tensors as wild variables.
+      // We can call these tensors as additional variables.
       const auto& op_attribute =
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
       // NOTE(chengcheng): handle constant variable created by job pass
@@ -318,9 +320,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
           JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
 
-      auto load_tensor_iter = wild_variable_op_tobe_loaded_name2tensor_.find(var_name);
-      if (load_tensor_iter == wild_variable_op_tobe_loaded_name2tensor_.end()) {
-        // Create a wild variable tensor
+      auto load_tensor_iter = additional_variable_op_tobe_loaded_name2tensor_.find(var_name);
+      if (load_tensor_iter == additional_variable_op_tobe_loaded_name2tensor_.end()) {
+        // Create a additional variable tensor
         Scalar value;
         VariableOpConf var_conf = op_attribute.op_conf().variable_conf();
         if (var_conf.initializer().has_constant_conf()) {
@@ -338,7 +340,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has created a eager tensor for this variable.\n";
       } else {
-        // Load a wild variable tensor
+        // Load a additional variable tensor
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
         // To consistent from a local or consistent tensor.
@@ -351,9 +353,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       }
       // Register
       variable_op_name2tensor_.at(var_name) = tensor;
-      auto find_iter = wild_variable_op_name2tensor_.find(var_name);
-      if (find_iter != wild_variable_op_name2tensor_.end()) {
-        wild_variable_op_name2tensor_[var_name] = tensor;
+      auto find_iter = additional_variable_op_name2tensor_.find(var_name);
+      if (find_iter != additional_variable_op_name2tensor_.end()) {
+        additional_variable_op_name2tensor_[var_name] = tensor;
       }
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
