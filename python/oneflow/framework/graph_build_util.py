@@ -99,12 +99,11 @@ class GLogScopeContext(object):
 
     def __enter__(self):
         oneflow._oneflow_internal.SetFLAGS_v(self._v)
-        # Print glog info to stderr when verbos level >= 2
-        if self._s == 0 and self._v >= 2:
+        if self._s == 0 and self._v >= 1:
             oneflow._oneflow_internal.SetFLAGS_alsologtostderr(True)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._s == 0 and self._v >= 2:
+        if self._s == 0 and self._v >= 1:
             oneflow._oneflow_internal.SetFLAGS_alsologtostderr(self._prev_logtostderr)
         oneflow._oneflow_internal.SetFLAGS_v(self._prev_v)
 
