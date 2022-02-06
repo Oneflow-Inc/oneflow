@@ -487,6 +487,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.erf,
+    """
+    Tensor.erf() -> Tensor
+
+    See :func:`oneflow.erf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfc,
+    """
+    Tensor.erfc() -> Tensor
+
+    See :func:`oneflow.erfc`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erfinv,
     """
     See :func:`oneflow.erfinv`
@@ -1057,6 +1075,16 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.fmod,
+    """
+    Tensor.fmod(other) -> Tensor
+    
+    See :func:`oneflow.fmod`
+    
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.logical_and,
     """
     logical_and() -> Tensor
@@ -1112,6 +1140,7 @@ add_docstr(
     oneflow.Tensor.div,
     """
     See :func:`oneflow.div`
+
     """,
 )
 
