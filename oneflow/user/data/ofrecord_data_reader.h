@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/user/data/ofrecord_parser.h"
 #include "oneflow/user/data/random_shuffle_dataset.h"
 #include "oneflow/user/data/batch_dataset.h"
-#include <iostream>
 
 namespace oneflow {
 namespace data {
@@ -29,20 +28,27 @@ namespace data {
 class OFRecordDataReader final : public DataReader<TensorBuffer> {
  public:
   OFRecordDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
+    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
+    if (auto* pool = TensorBufferPool::TryGet()) { pool->IncreasePoolSizeByBase(batch_size_); }
     loader_.reset(new OFRecordDataset(ctx));
-    parser_.reset(new OFRecordParser());
     if (ctx->Attr<bool>("random_shuffle")) {
       loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
     }
-    int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
-    loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+    loader_.reset(new BatchDataset<TensorBuffer>(batch_size_, std::move(loader_)));
+    parser_.reset(new OFRecordParser());
     StartLoadThread();
   }
-  ~OFRecordDataReader() = default;
+
+  ~OFRecordDataReader() override {
+    if (auto* pool = TensorBufferPool::TryGet()) { pool->DecreasePoolSizeByBase(batch_size_); }
+  }
 
  protected:
   using DataReader<TensorBuffer>::loader_;
   using DataReader<TensorBuffer>::parser_;
+
+ private:
+  size_t batch_size_;
 };
 
 }  // namespace data

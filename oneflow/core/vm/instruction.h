@@ -93,6 +93,8 @@ class InstructionMsg final : public intrusive::Base {
   void __Init__(const cfg::InstructionProto& proto);
   void __Init__(const InstructionMsg& instr_msg);
 
+  std::string DebugName() const;
+
   void ToProto(InstructionProto* proto) const;
   intrusive::shared_ptr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
   intrusive::shared_ptr<InstructionMsg> add_double_operand(double double_operand);

@@ -13,30 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_JOB_REWRITER_BOXING_WITH_MIDDLE_NODES_H_
+#define ONEFLOW_CORE_JOB_REWRITER_BOXING_WITH_MIDDLE_NODES_H_
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
-#define ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
-
-#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
-namespace debug {
+class OpGraph;
+class Job;
 
-bool RecordingInstructions();
-
-void StartRecordingInstructions();
-
-void EndRecordingInstructions();
-
-void ClearRecordedInstructions();
-
-void RecordInstruction(const intrusive::shared_ptr<vm::InstructionMsg>& instruction);
-
-void ReplayInstructions();
-
-}  // namespace debug
+Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTION_REPLAY_H_
+#endif  // ONEFLOW_CORE_JOB_REWRITER_BOXING_WITH_MIDDLE_NODES_H_
