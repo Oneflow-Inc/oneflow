@@ -35,6 +35,10 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
     return Maybe<void>::Ok();
   }
   const bool is_multi_client = CHECK_JUST(IsMultiClient());
+  if (is_multi_client) {
+    // GradientAccumulationRewritePass has been re-implemented in op interpreter in multi client.
+    return Maybe<void>::Ok();
+  }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> name2op_conf;
@@ -110,7 +114,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             if (dst_op.BnInOp2Lbi(ibn) == variable_lbi) {
               const auto& old_val =
                   ReplaceInputLbnInOpCustomizedConf(new_dst_op_conf, ibn, repeat_lbn);
-              CHECK_EQ(variable_lbn, old_val);
+              CHECK_EQ(variablg_lbn, old_val);
             }
           }
         });

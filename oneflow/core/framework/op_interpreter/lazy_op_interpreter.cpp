@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/consistency_check.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -106,8 +107,6 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
   return Maybe<void>::Ok();
 }
 
-}  // namespace
-
 std::string GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
   if (tensor->is_cuda()) {
     return "gpu";
@@ -191,6 +190,15 @@ Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& ten
   return NewScopeWithParallelConfAndCurScope(parallel_conf);
 }
 
+int32_t GetGradAccStep(const JobConfigProto& job_conf) {
+  if (job_conf.has_train_conf() && job_conf.has_num_gradient_accumulation_steps()
+      && job_conf.num_gradient_accumulation_steps() > 1) {
+    return job_conf.num_gradient_accumulation_steps();
+  } else {
+    return 1;
+  }
+}
+
 Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
   CHECK_OR_RETURN(input_tensor->is_eager());
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
@@ -235,6 +243,47 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
 
   return Maybe<void>::Ok();
 }
+
+Maybe<Tensor> GradAccInsertUnpackAfterInput(const OperatorConf& input_conf,
+                                            const std::shared_ptr<Tensor>& input_tensor,
+                                            int64_t parallel_desc_sym_id) {
+  auto infer_ctx = JUST(GetCurInferCtx());
+  int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
+  if (grad_acc_step > 1) {
+    // NOTE(chengcheng):
+    //   We assume that the input data is one mini-batch which containing multi micro-batches.
+    //   So we need unpack input data for each micro-batch.
+    VLOG(2)
+        << " Current OneFlow nn.Graph grad acc semantics is different from Torch. \n"
+        << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
+        << " the input tensor of nn.Graph will be unpacked by 0th dim into multiple micro-batches "
+        << " and exec them in order.\n";
+
+    user_op::UserOpConfWrapperBuilder unpack_builder("System-GradientAccumulation-InputUnpack-"
+                                                     + input_conf.name() + "-" + NewUniqueId());
+    const std::string input_tensor_lbn = GenLogicalBlobName(input_conf.name(), "out");
+    const auto unpack_op = unpack_builder.OpTypeName("unpack")
+                               .Input("in", input_tensor_lbn)
+                               .Output("out")
+                               .Attr<int32_t>("unpack_num", grad_acc_step)
+                               .ScopeSymbolId(input_conf.scope_symbol_id())
+                               .Build();
+
+    OpAttribute unpack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(unpack_op.op_conf()));
+    auto blob_parallel_desc =
+        JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+    const std::string unpack_lbn = unpack_op.output("out", 0);
+    auto unpack_input =
+        JUST(BuildTensor(unpack_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
+                         /* is_local= */ input_tensor->is_local()));
+    TensorNameScope::Global()->Record(unpack_input, unpack_lbn);
+    return unpack_input;
+  } else {
+    return input_tensor;
+  }
+}
+
+}  // namespace
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
@@ -283,9 +332,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   CHECK_OR_RETURN(!(*outputs)[0]);
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
-  (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
-                                   /* is_local= */ input_tensor->is_local()));
-  TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(op_conf.name(), obn));
+  auto origin_input = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
+                                       /* is_local= */ input_tensor->is_local()));
+  TensorNameScope::Global()->Record(origin_input, GenLogicalBlobName(op_conf.name(), obn));
+
+  // NOTE(chengcheng): Do GradAcc pass when add input op.
+  (*outputs)[0] = JUST(GradAccInsertUnpackAfterInput(op_conf, origin_input, parallel_desc_sym_id));
   return Maybe<void>::Ok();
 }
 
