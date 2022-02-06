@@ -114,7 +114,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             if (dst_op.BnInOp2Lbi(ibn) == variable_lbi) {
               const auto& old_val =
                   ReplaceInputLbnInOpCustomizedConf(new_dst_op_conf, ibn, repeat_lbn);
-              CHECK_EQ(variablg_lbn, old_val);
+              CHECK_EQ(variable_lbn, old_val);
             }
           }
         });
