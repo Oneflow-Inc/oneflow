@@ -227,18 +227,13 @@ decltype(OutPlacementAndSplit) OutPlacementAndSplit =
 namespace {
 
 Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> placement) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  ParallelConf parallel_conf{};
   int64_t machine_id = JUST(placement->MachineId4ParallelId(0));
   int64_t device_id = JUST(placement->DeviceId4ParallelId(0));
-  parallel_conf->set_device_tag(placement->device_tag());
-  parallel_conf->add_device_name(std::string("@") + std::to_string(machine_id) + ":"
-                                 + std::to_string(device_id));
-  std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-    return Maybe<void>::Ok();
-  }));
-  return SymbolOf(*parallel_desc);
+  parallel_conf.set_device_tag(placement->device_tag());
+  parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                + std::to_string(device_id));
+  return SymbolOf(ParallelDesc(parallel_conf));
 }
 
 Maybe<BoxingDividor> RawInFirstDeviceAndAllBroadcast() {
