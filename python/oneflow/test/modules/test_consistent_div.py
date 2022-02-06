@@ -26,23 +26,26 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, check_graph=False)
-def test_erfc_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
+@autotest(n=2, check_graph=False)
+def test_div_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
-    y = x.to_consistent(placement=placement, sbp=sbp)
-    z = torch.erfc(y)
+    x = x.to_consistent(placement=placement, sbp=sbp)
+    y = random_tensor(ndim, *dims)
+    y = y.to_consistent(placement=placement, sbp=sbp)
+
+    z = torch.div(x, y)
     return z
 
 
-class TestErfcConsistent(flow.unittest.TestCase):
+class TestDivConsistent(flow.unittest.TestCase):
     @consistent
-    def test_erfc(test_case):
+    def test_div(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_erfc_impl(test_case, ndim, placement, sbp)
+                test_div_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
