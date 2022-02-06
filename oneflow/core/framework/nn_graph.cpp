@@ -343,7 +343,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         // Load a wild variable tensor
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
-        // To consistent frme a local or consistent tensor.
+        // To consistent from a local or consistent tensor.
         tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple, grad_sbp_tuple));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()

@@ -1,7 +1,6 @@
 import unittest
 import os
 import numpy as np
-import copy
 import tempfile
 
 import oneflow as flow
@@ -9,7 +8,7 @@ import oneflow.unittest
 
 
 def _test_linear_graph_save_load(test_case, device):
-    def train_with_graph(call_cnt=0, state_dict_dir=None):
+    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
@@ -44,39 +43,40 @@ def _test_linear_graph_save_load(test_case, device):
                 out.backward()
                 return out
 
-        print(f"===Call count num {call_cnt}===", flush=True)
         linear_t_g = LinearTrainGraph()
-        #linear_t_g.debug(2)
         if (call_cnt == 1):
-            print("---Load state dict---", flush=True)
             state_dict = flow.load(state_dict_dir)
-            print("---Loaded state dict: ", state_dict)
             linear_t_g.load_state_dict(state_dict)
             # Check state in module has been loaded.
             test_case.assertTrue(np.array_equal(state_dict["linear"]["weight"].numpy(), linear.weight))
             test_case.assertTrue(np.array_equal(state_dict["linear"]["bias"].numpy(), linear.bias))
 
-        print("---Iter 0---", flush=True)
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()
         if (call_cnt == 1):
             # Check wild variable state initialized in job has been loaded.
             cur_train_step = iter0_state_dict["System-Train-TrainStep"].numpy()[0]
             test_case.assertTrue(3 == cur_train_step)
-        print("Iter 0 state dict: ", iter0_state_dict, flush=True)
-        #iter0_state_dict = copy.deepcopy(linear_t_g.state_dict())
+            test_case.assertTrue(cur_train_step == last_state_dict["System-Train-TrainStep"].numpy()[0])
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear"]["weight"].numpy(), last_state_dict["linear"]["weight"].numpy()))
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear"]["bias"].numpy(), last_state_dict["linear"]["bias"].numpy()))
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear.weight-momentum"].numpy(), last_state_dict["linear.weight-momentum"].numpy()))
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear.bias-momentum"].numpy(), last_state_dict["linear.bias-momentum"].numpy()))
 
-        print("---Iter 1---", flush=True)
         of_graph_out = linear_t_g(x)
         iter1_state_dict = linear_t_g.state_dict()
-        print("Iter 1 state dict: ", iter1_state_dict, flush=True)
         if call_cnt == 0:
             flow.save(iter1_state_dict, state_dict_dir)
 
+        if call_cnt == 0:
+            of_graph_out = linear_t_g(x)
+            iter2_state_dict = linear_t_g.state_dict()
+            return iter2_state_dict
+
 
     with tempfile.TemporaryDirectory() as state_dict_dir:
-        train_with_graph(0, state_dict_dir)
-        train_with_graph(1, state_dict_dir)
+        iter2_state_dict = train_with_graph(0, state_dict_dir)
+        train_with_graph(1, state_dict_dir, iter2_state_dict)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -88,6 +88,94 @@ class TestLinearGraphSaveLoad(oneflow.unittest.TestCase):
     def _test_linear_graph_save_load_cpu(test_case):
         _test_linear_graph_save_load(test_case, flow.device("cpu"))
 
+
+def _test_linear_graph_save_load_consistent(test_case, device):
+    P = flow.placement("cuda", {0: [0, 1]})
+    B = flow.sbp.broadcast
+    S = flow.sbp.split(0)
+    def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
+        linear = flow.nn.Linear(3, 8)
+        linear = linear.to(device)
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+        linear.to_consistent(placement=P, sbp=B)
+        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+
+        x = flow.tensor(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            dtype=flow.float32,
+            device=device,
+            requires_grad=False,
+        )
+        x = x.to_consistent(placement=P, sbp=S)
+
+        class LinearTrainGraphConsistent(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = linear
+                self.add_optimizer(of_sgd)
+
+            def build(self, x):
+                out = self.linear(x)
+                out = out.sum()
+                out.backward()
+                return out
+
+        linear_t_g = LinearTrainGraphConsistent()
+        if (call_cnt == 1):
+            state_dict = flow.load(state_dict_dir, consistent_src_rank=0)
+            linear_t_g.load_state_dict(state_dict)
+            # Check state in module has been loaded.
+            # Tensors in state dict are save to rank 0, so they need to be broadcast to rank 0 and 1 before check. 
+            test_case.assertTrue(np.array_equal(state_dict["linear"]["weight"].to_consistent(placement=P, sbp=B).to_local().numpy(), linear.weight.to_local().numpy()))
+            test_case.assertTrue(np.array_equal(state_dict["linear"]["bias"].to_consistent(placement=P, sbp=B).to_local().numpy(), linear.bias.to_local().numpy()))
+
+        of_graph_out = linear_t_g(x)
+        iter0_state_dict = linear_t_g.state_dict()
+        if (call_cnt == 1):
+            # Check wild variable state initialized in job has been loaded.
+            # TrainStep's placement is only on rank 0, so it needs to be broadcast to rank 0 and 1 before check. 
+            cur_train_step = iter0_state_dict["System-Train-TrainStep"].to_consistent(placement=P, sbp=B).to_local().numpy()[0]
+            test_case.assertTrue(3 == cur_train_step)
+            test_case.assertTrue(cur_train_step == last_state_dict["System-Train-TrainStep"].to_consistent(placement=P, sbp=B).to_local().numpy()[0])
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear"]["weight"].to_local().numpy(), last_state_dict["linear"]["weight"].to_local().numpy()))
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear"]["bias"].to_local().numpy(), last_state_dict["linear"]["bias"].to_local().numpy()))
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear.weight-momentum"].to_local().numpy(), last_state_dict["linear.weight-momentum"].to_local().numpy()))
+            test_case.assertTrue(np.array_equal(iter0_state_dict["linear.bias-momentum"].to_local().numpy(), last_state_dict["linear.bias-momentum"].to_local().numpy()))
+
+        of_graph_out = linear_t_g(x)
+        iter1_state_dict = linear_t_g.state_dict()
+        if call_cnt == 0:
+            flow.save(iter1_state_dict, state_dict_dir, consistent_dst_rank=0)
+
+        if call_cnt == 0:
+            of_graph_out = linear_t_g(x)
+            iter2_state_dict = linear_t_g.state_dict()
+            return iter2_state_dict
+
+
+    with tempfile.TemporaryDirectory() as state_dict_dir:
+        iter2_state_dict = train_with_graph(0, state_dict_dir)
+        train_with_graph(1, state_dict_dir, iter2_state_dict)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestLinearGraphSaveLoadConsistent(oneflow.unittest.TestCase):
+    def test_linear_graph_save_load_gpu(test_case):
+        _test_linear_graph_save_load_consistent(test_case, flow.device("cuda"))
+
+    def _test_linear_graph_save_load_cpu(test_case):
+        _test_linear_graph_save_load_consistent(test_case, flow.device("cpu"))
 
 if __name__ == "__main__":
     unittest.main()
