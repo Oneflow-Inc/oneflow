@@ -267,7 +267,9 @@ class Graph(object):
     def state_dict(
         self, destination=None, prefix="", keep_vars=False
     ) -> Dict[str, Tensor]:
-        assert self._is_compiled, "nn.Graph's state dict can only be get after the first call of graph."
+        assert (
+            self._is_compiled
+        ), "nn.Graph's state dict can only be get after the first call of graph."
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -278,7 +280,11 @@ class Graph(object):
             sub_destination._metadata = OrderedDict()
             module = block.origin
             if module is not None:
-                module.state_dict(sub_destination, prefix + ("." if prefix else ""), keep_vars=keep_vars)
+                module.state_dict(
+                    sub_destination,
+                    prefix + ("." if prefix else ""),
+                    keep_vars=keep_vars,
+                )
             destination[name] = sub_destination
         wild_var_names = self._c_nn_graph.wild_var_names
         wild_var_tensors = self._c_nn_graph.wild_var_tensors
@@ -291,11 +297,11 @@ class Graph(object):
         return destination
 
     def load_state_dict(
-        self,
-        state_dict: Dict[str, Dict[str, Tensor]],
-        strict: bool = True,
+        self, state_dict: Dict[str, Dict[str, Tensor]], strict: bool = True,
     ):
-        assert not self._is_compiled, "nn.Graph's state dict can only be load before the first call of graph."
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's state dict can only be load before the first call of graph."
         wild_var_names = list()
         wild_var_tensors = list()
         for name, sub_dict in state_dict.items():

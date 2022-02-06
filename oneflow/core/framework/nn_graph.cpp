@@ -110,7 +110,9 @@ Maybe<void> NNGraph::RegisterWildVarOpNamesAndTensorsToBeLoaded(
   CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_.empty())
       << " The wild variables of nn.Graph " << name_ << " are register repeatedly.";
   FOR_RANGE(size_t, i, 0, wild_var_names.size()) {
-    CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_.emplace(wild_var_names.at(i), wild_var_tensors.at(i)).second);
+    CHECK_OR_RETURN(wild_variable_op_tobe_loaded_name2tensor_
+                        .emplace(wild_var_names.at(i), wild_var_tensors.at(i))
+                        .second);
   }
   return Maybe<void>::Ok();
 }
@@ -187,17 +189,13 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 
 Maybe<std::vector<std::string>> NNGraph::GetWildVarOpNames() const {
   std::vector<std::string> names;
-  for (const auto& iter : wild_variable_op_name2tensor_) {
-    names.push_back(iter.first);
-  }
+  for (const auto& iter : wild_variable_op_name2tensor_) { names.push_back(iter.first); }
   return names;
 }
 
 Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetWildVarOpTensors() const {
   std::vector<std::shared_ptr<one::Tensor>> tensors;
-  for (const auto& iter : wild_variable_op_name2tensor_) {
-    tensors.push_back(iter.second);
-  }
+  for (const auto& iter : wild_variable_op_name2tensor_) { tensors.push_back(iter.second); }
   return tensors;
 }
 
@@ -344,10 +342,12 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
         // To consistent from a local or consistent tensor.
-        tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple, grad_sbp_tuple));
+        tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple,
+                                                    grad_sbp_tuple));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
-                << " created in JobPass, nn.Graph has loaded the tensor from state dict for this variable.\n";
+                << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
+                   "variable.\n";
       }
       // Register
       variable_op_name2tensor_.at(var_name) = tensor;

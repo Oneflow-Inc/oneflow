@@ -43,8 +43,8 @@ class NNGraph final : public NNGraphIf {
   int64_t variable_op_size() const;
 
   Maybe<void> RegisterWildVarOpNamesAndTensorsToBeLoaded(
-    const std::vector<std::string>& wild_var_names,
-    const std::vector<std::shared_ptr<one::Tensor>>& wild_var_tensors);
+      const std::vector<std::string>& wild_var_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& wild_var_tensors);
   Maybe<void> RegisterInputOpNamesAndTensors(
       const std::vector<std::string>& inputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);

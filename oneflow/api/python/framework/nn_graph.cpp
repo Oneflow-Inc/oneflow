@@ -40,7 +40,7 @@ py::object APINNGraphWildVarTensors(const std::shared_ptr<NNGraph>& graph) {
   py::list tensor_list = py::cast(tensors);
   return py::cast<py::object>(tensor_list);
 }
-}   // namespace
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
@@ -68,7 +68,8 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
       .def("register_wild_variable_names_and_tensors",
            [](NNGraph& graph, const std::vector<std::string>& variable_op_names,
               const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
-             return graph.RegisterWildVarOpNamesAndTensorsToBeLoaded(variable_op_names, variable_tensors)
+             return graph
+                 .RegisterWildVarOpNamesAndTensorsToBeLoaded(variable_op_names, variable_tensors)
                  .GetOrThrow();
            })
       .def_property_readonly("wild_var_names", &APINNGraphWildVarNames)
