@@ -41,7 +41,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
-  using LogicalObjectDeleteList = intrusive::List<INTRUSIVE_FIELD(LogicalObject, delete_hook_)>;
   using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
   using LivelyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, lively_instruction_hook_)>;
@@ -51,7 +50,6 @@ class VirtualMachineEngine final : public intrusive::Base {
       intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
   using StreamTypeId2StreamRtDesc =
       intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
-  using Id2LogicalObject = intrusive::SkipList<INTRUSIVE_FIELD(LogicalObject, logical_object_id_)>;
 
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
@@ -80,7 +78,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const {
     return stream_type_id2stream_rt_desc_;
   }
-  const Id2LogicalObject& id2logical_object() const { return id2logical_object_; }
   // Setters
   VmResourceDesc* mut_vm_resource_desc() {
     if (!vm_resource_desc_) { vm_resource_desc_ = intrusive::make_shared<VmResourceDesc>(); }
@@ -96,7 +93,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() {
     return &stream_type_id2stream_rt_desc_;
   }
-  Id2LogicalObject* mut_id2logical_object() { return &id2logical_object_; }
 
   // methods
   void __Init__(const VmDesc& vm_desc);
@@ -135,19 +131,12 @@ class VirtualMachineEngine final : public intrusive::Base {
   void ReleaseInstruction(Instruction* instruction);
   void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
 
-  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachMutMirroredObject(
-      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-      const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
-      int64_t global_device_id, const DoEachT& DoEach);
-
   void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  void ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access);
-  void ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access);
-  RwMutexedObjectAccess* AccessMirroredObject(OperandAccessType access_type,
-                                              MirroredObject* mirrored_object,
-                                              Instruction* instrution);
-  void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object, Instruction* instruction);
+  void ConnectInstructionsByWrite(DependenceAccess* dst_access);
+  void ConnectInstructionsByRead(DependenceAccess* dst_access);
+  DependenceAccess* AccessMirroredObject(OperandAccessType access_type,
+                                         MirroredObject* mirrored_object, Instruction* instrution);
+  void ConsumeMirroredObjects(Instruction* instruction);
   void DispatchInstruction(Instruction* instruction);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
@@ -167,7 +156,6 @@ class VirtualMachineEngine final : public intrusive::Base {
         active_stream_list_(),
         thread_ctx_list_(),
         stream_type_id2stream_rt_desc_(),
-        id2logical_object_(),
         pending_msg_list_(),
         local_pending_msg_list_(),
         ready_instruction_list_(),
@@ -185,7 +173,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   ActiveStreamList active_stream_list_;
   ThreadCtxList thread_ctx_list_;
   StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
-  Id2LogicalObject id2logical_object_;
   InstructionMsgMutexedList pending_msg_list_;
   InstructionMsgList local_pending_msg_list_;
   ReadyInstructionList ready_instruction_list_;
@@ -194,7 +181,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   size_t total_erased_lively_instruction_cnt_;
   BarrierInstructionList barrier_instruction_list_;
   std::map<std::string, RtInstrTypeId> instr_type_name2rt_instr_type_id_;
-  RwMutexedObjectAccess::object_pool_type access_pool_;
+  DependenceAccess::object_pool_type access_pool_;
   InstructionEdge::object_pool_type instruction_edge_pool_;
 };
 

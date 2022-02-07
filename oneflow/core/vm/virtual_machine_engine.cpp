@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/spin_counter.h"
@@ -36,20 +35,14 @@ namespace vm {
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_PUSH("R:" + instruction->instr_msg().DebugName());
   auto* access_list = instruction->mut_access_list();
-  auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
-    if (unlikely(access->is_mirrored_object_id_inserted())) {
-      rw_mutexed_object_accesses->Erase(access.Mutable());
-    }
     auto* mirrored_object = access->mut_mirrored_object();
     if (unlikely(!access->rw_mutexed_object_access_hook().empty())) {
-      CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
-      mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
+      mirrored_object->mut_access_list()->Erase(access.Mutable());
     }
   }
-  CHECK_EQ(rw_mutexed_object_accesses->size(), 0);
   auto* out_edges = instruction->mut_out_edges();
   INTRUSIVE_FOR_EACH_PTR(out_edge, out_edges) {
     Instruction* out_instruction = out_edge->mut_dst_instruction();
@@ -77,7 +70,7 @@ void VirtualMachineEngine::HandlePending() {
     mut_local_pending_msg_list()->Erase(instr_msg);
   }
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
-    ConsumeMirroredObjects(mut_id2logical_object(), instruction);
+    ConsumeMirroredObjects(instruction);
     if (likely(Dispatchable(instruction))) {
       mut_ready_instruction_list()->PushBack(instruction);
       new_instruction_list.Erase(instruction);
@@ -141,13 +134,13 @@ void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
   }
 }
 
-RwMutexedObjectAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
-                                                                  MirroredObject* mirrored_object,
-                                                                  Instruction* instruction) {
+DependenceAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
+                                                             MirroredObject* mirrored_object,
+                                                             Instruction* instruction) {
   auto access = access_pool_.make_shared(instruction, mirrored_object, access_type);
   auto* ptr = access.Mutable();
   instruction->mut_access_list()->PushBack(ptr);
-  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(std::move(access));
+  mirrored_object->mut_access_list()->EmplaceBack(std::move(access));
   return ptr;
 }
 
@@ -160,25 +153,24 @@ void VirtualMachineEngine::TryConnectInstruction(Instruction* src_instruction,
   dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
 }
 
-void VirtualMachineEngine::ConnectInstructionsByWrite(RwMutexedObjectAccess* dst_access) {
+void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_access) {
   CHECK(dst_access->is_mut_operand());
   auto* mirrored_object = dst_access->mut_mirrored_object();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
+  auto* access_list = mirrored_object->mut_access_list();
   if (likely(access_list->Begin() == dst_access)) { return; }
   INTRUSIVE_FOR_EACH_PTR(src_access, access_list) {
     if (unlikely(src_access == dst_access)) { break; }
     TryConnectInstruction(src_access->mut_instruction(), dst_instruction);
-    CHECK_EQ(src_access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
     access_list->Erase(src_access);
   }
 }
 
-void VirtualMachineEngine::ConnectInstructionsByRead(RwMutexedObjectAccess* dst_access) {
+void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_access) {
   CHECK(dst_access->is_const_operand());
   auto* mirrored_object = dst_access->mut_mirrored_object();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
+  auto* first = mirrored_object->mut_access_list()->Begin();
   if (first->is_mut_operand()) {
     TryConnectInstruction(first->mut_instruction(), dst_instruction);
   } else if (first->is_const_operand()) {
@@ -188,8 +180,7 @@ void VirtualMachineEngine::ConnectInstructionsByRead(RwMutexedObjectAccess* dst_
   }
 }
 
-void VirtualMachineEngine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
-                                                  Instruction* instruction) {
+void VirtualMachineEngine::ConsumeMirroredObjects(Instruction* instruction) {
   const auto& phy_instr_operand = CHECK_NOTNULL(instruction->instr_msg().phy_instr_operand());
   // Connect instructions by write before connecting by read.
   for (auto* mirrored_object : phy_instr_operand->output_dependences()) {

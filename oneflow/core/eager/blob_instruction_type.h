@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace vm {

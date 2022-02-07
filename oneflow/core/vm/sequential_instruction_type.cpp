@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"

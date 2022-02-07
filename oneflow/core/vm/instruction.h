@@ -28,9 +28,9 @@ limitations under the License.
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -154,10 +154,8 @@ class Instruction final : public intrusive::Base {
   // types
   using InEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, in_edge_hook_)>;
   using OutEdgeList = intrusive::List<INTRUSIVE_FIELD(InstructionEdge, out_edge_hook_)>;
-  using RwMutexedObjectAccessList =
-      intrusive::List<INTRUSIVE_FIELD(RwMutexedObjectAccess, instruction_access_hook_)>;
-  using MirroredObjectId2RwMutexedObjectAccess =
-      intrusive::SkipList<INTRUSIVE_FIELD(RwMutexedObjectAccess, mirrored_object_id_)>;
+  using DependenceAccessList =
+      intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
   // Getters
   void __Init__() { clear_stream(); }
@@ -179,10 +177,7 @@ class Instruction final : public intrusive::Base {
   const intrusive::ListHook& barrier_instruction_hook() const { return barrier_instruction_hook_; }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
-  const RwMutexedObjectAccessList& access_list() const { return access_list_; }
-  const MirroredObjectId2RwMutexedObjectAccess& mirrored_object_id2access() const {
-    return mirrored_object_id2access_;
-  }
+  const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
   void set_stream(Stream* val) { stream_ = val; }
@@ -198,10 +193,7 @@ class Instruction final : public intrusive::Base {
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
-  RwMutexedObjectAccessList* mut_access_list() { return &access_list_; }
-  MirroredObjectId2RwMutexedObjectAccess* mut_mirrored_object_id2access() {
-    return &mirrored_object_id2access_;
-  }
+  DependenceAccessList* mut_access_list() { return &access_list_; }
 
   // methods
   void Init(InstructionMsg* instr_msg, Stream* stream,
@@ -222,7 +214,6 @@ class Instruction final : public intrusive::Base {
         instr_msg_(),
         parallel_desc_(),
         stream_(),
-        mirrored_object_id2access_(),
         access_list_(),
         in_edges_(),
         out_edges_(),
@@ -237,10 +228,8 @@ class Instruction final : public intrusive::Base {
   intrusive::shared_ptr<InstructionMsg> instr_msg_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   Stream* stream_;
-  // maps
-  MirroredObjectId2RwMutexedObjectAccess mirrored_object_id2access_;
   // lists
-  RwMutexedObjectAccessList access_list_;
+  DependenceAccessList access_list_;
   InEdgeList in_edges_;
   OutEdgeList out_edges_;
 

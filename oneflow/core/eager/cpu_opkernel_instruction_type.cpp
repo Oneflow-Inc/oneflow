@@ -15,14 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/object.h"
 
 namespace oneflow {
 namespace vm {
