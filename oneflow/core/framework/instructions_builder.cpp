@@ -586,14 +586,15 @@ Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "ComputeRankFrontSeqCallback",
       std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
-  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
-  intrusive::shared_ptr<vm::InstructionMsg> instruction =
-      intrusive::make_shared<vm::InstructionMsg>("ComputeGlobalFrontSeqBarrier");
+  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([] {});
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), "ComputeGlobalFrontSeqBarrier",
+      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

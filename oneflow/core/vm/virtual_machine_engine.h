@@ -71,9 +71,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   }
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
-  const LogicalObjectDeleteList& delete_logical_object_list() const {
-    return delete_logical_object_list_;
-  }
   const LivelyInstructionList& lively_instruction_list() const { return lively_instruction_list_; }
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
@@ -92,7 +89,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   Range* mut_machine_id_range() { return &machine_id_range_; }
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
-  LogicalObjectDeleteList* mut_delete_logical_object_list() { return &delete_logical_object_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
   InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
@@ -112,9 +108,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
   std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
-  Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
-  MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
-  const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
 
   int64_t this_machine_id() const;
   int64_t this_start_global_device_id() const {
@@ -141,29 +134,6 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseInstruction(Instruction* instruction);
   void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
-  template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
-  void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
-                             int64_t global_device_id, const DoEachT& DoEach);
-  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachConstMirroredObject(
-      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-      const ModifiedOperand<kConstModifier, mem_zone_modifier>& const_operand,
-      int64_t global_device_id, const DoEachT& DoEach);
-  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachConstMirroredObject(
-      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-      const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-      int64_t global_device_id, const DoEachT& DoEach);
-  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachMutMirroredObject(
-      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-      const ModifiedOperand<kDataMutableModifier, mem_zone_modifier>& mutable_operand,
-      int64_t global_device_id, const DoEachT& DoEach);
-  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
-  void ForEachMutMirroredObject(
-      const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
-      const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
-      int64_t global_device_id, const DoEachT& DoEach);
 
   template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
   void ForEachMutMirroredObject(
@@ -179,7 +149,6 @@ class VirtualMachineEngine final : public intrusive::Base {
                                               Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object, Instruction* instruction);
   void DispatchInstruction(Instruction* instruction);
-  void TryDeleteLogicalObjects();
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
@@ -199,7 +168,6 @@ class VirtualMachineEngine final : public intrusive::Base {
         thread_ctx_list_(),
         stream_type_id2stream_rt_desc_(),
         id2logical_object_(),
-        delete_logical_object_list_(),
         pending_msg_list_(),
         local_pending_msg_list_(),
         ready_instruction_list_(),
@@ -218,7 +186,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   ThreadCtxList thread_ctx_list_;
   StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
   Id2LogicalObject id2logical_object_;
-  LogicalObjectDeleteList delete_logical_object_list_;
   InstructionMsgMutexedList pending_msg_list_;
   InstructionMsgList local_pending_msg_list_;
   ReadyInstructionList ready_instruction_list_;
