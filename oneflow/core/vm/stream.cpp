@@ -79,10 +79,8 @@ void Stream::MoveFromZombieListToFreeList() {
       // put `first` back to zombie_list because a worker is holding a reference to `first`
       zombie_list->EmplaceBack(std::move(first));
     } else {
-      InstructionProto proto;
-      first->instr_msg().ToProto(&proto);
       UNIMPLEMENTED() << "ref_cnt: " << ref_cnt << " first->ref_cnt():" << first->ref_cnt() << "\n"
-                      << proto.DebugString();
+                      << first->instr_msg().DebugName();
     }
   }
 }
@@ -99,11 +97,9 @@ void Stream::DeleteInstruction(intrusive::shared_ptr<Instruction>&& instruction)
     // a worker is holding a reference to `instruction`
     mut_zombie_instruction_list()->EmplaceBack(std::move(instruction));
   } else {
-    InstructionProto proto;
-    instruction->instr_msg().ToProto(&proto);
     UNIMPLEMENTED() << "ref_cnt: " << ref_cnt
                     << " instruction->ref_cnt():" << instruction->ref_cnt() << "\n"
-                    << proto.DebugString();
+                    << instruction->instr_msg().DebugName();
   }
   MoveFromZombieListToFreeList();
 }

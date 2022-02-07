@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/scope.pb.h"
-#include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
@@ -58,26 +57,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                               vm::InstructionMsgList* instruction_list,
-                               vm::cfg::EagerSymbolList* eager_symbol_list)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list) {}
-  InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      vm::InstructionMsgList* instruction_list,
-                      vm::cfg::EagerSymbolList* eager_symbol_list,
-                      const std::function<void(compatible_py::Object*)>& release_object)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list) {}
-  ~InstructionsBuilder() {
-    instruction_list_->Clear();
-    eager_symbol_list_->clear_eager_symbol();
-  }
+                               vm::InstructionMsgList* instruction_list)
+      : id_generator_(id_generator), instruction_list_(instruction_list) {}
+  ~InstructionsBuilder() { instruction_list_->Clear(); }
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
   const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
-  const vm::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
@@ -176,8 +161,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
       const std::string& modifier, Symbol<Device> op_device);
 
-  vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
-
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
  private:
@@ -189,7 +172,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
-  vm::cfg::EagerSymbolList* eager_symbol_list_;
 };
 
 // Make VM instructions with instruction builder and run instructions with physical/local view.

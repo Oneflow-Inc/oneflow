@@ -119,7 +119,6 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
       phy_instr_operand);
-  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   list->EmplaceBack(std::move(instruction));
 }
 

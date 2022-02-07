@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 
@@ -145,7 +144,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     new_scope->set_parent_scope_symbol_id(old_scope_symbol_id);
     new_scope->set_calculation_pass_name(pass_name);
     int64_t symbol_id = 0;
-    JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
       return Maybe<void>::Ok();
     }));
