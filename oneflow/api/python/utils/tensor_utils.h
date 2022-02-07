@@ -33,6 +33,21 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/extension/python/numpy.h"
+namespace pybind11 {
+template<>
+struct format_descriptor<oneflow::float16> {
+  static pybind11::dtype dtype() {
+    handle ptr = pybind11::detail::npy_api::get().PyArray_DescrFromType_(NPY_FLOAT16);
+    return reinterpret_borrow<pybind11::dtype>(ptr);
+  }
+  static std::string format() {
+    // following: https://docs.python.org/3/library/struct.html#format-characters
+    return "e";
+  }
+  static constexpr auto name() { return "float16"; }
+};
+}  // namespace pybind11
+
 namespace py = pybind11;
 
 namespace oneflow {
