@@ -103,6 +103,7 @@ class Graph(object):
         self._opts = []
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
+        self._additional_variable_tobe_loaded = OrderedDict()
         self._is_compiled = False
         # Default is local view
         self._is_global_view = False
@@ -267,9 +268,6 @@ class Graph(object):
     def state_dict(
         self, destination=None, prefix="", keep_vars=False
     ) -> Dict[str, Tensor]:
-        assert (
-            self._is_compiled
-        ), "nn.Graph's state dict can only be get after the first call of graph."
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -286,15 +284,22 @@ class Graph(object):
                     keep_vars=keep_vars,
                 )
             destination[name] = sub_destination
-        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
-        additional_var_names = self._c_nn_graph.additional_var_names
-        additional_var_tensors = self._c_nn_graph.additional_var_tensors
-        assert len(additional_var_names) == len(additional_var_tensors)
-        for i in range(len(additional_var_names)):
-            additional_tensor = additional_var_tensors[i]
-            if not self._is_global_view:
-                additional_tensor = additional_tensor.to_local()
-            destination[additional_var_names[i]] = additional_tensor
+        # Get additional states.
+        # Additional variables are states in Optimizer/LRScheduler and free eager tensors of nn.Graph.
+        if self._is_compiled:
+            # Get from _c_nn_graph.
+            additional_var_names = self._c_nn_graph.additional_var_names
+            additional_var_tensors = self._c_nn_graph.additional_var_tensors
+            assert len(additional_var_names) == len(additional_var_tensors)
+            for i in range(len(additional_var_names)):
+                additional_tensor = additional_var_tensors[i]
+                if not self._is_global_view:
+                    additional_tensor = additional_tensor.to_local()
+                destination[additional_var_names[i]] = additional_tensor
+        else:
+            # Get form loaded dict.
+            for name, item in self._additional_variable_tobe_loaded.items():
+                destination[name] = item
         return destination
 
     def load_state_dict(
@@ -306,15 +311,16 @@ class Graph(object):
         # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
         additional_var_names = list()
         additional_var_tensors = list()
-        for name, sub_dict in state_dict.items():
+        for name, item in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
-                self._blocks[name].origin.load_state_dict(sub_dict, strict)
+                self._blocks[name].origin.load_state_dict(item, strict)
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
-                assert isinstance(sub_dict, Tensor)
+                assert isinstance(item, Tensor)
                 additional_var_names.append(name)
-                additional_var_tensors.append(sub_dict)
+                additional_var_tensors.append(item)
+                self._additional_variable_tobe_loaded[name] = item
 
         if len(additional_var_names):
             self._c_nn_graph.register_additional_variable_names_and_tensors(
@@ -621,6 +627,8 @@ class Graph(object):
             raise
 
         self._is_compiled = True
+        # After compile, _additional_variable_tobe_loaded is useless.
+        self._additional_variable_tobe_loaded.clear()
         return eager_outputs
 
     def _build_graph(self, *args):

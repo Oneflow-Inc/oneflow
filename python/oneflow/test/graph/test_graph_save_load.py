@@ -69,6 +69,8 @@ def _test_linear_graph_save_load(test_case, device):
             test_case.assertTrue(
                 np.array_equal(state_dict["linear"]["bias"].numpy(), linear.bias)
             )
+        # Get state dict before compile is allowed.
+        init_state_dict = linear_t_g.state_dict()
 
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()
@@ -195,6 +197,8 @@ def _test_linear_graph_save_load_consistent(test_case, device):
                     linear.bias.to_local().numpy(),
                 )
             )
+        # Get state dict before compile is allowed.
+        init_state_dict = linear_t_g.state_dict()
 
         of_graph_out = linear_t_g(x)
         iter0_state_dict = linear_t_g.state_dict()

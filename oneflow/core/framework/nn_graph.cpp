@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -181,7 +182,7 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
     CHECK_OR_RETURN(var->is_eager());
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
-    CHECK_OR_RETURN(additional_variable_op_name2tensor_.emplace(var_name, var).second);
+    CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
@@ -189,13 +190,17 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 
 Maybe<std::vector<std::string>> NNGraph::GetAdditionalVarOpNames() const {
   std::vector<std::string> names;
-  for (const auto& iter : additional_variable_op_name2tensor_) { names.push_back(iter.first); }
+  for (const auto& iter : additional_variable_op_name_) { names.push_back(iter); }
   return names;
 }
 
 Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetAdditionalVarOpTensors() const {
   std::vector<std::shared_ptr<one::Tensor>> tensors;
-  for (const auto& iter : additional_variable_op_name2tensor_) { tensors.push_back(iter.second); }
+  for (const auto& iter : additional_variable_op_name_) {
+    auto find_iter = variable_op_name2tensor_.find(iter);
+    CHECK_OR_RETURN(find_iter != variable_op_name2tensor_.end());
+    tensors.push_back(find_iter->second);
+  }
   return tensors;
 }
 
@@ -216,9 +221,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
           variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
           << " ERROR! variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
-      CHECK_OR_RETURN(
-          additional_variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()})
-              .second)
+      CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second)
           << " ERROR! variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
     } else {
@@ -352,10 +355,6 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       }
       // Register
       variable_op_name2tensor_.at(var_name) = tensor;
-      auto find_iter = additional_variable_op_name2tensor_.find(var_name);
-      if (find_iter != additional_variable_op_name2tensor_.end()) {
-        additional_variable_op_name2tensor_[var_name] = tensor;
-      }
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
       Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
@@ -398,6 +397,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     CHECK_OR_RETURN(var_blob != nullptr);
     CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
   }
+  // Clear after load additional variable is finished.
+  additional_variable_op_tobe_loaded_name2tensor_.clear();
   return Maybe<void>::Ok();
 }
 
