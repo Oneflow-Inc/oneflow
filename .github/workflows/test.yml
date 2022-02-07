@@ -577,14 +577,14 @@ jobs:
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Module API test (distributed, 1st try)
-        timeout-minutes: 15
+        timeout-minutes: 30
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
         continue-on-error: true
         id: new_interface_distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.TEST_IMG_TAG }} --oneflow_wheel_path=${{ env.ONEFLOW_WHEEL_PATH }} --oneflow_wheel_python_version=3.7
       - name: Module API test (distributed, 2nd try)
-        timeout-minutes: 15
+        timeout-minutes: 30
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && steps.new_interface_distributed_try_1.outcome=='failure' }}
         continue-on-error: true
         id: new_interface_distributed_try_2
