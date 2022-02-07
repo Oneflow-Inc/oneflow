@@ -47,7 +47,7 @@ option(TREAT_WARNINGS_AS_ERRORS "" ON)
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
 
-set(ONEFLOW_CURRENT_VERSION 0.7.0 CACHE STRING "")
+set(ONEFLOW_CURRENT_VERSION 0.7.0.dev CACHE STRING "")
 if(BUILD_FOR_CI)
   set(ONEFLOW_CURRENT_VERSION ci)
 endif()
@@ -70,11 +70,7 @@ if(APPLE)
   set(WITH_ONEDNN OFF)
 endif()
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  set(CUDNN_STATIC OFF CACHE BOOL "")
-else()
-  set(CUDNN_STATIC ON CACHE BOOL "")
-endif()
+set(CUDNN_STATIC OFF CACHE BOOL "")
 
 project(oneflow C CXX)
 
@@ -167,11 +163,11 @@ if(OF_LAYER_NORM_USE_FAST_MATH)
 endif()
 
 if(CPU_THREADING_RUNTIME STREQUAL "TBB")
-  add_definitions(-DWITH_CPU_THREADING_RUNTIME=OF_RUNTIME_TBB)
+  add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_TBB)
 elseif(CPU_THREADING_RUNTIME STREQUAL "OMP")
-  add_definitions(-DWITH_CPU_THREADING_RUNTIME=OF_RUNTIME_OMP)
+  add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_OMP)
 elseif(CPU_THREADING_RUNTIME STREQUAL "SEQ")
-  add_definitions(-DWITH_CPU_THREADING_RUNTIME=OF_RUNTIME_SEQ)
+  add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_SEQ)
 endif()
 
 if(OF_FORCE_COLORED_DIAGNOSTICS)

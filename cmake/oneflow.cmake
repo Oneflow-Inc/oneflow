@@ -38,9 +38,14 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
-     "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
-     "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
+file(
+  GLOB_RECURSE
+  oneflow_all_src
+  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if(WITH_XLA OR WITH_TENSORRT OR WITH_OPENVINO)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if(NOT WITH_XLA)
@@ -257,6 +262,7 @@ oneflow_add_library(oneflow ${of_all_obj_cc})
 
 get_property(ROBIN_HOOD_HASHING_INCLUDE_DIR GLOBAL PROPERTY ROBIN_HOOD_HASHING_INCLUDE_DIR)
 target_include_directories(oneflow PRIVATE ${ROBIN_HOOD_HASHING_INCLUDE_DIR})
+add_dependencies(oneflow install-tbb)
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
@@ -571,6 +577,10 @@ if(BUILD_CPP_API)
     ${MLIR_RELATED_TARGETS}
     ${LLVM_RELATED_TARGETS}
     ${EXTERNAL_TARGETS})
+
+  if(BUILD_TESTING AND BUILD_SHARED_LIBS)
+    list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
+  endif()
 
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)

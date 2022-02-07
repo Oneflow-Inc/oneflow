@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +12,26 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
+"""
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/instruction_replay.h"
+add_docstr(
+    oneflow.is_floating_point,
+    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
 
-namespace py = pybind11;
+    Args:
+        input  (Tensor): the input tensor.
 
-namespace oneflow {
+    For example:
 
-namespace debug {
+    .. code-block:: python
 
-ONEFLOW_API_PYBIND11_MODULE("debug", m) {
-  m.def("start_recording_instructions", &StartRecordingInstructions);
-  m.def("end_recording_instructions", &EndRecordingInstructions);
-  m.def("clear_recorded_instructions", &ClearRecordedInstructions);
-  m.def("replay_instructions", &ReplayInstructions);
-}
-
-}  // namespace debug
-
-}  // namespace oneflow
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> output = flow.is_floating_point(input)
+        >>> output
+        False
+    """,
+)

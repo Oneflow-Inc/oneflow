@@ -26,6 +26,7 @@ if(RPC_BACKEND MATCHES "GRPC")
 endif()
 include(flatbuffers)
 include(lz4)
+include(string_view)
 
 if(WITH_XLA)
   include(tensorflow)
@@ -146,7 +147,8 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
-    nlohmann_json::nlohmann_json)
+    nlohmann_json::nlohmann_json
+    string-view-lite)
 if(WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
