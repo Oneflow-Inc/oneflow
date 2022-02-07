@@ -172,7 +172,6 @@ class TestClipGradConsistent(flow.unittest.TestCase):
     def test_clip_grad_consistent(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 4), (2, 4, 3), (2, 4, 5, 6)]
-        # arg_dict["shape"] = [(1,)]
         arg_dict["sbp"] = [
             flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
         arg_dict["placement"] = [
