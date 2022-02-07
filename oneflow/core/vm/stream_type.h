@@ -21,7 +21,6 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/instr_type_id.h"
-#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -39,7 +38,7 @@ class StreamType {
  public:
   virtual ~StreamType() = default;
 
-  void Run(Instruction* instruction) const;
+  void Run(Instruction* instruction) const { Compute(instruction); }
 
   virtual const char* device_tag() const = 0;
 
@@ -64,27 +63,10 @@ class StreamType {
   StreamType() = default;
 };
 
-HashMap<std::type_index, const StreamType*>* StreamType4TypeIndex();
-
 template<typename T>
-const StreamType* LookupStreamType4TypeIndex() {
-  return StreamType4TypeIndex()->at(typeid(T));
-}
-
-template<typename T>
-void TryRegisterStreamType4TypeIndex() {
-  auto* map = StreamType4TypeIndex();
-  std::type_index type_index(typeid(T));
-  if (map->find(type_index) == map->end()) { map->emplace(type_index, new T()); }
-}
-
-const StreamTypeId& LookupInferStreamTypeId(const StreamTypeId& compute_stream_type_id);
-void TryRegisterInferStreamTypeId(const StreamType* infer_stream_type,
-                                  const StreamType* compute_stream_type);
-template<typename InferStreamType, typename ComputeStreamType>
-void TryRegisterInferStreamTypeId() {
-  TryRegisterInferStreamTypeId(LookupStreamType4TypeIndex<InferStreamType>(),
-                               LookupStreamType4TypeIndex<ComputeStreamType>());
+const StreamType* StaticGlobalStreamType() {
+  static const StreamType* stream_type = new T();
+  return stream_type;
 }
 
 }  // namespace vm

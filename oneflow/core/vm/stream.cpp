@@ -42,10 +42,6 @@ const StreamType& Stream::stream_type() const {
   return thread_ctx().stream_rt_desc().stream_type();
 }
 
-const StreamTypeId& Stream::stream_type_id() const {
-  return thread_ctx().stream_rt_desc().stream_type_id();
-}
-
 intrusive::shared_ptr<Instruction> Stream::NewInstruction(
     InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   intrusive::shared_ptr<Instruction> instruction;

@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
@@ -29,7 +28,6 @@ namespace vm {
 
 void ControlStreamType::Compute(Instruction* instruction) const {
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
-  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
@@ -55,7 +53,7 @@ bool ControlStreamType::QueryInstructionStatusDone(
 intrusive::shared_ptr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
                                                                     int64_t this_machine_id) const {
   auto ret = intrusive::make_shared<StreamDesc>();
-  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<ControlStreamType>());
+  ret->set_stream_type(StaticGlobalStreamType<ControlStreamType>());
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
   return ret;

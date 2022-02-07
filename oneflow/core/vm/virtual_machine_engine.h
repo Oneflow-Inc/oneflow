@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <mutex>
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/stream_runtime_desc.h"
@@ -48,8 +47,8 @@ class VirtualMachineEngine final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(Instruction, barrier_instruction_hook_)>;
   using InstructionMsgMutexedList =
       intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
-  using StreamTypeId2StreamRtDesc =
-      intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_id_)>;
+  using StreamType2StreamRtDesc =
+      intrusive::SkipList<INTRUSIVE_FIELD(StreamRtDesc, stream_type_key_)>;
 
   // Getters
   const VmResourceDesc& vm_resource_desc() const {
@@ -75,8 +74,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   }
   const InstructionMsgMutexedList& pending_msg_list() const { return pending_msg_list_; }
   const InstructionMsgList& local_pending_msg_list() const { return local_pending_msg_list_; }
-  const StreamTypeId2StreamRtDesc& stream_type_id2stream_rt_desc() const {
-    return stream_type_id2stream_rt_desc_;
+  const StreamType2StreamRtDesc& stream_type2stream_rt_desc() const {
+    return stream_type2stream_rt_desc_;
   }
   // Setters
   VmResourceDesc* mut_vm_resource_desc() {
@@ -90,9 +89,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
   InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
   InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
-  StreamTypeId2StreamRtDesc* mut_stream_type_id2stream_rt_desc() {
-    return &stream_type_id2stream_rt_desc_;
-  }
+  StreamType2StreamRtDesc* mut_stream_type2stream_rt_desc() { return &stream_type2stream_rt_desc_; }
 
   // methods
   void __Init__(const VmDesc& vm_desc);
@@ -155,7 +152,7 @@ class VirtualMachineEngine final : public intrusive::Base {
         machine_id_range_(),
         active_stream_list_(),
         thread_ctx_list_(),
-        stream_type_id2stream_rt_desc_(),
+        stream_type2stream_rt_desc_(),
         pending_msg_list_(),
         local_pending_msg_list_(),
         ready_instruction_list_(),
@@ -172,7 +169,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   // Do not change the order of the following fields
   ActiveStreamList active_stream_list_;
   ThreadCtxList thread_ctx_list_;
-  StreamTypeId2StreamRtDesc stream_type_id2stream_rt_desc_;
+  StreamType2StreamRtDesc stream_type2stream_rt_desc_;
   InstructionMsgMutexedList pending_msg_list_;
   InstructionMsgList local_pending_msg_list_;
   ReadyInstructionList ready_instruction_list_;

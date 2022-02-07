@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/infer_stream_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -32,7 +31,6 @@ class InstructionType {
 
   bool IsSequential() const { return IsFrontSequential(); }
   virtual bool IsFrontSequential() const { return false; }
-  virtual bool ResettingIdToObjectMap() const { return false; }
   virtual void Compute(Instruction* instruction) const = 0;
 
   void InitInstructionStatusIf(Instruction* instruction) const {
@@ -48,53 +46,30 @@ class InstructionType {
   InstructionType() = default;
 
  private:
-  virtual void InitInstructionStatus(Instruction* instruction) const {
-    instruction->stream_type().InitInstructionStatus(instruction->stream(),
-                                                     instruction->mut_status_buffer());
-  }
-  virtual void DeleteInstructionStatus(Instruction* instruction) const {
-    instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
-                                                       instruction->mut_status_buffer());
-  }
+  virtual void InitInstructionStatus(Instruction* instruction) const;
+  virtual void DeleteInstructionStatus(Instruction* instruction) const;
 };
 
 class InstrTypeId;
 const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
 void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
 void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type,
-                         const InstructionType* instruction_type, InterpretType interpret_type);
-
-HashMap<std::type_index, const InstructionType*>* InstructionType4TypeIndex();
+                         const InstructionType* instruction_type);
 
 template<typename T>
-void TryRegisterInstructionType() {
-  auto* map = InstructionType4TypeIndex();
-  std::type_index type_index(typeid(T));
-  if (map->find(type_index) == map->end()) { map->emplace(type_index, new T()); }
+const InstructionType* StaticGlobalInstructionType() {
+  static const InstructionType* instruction_type = new T();
+  return instruction_type;
 }
 
 template<typename T>
-const InstructionType* LookupInstructionType() {
-  return InstructionType4TypeIndex()->at(typeid(T));
-}
-
-template<typename T>
-void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type,
-                         InterpretType interpret_type) {
-  TryRegisterInstructionType<T>();
-  RegisterInstrTypeId(instr_type_name, stream_type, LookupInstructionType<T>(), interpret_type);
+void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type) {
+  RegisterInstrTypeId(instr_type_name, stream_type, StaticGlobalInstructionType<T>());
 }
 
 template<typename T>
 void RegisterInstructionType(const std::string& instr_type_name) {
-  TryRegisterStreamType4TypeIndex<typename T::stream_type>();
-  TryRegisterStreamType4TypeIndex<InferStreamType<typename T::stream_type>>();
-  TryRegisterInferStreamTypeId<InferStreamType<typename T::stream_type>, typename T::stream_type>();
-  RegisterInstrTypeId<T>(instr_type_name, LookupStreamType4TypeIndex<typename T::stream_type>(),
-                         InterpretType::kCompute);
-  RegisterInstrTypeId<T>(std::string("Infer-") + instr_type_name,
-                         LookupStreamType4TypeIndex<InferStreamType<typename T::stream_type>>(),
-                         InterpretType::kInfer);
+  RegisterInstrTypeId<T>(instr_type_name, StaticGlobalStreamType<typename T::stream_type>());
 }
 
 }  // namespace vm
