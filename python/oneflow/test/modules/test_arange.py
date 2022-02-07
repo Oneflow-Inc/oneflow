@@ -94,20 +94,20 @@ class TestArange(flow.unittest.TestCase):
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
-def _test_consistent_arange(test_case,start,end,step,placement,sbp):
-    x = flow.arange(start,end,step,placement=placement,sbp=sbp)
+
+def _test_consistent_arange(test_case, start, end, step, placement, sbp):
+    x = flow.arange(start, end, step, placement=placement, sbp=sbp)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
-
-def _test_consistent_arange_graph(test_case,start,end,step,placement,sbp):
+def _test_consistent_arange_graph(test_case, start, end, step, placement, sbp):
     class ConsistentRandGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
         def build(self):
-            x = flow.arange(start,end,step, placement=placement, sbp=sbp)
+            x = flow.arange(start, end, step, placement=placement, sbp=sbp)
             return x
 
     c_arange_g = ConsistentRandGraph()
@@ -121,7 +121,7 @@ def _test_consistent_arange_graph(test_case,start,end,step,placement,sbp):
 class TestRandpermConsistent(flow.unittest.TestCase):
     def test_randperm_consistent(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_consistent_arange,_test_consistent_arange_graph]
+        arg_dict["test_fun"] = [_test_consistent_arange, _test_consistent_arange_graph]
         start = random().to(int)
         end = start + random().to(int)
         step = random(0, end - start).to(float)
@@ -135,5 +135,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
         arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
 if __name__ == "__main__":
     unittest.main()
