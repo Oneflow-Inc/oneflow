@@ -31,7 +31,7 @@ class CriticalSectionStreamType final : public StreamType {
   CriticalSectionStreamType() = default;
   virtual ~CriticalSectionStreamType() = default;
 
-  const char* device_tag() const override { return "critical_section"; }
+  const char* stream_tag() const override { return "critical_section"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 

@@ -32,7 +32,7 @@ class AsyncCudaStreamType final : public StreamType {
   AsyncCudaStreamType() = default;
   ~AsyncCudaStreamType() override = default;
 
-  const char* device_tag() const override { return "gpu"; }
+  const char* stream_tag() const override { return "async_launched_nccl"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
