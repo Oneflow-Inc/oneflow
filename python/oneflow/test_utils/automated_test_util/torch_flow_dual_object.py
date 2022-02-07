@@ -403,9 +403,13 @@ def GetDualObject(name, pytorch, oneflow):
                                         and "oneflow.nn.modules" in oneflow.__module__
                                     )
                                 ):
-                                    if global_backward and oneflow_res.ndim > 0:
-                                        graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
-                                        graph_functional_layernorm = graph_functional_layernorm.to(arg_device_type)
+                                    if global_backward and oneflow_res.ndim > 1:
+                                        graph_functional_layernorm = flow.nn.LayerNorm(
+                                            oneflow_res.shape[-1]
+                                        )
+                                        graph_functional_layernorm = graph_functional_layernorm.to(
+                                            arg_device_type
+                                        )
                                         of_sgd = flow.optim.SGD(
                                             graph_functional_layernorm.parameters(),
                                             lr=0.001,
@@ -415,16 +419,22 @@ def GetDualObject(name, pytorch, oneflow):
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
-                                            self.m = graph_functional_layernorm
                                             if (
                                                 global_backward
+                                                and flow.is_tensor(oneflow_res)
+                                                and oneflow_res.ndim > 1
                                             ):
+                                                self.m = graph_functional_layernorm
                                                 self.add_optimizer(of_sgd)
 
                                         def build(self):
                                             res = oneflow(*graph_args, **graph_kwargs)
                                             forward_res = res
-                                            if global_backward and flow.is_tensor(oneflow_res):
+                                            if (
+                                                global_backward
+                                                and flow.is_tensor(oneflow_res)
+                                                and oneflow_res.ndim > 1
+                                            ):
                                                 res = self.m(res)
                                                 res = res.sum()
                                                 res.backward()
@@ -534,9 +544,13 @@ def GetDualObject(name, pytorch, oneflow):
 
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
-                            if global_backward and oneflow_res.ndim > 0:
-                                graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
-                                graph_functional_layernorm = graph_functional_layernorm.to(arg_device_type)
+                            if global_backward and oneflow_res.ndim > 1:
+                                graph_functional_layernorm = flow.nn.LayerNorm(
+                                    oneflow_res.shape[-1]
+                                )
+                                graph_functional_layernorm = graph_functional_layernorm.to(
+                                    arg_device_type
+                                )
                                 of_sgd = flow.optim.SGD(
                                     graph_functional_layernorm.parameters(),
                                     lr=0.001,
@@ -549,6 +563,8 @@ def GetDualObject(name, pytorch, oneflow):
                                     self.m = graph_functional_layernorm
                                     if (
                                         global_backward
+                                        and flow.is_tensor(oneflow_res)
+                                        and oneflow_res.ndim > 1
                                     ):
                                         self.add_optimizer(of_sgd)
 
@@ -557,7 +573,11 @@ def GetDualObject(name, pytorch, oneflow):
                                         *tensor_graph_args, **tensor_graph_kwargs
                                     )
                                     forward_res = res
-                                    if global_backward and flow.is_tensor(oneflow_res):
+                                    if (
+                                        global_backward
+                                        and flow.is_tensor(oneflow_res)
+                                        and oneflow_res.ndim > 1
+                                    ):
                                         res = self.m(res)
                                         res = res.sum()
                                         res.backward()
