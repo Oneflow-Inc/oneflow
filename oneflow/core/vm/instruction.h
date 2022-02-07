@@ -263,7 +263,7 @@ class Instruction final : public intrusive::Base {
   void clear_stream() { stream_ = nullptr; }
   Stream* mut_stream() { return stream_; }
   InstructionMsg* mut_instr_msg() {
-    if (!instr_msg_) { instr_msg_ = intrusive::make_shared<InstructionMsg>(); }
+    if (unlikely(!instr_msg_)) { instr_msg_ = intrusive::make_shared<InstructionMsg>(); }
     return instr_msg_.Mutable();
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
