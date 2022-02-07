@@ -30,7 +30,7 @@ class TestDiagonal(flow.unittest.TestCase):
         dim1 = random(-4, 4).to(int)
         dim2 = random(-4, 4).to(int)
 
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(4, 6),
             dim2=random(4, 6),
@@ -47,7 +47,7 @@ class TestDiagonal(flow.unittest.TestCase):
         dim1 = random(-4, 4).to(int)
         dim2 = random(-4, 4).to(int)
 
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(4, 6),
             dim2=random(4, 6),

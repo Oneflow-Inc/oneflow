@@ -23,7 +23,7 @@ class TestVsplitVec(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_vsplit_vec(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),
@@ -38,7 +38,7 @@ class TestVsplitInt(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_vsplit_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),

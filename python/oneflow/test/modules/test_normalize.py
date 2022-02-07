@@ -27,12 +27,12 @@ class TestFunctionalNormalize(flow.unittest.TestCase):
         device = random_device()
         ndim = random(low=2)
 
-        shape = list(random_tensor(ndim).value().shape)
+        shape = list(random_tensor(ndim=ndim).oneflow.shape)
         dim = random(low=0, high=ndim).to(int).value()
         shape[dim] = random(low=2, high=8).to(int).value()
         shape = tuple(shape)
 
-        x = random_pytorch_tensor(len(shape), *shape).to(device)
+        x = random_tensor(len(shape), *shape).to(device)
         y = torch.nn.functional.normalize(x, oneof(2, 3, 4), dim, 1e-12)
 
         return y

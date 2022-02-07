@@ -262,6 +262,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   }
   const auto& op = JUST(MakeOp(user_op_expr, infer_args.attrs(), parallel_desc->device_tag()));
   JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
+  JUST(op->InferParallelSignatureIf());
   {
     // Infer parallel distribution.
     cfg::NdSbpSignature nd_sbp_constraints;

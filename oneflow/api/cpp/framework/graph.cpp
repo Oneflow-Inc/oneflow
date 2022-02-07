@@ -208,6 +208,9 @@ Graph Graph::Load(const std::string& model_path, const Device& device) {
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
+  if (oneflow::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
+    LOG(ERROR) << job_.DebugString();
+  }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
