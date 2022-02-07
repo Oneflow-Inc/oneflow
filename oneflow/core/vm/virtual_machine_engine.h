@@ -148,7 +148,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void HandlePending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionMsgList* /*out*/ pending_instr_msgs);
-  void MakeAndAppendFusedInstruction(InstructionMsgList* fused_instr_msg_list,
+  void MakeAndAppendFusedInstruction(InstructionMsgList&& fused_instr_msg_list,
                                      InstructionMsgList* /*out*/ pending_instr_msgs);
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();

@@ -131,14 +131,14 @@ bool FusableBetween(InstructionFuseType fuse_type, InstructionMsg* instr_msg,
 }  // namespace
 
 void VirtualMachineEngine::MakeAndAppendFusedInstruction(
-    InstructionMsgList* fused_instr_msg_list, InstructionMsgList* /*out*/ pending_instr_msgs) {
-  if (unlikely(fused_instr_msg_list->size() == 0)) { return; }
-  if (unlikely(fused_instr_msg_list->size() == 1)) {
-    fused_instr_msg_list->MoveTo(pending_instr_msgs);
+    InstructionMsgList&& fused_instr_msg_list, InstructionMsgList* /*out*/ pending_instr_msgs) {
+  if (unlikely(fused_instr_msg_list.size() == 0)) { return; }
+  if (unlikely(fused_instr_msg_list.size() == 1)) {
+    fused_instr_msg_list.MoveTo(pending_instr_msgs);
     return;
   }
-  auto* begin = fused_instr_msg_list->Begin();
-  auto phy_instr_operand = std::make_shared<FusePhyInstrOperand>(std::move(*fused_instr_msg_list));
+  auto* begin = fused_instr_msg_list.Begin();
+  auto phy_instr_operand = std::make_shared<FusePhyInstrOperand>(std::move(fused_instr_msg_list));
   const auto* stream_tag = begin->phy_instr_stream()->stream_type().stream_tag();
   auto instr_msg = intrusive::make_shared<InstructionMsg>(
       this, std::string(stream_tag) + ".Fuse", begin->phy_instr_parallel_desc(), phy_instr_operand);
@@ -153,7 +153,7 @@ void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
     auto* fuse_begin = fused_instr_msg_list.Begin();
     if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
       // no fuse
-      MakeAndAppendFusedInstruction(&fused_instr_msg_list, pending_instr_msgs);
+      MakeAndAppendFusedInstruction(std::move(fused_instr_msg_list), pending_instr_msgs);
       mut_local_pending_msg_list()->MoveToDstBack(instr_msg, pending_instr_msgs);
     } else if (likely(FusableBetween(kEnableInstructionFuseAtAnyPosition, instr_msg, fuse_begin))) {
       // fuse
@@ -161,14 +161,14 @@ void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
     } else if (likely(FusableBetween(kEnableInstructionFuseAsTailOnly, instr_msg, fuse_begin))) {
       // fuse
       mut_local_pending_msg_list()->MoveToDstBack(instr_msg, &fused_instr_msg_list);
-      MakeAndAppendFusedInstruction(&fused_instr_msg_list, pending_instr_msgs);
+      MakeAndAppendFusedInstruction(std::move(fused_instr_msg_list), pending_instr_msgs);
     } else {
       // no fuse
-      MakeAndAppendFusedInstruction(&fused_instr_msg_list, pending_instr_msgs);
+      MakeAndAppendFusedInstruction(std::move(fused_instr_msg_list), pending_instr_msgs);
       mut_local_pending_msg_list()->MoveToDstBack(instr_msg, pending_instr_msgs);
     }
   }
-  MakeAndAppendFusedInstruction(&fused_instr_msg_list, pending_instr_msgs);
+  MakeAndAppendFusedInstruction(std::move(fused_instr_msg_list), pending_instr_msgs);
 }
 
 std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t debug_cnt) {
