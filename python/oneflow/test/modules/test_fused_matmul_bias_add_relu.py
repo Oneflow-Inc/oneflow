@@ -23,7 +23,7 @@ from test_util import GenArgList
 import oneflow as flow
 
 
-def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b):
+def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b, dtype):
     m = np.random.randint(low=1, high=128)
     k = np.random.randint(low=1, high=128)
     n = np.random.randint(low=1, high=128)
@@ -39,9 +39,9 @@ def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b):
 
     bias = np.random.randn(n)
 
-    fused_a_tensor = flow.tensor(a, dtype=flow.float, device="cuda")
-    fused_b_tensor = flow.tensor(b, dtype=flow.float, device="cuda")
-    fused_bias_tensor = flow.tensor(bias, dtype=flow.float, device="cuda")
+    fused_a_tensor = flow.tensor(a, dtype=dtype, device="cuda")
+    fused_b_tensor = flow.tensor(b, dtype=dtype, device="cuda")
+    fused_bias_tensor = flow.tensor(bias, dtype=dtype, device="cuda")
     fused_a_tensor.requires_grad = True
     fused_b_tensor.requires_grad = True
     fused_bias_tensor.requires_grad = True
@@ -55,9 +55,9 @@ def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b):
         alpha=alpha,
     )
 
-    origin_a_tensor = flow.tensor(a, dtype=flow.float, device="cuda")
-    origin_b_tensor = flow.tensor(b, dtype=flow.float, device="cuda")
-    origin_bias_tensor = flow.tensor(bias, dtype=flow.float, device="cuda")
+    origin_a_tensor = flow.tensor(a, dtype=dtype, device="cuda")
+    origin_b_tensor = flow.tensor(b, dtype=dtype, device="cuda")
+    origin_bias_tensor = flow.tensor(bias, dtype=dtype, device="cuda")
 
     origin_a_tensor.requires_grad = True
     origin_b_tensor.requires_grad = True
@@ -117,6 +117,7 @@ class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
         args_dict["test_fun"] = [_test_fused_matmul_bias_add_relu]
         args_dict["transpose_a"] = [False, True]
         args_dict["transpose_b"] = [False, True]
+        args_dict["dtype"] = [flow.float32, flow.float64]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
