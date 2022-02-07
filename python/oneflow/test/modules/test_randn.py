@@ -29,7 +29,8 @@ from oneflow.test_utils.automated_test_util import *
 def _test_randn(test_case, device, shape):
     y1 = flow.randn(*shape, device=flow.device(device))
     y2 = flow.randn(*shape, device=flow.device(device))
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(not np.allclose(
+        y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -45,7 +46,8 @@ def _test_0d_rand(test_case, device, shape):
 def _test_different_dtype(test_case, device, shape):
     y1 = flow.randn(*shape, dtype=flow.float32, device=flow.device(device))
     y2 = flow.randn(*shape, dtype=flow.float64, device=flow.device(device))
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(not np.allclose(
+        y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
     with test_case.assertRaises(
@@ -73,12 +75,13 @@ def _test_with_generator(test_case, device, shape):
     y2 = flow.randn(
         *shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.allclose(
+        y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestRandnModule(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
+    def test_global_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
         x = flow.randn(16, 16, placement=placement, sbp=sbp)

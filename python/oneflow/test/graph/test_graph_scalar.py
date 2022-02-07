@@ -45,7 +45,8 @@ def _test_scalar_graph(test_case, device):
 
     scalar_g = ScalarGraph()
     of_lazy_out = scalar_g(x)
-    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
+    test_case.assertTrue(np.array_equal(
+        of_lazy_out.numpy(), of_eager_out.numpy()))
 
 
 def _test_scalar_train_graph(test_case, device):
@@ -74,7 +75,8 @@ def _test_scalar_train_graph(test_case, device):
         def __init__(self):
             super().__init__()
             self.m = lazy_module
-            of_sgd = flow.optim.SGD(lazy_module.parameters(), lr=0.001, momentum=0.9)
+            of_sgd = flow.optim.SGD(
+                lazy_module.parameters(), lr=0.001, momentum=0.9)
             # self.m = MyModule()
             # of_sgd = flow.optim.SGD(self.m.parameters(), lr=0.001, momentum=0.9)
             self.add_optimizer(of_sgd)
@@ -97,7 +99,7 @@ def _test_scalar_train_graph(test_case, device):
         )
 
 
-def _test_scalar_consistent_train_graph(test_case, placement):
+def _test_scalar_global_train_graph(test_case, placement):
     sbp_b = flow.sbp.broadcast
 
     class MyModule(flow.nn.Module):
@@ -121,13 +123,14 @@ def _test_scalar_consistent_train_graph(test_case, placement):
         eager_out_list.append(of_eager_out)
 
     lazy_module = MyModule()
-    lazy_module.to_consistent(placement=placement, sbp=sbp_b)
+    lazy_module.to_global(placement=placement, sbp=sbp_b)
 
     class ScalarTrainGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             self.m = lazy_module
-            of_sgd = flow.optim.SGD(lazy_module.parameters(), lr=0.001, momentum=0.9)
+            of_sgd = flow.optim.SGD(
+                lazy_module.parameters(), lr=0.001, momentum=0.9)
             self.add_optimizer(of_sgd)
 
         def build(self, x):
@@ -139,7 +142,7 @@ def _test_scalar_consistent_train_graph(test_case, placement):
     scalar_g = ScalarTrainGraph()
     for i in range(3):
         x = flow.tensor(i * 1.0, requires_grad=False)
-        x = x.to_consistent(placement=placement, sbp=sbp_b)
+        x = x.to_global(placement=placement, sbp=sbp_b)
         of_lazy_out = scalar_g(x)
         lazy_out_list.append(of_lazy_out)
 
@@ -166,11 +169,13 @@ class TestScalarGraph(oneflow.unittest.TestCase):
     def test_scalar_train_graph_cpu(test_case):
         _test_scalar_train_graph(test_case, flow.device("cpu"))
 
-    def test_scalar_consistent_train_graph_gpu(test_case):
-        _test_scalar_consistent_train_graph(test_case, flow.placement("cuda", {0: [0]}))
+    def test_scalar_global_train_graph_gpu(test_case):
+        _test_scalar_global_train_graph(
+            test_case, flow.placement("cuda", {0: [0]}))
 
-    def test_scalar_consistent_train_graph_cpu(test_case):
-        _test_scalar_consistent_train_graph(test_case, flow.placement("cpu", {0: [0]}))
+    def test_scalar_global_train_graph_cpu(test_case):
+        _test_scalar_global_train_graph(
+            test_case, flow.placement("cpu", {0: [0]}))
 
 
 if __name__ == "__main__":

@@ -24,8 +24,8 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
-    def test_asymmetric_consistent_tensor_clone(test_case):
+class Test2DeviceGlobalTensorTo(flow.unittest.TestCase):
+    def test_asymmetric_global_tensor_clone(test_case):
         placement = flow.placement("cuda", {0: range(1)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.detach().clone()
@@ -37,7 +37,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
             test_case.assertEqual(cloned_local[0].numpy().item(), 0)
             test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_consistent_tensor_clone(test_case):
+    def test_global_tensor_clone(test_case):
         placement = flow.placement("cuda", {0: range(2)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.detach().clone()
@@ -48,7 +48,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_consistent_tensor_to(test_case):
+    def test_global_tensor_to(test_case):
         placement = flow.placement("cuda", {0: range(2)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.to(copy=True)
@@ -65,14 +65,15 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         test_case.assertEqual(output.device, flow.device("cuda:1"))
         test_case.assertEqual(output.dtype, flow.int32)
         test_case.assertTrue(
-            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+            np.allclose(input.numpy(), output.numpy(),
+                        rtol=0.0001, atol=0.0001)
         )
 
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTo(flow.unittest.TestCase):
-    def test_consistent_tensor_clone(test_case):
+    def test_global_tensor_clone(test_case):
         x = flow.ones(
             (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
         )
@@ -84,7 +85,7 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_consistent_tensor_to(test_case):
+    def test_global_tensor_to(test_case):
         x = flow.ones(
             (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
         )
@@ -96,7 +97,7 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_empty_consistent_tensor_to(test_case):
+    def test_empty_global_tensor_to(test_case):
         x = flow.ones(
             (0,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
         )
@@ -112,12 +113,14 @@ class TestTo(flow.unittest.TestCase):
         output = input.to(device=flow.device("cuda"))
         test_case.assertEqual(output.device, flow.device("cuda"))
         test_case.assertTrue(
-            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+            np.allclose(input.numpy(), output.numpy(),
+                        rtol=0.0001, atol=0.0001)
         )
         gpu_output = output.to(device=flow.device("cuda"))
         test_case.assertEqual(gpu_output.device, flow.device("cuda"))
         test_case.assertTrue(
-            np.allclose(input.numpy(), gpu_output.numpy(), rtol=0.0001, atol=0.0001)
+            np.allclose(input.numpy(), gpu_output.numpy(),
+                        rtol=0.0001, atol=0.0001)
         )
 
     def test_tensor_to_d2h(test_case):
@@ -127,7 +130,8 @@ class TestTo(flow.unittest.TestCase):
         output = input.to(device=flow.device("cpu"))
         test_case.assertEqual(output.device, flow.device("cpu"))
         test_case.assertTrue(
-            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+            np.allclose(input.numpy(), output.numpy(),
+                        rtol=0.0001, atol=0.0001)
         )
 
     def test_tensor_to_d2d(test_case):
@@ -137,7 +141,8 @@ class TestTo(flow.unittest.TestCase):
         output = input.to(device=flow.device("cuda:0"))
         test_case.assertEqual(output.device, flow.device("cuda:0"))
         test_case.assertTrue(
-            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+            np.allclose(input.numpy(), output.numpy(),
+                        rtol=0.0001, atol=0.0001)
         )
 
     def test_tensor_to_h2h(test_case):
@@ -145,7 +150,8 @@ class TestTo(flow.unittest.TestCase):
         output = input.to(device=flow.device("cpu"))
         test_case.assertEqual(output.device, flow.device("cpu"))
         test_case.assertTrue(
-            np.allclose(input.numpy(), output.numpy(), rtol=0.0001, atol=0.0001)
+            np.allclose(input.numpy(), output.numpy(),
+                        rtol=0.0001, atol=0.0001)
         )
 
     def test_tensor_to_cast(test_case):
@@ -160,7 +166,8 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(output.device, flow.device("cuda"))
 
     def test_tensor_using_tensor(test_case):
-        tensor = flow.tensor(np.random.randn(2, 3, 4, 5), device="cuda", dtype=flow.int)
+        tensor = flow.tensor(np.random.randn(2, 3, 4, 5),
+                             device="cuda", dtype=flow.int)
         input = flow.tensor(np.random.randn(2, 3))
         output = input.to(tensor)
         test_case.assertEqual(output.dtype, flow.int)

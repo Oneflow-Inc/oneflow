@@ -28,14 +28,14 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=2, check_graph=False)
 def test_dot_impl(test_case, placement, sbp):
     k = random(100, 1000) * 8
-    x = random_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
-    y = random_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
+    x = random_tensor(ndim=1, dim0=k).to_global(placement=placement, sbp=sbp)
+    y = random_tensor(ndim=1, dim0=k).to_global(placement=placement, sbp=sbp)
     z = torch.dot(x, y)
     return z
 
 
 class TestDotConsistent(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_dot(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):

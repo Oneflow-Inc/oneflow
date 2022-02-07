@@ -30,7 +30,7 @@ from oneflow.test_utils.automated_test_util import *
 def test_flatten_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
-    y = x.to_consistent(placement=placement, sbp=sbp)
+    y = x.to_global(placement=placement, sbp=sbp)
     start_dim = random(0, ndim).to(int).value()
     end_dim = random(start_dim, ndim).to(int).value()
 
@@ -39,7 +39,7 @@ def test_flatten_impl(test_case, ndim, placement, sbp):
 
 
 class TestFlattenConsistent(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_flatten(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()

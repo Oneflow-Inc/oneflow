@@ -30,12 +30,12 @@ from oneflow.test_utils.automated_test_util import *
 def test_diag_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
-    y = x.to_consistent(placement=placement, sbp=sbp)
+    y = x.to_global(placement=placement, sbp=sbp)
     return torch.diag(y)
 
 
 class TestDiagConsistent(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_diag(test_case):
         # random ndim in range [1,2]
         ndim = random(1, 3).to(int).value()

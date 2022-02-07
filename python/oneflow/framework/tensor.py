@@ -83,9 +83,9 @@ def _getitem(self, key):
 
 
 def _setitem(self, key, value):
-    if self.is_consistent:
+    if self.is_global:
         if isinstance(value, (int, float)):
-            value = flow._C.consistent_constant(
+            value = flow._C.global_constant(
                 [1],
                 value,
                 dtype=self.dtype,
@@ -93,20 +93,21 @@ def _setitem(self, key, value):
                 sbp=flow.sbp.broadcast,
             )
         else:
-            if value.is_consistent:
-                value = value.to_consistent(sbp=flow.sbp.broadcast)
+            if value.is_global:
+                value = value.to_global(sbp=flow.sbp.broadcast)
                 # TODO: remove these lines after asymmetric boxing is ready
                 local_tensor = value.to_local()
                 if local_tensor.nelement() == 0:
                     local_tensor = flow.zeros(*value.shape)
-                value = local_tensor.to_consistent(
+                value = local_tensor.to_global(
                     self.placement, sbp=flow.sbp.broadcast
                 )
             else:
-                value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
+                value = value.to_global(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
-            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
+            value = flow._C.constant(
+                [1], value, dtype=self.dtype, device=self.device)
         else:
             value = value.to(device=self.device)
 
@@ -209,7 +210,8 @@ def is_nonzero(input):
     if shape.numel() == 0:
         raise RuntimeError("bool value of Tensor with no values is ambiguous")
     if shape.numel() > 1:
-        raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
+        raise RuntimeError(
+            "bool value of Tensor with more than one value is ambiguous")
     value = input.numpy().item()
     return bool(value)
 
@@ -753,14 +755,15 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
         random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
-    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
+    initializer = initializer_util.GetInitializer(
+        initializer_conf, random_seed, shape)
 
     np_arr = initializer_util.generate_values_by_initializer(
         initializer, shape, tensor.dtype
     )
-    if tensor.is_consistent:
+    if tensor.is_global:
         src_tensor = flow.tensor(np_arr)
-        src_tensor = src_tensor.to_consistent(
+        src_tensor = src_tensor.to_global(
             placement=tensor.placement,
             sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
         )
@@ -773,15 +776,15 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    if self.is_consistent:
+    if self.is_global:
         if not isinstance(other, Tensor):
             assert isinstance(other, np.ndarray)
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
             )
         else:
-            assert other.is_consistent
-            other = other.to_consistent(placement=self.placement, sbp=self.sbp)
+            assert other.is_global
+            other = other.to_global(placement=self.placement, sbp=self.sbp)
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if not isinstance(other, (Tensor)):
@@ -819,8 +822,8 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
-def _to_consistent(self, placement=None, sbp=None, grad_sbp=None):
-    return flow.to_consistent(self, placement, sbp, grad_sbp)
+def _to_global(self, placement=None, sbp=None, grad_sbp=None):
+    return flow.to_global(self, placement, sbp, grad_sbp)
 
 
 def _to_local(self):
@@ -959,9 +962,10 @@ def _numpy(self):
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
-    if self.is_consistent:
+    if self.is_global:
         sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
-        self = self.to_consistent(placement=self.placement, sbp=sbp_list).to_local()
+        self = self.to_global(placement=self.placement,
+                              sbp=sbp_list).to_local()
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
@@ -1115,7 +1119,7 @@ def RegisterMethods():
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
-    Tensor.to_consistent = _to_consistent
+    Tensor.to_global = _to_global
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax

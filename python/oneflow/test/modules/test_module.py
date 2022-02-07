@@ -142,10 +142,12 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(len(params), 2)
 
         test_case.assertTrue(
-            np.allclose(params[0].numpy(), param1.numpy(), atol=1e-4, rtol=1e-4)
+            np.allclose(params[0].numpy(), param1.numpy(),
+                        atol=1e-4, rtol=1e-4)
         )
         test_case.assertTrue(
-            np.allclose(params[1].numpy(), param0.numpy(), atol=1e-4, rtol=1e-4)
+            np.allclose(params[1].numpy(), param0.numpy(),
+                        atol=1e-4, rtol=1e-4)
         )
         children = list(m.children())
         test_case.assertEqual(len(children), 1)
@@ -154,8 +156,10 @@ class TestModule(flow.unittest.TestCase):
         child_params = list(child.parameters())
 
         test_case.assertEqual(len(child_params), 2)
-        test_case.assertTrue(np.allclose(child_params[0].numpy(), param0.numpy()))
-        test_case.assertTrue(np.allclose(child_params[1].numpy(), param1.numpy()))
+        test_case.assertTrue(np.allclose(
+            child_params[0].numpy(), param0.numpy()))
+        test_case.assertTrue(np.allclose(
+            child_params[1].numpy(), param1.numpy()))
 
     @flow.unittest.skip_unless_1n1d()
     def test_module_apply(test_case):
@@ -202,7 +206,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
     @flow.unittest.skip_unless_1n2d()
-    def test_save_and_load_consistent_from_nested_dict(test_case):
+    def test_save_and_load_global_from_nested_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -212,9 +216,11 @@ class TestModule(flow.unittest.TestCase):
                 return self.param
 
         m1 = CustomModule()
-        m1 = m1.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        m1 = m1.to_global(flow.placement(
+            "cuda", {0: range(2)}), flow.sbp.broadcast)
         m2 = CustomModule()
-        m2 = m2.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        m2 = m2.to_global(flow.placement(
+            "cuda", {0: range(2)}), flow.sbp.broadcast)
         res1 = m1() + m2()
         state_dict1 = m1.state_dict()
         state_dict2 = m2.state_dict()
@@ -224,18 +230,18 @@ class TestModule(flow.unittest.TestCase):
             with test_case.assertRaises(Exception):
                 flow.save(state_dict, f)
 
-            consistent_src_dst_rank = 0
-            flow.save(state_dict, f, consistent_dst_rank=consistent_src_dst_rank)
+            global_src_dst_rank = 0
+            flow.save(state_dict, f, global_dst_rank=global_src_dst_rank)
             rank = flow.env.get_rank()
-            if rank != consistent_src_dst_rank:
+            if rank != global_src_dst_rank:
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
             m1 = CustomModule()
-            m1 = m1.to_consistent(
+            m1 = m1.to_global(
                 flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
             )
             m2 = CustomModule()
-            m2 = m2.to_consistent(
+            m2 = m2.to_global(
                 flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
             )
 
@@ -244,7 +250,7 @@ class TestModule(flow.unittest.TestCase):
                 m1.load_state_dict(loaded_state_dict["m1"])
 
             loaded_state_dict = flow.load(
-                f, consistent_src_rank=consistent_src_dst_rank
+                f, global_src_rank=global_src_dst_rank
             )
             test_case.assertEqual(len(loaded_state_dict), 2)
             m1.load_state_dict(loaded_state_dict["m1"])
@@ -253,8 +259,8 @@ class TestModule(flow.unittest.TestCase):
 
         test_case.assertTrue(
             np.array_equal(
-                res1.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
-                res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+                res1.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
+                res2.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
             )
         )
 
@@ -267,19 +273,25 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, device=flow.device("cpu")))
-        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, device=flow.device("cpu")))
+        tensor0 = flow.nn.Parameter(
+            flow.Tensor(2, 3, device=flow.device("cpu")))
+        tensor1 = flow.nn.Parameter(
+            flow.Tensor(2, 3, device=flow.device("cpu")))
         sub_module = CustomModule(tensor0, tensor1)
         m = CustomModule(tensor1, sub_module)
         m.cuda()
         state_dict = m.state_dict()
-        test_case.assertEqual(state_dict["param2.param1"].device, flow.device("cuda:0"))
-        test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cuda:0"))
+        test_case.assertEqual(
+            state_dict["param2.param1"].device, flow.device("cuda:0"))
+        test_case.assertEqual(
+            state_dict["param2.param2"].device, flow.device("cuda:0"))
 
         m.cpu()
         state_dict = m.state_dict()
-        test_case.assertEqual(state_dict["param2.param1"].device, flow.device("cpu"))
-        test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cpu"))
+        test_case.assertEqual(
+            state_dict["param2.param1"].device, flow.device("cpu"))
+        test_case.assertEqual(
+            state_dict["param2.param2"].device, flow.device("cpu"))
 
     @flow.unittest.skip_unless_1n1d()
     def test_module_float_double(test_case):

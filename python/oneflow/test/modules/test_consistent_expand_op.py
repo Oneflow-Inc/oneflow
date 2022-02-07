@@ -35,7 +35,7 @@ def _test_expand_new_dims_broadcast(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_consistent(
+    of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
     of_out = of_input.expand(*expand_dim)
@@ -43,7 +43,8 @@ def _test_expand_new_dims_broadcast(test_case, device):
 
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
+            np.array_equal(of_out.to_local().numpy(),
+                           torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
             np.array_equal(
@@ -62,7 +63,7 @@ def _test_expand_same_dim_broadcast(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_consistent(
+    of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
 
@@ -72,7 +73,8 @@ def _test_expand_same_dim_broadcast(test_case, device):
 
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
+            np.array_equal(of_out.to_local().numpy(),
+                           torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
             np.array_equal(
@@ -91,7 +93,7 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_consistent(
+    of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
 
@@ -101,7 +103,8 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
 
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
+            np.array_equal(of_out.to_local().numpy(),
+                           torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
             np.array_equal(
@@ -120,10 +123,10 @@ def _test_expand_new_dims_split(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_consistent(
+    of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_input = of_input.to_consistent(sbp=flow.sbp.split(0))
+    of_input = of_input.to_global(sbp=flow.sbp.split(0))
 
     of_out = of_input.expand(*expand_dim)
     loss = of_out.sum()
@@ -154,10 +157,10 @@ def _test_expand_same_dim_split(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_consistent(
+    of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_input = of_input.to_consistent(sbp=flow.sbp.split(0))
+    of_input = of_input.to_global(sbp=flow.sbp.split(0))
 
     of_out = of_input.expand(*expand_dim)
     loss = of_out.sum()
@@ -188,10 +191,10 @@ def _test_expand_same_dim_negative_split(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_consistent(
+    of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_input = of_input.to_consistent(sbp=flow.sbp.split(2))
+    of_input = of_input.to_global(sbp=flow.sbp.split(2))
 
     of_out = of_input.expand(*expand_dim)
     loss = of_out.sum()
@@ -226,7 +229,7 @@ class ExpandConsistentTestCase(oneflow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     # NOTE(Liang Depeng): Run with the following command can pass the test locally, but will fail when run in ci.
-    # ONEFLOW_TEST_DEVICE_NUM=2 python3 -m oneflow.distributed.launch --nproc_per_node 2 test_consistent_expand_op.py
+    # ONEFLOW_TEST_DEVICE_NUM=2 python3 -m oneflow.distributed.launch --nproc_per_node 2 test_global_expand_op.py
     @unittest.skipIf(True, "skip for now")
     def test_expand_split(test_case):
         arg_dict = OrderedDict()

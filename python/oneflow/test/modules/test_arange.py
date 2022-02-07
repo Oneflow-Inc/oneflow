@@ -50,7 +50,8 @@ def _test_arange_backward(test_case, device):
     x.requires_grad = True
     y = x.sum()
     y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(
+        x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -87,7 +88,7 @@ class TestArange(flow.unittest.TestCase):
         x.to(device)
         return x
 
-    def test_consistent_naive(test_case):
+    def test_global_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
         x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp)

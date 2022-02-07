@@ -100,11 +100,13 @@ class Module(object):
         if not isinstance(module, Module) and module is not None:
             raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
-            raise TypeError("module name should be a string. Got {}".format(type(name)))
+            raise TypeError(
+                "module name should be a string. Got {}".format(type(name)))
         elif hasattr(self, name) and name not in self._modules:
             raise KeyError("attribute '{}' already exists".format(name))
         elif "." in name:
-            raise KeyError('module name can\'t contain ".", got: {}'.format(name))
+            raise KeyError(
+                'module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
         self._modules[name] = module
@@ -113,9 +115,11 @@ class Module(object):
         self, name: str, tensor: Optional[Tensor], persistent: bool = True
     ) -> None:
         if "_buffers" not in self.__dict__:
-            raise AttributeError("cannot assign buffer before Module.__init__() call")
+            raise AttributeError(
+                "cannot assign buffer before Module.__init__() call")
         elif not isinstance(name, str):
-            raise TypeError("buffer name should be a string. Got {}".format(type(name)))
+            raise TypeError(
+                "buffer name should be a string. Got {}".format(type(name)))
         elif "." in name:
             raise KeyError('buffer name can\'t contain "."')
         elif name == "":
@@ -175,7 +179,8 @@ class Module(object):
             if name in modules:
                 return modules[name]
         raise AttributeError(
-            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+            "'{}' object has no attribute '{}'".format(
+                type(self).__name__, name)
         )
 
     def __setattr__(self, name: str, value: Union[Tensor, "Module"]) -> None:
@@ -245,7 +250,8 @@ class Module(object):
 
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
-        modules = self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
+        modules = self.named_modules(prefix=prefix) if recurse else [
+            (prefix, self)]
         for (module_prefix, module) in modules:
             members = get_members_fn(module)
             for (k, v) in members:
@@ -380,7 +386,7 @@ class Module(object):
         if strict:
             for key in state_dict.keys():
                 if key.startswith(prefix):
-                    input_name = key[len(prefix) :]
+                    input_name = key[len(prefix):]
                     input_name = input_name.split(".", 1)[0]
                     if (
                         input_name not in self._modules
@@ -402,7 +408,8 @@ class Module(object):
             state_dict._metadata = metadata
 
         def load(module, prefix=""):
-            local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
+            local_metadata = {} if metadata is None else metadata.get(
+                prefix[:-1], {})
             module._load_from_state_dict(
                 state_dict,
                 prefix,
@@ -450,7 +457,8 @@ class Module(object):
         self._save_to_state_dict(destination, prefix, keep_vars)
         for (name, module) in self._modules.items():
             if module is not None:
-                module.state_dict(destination, prefix + name + ".", keep_vars=keep_vars)
+                module.state_dict(destination, prefix +
+                                  name + ".", keep_vars=keep_vars)
         for hook in self._state_dict_hooks.values():
             hook_result = hook(self, destination, prefix)
             if hook_result is not None:
@@ -534,9 +542,9 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, placement=None, sbp=None):
+    def to_global(self, placement=None, sbp=None):
         def convert(t):
-            return t.to_consistent(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 

@@ -26,7 +26,8 @@ def get_sbp(device: str):
     return flow.env.all_device_placement(device), flow.sbp.split(0)
 
 
-shapes = {2: (128, 8), 3: (16, 8, 64), 4: (16, 8, 32, 32), 5: (16, 8, 16, 16, 16)}
+shapes = {2: (128, 8), 3: (16, 8, 64), 4: (
+    16, 8, 32, 32), 5: (16, 8, 16, 16, 16)}
 
 
 def compare_loss(device_type, dim, reduction, cls, data_generator):
@@ -50,7 +51,8 @@ def compare_loss(device_type, dim, reduction, cls, data_generator):
         rtol=1e-05,
         atol=1e-05,
     )
-    assert np.allclose(loss_none.numpy(), loss_mean.numpy(), rtol=1e-05, atol=1e-05,)
+    assert np.allclose(loss_none.numpy(), loss_mean.numpy(),
+                       rtol=1e-05, atol=1e-05,)
     assert np.allclose(
         x.grad.to_local().numpy(), x1.grad.to_local().numpy(), rtol=1e-05, atol=1e-05,
     )
@@ -60,9 +62,10 @@ def generate_necessity_default(dim: int, device: str, placement, sbp):
     shape = shapes[dim]
     x_np = np.random.uniform(0, 1, shape)
     y_np = np.random.uniform(0, 1, shape)
-    f = lambda x, requires_grad: flow.tensor(
+
+    def f(x, requires_grad): return flow.tensor(
         x, device=device, requires_grad=requires_grad
-    ).to_consistent(placement=placement, sbp=[sbp])
+    ).to_global(placement=placement, sbp=[sbp])
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
@@ -73,9 +76,10 @@ def generate_necessity_for_cross_entropy_or_nll_loss(
     y_shape = (shape[0],) if dim == 2 else (shape[0], *shape[2:])
     x_np = np.random.uniform(0, 1, shape)
     y_np = np.random.randint(0, shape[1], y_shape)
-    f = lambda x, requires_grad: flow.tensor(
+
+    def f(x, requires_grad): return flow.tensor(
         x, device=device, requires_grad=requires_grad
-    ).to_consistent(placement=placement, sbp=[sbp])
+    ).to_global(placement=placement, sbp=[sbp])
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
@@ -100,7 +104,8 @@ class TestCrossEntropyOrNllLossConsistent(flow.unittest.TestCase):
         arg_dict["dim"] = [2, 3, 4, 5]
         arg_dict["reduction"] = ["sum", "mean"]
         arg_dict["cls"] = [flow.nn.CrossEntropyLoss, flow.nn.NLLLoss]
-        arg_dict["data_generator"] = [generate_necessity_for_cross_entropy_or_nll_loss]
+        arg_dict["data_generator"] = [
+            generate_necessity_for_cross_entropy_or_nll_loss]
         for arg in GenArgList(arg_dict):
             compare_loss(*arg)
 

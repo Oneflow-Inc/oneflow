@@ -44,7 +44,8 @@ class COCODataLoader(flow.nn.Module):
             sbp=sbp,
         )
         self.image_decoder = flow.nn.image.decode(dtype=flow.float32)
-        self.resize = flow.nn.image.Resize(target_size=[224, 224], dtype=flow.float32)
+        self.resize = flow.nn.image.Resize(
+            target_size=[224, 224], dtype=flow.float32)
 
     def forward(self):
         outputs = self.coco_reader()
@@ -77,12 +78,12 @@ class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             batch_size=2, device=flow.device("cpu", rank)
         )
 
-        consistent_coco_loader = COCODataLoader(
+        global_coco_loader = COCODataLoader(
             batch_size=4,
             placement=flow.placement("cpu", {0: [0, 1]}),
             sbp=[flow.sbp.split(0)],
         )
-        coco_loader_graph = DataLoaderGraph(consistent_coco_loader)
+        coco_loader_graph = DataLoaderGraph(global_coco_loader)
         # coco_loader_graph.debug()
 
         iteration = 1
@@ -96,12 +97,14 @@ class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             g_image, g_image_id, g_image_size = coco_loader_graph()
 
             # print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
-            test_case.assertTrue(np.allclose(image.numpy(), g_image.to_local().numpy()))
+            test_case.assertTrue(np.allclose(
+                image.numpy(), g_image.to_local().numpy()))
             test_case.assertTrue(
                 np.allclose(image_id.numpy(), g_image_id.to_local().numpy())
             )
             test_case.assertTrue(
-                np.allclose(image_size.numpy(), g_image_size.to_local().numpy())
+                np.allclose(image_size.numpy(),
+                            g_image_size.to_local().numpy())
             )
 
 

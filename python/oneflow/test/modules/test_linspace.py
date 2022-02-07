@@ -48,10 +48,11 @@ class TestLinspace(flow.unittest.TestCase):
         x.to(device)
         return x
 
-    def test_consistent_naive(test_case):
+    def test_global_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
-        x = flow.linspace(start=0, end=10, steps=2, placement=placement, sbp=sbp)
+        x = flow.linspace(start=0, end=10, steps=2,
+                          placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
@@ -75,7 +76,8 @@ class TestLinspace(flow.unittest.TestCase):
                 0.1000,
             ]
         )
-        test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
+        test_case.assertTrue(np.allclose(
+            flow_res.numpy(), torch_res, atol=1e-4))
         drop_path_rate = 0.2
         depths = [2, 2, 6, 2]
         flow_res = flow.linspace(0, drop_path_rate, sum(depths))
@@ -95,7 +97,8 @@ class TestLinspace(flow.unittest.TestCase):
                 0.2000,
             ]
         )
-        test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
+        test_case.assertTrue(np.allclose(
+            flow_res.numpy(), torch_res, atol=1e-4))
         drop_path_rate = 0.3
         depths = [2, 2, 18, 2]
         flow_res = flow.linspace(0, drop_path_rate, sum(depths))
@@ -127,7 +130,8 @@ class TestLinspace(flow.unittest.TestCase):
                 0.3000,
             ]
         )
-        test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
+        test_case.assertTrue(np.allclose(
+            flow_res.numpy(), torch_res, atol=1e-4))
         drop_path_rate = 0.1
         depths = [2, 2, 18, 2]
         flow_res = flow.linspace(0, drop_path_rate, sum(depths))
@@ -159,7 +163,8 @@ class TestLinspace(flow.unittest.TestCase):
                 0.1000,
             ]
         )
-        test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
+        test_case.assertTrue(np.allclose(
+            flow_res.numpy(), torch_res, atol=1e-4))
         drop_path_rate = 0.5
         depths = [2, 2, 18, 2]
         flow_res = flow.linspace(0, drop_path_rate, sum(depths))
@@ -191,7 +196,8 @@ class TestLinspace(flow.unittest.TestCase):
                 0.5000,
             ]
         )
-        test_case.assertTrue(np.allclose(flow_res.numpy(), torch_res, atol=1e-4))
+        test_case.assertTrue(np.allclose(
+            flow_res.numpy(), torch_res, atol=1e-4))
 
     def test_linspace_start_equal_end_bug(test_case):
         flow_res = flow.linspace(0, 0.0, 12).numpy()

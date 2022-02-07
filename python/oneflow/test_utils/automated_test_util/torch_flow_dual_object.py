@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from .util import broadcast
+from .global_scope import *
+from .generators import Nothing, generator, random_pytorch_tensor
 import collections.abc
 import functools
 import inspect
@@ -36,9 +39,6 @@ except ImportError:
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
     )
 
-from .generators import Nothing, generator, random_pytorch_tensor
-from .consistent_scope import *
-from .util import broadcast
 
 postulate = [".rand", ".Tensor"]
 
@@ -277,7 +277,8 @@ def GetDualObject(name, pytorch, oneflow):
                         ) = get_args(pytorch, *args, **kwargs)
 
                         try:
-                            pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
+                            pytorch_res = pytorch(
+                                *pytorch_args, **pytorch_kwargs)
 
                             if isinstance(pytorch_res, torch_original.Tensor):
                                 if (
@@ -313,7 +314,8 @@ def GetDualObject(name, pytorch, oneflow):
                                         *oneflow_args, **oneflow_kwargs
                                     )
                                 except Exception as ee:
-                                    raise BothDoNotSupportError(e, ee) from None
+                                    raise BothDoNotSupportError(
+                                        e, ee) from None
                                 print(
                                     "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                                 )
@@ -333,13 +335,15 @@ def GetDualObject(name, pytorch, oneflow):
                                 graph_kwargs = {}
                                 for key, value in oneflow_kwargs.items():
                                     if flow.is_tensor(value):
-                                        graph_kwargs[key] = value.clone().detach()
+                                        graph_kwargs[key] = value.clone(
+                                        ).detach()
                                     else:
-                                        graph_kwargs[key] = copy.deepcopy(value)
+                                        graph_kwargs[key] = copy.deepcopy(
+                                            value)
 
                             if isinstance(oneflow, flow.nn.Module) and testing_graph:
                                 graph_train_oneflow = copy.deepcopy(oneflow)
-                                if not is_consistent():
+                                if not is_global():
                                     arg_device_type = "cpu"
                                     for arg in oneflow_args:
                                         if flow.is_tensor(arg):
@@ -348,7 +352,8 @@ def GetDualObject(name, pytorch, oneflow):
                                         arg_device_type
                                     )
 
-                            oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            oneflow_res = oneflow(
+                                *oneflow_args, **oneflow_kwargs)
                             if testing_graph:
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
@@ -387,7 +392,8 @@ def GetDualObject(name, pytorch, oneflow):
 
                                     test_g = TestGraphOfModule()
                                     if verbose:
-                                        print("Run graph of module: ", repr(oneflow))
+                                        print("Run graph of module: ",
+                                              repr(oneflow))
                                         test_g.debug(3)
                                     # When testing module methods, kwargs are not considered.
                                     test_g_res = test_g(*graph_args)
@@ -461,7 +467,8 @@ def GetDualObject(name, pytorch, oneflow):
                                 if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
                                         for _, g_res in enumerate(test_g_res):
-                                            check_eager_graph_tensor(oneflow_res, g_res)
+                                            check_eager_graph_tensor(
+                                                oneflow_res, g_res)
                                     else:
                                         check_eager_graph_tensor(
                                             oneflow_res, test_g_res
@@ -493,7 +500,8 @@ def GetDualObject(name, pytorch, oneflow):
                                         *oneflow_args, **oneflow_kwargs
                                     )
                                 except Exception as ee:
-                                    raise BothDoNotSupportError(e, ee) from None
+                                    raise BothDoNotSupportError(
+                                        e, ee) from None
                                 print(
                                     "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                                 )
@@ -510,11 +518,14 @@ def GetDualObject(name, pytorch, oneflow):
                             tensor_graph_kwargs = {}
                             for key, value in oneflow_kwargs.items():
                                 if flow.is_tensor(value):
-                                    tensor_graph_kwargs[key] = value.clone().detach()
+                                    tensor_graph_kwargs[key] = value.clone(
+                                    ).detach()
                                 else:
-                                    tensor_graph_kwargs[key] = copy.deepcopy(value)
+                                    tensor_graph_kwargs[key] = copy.deepcopy(
+                                        value)
 
-                        oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
+                        oneflow_res = oneflow_method(
+                            *oneflow_args, **oneflow_kwargs)
                         if testing_graph:
 
                             class TestGraphOfTensorMethod(flow.nn.Graph):
@@ -529,7 +540,8 @@ def GetDualObject(name, pytorch, oneflow):
                             try:
                                 test_g = TestGraphOfTensorMethod()
                                 if verbose:
-                                    print("Run graph of method: ", repr(oneflow))
+                                    print("Run graph of method: ",
+                                          repr(oneflow))
                                     test_g.debug(3)
                                 test_g_res = test_g()
                             except Exception as e:
@@ -537,14 +549,17 @@ def GetDualObject(name, pytorch, oneflow):
                                 raise OneFlowGraphBuildOrRunError(e)
                             if isinstance(test_g_res, tuple):
                                 for _, g_res in enumerate(test_g_res):
-                                    check_eager_graph_tensor(oneflow_res, g_res)
+                                    check_eager_graph_tensor(
+                                        oneflow_res, g_res)
                             else:
-                                check_eager_graph_tensor(oneflow_res, test_g_res)
+                                check_eager_graph_tensor(
+                                    oneflow_res, test_g_res)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
 
-            magic_methods_for_new_cls[method_name] = get_dual_method(method_name)
+            magic_methods_for_new_cls[method_name] = get_dual_method(
+                method_name)
     Cls = type(f"{name}_{counter}", (DualObject,), magic_methods_for_new_cls)
     return Cls(name, pytorch, oneflow)
 
@@ -599,7 +614,8 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
-    print(f"\033[32m-----------------------------------------------------------\033[0m")
+    print(
+        f"\033[32m-----------------------------------------------------------\033[0m")
     unique_vis_tensor = []
     flag_vis_tensor = [False for _ in range(len(vis_tensor))]
     for i in range(len(vis_tensor)):
@@ -654,15 +670,16 @@ class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
         if isinstance(pytorch, torch_original.nn.Module):
-            if is_consistent():
+            if is_global():
                 pytorch.load_state_dict(broadcast(pytorch).state_dict())
             state_dict = pytorch.state_dict()
-            state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
+            state_dict = {k: v.detach().cpu().numpy()
+                          for (k, v) in state_dict.items()}
             oneflow.load_state_dict(state_dict, strict=False)
-            if is_consistent():
-                oneflow = oneflow.to_consistent(
+            if is_global():
+                oneflow = oneflow.to_global(
                     placement=flow.env.all_device_placement("cpu"),
-                    sbp=[flow.sbp.broadcast,],
+                    sbp=[flow.sbp.broadcast, ],
                 )
             if testing:
                 dual_modules_to_test.append(self)
@@ -676,7 +693,7 @@ class DualObject:
         return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
 
     def __getattr__(self, key):
-        if key in ["to_consistent", "to_local"]:
+        if key in ["to_global", "to_local"]:
 
             def identity(*args, **kwargs):
                 if isinstance(self.pytorch, torch_original.Tensor):
@@ -886,7 +903,8 @@ def autotest(
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
-                        test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
+                        test_case.assertTrue(check_equality(
+                            x, rtol=rtol, atol=atol), x)
 
                 if verbose:
                     print(f"{f.__name__} test eager passed.")
@@ -902,7 +920,7 @@ def autotest(
     return deco
 
 
-def consistent(f):
+def global_view(f):
     @functools.wraps(f)
     def new_f(*args, **kwargs):
         with ConsistentScope() as scope:
@@ -926,11 +944,12 @@ def random_tensor(
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_pytorch_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
+        random_pytorch_tensor(ndim, dim0, dim1, dim2,
+                              dim3, dim4, low, high, dtype)
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
-    if is_consistent():
+    if is_global():
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
@@ -947,4 +966,4 @@ def random_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "consistent", "random_tensor"]
+__all__ = ["autotest", "global_view", "random_tensor"]

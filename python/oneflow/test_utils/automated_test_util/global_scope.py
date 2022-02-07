@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-_global_is_consistent = False
+_global_is_global = False
 
 
 class ConsistentScope:
@@ -22,14 +22,14 @@ class ConsistentScope:
         pass
 
     def __enter__(self, *argc, **kwarg):
-        global _global_is_consistent
-        self.last_is_consistent = _global_is_consistent
-        _global_is_consistent = True
+        global _global_is_global
+        self.last_is_global = _global_is_global
+        _global_is_global = True
 
     def __exit__(self, *argc, **kwarg):
-        global _global_is_consistent
-        _global_is_consistent = self.last_is_consistent
+        global _global_is_global
+        _global_is_global = self.last_is_global
 
 
-def is_consistent():
-    return _global_is_consistent
+def is_global():
+    return _global_is_global

@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.tensor,
     r"""
-    Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
+    Constructs a tensor with data, return a global tensor if placement and sbp are in kwargs,
        otherwise return a local tensor. 
        
     Arguments:
@@ -35,7 +35,7 @@ add_docstr(
 
     Note:
         The Keyword Argument device is mutually exclusive with placement and sbp.
-        Consistent tensor only can be constructed from tensor.
+        Global tensor only can be constructed from tensor.
 
 
     For example:
@@ -168,11 +168,11 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.to_consistent,
+    oneflow.Tensor.to_global,
     """
-    Tensor.to_consistent() -> Tensor
+    Tensor.to_global() -> Tensor
 
-    See :func:`oneflow.to_consistent`
+    See :func:`oneflow.to_global`
     """,
 )
 
@@ -873,7 +873,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.to_local,
-    """Returns the local tensor of a consistent tensor.
+    """Returns the local tensor of a global tensor.
 
 
     Args:
@@ -888,8 +888,8 @@ add_docstr(
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.tensor(np_arr, dtype=flow.float32)
         >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
-        >>> consistent_tensor.to_local()
+        >>> global_tensor = input.to_global(placement, [flow.sbp.split(0)])
+        >>> global_tensor.to_local()
         tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
     """,
 )

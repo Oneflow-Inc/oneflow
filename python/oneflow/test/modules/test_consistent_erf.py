@@ -30,13 +30,13 @@ from oneflow.test_utils.automated_test_util import *
 def test_erf_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
-    y = x.to_consistent(placement=placement, sbp=sbp)
+    y = x.to_global(placement=placement, sbp=sbp)
     z = torch.erf(y)
     return z
 
 
 class TestErfConsistent(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_erf(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()

@@ -35,12 +35,14 @@ BLOCK_FILTERS_INNER = [64, 128, 256, 512]
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser.add_argument("-g", "--gpu_num_per_node",
+                    type=int, default=1, required=False)
 parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
 parser.add_argument(
     "-m", "--multinode", default=False, action="store_true", required=False
 )
-parser.add_argument("-n", "--node_list", type=str, default=NODE_LIST, required=False)
+parser.add_argument("-n", "--node_list", type=str,
+                    default=NODE_LIST, required=False)
 parser.add_argument(
     "-s", "--skip_scp_binary", default=False, action="store_true", required=False
 )
@@ -54,15 +56,18 @@ parser.add_argument(
 parser.add_argument(
     "-r", "--remote_by_hand", default=False, action="store_true", required=False
 )
-parser.add_argument("-e", "--eval_dir", type=str, default=DATA_DIR, required=False)
-parser.add_argument("-t", "--train_dir", type=str, default=DATA_DIR, required=False)
+parser.add_argument("-e", "--eval_dir", type=str,
+                    default=DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str,
+                    default=DATA_DIR, required=False)
 parser.add_argument(
     "-load", "--model_load_dir", type=str, default=MODEL_LOAD, required=False
 )
 parser.add_argument(
     "-save", "--model_save_dir", type=str, default=MODEL_SAVE, required=False
 )
-parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument("-dn", "--data_part_num", type=int,
+                    default=32, required=False)
 parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
 g_output_key = []
 g_trainable = True
@@ -78,7 +83,8 @@ def _data_load(args, data_dir):
         data_part_num=args.data_part_num,
         name="decode",
     )
-    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
+    image = flow.data.ofrecord_image_decoder(
+        ofrecord, "encoded", color_space="RGB")
     label = flow.data.ofrecord_raw_decoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
     )
@@ -244,7 +250,7 @@ def main(args):
     flow.config.machine_num(1)
     flow.config.gpu_device_num(args.gpu_num_per_node)
     train_config = flow.FunctionConfig()
-    train_config.default_logical_view(flow.scope.consistent_view())
+    train_config.default_logical_view(flow.scope.global_view())
     train_config.default_data_type(flow.float)
 
     @flow.global_function(type="train", function_config=train_config)
@@ -261,7 +267,7 @@ def main(args):
 
     @flow.global_function(function_config=eval_config)
     def evaluate():
-        with flow.scope.consistent_view():
+        with flow.scope.global_view():
             _set_trainable(False)
             return resnet50(args, args.eval_dir)
 

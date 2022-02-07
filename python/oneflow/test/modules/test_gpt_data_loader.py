@@ -72,14 +72,15 @@ class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
         # print(
         #     f"GPTDataLoaderDistributedTestCase.test_case1 on rank {rank} {os.getpid()}"
         # )
-        eager_gpt_loader = GPTDataLoader(batch_size=4, device=flow.device("cpu", rank))
+        eager_gpt_loader = GPTDataLoader(
+            batch_size=4, device=flow.device("cpu", rank))
 
-        consistent_gpt_loader = GPTDataLoader(
+        global_gpt_loader = GPTDataLoader(
             batch_size=8,
             placement=flow.placement("cpu", {0: [0, 1]}),
             sbp=[flow.sbp.split(0)],
         )
-        gpt_loader_graph = DataLoaderGraph(consistent_gpt_loader)
+        gpt_loader_graph = DataLoaderGraph(global_gpt_loader)
 
         iteration = 2
         for i in range(iteration):

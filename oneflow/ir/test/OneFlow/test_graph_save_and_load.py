@@ -15,17 +15,15 @@ limitations under the License.
 """
 # RUN: python3 %s
 
+from networks.resnet50 import resnet50
+from oneflow.core.job import job_pb2 as job_pb
+import oneflow.unittest
+import oneflow as flow
+import unittest
 import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-import unittest
-import oneflow as flow
-import oneflow.unittest
-from oneflow.core.job import job_pb2 as job_pb
-
-from networks.resnet50 import resnet50
 
 
 class InferGraph(flow.nn.Graph):
@@ -34,7 +32,7 @@ class InferGraph(flow.nn.Graph):
         model = resnet50()
         if placement_arg is not None:
             if "placement" in placement_arg:
-                model.to_consistent(**placement_arg)
+                model.to_global(**placement_arg)
             else:
                 model.to(**placement_arg)
         self.model = model

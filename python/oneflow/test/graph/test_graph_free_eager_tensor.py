@@ -53,7 +53,8 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         graph_out = my_g(x)
         eager_out = my_net_module(x)
         test_case.assertTrue(
-            np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
+            np.allclose(graph_out.numpy(), eager_out.numpy(),
+                        atol=1e-4, rtol=1e-4)
         )
 
     def test_eager_tensor_to(test_case):
@@ -80,7 +81,8 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         graph_out = e_g()
         eager_out = e_m()
         test_case.assertTrue(
-            np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
+            np.allclose(graph_out.numpy(), eager_out.numpy(),
+                        atol=1e-4, rtol=1e-4)
         )
 
     def test_two_graph_caught_same_free_eager_tensor(test_case):
@@ -169,24 +171,26 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         )
         # x has not changed
         # So nn.Graph inplace will not change free eager tensor.
-        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
+        test_case.assertTrue(np.allclose(
+            x.numpy(), np_x, atol=1e-4, rtol=1e-4))
 
         # Run second time
         ret_eager_out = g_return_eager()
         test_case.assertTrue(
             np.allclose(ret_eager_out.numpy(), np_x * 2, atol=1e-4, rtol=1e-4)
         )
-        test_case.assertTrue(np.allclose(x.numpy(), np_x, atol=1e-4, rtol=1e-4))
+        test_case.assertTrue(np.allclose(
+            x.numpy(), np_x, atol=1e-4, rtol=1e-4))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class ConsistentFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
-    def test_consistent_eager_tensor_to(test_case):
+    def test_global_eager_tensor_to(test_case):
         rank = flow.env.get_rank()
         placement = flow.placement("cpu", {0: [0, 1]})
         t_l = flow.tensor([1.0, 2.0], dtype=flow.float32)
-        t = t_l.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        t = t_l.to_global(placement=placement, sbp=flow.sbp.broadcast)
 
         class ConsistentEagerTensorToModule(flow.nn.Module):
             def __init__(self):
