@@ -125,7 +125,6 @@ CudaStream::~CudaStream() {
   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
   OF_CUDA_CHECK(cudaFree(workspace_));
-  OF_CUDA_CHECK(cudaFree(workspace_));
 }
 
 Maybe<void> CudaStream::OnExecutionContextSetup() {
