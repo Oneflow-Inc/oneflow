@@ -13,10 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-<<<<<<< HEAD
-=======
-
->>>>>>> add three todo test cases
 import unittest
 from collections import OrderedDict
 
@@ -28,24 +24,32 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-@autotest(n=1, check_graph=False)
-def test_flip_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    new_dim = random(0, ndim).to(int).value()
-    z = torch.flip(y, constant([i for i in range(new_dim)]))
-    return z
+@autotest(n=10, check_graph=False)
+def test_flow_diagonal_impl(test_case, placement, sbp):
+    offset = random(-5, 5).to(int).value() * 8
+    dim1 = random(-4, 4).to(int).value()
+    dim2 = random(-4, 4).to(int).value()
 
+    x = random_tensor(
+        ndim=4,
+        dim1=random(1, 6)*8,
+        dim2=random(1, 6)*8,
+        dim3=random(1, 6)*8,
+        dim4=random(1, 6)*8,
+    )
+    y = x.to_consistent(placement=placement, sbp=sbp)
+    # z = torch.diagonal(y, offset, dim1, dim2)
+    return y
 
-class TestFlipConsistent(flow.unittest.TestCase):
-    @globaltest
-    def test_flip(test_case):
+class TestDiagonalConsistent(flow.unittest.TestCase):
+    @consistent
+    def test_flow_diagonal_impl(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
-                test_flip_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=4):
+                test_flow_diagonal_impl(test_case, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()

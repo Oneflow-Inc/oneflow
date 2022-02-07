@@ -13,10 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-<<<<<<< HEAD
-=======
 
->>>>>>> add three todo test cases
 import unittest
 from collections import OrderedDict
 
@@ -28,24 +25,30 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-@autotest(n=1, check_graph=False)
-def test_flip_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    new_dim = random(0, ndim).to(int).value()
-    z = torch.flip(y, constant([i for i in range(new_dim)]))
-    return z
+@autotest(n=3, auto_backward=True, rtol=1e-4, atol=1e-4)
+def test_fold_impl(test_case, placement, sbp):
+    m = torch.nn.Fold(
+        output_size=constant((4, 4)),
+        kernel_size=constant(3),
+        dilation=constant(1),
+        padding=constant(1),
+        stride=constant(1),
+    )
+    m.train(random())
+    device = random_device()
+    m.to(device)
+    x = random_tensor(
+        ndim=3, dim0=constant(8), dim1=constant(16), dim2=constant(24)
+    ).to_consistent(placement=placement, sbp=sbp)
+    y = m(x)
+    return y
 
-
-class TestFlipConsistent(flow.unittest.TestCase):
-    @globaltest
-    def test_flip(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+class TestFold(flow.unittest.TestCase):
+    @consistent
+    def test_fold(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
-                test_flip_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=2):
+                test_fold_impl(test_case, placement, sbp)
 
 if __name__ == "__main__":
     unittest.main()
