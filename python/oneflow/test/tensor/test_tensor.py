@@ -67,7 +67,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(np.int32, tensor.numpy().dtype)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_copy_to_and_from_numpy(test_case):
+    def test_fp16_tensor_copy_to_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float16)
         tensor = flow.tensor(np_arr, dtype=flow.float16)
         test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
