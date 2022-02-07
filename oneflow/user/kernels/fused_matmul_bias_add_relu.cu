@@ -97,19 +97,19 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
  public:
   explicit FusedMatmulBiasAddReluKernelCache() {
-    OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operationDesc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
     // Just for init.
+    OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
   }
   ~FusedMatmulBiasAddReluKernelCache() override {
-    OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operationDesc));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operation_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_c_desc));
   }
-  cublasLtMatmulDesc_t operationDesc;
+  cublasLtMatmulDesc_t operation_desc;
   cublasLtMatrixLayout_t cublas_a_desc;
   cublasLtMatrixLayout_t cublas_b_desc;
   cublasLtMatrixLayout_t cublas_c_desc;
@@ -141,7 +141,7 @@ template<typename T>
 class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
  public:
   FusedMatmulBiasAddReluKernel() = default;
-  ~FusedMatmulBiasAddReluKernel() = default;
+  ~FusedMatmulBiasAddReluKernel() override = default;
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -158,7 +158,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* cublas_a = b;
     const user_op::Tensor* cublas_b = a;
 
-    const auto* matmul_cache = dynamic_cast<const FusedMatmulBiasAddReluKernelCache*>(cache);
+    const auto* matmul_cache =
+        CHECK_NOTNULL(dynamic_cast<const FusedMatmulBiasAddReluKernelCache*>(cache));
 
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -218,30 +219,29 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const int64_t cublas_ldc = n;
 
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-        matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
+        matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
         sizeof(cublas_compute_dtype)));
     // For best performance when using the bias vector, specify beta == 0 and
     // CUBLASLT_POINTER_MODE_HOST.(from
     // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
     cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-        matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc,
+        matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_TRANSA, &cublas_trans_a,
                                                    sizeof(cublas_trans_a)));
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc,
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_TRANSB, &cublas_trans_b,
                                                    sizeof(cublas_trans_b)));
 
     // Set as matmul + bias_add + relu.
-    cublasLtEpilogue_t epilogue;
-    epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-        matmul_cache->operationDesc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+        matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
 
     // Set bias ptr
     const T* bias_ptr = reinterpret_cast<const T*>(bias->dptr());
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operationDesc,
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
                                                    sizeof(bias_ptr)));
 
@@ -252,15 +252,15 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     SetCublasMatrixLayout(matmul_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m,
                           cublas_n, cublas_ldc);
 
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     OF_CUBLAS_CHECK(cublasLtMatmul(
-        ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operationDesc,
+        ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operation_desc,
         &alpha, reinterpret_cast<const T*>(cublas_a->dptr()), matmul_cache->cublas_a_desc,
         reinterpret_cast<const T*>(cublas_b->dptr()), matmul_cache->cublas_b_desc, &beta,
         reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc,
         reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc, NULL,
-        ctx->stream()->As<ep::CudaStream>()->cublas_workspace(),
-        ctx->stream()->As<ep::CudaStream>()->cublas_workspace_size(),
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+        cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+        cuda_stream->cuda_stream()));
   }
 };
 
@@ -273,5 +273,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(half, DataType::kFloat16);
-
+#if CUDA_VERSION >= 11000
+REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+#endif
 }  // namespace oneflow

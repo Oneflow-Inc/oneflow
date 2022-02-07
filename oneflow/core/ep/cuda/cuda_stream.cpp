@@ -99,9 +99,9 @@ CudaStream::CudaStream(CudaDevice* device)
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
+  OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
 #if CUBLAS_VERSION >= 11200
   workspace_size_ = kDefaultWorkspaceSize;
-  OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
   // cudnn_handle
@@ -124,9 +124,8 @@ CudaStream::~CudaStream() {
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
-#if CUBLAS_VERSION >= 11200
   OF_CUDA_CHECK(cudaFree(workspace_));
-#endif  // CUBLAS_VERSION >= 11200
+  OF_CUDA_CHECK(cudaFree(workspace_));
 }
 
 Maybe<void> CudaStream::OnExecutionContextSetup() {

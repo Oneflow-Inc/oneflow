@@ -122,18 +122,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
       .PartialSum(user_op::OpArg("bias", 0))
       .PartialSum(user_op::OpArg("out", 0))
       .Build();
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("a", 0))
-      .Broadcast(user_op::OpArg("b", 0))
-      .PartialSum(user_op::OpArg("bias", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("a", 0))
-      .PartialSum(user_op::OpArg("b", 0))
-      .PartialSum(user_op::OpArg("bias", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 
