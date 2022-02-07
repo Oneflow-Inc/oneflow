@@ -254,11 +254,13 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     /* equal to -std::numeric_limits<T>::infinity(); */
     T max_value = detail::numeric_limits<T>::lower_bound();
 
+    const T* btm_data = src + start_idx; 
     for (IDX i = hstart; i < hend; i += dilation_h) {
       for (IDX j = wstart; j < wend; j += dilation_w) {
         const IDX window_idx = i * x_width + j;
-        const IDX search_idx = start_idx + window_idx;
-        T val = src[search_idx];
+        // const IDX search_idx = start_idx + window_idx;
+        // T val = src[search_idx];
+        T val = btm_data[window_idx]; 
         /* NOTE:
         std::isnan(val) only supports a few data types, see:
         https://en.cppreference.com/w/cpp/numeric/math/isnan and when use gcc/g++ 4.x to compile,
