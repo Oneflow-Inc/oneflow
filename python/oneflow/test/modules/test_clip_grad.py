@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 from collections import OrderedDict
 
@@ -167,8 +168,9 @@ class TestClipGrad(flow.unittest.TestCase):
             _test_graph_clip_grad_value_impl(test_case, *arg)
 
 
-@flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestClipGradConsistent(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
     def test_clip_grad_consistent(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 4), (2, 4, 3), (2, 4, 5, 6)]
