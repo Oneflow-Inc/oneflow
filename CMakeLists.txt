@@ -79,8 +79,10 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 7)
     message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
   endif()
+
   if(CPU_THREADING_RUNTIME STREQUAL "OMP")
     set(OMP_FLAGS "-fopenmp")
+    # message(FATAL_ERROR "test-mu")
   endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Reference:
