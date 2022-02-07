@@ -253,6 +253,8 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
         }
       }
     }
+    dest[num] = src[src_idx];
+    indice_ptr[num] = max_index;
   }
 }
 
