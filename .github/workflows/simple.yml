@@ -13,7 +13,7 @@ on:
         description: "placeholder, no effect"
         required: false
 concurrency:
-  group: build-and-test-${{ github.ref }}
+  group: simple-ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 jobs:
   static_analysis_with_clang:
