@@ -26,7 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 def _test_nonzero(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
     shape = [8 for _ in range(ndim)]
-    x = random_pytorch_tensor(ndim, *shape).to_consistent(placement, sbp)
+    x = random_tensor(ndim, *shape).to_consistent(placement, sbp)
     return torch.nonzero(x)
 
 

@@ -23,10 +23,10 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(check_graph=False)
 def _test_meshgrid(test_case, placement, x_sbp, y_sbp):
-    x = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to_consistent(
+    x = random_tensor(ndim=1, dim0=3, requires_grad=False).to_consistent(
         placement, x_sbp
     )
-    y = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to_consistent(
+    y = random_tensor(ndim=1, dim0=3, requires_grad=False).to_consistent(
         placement, y_sbp
     )
     res = torch.meshgrid(x, y)

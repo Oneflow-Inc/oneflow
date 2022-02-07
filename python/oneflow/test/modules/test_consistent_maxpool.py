@@ -32,7 +32,7 @@ def _test_maxpool1d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    x = random_pytorch_tensor(ndim=3, dim0=dim0, dim1=dim1, 
+    x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, 
         dim2=random(20, 22)).to_consistent(placement, sbp)
     y = torch.nn.functional.max_pool1d(
         x,
@@ -54,7 +54,7 @@ def _test_maxpool2d_functional(test_case, placement, sbp):
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
     device = random_device()
-    x = random_pytorch_tensor(ndim=4, dim0=dim0, dim1=dim1,
+    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1,
         dim2=random(20, 22), dim3=random(20, 22)).to_consistent(
         placement, sbp
     )
@@ -80,7 +80,7 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
     device = random_device()
-    x = random_pytorch_tensor(ndim=5, dim0=dim0, dim1=dim1,
+    x = random_tensor(ndim=5, dim0=dim0, dim1=dim1,
     dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)).to_consistent(
     placement, sbp
     )
@@ -113,7 +113,7 @@ def _test_maxpool1d(test_case, placement, sbp):
         return_indices=return_indices,
     )
     m.train(random())
-    x = random_pytorch_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(20, 22)).to_consistent(
+    x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(20, 22)).to_consistent(
         placement, sbp
     )
     y = m(x)
@@ -137,7 +137,7 @@ def _test_maxpool2d(test_case, placement, sbp):
         return_indices=return_indices,
     )
     m.train(random())
-    x = random_pytorch_tensor(ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)).to_consistent(
+    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)).to_consistent(
         placement, sbp
     )
     y = m(x)
@@ -163,7 +163,7 @@ def _test_maxpool3d(test_case, placement, sbp):
     m.train(random())
     device = random_device()
     m.to(device)
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=5, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
     ).to(device)
     y = m(x)

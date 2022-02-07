@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(check_graph=False)
 def _test_movedim(test_case, placement, sbp):
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4,
         dim1=random(3, 6) * 8,
         dim2=random(3, 6) * 8,

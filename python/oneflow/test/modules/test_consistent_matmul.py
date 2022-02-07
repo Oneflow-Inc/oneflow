@@ -27,10 +27,10 @@ def _test_matmul(test_case, placement, x_sbp, y_sbp):
     m = random().to(int).value() * 8
     k = random().to(int).value() * 8
     n = random().to(int).value() * 8
-    x = random_pytorch_tensor(ndim=2, dim0=m, dim1=k).to_consistent(
+    x = random_tensor(ndim=2, dim0=m, dim1=k).to_consistent(
         placement=placement, sbp=x_sbp
     )
-    y = random_pytorch_tensor(ndim=2, dim0=k, dim1=n).to_consistent(
+    y = random_tensor(ndim=2, dim0=k, dim1=n).to_consistent(
         placement=placement, sbp=y_sbp
     )
     return torch.matmul(x, y)
@@ -41,10 +41,10 @@ def _test_tensor_matmul(test_case, placement, x_sbp, y_sbp):
     m = random().to(int).value() * 8
     k = random().to(int).value() * 8
     n = random().to(int).value() * 8
-    x = random_pytorch_tensor(ndim=2, dim0=m, dim1=k).to_consistent(
+    x = random_tensor(ndim=2, dim0=m, dim1=k).to_consistent(
         placement=placement, sbp=x_sbp
     )
-    y = random_pytorch_tensor(ndim=2, dim0=k, dim1=n).to_consistent(
+    y = random_tensor(ndim=2, dim0=k, dim1=n).to_consistent(
         placement=placement, sbp=y_sbp
     )
     return x.matmul(y)
@@ -57,10 +57,10 @@ def _test_tensor_broadcast_matmul(test_case, placement, x_sbp, y_sbp):
     m = random().to(int).value() * 8
     k = random().to(int).value() * 8
     n = random().to(int).value() * 8
-    x = random_pytorch_tensor(ndim=4, dim0=dim0, dim1=dim1, dim3=k).to_consistent(
+    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dim3=k).to_consistent(
         placement=placement, sbp=x_sbp
     )
-    y = random_pytorch_tensor(ndim=2, dim0=k, dim1=n).to_consistent(
+    y = random_tensor(ndim=2, dim0=k, dim1=n).to_consistent(
         placement=placement, sbp=y_sbp
     )
     return x.matmul(y)

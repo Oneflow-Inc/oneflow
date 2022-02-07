@@ -26,14 +26,14 @@ from oneflow.test_utils.automated_test_util import *
 def _test_negative(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
     shape = [8 for _ in range(ndim)]
-    x = random_pytorch_tensor(ndim, *shape).to_consistent(placement, sbp)
+    x = random_tensor(ndim, *shape).to_consistent(placement, sbp)
     return torch.negative(x)
 
 
 @unittest.skip("b2s not support 0 size")
 @autotest(check_graph=False)
 def _test_negative_with_0_size(test_case, placement, sbp):
-    x = random_pytorch_tensor(3, 8, 8, 0).to_consistent(placement, sbp)
+    x = random_tensor(3, 8, 8, 0).to_consistent(placement, sbp)
     return torch.negative(x)
 
 

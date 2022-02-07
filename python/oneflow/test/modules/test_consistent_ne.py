@@ -24,10 +24,10 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(auto_backward=False, check_graph=False)
 def _test_ne(test_case, placement, sbp):
-    x1 = random_pytorch_tensor(ndim=4, dim0=8, dim1=8, dim2=5, dim3=5).to_consistent(
+    x1 = random_tensor(ndim=4, dim0=8, dim1=8, dim2=5, dim3=5).to_consistent(
         placement, sbp
     )
-    x2 = random_pytorch_tensor(ndim=4, dim0=8, dim1=8, dim2=1, dim3=5).to_consistent(
+    x2 = random_tensor(ndim=4, dim0=8, dim1=8, dim2=1, dim3=5).to_consistent(
         placement, sbp
     )
     return torch.ne(x1, x2)
