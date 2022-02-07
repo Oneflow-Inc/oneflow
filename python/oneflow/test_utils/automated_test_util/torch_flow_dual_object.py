@@ -337,23 +337,33 @@ def GetDualObject(name, pytorch, oneflow):
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
 
-                            if isinstance(oneflow, flow.nn.Module) and testing_graph:
-                                graph_train_oneflow = copy.deepcopy(oneflow)
-                                if not is_consistent():
-                                    arg_device_type = "cpu"
-                                    for arg in oneflow_args:
-                                        if flow.is_tensor(arg):
-                                            arg_device_type = arg.device.type
-                                    graph_train_oneflow = graph_train_oneflow.to(
-                                        arg_device_type
-                                    )
+                            if testing_graph:
+                                if isinstance(oneflow, flow.nn.Module):
+                                    graph_train_oneflow = copy.deepcopy(oneflow)
+                                    if not is_consistent():
+                                        arg_device_type = "cpu"
+                                        for arg in oneflow_args:
+                                            if flow.is_tensor(arg):
+                                                arg_device_type = arg.device.type
+                                        graph_train_oneflow = graph_train_oneflow.to(
+                                            arg_device_type
+                                        )
+
+                                else:
+                                    graph_functional_oneflow = copy.deepcopy(oneflow)
+                                    if "__self__" in dir(
+                                        graph_functional_oneflow
+                                    ) and flow.is_tensor(oneflow.__self__):
+                                        graph_functional_oneflow.__self__.data = (
+                                            oneflow.__self__.detach().clone()
+                                        )
+
                             if verbose:
                                 print(
                                     "Before running eager module or functional: ",
                                     repr(oneflow),
                                 )
-                            if testing_graph:
-                                graph_functional_oneflow = copy.deepcopy(oneflow)
+
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if verbose:
                                 print(
