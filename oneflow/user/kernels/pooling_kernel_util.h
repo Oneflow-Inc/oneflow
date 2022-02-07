@@ -54,6 +54,13 @@ struct DeviceAdd {
   };
 };
 
+#ifdef WITH_CUDA 
+  template<typename T>
+  __device__ inline T device_min(T a, T b) {
+    return a <= b ? a : b;
+  }
+#endif
+
 class MaxPoolingParams3D {
  public:
   MaxPoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
@@ -214,19 +221,35 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     const IDX start_idx = (n * n_channel + c) * x_width * x_height;
     IDX hstart = h * stride_h - padding_h;
     IDX wstart = w * stride_w - padding_w;
+    /*
     const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
                              ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
                              : x_height;
     const IDX wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
                              ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
                              : x_width;
+    */
+
+    #ifdef WITH_CUDA
+    const IDX hend = device_min<T>((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
+    const IDX wend = device_min<T>((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
+    // const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
+    //                          ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
+    //                          : x_height;
+    // const IDX wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
+    //                          ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
+    //                          : x_width;
+    #else
+    const IDX hend = std::min((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
+    const IDX wend = std::min((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
+    #endif
 
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
 
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
     IDX max_index = hstart * x_width + wstart;
-    IDX src_idx = 0;
+    // IDX src_idx = 0;
 
     /* equal to -std::numeric_limits<T>::infinity(); */
     T max_value = detail::numeric_limits<T>::lower_bound();
@@ -249,11 +272,12 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
         if (val > max_value || detail::numerics<T>::isnan(val)) {
           max_value = val;
           max_index = window_idx;
-          src_idx = search_idx;
+          // src_idx = search_idx;
         }
       }
     }
-    dest[num] = src[src_idx];
+    // dest[num] = src[src_idx];
+    dest[num] = max_value; 
     indice_ptr[num] = max_index;
   }
 }
