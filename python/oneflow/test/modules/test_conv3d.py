@@ -38,7 +38,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim0=2, dim1=channels).to(device)
+        x = random_tensor(ndim=5, dim0=2, dim1=channels).to(device)
         y = m(x)
         return y
 
@@ -61,7 +61,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         m.pytorch.to("cuda")
-        x = random_pytorch_tensor(ndim=5, dim1=channels).to(device)
+        x = random_tensor(ndim=5, dim1=channels).to(device)
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y

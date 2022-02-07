@@ -26,7 +26,7 @@ class TestReduceProd(flow.unittest.TestCase):
     def test_reduce_prod_without_dim(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)
-        x = random_pytorch_tensor(ndim=ndim).to(device)
+        x = random_tensor(ndim=ndim).to(device)
         y = torch.prod(x)
 
         return y
@@ -35,7 +35,7 @@ class TestReduceProd(flow.unittest.TestCase):
     def test_reduce_prod_with_dim(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)
-        x = random_pytorch_tensor(ndim=ndim).to(device)
+        x = random_tensor(ndim=ndim).to(device)
         dim = random(0, ndim).to(int)
         y = torch.prod(x, dim)
         y = torch.exp(y)
@@ -46,7 +46,7 @@ class TestReduceProd(flow.unittest.TestCase):
     def test_reduce_prod_bool_without_dim(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)
-        x = random_pytorch_tensor(ndim=ndim).to(device=device, dtype=torch.bool)
+        x = random_tensor(ndim=ndim).to(device=device, dtype=torch.bool)
         y = torch.prod(x)
 
         return y

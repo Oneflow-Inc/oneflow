@@ -81,7 +81,7 @@ Maybe<void> Cluster::WorkerLoop() {
         AsyncRunLazyJobSet(&lazy_runtime_thread, wait_session_init);
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         while (!wait_session_init_list.empty()) {
-          wait_session_init_list.front()->WaitUntilCntEqualZero();
+          wait_session_init_list.front()->WaitForeverUntilCntEqualZero();
           wait_session_init_list.pop_front();
         }
         JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(

@@ -456,7 +456,9 @@ struct LocalCallOpKernelUtil final {
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    if (operand->user_opkernel()->has_state_or_cache()) {
+      TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
@@ -545,10 +547,12 @@ void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) con
   CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction));
 }
 
-const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
-    vm::Instruction* instruction) const {
-  auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
-  return operand->opkernel().op_type_name();
+std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
+    const vm::InstructionMsg& instr_msg) const {
+  auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
+  return CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand))
+      ->opkernel()
+      .op_type_name();
 }
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,

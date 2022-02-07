@@ -31,6 +31,7 @@ class MultiClientSessionContext {
   ~MultiClientSessionContext() {}
 
   Maybe<void> TryInit(const ConfigProto& config_proto);
+  Maybe<void> UpdateResource(const Resource& reso_proto);
   Maybe<void> AddCGraph(const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr);
   Maybe<void> TryClose();
 

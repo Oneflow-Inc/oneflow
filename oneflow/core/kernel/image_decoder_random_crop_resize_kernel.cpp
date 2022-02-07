@@ -586,7 +586,7 @@ void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(KernelC
     work->task_counter = task_counter;
     workers_.at(worker_id)->Enqueue(work);
   }
-  done_counter->WaitUntilCntEqualZero();
+  done_counter->WaitForeverUntilCntEqualZero();
 }
 
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
