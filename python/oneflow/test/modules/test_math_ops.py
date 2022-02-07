@@ -385,6 +385,7 @@ class TestMinimum(flow.unittest.TestCase):
         return torch.minimum(x, y)
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMaximum(flow.unittest.TestCase):
     @autotest()
     def test_flow_elementwise_mximum_with_random_data(test_case):
