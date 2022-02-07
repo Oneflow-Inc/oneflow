@@ -34,7 +34,7 @@
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8, 3.9
+- Python 3.6, 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -75,11 +75,7 @@
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
     | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu111 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu110, cu110_xla | >= 450.36.06 | GTX 10xx, RTX 20xx, A100|
-    | cu102, cu102_xla | >= 440.33 | GTX 10xx, RTX 20xx |
-    | cu101, cu101_xla | >= 418.39 | GTX 10xx, RTX 20xx |
-    | cu100, cu100_xla | >= 410.48 | GTX 10xx, RTX 20xx |
+    | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 
 - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
@@ -92,7 +88,7 @@
 
 ```
 docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.1
+docker pull oneflowinc/oneflow:nightly-cuda11.2
 ```
 
 ### Build from Source
@@ -126,39 +122,17 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
 - #### Option 2: Build in docker container (recommended)
 
-  - Pull a docker image:
+  - Pull the docker image:
 
-    ```
-    docker pull oneflowinc/oneflow-manylinux2014-cuda10.2:0.1
-    ```
-
-    All images available : https://hub.docker.com/u/oneflowinc
-
-  - In the root directory of OneFlow source code, run:
-
-    ```
-    python3 docker/package/manylinux/build_wheel.py --inplace --python_version=3.6
+    ```bash
+    docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
     ```
 
-    This should produce `.whl` files in the directory `wheelhouse`
-
-  - If you are in China, you might need to add these flags:
-
-    ```
-    --use_tuna --use_system_proxy --use_aliyun_mirror
-    ```
-
-  - You can choose CUDA/Python versions of wheel by adding:
-
-    ```
-    --cuda_version=10.1 --python_version=3.6,3.7
-    ```
-
-  - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
+  - Follow the instructions in the bare metal build guide below.
 
 - #### Option 3: Build on bare metal
 
-  - Install dependencies
+  - Install dependencies (not required if you are using docker):
     - on Ubuntu 20.04, run:
       ```
       sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool

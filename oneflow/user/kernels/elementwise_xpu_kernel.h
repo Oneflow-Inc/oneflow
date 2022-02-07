@@ -133,16 +133,17 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
   std::string input_b_name;
 };
 
-#define REGISTER_UNARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,             \
-                                            input_a_dtype, create_function, out_name,            \
-                                            input_a_name)                                        \
-  REGISTER_USER_KERNEL(kernel_name)                                                              \
-      .SetCreateFn([]() {                                                                        \
-        return new UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>( \
-            create_function, out_name, input_a_name);                                            \
-      })                                                                                         \
-      .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == device)                                                   \
+#define REGISTER_UNARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,       \
+                                            input_a_dtype, create_function, out_name,      \
+                                            input_a_name)                                  \
+  REGISTER_USER_KERNEL(kernel_name)                                                        \
+      .SetCreateFn([]() {                                                                  \
+        return user_op::NewOpKernel<                                                       \
+            UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>>( \
+            create_function, out_name, input_a_name);                                      \
+      })                                                                                   \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == device)                                             \
           && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 #define REGISTER_BINARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,              \
@@ -150,9 +151,9 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
                                              out_name, input_a_name, input_b_name)                 \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
       .SetCreateFn([]() {                                                                          \
-        return new BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype,   \
-                                           input_b_dtype>(create_function, out_name, input_a_name, \
-                                                          input_b_name);                           \
+        return user_op::NewOpKernel<BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, \
+                                                            input_a_dtype, input_b_dtype>>(        \
+            create_function, out_name, input_a_name, input_b_name);                                \
       })                                                                                           \
       .SetIsMatchedHob(                                                                            \
           (user_op::HobDeviceType() == device)                                                     \

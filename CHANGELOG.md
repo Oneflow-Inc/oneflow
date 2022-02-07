@@ -14,7 +14,15 @@
 
 #### Build
 
-- placeholder
+- Python 3.10 now supported
+- Profiler build: new index to install OneFlow with `BUILD_PROFILER=ON`. Updated by pushing new commit to master branch:
+  ```bash
+  python3 -m pip install -f https://staging.oneflow.info/profiler/refs/heads/master/cu112 oneflow
+  ```
+- Canary build: new index to install OneFlow. Updated by pushing new commit to master branch:
+  ```bash
+  python3 -m pip install -f https://staging.oneflow.info/canary/refs/heads/master/cu112 oneflow
+  ```
 
 ### 2. Bug fixes
 

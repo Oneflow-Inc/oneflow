@@ -25,18 +25,20 @@ static constexpr double kDefaultShrinkFactor = 0.7f;
 static constexpr size_t kDefaultTensorBufferAlignedSize = 1024;
 
 size_t GetTensorBufferAlignedSize(size_t origin_size, double factor) {
-  size_t aligned_size =
+  static size_t aligned_size =
       ParseIntegerFromEnv("ONEFLOW_TENSOR_BUFFER_ALIGNED_SIZE", kDefaultTensorBufferAlignedSize);
   return RoundUp(static_cast<size_t>(origin_size * factor), aligned_size);
 }
 
 size_t GetTensorBufferGrowthSize(size_t origin_size) {
-  double factor = ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_GROWTH_FACTOR", kDefaultGrowthFactor);
+  static double factor =
+      ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_GROWTH_FACTOR", kDefaultGrowthFactor);
   return GetTensorBufferAlignedSize(origin_size, factor);
 }
 
 size_t GetTensorBufferShrinkSize(size_t origin_size) {
-  double factor = ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_SHRINK_FACTOR", kDefaultShrinkFactor);
+  static double factor =
+      ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_SHRINK_FACTOR", kDefaultShrinkFactor);
   return GetTensorBufferAlignedSize(origin_size, factor);
 }
 
@@ -194,14 +196,14 @@ constexpr double kDefaultPoolSizeFactor = 2.0;
 constexpr size_t kDefaultThreadLocalCacheSize = 64;
 
 size_t GetTensorBufferPoolSize(size_t base = kDefaultPoolSizeBase) {
-  double factor =
+  static double factor =
       ParseFloatFromEnv("ONEFLOW_TENSOR_BUFFER_POOL_SIZE_FACTOR", kDefaultPoolSizeFactor);
   return static_cast<size_t>(std::ceil(base * factor));
 }
 
 size_t GetTensorBufferPoolThreadLocalCacheSize() {
-  size_t cache_size = ParseIntegerFromEnv("ONEFLOW_TENSOR_BUFFER_POOL_THREAD_LOCAL_CACHE_SIZE",
-                                          kDefaultThreadLocalCacheSize);
+  static size_t cache_size = ParseIntegerFromEnv(
+      "ONEFLOW_TENSOR_BUFFER_POOL_THREAD_LOCAL_CACHE_SIZE", kDefaultThreadLocalCacheSize);
   return cache_size;
 }
 

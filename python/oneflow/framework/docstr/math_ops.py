@@ -925,6 +925,33 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.log2,
+    """
+    oneflow.log2(input) -> Tensor
+
+    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
+    
+    .. math::
+        y_{i} = \\log2_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.random.randn(2, 3, 4, 5)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> output = flow.log2(input)
+
+
+    """,
+)
+
+add_docstr(
     oneflow.minimum,
     r"""Computes the element-wise minimum of x and y.
 
@@ -1297,6 +1324,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.as_strided,
+    r"""
+    Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
+
+    Args:
+        input (Tensor): the input tensor.
+        size (tuple or ints): the shape of the output tensor.
+        stride (tuple or ints): the stride of the output tensor.
+        storage_offset (int): the offset in the underlying storage of the output tensor
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(2,3,5)
+        >>> output = flow.as_strided(input, (2,3,3), (1,2,3), 1)
+        >>> output.size()
+        oneflow.Size([2, 3, 3])
+    """,
+)
+
+add_docstr(
     oneflow.eye,
     """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
 
@@ -1330,6 +1386,126 @@ add_docstr(
         tensor([[1., 0., 0.],
                 [0., 1., 0.],
                 [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.tensor_split,
+    r"""
+    Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
+    dim according to the indices or number of sections specified by indices_or_sections .
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.tensor_split.html#torch.tensor_split
+
+    Args:
+        input (Tensor): the input tensor.
+        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
+            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
+            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
+            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
+            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
+            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
+            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
+            one-dimensional long tensor on the CPU.
+        dim (int): dimension along which to split the tensor.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5)
+        >>> output = flow.tensor_split(input,(2,3),2)
+        >>> output[0].size()
+        oneflow.Size([3, 4, 2])
+        >>> output[1].size()
+        oneflow.Size([3, 4, 1])
+        >>> output[2].size()
+        oneflow.Size([3, 4, 2])
+    """,
+)
+
+add_docstr(
+    oneflow.hsplit,
+    r"""
+    Splits input, a tensor with one or more dimensions, into multiple tensors horizontally according to indices_or_sections.
+    Each split is a view of input.
+    If input is one dimensional this is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) 
+    (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
+    torch.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
+    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+
+    Args:
+        input (Tensor): the input tensor.
+        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
+            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
+            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
+            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
+            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
+            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
+            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
+            one-dimensional long tensor on the CPU.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5,6)
+        >>> output = flow.hsplit(input,(1,3))
+        >>> output[0].size()
+        oneflow.Size([3, 1, 5, 6])
+        >>> output[1].size()
+        oneflow.Size([3, 2, 5, 6])
+        >>> output[2].size()
+        oneflow.Size([3, 1, 5, 6])
+    """,
+)
+
+add_docstr(
+    oneflow.vsplit,
+    r"""
+    Splits input, a tensor with two or more dimensions, into multiple tensors vertically according to indices_or_sections.
+    Each split is a view of input.
+    This is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
+    except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+
+    Args:
+        input (Tensor): the input tensor.
+        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
+            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
+            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
+            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
+            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
+            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
+            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
+            one-dimensional long tensor on the CPU.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5,6)
+        >>> output = flow.vsplit(input,(1,3))
+        >>> output[0].size()
+        oneflow.Size([1, 4, 5, 6])
+        >>> output[1].size()
+        oneflow.Size([2, 4, 5, 6])
+        >>> output[2].size()
+        oneflow.Size([1, 4, 5, 6])
     """,
 )
 
