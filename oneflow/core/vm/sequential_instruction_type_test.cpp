@@ -96,7 +96,7 @@ TEST(SequentialInstruction, front_seq_compute) {
     bc.Decrease();
   });
   CHECK_JUST(vm->Receive(&list));
-  bc.WaitUntilCntEqualZero();
+  bc.WaitForeverUntilCntEqualZero();
   ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());
   t.join();

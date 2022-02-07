@@ -23,6 +23,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.block import TensorBlock
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
+import oneflow as flow
 
 
 class ParamGroup(object):
@@ -80,6 +81,27 @@ class ParamGroup(object):
         return self._parameters
 
 
+class _SourceOpOnlyResourceDependenceMode:
+    def __init__(self):
+        self.guard_ = None
+
+    def __enter__(self):
+        self.guard = (
+            flow._oneflow_internal.eager.multi_client.SourceOpOnlyResourceDependenceModeGuard()
+        )
+
+    def __exit__(self, *args, **kwargs):
+        del self.guard
+
+
+def _decorate_step(step):
+    def decorated_step(*args, **kwargs):
+        with _SourceOpOnlyResourceDependenceMode():
+            return step(*args, **kwargs)
+
+    return decorated_step
+
+
 class Optimizer(object):
     def __init__(self, parameters, options):
         self.param_groups = list()
@@ -88,6 +110,8 @@ class Optimizer(object):
         self._state["step"] = 0
 
         self._parse_input_parameters(parameters)
+
+        self.step = _decorate_step(self.step)
 
     def add_param_group(self, param_group) -> None:
         raise NotImplementedError()

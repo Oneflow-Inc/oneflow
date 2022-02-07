@@ -36,7 +36,7 @@ except ImportError:
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
     )
 
-from .generators import Nothing, generator, random_tensor
+from .generators import Nothing, generator, random_pytorch_tensor
 from .consistent_scope import *
 from .util import broadcast
 
@@ -911,7 +911,7 @@ def consistent(f):
     return new_f
 
 
-def random_pytorch_tensor(
+def random_tensor(
     ndim=None,
     dim0=1,
     dim1=None,
@@ -926,7 +926,7 @@ def random_pytorch_tensor(
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
+        random_pytorch_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
@@ -947,4 +947,4 @@ def random_pytorch_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "consistent", "random_pytorch_tensor"]
+__all__ = ["autotest", "consistent", "random_tensor"]
