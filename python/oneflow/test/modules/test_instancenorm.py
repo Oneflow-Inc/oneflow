@@ -434,7 +434,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim1=height, dim2=width).to(device)
+        x = random_tensor(ndim=3, dim1=height, dim2=width).to(device)
         y = m(x)
         return y
 
@@ -453,9 +453,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
-            device
-        )
+        x = random_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(device)
         y = m(x)
         return y
 
@@ -477,9 +475,9 @@ class TestInstanceNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
-            ndim=5, dim1=channel, dim2=depth, dim3=height, dim4=width
-        ).to(device)
+        x = random_tensor(ndim=5, dim1=channel, dim2=depth, dim3=height, dim4=width).to(
+            device
+        )
         y = m(x)
         return y
 

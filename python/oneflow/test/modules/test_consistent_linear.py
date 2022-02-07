@@ -42,7 +42,7 @@ def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
         m.bias = torch.nn.Parameter(
             m.bias.to_consistent(placement=placement, sbp=bias_sbp)
         )
-    x = random_pytorch_tensor(ndim=2, dim1=input_size, dim2=8).to_consistent(
+    x = random_tensor(ndim=2, dim1=input_size, dim2=8).to_consistent(
         placement=placement, sbp=input_sbp
     )
     y = m(x)

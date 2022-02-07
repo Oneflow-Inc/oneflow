@@ -50,7 +50,7 @@ class TestCuda(flow.unittest.TestCase):
     @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_cuda(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         x = x.cuda()
         y = x.sum()
         return y
@@ -58,7 +58,7 @@ class TestCuda(flow.unittest.TestCase):
     @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_cuda_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         x = x.cuda()
         y = x.sum()
         return y
@@ -69,7 +69,7 @@ class TestTensorOps(flow.unittest.TestCase):
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_cpu(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         x = x.cpu()
         y = x.sum()
         return y
@@ -77,84 +77,84 @@ class TestTensorOps(flow.unittest.TestCase):
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_long(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         y = x.long()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_long_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         y = x.long()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         y = x.int()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_int_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         y = x.int()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_float(test_case):
         device = random_device()
-        x = random_pytorch_tensor(dtype=int).to(device)
+        x = random_tensor(dtype=int).to(device)
         y = x.float()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_float_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0, dtype=int).to(device)
+        x = random_tensor(ndim=0, dtype=int).to(device)
         y = x.float()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_double(test_case):
         device = random_device()
-        x = random_pytorch_tensor(dtype=int).to(device)
+        x = random_tensor(dtype=int).to(device)
         y = x.double()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_double_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0, dtype=int).to(device)
+        x = random_tensor(ndim=0, dtype=int).to(device)
         y = x.double()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_item(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=1, dim0=1, dtype=int).to(device)
+        x = random_tensor(ndim=1, dim0=1, dtype=int).to(device)
         y = torch.tensor(x.item())
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_item_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0, dtype=int).to(device)
+        x = random_tensor(ndim=0, dtype=int).to(device)
         y = torch.tensor(x.item())
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_tolist(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4).to(device)
+        x = random_tensor(ndim=4).to(device)
         y = torch.tensor(x.tolist())
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
     def test_tolist_0dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         y = torch.tensor(x.tolist())
         return y
 

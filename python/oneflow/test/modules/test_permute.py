@@ -80,7 +80,7 @@ class TestPermute(flow.unittest.TestCase):
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(ndim=ndim, dim0=random().to(int)).to(device)
+        x = random_tensor(ndim=ndim, dim0=random().to(int)).to(device)
         y = torch.permute(x, dims=permute_list)
         return y
 
@@ -90,7 +90,7 @@ class TestPermute(flow.unittest.TestCase):
         device = random_device()
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         y = torch.permute(x, dims=permute_list)
         return y
 
@@ -100,7 +100,7 @@ class TestPermute(flow.unittest.TestCase):
         ndim = 5
         permute_list = [0, 1, 2, 3, 4]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 16).to(int),
             dim1=random(1, 33).to(int),
@@ -117,7 +117,7 @@ class TestPermute(flow.unittest.TestCase):
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 32).to(int),
             dim1=random(1, 59).to(int),
@@ -133,7 +133,7 @@ class TestPermute(flow.unittest.TestCase):
         ndim = 3
         permute_list = [0, 1, 2]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 18).to(int),
             dim1=random(1, 78).to(int),
@@ -149,7 +149,7 @@ class TestPermute(flow.unittest.TestCase):
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 32).to(int),
             dim1=random(1, 59).to(int),

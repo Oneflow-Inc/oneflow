@@ -925,6 +925,33 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.log2,
+    """
+    oneflow.log2(input) -> Tensor
+
+    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
+    
+    .. math::
+        y_{i} = \\log2_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.random.randn(2, 3, 4, 5)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> output = flow.log2(input)
+
+
+    """,
+)
+
+add_docstr(
     oneflow.minimum,
     r"""Computes the element-wise minimum of x and y.
 
