@@ -403,7 +403,7 @@ def GetDualObject(name, pytorch, oneflow):
                                         and "oneflow.nn.modules" in oneflow.__module__
                                     )
                                 ):
-                                    if global_backward and oneflow_res.ndim > 1:
+                                    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
                                         graph_functional_layernorm = flow.nn.LayerNorm(
                                             oneflow_res.shape[-1]
                                         )
@@ -544,7 +544,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
-                            if global_backward and oneflow_res.ndim > 1:
+                            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
                                 graph_functional_layernorm = flow.nn.LayerNorm(
                                     oneflow_res.shape[-1]
                                 )
