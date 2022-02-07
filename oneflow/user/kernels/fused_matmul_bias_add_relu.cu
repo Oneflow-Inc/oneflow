@@ -55,12 +55,29 @@ cublasComputeType_t GetComputeType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUBLAS_COMPUTE_32F;
     case kDouble: return CUBLAS_COMPUTE_64F;
-    case kFloat16: return CUBLAS_COMPUTE_16F;
+    case kFloat16: return CUBLAS_COMPUTE_32F;
 #if CUDA_VERSION >= 11000
     case kBFloat16: return CUBLAS_COMPUTE_32F_FAST_16BF;
 #endif  // CUDA_VERSION >= 11000
     default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
+}
+
+union CublasScalarParameter {
+  double d;
+  float s;
+};
+
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
+  CublasScalarParameter sp{};
+  if (compute_type == CUBLAS_COMPUTE_64F) {
+    sp.d = scalar.Value<double>();
+  } else if (compute_type == CUBLAS_COMPUTE_32F) {
+    sp.s = scalar.Value<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sp;
 }
 
 void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const ShapeView& c_shape,
@@ -164,8 +181,6 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-    const T alpha = static_cast<T>(ctx->Attr<double>("alpha"));
-    const T beta = static_cast<T>(0.0);
 
     const auto GetCublasOperation = [](ep::primitive::BlasTransposeType transpose_type) {
       if (transpose_type == ep::primitive::BlasTransposeType::N) {
@@ -198,6 +213,12 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
 
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
+
+    const double alpha = ctx->Attr<double>("alpha");
+    const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
+
+    const double beta = 0.0;
+    const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
     int64_t cublas_lda = 0;
     if (trans_b == ep::primitive::BlasTransposeType::N) {
@@ -255,8 +276,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     OF_CUBLAS_CHECK(cublasLtMatmul(
         ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operation_desc,
-        &alpha, reinterpret_cast<const T*>(cublas_a->dptr()), matmul_cache->cublas_a_desc,
-        reinterpret_cast<const T*>(cublas_b->dptr()), matmul_cache->cublas_b_desc, &beta,
+        &sp_alpha, reinterpret_cast<const T*>(cublas_a->dptr()), matmul_cache->cublas_a_desc,
+        reinterpret_cast<const T*>(cublas_b->dptr()), matmul_cache->cublas_b_desc, &sp_beta,
         reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc,
         reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc, NULL,
         cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
