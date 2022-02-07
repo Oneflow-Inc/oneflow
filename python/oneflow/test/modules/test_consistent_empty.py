@@ -79,6 +79,5 @@ class TestEmptyConsistent(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=len(shape), except_partial_sum=True):
                 _test_graph_empty(test_case, shape, placement, sbp)
 
-
 if __name__ == "__main__":
     unittest.main()
