@@ -61,7 +61,6 @@ class StreamType {
                                                            int64_t this_machine_id) const = 0;
 
   virtual bool OnSchedulerThread() const = 0;
-  virtual bool EnableInstructionFuse() const { return false; }
   virtual bool SupportingTransportInstructions() const = 0;
   virtual bool IsControlStreamType() const { return false; }
   virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
