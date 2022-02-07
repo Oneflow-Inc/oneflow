@@ -41,7 +41,6 @@ def _clip_grad_norm_np(input, max_norm, norm_type):
         for i in range(np_grad.ndim, 0, -1):
             total_norm = np.linalg.norm(total_norm, norm_type, axis=i - 1)
     clip_coef = max_norm / (total_norm + 1e-6)
-    print("fake: ", np_grad, max_norm, total_norm, clip_coef)
     if clip_coef < 1:
         np_grad = np.dot(np_grad, clip_coef)
     return total_norm, np_grad
@@ -117,7 +116,9 @@ def _test_graph_clip_grad_value_impl(test_case, shape, device, clip_value):
     )
 
 
-def _test_clip_grad_norm_consistent_impl(test_case, shape, sbp, placement, max_norm, norm_type):
+def _test_clip_grad_norm_consistent_impl(
+    test_case, shape, sbp, placement, max_norm, norm_type
+):
     of_input = flow.rand(
         *shape, dtype=flow.float32, sbp=sbp, placement=placement, requires_grad=True
     )
@@ -127,19 +128,21 @@ def _test_clip_grad_norm_consistent_impl(test_case, shape, sbp, placement, max_n
     of_out = m(of_input)
     of_out = of_out.sum()
     of_out.backward()
-    # print(np_input)
-    # print(of_input.grad.detach().to_consistent(sbp=flow.sbp.broadcast).to_local().numpy())
-    of_total_norm = flow.nn.utils.clip_grad_norm_(of_input, max_norm, norm_type).to_local()
+    of_total_norm = flow.nn.utils.clip_grad_norm_(
+        of_input, max_norm, norm_type
+    ).to_local()
     np_total_norm, np_grad = _clip_grad_norm_np(np_input, max_norm, norm_type)
-    print(of_total_norm)
-    print(np_total_norm)
     test_case.assertTrue(
         np.allclose(of_total_norm.numpy(), np_total_norm, 1e-4, 1e-4, equal_nan=True)
     )
-    # print(np_grad)
-    # print(of_input.grad.detach().to_consistent(sbp=flow.sbp.broadcast).to_local().numpy())
     test_case.assertTrue(
-        np.allclose(of_input.grad.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(
+            of_input.grad.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            np_grad,
+            1e-4,
+            1e-4,
+            equal_nan=True,
+        )
     )
 
 
@@ -168,10 +171,14 @@ class TestClipGrad(flow.unittest.TestCase):
 class TestClipGradConsistent(flow.unittest.TestCase):
     def test_clip_grad_consistent(test_case):
         arg_dict = OrderedDict()
-        # arg_dict["shape"] = [(2, 4), (2, 4, 3), (2, 4, 5, 6)]
-        arg_dict["shape"] = [(1,)]
-        arg_dict["sbp"] = [flow.sbp.broadcast]#, flow.sbp.split(0), flow.sbp.split(1)]
-        arg_dict["placement"] = [flow.env.all_device_placement("cpu"), flow.env.all_device_placement("cuda")]
+        arg_dict["shape"] = [(2, 4), (2, 4, 3), (2, 4, 5, 6)]
+        # arg_dict["shape"] = [(1,)]
+        arg_dict["sbp"] = [
+            flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
+        arg_dict["placement"] = [
+            flow.env.all_device_placement("cpu"),
+            flow.env.all_device_placement("cuda"),
+        ]
         arg_dict["max_norm"] = [0, 0.5, 1.0]
         arg_dict["norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         for arg in GenArgList(arg_dict):
