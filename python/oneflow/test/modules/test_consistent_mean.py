@@ -31,7 +31,9 @@ def _test_mean(test_case, placement, sbp):
     dim = random(1, 4).to(int).value()
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dtype=float).to_consistent(placement, sbp)
+    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dtype=float).to_consistent(
+        placement, sbp
+    )
     return torch.mean(x, dim)
 
 

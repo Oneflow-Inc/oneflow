@@ -74,9 +74,7 @@ class TestMatMulModule(flow.unittest.TestCase):
                 for y_sbp in all_sbp(placement, max_dim=2):
                     _test_matmul(test_case, placement, x_sbp, y_sbp)
                     _test_tensor_matmul(test_case, placement, x_sbp, y_sbp)
-                    _test_tensor_broadcast_matmul(
-                        test_case, placement, x_sbp, y_sbp
-                    )
+                    _test_tensor_broadcast_matmul(test_case, placement, x_sbp, y_sbp)
 
 
 if __name__ == "__main__":

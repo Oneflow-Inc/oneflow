@@ -252,7 +252,7 @@ class TestLrScheduler(flow.unittest.TestCase):
                 poly_decay_lr.get_last_lr()[0], new_lr, places=4
             )
 
-        cycle = True
+        cycle = False
         poly_decay_lr = flow.optim.lr_scheduler.PolynomialLR(
             optimizer, decay_steps, end_learning_rate, power, cycle
         )

@@ -21,6 +21,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(check_graph=False)
 def _test_meshgrid(test_case, placement, x_sbp, y_sbp):
     x = random_tensor(ndim=1, dim0=3, requires_grad=False).to_consistent(
@@ -41,7 +42,6 @@ class TestMeshGrid(flow.unittest.TestCase):
             for x_sbp in all_sbp(placement, max_dim=1):
                 for y_sbp in all_sbp(placement, max_dim=1):
                     _test_meshgrid(test_case, placement, x_sbp, y_sbp)
-
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(check_graph=False)
 def _test_sinh(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
@@ -28,12 +29,14 @@ def _test_sinh(test_case, placement, sbp):
     y = torch.sinh(x)
     return y
 
+
 @autotest(check_graph=False)
 def _test_sin(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
     x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, sbp)
     y = torch.sin(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_inplace_sin(test_case, placement, sbp):
@@ -43,12 +46,14 @@ def _test_inplace_sin(test_case, placement, sbp):
     y.sin_()
     return y
 
+
 @autotest(check_graph=False)
 def _test_cos(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
     x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, sbp)
     y = torch.cos(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_log(test_case, placement, sbp):
@@ -57,12 +62,14 @@ def _test_log(test_case, placement, sbp):
     y = torch.log(x)
     return y
 
+
 @autotest(check_graph=False)
 def _test_sqrt(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
     x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, sbp)
     y = torch.sqrt(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_exp(test_case, placement, sbp):
@@ -71,12 +78,14 @@ def _test_exp(test_case, placement, sbp):
     y = torch.exp(x)
     return y
 
+
 @autotest(check_graph=False)
 def _test_rsqrt(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
     x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, sbp)
     y = torch.rsqrt(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_square(test_case, placement, sbp):
@@ -85,6 +94,7 @@ def _test_square(test_case, placement, sbp):
     y = torch.square(x)
     return y
 
+
 @autotest(check_graph=False)
 def _test_pow_with_scalar(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
@@ -92,6 +102,7 @@ def _test_pow_with_scalar(test_case, placement, sbp):
     y = random().to(float)
     z = torch.pow(x, y)
     return z
+
 
 @autotest(auto_backward=False, check_graph=False)
 def _test_floordiv_with_scalar(test_case, placement, sbp):
@@ -105,14 +116,19 @@ def _test_floordiv_with_scalar(test_case, placement, sbp):
 @autotest(check_graph=False)
 def _test_arccos(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(placement, sbp)
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(
+        placement, sbp
+    )
     y = torch.arccos(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_acos(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(placement, sbp)
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(
+        placement, sbp
+    )
     y = torch.acos(x)
     return y
 
@@ -120,42 +136,40 @@ def _test_acos(test_case, placement, sbp):
 @autotest(check_graph=False)
 def _test_arccosh(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(placement, sbp)
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(
+        placement, sbp
+    )
     y = torch.arccosh(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_acosh(test_case, placement, sbp):
     ndim = random(2, 5).to(int).value()
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(placement, sbp)
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8, low=2, high=3).to_consistent(
+        placement, sbp
+    )
     y = torch.acosh(x)
     return y
+
 
 @autotest(check_graph=False)
 def _test_atan2(test_case, placement, x_sbp, y_sbp):
     ndim = random(2, 5).to(int).value()
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(
-        placement, y_sbp
-    )
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, x_sbp)
+    y = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, y_sbp)
     z = torch.atan2(x, y)
     return z
+
 
 @autotest(check_graph=False)
 def _test_minimum(test_case, placement, x_sbp, y_sbp):
     ndim = random(2, 5).to(int).value()
-    shape = [8, 8] + [random().to(int).value() for _ in range(ndim-2)]
-    x = random_tensor(ndim, *shape).to_consistent(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim, *shape).to_consistent(
-        placement, y_sbp
-    )
+    shape = [8, 8] + [random().to(int).value() for _ in range(ndim - 2)]
+    x = random_tensor(ndim, *shape).to_consistent(placement, x_sbp)
+    y = random_tensor(ndim, *shape).to_consistent(placement, y_sbp)
     z = torch.minimum(x, y)
     return z
-
 
 
 @autotest(check_graph=False)
@@ -172,17 +186,15 @@ def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
     z = torch.minimum(x, y)
     return z
 
+
 def _test_maximum(test_case, placement, x_sbp, y_sbp):
     ndim = random(2, 5).to(int).value()
-    shape = [8, 8] + [random().to(int).value() for _ in range(ndim-2)]
-    x = random_tensor(ndim, *shape).to_consistent(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim, *shape).to_consistent(
-        placement, y_sbp
-    )
+    shape = [8, 8] + [random().to(int).value() for _ in range(ndim - 2)]
+    x = random_tensor(ndim, *shape).to_consistent(placement, x_sbp)
+    y = random_tensor(ndim, *shape).to_consistent(placement, y_sbp)
     z = torch.maximum(x, y)
     return z
+
 
 @autotest(check_graph=False)
 def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
@@ -198,17 +210,15 @@ def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
     z = torch.maximum(x, y)
     return z
 
+
 @autotest(auto_backward=False, check_graph=False)
 def _test_floordiv(test_case, placement, x_sbp, y_sbp):
     ndim = random(2, 5).to(int).value()
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(
-        placement, y_sbp
-    )
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, x_sbp)
+    y = random_tensor(ndim=ndim, dim0=8, dim1=8).to_consistent(placement, y_sbp)
     z = torch.floor_divide(x, y)
     return z
+
 
 class TestMathOps(flow.unittest.TestCase):
     @consistent

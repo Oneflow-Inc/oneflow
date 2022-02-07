@@ -24,9 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_mul(test_case, placement, x_sbp, y_sbp):
-    x = random_tensor(ndim=3, dim0=16, dim1=8, dim2=24).to_consistent(
-        placement, x_sbp
-    )
+    x = random_tensor(ndim=3, dim0=16, dim1=8, dim2=24).to_consistent(placement, x_sbp)
     y = random_tensor(ndim=2, dim0=8, dim1=24).to_consistent(placement, y_sbp)
     z = torch.mul(x, y)
     return z

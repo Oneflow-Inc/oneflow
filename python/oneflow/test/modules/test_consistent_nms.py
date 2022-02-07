@@ -23,6 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 from test_nms import create_tensors_with_iou
 from test_nms import nms_np
 
+
 def _test_nms(test_case, placement, sbp):
     iou = 0.5
     boxes, scores = create_tensors_with_iou(800, iou)
@@ -31,6 +32,7 @@ def _test_nms(test_case, placement, sbp):
     keep_np = nms_np(boxes.numpy(), scores.numpy(), iou)
     keep = flow.nms(boxes, scores, iou)
     test_case.assertTrue(np.allclose(keep.numpy(), keep_np))
+
 
 class TestNMS(flow.unittest.TestCase):
     @consistent

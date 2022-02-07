@@ -27,13 +27,15 @@ from test_util import GenArgList
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.test_utils.automated_test_util.util import broadcast
 
+
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_maxpool1d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, 
-        dim2=random(20, 22)).to_consistent(placement, sbp)
+    x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(20, 22)).to_consistent(
+        placement, sbp
+    )
     y = torch.nn.functional.max_pool1d(
         x,
         kernel_size=random(4, 6).to(int),
@@ -48,16 +50,16 @@ def _test_maxpool1d_functional(test_case, placement, sbp):
     else:
         return y, y.sum().backward()
 
+
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_maxpool2d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
     device = random_device()
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1,
-        dim2=random(20, 22), dim3=random(20, 22)).to_consistent(
-        placement, sbp
-    )
+    x = random_tensor(
+        ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)
+    ).to_consistent(placement, sbp)
     y = torch.nn.functional.max_pool2d(
         x,
         kernel_size=random(4, 6).to(int),
@@ -80,10 +82,14 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
     device = random_device()
-    x = random_tensor(ndim=5, dim0=dim0, dim1=dim1,
-    dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)).to_consistent(
-    placement, sbp
-    )
+    x = random_tensor(
+        ndim=5,
+        dim0=dim0,
+        dim1=dim1,
+        dim2=random(20, 22),
+        dim3=random(20, 22),
+        dim4=random(20, 22),
+    ).to_consistent(placement, sbp)
     y = torch.nn.functional.max_pool3d(
         x,
         kernel_size=random(4, 6).to(int),
@@ -98,6 +104,7 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
         return unpack_indices(y)
     else:
         return y, y.sum().backward()
+
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_maxpool1d(test_case, placement, sbp):
@@ -137,9 +144,9 @@ def _test_maxpool2d(test_case, placement, sbp):
         return_indices=return_indices,
     )
     m.train(random())
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)).to_consistent(
-        placement, sbp
-    )
+    x = random_tensor(
+        ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)
+    ).to_consistent(placement, sbp)
     y = m(x)
     if return_indices:
         return unpack_indices(y)
@@ -164,7 +171,12 @@ def _test_maxpool3d(test_case, placement, sbp):
     device = random_device()
     m.to(device)
     x = random_tensor(
-        ndim=5, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
+        ndim=5,
+        dim0=dim0,
+        dim1=dim1,
+        dim2=random(20, 22),
+        dim3=random(20, 22),
+        dim4=random(20, 22),
     ).to(device)
     y = m(x)
 
@@ -175,8 +187,8 @@ def _test_maxpool3d(test_case, placement, sbp):
 
 
 def _test_maxpool2d_channel_last(
-    test_case, shape, kernel_size, stride, padding, dilation, ceil_mode,
-    placement):
+    test_case, shape, kernel_size, stride, padding, dilation, ceil_mode, placement
+):
     os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
     shape = broadcast(shape)
     kernel_size = broadcast(kernel_size)
@@ -208,7 +220,9 @@ def _test_maxpool2d_channel_last(
         x1 = flow.tensor(arr, dtype=flow.float64).to_consistent(placement, sbp)
         y1 = m1(x1)
         test_case.assertTrue(
-            np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
+            np.allclose(
+                y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4
+            )
         )
     os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
 

@@ -21,6 +21,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(check_graph=False)
 def _test_movedim(test_case, placement, sbp):
     x = random_tensor(
@@ -33,12 +34,14 @@ def _test_movedim(test_case, placement, sbp):
     z = torch.movedim(x, (0, 1), (2, 3))
     return z
 
+
 class TestMovedim(flow.unittest.TestCase):
     @consistent
     def test_movedim(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement):
                 _test_movedim(test_case, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
