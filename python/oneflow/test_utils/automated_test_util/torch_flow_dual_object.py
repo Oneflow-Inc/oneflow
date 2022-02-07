@@ -336,17 +336,21 @@ def GetDualObject(name, pytorch, oneflow):
                                         graph_kwargs[key] = value.clone().detach()
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
-
+                            if not is_consistent():
+                                arg_device_type = "cpu"
+                                for arg in oneflow_args:
+                                    if flow.is_tensor(arg):
+                                        arg_device_type = arg.device.type
                             if isinstance(oneflow, flow.nn.Module) and testing_graph:
                                 graph_train_oneflow = copy.deepcopy(oneflow)
-                                if not is_consistent():
-                                    arg_device_type = "cpu"
-                                    for arg in oneflow_args:
-                                        if flow.is_tensor(arg):
-                                            arg_device_type = arg.device.type
-                                    graph_train_oneflow = graph_train_oneflow.to(
-                                        arg_device_type
-                                    )
+                                graph_train_oneflow = graph_train_oneflow.to(
+                                    arg_device_type
+                                )
+                                of_sgd = flow.optim.SGD(
+                                    graph_train_oneflow.parameters(),
+                                    lr=0.001,
+                                    momentum=0.9,
+                                )
 
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
                             if testing_graph:
@@ -354,11 +358,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    of_sgd = flow.optim.SGD(
-                                        graph_train_oneflow.parameters(),
-                                        lr=0.001,
-                                        momentum=0.9,
-                                    )
                                     graph_train_parameters_len = 0
                                     for param in oneflow._parameters.values():
                                         if param is not None:
@@ -404,13 +403,32 @@ def GetDualObject(name, pytorch, oneflow):
                                         and "oneflow.nn.modules" in oneflow.__module__
                                     )
                                 ):
+                                    if global_backward and oneflow_res.ndim > 0:
+                                        graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
+                                        graph_functional_layernorm = graph_functional_layernorm.to(arg_device_type)
+                                        of_sgd = flow.optim.SGD(
+                                            graph_functional_layernorm.parameters(),
+                                            lr=0.001,
+                                            momentum=0.9,
+                                        )
 
                                     class TestGraphOfFunctional(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
+                                            self.m = graph_functional_layernorm
+                                            if (
+                                                global_backward
+                                            ):
+                                                self.add_optimizer(of_sgd)
 
                                         def build(self):
-                                            return oneflow(*graph_args, **graph_kwargs)
+                                            res = oneflow(*graph_args, **graph_kwargs)
+                                            forward_res = res
+                                            if global_backward and flow.is_tensor(oneflow_res):
+                                                res = self.m(res)
+                                                res = res.sum()
+                                                res.backward()
+                                            return forward_res
 
                                     try:
                                         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
@@ -516,15 +534,34 @@ def GetDualObject(name, pytorch, oneflow):
 
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if testing_graph:
+                            if global_backward and oneflow_res.ndim > 0:
+                                graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
+                                graph_functional_layernorm = graph_functional_layernorm.to(arg_device_type)
+                                of_sgd = flow.optim.SGD(
+                                    graph_functional_layernorm.parameters(),
+                                    lr=0.001,
+                                    momentum=0.9,
+                                )
 
                             class TestGraphOfTensorMethod(flow.nn.Graph):
                                 def __init__(self):
                                     super().__init__()
+                                    self.m = graph_functional_layernorm
+                                    if (
+                                        global_backward
+                                    ):
+                                        self.add_optimizer(of_sgd)
 
                                 def build(self):
-                                    return oneflow_method(
+                                    res = oneflow_method(
                                         *tensor_graph_args, **tensor_graph_kwargs
                                     )
+                                    forward_res = res
+                                    if global_backward and flow.is_tensor(oneflow_res):
+                                        res = self.m(res)
+                                        res = res.sum()
+                                        res.backward()
+                                    return forward_res
 
                             try:
                                 test_g = TestGraphOfTensorMethod()
