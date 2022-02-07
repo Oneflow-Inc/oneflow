@@ -153,8 +153,7 @@ def clip_grad_norm_(
                 norm_type,
             )
         if error_if_nonfinite and (
-            np.isnan(total_norm.to_local().numpy()).all()
-            or np.isinf(total_norm.to_local().numpy()).all()
+                np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all()
         ):
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "
@@ -162,7 +161,6 @@ def clip_grad_norm_(
                 "this error and scale the gradients by the non-finite norm anyway, "
                 "set `error_if_nonfinite=False`"
             )
-
         clip_coef = max_norm / (total_norm + 1e-6)
         clip_coef_clamped = clip_coef.clamp(max=1.0)
         for p in parameters:
