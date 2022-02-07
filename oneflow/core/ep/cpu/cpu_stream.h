@@ -111,8 +111,8 @@ class CpuStream : public Stream {
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
 #if OF_CPU_THREADING_RUNTIME != OF_RUNTIME_SEQ
-    auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };         // NOLINT
-    size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();  // NOLINT
+    auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
+    size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();
 #endif
     if (begin >= end) { return; }
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
