@@ -691,7 +691,7 @@ void PersistentTableImpl<Key, Engine>::ParallelFor(size_t total,
                                                    const ForRange<Engine>& for_range) {
   ParallelForTask<Engine> task(kNumWorkerThreads, total, &for_range);
   for (size_t i = 0; i < kNumWorkerThreads; ++i) { workers_.at(i)->Schedule(&task); }
-  task.bc.WaitUntilCntEqualZero();
+  task.bc.WaitForeverUntilCntEqualZero();
 }
 
 template<typename Engine>
