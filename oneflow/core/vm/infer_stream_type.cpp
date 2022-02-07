@@ -40,15 +40,5 @@ bool InferStreamTypeUtil::QueryInstructionStatusDone(const Stream& stream,
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void InferStreamTypeUtil::Infer(Instruction* instruction) {
-  {
-    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
-    instr_type_id.instruction_type().Infer(instruction);
-  }
-  auto* status_buffer = instruction->mut_status_buffer();
-  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
-}
-
 }  // namespace vm
 }  // namespace oneflow

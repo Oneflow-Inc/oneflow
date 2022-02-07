@@ -35,7 +35,6 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
 
   using stream_type = StreamT;
 
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const vm::InstructionMsg& instr_msg = instruction->instr_msg();
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();

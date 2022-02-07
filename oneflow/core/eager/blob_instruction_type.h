@@ -20,35 +20,12 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class LazyReferenceInstructionType : public vm::InstructionType {
- public:
-  LazyReferenceInstructionType() = default;
-  virtual ~LazyReferenceInstructionType() override = default;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(LazyReferenceInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, eager_blob);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, lbn_sym_id);
-  FLAT_MSG_VIEW_END(LazyReferenceInstruction);
-  // clang-format on
-
-  void Infer(vm::Instruction* instruction) const override { CHECK_OK(Run(instruction)); }
-  void Compute(vm::Instruction* instruction) const override{
-      // do nothing
-  };
-
- private:
-  Maybe<void> Run(vm::Instruction* instruction) const;
-};
-
 class TensorViewInstructionType : public vm::InstructionType {
  public:
   TensorViewInstructionType() = default;
   ~TensorViewInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override;
-
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
 class AccessBlobByCallbackInstructionType : public vm::InstructionType {
@@ -57,8 +34,6 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   ~AccessBlobByCallbackInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override;
-
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
 class RecordEventInstructionType : public vm::InstructionType {
@@ -67,8 +42,6 @@ class RecordEventInstructionType : public vm::InstructionType {
   ~RecordEventInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override {}
-
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
 }  // namespace vm

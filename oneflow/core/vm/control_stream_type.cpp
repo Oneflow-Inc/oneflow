@@ -27,72 +27,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class NewSymbolInstructionType final : public InstructionType {
- public:
-  NewSymbolInstructionType() = default;
-  ~NewSymbolInstructionType() override = default;
-
-  bool ResettingIdToObjectMap() const override { return true; }
-
-  using stream_type = ControlStreamType;
-
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(NewSymbolInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, symbol_id);
-  FLAT_MSG_VIEW_END(NewSymbolInstruction);
-  // clang-format on
-
-  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
-    Run<&IdUtil::GetTypeId>(vm, instr_msg);
-  }
-  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override {
-    Run<&IdUtil::GetValueId>(vm, instr_msg);
-  }
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
-
- private:
-  template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
-    FlatMsgView<NewSymbolInstruction> view;
-    CHECK(view.Match(instr_msg->operand()));
-    FOR_RANGE(int, i, 0, view->symbol_id_size()) {
-      int64_t symbol_id = GetLogicalObjectId(view->symbol_id(i));
-      auto logical_object = intrusive::make_shared<LogicalObject>(symbol_id);
-      CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
-      auto* global_device_id2mirrored_object =
-          logical_object->mut_global_device_id2mirrored_object();
-      auto mirrored_object = intrusive::make_shared<MirroredObject>(logical_object.Mutable(), 0);
-      CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
-    }
-  }
-};
-COMMAND(RegisterInstructionType<NewSymbolInstructionType>("NewSymbol"));
-
-void ControlStreamType::Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
-  const auto& instr_type_id = instr_msg->instr_type_id();
-  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
-  instr_type_id.instruction_type().Infer(vm, instr_msg);
-}
-
-void ControlStreamType::Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
-  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
-  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
-  instr_type_id.instruction_type().Infer(vm, instruction);
-  auto* status_buffer = instruction->mut_status_buffer();
-  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
-}
-
-void ControlStreamType::Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
-  const auto& instr_type_id = instr_msg->instr_type_id();
-  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-  instr_type_id.instruction_type().Compute(vm, instr_msg);
-}
-
-void ControlStreamType::Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
+void ControlStreamType::Compute(Instruction* instruction) const {
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
-  instr_type_id.instruction_type().Compute(vm, instruction);
+  instr_type_id.instruction_type().Compute(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
@@ -113,8 +51,6 @@ bool ControlStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
-
-void ControlStreamType::Compute(Instruction* instruction) const { UNIMPLEMENTED(); }
 
 intrusive::shared_ptr<StreamDesc> ControlStreamType::MakeStreamDesc(const Resource& resource,
                                                                     int64_t this_machine_id) const {

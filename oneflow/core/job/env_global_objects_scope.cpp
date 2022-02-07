@@ -110,9 +110,6 @@ void SetCpuDeviceManagerNumThreads() {
 }
 
 void ClearAllSymbolAndIdCache() {
-  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
-
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
 
@@ -124,8 +121,6 @@ void ClearAllSymbolAndIdCache() {
 
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
-  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
 }
 
 #if defined(__linux__) && defined(WITH_RDMA)

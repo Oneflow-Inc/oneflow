@@ -37,7 +37,6 @@ struct InferStreamTypeUtil final {
   static void DeleteInstructionStatus(const Stream& stream, InstructionStatusBuffer* status_buffer);
   static bool QueryInstructionStatusDone(const Stream& stream,
                                          const InstructionStatusBuffer& status_buffer);
-  static void Infer(Instruction* instruction);
 };
 
 template<typename T>
@@ -62,7 +61,6 @@ class InferStreamType final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override {
     return InferStreamTypeUtil::QueryInstructionStatusDone(stream, status_buffer);
   }
-  void Infer(Instruction* instruction) const override { InferStreamTypeUtil::Infer(instruction); }
   void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
@@ -100,17 +98,7 @@ class InferStreamType<ControlStreamType> final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override {
     return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
   }
-  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override {
-    ControlStreamType().Infer(vm, instruction);
-  }
-  void Infer(VirtualMachineEngine* vm, InstructionMsg* instruction_msg) const override {
-    ControlStreamType().Infer(vm, instruction_msg);
-  }
   void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void Compute(VirtualMachineEngine*, InstructionMsg*) const override {
-    LOG(FATAL) << "UNIMPLEMENTED";
-  }
 
   bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }

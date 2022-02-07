@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/id_generator.h"
-#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"

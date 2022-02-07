@@ -92,11 +92,7 @@ void VirtualMachineEngine::HandlePending() {
   InstructionList new_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instr_msg, mut_local_pending_msg_list()) {
     if (cnt-- <= 0) { break; }
-    if (unlikely(instr_msg->instr_type_id().instruction_type().ResettingIdToObjectMap())) {
-      RunInstructionsInAdvance(instr_msg);
-    } else {
-      MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
-    }
+    MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
     mut_local_pending_msg_list()->Erase(instr_msg);
   }
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
@@ -140,17 +136,6 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
-  }
-}
-
-void VirtualMachineEngine::RunInstructionsInAdvance(InstructionMsg* instr_msg) {
-  const auto& instr_type_id = instr_msg->instr_type_id();
-  const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-  CHECK(stream_type.IsControlStreamType());
-  CHECK(HasImmediateOperandsOnly(*instr_msg));
-  const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
-  if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
-    stream_type.Run(this, instr_msg);
   }
 }
 
@@ -520,7 +505,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   const auto& stream_type = stream->stream_type();
   if (OnSchedulerThread(stream_type)) {
-    stream_type.Run(this, instruction);
+    stream_type.Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
   }
@@ -581,16 +566,6 @@ int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
   OF_PROFILER_RANGE_PUSH("vm:Receive");
-  InstructionMsgList new_instr_msg_list;
-  INTRUSIVE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
-    if (!compute_instr_msg->phy_instr_operand()) {
-      new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
-    } else {
-      OF_PROFILER_RANGE_PUSH(compute_instr_msg->DebugName());
-      OF_PROFILER_RANGE_POP();
-    }
-    compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
-  }
   const int64_t kHighWaterMark = GetInstructionHighWaterMark();
   const int64_t kLowWaterMark = GetInstructionLowWaterMark();
   if (flying_instruction_cnt() > kHighWaterMark) {
@@ -607,7 +582,7 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
       return Maybe<void>::Ok();
     }));
   }
-  bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  bool old_list_empty = mut_pending_msg_list()->MoveFrom(compute_instr_msg_list);
   OF_PROFILER_RANGE_POP();
   return old_list_empty;
 }
@@ -695,7 +670,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   CHECK(instruction_type.IsFrontSequential());
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
   CHECK(OnSchedulerThread(stream_type));
-  stream_type.Run(this, sequnential_instruction);
+  stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
   OF_PROFILER_RANGE_POP();

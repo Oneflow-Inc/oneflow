@@ -25,7 +25,6 @@ namespace vm {
 
 struct InstructionMsg;
 struct Instruction;
-struct VirtualMachineEngine;
 
 class InstructionType {
  public:
@@ -35,16 +34,7 @@ class InstructionType {
   virtual bool IsFrontSequential() const { return false; }
   virtual bool ResettingIdToObjectMap() const { return false; }
   virtual void Compute(Instruction* instruction) const = 0;
-  virtual void Infer(Instruction* instruction) const = 0;
 
-  virtual void Compute(VirtualMachineEngine* vm, Instruction* instruction) const;
-  virtual void Infer(VirtualMachineEngine* vm, Instruction* instruction) const;
-  virtual void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
-    LOG(FATAL) << "UNIMPLEMENTED";
-  }
-  virtual void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
-    LOG(FATAL) << "UNIMPLEMENTED";
-  }
   void InitInstructionStatusIf(Instruction* instruction) const {
     InitInstructionStatus(instruction);
   }

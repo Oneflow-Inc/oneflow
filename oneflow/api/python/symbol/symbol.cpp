@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
-#include "oneflow/core/vm/string_symbol.h"
 
 namespace py = pybind11;
 

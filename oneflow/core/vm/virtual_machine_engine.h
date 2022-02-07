@@ -141,7 +141,6 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseInstruction(Instruction* instruction);
   void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
-  void RunInstructionsInAdvance(InstructionMsg* instr_msg);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object, const Operand& operand,
                              int64_t global_device_id, const DoEachT& DoEach);
