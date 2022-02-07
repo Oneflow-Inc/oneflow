@@ -37,6 +37,7 @@ def test_greater_impl(test_case, ndim, placement, sbp):
     z = torch.gt(x2, y2)
     return z
 
+
 @unittest.skip("TODO: houjiang, yushun. this test might fail")
 class TestGreaterConsistent(flow.unittest.TestCase):
     @consistent
