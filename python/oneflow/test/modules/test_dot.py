@@ -26,8 +26,8 @@ class TestDot(flow.unittest.TestCase):
     def test_dot(test_case):
         device = random_device()
         k = random(1000, 10000)
-        x = random_pytorch_tensor(ndim=1, dim0=k).to(device)
-        y = random_pytorch_tensor(ndim=1, dim0=k).to(device)
+        x = random_tensor(ndim=1, dim0=k).to(device)
+        y = random_tensor(ndim=1, dim0=k).to(device)
         z = torch.dot(x, y)
         return z
 
