@@ -20,7 +20,6 @@ limitations under the License.
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -105,7 +104,9 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.body().emplaceBlock();
-  function.body().addArguments(argument_types);
+  for (auto& arg : argument_types) {
+  function.body().addArguments(arg, loc);
+  }
   for (auto argument_pair : llvm::zip(operands, function.body().getArguments())) {
     mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
@@ -221,13 +222,12 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
   assert(p->initializeOptions("allow-folding-unit-dim-reshapes=true").succeeded());
-  pm.addNestedPass<FuncOp>(std::move(p));                 // linalg-fuse-elementwise-ops
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());  // linalg-bufferize
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());  // tensor-bufferize
-  pm.addPass(createTensorConstantBufferizePass());        // tensor-constant-bufferize
-  pm.addPass(createFuncBufferizePass());                  // func-bufferize
-  pm.addPass(createBufferResultsToOutParamsPass());       // buffer-results-to-out-params
-  pm.addPass(createCanonicalizerPass());                  // canonicalize
+  pm.addNestedPass<FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize
+  pm.addPass(createFuncBufferizePass());                            // func-bufferize
+  pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
+  pm.addPass(createCanonicalizerPass());                            // canonicalize
   pm.addNestedPass<FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
@@ -236,7 +236,6 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
-  pm.addNestedPass<FuncOp>(createLowerToCFGPass());            // convert-scf-to-std
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm

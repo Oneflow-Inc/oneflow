@@ -17,7 +17,7 @@ limitations under the License.
 #include <string>
 #include "OneFlow/Passes.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {

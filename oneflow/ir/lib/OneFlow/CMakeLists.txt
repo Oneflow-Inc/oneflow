@@ -37,7 +37,6 @@ oneflow_add_mlir_dialect_library(
   PUBLIC
   ${dialect_libs}
   MLIRTosaToLinalg
-  MLIRSCFToStandard
   MLIRMemRefToLLVM
   MLIRLinalgToLLVM
   MLIRReconcileUnrealizedCasts

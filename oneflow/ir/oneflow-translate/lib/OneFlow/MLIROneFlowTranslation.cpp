@@ -726,7 +726,7 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
 }
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
-                                     MLIRContext* context, OwningModuleRef& module) {
+                                     MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
@@ -749,13 +749,13 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   return success();
 }
 
-OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
+OwningOpRef<ModuleOp> TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   context->loadDialect<oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
 }
@@ -768,7 +768,7 @@ void RoundTripOneFlowJob(
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
 
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   JobImporter imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
@@ -795,7 +795,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
 
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   JobImporter imp(job_wrapper, &context, module.get());
   if (succeeded(imp.ProcessJob())) {
@@ -828,7 +828,7 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
-  OwningModuleRef module = parseSourceFile<ModuleOp>(path, &context);
+  OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
   JobImporter imp(job_wrapper, &context, module.get());
   if (failed(imp.TryToUpdateJob())) {
     llvm::errs() << "fail to load job from IR";

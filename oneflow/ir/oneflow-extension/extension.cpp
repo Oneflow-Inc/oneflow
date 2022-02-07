@@ -134,7 +134,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
-    const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
+    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
@@ -142,7 +142,7 @@ void WithMlirContext(
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
-  mlir::OwningModuleRef module = parse(&mlir_ctx);
+  mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
   CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   llvm::InitializeNativeTarget();
