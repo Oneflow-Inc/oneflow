@@ -21,7 +21,7 @@ from math import sqrt
 
 
 class RNN(Module):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNN.html#torch.nn.RNN
 
     Applies a multi-layer Elman RNN with \tanhtanh or \text{ReLU}ReLU non-linearity to an input sequence.
@@ -61,55 +61,56 @@ class RNN(Module):
         * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or
           :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
           the input sequence.
-        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden
+        * **h_0**: tensor of shape :math:`(D * \text{num_layers}, N, H_{out})` containing the initial hidden
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
+
         .. math::
             \begin{aligned}
                 N ={} & \text{batch size} \\
                 L ={} & \text{sequence length} \\
                 D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
-                H_{in} ={} & \text{input\_size} \\
-                H_{out} ={} & \text{hidden\_size}
+                H_{in} ={} & \text{input_size} \\
+                H_{out} ={} & \text{hidden_size}
             \end{aligned}
 
     Outputs: output, h_n
         * **output**: tensor of shape :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
           :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
           `(h_t)` from the last layer of the RNN, for each `t`.
-        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the final hidden state
+        * **h_n**: tensor of shape :math:`(D * \text{num_layers}, N, H_{out})` containing the final hidden state
           for each element in the batch.
 
-    Attributes:
-        weight_ih_l[k]: the learnable input-hidden weights of the k-th layer,
-            of shape `(hidden_size, input_size)` for `k = 0`. Otherwise, the shape is
-            `(hidden_size, num_directions * hidden_size)`
-        weight_hh_l[k]: the learnable hidden-hidden weights of the k-th layer,
-            of shape `(hidden_size, hidden_size)`
-        bias_ih_l[k]: the learnable input-hidden bias of the k-th layer,
-            of shape `(hidden_size)`
-        bias_hh_l[k]: the learnable hidden-hidden bias of the k-th layer,
-            of shape `(hidden_size)`
+    Attributes: weight_ih_l[k], weight_hh_l[k], bias_ih_l[k], bias_hh_l[k]
+        * **weight_ih_l[k]**: the learnable input-hidden weights of the k-th layer, of 
+          shape `(hidden_size, input_size)` for `k = 0`. Otherwise, the shape is
+          `(hidden_size, num_directions * hidden_size)`.
+        * **weight_hh_l[k]**: the learnable hidden-hidden weights of the k-th layer, of 
+          shape `(hidden_size, hidden_size)`.
+        * **bias_ih_l[k]**: the learnable input-hidden bias of the k-th layer, of 
+          shape `(hidden_size)`.
+        * **bias_hh_l[k]**: the learnable hidden-hidden bias of the k-th layer, of 
+          shape `(hidden_size)`.
 
     .. note::
         All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
-        where :math:`k = \frac{1}{\text{hidden\_size}}`
+        where :math:`k = \frac{1}{\text{hidden_size}}`
     
     .. note::
         For bidirectional RNNs, forward and backward are directions 0 and 1 respectively.
         Example of splitting the output layers when ``batch_first=False``:
-        ``output.view((seq_len, batch, num_directions, hidden_size))``.
+        ``output.view(seq_len, batch, num_directions, hidden_size)``.
     
-    # For example:
+    For example:
 
-    # .. code-block:: python
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
         >>> rnn = flow.nn.RNN(10, 20, 2)
-        >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-        >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> input = flow.randn(5, 3, 10)
+        >>> h0 = flow.randn(2, 3, 20)
         >>> output, hn = rnn(input, h0)
         >>> output.size()
         oneflow.Size([5, 3, 20])
@@ -184,19 +185,19 @@ class RNN(Module):
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
 
-        self.reset_parameters()
+        self._reset_parameters()
 
-    def reset_parameters(self):
+    def _reset_parameters(self):
         stdv = 1.0 / sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
 
-    def permute_tensor(self, input):
+    def _permute_tensor(self, input):
         return input.permute(1, 0, 2)
 
     def forward(self, input, h_0=None):
         if self.batch_first == False:
-            input = self.permute_tensor(input)
+            input = self._permute_tensor(input)
 
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
@@ -339,13 +340,13 @@ class RNN(Module):
         h_t = flow.cat(layer_hidden, dim=0)
 
         if self.batch_first == False:
-            hidden_seq = self.permute_tensor(hidden_seq)
+            hidden_seq = self._permute_tensor(hidden_seq)
 
         return hidden_seq, h_t
 
 
 class GRU(Module):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#GRU
 
     Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
@@ -395,7 +396,7 @@ class GRU(Module):
         * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or
           :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
           the input sequence. 
-        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden
+        * **h_0**: tensor of shape :math:`(D * \text{num_layers}, N, H_{out})` containing the initial hidden
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
@@ -405,47 +406,47 @@ class GRU(Module):
                 N ={} & \text{batch size} \\
                 L ={} & \text{sequence length} \\
                 D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
-                H_{in} ={} & \text{input\_size} \\
-                H_{out} ={} & \text{hidden\_size}
+                H_{in} ={} & \text{input_size} \\
+                H_{out} ={} & \text{hidden_size}
             \end{aligned}
 
     Outputs: output, h_n
         * **output**: tensor of shape :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
           :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
           `(h_t)` from the last layer of the GRU, for each `t`. If a
-        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the final hidden state
+        * **h_n**: tensor of shape :math:`(D * \text{num_layers}, N, H_{out})` containing the final hidden state
           for each element in the batch.
 
-    Attributes:
-        weight_ih_l[k] : the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
-            (W_ir|W_iz|W_in), of shape `(3*hidden_size, input_size)` for `k = 0`.
-            Otherwise, the shape is `(3*hidden_size, num_directions * hidden_size)`
-        weight_hh_l[k] : the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
-            (W_hr|W_hz|W_hn), of shape `(3*hidden_size, hidden_size)`
-        bias_ih_l[k] : the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
-            (b_ir|b_iz|b_in), of shape `(3*hidden_size)`
-        bias_hh_l[k] : the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
-            (b_hr|b_hz|b_hn), of shape `(3*hidden_size)`
+    Attributes: weight_ih_l[k], weight_hh_l[k], bias_ih_l[k], bias_hh_l[k]
+        * **weight_ih_l[k]**: the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
+          (W_ir|W_iz|W_in), of shape `(3*hidden_size, input_size)` for `k = 0`.
+          Otherwise, the shape is `(3*hidden_size, num_directions * hidden_size)`
+        * **weight_hh_l[k]**: the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
+          (W_hr|W_hz|W_hn), of shape `(3*hidden_size, hidden_size)`
+        * **bias_ih_l[k]**: the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
+          (b_ir|b_iz|b_in), of shape `(3*hidden_size)`
+        * **bias_hh_l[k]**: the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
+          (b_hr|b_hz|b_hn), of shape `(3*hidden_size)`
 
     .. note::
         All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
-        where :math:`k = \frac{1}{\text{hidden\_size}}`
+        where :math:`k = \frac{1}{\text{hidden_size}}`
 
     .. note::
         For bidirectional GRUs, forward and backward are directions 0 and 1 respectively.
         Example of splitting the output layers when ``batch_first=False``:
         ``output.view(seq_len, batch, num_directions, hidden_size)``.
 
-    # For example:
+    For example:
 
-    # .. code-block:: python
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> rnn = flow.nn.GRU(10, 20, 2)
-        >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-        >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
-        >>> output, hn = rnn(input, h0)
+        >>> gru = flow.nn.GRU(10, 20, 2)
+        >>> input = flow.randn(5, 3, 10)
+        >>> h0 = flow.randn(2, 3, 20)
+        >>> output, hn = gru(input, h0)
         >>> output.size()
         oneflow.Size([5, 3, 20])
     
@@ -509,19 +510,19 @@ class GRU(Module):
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
 
-        self.reset_parameters()
+        self._reset_parameters()
 
-    def reset_parameters(self):
+    def _reset_parameters(self):
         stdv = 1.0 / sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
 
-    def permute_tensor(self, input):
+    def _permute_tensor(self, input):
         return input.permute(1, 0, 2)
 
     def forward(self, input, h_0=None):
         if self.batch_first == False:
-            input = self.permute_tensor(input)
+            input = self._permute_tensor(input)
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
         batch_size, seq_len, _ = input.size()
@@ -674,13 +675,13 @@ class GRU(Module):
         h_t = flow.cat(layer_hidden, dim=0)
 
         if self.batch_first == False:
-            hidden_seq = self.permute_tensor(hidden_seq)
+            hidden_seq = self._permute_tensor(hidden_seq)
 
         return hidden_seq, h_t
 
 
 class LSTM(nn.Module):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
 
     Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
@@ -742,10 +743,10 @@ class LSTM(nn.Module):
         * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or
           :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
           the input sequence.
-        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the
+        * **h_0**: tensor of shape :math:`(D * \text{num_layers}, N, H_{out})` containing the
           initial hidden state for each element in the batch.
           Defaults to zeros if (h_0, c_0) is not provided.
-        * **c_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{cell})` containing the
+        * **c_0**: tensor of shape :math:`(D * \text{num_layers}, N, H_{cell})` containing the
           initial cell state for each element in the batch.
           Defaults to zeros if (h_0, c_0) is not provided.
 
@@ -756,55 +757,55 @@ class LSTM(nn.Module):
                 N ={} & \text{batch size} \\
                 L ={} & \text{sequence length} \\
                 D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
-                H_{in} ={} & \text{input\_size} \\
-                H_{cell} ={} & \text{hidden\_size} \\
-                H_{out} ={} & \text{proj\_size if } \text{proj\_size}>0 \text{ otherwise hidden\_size} \\
+                H_{in} ={} & \text{input_size} \\
+                H_{cell} ={} & \text{hidden_size} \\
+                H_{out} ={} & \text{proj_size if } \text{proj_size}>0 \text{ otherwise hidden_size} \\
             \end{aligned}
 
     Outputs: output, (h_n, c_n)
         * **output**: tensor of shape :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
           :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
           `(h_t)` from the last layer of the LSTM, for each `t`.
-        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the
+        * **h_n**: tensor of shape :math:`(D * \text{num_layers}, N, H_{out})` containing the
           final hidden state for each element in the batch.
-        * **c_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{cell})` containing the
+        * **c_n**: tensor of shape :math:`(D * \text{num_layers}, N, H_{cell})` containing the
           final cell state for each element in the batch.
 
-    Attributes:
-        weight_ih_l[k] : the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
-            `(W_ii|W_if|W_ig|W_io)`, of shape `(4*hidden_size, input_size)` for `k = 0`.
-            Otherwise, the shape is `(4*hidden_size, num_directions * hidden_size)`
-        weight_hh_l[k] : the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
-            `(W_hi|W_hf|W_hg|W_ho)`, of shape `(4*hidden_size, hidden_size)`. If ``proj_size > 0``
-            was specified, the shape will be `(4*hidden_size, proj_size)`.
-        bias_ih_l[k] : the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
-            `(b_ii|b_if|b_ig|b_io)`, of shape `(4*hidden_size)`
-        bias_hh_l[k] : the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
-            `(b_hi|b_hf|b_hg|b_ho)`, of shape `(4*hidden_size)`
-        weight_hr_l[k] : the learnable projection weights of the :math:`\text{k}^{th}` layer
-            of shape `(proj_size, hidden_size)`. Only present when ``proj_size > 0`` was
-            specified.
+    Attributes: weight_ih_l[k], weight_hh_l[k], bias_ih_l[k], bias_hh_l[k], weight_hr_l[k]
+        * **weight_ih_l[k]**: the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
+          `(W_ii|W_if|W_ig|W_io)`, of shape `(4*hidden_size, input_size)` for `k = 0`.
+          Otherwise, the shape is `(4*hidden_size, num_directions * hidden_size)`
+        * **weight_hh_l[k]**: the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
+          `(W_hi|W_hf|W_hg|W_ho)`, of shape `(4*hidden_size, hidden_size)`. If ``proj_size > 0``
+          was specified, the shape will be `(4*hidden_size, proj_size)`.
+        * **bias_ih_l[k]**: the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
+          `(b_ii|b_if|b_ig|b_io)`, of shape `(4*hidden_size)`
+        * **bias_hh_l[k]**: the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
+          `(b_hi|b_hf|b_hg|b_ho)`, of shape `(4*hidden_size)`
+        * **weight_hr_l[k]**: the learnable projection weights of the :math:`\text{k}^{th}` layer
+          of shape `(proj_size, hidden_size)`. Only present when ``proj_size > 0`` was
+          specified.
 
     .. note::
         All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
-        where :math:`k = \frac{1}{\text{hidden\_size}}`
+        where :math:`k = \frac{1}{\text{hidden_size}}`
 
     .. note::
         For bidirectional LSTMs, forward and backward are directions 0 and 1 respectively.
         Example of splitting the output layers when ``batch_first=False``:
         ``output.view(seq_len, batch, num_directions, hidden_size)``.
 
-    # For example:
+    For example:
 
-    # .. code-block:: python
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> rnn = flow.nn.LSTM(10, 20, 2)
-        >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-        >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
-        >>> c0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
-        >>> output, (hn, cn) = rnn(input, (h0, c0))
+        >>> lstm = flow.nn.LSTM(10, 20, 2)
+        >>> input = flow.randn(5, 3, 10)
+        >>> h0 = flow.randn(2, 3, 20)
+        >>> c0 = flow.randn(2, 3, 20)
+        >>> output, (hn, cn) = lstm(input, (h0, c0))
         >>> output.size()
         oneflow.Size([5, 3, 20])
         
@@ -891,19 +892,19 @@ class LSTM(nn.Module):
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
 
-        self.reset_parameters()
+        self._reset_parameters()
 
-    def reset_parameters(self):
+    def _reset_parameters(self):
         stdv = 1.0 / sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
 
-    def permute_tensor(self, input):
+    def _permute_tensor(self, input):
         return input.permute(1, 0, 2)
 
     def forward(self, input, h_0=None):
         if self.batch_first == False:
-            input = self.permute_tensor(input)
+            input = self._permute_tensor(input)
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
         batch_size, seq_len, _ = input.size()
@@ -1118,7 +1119,7 @@ class LSTM(nn.Module):
         c_t = flow.cat(layer_cell, dim=0)
 
         if self.batch_first == False:
-            hidden_seq = self.permute_tensor(hidden_seq)
+            hidden_seq = self._permute_tensor(hidden_seq)
 
         return hidden_seq, (h_t, c_t)
 
