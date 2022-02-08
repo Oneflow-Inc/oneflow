@@ -17,7 +17,7 @@ limitations under the License.
 _global_is_global = False
 
 
-class ConsistentScope:
+class GlobalScope:
     def __init__(self):
         pass
 

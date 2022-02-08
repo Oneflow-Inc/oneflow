@@ -963,7 +963,7 @@ def autotest(
 def global_view(f):
     @functools.wraps(f)
     def new_f(*args, **kwargs):
-        with ConsistentScope() as scope:
+        with GlobalScope() as scope:
             return f(*args, **kwargs)
 
     return new_f
