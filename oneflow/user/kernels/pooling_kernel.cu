@@ -98,8 +98,8 @@ template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool2dForwardCFirst(const NdIndexOffsetHelper<IDX, 4> index_helper,
                                       IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                      int32_t padding_h, int32_t padding_w, int64_t n_batch,
-                                      int64_t n_channel, int64_t x_height, int64_t x_width,
+                                      int32_t padding_h, int32_t padding_w, int32_t n_batch,
+                                      int32_t n_channel, int32_t x_height, int32_t x_width,
                                       int32_t kernel_size_h, int32_t kernel_size_w, 
                                       int32_t stride_h, int32_t stride_w,
                                       int32_t dilation_h, int32_t dilation_w) {
