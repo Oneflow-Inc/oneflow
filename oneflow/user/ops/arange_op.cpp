@@ -50,8 +50,20 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ArangeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  int32_t n = ctx->Attr<int32_t>("n");
-  DimVector dim_vec{n};
+  DataType dtype = ctx->Attr<DataType>("dtype");
+  int64_t range_elem_cnt = 0;
+  if (IsIntegralDataType(dtype)) {
+    int64_t integer_delta = ctx->Attr<int64_t>("integer_delta");
+    int64_t integer_start = ctx->Attr<int64_t>("integer_start");
+    int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
+    range_elem_cnt = std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
+  } else {
+    double float_delta = ctx->Attr<double>("float_delta");
+    double float_start = ctx->Attr<double>("float_start");
+    double float_limit = ctx->Attr<double>("float_limit");
+    range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
+  }
+  DimVector dim_vec{range_elem_cnt};
   const Shape& shape = Shape(dim_vec);
   const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   if (out_sbp_para.has_split_parallel()) {
