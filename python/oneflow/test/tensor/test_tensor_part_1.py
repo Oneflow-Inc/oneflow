@@ -32,7 +32,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_numpy_and_default_dtype(test_case):
         shape = (2, 3, 4, 5)
         tensor = flow.Tensor(*shape)
-        flow.nn.init.ones_(tensor)ß
+        flow.nn.init.ones_(tensor)
         test_case.assertTrue(tensor.dtype == flow.float32)
         test_case.assertTrue(
             np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
@@ -843,7 +843,6 @@ class TestTensor(flow.unittest.TestCase):
         y = x.flip(constant((0, 1, 2)))
         return y
 
-
     @autotest(check_graph=True)
     def test_tensor_chunk_list_with_random_data(test_case):
         device = random_device()
@@ -982,6 +981,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = x.unsqueeze(random(1, 3).to(int))
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
