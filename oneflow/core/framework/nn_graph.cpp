@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -112,7 +113,7 @@ Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
       << " are register repeatedly.";
   FOR_RANGE(size_t, i, 0, additional_var_names.size()) {
     CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_
-                        .emplace(additional_var_names.at(i), additional_var_tensors.at(i))
+                        .emplace(JUST(VectorAt(additional_var_names, i)), JUST(VectorAt(additional_var_tensors, i)))
                         .second);
   }
   return Maybe<void>::Ok();
@@ -354,7 +355,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
                    "variable.\n";
       }
       // Register
-      variable_op_name2tensor_.at(var_name) = tensor;
+      *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
       Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
