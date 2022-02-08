@@ -138,22 +138,9 @@ std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
   return std::make_shared<Parameter>(data, requires_grad);
 }
 
-void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor, const py::function& hook,
-                                  const py::args& args) {
-  auto py_args_ptr = args.ptr();
-  auto py_func_ptr = hook.ptr();
-  auto packed_hook = [py_func_ptr, py_args_ptr]() -> void {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire(
-        [py_func_ptr, py_args_ptr]() -> Maybe<void> {
-          py::cast<py::function>(py_func_ptr)();
-          Py_DECREF(py_func_ptr);
-          Py_DECREF(py_args_ptr);
-          return Maybe<void>::Ok();
-        }));
-  };
-  Py_INCREF(py_args_ptr);
-  Py_INCREF(py_func_ptr);
-  CHECK_JUST(tensor->RegisterStorageDeleteHook(packed_hook));
+void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor,
+                                  const std::function<void()>& hook) {
+  CHECK_JUST(tensor->RegisterStorageDeleteHook(hook));
 }
 
 }  // namespace
