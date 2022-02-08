@@ -35,7 +35,7 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler
+from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
@@ -163,7 +163,7 @@ class Graph(object):
         raise NotImplementedError()
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LrScheduler = None,
+        self, optim: Optimizer, *, lr_sch: LRScheduler = None,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -220,7 +220,7 @@ class Graph(object):
         ), "optimizer must be an instance of Optimizer"
         opt_dict["optim"] = optim
         if lr_sch is not None:
-            assert isinstance(lr_sch, LrScheduler)
+            assert isinstance(lr_sch, LRScheduler)
             assert (
                 lr_sch._optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
