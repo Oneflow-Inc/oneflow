@@ -110,14 +110,20 @@ class CpuStream : public Stream {
 
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
+#if OF_CPU_THREADING_RUNTIME != OF_RUNTIME_SEQ
     auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
     size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();
+#endif
     if (begin >= end) { return; }
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-    if (grain_size > 0) { num_threads = std::min(num_threads, DivUp((end - begin), grain_size)); }
+    if (grain_size > 0) {
+      num_threads = std::min(num_threads, (size_t)(DivUp((end - begin), grain_size)));
+    } else {
+      num_threads = 1;
+    }
 #pragma omp parallel num_threads(num_threads)
     {
-      int64_t omp_num_thread = omp_get_num_thread();
+      int64_t omp_num_thread = omp_get_num_threads();
       int64_t chunk_size = DivUp((end - begin), omp_num_thread);
       int64_t omp_tid = omp_get_thread_num();
       int64_t thread_begin_index = begin + omp_tid * chunk_size;

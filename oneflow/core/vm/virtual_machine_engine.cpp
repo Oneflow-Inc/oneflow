@@ -216,6 +216,8 @@ void VirtualMachineEngine::ReleaseFinishedInstructions() {
       if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
       ReleaseInstruction(instruction_ptr);
       stream->mut_running_instruction_list()->Erase(instruction_ptr);
+      // By referencing `instruction_ptr->mut_instr_msg()`, we can avoid instr_msg being destructed
+      // in stream->DeleteInstruction(...)
       intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
       stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
       MoveInstructionMsgToGarbageMsgList(std::move(instr_msg));
@@ -228,6 +230,8 @@ void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
     intrusive::shared_ptr<InstructionMsg>&& instr_msg) {
   local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
   static constexpr int kWindowSize = 32;
+  // local_garbage_msg_list_ is the cache of garbage_msg_list_.
+  // `kWindowSize` controls the frequency of the usage of mutexed list.
   if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) { MoveToGarbageMsgListAndNotifyGC(); }
 }
 
@@ -581,7 +585,6 @@ bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instru
 
 bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
   if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
-  const auto* stream = &instruction->stream();
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
     const auto* src_instruction = &edge->src_instruction();
     if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
@@ -845,7 +848,7 @@ void VirtualMachineEngine::Callback() {
   // destruct garbage_msg_list.
 }
 
-void VirtualMachineEngine::ScheduleEnd() { MoveToGarbageMsgListAndNotifyGC(); }
+void VirtualMachineEngine::NotifyCallback() { MoveToGarbageMsgListAndNotifyGC(); }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
   return local_pending_msg_list().empty() && active_stream_list().empty()

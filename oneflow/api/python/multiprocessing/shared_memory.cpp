@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <optional>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/ipc/shared_memory.h"
 
