@@ -113,7 +113,8 @@ Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
       << " are register repeatedly.";
   FOR_RANGE(size_t, i, 0, additional_var_names.size()) {
     CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_
-                        .emplace(JUST(VectorAt(additional_var_names, i)), JUST(VectorAt(additional_var_tensors, i)))
+                        .emplace(JUST(VectorAt(additional_var_names, i)),
+                                 JUST(VectorAt(additional_var_tensors, i)))
                         .second);
   }
   return Maybe<void>::Ok();
