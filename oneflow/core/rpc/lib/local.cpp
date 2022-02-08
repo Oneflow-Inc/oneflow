@@ -47,7 +47,7 @@ void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_n
     }
   }
   counter->Decrease();
-  counter->WaitUntilCntEqualZero();
+  counter->WaitForeverUntilCntEqualZero();
   if (is_first) {
     std::unique_lock<std::mutex> lck(barrier_counter_mtx_);
     CHECK_EQ(barrier_counter_.erase(barrier_name), 1);

@@ -289,8 +289,8 @@ class OpKernelCache {
 
 class OpKernel;
 
-template<typename T>
-OpKernel* NewOpKernel();
+template<typename T, typename... Args>
+OpKernel* NewOpKernel(Args&&... args);
 
 class OpKernel {
  public:
@@ -305,8 +305,8 @@ class OpKernel {
     return std::shared_ptr<OpKernelCache>();
   }
 
-  virtual void InitOpKernelCache(KernelCacheContext* ctx, int8_t flag,
-                                 std::shared_ptr<OpKernelCache>* cache_ptr) const {
+  virtual void InitOpKernelCacheWithFlags(KernelCacheContext* ctx, int8_t flag,
+                                          std::shared_ptr<OpKernelCache>* cache_ptr) const {
     *cache_ptr = InitOpKernelCache(ctx);
   }
 
@@ -317,17 +317,27 @@ class OpKernel {
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 
+  bool has_state_or_cache() const { return has_state_or_cache_; }
+
  protected:
-  OpKernel() {}
+  OpKernel() : has_state_or_cache_(true) {}
 
  private:
-  template<typename T>
-  friend OpKernel* NewOpKernel();
+  template<typename T, typename... Args>
+  friend OpKernel* NewOpKernel(Args&&... args);
+  bool has_state_or_cache_;
 };
 
-template<typename T>
-OpKernel* NewOpKernel() {
-  return new T();
+template<typename T, typename... Args>
+OpKernel* NewOpKernel(Args&&... args) {
+  OpKernel* ptr = new T(std::forward<Args>(args)...);
+  ptr->has_state_or_cache_ = !(std::is_same<decltype(&OpKernel::CreateOpKernelState),
+                                            decltype(&T::CreateOpKernelState)>::value
+                               && std::is_same<decltype(&OpKernel::InitOpKernelCache),
+                                               decltype(&T::InitOpKernelCache)>::value
+                               && std::is_same<decltype(&OpKernel::InitOpKernelCacheWithFlags),
+                                               decltype(&T::InitOpKernelCacheWithFlags)>::value);
+  return ptr;
 }
 
 }  // namespace user_op

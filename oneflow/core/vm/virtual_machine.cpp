@@ -27,10 +27,18 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/common/env_var.h"
 
 namespace oneflow {
 
 namespace {
+
+template<typename T>
+int MicrosecondsFrom(const T& start) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
+                                                               - start)
+      .count();
+}
 
 Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
@@ -91,19 +99,23 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
   };
 }
 
+void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
+  Initializer(thread_ctx);
+  while (thread_ctx->ReceiveAndRun() == intrusive::kChannelStatusSuccess) {}
+}
+
 }  // namespace
 
 VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
     : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
         vm::MakeVmDesc(resource, this_machine_id).Get())) {
-  OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Main");
+  OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
-    auto thread =
-        std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
+    auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
@@ -129,7 +141,8 @@ void VirtualMachine::ControlSync() {
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
   CHECK_JUST(Receive(&list));
-  bc.WaitUntilCntEqualZero();
+  CHECK_JUST(
+      bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -139,12 +152,39 @@ VirtualMachine::~VirtualMachine() {
   CHECK(!vm_);
 }
 
+std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions() {
+  auto last_total_erased = std::make_shared<size_t>(0);
+  auto* vm = Global<VirtualMachine>::Get();
+  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
+  return [last_total_erased]() -> Maybe<bool> {
+    auto* vm = Global<VirtualMachine>::Get();
+    CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
+    CHECK_OR_RETURN(!vm->NoMoreErasedLivelyInstructions(last_total_erased.get()))
+        << "blocking instructions\n"
+        << vm->GetBlockingDebugString();
+    return false;
+  };
+}
+
+bool VirtualMachine::NoMoreErasedLivelyInstructions(
+    size_t* last_total_erased_lively_instruction_cnt) const {
+  size_t cnt = vm_->total_erased_lively_instruction_cnt();
+  bool no_more_erased = (*last_total_erased_lively_instruction_cnt == cnt);
+  *last_total_erased_lively_instruction_cnt = cnt;
+  return no_more_erased;
+}
+
+std::string VirtualMachine::GetBlockingDebugString() {
+  size_t limit = ThreadLocalEnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
+  return vm_->GetLivelyInstructionListDebugString(limit);
+}
+
 Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
-      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+      CHECK(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     }
     JUST(vm_->Receive(instr_list));
@@ -157,17 +197,6 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   }
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-template<typename T>
-int MicrosecondsFrom(const T& start) {
-  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()
-                                                               - start)
-      .count();
-}
-
-}  // namespace
 
 void VirtualMachine::Loop(const std::function<void()>& Initializer) {
   Initializer();

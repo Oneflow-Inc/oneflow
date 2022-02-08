@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <iostream>
+#include "gtest/gtest.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/vm_desc.h"
