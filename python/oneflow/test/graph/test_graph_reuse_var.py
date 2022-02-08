@@ -49,8 +49,7 @@ class TestGraphResueVar(flow.unittest.TestCase):
 
         reuse_var_m = ReuseVarModule()
         reuse_var_m.to_global(placement=P, sbp=B)
-        of_sgd = flow.optim.SGD(
-            reuse_var_m.parameters(), lr=0.001, momentum=0.9)
+        of_sgd = flow.optim.SGD(reuse_var_m.parameters(), lr=0.001, momentum=0.9)
 
         class ReuseVarGraph(flow.nn.Graph):
             def __init__(self):

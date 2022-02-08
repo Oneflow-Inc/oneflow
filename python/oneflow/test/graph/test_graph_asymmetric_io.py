@@ -34,18 +34,15 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
                 super().__init__()
                 self.linear1 = flow.nn.Linear(3, 8, False)
                 self.linear2 = flow.nn.Linear(8, 7, False)
-                self.linear1.to_global(
-                    placement=Placement_rank_0, sbp=Broadcast)
-                self.linear2.to_global(
-                    placement=Placement_rank_1, sbp=Broadcast)
+                self.linear1.to_global(placement=Placement_rank_0, sbp=Broadcast)
+                self.linear2.to_global(placement=Placement_rank_1, sbp=Broadcast)
                 flow.nn.init.ones_(self.linear1.weight)
                 flow.nn.init.constant_(self.linear2.weight, 2.3)
 
             def forward(self, x, y):
                 out0 = x + y
                 out1 = self.linear1(out0)
-                out1 = out1.to_global(
-                    placement=Placement_rank_1, sbp=Broadcast)
+                out1 = out1.to_global(placement=Placement_rank_1, sbp=Broadcast)
                 out2 = self.linear2(out1)
                 return out2
 

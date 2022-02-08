@@ -73,8 +73,7 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None):
             )
 
         if not isinstance(placement, flow.placement):
-            raise ValueError(
-                f"Invalid parameter placement with type {type(placement)}")
+            raise ValueError(f"Invalid parameter placement with type {type(placement)}")
 
     if grad_sbp is None:
         grad_sbp = tuple()

@@ -24,8 +24,7 @@ from absl import flags
 from pretrain import PreTrain
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string(
-    "data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
+flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
 flags.DEFINE_string(
     "model_load_dir", "/dataset/bert_regression_test/of_random_init_L-12_H-768_A-12", ""
 )

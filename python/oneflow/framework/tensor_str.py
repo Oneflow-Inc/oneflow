@@ -18,8 +18,6 @@ This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
 
 
-
-
 import math
 import numpy as np
 from typing import Optional
@@ -27,6 +25,8 @@ import oneflow as flow
 from oneflow.framework.tensor_str_util import slice_wrapper
 from oneflow.framework.tensor_str_util import _autoset_linewidth
 from oneflow.framework.tensor_str_util import _try_convert_to_local_tensor
+
+
 class __PrinterOptions(object):
     precision: int = 4
     threshold: float = 1000
@@ -126,8 +126,7 @@ class _Formatter(object):
                 self.max_width = max(self.max_width, len(value_str))
 
         else:
-            nonzero_finite_vals = flow.masked_select(
-                tensor_view, tensor_view.ne(0))
+            nonzero_finite_vals = flow.masked_select(tensor_view, tensor_view.ne(0))
             if nonzero_finite_vals.numel() == 0:
                 # no valid number, do nothing
                 return
@@ -150,15 +149,13 @@ class _Formatter(object):
                     self.sci_mode = True
                     for value in nonzero_finite_vals:
                         value_str = (
-                            ("{{:.{}e}}").format(
-                                PRINT_OPTS.precision).format(value)
+                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
                         )
                         self.max_width = max(self.max_width, len(value_str))
                 else:
                     for value in nonzero_finite_vals:
                         value_str = ("{:.0f}").format(value)
-                        self.max_width = max(
-                            self.max_width, len(value_str) + 1)
+                        self.max_width = max(self.max_width, len(value_str) + 1)
             else:
                 if (
                     nonzero_finite_max / nonzero_finite_min > 1000.0
@@ -168,15 +165,13 @@ class _Formatter(object):
                     self.sci_mode = True
                     for value in nonzero_finite_vals:
                         value_str = (
-                            ("{{:.{}e}}").format(
-                                PRINT_OPTS.precision).format(value)
+                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
                         )
                         self.max_width = max(self.max_width, len(value_str))
                 else:
                     for value in nonzero_finite_vals:
                         value_str = (
-                            ("{{:.{}f}}").format(
-                                PRINT_OPTS.precision).format(value)
+                            ("{{:.{}f}}").format(PRINT_OPTS.precision).format(value)
                         )
                         self.max_width = max(self.max_width, len(value_str))
 
@@ -224,8 +219,7 @@ def _vector_str(self, indent, summarize, formatter1):
             slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1])
         ).tolist()
         right_values = _try_convert_to_local_tensor(
-            slice_wrapper(
-                self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
+            slice_wrapper(self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
         ).tolist()
         data = (
             [_val_formatter(val) for val in left_values]
@@ -237,7 +231,7 @@ def _vector_str(self, indent, summarize, formatter1):
         data = [_val_formatter(val) for val in values]
 
     data_lines = [
-        data[i: i + elements_per_line] for i in range(0, len(data), elements_per_line)
+        data[i : i + elements_per_line] for i in range(0, len(data), elements_per_line)
     ]
     lines = [", ".join(line) for line in data_lines]
     return "[" + ("," + "\n" + " " * (indent + 1)).join(lines) + "]"
@@ -277,8 +271,7 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
     else:
         slices = [
             _tensor_str_with_formatter(
-                slice_wrapper(self, [i, i + 1, 1]), indent +
-                1, summarize, formatter1
+                slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
             )
             for i in range(0, self.size(0))
         ]
@@ -297,8 +290,7 @@ def _tensor_str(self, indent):
         return "[...]"
 
     with flow.no_grad():
-        formatter = _Formatter(get_summarized_data(self)
-                               if summarize else self)
+        formatter = _Formatter(get_summarized_data(self) if summarize else self)
         return _tensor_str_with_formatter(self, indent, summarize, formatter)
 
 
@@ -327,8 +319,7 @@ def get_summarized_data(self):
                 (
                     slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1]),
                     slice_wrapper(
-                        self, [
-                            self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
+                        self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
                     ),
                 )
             )

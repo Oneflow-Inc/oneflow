@@ -78,9 +78,7 @@ class TestGraphNeqDeviceProcessNum(flow.unittest.TestCase):
 
             def forward(self, x):
                 out_stage0 = self.m_stage0(x)
-                in_stage1 = out_stage0.to_global(
-                    placement=P1, sbp=flow.sbp.split(0)
-                )
+                in_stage1 = out_stage0.to_global(placement=P1, sbp=flow.sbp.split(0))
                 out_stage1 = self.m_stage1(in_stage1)
                 return out_stage1
 
@@ -114,8 +112,7 @@ class TestGraphNeqDeviceProcessNum(flow.unittest.TestCase):
 
         for i in range(2):
             loss = graph_pipeline(x, y)
-            print(">>>>>>>", flow.env.get_rank(),
-                  loss.to_local().numpy(), flush=True)
+            print(">>>>>>>", flow.env.get_rank(), loss.to_local().numpy(), flush=True)
 
 
 if __name__ == "__main__":

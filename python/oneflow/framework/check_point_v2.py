@@ -70,16 +70,14 @@ class FileBackendVariableBlob:
             self.dtype_ = dtype
             self.has_meta_info_ = True
         elif shape is not None or dtype is not None:
-            raise RuntimeError(
-                "both or neither of shape and dtype should be None")
+            raise RuntimeError("both or neither of shape and dtype should be None")
         else:
             pass
         if self.has_meta_info_:
             itemsize = np.dtype(
                 dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype_)
             ).itemsize
-            assert os.path.getsize(data_path) == np.prod(
-                self.shape).item() * itemsize
+            assert os.path.getsize(data_path) == np.prod(self.shape).item() * itemsize
 
     @property
     def file_path(self) -> str:
@@ -174,13 +172,8 @@ def tensor_getstate(self):
             rel_dir_name = f"global_tensor_{self.global_id()}"
             abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_global(
-                sbp=[flow.sbp.broadcast] * len(self.sbp)
-            ).to_local()
-        if (
-            global_src_dsk_rank is None
-            or global_src_dsk_rank == flow.env.get_rank()
-        ):
+            tensor = self.to_global(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+        if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
             _save_tensor_to_disk(tensor, abs_dir_name)
 
         return {"path": rel_dir_name}
@@ -203,8 +196,7 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        self.__init__(_LoadSingleVariable(
-            str(abs_dir_name), global_src_dsk_rank))
+        self.__init__(_LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank))
     else:
         if "placement" in pickle_dict:
             return self.__init__(
@@ -345,10 +337,8 @@ def save(
 
         path.mkdir(exist_ok=True)
 
-        serialized_job = str(
-            text_format.MessageToString(graph._forward_job_proto))
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(
-            serialized_job, str(path))
+        serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():
             _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")

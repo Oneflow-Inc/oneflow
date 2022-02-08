@@ -357,8 +357,7 @@ class random_pytorch_tensor(generator):
             np_arr = rng.integers(low=low, high=high, size=shape)
             return torch.tensor(np_arr, dtype=torch.int64)
         else:
-            raise NotImplementedError(
-                f"Not implemented dtype {dtype} in random")
+            raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
 
 @data_generator(bool)
@@ -423,8 +422,7 @@ class all_placement(generator):
         ]
         return [
             flow.placement(
-                device, {i: device_ids for i in range(
-                    self.node_size)}, hierarchy
+                device, {i: device_ids for i in range(self.node_size)}, hierarchy
             )
             for device, hierarchy in list(product(all_device, all_hierarchy))
         ]

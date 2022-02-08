@@ -33,8 +33,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
         grad_scaler = flow.amp.StaticGradScaler(200)
 
-        x = flow.randint(1, 100, (4, 8), dtype=flow.float32,
-                         placement=P, sbp=S0)
+        x = flow.randint(1, 100, (4, 8), dtype=flow.float32, placement=P, sbp=S0)
 
         class LinearTrainGraphWithZeRO(flow.nn.Graph):
             def __init__(self):
@@ -46,22 +45,16 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 self.set_grad_scaler(grad_scaler)
                 if zero_stage == 1:
                     print("zero stage 1 optimization")
-                    self.config.set_zero_redundancy_optimizer_mode(
-                        "distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(
-                        1)
+                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
                 if zero_stage == 2:
-                    self.config.set_zero_redundancy_optimizer_mode(
-                        "distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(
-                        1)
+                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
                     flow.boxing.nccl.enable_use_compute_stream(True)
                 if zero_stage == 3:
                     print("zero stage 3 optimization")
-                    self.config.set_zero_redundancy_optimizer_mode(
-                        "distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(
-                        1)
+                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
                     flow.boxing.nccl.enable_use_compute_stream(True)
                     flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 

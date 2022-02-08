@@ -99,15 +99,12 @@ def _setitem(self, key, value):
                 local_tensor = value.to_local()
                 if local_tensor.nelement() == 0:
                     local_tensor = flow.zeros(*value.shape)
-                value = local_tensor.to_global(
-                    self.placement, sbp=flow.sbp.broadcast
-                )
+                value = local_tensor.to_global(self.placement, sbp=flow.sbp.broadcast)
             else:
                 value = value.to_global(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
-            value = flow._C.constant(
-                [1], value, dtype=self.dtype, device=self.device)
+            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
         else:
             value = value.to(device=self.device)
 
@@ -210,8 +207,7 @@ def is_nonzero(input):
     if shape.numel() == 0:
         raise RuntimeError("bool value of Tensor with no values is ambiguous")
     if shape.numel() > 1:
-        raise RuntimeError(
-            "bool value of Tensor with more than one value is ambiguous")
+        raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
     value = input.numpy().item()
     return bool(value)
 
@@ -755,8 +751,7 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
         random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
-    initializer = initializer_util.GetInitializer(
-        initializer_conf, random_seed, shape)
+    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
     np_arr = initializer_util.generate_values_by_initializer(
         initializer, shape, tensor.dtype
@@ -964,8 +959,7 @@ def _numpy(self):
         return [t.numpy() for t in tensors]
     if self.is_global:
         sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
-        self = self.to_global(placement=self.placement,
-                              sbp=sbp_list).to_local()
+        self = self.to_global(placement=self.placement, sbp=sbp_list).to_local()
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()

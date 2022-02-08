@@ -154,9 +154,7 @@ class Optimizer(object):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
-                    value = value.to_global(
-                        placement=param.placement, sbp=param.sbp
-                    )
+                    value = value.to_global(placement=param.placement, sbp=param.sbp)
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
@@ -183,8 +181,7 @@ class Optimizer(object):
             group._enable_clip_grad = new_group["_enable_clip_grad"]
             return group
 
-        param_groups = [update_group(g, ng)
-                        for g, ng in zip(groups, saved_groups)]
+        param_groups = [update_group(g, ng) for g, ng in zip(groups, saved_groups)]
         self.param_groups = param_groups
 
     def state_dict(self):
@@ -214,8 +211,7 @@ class Optimizer(object):
                     if id(p) not in param_mappings
                 }
             )
-            packed["params"] = [
-                param_mappings[id(p)] for p in group._parameters]
+            packed["params"] = [param_mappings[id(p)] for p in group._parameters]
             start_index += len(packed["params"])
             return packed
 
@@ -301,8 +297,7 @@ class Optimizer(object):
             if isinstance(parameters[0], dict):
                 for param in parameters:
                     assert isinstance(param, dict)
-                    self.param_groups.append(
-                        ParamGroup(param, self._default_options))
+                    self.param_groups.append(ParamGroup(param, self._default_options))
             # List[Parameter or Tensor]
             else:
                 self.param_groups.append(
@@ -359,8 +354,7 @@ class Optimizer(object):
 
     def _generate_indexed_slices_optimizer_conf(self, job_conf, vars_conf):
         if not self.support_sparse:
-            raise ValueError(
-                f"{self.__class__} does not support sparse updating.")
+            raise ValueError(f"{self.__class__} does not support sparse updating.")
 
         for param_group in self.param_groups:
             for param in param_group.parameters:

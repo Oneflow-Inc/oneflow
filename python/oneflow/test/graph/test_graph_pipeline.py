@@ -113,15 +113,9 @@ def _train_with_graph(iter_num=3):
                 self.stage_0_m = StageModule(1452, 8, False).to_global(
                     placement=P0, sbp=B
                 )
-                self.stage_1_m = StageModule(8, 8, False).to_global(
-                    placement=P1, sbp=B
-                )
-                self.stage_2_m = StageModule(8, 8, False).to_global(
-                    placement=P2, sbp=B
-                )
-                self.stage_3_m = StageModule(8, 1, False).to_global(
-                    placement=P3, sbp=B
-                )
+                self.stage_1_m = StageModule(8, 8, False).to_global(placement=P1, sbp=B)
+                self.stage_2_m = StageModule(8, 8, False).to_global(placement=P2, sbp=B)
+                self.stage_3_m = StageModule(8, 1, False).to_global(placement=P3, sbp=B)
 
             def forward(self, image):
                 out = self.stage_0_m(image)
@@ -282,8 +276,7 @@ def _test_graph_pipeline(test_case):
         for i in range(iter_num * 4):
             # check equal on loss
             test_case.assertTrue(
-                np.array_equal(
-                    module_check_list[i], graph_check_list[i // 4][i % 4])
+                np.array_equal(module_check_list[i], graph_check_list[i // 4][i % 4])
             )
 
 

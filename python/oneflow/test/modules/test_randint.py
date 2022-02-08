@@ -27,8 +27,7 @@ from test_util import GenArgList
 def _test_randint(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
     y2 = flow.randint(low, high, shape, device=flow.device(device))
-    test_case.assertFalse(np.allclose(
-        y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertFalse(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -50,8 +49,7 @@ def _test_different_dtype(test_case, device, shape, low, high):
         flow.float32,
         flow.float64,
     ]:
-        y = flow.randint(low, high, shape, dtype=dtype,
-                         device=flow.device(device))
+        y = flow.randint(low, high, shape, dtype=dtype, device=flow.device(device))
         test_case.assertTrue(y.dtype == dtype)
         test_case.assertTrue(y.shape == shape)
 
@@ -66,15 +64,13 @@ def _test_with_generator(test_case, device, shape, low, high):
     y2 = flow.randint(
         low, high, shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    test_case.assertTrue(np.allclose(
-        y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
 def _test_high(test_case, device, shape, low, high):
     y1 = flow._C.randint(high, shape, device=flow.device(device))
     y2 = flow._C.randint(high, shape, device=flow.device(device))
-    test_case.assertFalse(np.allclose(
-        y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertFalse(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -102,8 +98,7 @@ class TestRandint(flow.unittest.TestCase):
         ]:
             placement = flow.placement("cpu", {0: [0]})
             sbp = (flow.sbp.broadcast,)
-            x = flow.randint(
-                0, 16, (10, 1), placement=placement, sbp=sbp, dtype=dtype)
+            x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)
             test_case.assertEqual(x.sbp, sbp)
             test_case.assertEqual(x.placement, placement)

@@ -28,9 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=5, check_graph=False)
 def _test_cat_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(
-        placement=placement, sbp=sbp
-    )
+    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement=placement, sbp=sbp)
     return torch.cat((x, x), random(0, 2).to(int))
 
 

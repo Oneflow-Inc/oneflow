@@ -45,8 +45,7 @@ def _test_scalar_graph(test_case, device):
 
     scalar_g = ScalarGraph()
     of_lazy_out = scalar_g(x)
-    test_case.assertTrue(np.array_equal(
-        of_lazy_out.numpy(), of_eager_out.numpy()))
+    test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
 
 def _test_scalar_train_graph(test_case, device):
@@ -75,8 +74,7 @@ def _test_scalar_train_graph(test_case, device):
         def __init__(self):
             super().__init__()
             self.m = lazy_module
-            of_sgd = flow.optim.SGD(
-                lazy_module.parameters(), lr=0.001, momentum=0.9)
+            of_sgd = flow.optim.SGD(lazy_module.parameters(), lr=0.001, momentum=0.9)
             # self.m = MyModule()
             # of_sgd = flow.optim.SGD(self.m.parameters(), lr=0.001, momentum=0.9)
             self.add_optimizer(of_sgd)
@@ -129,8 +127,7 @@ def _test_scalar_global_train_graph(test_case, placement):
         def __init__(self):
             super().__init__()
             self.m = lazy_module
-            of_sgd = flow.optim.SGD(
-                lazy_module.parameters(), lr=0.001, momentum=0.9)
+            of_sgd = flow.optim.SGD(lazy_module.parameters(), lr=0.001, momentum=0.9)
             self.add_optimizer(of_sgd)
 
         def build(self, x):
@@ -170,12 +167,10 @@ class TestScalarGraph(oneflow.unittest.TestCase):
         _test_scalar_train_graph(test_case, flow.device("cpu"))
 
     def test_scalar_global_train_graph_gpu(test_case):
-        _test_scalar_global_train_graph(
-            test_case, flow.placement("cuda", {0: [0]}))
+        _test_scalar_global_train_graph(test_case, flow.placement("cuda", {0: [0]}))
 
     def test_scalar_global_train_graph_cpu(test_case):
-        _test_scalar_global_train_graph(
-            test_case, flow.placement("cpu", {0: [0]}))
+        _test_scalar_global_train_graph(test_case, flow.placement("cpu", {0: [0]}))
 
 
 if __name__ == "__main__":

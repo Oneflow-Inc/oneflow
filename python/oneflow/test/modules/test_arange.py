@@ -50,8 +50,7 @@ def _test_arange_backward(test_case, device):
     x.requires_grad = True
     y = x.sum()
     y.backward()
-    test_case.assertTrue(np.allclose(
-        x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
 
 
 @flow.unittest.skip_unless_1n1d()

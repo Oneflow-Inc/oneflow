@@ -72,8 +72,7 @@ class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
         # print(
         #     f"GPTDataLoaderDistributedTestCase.test_case1 on rank {rank} {os.getpid()}"
         # )
-        eager_gpt_loader = GPTDataLoader(
-            batch_size=4, device=flow.device("cpu", rank))
+        eager_gpt_loader = GPTDataLoader(batch_size=4, device=flow.device("cpu", rank))
 
         global_gpt_loader = GPTDataLoader(
             batch_size=8,

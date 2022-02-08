@@ -159,14 +159,11 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_global_loop_broadcast_shape_dtype(test_case):
         if int(os.getenv("RANK")) < 2:
-            x = flow.ones((16, 16), device=flow.device(
-                "cuda"), dtype=flow.int32)
-            a = flow.ones((16, 16), device=flow.device(
-                "cpu"), dtype=flow.int32)
+            x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+            a = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
         else:
             x = flow.zeros((1,), dtype=flow.float)
-            a = flow.zeros((16, 16), device=flow.device(
-                "cpu"), dtype=flow.int32)
+            a = flow.zeros((16, 16), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
         sbp = (flow.sbp.split(0),)
         for i in range(1000):
@@ -486,8 +483,7 @@ def _test_cpu_p2b_with_random_parameter(test_case, device_list):
             np_arr = gen_int(1, 10, shape)
         else:
             np_arr = gen_float(shape)
-        tensor = flow.tensor(np_arr, device="cpu",
-                             dtype=dtype_list[int(kdtype)])
+        tensor = flow.tensor(np_arr, device="cpu", dtype=dtype_list[int(kdtype)])
         cpu_tensor = tensor.to_global(
             placement=flow.placement("cpu", {0: device_list}), sbp=flow.sbp.partial_sum
         )
@@ -498,8 +494,7 @@ def _test_cpu_p2b_with_random_parameter(test_case, device_list):
         )
         cuda_tensor = cuda_tensor.to_global(sbp=flow.sbp.broadcast)
         test_case.assertTrue(
-            np.allclose(cpu_tensor.to_local().numpy(),
-                        cuda_tensor.to_local().numpy())
+            np.allclose(cpu_tensor.to_local().numpy(), cuda_tensor.to_local().numpy())
         )
 
 
@@ -535,8 +530,7 @@ def _test_cpu_s2b_with_random_parameter(test_case, device_list):
             np_arr = gen_int(1, 10, shape)
         else:
             np_arr = gen_float(shape)
-        tensor = flow.tensor(np_arr, device="cpu",
-                             dtype=dtype_list[int(kdtype)])
+        tensor = flow.tensor(np_arr, device="cpu", dtype=dtype_list[int(kdtype)])
         cpu_tensor = tensor.to_global(
             placement=flow.placement("cpu", {0: device_list}), sbp=flow.sbp.split(0)
         )
@@ -547,8 +541,7 @@ def _test_cpu_s2b_with_random_parameter(test_case, device_list):
         )
         cuda_tensor = cuda_tensor.to_global(sbp=flow.sbp.broadcast)
         test_case.assertTrue(
-            np.allclose(cpu_tensor.to_local().numpy(),
-                        cuda_tensor.to_local().numpy())
+            np.allclose(cpu_tensor.to_local().numpy(), cuda_tensor.to_local().numpy())
         )
 
 
@@ -586,8 +579,7 @@ def _test_cpu_p2s_with_random_parameter(test_case, device_list):
             np_arr = gen_int(1, 10, shape)
         else:
             np_arr = gen_float(shape)
-        tensor = flow.tensor(np_arr, device="cpu",
-                             dtype=dtype_list[int(kdtype)])
+        tensor = flow.tensor(np_arr, device="cpu", dtype=dtype_list[int(kdtype)])
         cpu_tensor = tensor.to_global(
             placement=flow.placement("cpu", {0: device_list}), sbp=flow.sbp.partial_sum
         )
@@ -598,8 +590,7 @@ def _test_cpu_p2s_with_random_parameter(test_case, device_list):
         )
         cuda_tensor = cuda_tensor.to_global(sbp=flow.sbp.split(0))
         test_case.assertTrue(
-            np.allclose(cpu_tensor.to_local().numpy(),
-                        cuda_tensor.to_local().numpy())
+            np.allclose(cpu_tensor.to_local().numpy(), cuda_tensor.to_local().numpy())
         )
 
 
@@ -767,12 +758,9 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
         np_arr = np.random.randn(4, 12)
 
         cuda_device = flow.device("cuda")
-        cuda_tensor = flow.tensor(
-            np_arr, device=cuda_device, dtype=flow.float32)
+        cuda_tensor = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
         cuda_placement = flow.placement("cuda", {0: [1, 3]})
-        cuda_split0_tensor = cuda_tensor.to_global(
-            cuda_placement, flow.sbp.split(0)
-        )
+        cuda_split0_tensor = cuda_tensor.to_global(cuda_placement, flow.sbp.split(0))
         cuda_split1_tensor = cuda_split0_tensor.to_global(
             cuda_placement, flow.sbp.split(1)
         )
@@ -780,8 +768,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
         cpu_device = flow.device("cpu")
         cpu_tensor = flow.tensor(np_arr, device=cpu_device, dtype=flow.float32)
         cpu_placement = flow.placement("cpu", {0: [1, 3]})
-        cpu_split0_tensor = cpu_tensor.to_global(
-            cpu_placement, flow.sbp.split(0))
+        cpu_split0_tensor = cpu_tensor.to_global(cpu_placement, flow.sbp.split(0))
         cpu_split1_tensor = cpu_split0_tensor.to_global(
             cpu_placement, flow.sbp.split(1)
         )
@@ -798,11 +785,9 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
         np_arr = np.random.randn(4, 12)
 
         cuda_device = flow.device("cuda")
-        cuda_tensor = flow.tensor(
-            np_arr, device=cuda_device, dtype=flow.float32)
+        cuda_tensor = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
         cuda_placement = flow.placement("cuda", {0: range(2)})
-        cuda_split_tensor = cuda_tensor.to_global(
-            cuda_placement, flow.sbp.split(0))
+        cuda_split_tensor = cuda_tensor.to_global(cuda_placement, flow.sbp.split(0))
         cuda_split1_tensor = cuda_split_tensor.to_global(
             cuda_placement, flow.sbp.split(1)
         )
@@ -813,11 +798,8 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
         cpu_device = flow.device("cpu")
         cpu_tensor = flow.tensor(np_arr, device=cpu_device, dtype=flow.float32)
         cpu_placement = flow.placement("cpu", {0: range(2)})
-        cpu_split_tensor = cpu_tensor.to_global(
-            cpu_placement, flow.sbp.split(0))
-        cpu_split1_tensor = cpu_split_tensor.to_global(
-            cpu_placement, flow.sbp.split(1)
-        )
+        cpu_split_tensor = cpu_tensor.to_global(cpu_placement, flow.sbp.split(0))
+        cpu_split1_tensor = cpu_split_tensor.to_global(cpu_placement, flow.sbp.split(1))
         cpu_split0_tensor = cpu_split1_tensor.to_global(
             cpu_placement, flow.sbp.split(0)
         )
@@ -860,9 +842,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(2)})
         global_tensor = tensor.to_global(placement, flow.sbp.broadcast)
         new_placement = flow.placement("cuda", {0: range(3)})
-        broadcast_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        broadcast_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() != 3:
             test_case.assertTrue(
@@ -901,9 +881,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(3)})
         global_tensor = tensor.to_global(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
-        broadcast_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        broadcast_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(broadcast_tensor.placement, new_placement)
         test_case.assertTrue(
             np.array_equal(
@@ -954,9 +932,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(3)})
         global_tensor = tensor.to_global(placement, flow.sbp.partial_sum)
         new_placement = flow.placement("cuda", {0: range(4)})
-        broadcast_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        broadcast_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(broadcast_tensor.placement, new_placement)
         test_case.assertTrue(
             np.array_equal(
@@ -993,9 +969,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(1)})
         global_tensor = tensor.to_global(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(2)})
-        broadcast_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        broadcast_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() < 2:
             test_case.assertTrue(
@@ -1065,8 +1039,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(1)})
         global_tensor = tensor.to_global(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
-        split_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.split(0))
+        split_tensor = global_tensor.to_global(new_placement, flow.sbp.split(0))
         test_case.assertEqual(split_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
@@ -1117,9 +1090,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(2)})
         global_tensor = tensor.to_global(placement, flow.sbp.broadcast)
         new_placement = flow.placement("cuda", {0: range(1)})
-        broadcast_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        broadcast_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
@@ -1148,9 +1119,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(2)})
         global_tensor = tensor.to_global(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(1)})
-        partial_sum_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        partial_sum_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(partial_sum_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
@@ -1188,9 +1157,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(2)})
         global_tensor = tensor.to_global(placement, flow.sbp.partial_sum)
         new_placement = flow.placement("cuda", {0: range(1)})
-        partial_sum_tensor = global_tensor.to_global(
-            new_placement, flow.sbp.broadcast
-        )
+        partial_sum_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(partial_sum_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
@@ -1235,8 +1202,7 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
                 np.array_equal(
                     y.to_local().numpy(),
                     np.array(
-                        [[2, 10, 10, 7], [3, 9, 10, 5],
-                            [4, 6, 6, 9], [6, 8, 6, 4]],
+                        [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
                         dtype=np.float32,
                     ),
                 )
@@ -1323,8 +1289,7 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
                 np.array_equal(
                     y.to_local().numpy(),
                     np.array(
-                        [[2, 10, 10, 7], [3, 9, 10, 5],
-                            [4, 6, 6, 9], [6, 8, 6, 4]],
+                        [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
                         dtype=np.float32,
                     ),
                 )

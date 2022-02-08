@@ -54,9 +54,9 @@ def all_reduce(tensor):
     assert tensor.is_local
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
-    result = tensor.to_global(
-        placement=placement, sbp=flow.sbp.partial_sum
-    ).to_global(placement=placement, sbp=flow.sbp.broadcast)
+    result = tensor.to_global(placement=placement, sbp=flow.sbp.partial_sum).to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    )
 
     tensor.data = result.to_local()
 
@@ -306,9 +306,9 @@ def gather(tensor, gather_list=None, dst=0):
     tensor = tensor.expand(*([1] + list(shape)))
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
-    tensor = tensor.to_global(
-        placement=placement, sbp=flow.sbp.split(0)
-    ).to_global(placement=placement, sbp=flow.sbp.broadcast)
+    tensor = tensor.to_global(placement=placement, sbp=flow.sbp.split(0)).to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    )
 
     if gather_list is None:
         gather_list = [

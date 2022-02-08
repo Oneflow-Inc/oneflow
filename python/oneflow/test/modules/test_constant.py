@@ -28,14 +28,11 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_different_dtype(test_case, device, shape):
     y1 = flow.ones(shape, dtype=flow.int32, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(
-        np.ones(shape, dtype=np.int32), y1.numpy()))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.int32), y1.numpy()))
     y2 = flow.ones(shape, dtype=flow.uint8, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(
-        np.ones(shape, dtype=np.uint8), y2.numpy()))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.uint8), y2.numpy()))
     y3 = flow.ones(shape, dtype=flow.float64, device=flow.device(device))
-    test_case.assertTrue(np.array_equal(
-        np.ones(shape, dtype=np.float64), y3.numpy()))
+    test_case.assertTrue(np.array_equal(np.ones(shape, dtype=np.float64), y3.numpy()))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -65,8 +62,7 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         y1 = torch.ones(random().to(int)).to(device)
         y2 = torch.ones(random().to(int), random().to(int)).to(device)
-        y3 = torch.ones(random().to(int), random().to(int),
-                        random().to(int)).to(device)
+        y3 = torch.ones(random().to(int), random().to(int), random().to(int)).to(device)
         y4 = torch.ones(
             random().to(int), random().to(int), random().to(int), random().to(int)
         ).to(device)

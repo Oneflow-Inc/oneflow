@@ -39,9 +39,7 @@ def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
     if m.bias is not None:
         # bias is 1-d tensor
         bias_sbp = random_sbp(placement, max_dim=1)
-        m.bias = torch.nn.Parameter(
-            m.bias.to_global(placement=placement, sbp=bias_sbp)
-        )
+        m.bias = torch.nn.Parameter(m.bias.to_global(placement=placement, sbp=bias_sbp))
     x = random_tensor(ndim=2, dim1=input_size, dim2=8).to_global(
         placement=placement, sbp=input_sbp
     )

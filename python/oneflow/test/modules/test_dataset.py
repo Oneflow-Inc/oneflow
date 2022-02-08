@@ -66,16 +66,14 @@ class TestOFRecordModule(flow.unittest.TestCase):
         label = record_label_decoder(val_record)
         image_raw_buffer = record_image_decoder(val_record)
         image_raw_buffer_nd = image_raw_buffer.numpy()
-        gt_np = cv2.imread(
-            "/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd[0], gt_np))
         image = resize(image_raw_buffer)[0]
         resized_image_raw_buffer_nd = image.numpy()
         gt_np = cv2.imread(
             "/dataset/imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
         )
-        test_case.assertTrue(np.array_equal(
-            resized_image_raw_buffer_nd[0], gt_np))
+        test_case.assertTrue(np.array_equal(resized_image_raw_buffer_nd[0], gt_np))
         image = crop_mirror_normal(image)
         image_np = image.numpy()
         image_np = np.squeeze(image_np)
@@ -137,16 +135,14 @@ class TestConsistentOFRecordModule(flow.unittest.TestCase):
         label = record_label_decoder(val_record)
         image_raw_buffer = record_image_decoder(val_record)
         image_raw_buffer_nd = image_raw_buffer.to_local().numpy()
-        gt_np = cv2.imread(
-            "/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
         test_case.assertTrue(np.array_equal(image_raw_buffer_nd[0], gt_np))
         image = resize(image_raw_buffer)[0]
         resized_image_raw_buffer_nd = image.to_local().numpy()
         gt_np = cv2.imread(
             "/dataset/imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
         )
-        test_case.assertTrue(np.array_equal(
-            resized_image_raw_buffer_nd[0], gt_np))
+        test_case.assertTrue(np.array_equal(resized_image_raw_buffer_nd[0], gt_np))
         image = crop_mirror_normal(image)
         image_np = image.to_local().numpy()
         image_np = np.squeeze(image_np)
@@ -173,8 +169,7 @@ def _coco(anno_file):
 
 def _get_coco_image_samples(anno_file, image_dir, image_ids):
     coco = _coco(anno_file)
-    category_id_to_contiguous_id_map = _get_category_id_to_contiguous_id_map(
-        coco)
+    category_id_to_contiguous_id_map = _get_category_id_to_contiguous_id_map(coco)
     (image, image_size) = _read_images_with_cv(coco, image_dir, image_ids)
     bbox = _read_bbox(coco, image_ids)
     label = _read_label(coco, image_ids, category_id_to_contiguous_id_map)
@@ -183,8 +178,7 @@ def _get_coco_image_samples(anno_file, image_dir, image_ids):
     samples = []
     for (im, ims, b, l, p, pi) in zip(image, image_size, bbox, label, poly, poly_index):
         samples.append(
-            dict(image=im, image_size=ims, bbox=b,
-                 label=l, poly=p, poly_index=pi)
+            dict(image=im, image_size=ims, bbox=b, label=l, poly=p, poly_index=pi)
         )
     return samples
 
@@ -202,8 +196,7 @@ def _read_images_with_cv(coco, image_dir, image_ids):
         for img_id in image_ids
     ]
     return (
-        [cv2.imread(image_file).astype(np.single)
-         for image_file in image_files],
+        [cv2.imread(image_file).astype(np.single) for image_file in image_files],
         image_size,
     )
 
@@ -294,10 +287,8 @@ def _segm_poly_list_to_tensor(img_segm_poly_list):
                 img_poly_elem_list.extend(poly)
                 for (pt_idx, pt) in enumerate(poly):
                     if pt_idx % 2 == 0:
-                        img_poly_index_list.append(
-                            [pt_idx / 2, poly_idx, obj_idx])
-        img_poly_array = np.array(
-            img_poly_elem_list, dtype=np.single).reshape(-1, 2)
+                        img_poly_index_list.append([pt_idx / 2, poly_idx, obj_idx])
+        img_poly_array = np.array(img_poly_elem_list, dtype=np.single).reshape(-1, 2)
         assert img_poly_array.size > 0, segm_poly_list
         poly_array_list.append(img_poly_array)
         img_poly_index_array = np.array(img_poly_index_list, dtype=np.int32)
@@ -340,8 +331,7 @@ class TestCocoReader(flow.unittest.TestCase):
             segm_index_list = gt_segm_index.numpy()
             samples = _get_coco_image_samples(anno_file, image_dir, image_id)
             for (i, sample) in enumerate(samples):
-                test_case.assertTrue(np.array_equal(
-                    image_list[i], sample["image"]))
+                test_case.assertTrue(np.array_equal(image_list[i], sample["image"]))
                 test_case.assertTrue(
                     np.array_equal(image_size[i], sample["image_size"])
                 )
@@ -349,8 +339,7 @@ class TestCocoReader(flow.unittest.TestCase):
                 cur_label = label_list[i]
                 if len(cur_label.shape) == 0:
                     cur_label = np.array([cur_label])
-                test_case.assertTrue(np.array_equal(
-                    cur_label, sample["label"]))
+                test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
                 test_case.assertTrue(np.allclose(segm_list[i], sample["poly"]))
                 test_case.assertTrue(
                     np.array_equal(segm_index_list[i], sample["poly_index"])
@@ -373,8 +362,7 @@ class TestOFRecordBytesDecoder(flow.unittest.TestCase):
         image_raw_buffer = bytesdecoder_img(val_record)
 
         image_raw_buffer_nd = image_raw_buffer.numpy()[0]
-        gt_np = cv2.imread(
-            "/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
         img = cv2.imdecode(image_raw_buffer_nd, cv2.IMREAD_COLOR)
         test_case.assertTrue(np.array_equal(img, gt_np))
 

@@ -43,8 +43,7 @@ def _test_expand_new_dims_broadcast(test_case, device):
 
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(),
-                           torch_out.detach().cpu().numpy())
+            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
             np.array_equal(
@@ -73,8 +72,7 @@ def _test_expand_same_dim_broadcast(test_case, device):
 
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(),
-                           torch_out.detach().cpu().numpy())
+            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
             np.array_equal(
@@ -103,8 +101,7 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
 
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(),
-                           torch_out.detach().cpu().numpy())
+            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
             np.array_equal(

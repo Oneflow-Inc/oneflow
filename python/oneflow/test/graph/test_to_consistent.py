@@ -201,10 +201,8 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_fwd_P2B")
 
-        local_x = flow.tensor(x, dtype=flow.float32,
-                              device=flow.device(f"cuda:{rank}"))
-        local_y = flow.tensor(y, dtype=flow.float32,
-                              device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
             flow.cat([local_x, local_x], dim=1),
@@ -239,10 +237,8 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_bwd_P2B")
 
-        local_x = flow.tensor(x, dtype=flow.float32,
-                              device=flow.device(f"cuda:{rank}"))
-        local_y = flow.tensor(y, dtype=flow.float32,
-                              device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
             local_y, flow.cat([local_x, local_x], dim=0), transpose_b=True,
@@ -286,10 +282,8 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_multi_graph")
 
-        local_x = flow.tensor(x, dtype=flow.float32,
-                              device=flow.device(f"cuda:{rank}"))
-        local_y = flow.tensor(y, dtype=flow.float32,
-                              device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         placement = flow.placement("cuda", {0: [0, 1]})
         x1 = local_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
@@ -299,8 +293,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         g1 = MyGraph(m1)
 
         slice_obj = slice(
-            int(rank * local_x.shape[0] /
-                2), int((rank + 1) * local_x.shape[0] / 2)
+            int(rank * local_x.shape[0] / 2), int((rank + 1) * local_x.shape[0] / 2)
         )
         x2 = local_x[slice_obj, :]
         x2 = x2.to_global(placement=placement, sbp=flow.sbp.split(0))
@@ -310,11 +303,11 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         g2 = MyGraph(m2)
 
         x3 = local_x[
-            :, int(rank * local_x.shape[1] / 2): int((rank + 1) * local_x.shape[1] / 2)
+            :, int(rank * local_x.shape[1] / 2) : int((rank + 1) * local_x.shape[1] / 2)
         ]
         x3 = x3.to_global(placement=placement, sbp=flow.sbp.split(1))
         y3 = local_y[
-            :, int(rank * local_y.shape[1] / 2): int((rank + 1) * local_y.shape[1] / 2)
+            :, int(rank * local_y.shape[1] / 2) : int((rank + 1) * local_y.shape[1] / 2)
         ]
         y3 = y3.to_global(placement=placement, sbp=flow.sbp.split(1))
         # S(1) * S(0) -> P -> B
@@ -331,10 +324,8 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         # print(f"z3 shape: {z3.shape}, placement: {z3.placement}, sbp: {z3.sbp}")
         # print(z3.to_local().numpy())
 
-        test_case.assertTrue(np.allclose(
-            z1.to_local().numpy(), z2.to_local().numpy()))
-        test_case.assertTrue(np.allclose(
-            z1.to_local().numpy(), z3.to_local().numpy()))
+        test_case.assertTrue(np.allclose(z1.to_local().numpy(), z2.to_local().numpy()))
+        test_case.assertTrue(np.allclose(z1.to_local().numpy(), z3.to_local().numpy()))
 
     # @unittest.skipIf(True, "")
     def test_global_to(test_case):
@@ -355,8 +346,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(g.is_global)
         test_case.assertTrue(g.sbp[0] == flow.sbp.split(0))
 
-        test_case.assertTrue(np.allclose(
-            e.to_local().numpy(), g.to_local().numpy()))
+        test_case.assertTrue(np.allclose(e.to_local().numpy(), g.to_local().numpy()))
 
     # @unittest.skipIf(True, "")
     def test_free_tensor_to_global(test_case):
@@ -378,8 +368,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(graph_out.sbp[0] == flow.sbp.split(0))
 
         test_case.assertTrue(
-            np.allclose(eager_out.to_local().numpy(),
-                        graph_out.to_local().numpy())
+            np.allclose(eager_out.to_local().numpy(), graph_out.to_local().numpy())
         )
 
     # @unittest.skipIf(True, "")

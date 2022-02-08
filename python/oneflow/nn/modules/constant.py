@@ -53,8 +53,7 @@ class _ConstantBase(Module):
         self.placement = placement
         self.sbp = sbp
         if placement is not None:
-            assert isinstance(
-                sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(self.sbp, flow.sbp.sbp):
                 self.sbp = (self.sbp,)
             else:
@@ -317,8 +316,7 @@ def new_ones_op(
             new_size, 1.0, dtype=new_dtype, placement=placement, sbp=sbp
         )
     else:
-        res = flow._C.constant(
-            new_size, 1.0, dtype=new_dtype, device=new_device)
+        res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
     res.requires_grad = new_requires_grad
     return res
 

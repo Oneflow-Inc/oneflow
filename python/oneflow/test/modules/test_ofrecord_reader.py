@@ -46,8 +46,7 @@ class OFRecordDataLoader(flow.nn.Module):
             "encoded", color_space="RGB"
         )
 
-        self.resize = flow.nn.image.Resize(
-            target_size=[227, 227], dtype=flow.float32)
+        self.resize = flow.nn.image.Resize(target_size=[227, 227], dtype=flow.float32)
 
     def forward(self):
         record = self.ofrecord_reader()
@@ -108,10 +107,8 @@ class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
             # )
 
             # print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
-            test_case.assertTrue(np.allclose(
-                image.numpy(), g_image.to_local().numpy()))
-            test_case.assertTrue(np.allclose(
-                label.numpy(), g_label.to_local().numpy()))
+            test_case.assertTrue(np.allclose(image.numpy(), g_image.to_local().numpy()))
+            test_case.assertTrue(np.allclose(label.numpy(), g_label.to_local().numpy()))
 
 
 if __name__ == "__main__":
