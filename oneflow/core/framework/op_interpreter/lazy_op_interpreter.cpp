@@ -200,51 +200,6 @@ int32_t GetGradAccStep(const JobConfigProto& job_conf) {
   }
 }
 
-Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
-  CHECK_OR_RETURN(input_tensor->is_eager());
-  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(empty_lbn.empty());
-  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-  OperatorConf op_conf;
-  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
-  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
-  var_conf->set_out("out");
-  input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype()->data_type());
-  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
-  //   by EagerTensor.
-  var_conf->mutable_initializer()->mutable_empty_conf();
-  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
-  // NOTE(chengcheng): Free EagerTensor not trainable
-  var_conf->set_trainable(false);
-
-  auto infer_ctx = JUST(GetCurInferCtx());
-  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
-  //  name so just new a unique name for it.
-  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
-  op_conf.set_name(new_op_name);
-
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
-          << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.name() << " for FreeEagerTensor.\n";
-  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
-          << " infer and and op attr : \n"
-          << op_attr.DebugString() << " for FreeEagerTensor.\n";
-
-  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
-  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
-  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
-  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-      graph_name, input_tensor, new_op_name);
-  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
-  TensorNameScope::Global()->Record(input_tensor, lbn);
-
-  return Maybe<void>::Ok();
-}
-
 Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
     const OperatorConf& input_conf, const std::shared_ptr<ParallelDesc>& blob_parallel_desc,
     const std::shared_ptr<Tensor>& input_tensor) {
@@ -428,6 +383,91 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(std::shared_ptr<OperatorConf>
     (*source_op_conf->mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
         .add_s(repeat_op.output("out", 0));
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_conf) {
+  const std::string var_tensor_lbn = GenLogicalBlobName(var_conf.name(), "out");
+  auto infer_ctx = JUST(GetCurInferCtx());
+  int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
+  if (grad_acc_step > 1) {
+    // NOTE(chengcheng):
+    //   We assume that the nn.Graph once call is one mini-batch which containing multi
+    //   micro-batches. So we just repeat variable tensor for each micro-batch.
+    VLOG(2)
+        << " Current OneFlow nn.Graph grad acc semantics is different from Torch. \n"
+        << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
+        << " the free var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
+
+    user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-VariableRepeat-"
+                                                     + var_conf.name() + "-" + NewUniqueId());
+    const auto repeat_op = repeat_builder.OpTypeName("repeat")
+                               .Input("in", var_tensor_lbn)
+                               .Output("out")
+                               .Attr<int32_t>("repeat_num", grad_acc_step)
+                               .ScopeSymbolId(var_conf.scope_symbol_id())
+                               .DeviceTag(var_conf.device_tag())
+                               .Build();
+
+    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
+            << repeat_op.op_conf().DebugString() << std::endl;
+    VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " infer and and op attr : \n"
+            << repeat_op_attr.DebugString() << std::endl;
+
+    const std::string repeat_lbn = repeat_op.output("out", 0);
+    return repeat_lbn;
+  } else {
+    return var_tensor_lbn;
+  }
+}
+
+Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  CHECK_OR_RETURN(input_tensor->is_eager());
+  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(empty_lbn.empty());
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
+  OperatorConf op_conf;
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
+  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
+  var_conf->set_out("out");
+  input_tensor->shape()->ToProto(var_conf->mutable_shape());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
+  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
+  //   by EagerTensor.
+  var_conf->mutable_initializer()->mutable_empty_conf();
+  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
+  // NOTE(chengcheng): Free EagerTensor not trainable
+  var_conf->set_trainable(false);
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
+  //  name so just new a unique name for it.
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
+  op_conf.set_name(new_op_name);
+
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
+          << op_conf.DebugString() << std::endl;
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.name() << " for FreeEagerTensor.\n";
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << " for FreeEagerTensor.\n";
+
+  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
+  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
+  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
+  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+      graph_name, input_tensor, new_op_name);
+  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
+  // NOTE(chengcheng): in GradAcc FreeEagerTensor need insert repeat op, but there is no need to
+  //  create a new tensor for repeat op out. We just set repeat lbn as this free eager tensor's lbn.
+  TensorNameScope::Global()->Record(input_tensor,
+                                    *JUST(GradAccTryInsertRepeatAfterFreeVar(op_conf)));
+
   return Maybe<void>::Ok();
 }
 
