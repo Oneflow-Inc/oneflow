@@ -56,7 +56,7 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
     *indice_desc = *ctx->OutputTensorDesc("y", 0);
     *indice_desc->mut_shape() = *y_desc->mut_shape();
     DataType* dtype = indice_desc->mut_data_type();
-    *dtype = kInt64;
+    *dtype = kInt32;
     return Maybe<void>::Ok();
   };
 }
