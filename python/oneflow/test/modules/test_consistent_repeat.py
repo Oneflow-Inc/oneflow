@@ -22,23 +22,24 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, check_graph=False)
-def test_reciprocal_impl(test_case, ndim, placement, sbp):
+@autotest(n=5, check_graph=False)
+def test_repeat_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for _ in range(ndim)]
+    repeat_size = [random(1, 4) for _ in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_consistent(placement=placement, sbp=sbp)
     z = torch.reciprocal(y)
     return z
 
 
-class TestReciprocalConsistent(flow.unittest.TestCase):
+class TestRepeatConsistent(flow.unittest.TestCase):
     @consistent
-    def test_reciprocal(test_case):
+    def test_repeat(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_reciprocal_impl(test_case, ndim, placement, sbp)
+                test_repeat_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
