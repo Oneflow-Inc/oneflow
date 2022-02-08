@@ -351,7 +351,7 @@ def GetDualObject(name, pytorch, oneflow):
 
                                 else:
                                     graph_functional_oneflow = copy.deepcopy(oneflow)
-                                    # TODO: Incorrect device of oneflow tensor after deepcopy
+                                    # TODO: deepcopy will cause the device of tensor to be changed to cpu, waiting for repair.
                                     if "__self__" in dir(
                                         graph_functional_oneflow
                                     ) and flow.is_tensor(oneflow.__self__):
