@@ -244,9 +244,9 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> GradAccInsertUnpackAfterInput(const OperatorConf& input_conf,
-                                            const std::shared_ptr<Tensor>& input_tensor,
-                                            int64_t parallel_desc_sym_id) {
+Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
+    const OperatorConf& input_conf, const std::shared_ptr<ParallelDesc>& blob_parallel_desc,
+    const std::shared_ptr<Tensor>& input_tensor) {
   auto infer_ctx = JUST(GetCurInferCtx());
   int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
   if (grad_acc_step > 1) {
@@ -270,8 +270,6 @@ Maybe<Tensor> GradAccInsertUnpackAfterInput(const OperatorConf& input_conf,
                                .Build();
 
     OpAttribute unpack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(unpack_op.op_conf()));
-    auto blob_parallel_desc =
-        JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
     const std::string unpack_lbn = unpack_op.output("out", 0);
     auto unpack_input =
         JUST(BuildTensor(unpack_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
@@ -280,6 +278,83 @@ Maybe<Tensor> GradAccInsertUnpackAfterInput(const OperatorConf& input_conf,
     return unpack_input;
   } else {
     return input_tensor;
+  }
+}
+
+Maybe<Tensor> GradAccTryInsertRepeatAfterVar(
+    const OperatorConf& var_conf, const std::shared_ptr<ParallelDesc>& blob_parallel_desc,
+    const std::shared_ptr<Tensor>& var_tensor) {
+  auto infer_ctx = JUST(GetCurInferCtx());
+  int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
+  if (grad_acc_step > 1) {
+    // NOTE(chengcheng):
+    //   We assume that the nn.Graph once call is one mini-batch which containing multi
+    //   micro-batches. So we just repeat variable tensor for each micro-batch.
+    VLOG(2)
+        << " Current OneFlow nn.Graph grad acc semantics is different from Torch. \n"
+        << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
+        << " the var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
+
+    const std::string var_tensor_lbn = GenLogicalBlobName(var_conf.name(), "out");
+    user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-VariableRepeat-"
+                                                     + var_conf.name() + "-" + NewUniqueId());
+    const auto repeat_op = repeat_builder.OpTypeName("repeat")
+                               .Input("in", var_tensor_lbn)
+                               .Output("out")
+                               .Attr<int32_t>("repeat_num", grad_acc_step)
+                               .ScopeSymbolId(var_conf.scope_symbol_id())
+                               .Build();
+
+    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    const std::string repeat_lbn = repeat_op.output("out", 0);
+    auto repeat_var =
+        JUST(BuildTensor(repeat_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
+                         /* is_local= */ var_tensor->is_local()));
+    TensorNameScope::Global()->Record(repeat_var, repeat_lbn);
+    return repeat_var;
+  } else {
+    return var_tensor;
+  }
+}
+
+Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& scope,
+                                               const std::string& output_in_lbn,
+                                               const std::string& output_op_name,
+                                               const std::shared_ptr<Tensor>& output_tensor) {
+  auto infer_ctx = JUST(GetCurInferCtx());
+  int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
+  if (grad_acc_step > 1) {
+    // NOTE(chengcheng):
+    //   We assume that the nn.Graph once call is one mini-batch which containing multi
+    //   micro-batches. So we need pack output tensor for each micro-batch to one micro-batch.
+    VLOG(2)
+        << " Current OneFlow nn.Graph grad acc semantics is different from Torch. \n"
+        << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
+        << " the output tensor of nn.Graph will be packed to a big tensor by 0th dim, after exec \n"
+        << " for multiple micro-batches. \n";
+
+    user_op::UserOpConfWrapperBuilder pack_builder("System-GradientAccumulation-OutputPack-"
+                                                   + output_op_name);
+    const auto output_pack_op = pack_builder.OpTypeName("pack")
+                                    .Input("in", output_in_lbn)
+                                    .Output("out")
+                                    .Attr<int32_t>("pack_num", grad_acc_step)
+                                    .ScopeSymbolId(JUST(scope->symbol_id()))
+                                    .Build();
+
+    int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(output_pack_op.op_conf()));
+    auto blob_parallel_desc =
+        JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+
+    OpAttribute pack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(output_pack_op.op_conf()));
+    const std::string pack_lbn = output_pack_op.output("out", 0);
+    auto packed_output =
+        JUST(BuildTensor(pack_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
+                         /* is_local= */ output_tensor->is_local()));
+    TensorNameScope::Global()->Record(packed_output, pack_lbn);
+    return packed_output;
+  } else {
+    return output_tensor;
   }
 }
 
@@ -337,7 +412,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   TensorNameScope::Global()->Record(origin_input, GenLogicalBlobName(op_conf.name(), obn));
 
   // NOTE(chengcheng): Do GradAcc pass when add input op.
-  (*outputs)[0] = JUST(GradAccInsertUnpackAfterInput(op_conf, origin_input, parallel_desc_sym_id));
+  (*outputs)[0] = JUST(GradAccTryInsertUnpackAfterInput(op_conf, blob_parallel_desc, origin_input));
   return Maybe<void>::Ok();
 }
 
@@ -391,12 +466,15 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   CHECK_OR_RETURN(!(*outputs)[0]);
 
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
-  (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
-                                   /* is_local */ input_tensor->is_local()));
+  auto origin_var = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
+                                     /* is_local */ input_tensor->is_local()));
+
   // NOTE(chengcheng): Record variable op output LazyTenosr
-  TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(op_conf.name(), obn));
+  TensorNameScope::Global()->Record(origin_var, GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
   TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
+
+  (*outputs)[0] = JUST(GradAccTryInsertRepeatAfterVar(op_conf, blob_parallel_desc, origin_var));
   return Maybe<void>::Ok();
 }
 
@@ -420,24 +498,29 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
+  std::shared_ptr<Tensor> output_tensor =
+      JUST(GradAccTryInsertPackBeforeOutput(scope, input_lbn, op_expr.op_name(), input_tensor));
+
+  const std::string output_lbn = TensorNameScope::Global()->Lookup(output_tensor);
+
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  op_conf.set_device_tag(GetDeviceTagOfTensor(output_tensor));
   // NOTE(chengcheng):
   //   We contruct OutputOpConf instead of FetchOutputOpConf because FetchOutputOpExpr JUST
   //   for get nn.Graph output LazyTensor.
   OutputOpConf* output_conf = op_conf.mutable_output_conf();
-  output_conf->set_in(input_lbn);
+  output_conf->set_in(output_lbn);
   output_conf->set_out("out");
   InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
-  input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(input_tensor->dtype()->data_type());
+  output_tensor->shape()->ToProto(blob_conf->mutable_shape());
+  blob_conf->set_data_type(output_tensor->dtype()->data_type());
   // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
   //     this flag will be removed in the future.
-  // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
+  // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(output_tensor));
   blob_conf->set_is_dynamic(false);
-  JUST(GenNdSbpByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
+  JUST(GenNdSbpByTensor(blob_conf->mutable_nd_sbp(), output_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
@@ -458,7 +541,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   CHECK_OR_RETURN(!(*outputs)[0]);
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ false,
-                                   /* is_local= */ input_tensor->is_local()));
+                                   /* is_local= */ output_tensor->is_local()));
   return Maybe<void>::Ok();
 }
 
