@@ -76,7 +76,7 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 #ifdef __linux__
   int fd = 0;
   PCHECK_OR_RETURN(ShmOpen(shm_name, &fd));
-  struct stat st;
+  struct stat st;  // NOLINT
   PCHECK_OR_RETURN(fstat(fd, &st)) << ReturnEmptyStr([&] { close(fd); });
   *shm_size = st.st_size;
   void* ptr = nullptr;

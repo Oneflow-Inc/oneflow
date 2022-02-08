@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace py = pybind11;
 
@@ -108,13 +109,10 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
-      auto Release = [&]() { Py_DECREF(array); };
-      if (!PyGILState_Check()) {
-        py::gil_scoped_acquire acquire;
-        Release();
-      } else {
-        Release();
-      }
+      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(array);
+        return Maybe<void>::Ok();
+      }));
     });
 
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {

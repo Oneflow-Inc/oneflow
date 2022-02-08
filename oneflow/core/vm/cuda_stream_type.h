@@ -46,7 +46,6 @@ class CudaStreamType final : public StreamType {
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;
   bool OnSchedulerThread() const override { return true; }
-  bool EnableInstructionFuse() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };
 

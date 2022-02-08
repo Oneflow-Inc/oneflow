@@ -460,13 +460,13 @@ struct LocalCallOpKernelUtil final {
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
       OF_PROFILER_RANGE_POP();
     }
-    OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
+      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+      OF_PROFILER_RANGE_POP();
     }
-    OF_PROFILER_RANGE_POP();
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
