@@ -262,7 +262,6 @@ oneflow_add_library(oneflow ${of_all_obj_cc})
 
 get_property(ROBIN_HOOD_HASHING_INCLUDE_DIR GLOBAL PROPERTY ROBIN_HOOD_HASHING_INCLUDE_DIR)
 target_include_directories(oneflow PRIVATE ${ROBIN_HOOD_HASHING_INCLUDE_DIR})
-add_dependencies(oneflow install-tbb)
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)

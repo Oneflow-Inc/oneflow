@@ -49,6 +49,7 @@ class ParamGroup(object):
         for key in self._options:
             if key in parameters:
                 self._options[key] = parameters[key]
+
         self._enable_clip_grad = False
         if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
             self._enable_clip_grad = True
@@ -63,6 +64,10 @@ class ParamGroup(object):
 
     def __contains__(self, key):
         return self._options.__contains__(key)
+
+    def setdefault(self, key, value):
+        if key not in self._options:
+            self._options[key] = value
 
     def items(self):
         return self.__dict__.items()
