@@ -937,7 +937,7 @@ class Graph(object):
             dtype = t.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                if t.is_consistent:
+                if t.is_global:
                     eager_out = oneflow.empty(
                         shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
                     )
