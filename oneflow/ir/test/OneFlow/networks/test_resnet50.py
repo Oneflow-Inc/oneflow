@@ -244,7 +244,7 @@ def main(args):
     flow.config.machine_num(1)
     flow.config.gpu_device_num(args.gpu_num_per_node)
     train_config = flow.FunctionConfig()
-    train_config.default_logical_view(flow.scope.global_view())
+    train_config.default_logical_view(flow.scope.consistent_view())
     train_config.default_data_type(flow.float)
 
     @flow.global_function(type="train", function_config=train_config)
@@ -261,7 +261,7 @@ def main(args):
 
     @flow.global_function(function_config=eval_config)
     def evaluate():
-        with flow.scope.global_view():
+        with flow.scope.consistent_view():
             _set_trainable(False)
             return resnet50(args, args.eval_dir)
 
