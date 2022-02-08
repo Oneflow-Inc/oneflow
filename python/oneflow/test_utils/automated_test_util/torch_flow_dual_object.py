@@ -336,19 +336,45 @@ def GetDualObject(name, pytorch, oneflow):
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
 
-                            if isinstance(oneflow, flow.nn.Module) and testing_graph:
-                                graph_train_oneflow = copy.deepcopy(oneflow)
-                                if not is_consistent():
-                                    arg_device_type = "cpu"
-                                    for arg in oneflow_args:
-                                        if flow.is_tensor(arg):
-                                            arg_device_type = arg.device.type
-                                    graph_train_oneflow = graph_train_oneflow.to(
-                                        arg_device_type
-                                    )
+                            if testing_graph:
+                                if isinstance(oneflow, flow.nn.Module):
+                                    graph_train_oneflow = copy.deepcopy(oneflow)
+                                    if not is_consistent():
+                                        arg_device_type = "cpu"
+                                        for arg in oneflow_args:
+                                            if flow.is_tensor(arg):
+                                                arg_device_type = arg.device.type
+                                        graph_train_oneflow = graph_train_oneflow.to(
+                                            arg_device_type
+                                        )
+
+                                else:
+                                    graph_functional_oneflow = copy.deepcopy(oneflow)
+                                    if "__self__" in dir(
+                                        graph_functional_oneflow
+                                    ) and flow.is_tensor(oneflow.__self__):
+                                        graph_functional_oneflow.__self__.data = (
+                                            oneflow.__self__.detach().clone()
+                                        )
+
+                            if verbose:
+                                print(
+                                    "Before running eager module or functional: ",
+                                    repr(oneflow),
+                                )
 
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+                            if verbose:
+                                print(
+                                    "The result after running eager module or functional: ",
+                                    oneflow_res,
+                                )
                             if testing_graph:
+                                if verbose:
+                                    print(
+                                        "After running eager module or functional: ",
+                                        repr(oneflow),
+                                    )
                                 find_check_module_func = True
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
@@ -390,6 +416,11 @@ def GetDualObject(name, pytorch, oneflow):
                                         test_g.debug(3)
                                     # When testing module methods, kwargs are not considered.
                                     test_g_res = test_g(*graph_args)
+                                    if verbose:
+                                        print(
+                                            "The result after running graph module: ",
+                                            test_g_res,
+                                        )
                                 elif oneflow.__name__ in ignore_apis_list:
                                     find_check_module_func = False
                                 # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
@@ -409,7 +440,9 @@ def GetDualObject(name, pytorch, oneflow):
                                             super().__init__()
 
                                         def build(self):
-                                            return oneflow(*graph_args, **graph_kwargs)
+                                            return graph_functional_oneflow(
+                                                *graph_args, **graph_kwargs
+                                            )
 
                                     try:
                                         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
@@ -454,6 +487,11 @@ def GetDualObject(name, pytorch, oneflow):
                                                 )
                                                 test_g.debug(3)
                                             test_g_res = test_g()
+                                            if verbose:
+                                                print(
+                                                    "The result after running graph functional: ",
+                                                    test_g_res,
+                                                )
                                     except Exception as e:
                                         print_note_fake_program()
                                         raise OneFlowGraphBuildOrRunError(e)
@@ -512,9 +550,23 @@ def GetDualObject(name, pytorch, oneflow):
                                     tensor_graph_kwargs[key] = value.clone().detach()
                                 else:
                                     tensor_graph_kwargs[key] = copy.deepcopy(value)
-
+                        if verbose:
+                            print(
+                                "Before running tensor eager tensor method: ",
+                                repr(oneflow_method),
+                            )
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
+                        if verbose:
+                            print(
+                                "The result after running tensor eager tensor method: ",
+                                oneflow_res,
+                            )
                         if testing_graph:
+                            if verbose:
+                                print(
+                                    "After running tensor eager tensor method: ",
+                                    repr(oneflow_method),
+                                )
 
                             class TestGraphOfTensorMethod(flow.nn.Graph):
                                 def __init__(self):
@@ -531,6 +583,11 @@ def GetDualObject(name, pytorch, oneflow):
                                     print("Run graph of method: ", repr(oneflow))
                                     test_g.debug(3)
                                 test_g_res = test_g()
+                                if verbose:
+                                    print(
+                                        "The result after running tensor graph tensor method: ",
+                                        test_g_res,
+                                    )
                             except Exception as e:
                                 print_note_fake_program()
                                 raise OneFlowGraphBuildOrRunError(e)
