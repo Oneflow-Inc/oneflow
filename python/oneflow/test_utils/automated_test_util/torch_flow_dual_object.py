@@ -13,9 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .util import broadcast
-from .global_scope import *
-from .generators import Nothing, generator, random_pytorch_tensor
 import collections.abc
 import functools
 import inspect
@@ -39,6 +36,10 @@ except ImportError:
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
     )
 
+
+from .util import broadcast
+from .global_scope import *
+from .generators import Nothing, generator, random_pytorch_tensor
 
 postulate = [".rand", ".Tensor"]
 
