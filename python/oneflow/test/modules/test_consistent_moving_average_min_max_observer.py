@@ -50,8 +50,7 @@ def _run_test_moving_average_min_max_observer(
         if any([item == flow.sbp.split(0) for item in sbp]):
             continue
         current_train_step_tensor = flow.tensor(
-            np.zeros((1,)).astype(np.float32),
-            dtype=flow.int64
+            np.zeros((1,)).astype(np.float32), dtype=flow.int64
         ).to_consistent(placement, sbp)
         for i in range(10):
             activation = (np.random.random(activation_shape) - 0.5).astype(

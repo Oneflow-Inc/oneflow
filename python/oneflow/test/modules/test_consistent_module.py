@@ -22,6 +22,7 @@ import oneflow.unittest
 from test_module import np_relu
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, check_graph=False)
 def test_nested_module(test_case, placement, sbp):
     class CustomModule(torch.nn.Module):
@@ -103,7 +104,8 @@ def _test_module_setattr(test_case, placement, sbp):
     print("child 0 param = ", child_params[0].numpy())
     print("param0 = ", param0.numpy())
     test_case.assertTrue(np.allclose(child_params[0].numpy(), param0.numpy()))
-    test_case.assertTrue(np.allclose(child_params[1].numpy(), param1.numpy()))              
+    test_case.assertTrue(np.allclose(child_params[1].numpy(), param1.numpy()))
+
 
 def _test_module_float_double(test_case, placement, sbp):
     class CustomModule(flow.nn.Module):
@@ -112,8 +114,12 @@ def _test_module_float_double(test_case, placement, sbp):
             self.param1 = param1
             self.param2 = param2
 
-    tensor0 = flow.nn.Parameter(flow.Tensor(8, 8).to(dtype=flow.float64).to_consistent(placement, sbp))
-    tensor1 = flow.nn.Parameter(flow.Tensor(8, 8).to(dtype=flow.float64).to_consistent(placement, sbp))
+    tensor0 = flow.nn.Parameter(
+        flow.Tensor(8, 8).to(dtype=flow.float64).to_consistent(placement, sbp)
+    )
+    tensor1 = flow.nn.Parameter(
+        flow.Tensor(8, 8).to(dtype=flow.float64).to_consistent(placement, sbp)
+    )
     m = CustomModule(tensor0, tensor1).to_consistent(placement, sbp)
     m = m.float()
     state_dict = m.state_dict()
