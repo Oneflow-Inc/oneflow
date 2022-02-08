@@ -96,7 +96,7 @@ __launch_bounds__(kBlockSize) __global__
 
 template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool2dForwardCFirst(const NdIndexOffsetHelper<IDX, 4> index_helper,
+    void DoCUDAMaxPool2dForwardCFirst(const NdIndexOffsetHelper<IDX, 3> index_helper,
                                       IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                       int32_t padding_h, int32_t padding_w, int32_t n_batch,
                                       int32_t n_channel, int32_t x_height, int32_t x_width,
@@ -214,7 +214,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   }
 
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
-                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                                     const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
                                      int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     DoCUDAMaxPool2dForwardCFirst<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,

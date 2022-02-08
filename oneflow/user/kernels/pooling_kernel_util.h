@@ -113,7 +113,7 @@ struct PoolingKernelUtil {
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
-                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                                     const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
                                      int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 
@@ -209,53 +209,34 @@ OF_DEVICE_FUNC void Maxpool1dBackwardCompute(const NdIndexOffsetHelper<IDX, 3> i
 
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
-    const NdIndexOffsetHelper<IDX, 4> index_helper, IDX elem_num, const T* src, T* dest,
+    const NdIndexOffsetHelper<IDX, 3> index_helper, IDX elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int32_t n_batch,
     const int32_t n_channel, const int32_t x_height, const int32_t x_width,
     const int32_t kernel_size_h, const int32_t kernel_size_w,
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    IDX n, c, h, w;
-    index_helper.OffsetToNdIndex(num, n, c, h, w);
+    IDX n_c, h, w;
+    index_helper.OffsetToNdIndex(num, n_c, h, w);
     int32_t hstart = h * stride_h - padding_h;
     int32_t wstart = w * stride_w - padding_w;
-    /*
     const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
                              ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
                              : x_height;
     const IDX wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
                              ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
                              : x_width;
-    */
-    #ifdef WITH_CUDA
-    const int32_t hend = device_min((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
-    const int32_t wend = device_min((wstart + (kernel_size_w - 1) * dilation_w + 1), x_width);
-    // const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
-    //                          ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
-    //                          : x_height;
-    // const IDX wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
-    //                          ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
-    //                          : x_width;
-    #else
-    const int32_t hend = std::min((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
-    const int32_t wend = std::min((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
-    #endif
-
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
     /* equal to -std::numeric_limits<T>::infinity(); */
-    T max_value = -10000;
+    T max_value = detail::numeric_limits<T>::lower_bound();
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
     int32_t max_index = hstart * x_width + wstart;
-    const T* btm_data = src + (n * n_channel + c) * x_width * x_height;
+    const T* btm_data = src + n_c * x_width * x_height;
     for (int32_t i = hstart; i < hend; i += dilation_h) {
       for (int32_t j = wstart; j < wend; j += dilation_w) {
-        // const int32_t window_idx = i * x_width + j;
-        // const IDX search_idx = start_idx + window_idx;
-        // T val = src[search_idx];
-        // T val = btm_data[window_idx]; 
-        T val = btm_data[i * x_width + j]; 
+        const int32_t window_idx = i * x_width + j;
+        T val = btm_data[window_idx]; 
         /* NOTE:
         std::isnan(val) only supports a few data types, see:
         https://en.cppreference.com/w/cpp/numeric/math/isnan and when use gcc/g++ 4.x to compile,
@@ -267,18 +248,12 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
         but if use gcc/g++ 7.x to compile, everything is ok! the exact reason is still unknown!
         */
         if (val > max_value || detail::numerics<T>::isnan(val)) {
-          max_index = i * x_width + j;
-          // max_value = val;
-          max_value = static_cast<T>(val);
-
-          // max_index = window_idx;
-          // src_idx = search_idx;
+          max_index = window_idx;
+          max_value = val;
         }
       }
     }
-    // dest[num] = src[src_idx];
-    // dest[num] = max_value;
-    dest[num] = static_cast<T>(max_value); 
+    dest[num] = max_value;
     indice_ptr[num] = max_index;
   }
 }

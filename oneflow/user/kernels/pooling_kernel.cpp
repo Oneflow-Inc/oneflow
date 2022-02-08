@@ -118,7 +118,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   }
 
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
-                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                                     const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
                                      int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool2dForwardComputeCFirst<T, IDX>(
@@ -307,8 +307,8 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
+
+
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     // if(elem_num < GetMaxVal<int32_t>()){
     //   NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
@@ -334,11 +334,18 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     //   }
     // }
 
-    NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
     if (data_format == "channels_first") {
-    PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
+      DimVector y_vector(3);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1); 
+      y_vector.at(1) = y->shape().At(2); 
+      y_vector.at(2) = y->shape().At(3); 
+      NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
+      PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
         ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     } else if (data_format == "channels_last") {
+      DimVector y_vector;
+      y->shape().ToDimVector(&y_vector);
+      NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
       PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
           ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     } else {
