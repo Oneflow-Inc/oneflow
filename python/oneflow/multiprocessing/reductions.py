@@ -43,7 +43,7 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     t = flow.from_numpy(arr)
     t._register_storage_delete_hook(delete_shm)
     t.requires_grad = requires_grad
- 
+
     return t
 
 
@@ -66,7 +66,10 @@ def reduce_tensor(tensor):
     shm_numpy[:] = tensor_data[:]
 
     requires_grad = tensor.requires_grad
-    return (rebuild_shm_tensor, (shm, tensor_data.shape, tensor_data.dtype, requires_grad))
+    return (
+        rebuild_shm_tensor,
+        (shm, tensor_data.shape, tensor_data.dtype, requires_grad),
+    )
 
 
 def reduce_parameter(tensor):
@@ -77,7 +80,10 @@ def reduce_parameter(tensor):
     shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
     shm_numpy[:] = tensor_data[:]
 
-    return (rebuild_shm_parameter, (shm, tensor_data.shape, tensor_data.dtype, requires_grad))
+    return (
+        rebuild_shm_parameter,
+        (shm, tensor_data.shape, tensor_data.dtype, requires_grad),
+    )
 
 
 def init_reductions():
