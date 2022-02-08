@@ -99,9 +99,9 @@ CudaStream::CudaStream(CudaDevice* device)
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
+  workspace_size_ = kDefaultWorkspaceSize;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
 #if CUBLAS_VERSION >= 11200
-  workspace_size_ = kDefaultWorkspaceSize;
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
   // cudnn_handle

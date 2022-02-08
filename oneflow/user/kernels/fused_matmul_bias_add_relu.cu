@@ -162,6 +162,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  using user_op::OpKernel::InitOpKernelCache;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateFusedMatmulBiasAddReluKernelCache();
@@ -276,12 +277,10 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     OF_CUBLAS_CHECK(cublasLtMatmul(
         ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operation_desc,
-        &sp_alpha, reinterpret_cast<const T*>(cublas_a->dptr()), matmul_cache->cublas_a_desc,
-        reinterpret_cast<const T*>(cublas_b->dptr()), matmul_cache->cublas_b_desc, &sp_beta,
-        reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc,
-        reinterpret_cast<T*>(out->mut_dptr()), matmul_cache->cublas_c_desc, NULL,
-        cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-        cuda_stream->cuda_stream()));
+        &sp_alpha, cublas_a->dptr(), matmul_cache->cublas_a_desc, cublas_b->dptr(),
+        matmul_cache->cublas_b_desc, &sp_beta, out->mut_dptr(), matmul_cache->cublas_c_desc,
+        out->mut_dptr(), matmul_cache->cublas_c_desc, NULL, cuda_stream->cublas_workspace(),
+        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   }
 };
 
