@@ -79,7 +79,7 @@ class TestGridSample(flow.unittest.TestCase):
         return output
 
     # This test may fail due to using ::floor in backward
-    # floor(1.99999988) = 1 和 floor(2.000000) = 2, then select differente images pixel
+    # floor(1.99999988) = 1 and floor(2.000000) = 2, then select differente images pixel
     @autotest(
         auto_backward=False,
         rtol=1e-03,
