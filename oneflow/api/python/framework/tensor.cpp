@@ -218,7 +218,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &Tensor::is_lazy)
       .def_property_readonly("is_eager", &Tensor::is_eager)
-      .def_property_readonly("is_consistent", &Tensor::is_consistent)
+      .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
