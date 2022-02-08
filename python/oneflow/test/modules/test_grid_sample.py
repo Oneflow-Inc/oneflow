@@ -51,7 +51,7 @@ class TestGridSample(flow.unittest.TestCase):
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(rtol=1e-03, atol=1e-04, check_graph=False)
+    @autotest(rtol=1e-03, atol=1e-04, check_graph=True)
     def test_flow_grid_sample_cudnn_with_random_data(test_case):
         # cudnn only support 4D input, with mode = 'bilinear' && padding_mode = 'zeros' && align_corners
         N = randint(1, 8)
@@ -84,7 +84,7 @@ class TestGridSample(flow.unittest.TestCase):
         auto_backward=False,
         rtol=1e-03,
         atol=1e-04,
-        check_graph=False,
+        check_graph=True,
         check_allclose=False,
     )
     def test_flow_grid_sample_4d_with_random_data(test_case):
@@ -112,7 +112,7 @@ class TestGridSample(flow.unittest.TestCase):
         )
         return output
 
-    @autotest(auto_backward=False, rtol=1e-03, atol=1e-03, check_graph=False)
+    @autotest(auto_backward=False, rtol=1e-03, atol=1e-03, check_graph=True)
     def test_flow_grid_sample_5d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
