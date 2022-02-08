@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.multiprocessing import shared_memory
 from multiprocessing.reduction import ForkingPickler
 
 import numpy as np
@@ -21,6 +20,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
 from oneflow.framework.tensor import Tensor
+from oneflow.multiprocessing import shared_memory
 
 
 try:
@@ -41,7 +41,7 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
-    t._register_storage_delete_hook(delete_shm)
+    t._register_storage_delete_hook(delete_shm, shm)
     t.requires_grad = requires_grad
  
     return t
@@ -54,7 +54,7 @@ def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
-    t._register_storage_delete_hook(delete_shm)
+    t._register_storage_delete_hook(delete_shm, shm)
     return Parameter(t, requires_grad=requires_grad)
 
 
