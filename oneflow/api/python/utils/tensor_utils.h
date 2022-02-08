@@ -33,6 +33,8 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/extension/python/numpy.h"
+namespace py = pybind11;
+
 namespace pybind11 {
 // reference: https://github.com/pybind/pybind11/issues/1776
 template<>
@@ -48,8 +50,6 @@ struct format_descriptor<oneflow::float16> {
   static constexpr auto name() { return detail::_("float16"); }
 };
 }  // namespace pybind11
-
-namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
