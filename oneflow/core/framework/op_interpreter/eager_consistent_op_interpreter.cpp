@@ -69,6 +69,7 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 }
 
 Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMeta>>& tensor_metas) {
+  if (tensor_metas.empty()) { return false; }
   for (const auto& tensor_meta : tensor_metas) {
     if (tensor_meta->shape().elem_cnt() != 0) { return false; }
   }
