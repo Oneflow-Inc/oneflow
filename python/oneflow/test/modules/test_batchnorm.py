@@ -36,7 +36,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             num_features=channel, track_running_stats=random().to(bool)
         ).to(device)
         m.train(random())
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=3, dim0=random(1, 4), dim1=channel, requires_grad=True
         ).to(device)
         y = m(x)
@@ -50,7 +50,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             num_features=channel, track_running_stats=random().to(bool)
         ).to(device)
         m.train(random())
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4, dim0=random(1, 4), dim1=channel, requires_grad=True
         ).to(device)
         y = m(x)
@@ -64,7 +64,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             num_features=channel, track_running_stats=random().to(bool)
         ).to(device)
         m.train(random())
-        x = random_pytorch_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
+        x = random_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
         y = m(x)
         return y
 
