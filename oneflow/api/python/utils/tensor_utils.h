@@ -33,6 +33,8 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
+
 namespace py = pybind11;
 
 namespace pybind11 {
@@ -140,8 +142,10 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
-      py::gil_scoped_acquire acquire;
-      Py_DECREF(array);
+      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(array);
+        return Maybe<void>::Ok();
+      }));
     });
 
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
