@@ -104,9 +104,7 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.body().emplaceBlock();
-  for (auto& arg : argument_types) {
-  function.body().addArguments(arg, loc);
-  }
+  for (auto& arg : argument_types) { function.body().addArguments(arg, loc); }
   for (auto argument_pair : llvm::zip(operands, function.body().getArguments())) {
     mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
@@ -159,7 +157,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
         GetOrInsertFuncOp(rewriter, batch_matmul_op->getLoc(), op_name, operands, results, ops);
     auto created =
         rewriter.create<MlirJitOp>(batch_matmul_op.getLoc(), function, attributes, operands);
-    assert(DumpAssembly(rewriter, created).succeeded());
+    if (failed(DumpAssembly(rewriter, created))) exit(1);
     return created->getResults();
   }
   return {};
@@ -221,7 +219,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createCSEPass());                           // cse
   pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
-  assert(p->initializeOptions("allow-folding-unit-dim-reshapes=true").succeeded());
+  if (p->initializeOptions("allow-folding-unit-dim-reshapes=true").failed()) exit(1);
   pm.addNestedPass<FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
   pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
   pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize

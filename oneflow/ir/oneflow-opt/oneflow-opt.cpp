@@ -29,10 +29,11 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 
 namespace mlir {
-struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, FunctionPass> {
-  void runOnFunction() override {
-    assert(
-        succeeded(applyPatternsAndFoldGreedily(getFunction(), RewritePatternSet(&getContext()))));
+struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, OperationPass<FuncOp>> {
+  void runOnOperation() override {
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), RewritePatternSet(&getContext())))) {
+      exit(1);
+    }
   }
   StringRef getArgument() const final { return "test-oneflow-trait-folder"; }
 };

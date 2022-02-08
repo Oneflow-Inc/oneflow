@@ -255,13 +255,13 @@ def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
   let dependentDialects = ["scf::SCFDialect"];
 }
 
-def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
+def BufferHostRegisterPass : Pass<"buffer-host-register", "FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
   let dependentDialects = ["gpu::GPUDialect"];
 }
 
-def GpuCopyArgPass : FunctionPass<"gpu-copy-arg"> {
+def GpuCopyArgPass : Pass<"gpu-copy-arg", "FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createGpuCopyArgPass()";
   let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];

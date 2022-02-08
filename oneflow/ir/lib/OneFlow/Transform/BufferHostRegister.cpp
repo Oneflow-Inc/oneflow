@@ -25,8 +25,8 @@ namespace mlir {
 namespace {
 
 class BufferHostRegisterPass : public BufferHostRegisterPassBase<BufferHostRegisterPass> {
-  void runOnFunction() override {
-    getFunction()->walk([&](memref::AllocOp alloc) {
+  void runOnOperation() override {
+    getOperation()->walk([&](memref::AllocOp alloc) {
       auto ranked_type = alloc.getResult().getType().cast<MemRefType>();
       Type unranked_type =
           UnrankedMemRefType::get(ranked_type.getElementType(), ranked_type.getMemorySpace());
@@ -39,8 +39,8 @@ class BufferHostRegisterPass : public BufferHostRegisterPassBase<BufferHostRegis
 };
 
 class GpuCopyArgPass : public GpuCopyArgPassBase<GpuCopyArgPass> {
-  void runOnFunction() override {
-    Operation* op = getFunction();
+  void runOnOperation() override {
+    Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
     oneflow::populateGpuHelperPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
