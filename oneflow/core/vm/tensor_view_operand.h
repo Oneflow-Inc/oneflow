@@ -44,6 +44,7 @@ class TensorViewOperand : public PhyInstrOperand {
     ForEachConstMirroredObject(SetInserter(&input_dependences_));
     ForEachMutMirroredObject(SetInserter(&output_dependences_));
     ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    stream_sequential_dependence_ = nullptr;
   }
   ~TensorViewOperand() = default;
 
