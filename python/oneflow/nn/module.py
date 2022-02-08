@@ -51,7 +51,6 @@ T = TypeVar("T", bound="Module")
 class Module(object):
     def __init__(self):
         self.training = True
-        self._global_view = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -62,10 +61,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-
-    @property
-    def global_view(self):
-        return self._global_view
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
