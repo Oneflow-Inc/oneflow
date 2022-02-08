@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -228,7 +229,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
           << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << " for FreeEagerTensor.\n";
+          << op_conf.name() << " for FreeEagerTensor.\n";
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
           << op_attr.DebugString() << " for FreeEagerTensor.\n";
@@ -270,6 +271,12 @@ Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
                                .Build();
 
     OpAttribute unpack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(unpack_op.op_conf()));
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
+            << unpack_op.op_conf().DebugString() << std::endl;
+    VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " infer and and op attr : \n"
+            << unpack_op_attr.DebugString() << std::endl;
+
     const std::string unpack_lbn = unpack_op.output("out", 0);
     auto unpack_input =
         JUST(BuildTensor(unpack_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
@@ -306,6 +313,12 @@ Maybe<Tensor> GradAccTryInsertRepeatAfterVar(
                                .Build();
 
     OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
+            << repeat_op.op_conf().DebugString() << std::endl;
+    VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " infer and and op attr : \n"
+            << repeat_op_attr.DebugString() << std::endl;
+
     const std::string repeat_lbn = repeat_op.output("out", 0);
     auto repeat_var =
         JUST(BuildTensor(repeat_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
@@ -347,6 +360,12 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
         JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
 
     OpAttribute pack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(output_pack_op.op_conf()));
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
+            << output_pack_op.op_conf().DebugString() << std::endl;
+    VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " infer and and op attr : \n"
+            << pack_op_attr.DebugString() << std::endl;
+
     const std::string pack_lbn = output_pack_op.output("out", 0);
     auto packed_output =
         JUST(BuildTensor(pack_op_attr, "out_0", blob_parallel_desc, /* is_lazy= */ true,
@@ -356,6 +375,55 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
   } else {
     return output_tensor;
   }
+}
+
+Maybe<void> GradAccTryInsertRepeatTickBeforeSource(std::shared_ptr<OperatorConf> source_op_conf) {
+  auto infer_ctx = JUST(GetCurInferCtx());
+  int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
+  if (grad_acc_step > 1) {
+    // NOTE(chengcheng):
+    //   We assume that the nn.Graph once call is one mini-batch which containing multi
+    //   micro-batches. So we need repeat source op for each micro-batch in one micro-batch.
+    VLOG(2)
+        << " Current OneFlow nn.Graph grad acc semantics is different from Torch. \n"
+        << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
+        << " the source op of nn.Graph will be repeated exec n-times for multiple micro-batches.\n";
+
+    // Insert Tick
+    OperatorConf tick_conf{};
+    tick_conf.set_name("System-GradientAccumulation-RepeatTick-DeviceTick-"
+                       + source_op_conf->name());
+    tick_conf.mutable_device_tick_conf()->set_out("out");
+    tick_conf.set_scope_symbol_id(source_op_conf->scope_symbol_id());
+    auto tick_lbn = GenLogicalBlobName(tick_conf.name(), tick_conf.device_tick_conf().out());
+    OpAttribute tick_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(tick_conf));
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
+            << tick_conf.DebugString() << std::endl;
+    VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " infer and and op attr : \n"
+            << tick_op_attr.DebugString() << std::endl;
+
+    user_op::UserOpConfWrapperBuilder repeat_builder(
+        "System-GradientAccumulation-RepeatTick-Repeat-" + source_op_conf->name());
+    const auto repeat_op = repeat_builder.OpTypeName("repeat")
+                               .Input("in", tick_lbn)
+                               .Output("out")
+                               .Attr<int32_t>("repeat_num", grad_acc_step)
+                               .ScopeSymbolId(source_op_conf->scope_symbol_id())
+                               .Build();
+
+    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
+            << repeat_op.op_conf().DebugString() << std::endl;
+    VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+            << " infer and and op attr : \n"
+            << repeat_op_attr.DebugString() << std::endl;
+
+    const std::string repeat_tick_lbn = repeat_op.output("out", 0);
+    (*source_op_conf->mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
+        .add_s(repeat_op.output("out", 0));
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -394,7 +462,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
           << " try to add op: \n: " << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << std::endl;
+          << op_conf.name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
@@ -452,7 +520,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
           << " try to add op: \n: " << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << std::endl;
+          << op_conf.name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
@@ -527,7 +595,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
           << op_conf.DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << std::endl;
+          << op_conf.name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
@@ -582,7 +650,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf->DebugString() << std::endl;
+          << op_conf->name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
@@ -655,11 +723,13 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     }
   }
 
+  JUST(GradAccTryInsertRepeatTickBeforeSource(op_conf));
+
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf->DebugString() << std::endl;
+          << op_conf->name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
@@ -814,8 +884,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
-  VLOG(2) << "Lazy nn.Graph name " << graph_name << " add op : \n"
-          << op_conf->DebugString() << std::endl;
+  VLOG(2) << "Lazy nn.Graph name " << graph_name << " add op : \n" << op_conf->name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << graph_name << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
 
