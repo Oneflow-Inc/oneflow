@@ -149,7 +149,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
   if (ctx->has_output("embeddings", 0)) {
-    *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+    *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("embeddings_dtype");
   }
   return Maybe<void>::Ok();
 }
