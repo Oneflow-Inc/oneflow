@@ -218,9 +218,9 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     IDX n, c, h, w;
     index_helper.OffsetToNdIndex(num, n, c, h, w);
 
-    const IDX start_idx = (n * n_channel + c) * x_width * x_height;
-    IDX hstart = h * stride_h - padding_h;
-    IDX wstart = w * stride_w - padding_w;
+    const int32_t start_idx = (n * n_channel + c) * x_width * x_height;
+    int32_t hstart = h * stride_h - padding_h;
+    int32_t wstart = w * stride_w - padding_w;
     /*
     const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
                              ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
@@ -231,8 +231,9 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     */
 
     #ifdef WITH_CUDA
-    const IDX hend = device_min<T>((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
-    const IDX wend = device_min<T>((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
+    const int32_t hend = device_min<T>((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
+    const int32_t wend = device_min<T>((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
+    
     // const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
     //                          ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
     //                          : x_height;
@@ -240,24 +241,24 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     //                          ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
     //                          : x_width;
     #else
-    const IDX hend = std::min((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
-    const IDX wend = std::min((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
+    const int32_t hend = std::min((hstart + (kernel_size_h - 1) * dilation_h + 1), x_height);
+    const int32_t wend = std::min((wstart + (kernel_size_w - 1) * dilation_w + 1), x_height);
     #endif
 
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
 
     /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
-    IDX max_index = hstart * x_width + wstart;
+    int32_t max_index = hstart * x_width + wstart;
     // IDX src_idx = 0;
 
     /* equal to -std::numeric_limits<T>::infinity(); */
     T max_value = detail::numeric_limits<T>::lower_bound();
 
     const T* btm_data = src + start_idx; 
-    for (IDX i = hstart; i < hend; i += dilation_h) {
-      for (IDX j = wstart; j < wend; j += dilation_w) {
-        const IDX window_idx = i * x_width + j;
+    for (int32_t i = hstart; i < hend; i += dilation_h) {
+      for (int32_t j = wstart; j < wend; j += dilation_w) {
+        const int32_t window_idx = i * x_width + j;
         // const IDX search_idx = start_idx + window_idx;
         // T val = src[search_idx];
         T val = btm_data[window_idx]; 

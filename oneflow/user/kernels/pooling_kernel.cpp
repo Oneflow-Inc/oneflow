@@ -300,7 +300,9 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const auto* pooling_cache = dynamic_cast<const PoolingOpKernelCache*>(cache);
     const MaxPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    // const int64_t elem_num = y->shape().elem_cnt();
+    const int32_t elem_num = y->shape().elem_cnt();
+
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
@@ -308,28 +310,39 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-    if(elem_num < GetMaxVal<int32_t>()){
-      NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
-      if (data_format == "channels_first") {
-      PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
+    // if(elem_num < GetMaxVal<int32_t>()){
+    //   NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
+    //   if (data_format == "channels_first") {
+    //   PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
+    //       ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    //   } else if (data_format == "channels_last") {
+    //     PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
+    //         ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    //   } else {
+    //     UNIMPLEMENTED() << "Unsupported data_format";
+    //   }
+    // }else{
+    //   NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+    //   if (data_format == "channels_first") {
+    //   PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCFirst(
+    //       ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    //   } else if (data_format == "channels_last") {
+    //     PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCLast(
+    //         ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    //   } else {
+    //     UNIMPLEMENTED() << "Unsupported data_format";
+    //   }
+    // }
+
+    NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
+    if (data_format == "channels_first") {
+    PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
+        ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    } else if (data_format == "channels_last") {
+      PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
           ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else if (data_format == "channels_last") {
-        PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else {
-        UNIMPLEMENTED() << "Unsupported data_format";
-      }
-    }else{
-      NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-      if (data_format == "channels_first") {
-      PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCFirst(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else if (data_format == "channels_last") {
-        PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCLast(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else {
-        UNIMPLEMENTED() << "Unsupported data_format";
-      }
+    } else {
+      UNIMPLEMENTED() << "Unsupported data_format";
     }
   };
 };
