@@ -114,7 +114,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
   void Schedule();
   void Callback();
-  void ScheduleEnd();
+  void NotifyCallback();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
   bool CallbackEmpty() const;
@@ -240,9 +240,11 @@ class VirtualMachineEngine final : public intrusive::Base {
   LogicalObjectDeleteList delete_logical_object_list_;
   std::mutex pending_msg_mutex_;
   InstructionMsgMutexedList pending_msg_list_;
+  // local_pending_msg_list_ should be consider as the cache of pending_msg_list_.
   InstructionMsgList local_pending_msg_list_;
   std::mutex callback_msg_mutex_;
   InstructionMsgMutexedList garbage_msg_list_;
+  // local_garbage_msg_list_ should be consider as the cache of garbage_msg_list_.
   InstructionMsgList local_garbage_msg_list_;
   std::function<void()> notify_callback_thread_;
   ReadyInstructionList ready_instruction_list_;

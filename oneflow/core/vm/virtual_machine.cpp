@@ -114,6 +114,10 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 }  // namespace
 
 VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id) {
+  // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
+  // manages threads and condition variables.
+  // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
+  // an argument for VirtualMachineEngine's constructor.
   vm_ = intrusive::make_shared<vm::VirtualMachineEngine>(
       vm::MakeVmDesc(resource, this_machine_id).Get(), [this]() { callback_notifier_.Notify(); });
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
@@ -202,6 +206,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     JUST(vm_->Receive(instr_list));
     while (!vm_->Empty()) { vm_->Schedule(); }
     vm_->Callback();
+    // no scheduler processing gc, we must do it in current thread.
     vm::InstructionMsgList garbage_msg_list;
     vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
@@ -242,14 +247,14 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
         do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
-        vm->ScheduleEnd();
+        vm->NotifyCallback();
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
   while (!(vm->Empty() && vm->CallbackEmpty())) {
     vm->Schedule();
-    vm->ScheduleEnd();
+    vm->NotifyCallback();
   }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_pending_instruction_list()->Close();
