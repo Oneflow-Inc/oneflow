@@ -44,7 +44,7 @@ namespace {
 
 template<typename T, typename IDX>
 void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helper,
-                                  IDX elem_num, const T* src, T* dest, int32_t* indice_ptr,
+                                  IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                   const int32_t padding_h, const int32_t padding_w,
                                   const int32_t n_batch, const int32_t n_channel,
                                   const int32_t x_height, const int32_t x_width,
@@ -99,7 +99,7 @@ template<typename T, typename IDX>
 struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream,
                                const NdIndexOffsetHelper<IDX, 3>& index_helper,
-                               const IDX elem_num, const T* src, T* dest, int32_t* indice_ptr,
+                               const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     Maxpool1dForwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
                                params_3d.padding()[2], params_3d.num_batch(),
@@ -111,7 +111,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool1dBackward(ep::Stream* stream,
                                 const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const int32_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool1dBackwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
                                 params_3d.num_batch(), params_3d.num_channel(),
                                 params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
@@ -120,7 +120,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
-                                     int32_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                     int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool2dForwardComputeCFirst<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
@@ -133,7 +133,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool2dBackwardCFirst(ep::Stream* stream,
                                       const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                       const IDX elem_num, const T* src, T* dest,
-                                      const int32_t* indice_ptr,
+                                      const int64_t* indice_ptr,
                                       const MaxPoolingParams3D& params_3d) {
     Maxpool2dBackwardComputeCFirst<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
                                       params_3d.num_batch(), params_3d.num_channel(),
@@ -144,7 +144,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool2dForwardCLast(ep::Stream* stream,
                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                     const IDX elem_num, const T* src, T* dest,
-                                    int32_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                    int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool2dForwardComputeCLast<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
@@ -157,7 +157,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool2dBackwardCLast(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
-                                     const int32_t* indice_ptr,
+                                     const int64_t* indice_ptr,
                                      const MaxPoolingParams3D& params_3d) {
     Maxpool2dBackwardComputeCLast<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
                                      params_3d.num_batch(), params_3d.num_channel(),
@@ -167,7 +167,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
 
   static void Maxpool3dForward(ep::Stream* stream,
                                const NdIndexOffsetHelper<IDX, 5>& index_helper,
-                               const IDX elem_num, const T* src, T* dest, int32_t* indice_ptr,
+                               const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     Maxpool3dForwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
@@ -183,7 +183,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool3dBackward(ep::Stream* stream,
                                 const NdIndexOffsetHelper<IDX, 5> index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const int32_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool3dBackwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
                                 params_3d.num_batch(), params_3d.num_channel(),
                                 params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
@@ -217,7 +217,7 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     const int64_t elem_num = y->shape().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
-    int32_t* indice_ptr = indice->mut_dptr<int32_t>();
+    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
@@ -258,7 +258,7 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
 
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
-    const int32_t* indice_ptr = indice->dptr<int32_t>();
+    const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
     DimVector dy_vector;
     dy->shape().ToDimVector(&dy_vector);
@@ -305,7 +305,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
 
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
-    int32_t* indice_ptr = indice->mut_dptr<int32_t>();
+    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
@@ -365,7 +365,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
-    const int32_t* indice_ptr = indice->dptr<int32_t>();
+    const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
     DimVector dy_vector;
     dy->shape().ToDimVector(&dy_vector);
@@ -425,7 +425,7 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     const int64_t elem_num = y->shape().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
-    int32_t* indice_ptr = indice->mut_dptr<int32_t>();
+    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
@@ -465,7 +465,7 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
 
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
-    const int32_t* indice_ptr = indice->dptr<int32_t>();
+    const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
 
     DimVector dy_vector;
