@@ -41,7 +41,7 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
-    t._register_storage_delete_hook(delete_shm, shm)
+    t._register_storage_delete_hook(delete_shm)
     t.requires_grad = requires_grad
  
     return t
@@ -54,11 +54,7 @@ def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
-
-    shm.close()
-    shm.unlink()
-
-    t._register_storage_delete_hook(delete_shm, shm)
+    t._register_storage_delete_hook(delete_shm)
     return Parameter(t, requires_grad=requires_grad)
 
 
