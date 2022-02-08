@@ -76,8 +76,8 @@ class MaxPoolingParams3D {
   const std::vector<int32_t>& dilation_3d() const { return dilation_3d_; }
   const bool& return_indices() const { return return_indices_; }
   const bool& ceil_mode() const { return ceil_mode_; }
-  const int64_t& num_batch() const { return batch_num_; }
-  const int64_t& num_channel() const { return channel_num_; }
+  const int32_t& num_batch() const { return batch_num_; }
+  const int32_t& num_channel() const { return channel_num_; }
 
   void Reset(const ShapeView& x_shape);
   Shape GetYShape() const;
@@ -95,8 +95,8 @@ class MaxPoolingParams3D {
   std::vector<int32_t> dilation_3d_;
   bool return_indices_;
   bool ceil_mode_;
-  int64_t batch_num_;
-  int64_t channel_num_;
+  int32_t batch_num_;
+  int32_t channel_num_;
 };
 
 template<DeviceType device_type, typename T, typename IDX>
@@ -148,8 +148,8 @@ template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 3> index_helper,
                                             IDX elem_num, const T* src, T* dest,
                                             int64_t* indice_ptr, const int32_t padding_l,
-                                            const int64_t n_batch, const int64_t n_channel,
-                                            const int64_t x_length, const int32_t kernel_size_l, 
+                                            const int32_t n_batch, const int32_t n_channel,
+                                            const int32_t x_length, const int32_t kernel_size_l, 
                                             const int32_t stride_l, const int32_t dilation_l) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n, c, l;
@@ -188,9 +188,9 @@ OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 3> in
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool1dBackwardCompute(const NdIndexOffsetHelper<IDX, 3> index_helper,
                                              const IDX elem_num, const T* src, T* dest,
-                                             const int64_t* indice_ptr, const int64_t n_batch,
-                                             const int64_t n_channel, const int64_t src_length,
-                                             const int64_t dst_length) {
+                                             const int64_t* indice_ptr, const int32_t n_batch,
+                                             const int32_t n_channel, const int32_t src_length,
+                                             const int32_t dst_length) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n, c, l;
     index_helper.OffsetToNdIndex(num, n, c, l);
@@ -209,8 +209,8 @@ OF_DEVICE_FUNC void Maxpool1dBackwardCompute(const NdIndexOffsetHelper<IDX, 3> i
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     const NdIndexOffsetHelper<IDX, 4> index_helper, IDX elem_num, const T* src, T* dest,
-    int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int64_t n_batch,
-    const int64_t n_channel, const int64_t x_height, const int64_t x_width,
+    int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int32_t n_batch,
+    const int32_t n_channel, const int32_t x_height, const int32_t x_width,
     const int32_t kernel_size_h, const int32_t kernel_size_w,
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w) {
@@ -287,9 +287,9 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool2dBackwardComputeCFirst(
     const NdIndexOffsetHelper<IDX, 4> index_helper, const IDX elem_num, const T* src,
-    T* dest, const int64_t* indice_ptr, const int64_t n_batch, const int64_t n_channel,
-    const int64_t src_height, const int64_t src_width, const int64_t dst_height,
-    const int64_t dst_width) {
+    T* dest, const int64_t* indice_ptr, const int32_t n_batch, const int32_t n_channel,
+    const int32_t src_height, const int32_t src_width, const int32_t dst_height,
+    const int32_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n, c, h, w;
     index_helper.OffsetToNdIndex(num, n, c, h, w);
@@ -309,9 +309,9 @@ OF_DEVICE_FUNC void Maxpool2dBackwardComputeCFirst(
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool2dBackwardComputeCLast(
     const NdIndexOffsetHelper<IDX, 4> index_helper, const IDX elem_num, const T* src,
-    T* dest, const int64_t* indice_ptr, const int64_t n_batch, const int64_t n_channel,
-    const int64_t src_height, const int64_t src_width, const int64_t dst_height,
-    const int64_t dst_width) {
+    T* dest, const int64_t* indice_ptr, const int32_t n_batch, const int32_t n_channel,
+    const int32_t src_height, const int32_t src_width, const int32_t dst_height,
+    const int32_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n, c, h, w;
     index_helper.OffsetToNdIndex(num, n, c, h, w);
@@ -330,8 +330,8 @@ template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool3dForwardCompute(
     const NdIndexOffsetHelper<IDX, 5> index_helper, IDX elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_t, const int32_t padding_h, const int32_t padding_w,
-    const int64_t n_batch, const int64_t n_channel, 
-    const int64_t x_time, const int64_t x_height, const int64_t x_width, 
+    const int32_t n_batch, const int32_t n_channel, 
+    const int32_t x_time, const int32_t x_height, const int32_t x_width, 
     const int32_t kernel_size_t, const int32_t kernel_size_h, const int32_t kernel_size_w,
     const int32_t stride_t, const int32_t stride_h, const int32_t stride_w,
     const int32_t dilation_t, const int32_t dilation_h, const int32_t dilation_w) {
@@ -384,11 +384,11 @@ OF_DEVICE_FUNC void Maxpool3dForwardCompute(
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<IDX, 5> index_helper,
                                              const IDX elem_num, const T* src, T* dest,
-                                             const int64_t* indice_ptr, const int64_t n_batch,
-                                             const int64_t n_channel, const int64_t src_time,
-                                             const int64_t src_height, const int64_t src_width,
-                                             const int64_t dst_time, const int64_t dst_height,
-                                             const int64_t dst_width) {
+                                             const int64_t* indice_ptr, const int32_t n_batch,
+                                             const int32_t n_channel, const int32_t src_time,
+                                             const int32_t src_height, const int32_t src_width,
+                                             const int32_t dst_time, const int32_t dst_height,
+                                             const int32_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n, c, t, h, w;
     index_helper.OffsetToNdIndex(num, n, c, t, h, w);

@@ -46,9 +46,9 @@ template<typename T, typename IDX>
 void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                   IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                   const int32_t padding_h, const int32_t padding_w,
-                                  const int64_t n_batch, const int64_t n_channel,
-                                  const int64_t x_height, const int64_t x_width,
-                                  const int64_t y_height, const int64_t y_width,
+                                  const int32_t n_batch, const int32_t n_channel,
+                                  const int32_t x_height, const int32_t x_width,
+                                  const int32_t y_height, const int32_t y_width,
                                   const int32_t kernel_size_h, const int32_t kernel_size_w,
                                   const int32_t stride_h, const int32_t stride_w,
                                   const int32_t dilation_h, const int32_t dilation_w) {
