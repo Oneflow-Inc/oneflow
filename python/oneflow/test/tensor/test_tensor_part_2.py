@@ -28,7 +28,6 @@ from oneflow.test_utils.automated_test_util import *
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
-
     @autotest(check_graph=True)
     def test_permute_flow_with_random_data(test_case):
         device = random_device()
@@ -504,7 +503,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.arctanh()
         return y
 
-    # Not check graph because of one reason: 
+    # Not check graph because of one reason:
     # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
     # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
     @flow.unittest.skip_unless_1n1d()
