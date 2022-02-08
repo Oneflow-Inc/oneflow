@@ -17,6 +17,7 @@ import unittest
 import os
 import numpy as np
 import copy
+import time
 
 import oneflow as flow
 import oneflow.unittest
@@ -165,40 +166,39 @@ def _test_fixed_length_columns_shuffle_determinism(test_case, completely_shuffle
 @flow.unittest.skip_unless_1n1d()
 class ParquetReaderTestCase(oneflow.unittest.TestCase):
     def test_compare_with_ofrecord(test_case):
-        parquet_file = "/dataset/dlrm_parquet/train"
+        parquet_file = "/minio/sdb/dataset/criteo_kaggle/dlrm_parquet/train"
         schema = [
             {"col_id": 0, "shape": (1,), "dtype": flow.double},
-            {"col_id": 1, "shape": (13,), "dtype": flow.double},
-            {"col_id": 2, "shape": (26,), "dtype": flow.int32},
+            # {"col_id": 1, "shape": (13,), "dtype": flow.double},
+            # {"col_id": 2, "shape": (26,), "dtype": flow.int32},
         ]
-        batch_size = 32
+        batch_size = 100
 
         parquet_reader = make_parquet_reader(
             parquet_file, schema, batch_size=batch_size, shuffle=False
         )
 
-        ofrecord_file_dir = "/dataset/dlrm_ofrecord/"
-        ofrecord_reader = OFRecordReader(
-            data_dir=ofrecord_file_dir,
-            batch_size=batch_size,
-            shuffle=False,
-            mode="train",
-        )
+        # ofrecord_file_dir = "/dataset/dlrm_ofrecord/"
+        # ofrecord_reader = OFRecordReader(
+        #     data_dir=ofrecord_file_dir,
+        #     batch_size=batch_size,
+        #     shuffle=False,
+        #     mode="train",
+        # )
 
-        iter_num = 1000
+        iter_num = 10000
         for i in range(iter_num):
-            # print(f"## {i}")
-            labels, dense_fields, sparse_fields = parquet_reader()
-            labels_, dense_fields_, sparse_fields_ = ofrecord_reader()
+            results = parquet_reader()
 
-            test_case.assertTrue(np.allclose(labels.numpy(), labels_.numpy()))
-            test_case.assertTrue(
-                np.allclose(dense_fields.numpy(), dense_fields_.numpy())
-            )
-            test_case.assertTrue(
-                np.allclose(sparse_fields.numpy(), sparse_fields_.numpy())
-            )
+            if i == 1:
+                start = time.perf_counter()
 
+            if i == iter_num - 1:
+                datas = [r.numpy() for r in results]
+                end = time.perf_counter()
+                print(f"### escalped: {end -start}")
+
+    @unittest.skipIf(True, "")
     def test_fixed_length_columns_shuffle_determinism(test_case):
         _test_fixed_length_columns_shuffle_determinism(test_case, False)
         _test_fixed_length_columns_shuffle_determinism(test_case, True)
