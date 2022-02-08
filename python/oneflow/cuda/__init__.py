@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
+from oneflow.cuda.type_tensor import *
 
 def is_available() -> bool:
     r"""Returns a bool indicating if CUDA is currently available."""
