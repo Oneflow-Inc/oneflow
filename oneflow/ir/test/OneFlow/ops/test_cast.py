@@ -18,8 +18,8 @@ import os
 import unittest
 import numpy as np
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = '1'
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = '1'
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
 
 import oneflow.compatible.single_client as flow
 import oneflow.compatible.single_client.typing as oft
@@ -28,18 +28,18 @@ import typing
 
 func_config = flow.FunctionConfig()
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCastToTosa(flow.unittest.TestCase):
     def test_idempotent(test_case):
         @flow.global_function(function_config=func_config)
-        def CastJob(
-            x: oft.Numpy.Placeholder((20, 30))
-        ) -> oft.Numpy:
+        def CastJob(x: oft.Numpy.Placeholder((20, 30))) -> oft.Numpy:
             res = flow.cast(x, dtype=flow.int32)
             return res
 
         x = np.random.rand(20, 30).astype(np.float32) - 1
         res = CastJob(x)
+
 
 if __name__ == "__main__":
     unittest.main()
