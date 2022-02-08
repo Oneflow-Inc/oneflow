@@ -268,6 +268,7 @@ Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
                                .Output("out")
                                .Attr<int32_t>("unpack_num", grad_acc_step)
                                .ScopeSymbolId(input_conf.scope_symbol_id())
+                               .DeviceTag(input_conf.device_tag())
                                .Build();
 
     OpAttribute unpack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(unpack_op.op_conf()));
@@ -310,6 +311,7 @@ Maybe<Tensor> GradAccTryInsertRepeatAfterVar(
                                .Output("out")
                                .Attr<int32_t>("repeat_num", grad_acc_step)
                                .ScopeSymbolId(var_conf.scope_symbol_id())
+                               .DeviceTag(var_conf.device_tag())
                                .Build();
 
     OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
@@ -353,6 +355,7 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
                                     .Output("out")
                                     .Attr<int32_t>("pack_num", grad_acc_step)
                                     .ScopeSymbolId(JUST(scope->symbol_id()))
+                                    .DeviceTag(GetDeviceTagOfTensor(output_tensor))
                                     .Build();
 
     int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(output_pack_op.op_conf()));
@@ -393,6 +396,7 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(std::shared_ptr<OperatorConf>
     OperatorConf tick_conf{};
     tick_conf.set_name("System-GradientAccumulation-RepeatTick-DeviceTick-"
                        + source_op_conf->name());
+    tick_conf.set_device_tag(source_op_conf->device_tag());
     tick_conf.mutable_device_tick_conf()->set_out("out");
     tick_conf.set_scope_symbol_id(source_op_conf->scope_symbol_id());
     auto tick_lbn = GenLogicalBlobName(tick_conf.name(), tick_conf.device_tick_conf().out());
@@ -410,6 +414,7 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(std::shared_ptr<OperatorConf>
                                .Output("out")
                                .Attr<int32_t>("repeat_num", grad_acc_step)
                                .ScopeSymbolId(source_op_conf->scope_symbol_id())
+                               .DeviceTag(source_op_conf->device_tag())
                                .Build();
 
     OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
