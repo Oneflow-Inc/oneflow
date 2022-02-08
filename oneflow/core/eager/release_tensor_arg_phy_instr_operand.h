@@ -39,7 +39,7 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
       : eager_blob_object_(eager_blob_object), output_dependences_() {
     output_dependences_.push_back(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
     if (op_device.has_value()) {
-      output_dependences_.push_back(CHECK_JUST(op_device)->mut_schedule_local_dep_object());
+      stream_sequential_dependence_ = CHECK_JUST(op_device)->mut_schedule_local_dep_object();
     }
   }
   ~ReleaseTensorArgPhyInstrOperand() override = default;

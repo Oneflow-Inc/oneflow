@@ -65,7 +65,7 @@ jobs:
     steps:
       - name: Fix permissions
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+          docker run --rm -v $PWD:/p -w /p busybox rm -rf *
       - name: Install dependencies
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple

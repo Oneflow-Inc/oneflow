@@ -15,7 +15,7 @@ limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler
+from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 
 
 class OptDict(object):
@@ -39,9 +39,9 @@ class OptDict(object):
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
-            if not isinstance(opt_dict["lr_sch"], LrScheduler):
+            if not isinstance(opt_dict["lr_sch"], LRScheduler):
                 raise ValueError(
-                    'opt_dict["lr_sch"] is not an instance of LrScheduler.'
+                    'opt_dict["lr_sch"] is not an instance of LRScheduler.'
                 )
 
             if opt_dict["lr_sch"]._optimizer is not self._optimizer:
