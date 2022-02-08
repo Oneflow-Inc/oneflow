@@ -335,7 +335,8 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
   }
 }
 
-Maybe<void> GradAccTryInsertRepeatTickBeforeSource(std::shared_ptr<OperatorConf> source_op_conf) {
+Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
+    const std::shared_ptr<OperatorConf>& source_op_conf) {
   auto infer_ctx = JUST(GetCurInferCtx());
   int64_t grad_acc_step = GetGradAccStep(infer_ctx->job().job_conf());
   if (grad_acc_step > 1) {
