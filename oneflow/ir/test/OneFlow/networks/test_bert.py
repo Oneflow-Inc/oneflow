@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import os
-import sys
+import os, sys
 from collections import OrderedDict
 
 import numpy as np
@@ -197,7 +196,7 @@ def PretrainJob():
 
 
 func_config = flow.FunctionConfig()
-func_config.default_logical_view(flow.scope.global_view())
+func_config.default_logical_view(flow.scope.consistent_view())
 # func_config.enable_auto_mixed_precision(FLAGS.enable_auto_mixed_precision)
 
 
@@ -219,7 +218,7 @@ def GetSeveralLossesAsNumpy(enable_inplace, num_iters=10):
     flow.config.enable_debug_mode(True)
     flow.config.gpu_device_num(1)
     train_config = flow.FunctionConfig()
-    train_config.default_logical_view(flow.scope.global_view())
+    train_config.default_logical_view(flow.scope.consistent_view())
     train_config.enable_inplace(enable_inplace)
 
     @flow.global_function(type="train", function_config=train_config)
