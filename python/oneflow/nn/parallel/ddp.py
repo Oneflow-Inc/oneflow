@@ -50,6 +50,7 @@ def allreduce_fn(module, param):
             if all_params_in_bucket_ready:
                 for x in bucket:
                     ddp_state_for_reversed_params[x][1] = True
+                # NOTE(jianhao)(higher-order-grad): local allreduce doesn't have gradient function, higher-order grad may be unsupported
                 flow._C.local_all_reduce(bucket_tensors[index], inplace=True)
             else:
                 break
