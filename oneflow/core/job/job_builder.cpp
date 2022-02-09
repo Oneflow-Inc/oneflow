@@ -284,7 +284,7 @@ Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
   for (const auto& op_conf : op_confs) {
-    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second);
+    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second) << op_conf.name() << " is mut twice.";
     op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
   }
 }
