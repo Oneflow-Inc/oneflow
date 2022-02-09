@@ -103,11 +103,8 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
-          if (eager_blob_object->last_used_device().has_value()) {
-            const auto& device = JUST(eager_blob_object->producer_op_device());
-            auto* local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
-            JUST(PutLocalDepObjectToDevicePool(device, local_dep_object));
+          if (eager_blob_object->producer_op_device().has_value()) {
+            JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
           }
           return Maybe<void>::Ok();
         }));
@@ -119,7 +116,8 @@ Maybe<LocalDepObject*> EagerMirroredTensorImpl::compute_local_dep_object() const
   return JUST(eager_blob_object())->compute_local_dep_object();
 }
 
-Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_object) {
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
+    const intrusive::shared_ptr<LocalDepObject>& dep_object) {
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
@@ -170,6 +168,12 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
       std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
   detached_impl->eager_blob_object_ = eager_blob_object_;
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
+}
+
+Maybe<void> EagerMirroredTensorImpl::RegisterStorageDeleteHook(const std::function<void()>& hook) {
+  CHECK_OR_RETURN(eager_blob_object_) << "EagerBlobObject has not initialized";
+  eager_blob_object_->RegisterStorageDeleteHook(hook);
+  return Maybe<void>::Ok();
 }
 
 MirroredTensorMeta::MirroredTensorMeta()
@@ -260,12 +264,15 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
   std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
-  if (parallel_id.has_value()) {
+  // If the `'parallel_desc` doesn't cover current ProcessCtx or the tensor has 0-size shape, there
+  // is no need to compute through the corresponding opkernel, and can be obtained directly through
+  // empty op.
+  if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
         std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
     auto cur_rank_phy_tensor_impl =
         std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
-    const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
+    const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
     cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   } else {

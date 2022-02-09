@@ -258,7 +258,7 @@ class TestNormModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_no_dim_no_ord_norm_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         keepdim = random_bool()
         m = torch.linalg.norm(input, keepdim=keepdim)
         return m
@@ -266,7 +266,7 @@ class TestNormModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_one_dim_norm_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=4).to(device)
+        input = random_tensor(ndim=4).to(device)
         dim = random(low=0, high=4).to(int)
         k = random().to(float)
         ord = oneof(float("inf"), float("-inf"), k, None)
@@ -277,7 +277,7 @@ class TestNormModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_no_dim_one_shape_norm_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=1).to(device)
+        input = random_tensor(ndim=1).to(device)
         k = random().to(float)
         ord = oneof(float("inf"), float("-inf"), k)
         keepdim = random_bool()
@@ -287,7 +287,7 @@ class TestNormModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_no_dim_two_shape_norm_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2).to(device)
+        input = random_tensor(ndim=2).to(device)
         ord = oneof(float("inf"), float("-inf"), "fro", 1, -1)
         keepdim = random().to(bool)
         m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
@@ -296,7 +296,7 @@ class TestNormModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_tuple_dim_norm_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2).to(device)
+        input = random_tensor(ndim=2).to(device)
         k = random(low=-2, high=1).to(int)
         dim = oneof((-2, -1), (0, 1), (-1, 0))
         ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, None)

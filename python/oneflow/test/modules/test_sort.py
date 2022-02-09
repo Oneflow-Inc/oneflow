@@ -77,10 +77,16 @@ class TestSort(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_sort_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4).to(device)
+        x = random_tensor(ndim=4).to(device)
+        y = torch.sort(x, dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return y[0], y[1]
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_sort_bool_with_random_data(test_case):
+        x = random_tensor(ndim=4).to(device="cpu", dtype=torch.bool)
         y = torch.sort(x, dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y[0], y[1]
 

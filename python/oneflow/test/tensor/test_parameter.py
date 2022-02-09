@@ -25,14 +25,14 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestParameter(flow.unittest.TestCase):
-    @autotest(n=1, check_graph=False)
+    @autotest(n=1, check_graph=True)
     def test_parameter_grad_fn_none(test_case):
         x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
         z = torch.nn.Parameter(y)
         return z.grad_fn
 
-    @autotest(n=1, check_graph=False)
+    @autotest(n=1, check_graph=True)
     def test_parameter_set_data_autograd_meta(test_case):
         x = torch.ones(2, 3).requires_grad_(True)
         y = x + x
@@ -40,7 +40,11 @@ class TestParameter(flow.unittest.TestCase):
         z.data = y
         return z.grad_fn, z.is_leaf
 
-    @autotest(n=1, check_graph=False)
+    # Not check graph because of 2 reason.
+    # Reason 1, x.data return a new tensor but share storage with the origin tensor, this is not well dealed in nn.Graph.
+    # Reason 2, inplace operation mul_ can works well inside nn.Graph but will not change the value in free eager tensor.
+    # Please refer to test case: test_graph_return_inplace_free_eager_tensor
+    @autotest(n=1, check_graph="ValidatedFlase")
     def test_parameter_inplace_modify_data(test_case):
         x = torch.nn.Parameter(torch.ones(2, 3))
         x.data.mul_(2)
