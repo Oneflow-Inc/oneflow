@@ -139,27 +139,24 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  if (!(input->is_eager() && input->is_local())) {
-    return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-                                 << (input->is_lazy() ? "lazy" : "consistent");
-  }
+  CHECK_OR_RETURN(input->is_eager() && input->is_local())
+      << "view::Slice(): input should be eager local tensor, but is "
+      << (input->is_lazy() ? "lazy" : "consistent");
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = starts.size();
-  if (ndim != shape->NumAxes()) {
-    return Error::RuntimeError() << "view::Slice(): starts size is expected " << shape->NumAxes()
-                                 << ", but got " << ndim;
-  }
-  if (ends.size() != ndim || steps.size() != ndim) {
-    return Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
-                                 << " size is not equal to start.";
-  }
+  CHECK_OR_RETURN(ndim == shape->NumAxes())
+      << "view::Slice(): starts size is expected " << shape->NumAxes() << ", but got " << ndim;
+
+  CHECK_OR_RETURN(ends.size() == ndim && steps.size() == ndim)
+      << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
+      << " size is not equal to start.";
   DimVector target_dims(ndim);
   StrideVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   for (int i = 0; i < ndim; ++i) {
     int64_t step = std::min(steps.at(i), shape->At(i));
-    if (step < 0) { return Error::RuntimeError() << "Step must be greater than zero."; }
+    CHECK_OR_RETURN(step >= 0) << "Step must be greater than zero.";
     int64_t start = std::min(starts.at(i), shape->At(i));
     int64_t end = std::min(ends.at(i), shape->At(i));
     if (start < 0) { start += shape->At(i); }
