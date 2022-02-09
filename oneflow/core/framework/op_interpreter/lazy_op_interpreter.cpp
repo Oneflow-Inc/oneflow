@@ -502,7 +502,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   LOG(ERROR) << "Add SourceUserOpExpr: " << op_expr.op_name();
-  if (op_expr.op_name() == "uniform_int3") {
+  if (op_expr.op_name() == "uniform_int9") {
     LOG(ERROR) << "set_stream_name_hint: " << op_expr.op_name();
     op_conf->set_stream_name_hint("UNIFORM_INT");
   }

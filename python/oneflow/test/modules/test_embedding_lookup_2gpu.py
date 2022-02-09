@@ -20,9 +20,14 @@ import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
 import os
+import shutil
 
 placement = flow.placement("cuda", {0: [0, 1]})
 batch_size = 65536
+shutil.rmtree("test/")
+os.mkdir("test")
+os.mkdir("test/0-2")
+os.mkdir("test/1-2")
 
 
 class SyntheticDataLoader(nn.Module):
@@ -47,9 +52,9 @@ class SyntheticDataLoader(nn.Module):
             sbp=flow.sbp.broadcast,
             dtype=flow.int32,
         )
-        #split_ids = ids.to_consistent(placement, flow.sbp.split(0))
-        #split_slots = slots.to_consistent(placement, flow.sbp.split(0))
-        return ids, slots
+        split_ids = ids.to_consistent(placement, flow.sbp.split(0))
+        split_slots = slots.to_consistent(placement, flow.sbp.split(0))
+        return split_ids, split_slots
 
 
 class MatMul(flow.nn.Module):
@@ -160,4 +165,4 @@ class TrainGraph(flow.nn.Graph):
 graph = TrainGraph()
 for i in range(20):
     loss = graph()
-print(loss)
+    print(loss)
