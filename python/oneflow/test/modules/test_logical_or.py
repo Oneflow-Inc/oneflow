@@ -85,7 +85,7 @@ class TestLogicalOrModule(flow.unittest.TestCase):
         y = torch.logical_or(x1, x2)
         return y
 
-    @autotest(n=10, auto_backward=False, check_graph=False)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_logical_or_bool_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape

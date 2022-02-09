@@ -635,8 +635,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
         << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
         << " has different device type in module/op_name: " << new_op_name
         << ". Please use tensor.to() or tensor.to_consistent() to make all input with same device.";
-    CHECK_OR_RETURN(
-        parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
+    CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);
@@ -732,7 +731,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
 
   std::shared_ptr<Tensor> input_proxy;
   if (!JUST(GetParallelDescOfTensor(input_tensor))
-           ->EqualsIgnoringHierarchy(*parallel_desc_sym.shared_from_symbol())) {
+           ->Equals(*parallel_desc_sym.shared_from_symbol())) {
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
     input_proxy =
