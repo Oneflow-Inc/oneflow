@@ -774,21 +774,14 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
     if self.is_consistent:
-<<<<<<< HEAD
-        if not isinstance(other, (Tensor)):
-=======
         if not isinstance(other, Tensor):
->>>>>>> b9d9c2bebbd8dbfc9a26a612a82bc138d8b6b1b0
             assert isinstance(other, np.ndarray)
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
             )
-<<<<<<< HEAD
-=======
         else:
             assert other.is_consistent
             other = other.to_consistent(placement=self.placement, sbp=self.sbp)
->>>>>>> b9d9c2bebbd8dbfc9a26a612a82bc138d8b6b1b0
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if not isinstance(other, (Tensor)):
