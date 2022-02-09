@@ -207,7 +207,7 @@ int GetNumBlocks(const int num_instances) {
 
 void GenerateTrilIndices(ep::Stream* stream, const int32_t concat_dim, const int32_t pad_dim,
                          int32_t* tril_indices) {
-  GenerateTrilIndicesGpu<<<1, (32, 32), 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  GenerateTrilIndicesGpu<<<1, dim3(32, 32), 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
       concat_dim, pad_dim, tril_indices);
 }
 
