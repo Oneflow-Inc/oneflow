@@ -130,29 +130,52 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.double()
         return y
 
-    #TODO
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # Not check graph because of 2 reason.
+    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    @autotest(
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    )
     def test_item(test_case):
         device = random_device()
         x = random_tensor(ndim=1, dim0=1, dtype=int).to(device)
         y = torch.tensor(x.item())
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # Not check graph because of 2 reason.
+    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    @autotest(
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    )
     def test_item_0dim(test_case):
         device = random_device()
         x = random_tensor(ndim=0, dtype=int).to(device)
         y = torch.tensor(x.item())
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # Not check graph because of 2 reason.
+    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    @autotest(
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    )
     def test_tolist(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = torch.tensor(x.tolist())
         return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # Not check graph because of 2 reason.
+    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    @autotest(
+        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    )
     def test_tolist_0dim(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)

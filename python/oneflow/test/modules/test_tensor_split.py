@@ -18,6 +18,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestTorchSplitVec(flow.unittest.TestCase):
     @autotest(check_graph=True)
@@ -33,6 +34,7 @@ class TestTorchSplitVec(flow.unittest.TestCase):
         dim = random(-3, 3).to(int)
         z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestTorchSplitInt(flow.unittest.TestCase):

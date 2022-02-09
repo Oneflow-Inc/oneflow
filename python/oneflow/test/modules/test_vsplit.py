@@ -18,6 +18,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestVsplitVec(flow.unittest.TestCase):
     @autotest(check_graph=True)
@@ -32,6 +33,7 @@ class TestVsplitVec(flow.unittest.TestCase):
         ).to(device)
         z = torch.vsplit(x, (1, 2))
         return z[0]
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestVsplitInt(flow.unittest.TestCase):
