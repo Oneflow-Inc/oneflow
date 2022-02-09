@@ -26,6 +26,8 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
+# Check failed in hierarchical_parallel_cast_op if open check_graph:
+# (conf.size()) == (parallel_hierarchy.NumAxes()) (2 vs 1)
 @autotest(n=3, check_graph=False)
 def _test_flow_split_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8

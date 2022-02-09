@@ -26,7 +26,9 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False, rtol=0.5, atol=0.5)
+# raise pytorch error if open auto_backward: PyTorch error:
+# element 0 of tensors does not require grad and does not have a grad_fn
+@autotest(n=1, auto_backward=True, check_graph=False, rtol=0.5, atol=0.5)
 def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=4, dim0=8, dim1=32, dim2=40, dim3=64, requires_grad=False
