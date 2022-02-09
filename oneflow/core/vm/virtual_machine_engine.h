@@ -119,8 +119,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   void NotifyCallback();
   bool ThreadUnsafeEmpty() const;
   bool Empty() const;
-  std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
   bool CallbackEmpty() const;
+  std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
   Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
   MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
   const MirroredObject* GetMirroredObject(int64_t logical_object_id, int64_t global_device_id);
