@@ -117,6 +117,8 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   return std::make_shared<ChainSubTskGphBuilder>(builders);
 }
 
+}  // namespace
+
 bool NdSbpAllSameSplitParallel(const cfg::NdSbp& nd_sbp) {
   CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
   const cfg::SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
@@ -126,8 +128,6 @@ bool NdSbpAllSameSplitParallel(const cfg::NdSbp& nd_sbp) {
   }
   return true;
 }
-
-}  // namespace
 
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const cfg::NdSbp& in_nd_sbp,

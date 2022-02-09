@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(check_graph=False)
 def _test_consistent_flow_tile_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
+    x = random_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
     reps = (
         random(1, 5).to(int) * 8,
         random(1, 5).to(int) * 8,
@@ -35,7 +35,7 @@ def _test_consistent_flow_tile_with_random_data(test_case, placement, sbp):
 
 @autotest(check_graph=False)
 def _test_consistent_flow_tensor_tile_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
+    x = random_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
     reps = (
         random(1, 5).to(int) * 8,
         random(1, 5).to(int) * 8,

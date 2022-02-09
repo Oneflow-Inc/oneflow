@@ -133,7 +133,7 @@ using VisitResult = typename VisitResultS<R, F, Ts...>::type;
 
 // preconditions: template type arguments must be no less than 2 different type
 // and without reference and cv qualifiers
-// this Variant DO NOT guarantee exception safty
+// this Variant DO NOT guarantee exception safety
 template<typename... Ts>
 struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
  public:
@@ -147,7 +147,7 @@ struct Variant {  // NOLINT(cppcoreguidelines-pro-type-member-init)
   static constexpr std::size_t Num = sizeof...(Ts);
 
   template<typename T>
-  static constexpr auto IndexOfType = IndexGet<T, Ts...>;
+  static constexpr std::size_t IndexOfType = IndexGet<T, Ts...>;
 
   template<typename T>
   static constexpr bool HasType = TypeIn<T, Ts...>;

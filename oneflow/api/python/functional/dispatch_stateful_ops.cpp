@@ -322,6 +322,44 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
+      "DispatchOneRecReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::vector<std::string>& files,
+         const int64_t batch_size, const bool random_shuffle, const std::string& shuffle_mode,
+         const int32_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
+         const bool verify_example, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
+        JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
+        JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
+        JUST(attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode));
+        JUST(attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size));
+        JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
+        JUST(attrs.SetAttr<int64_t>("seed", random_seed));
+        JUST(attrs.SetAttr<bool>("verify_example", verify_example));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
+      });
+  m.add_functor(
+      "DispatchOneRecReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::vector<std::string>& files,
+         const int64_t batch_size, const bool random_shuffle, const std::string& shuffle_mode,
+         const int32_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
+         const bool verify_example, const Symbol<ParallelDesc>& placement,
+         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
+        JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
+        JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
+        JUST(attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode));
+        JUST(attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size));
+        JUST(attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch));
+        JUST(attrs.SetAttr<int64_t>("seed", random_seed));
+        JUST(attrs.SetAttr<bool>("verify_example", verify_example));
+        JUST(attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple))));
+        auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {},
+                                              OpExprInterpContext(attrs, placement, nd_sbp));
+      });
+  m.add_functor(
       "DispatchMegatronGptMmapDataLoader",
       [](const std::shared_ptr<OpExpr>& op, const std::string& data_file_prefix, int64_t seq_length,
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
@@ -442,6 +480,26 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();
       });
+  m.add_functor("DispatchLambUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, float bias_correction1, float bias_correction2,
+                   double scale, float l1, float l2, float beta1, float beta2, float epsilon,
+                   float weight_decay, bool do_bias_correction) -> Maybe<void> {
+                  MutableAttrMap attrs;
+                  JUST(attrs.SetAttr("learning_rate_val", learning_rate));
+                  JUST(attrs.SetAttr("bias_correction1_val", bias_correction1));
+                  JUST(attrs.SetAttr("bias_correction2_val", bias_correction2));
+                  JUST(attrs.SetAttr("scale", scale));
+                  JUST(attrs.SetAttr("l1", l1));
+                  JUST(attrs.SetAttr("l2", l2));
+                  JUST(attrs.SetAttr("beta1", beta1));
+                  JUST(attrs.SetAttr("beta2", beta2));
+                  JUST(attrs.SetAttr("epsilon", epsilon));
+                  JUST(attrs.SetAttr("weight_decay", weight_decay));
+                  JUST(attrs.SetAttr("do_bias_correction", do_bias_correction));
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
+                });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {

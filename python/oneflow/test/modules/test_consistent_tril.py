@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @autotest(n=3, check_graph=False)
 def _test_consistent_tril_without_diag(test_case, placement, sbp):
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4,
         dim0=random(1, 5).to(int) * 8,
         dim1=random(1, 5).to(int) * 8,
