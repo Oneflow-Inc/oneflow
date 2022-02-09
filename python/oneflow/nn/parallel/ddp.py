@@ -22,7 +22,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 def grad_setting_fn(module, param):
     def grad_setting(grad):
         if param.grad is None:
-            start = module._param_grad_start[param]
+            start = module._param_grad_offset_in_bucket[param]
             bucket_index = module._bucket_index[param]
             bucket_tensor = module._bucket_tensors[bucket_index]
             param.grad = bucket_tensor[start : start + param.numel()].view(param.shape)
@@ -50,7 +50,8 @@ def allreduce_fn(module, param):
             if all_params_in_bucket_ready:
                 for x in bucket:
                     ddp_state_for_reversed_params[x][1] = True
-                # NOTE(jianhao)(higher-order-grad): local allreduce doesn't have gradient function, higher-order grad may be unsupported
+                # NOTE(jianhao)(higher-order-grad): 
+                # local allreduce doesn't have gradient function, higher-order grad may be unsupported
                 flow._C.local_all_reduce(bucket_tensors[index], inplace=True)
             else:
                 break
@@ -77,15 +78,15 @@ def DistributedDataParallel(
         device = list(module.parameters())[0].device
         assert all(x.device == device for x in module.parameters())
     reversed_param_list = list(reversed(list(module.parameters())))
-    module._param_grad_start = {}
-    bytes = 0
+    module._param_grad_offset_in_bucket = {}
+    offset_in_bucket = 0
     with flow.no_grad():
-        for i, x in enumerate(reversed_param_list):
-            assert x.is_leaf
+        for i, param in enumerate(reversed_param_list):
+            assert param.is_leaf
             if i % bucket_size == 0:
-                bytes = 0
-            module._param_grad_start[x] = bytes
-            bytes += x.numel()
+                offset_in_bucket = 0
+            module._param_grad_offset_in_bucket[param] = offset_in_bucket
+            offset_in_bucket += param.numel()
 
     module._bucket_index = {x: i // bucket_size for i, x in enumerate(reversed_param_list)}
     module._buckets = [reversed_param_list[i : i + bucket_size] for i in range(0, len(reversed_param_list), bucket_size)]
