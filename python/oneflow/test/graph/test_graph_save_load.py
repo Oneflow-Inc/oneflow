@@ -77,7 +77,7 @@ def _test_linear_graph_save_load(test_case, device):
         if call_cnt == 1:
             # Check additional variable state initialized in job has been loaded.
             cur_train_step = iter0_state_dict["System-Train-TrainStep"].numpy()[0]
-            test_case.assertTrue(3 == cur_train_step)
+            test_case.assertEqual(3, cur_train_step)
             test_case.assertTrue(
                 cur_train_step == last_state_dict["System-Train-TrainStep"].numpy()[0]
             )
@@ -116,7 +116,7 @@ def _test_linear_graph_save_load(test_case, device):
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory() as state_dict_dir:
+    with tempfile.TemporaryDirectory(prefix="graph_save_load_local") as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
@@ -211,7 +211,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
                 .to_local()
                 .numpy()[0]
             )
-            test_case.assertTrue(3 == cur_train_step)
+            test_case.assertEqual(3, cur_train_step)
             test_case.assertTrue(
                 cur_train_step
                 == last_state_dict["System-Train-TrainStep"]
@@ -254,7 +254,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory() as state_dict_dir:
+    with tempfile.TemporaryDirectory(prefix="graph_save_load_consistent") as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
