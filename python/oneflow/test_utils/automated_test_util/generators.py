@@ -339,6 +339,8 @@ class random_pytorch_tensor(generator):
         if ndim == 0:
             shape = []
         if ndim >= 1 and dim0 is not None:
+            shape[0] = dim0
+        if ndim >= 2:
             shape[1] = dim1
         if ndim >= 3:
             shape[2] = dim2
