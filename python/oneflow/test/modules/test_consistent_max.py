@@ -18,11 +18,10 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(check_graph=False)
 def _test_max(test_case, placement, sbp):
     keepdim = random().to(bool)
     dim = random(0, 4).to(int)
