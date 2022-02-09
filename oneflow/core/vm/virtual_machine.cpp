@@ -153,11 +153,11 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
 }  // namespace
 
 void VirtualMachine::ControlSync() {
-  BlockingCounter bc(1);
+  auto bc = std::make_shared<BlockingCounter>(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
+  MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
-  CHECK_JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -212,17 +212,17 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
-    const int64_t kLowWaterMark = GetInstructionLowWaterMark();
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
       JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
-        BlockingCounter bc(1);
-        vm_->InsertProbe([&](vm::VirtualMachineEngine* vm) {
+        auto bc = std::make_shared<BlockingCounter>(1);
+        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
+          const int64_t kLowWaterMark = GetInstructionLowWaterMark();
           if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
-          bc.Decrease();
+          bc->Decrease();
           return true;
         });
         pending_notifier_.Notify();
-        JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+        JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
         return Maybe<void>::Ok();
       }));
     }
