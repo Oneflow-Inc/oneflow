@@ -124,7 +124,7 @@ class TestLess(flow.unittest.TestCase):
         y2 = x1 < x2
         return (y1, y2)
 
-    @autotest(n=60, auto_backward=False, check_graph=False)
+    @autotest(n=60, auto_backward=False, check_graph=True)
     def test_less_bool_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape

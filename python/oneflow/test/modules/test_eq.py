@@ -68,7 +68,7 @@ class TestEq(flow.unittest.TestCase):
         x = random_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.eq(x, x)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_eq_bool_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
