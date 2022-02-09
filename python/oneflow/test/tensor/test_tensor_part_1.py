@@ -186,7 +186,7 @@ class TestTensor(flow.unittest.TestCase):
                 sbp=flow.sbp.broadcast,
                 placement=flow.placement("cuda", {0: range(2)})
             ),
-            lambda x: x.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
         )
 
     @flow.unittest.skip_unless_1n1d()
@@ -237,7 +237,7 @@ class TestTensor(flow.unittest.TestCase):
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
         ):
-            x.consistent_id()
+            x.global_id()
 
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
