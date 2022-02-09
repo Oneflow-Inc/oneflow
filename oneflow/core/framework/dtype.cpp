@@ -32,9 +32,8 @@ std::size_t GetDataTypeBytes() {
 }
 
 #define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
-DEFINE_STATIC_SWITCH_FUNC(
-    std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
-    MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ));
+DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
 
 class DTypeMeta final {
  public:
@@ -220,7 +219,7 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
       /* f2 */   {f2,  f2,  f4,  f8,  f2,  f2,  f2,  f2,  iv,  f2,  iv,  bf,  f2,  f2,  f2,  f2,  iv,   f2,  f2,   iv,   cp4,  cp16},
       /* bu */   {iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  iv,  bu,  iv,  iv,  iv,  iv,  iv,  iv,   iv,  iv,   iv,   iv,   iv},
       /* bf */   {bf,  bf,  bf,  bf,  bf,  bf,  bf,  bf,  iv,  bf,  iv,  bf,  bf,  bf,  bf,  bf,  iv,   bf,  bf,   iv,   cp4,  cp16},
-      /* b1 */   {c1,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
+      /* b1 */   {b1,  c1,  f4,  f8,  i1,  i4,  i8,  u1,  iv,  f2,  iv,  bf,  b1,  u2,  u4,  u8,  u16,  i2,  i16,  iv,   cp4,  cp16},
       /* u2 */   {u2,  u2,  f4,  f8,  i4,  i4,  i8,  u2,  iv,  f2,  iv,  bf,  u2,  u2,  u4,  u8,  u16,  i4,  i16,  iv,   cp4,  cp16},
       /* u4 */   {u4,  u4,  f4,  f8,  i8,  i8,  i8,  u4,  iv,  f2,  iv,  bf,  u4,  u4,  u4,  u8,  u16,  i8,  i16,  iv,   cp4,  cp16},
       /* u8 */   {u8,  u8,  f4,  f8,  i16, i16, i16, u8,  iv,  f2,  iv,  bf,  u8,  u8,  u8,  u8,  u16,  i16, i16,  iv,   cp4,  cp16},

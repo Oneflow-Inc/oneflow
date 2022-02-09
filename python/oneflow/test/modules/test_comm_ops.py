@@ -31,16 +31,9 @@ class TestAllReduce(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_all_reduce_1n2d(test_case):
         np_arr = np.array([[1, 2], [3, 4]])
-        of_tensor = flow.tensor(np_arr, device="cuda")
-        flow.comm.all_reduce(of_tensor)
-
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("gloo")
-        torch_tensor = torch.tensor(np_arr)
-        dist.all_reduce(torch_tensor)
-
-        test_case.assertTrue(np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy()))
-        dist.destroy_process_group()
+        tensor = flow.tensor(np_arr, device="cuda")
+        flow.comm.all_reduce(tensor)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr * 2))
 
     @flow.unittest.skip_unless_2n2d()
     def test_all_reduce_2n2d(test_case):
@@ -59,24 +52,15 @@ class TestAllGather(flow.unittest.TestCase):
             np_arr = np.array([[2, 3], [4, 5]])
         elif flow.env.get_rank() == 1:
             np_arr = np.array([[1, 2], [3, 4]])
-        of_input = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
-        of_tensor_list = [flow.zeros(np_arr.shape, dtype=flow.int32) for _ in range(2)]
-        flow.comm.all_gather(of_tensor_list, of_input)
-
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("gloo")
-        torch_tensor_list = [
-            torch.zeros(np_arr.shape, dtype=torch.int32) for _ in range(2)
-        ]
-        torch_input = torch.tensor(np_arr, dtype=torch.int32)
-        dist.all_gather(torch_tensor_list, torch_input)
+        input = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        tensor_list = [flow.zeros(np_arr.shape, dtype=flow.int32) for _ in range(2)]
+        flow.comm.all_gather(tensor_list, input)
         test_case.assertTrue(
-            np.allclose(of_tensor_list[0].numpy(), torch_tensor_list[0].cpu().numpy())
+            np.allclose(tensor_list[0].numpy(), np.array([[2, 3], [4, 5]]))
         )
         test_case.assertTrue(
-            np.allclose(of_tensor_list[1].numpy(), torch_tensor_list[1].cpu().numpy())
+            np.allclose(tensor_list[1].numpy(), np.array([[1, 2], [3, 4]]))
         )
-        dist.destroy_process_group()
 
 
 @unittest.skip("comm test case has bug")
@@ -88,22 +72,13 @@ class TestBroadCast(flow.unittest.TestCase):
             np_arr = np.array([[1, 2], [3, 4]])
         elif flow.env.get_rank() == 1:
             np_arr = np.array([[4, 5], [6, 7]])
-        of_tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
-        flow.comm.broadcast(of_tensor, 1)
+        tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        flow.comm.broadcast(tensor, 1)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]])))
 
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("gloo")
-
-        torch_tensor = torch.tensor(np_arr, dtype=torch.int32)
-        dist.broadcast(torch_tensor, 1)
-        test_case.assertTrue(np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy()))
-
-        of_tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
-        flow.comm.broadcast(of_tensor, 0)
-        torch_tensor = torch.tensor(np_arr, dtype=torch.int32)
-        dist.broadcast(torch_tensor, 0)
-        test_case.assertTrue(np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy()))
-        dist.destroy_process_group()
+        tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        flow.comm.broadcast(tensor, 0)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))
 
 
 @unittest.skip("comm test case has bug")
@@ -111,25 +86,22 @@ class TestBroadCast(flow.unittest.TestCase):
 class TestScatter(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_scatter_1n4d(test_case):
-        of_output = flow.tensor([[1, 2], [3, 4]], device="cuda")
-        torch_output = torch.tensor([[1, 2], [3, 4]])
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("gloo")
+        output = flow.tensor([[1, 2], [3, 4]], device="cuda")
         if flow.env.get_rank() == 1:
-            of_tensor_list = [
+            tensor_list = [
                 flow.tensor([[5, 6], [7, 8]], device="cuda") + i for i in range(4)
             ]
-            flow.comm.scatter(of_output, of_tensor_list, src=1)
-
-            torch_tensor_list = [torch.tensor(x.numpy()) for x in of_tensor_list]
-            dist.scatter(torch_output, torch_tensor_list, src=1)
-            test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.numpy()))
+            flow.comm.scatter(output, tensor_list, src=1)
+            test_case.assertTrue(
+                np.allclose(output.numpy(), np.array([[6, 7], [8, 9]]))
+            )
         else:
-            flow.comm.scatter(of_output, src=1)
-
-            dist.scatter(torch_output, src=1)
-            test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.numpy()))
-        dist.destroy_process_group()
+            flow.comm.scatter(output, src=1)
+            test_case.assertTrue(
+                np.allclose(
+                    output.numpy(), np.array([[5, 6], [7, 8]]) + flow.env.get_rank()
+                )
+            )
 
 
 @unittest.skip("comm test case has bug")
@@ -138,34 +110,21 @@ class TestGather(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_gather_1n4d(test_case):
         np_arr = np.array([[1, 2], [3, 4]])
-        of_input = flow.tensor(
-            np_arr + flow.env.get_rank(), dtype=flow.int32, device="cuda"
-        )
-
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("gloo")
-        torch_input = torch.tensor(np_arr + dist.get_rank(), dtype=torch.int32)
-
         if flow.env.get_rank() == 1:
-            of_tensor_list = [
-                flow.zeros(np_arr.shape, dtype=flow.int32, device="cuda")
-                for _ in range(4)
-            ]
-            flow.comm.gather(of_input, gather_list=of_tensor_list, dst=1)
-
-            torch_tensor_list = [
-                torch.zeros(np_arr.shape, dtype=torch.int32) for _ in range(4)
-            ]
-            dist.gather(torch_input, gather_list=torch_tensor_list, dst=1)
+            input = flow.tensor(
+                np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32
+            )
+            tensor_list = [flow.zeros(np_arr.shape, dtype=flow.int32) for _ in range(4)]
+            flow.comm.gather(input, gather_list=tensor_list, dst=1)
             for i in range(4):
                 test_case.assertTrue(
-                    np.allclose(of_tensor_list[i].numpy(), torch_tensor_list[i].numpy())
+                    np.allclose(tensor_list[i].numpy(), np.array([[1, 2], [3, 4]]) + i)
                 )
         else:
-            flow.comm.gather(of_input, dst=1)
-            dist.gather(torch_input, dst=1)
-
-        dist.destroy_process_group()
+            input = flow.tensor(
+                np_arr + flow.env.get_rank(), device="cuda", dtype=flow.int32
+            )
+            flow.comm.gather(input, dst=1)
 
 
 @unittest.skip("comm test case has bug")
@@ -177,24 +136,16 @@ class TestReduce(flow.unittest.TestCase):
             np_arr = np.array([[1, 2], [3, 4]])
         elif flow.env.get_rank() == 1:
             np_arr = np.array([[4, 5], [6, 7]])
-        of_tensor = flow.tensor(np_arr, device="cpu", dtype=flow.int32)
-        flow.comm.reduce(of_tensor, 0)
-
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("nccl")
-        torch.cuda.set_device(dist.get_rank())
-        torch_tensor = torch.tensor(np_arr, dtype=torch.int32, device="cuda")
-        dist.reduce(torch_tensor, 0)
-
+        tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        flow.comm.reduce(tensor, 0)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
-                np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy())
+                np.allclose(tensor.numpy(), np.array([[5, 7], [9, 11]]))
             )
         else:
             test_case.assertTrue(
-                np.allclose(of_tensor.numpy(), torch_tensor.cpu().numpy())
+                np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]]))
             )
-        dist.destroy_process_group()
 
 
 @unittest.skip("comm test case has bug")
@@ -202,33 +153,19 @@ class TestReduce(flow.unittest.TestCase):
 class TestAllToAll(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_all_to_all_1n4d(test_case):
-        of_input_list = [
-            flow.tensor([0, 1], device="cpu") + i * 2 + flow.env.get_rank() * 8
+        input_list = [
+            flow.tensor([0, 1], device="cuda") + i * 2 + flow.env.get_rank() * 8
             for i in range(4)
         ]
-        of_output_list = [flow.tensor([0, 1], device="cpu") for _ in range(4)]
-        flow.comm.all_to_all(of_output_list, of_input_list)
-
-        # only nccl support
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("nccl")
-        torch_input_list = [
-            torch.tensor(x.numpy()).to("cuda:{}".format(dist.get_rank()))
-            for x in of_input_list
-        ]
-        torch_output_list = [
-            torch.tensor(x.numpy()).to("cuda:{}".format(dist.get_rank()))
-            for x in of_output_list
-        ]
-        dist.all_to_all(torch_output_list, torch_input_list)
-
-        for i in range(len(of_output_list)):
+        output_list = [flow.tensor([0, 1], device="cuda") for _ in range(4)]
+        flow.comm.all_to_all(output_list, input_list)
+        for i in range(len(output_list)):
             test_case.assertTrue(
                 np.allclose(
-                    of_output_list[i].numpy(), torch_output_list[i].cpu().numpy(),
+                    output_list[i].numpy(),
+                    input_list[i].numpy() + (i - flow.env.get_rank()) * 6,
                 )
             )
-        dist.destroy_process_group()
 
 
 @unittest.skip("comm test case has bug")
@@ -236,26 +173,15 @@ class TestAllToAll(flow.unittest.TestCase):
 class TestReduceScatter(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_reduce_scatter_1n4d(test_case):
-        of_output = flow.tensor([[0, 0], [0, 0]], device="cpu")
-        of_tensor_list = [
-            flow.tensor([[1, 2], [3, 4]], device="cpu") + flow.env.get_rank() + i
+        output = flow.tensor([[0, 0], [0, 0]], device="cuda")
+        tensor_list = [
+            flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_rank() + i
             for i in range(4)
         ]
-        flow.comm.reduce_scatter(of_output, of_tensor_list)
-
-        if not torch.distributed.is_initialized():
-            dist.init_process_group("nccl")
-        torch_output = torch.tensor([[0, 0], [0, 0]]).to(
-            "cuda:{}".format(dist.get_rank())
+        flow.comm.reduce_scatter(output, tensor_list)
+        test_case.assertTrue(
+            np.allclose(output.numpy(), tensor_list[0].numpy() * 4 + 6)
         )
-        torch_tensor_list = [
-            torch.tensor(x.numpy()).to("cuda:{}".format(dist.get_rank()))
-            for x in of_tensor_list
-        ]
-        dist.reduce_scatter(torch_output, torch_tensor_list)
-
-        test_case.assertTrue(np.allclose(of_output.numpy(), torch_output.cpu().numpy()))
-        dist.destroy_process_group()
 
 
 @unittest.skip("comm test case has bug")

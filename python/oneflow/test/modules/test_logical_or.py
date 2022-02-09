@@ -79,9 +79,22 @@ class TestLogicalOrModule(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=False, check_graph=True)
     def test_logical_or_with_random_data(test_case):
         device = random_device()
-        shape = random_tensor().value().shape
-        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        shape = random_tensor().oneflow.shape
+        x1 = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.logical_or(x1, x2)
+        return y
+
+    @autotest(n=10, auto_backward=False, check_graph=True)
+    def test_logical_or_bool_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x1 = random_tensor(len(shape), *shape, requires_grad=False).to(
+            device=device, dtype=torch.bool
+        )
+        x2 = random_tensor(len(shape), *shape, requires_grad=False).to(
+            device=device, dtype=torch.bool
+        )
         y = torch.logical_or(x1, x2)
         return y
 

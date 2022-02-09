@@ -589,6 +589,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     return nullptr;
   };
   JUST(op->FillLogicalInBlobDesc(GetBlobDesc4BnInOp));
+  JUST(op->InferParallelSignatureIf());
 
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
@@ -618,7 +619,6 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return &iter->second;
   };
-  JUST(op->InferParallelSignatureIf());
   for (const auto& bn : op->output_bns()) {
     lbi2parallel_desc_from_producer_view_.emplace(op->BnInOp2Lbi(bn),
                                                   *JUST(op->GetParallelDesc4BnInOp(bn)));
@@ -1375,7 +1375,7 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
   return op_name;

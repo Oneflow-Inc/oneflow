@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace py = pybind11;
 
@@ -40,9 +41,11 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
-    py::gil_scoped_acquire acquire;
-    if (obj) { Py_DECREF(obj); }
-    obj = NULL;
+    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      if (obj) { Py_DECREF(obj); }
+      obj = NULL;
+      return Maybe<void>::Ok();
+    }));
   }
 };
 
@@ -106,7 +109,9 @@ inline Maybe<std::vector<T>> PyUnpackFloatSequence(PyObject* obj) {
 bool PyStringCheck(PyObject* obj);
 bool PyStringSequenceCheck(PyObject* obj);
 
-Maybe<const char*> PyStringAsString(PyObject* obj);
+Maybe<std::string> PyStringAsString(PyObject* str_obj);
+
+Maybe<std::string> PyObjectToReprStr(PyObject* obj);
 
 // Scalar
 bool PyScalarCheck(PyObject* obj);
