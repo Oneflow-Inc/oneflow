@@ -33,7 +33,7 @@ inline Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& 
   std::shared_ptr<Scope> scope;
   std::shared_ptr<cfg::JobConfigProto> cfg_config_proto =
       std::make_shared<cfg::JobConfigProto>(config_proto);
-  JUST(LogicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     int64_t session_id = 0;
     std::string device_tag = "cpu";
     std::string machine_ids = "0";
