@@ -965,6 +965,11 @@ def _numpy(self):
         self = self.cpu()
     return self.to_numpy()
 
+def _is_consistent(self):
+    raise RuntimeError("is_consistent is removed. Please use is_global instead")
+
+def _to_consistent(self):
+    raise RuntimeError("to_consistent is removed. Please use to_global instead")
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
@@ -1167,6 +1172,8 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
+    Tensor.is_consistent = _is_consistent
+    Tensor.to_consistent = _to_consistent
 
 
 def register_tensor_op(op_name):
