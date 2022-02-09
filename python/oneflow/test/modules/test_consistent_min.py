@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(auto_backward=False, check_graph=False)
+@autotest(check_graph=False)
 def _test_min(test_case, placement, sbp):
     keepdim = random().to(bool)
     dim = random(0, 4).to(int)
