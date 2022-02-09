@@ -132,7 +132,7 @@ class TestTensorOps(flow.unittest.TestCase):
 
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
         n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
@@ -145,7 +145,7 @@ class TestTensorOps(flow.unittest.TestCase):
 
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
         n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
@@ -158,7 +158,7 @@ class TestTensorOps(flow.unittest.TestCase):
 
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
         n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
@@ -171,7 +171,7 @@ class TestTensorOps(flow.unittest.TestCase):
 
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so eager tensors supported only.
+    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
     # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
     @autotest(
         n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"

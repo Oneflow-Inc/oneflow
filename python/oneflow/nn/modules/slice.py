@@ -100,7 +100,7 @@ def logical_slice_assign_op(
 
 
 def logical_slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
-    """Extracts a slice from a consistent tensor.
+    """Extracts a slice from a global tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
     The operator will slice the tensor according to the `slice_tup_list`.
 

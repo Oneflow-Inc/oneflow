@@ -123,7 +123,7 @@ def _test_clip_grad_norm_consistent_impl(
     of_input = flow.rand(
         *shape, dtype=flow.float32, sbp=sbp, placement=placement, requires_grad=True
     )
-    np_input = of_input.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy()
+    np_input = of_input.to_global(sbp=flow.sbp.broadcast).to_local().numpy()
 
     m = flow.nn.ReLU()
     of_out = m(of_input)
@@ -138,7 +138,7 @@ def _test_clip_grad_norm_consistent_impl(
     )
     test_case.assertTrue(
         np.allclose(
-            of_input.grad.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            of_input.grad.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
             np_grad,
             1e-4,
             1e-4,
