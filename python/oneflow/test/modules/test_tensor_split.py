@@ -18,9 +18,9 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
-
+@flow.unittest.skip_unless_1n1d()
 class TestTorchSplitVec(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_split_vec(test_case):
         device = random_device()
         x = random_tensor(
@@ -34,9 +34,9 @@ class TestTorchSplitVec(flow.unittest.TestCase):
         z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
 
-
+@flow.unittest.skip_unless_1n1d()
 class TestTorchSplitInt(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_split_int(test_case):
         device = random_device()
         x = random_tensor(

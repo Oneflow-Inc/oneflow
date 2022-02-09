@@ -19,9 +19,9 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
-
+@flow.unittest.skip_unless_1n1d()
 class TestAsStrided(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_AsStrided(test_case):
         device = random_device()
         ndim = np.random.randint(3, 6)
