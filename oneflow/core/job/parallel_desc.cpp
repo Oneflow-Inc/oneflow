@@ -323,7 +323,8 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
     const auto& sorted_dev_phy_ids_iter =
         machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
     for (int64_t machine_id : sorted_machine_ids_) {
-      CHECK_LT_OR_RETURN(machine_id, GlobalProcessCtx::WorldSize());
+      CHECK_LT_OR_RETURN(machine_id, GlobalProcessCtx::WorldSize())
+          << "Placment is invalid because rank must be less than world size!";
     }
     if (sorted_dev_phy_ids_iter != machine_id2sorted_dev_phy_ids_->end()) {
       for (int64_t dev_phy_id : *sorted_dev_phy_ids_iter->second) {
