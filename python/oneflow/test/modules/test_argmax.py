@@ -97,7 +97,7 @@ class TestArgmax(flow.unittest.TestCase):
     def test_argmax_with_random_data(test_case):
         device = random_device()
         ndim = random(1, 6).to(int)
-        x = random_pytorch_tensor(ndim=ndim).to(device)
+        x = random_tensor(ndim=ndim).to(device)
         y = torch.argmax(x, dim=random(0, ndim).to(int), keepdim=random().to(bool))
         return y
 

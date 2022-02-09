@@ -70,6 +70,7 @@ Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(IsAllPartialSumNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(IsAllSplitNdSbp(out->nd_sbp(), 0));
 
+  CHECK_GT_OR_RETURN(logical_shape.NumAxes(), 0);
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
@@ -86,6 +87,7 @@ Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(IsAllSplitNdSbp(in->nd_sbp(), 0));
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
 
+  CHECK_GT_OR_RETURN(logical_shape.NumAxes(), 0);
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
@@ -107,6 +109,8 @@ Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
 
   int64_t in_split_axis = in->nd_sbp()->sbp_parallel(0).split_parallel().axis();
   int64_t out_split_axis = out->nd_sbp()->sbp_parallel(0).split_parallel().axis();
+  CHECK_GT_OR_RETURN(logical_shape.NumAxes(), in_split_axis);
+  CHECK_GT_OR_RETURN(logical_shape.NumAxes(), out_split_axis);
   CHECK_OR_RETURN(logical_shape.At(in_split_axis) % in->placement()->parallel_num() == 0);
   CHECK_OR_RETURN(logical_shape.At(out_split_axis) % in->placement()->parallel_num() == 0);
 

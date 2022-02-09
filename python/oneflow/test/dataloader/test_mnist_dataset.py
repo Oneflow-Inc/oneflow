@@ -16,10 +16,12 @@ limitations under the License.
 import os
 import unittest
 
+import flowvision as vision
+import flowvision.transforms as transforms
+
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
-import oneflow.utils.vision.transforms as transforms
 from data_utils import load_data_mnist
 
 

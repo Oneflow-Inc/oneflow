@@ -27,28 +27,33 @@ class TestNegativeModule(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=True)
     def test_ne_with_0_size_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)
+        x = random_tensor(4, 2, 3, 0, 5).to(device)
         y1 = torch.negative(x)
         y2 = torch.neg(x)
         y3 = -x
         return (y1, y2, y3)
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_tensor_negative_with_random_data(test_case):
-        x = random_pytorch_tensor().to(random_device())
+        x = random_tensor().to(random_device())
         return x.negative()
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_negative_with_random_data(test_case):
-        x = random_pytorch_tensor().to(random_device())
+        x = random_tensor().to(random_device())
         z = torch.negative(x)
         return z
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_neg_with_random_data(test_case):
-        x = random_pytorch_tensor().to(random_device())
+        x = random_tensor().to(random_device())
         z = torch.neg(x)
         return z
+
+    @autotest()
+    def test_tensor_negative_with_0dim_data(test_case):
+        x = random_tensor(ndim=0).to(random_device())
+        return x.negative()
 
 
 if __name__ == "__main__":

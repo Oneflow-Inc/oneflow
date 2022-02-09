@@ -15,10 +15,11 @@ limitations under the License.
 """
 import math
 
-from .lr_scheduler import LrScheduler
+from .optimizer import Optimizer
+from .lr_scheduler import LRScheduler
 
 
-class CosineDecayLR(LrScheduler):
+class CosineDecayLR(LRScheduler):
     """This operator creates a Cosine decayed learning rate scheduler.
 
     Before the decay_steps are specified by user, the learning rate will be updated as:
@@ -66,11 +67,11 @@ class CosineDecayLR(LrScheduler):
 
     def __init__(
         self,
-        optimizer,
+        optimizer: Optimizer,
         decay_steps: int,
         alpha: float = 0.0,
-        last_step=-1,
-        verbose=False,
+        last_step: int = -1,
+        verbose: bool = False,
     ):
         assert (
             decay_steps > 0

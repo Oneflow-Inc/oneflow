@@ -3324,13 +3324,13 @@ def _test_eager_consistent_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp
     placement0 = flow.placement(device_type, {0: [0]}, (1, 1))
     placement1 = flow.placement(device_type, {0: range(4)}, (2, 2))
 
-    # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0]}, hierarchy=(1, 1))
+    # oneflow.placement(device_type="cuda", device_ids={0 : [0]}, hierarchy=(1, 1))
     # (src_sbp, src_sbp)
     x = flow.tensor(
         np_arr, placement=placement0, sbp=[src_sbp, src_sbp], requires_grad=False,
     )
 
-    # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
+    # oneflow.placement(device_type="cuda", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
     # (dst_sbp, dst_sbp)
     y = x.to_consistent(placement=placement1, sbp=[dst_sbp, dst_sbp])
 
@@ -3352,6 +3352,51 @@ class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
         arg_dict["dst_sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
         for arg in GenArgList(arg_dict):
             _test_eager_consistent_n_dim_reduce(test_case, *arg)
+
+
+def _test_eager_consistent_with_0_size_data(
+    test_case,
+    shape,
+    in_device_type,
+    out_device_type,
+    in_device_list,
+    out_device_list,
+    in_sbp,
+    out_sbp,
+):
+    in_placement = flow.placement(in_device_type, {0: in_device_list})
+    out_placement = flow.placement(out_device_type, {0: out_device_list})
+    x = flow.Tensor(*shape, placement=in_placement, sbp=in_sbp)
+    y = x.to_consistent(out_placement, out_sbp)
+
+    test_case.assertEqual(y.placement, out_placement)
+    test_case.assertEqual(y.sbp, out_sbp)
+    test_case.assertEqual(y.size(), shape)
+
+
+@flow.unittest.skip_unless_1n4d()
+class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
+    def test_eager_consistent_with_0_size_data(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(8, 0, 4), (5, 0, 7)]
+        arg_dict["in_device_type"] = ["cpu", "cuda"]
+        arg_dict["out_device_type"] = ["cpu", "cuda"]
+        arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
+        arg_dict["out_device_list"] = [[1], [3], [2, 3], [0, 1, 3], [0, 1, 2, 3]]
+        arg_dict["in_sbp"] = [
+            (flow.sbp.split(0),),
+            (flow.sbp.split(2),),
+            (flow.sbp.broadcast,),
+            (flow.sbp.partial_sum,),
+        ]
+        arg_dict["out_sbp"] = [
+            (flow.sbp.split(0),),
+            (flow.sbp.split(2),),
+            (flow.sbp.broadcast,),
+            (flow.sbp.partial_sum,),
+        ]
+        for arg in GenArgList(arg_dict):
+            _test_eager_consistent_with_0_size_data(test_case, *arg)
 
 
 if __name__ == "__main__":
