@@ -28,14 +28,14 @@ import oneflow.unittest
 
 @autotest(auto_backward=False, check_graph=False)
 def _test_squeeze_1d_input(test_case, placement, sbp):
-    x = random_pytorch_tensor(1, 10, dtype=float).to_consistent(placement, sbp)
+    x = random_tensor(1, 10, dtype=float).to_consistent(placement, sbp)
     y = torch.squeeze(x)
     return y
 
 
 @autotest(auto_backward=False, check_graph=False)
 def _test_squeeze_backward(test_case, placement, sbp):
-    x = random_pytorch_tensor(
+    x = random_tensor(
         4, 1, 1, 1, 16, dtype=float, requires_grad=True
     ).to_consistent(placement, sbp)
     y = torch.squeeze(x, dim=1).sum()
@@ -46,14 +46,14 @@ def _test_squeeze_backward(test_case, placement, sbp):
 
 @autotest(auto_backward=False, check_graph=False)
 def _test_flow_squeeze_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16).to_consistent(placement, sbp)
+    x = random_tensor(2, 8, 16).to_consistent(placement, sbp)
     y = torch.squeeze(x, random(1, 3).to(int))
     return y
 
 
 @autotest(auto_backward=False, check_graph=False)
 def _test_squeeze_with_0_size_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(3, 8, 16, 0).to_consistent(placement, sbp)
+    x = random_tensor(3, 8, 16, 0).to_consistent(placement, sbp)
     y = torch.squeeze(x)
     return y
 
