@@ -1,7 +1,7 @@
 oneflow.nn.Graph
-======================================================
+============================================================
 Base class for running neural networks in Static Graph Mode.
-------------------------------------------------------
+------------------------------------------------------------
 .. currentmodule:: oneflow.nn
 .. autoclass:: oneflow.nn.Graph
     :members: __init__,

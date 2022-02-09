@@ -84,7 +84,8 @@ class Graph(object):
         >>> linear_graph(x).shape
         oneflow.Size([4, 8])
 
-    Note that Graph cannot be nested at the moment.
+    Note:
+        nn.Graph cannot be nested at the moment.
     """
     _child_init_cnt = dict()
 
@@ -160,11 +161,12 @@ class Graph(object):
             >>> x = flow.randn(4, 3)
             >>> y = linear_graph(x) # The build() method is called implicitly
 
-        Note that ``build()`` method's inputs and outputs support list/tuple/dict,
-        but the item in them must be one of these types:
+        Note:
+            ``build()`` method's inputs and outputs support list/tuple/dict,
+            but the item in them must be one of these types:
 
-        * ``Tensor``
-        * ``None``
+            * ``Tensor``
+            * ``None``
 
         """
         raise NotImplementedError()
@@ -183,10 +185,11 @@ class Graph(object):
         method. And the ``__call__`` method will return outputs matching the
         outputs of ``build()`` method.
 
-        Note that the first call takes longer than later calls, because nn.Graph
-        will do the computaion graph generation and optimization at the first call.
+        Note:
+            The first call takes longer than later calls, because nn.Graph
+            will do the computaion graph generation and optimization at the first call.
 
-        Donot override this function.
+            Donot override this function.
         """
         if not self._is_compiled:
             with graph_build_util.GLogScopeContext(
