@@ -122,12 +122,13 @@ class TestRandpermConsistent(flow.unittest.TestCase):
     def test_randperm_consistent(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_consistent_arange, _test_consistent_arange_graph]
-        start = random().to(int)
-        end = start + random().to(int)
-        step = random(0, end - start).to(float)
-        arg_dict["start"] = start
-        arg_dict["end"] = end
-        arg_dict["step"] = step
+        start = np.random.randint(0,10)
+        end = start + np.random.randint(10,100)
+        step = np.random.randint(1,10)
+        print("start: ",start,"end: ",end,"step: ",step)
+        arg_dict["start"] = [start]
+        arg_dict["end"]   = [end]
+        arg_dict["step"]  = [step]
         arg_dict["placement"] = [
             flow.placement("cpu", {0: [0, 1]}),
             flow.placement("cuda", {0: [0, 1]}),

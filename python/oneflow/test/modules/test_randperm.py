@@ -151,13 +151,13 @@ class TestRandpermConsistent(flow.unittest.TestCase):
             _test_consistent_randperm,
             _test_consistent_randperm_graph,
         ]
-        arg_dict["N"] = [i for i in range(10, 100, 5)]
+        arg_dict["N"] = [i for i in range(10, 100, 10)]
         arg_dict["placement"] = [
             flow.placement("cpu", {0: [0, 1]}),
             flow.placement("cuda", {0: [0, 1]}),
         ]
-        arg_dict["dtype"] = [flow.float32, flow.float64]
         arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
+        arg_dict["dtype"] = [flow.float32, flow.float64]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
