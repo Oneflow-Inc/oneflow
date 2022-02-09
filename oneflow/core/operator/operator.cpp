@@ -1291,7 +1291,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
               return Maybe<void>::Ok();
             };
-            JUST(LogicalRun(BuildInstruction));
+            JUST(PhysicalRun(BuildInstruction));
             return symbol_id;
           };
           (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());
