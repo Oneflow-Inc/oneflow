@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=3, auto_backward=False, check_graph=True)
-def test_greater_impl(test_case, ndim, placement):
+def test_semi_auto_with_random_data(test_case, ndim, placement):
     dims = [random(1, 3) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
     # NOTE: Boxing collector (a.k.a. middle nodes algorithm) do not support transferring a 1D sbp to nd sbp at this moment.
@@ -43,6 +43,9 @@ def test_greater_impl(test_case, ndim, placement):
     )
     # print("x2 sbp: ", x2.sbp)
 
+    # There are at least two nodes between (S0, S1) and (S1, S0)
+    # If the middle nodes algorithm does not work, it is impossible that
+    # one sbp node can reach (S0, S1) and (S1, S0) simultaneously.
     y = x1 + x2
     # print("y sbp: ", y.sbp)
     return y
@@ -50,13 +53,13 @@ def test_greater_impl(test_case, ndim, placement):
 
 class TestGreaterConsistent(flow.unittest.TestCase):
     @global_view
-    def test_greater(test_case):
+    def test_semi_auto(test_case):
         # random ndim in range [1,4]
         ndim = random(2, 3).to(int).value()
         for placement in all_placement():
             if len(placement.hierarchy) != 2 or min(placement.hierarchy) <= 1:
                 continue
-            test_greater_impl(test_case, ndim, placement)
+            test_semi_auto_with_random_data(test_case, ndim, placement)
 
 
 if __name__ == "__main__":

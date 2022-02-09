@@ -50,7 +50,7 @@ class TestConsistentSplitModule(flow.unittest.TestCase):
     def test_boxing_with_random_data(test_case):
         for ndim in range(2, 3):
             for placement in all_placement():
-                if len(placement.hierarchy) != 2 or min(placement.hierarchy) <= 1:
+                if len(placement.hierarchy) != 2:
                     continue
                 for sbp_in in all_sbp(placement, max_dim=ndim):
                     for sbp_out in all_sbp(placement, max_dim=ndim):
