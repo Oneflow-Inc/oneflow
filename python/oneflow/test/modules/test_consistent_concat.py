@@ -36,8 +36,13 @@ def _test_cat_with_random_data(test_case, placement, sbp):
 
 @autotest(n=5, auto_backward=False, check_graph=True)
 def _test_concat_with_input_0_size_data(test_case, placement, sbp):
+<<<<<<< HEAD
     x = random_tensor(4, 8, 8, 2, 4).to_consistent(placement=placement, sbp=sbp)
     y = random_tensor(4, 8, 8, random(0, 3) * 8, 8).to_consistent(
+=======
+    x = random_pytorch_tensor(4, 8, 8, 2, 4).to_consistent(placement=placement, sbp=sbp)
+    y = random_pytorch_tensor(4, 8, 8, random(0, 3) * 8, 8).to_consistent(
+>>>>>>> affb1302f75fc167547029d81e4a667cfc0d3b0a
         placement=placement, sbp=sbp
     )
     z = torch.cat((x, y), dim=2)
