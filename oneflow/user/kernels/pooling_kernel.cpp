@@ -43,8 +43,8 @@ std::shared_ptr<PoolingOpKernelCache> CreateOpKernelCache(user_op::KernelCacheCo
 namespace {
 
 template<typename T, typename IDX>
-void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helper,
-                                  IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
+void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helper, IDX elem_num,
+                                  const T* src, T* dest, int64_t* indice_ptr,
                                   const int32_t padding_h, const int32_t padding_w,
                                   const int32_t n_batch, const int32_t n_channel,
                                   const int32_t x_height, const int32_t x_width,
@@ -61,11 +61,11 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helpe
     IDX hstart = h * stride_h - padding_h;
     IDX wstart = w * stride_w - padding_w;
     const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
-                             ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
-                             : x_height;
+                         ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
+                         : x_height;
     const IDX wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
-                             ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
-                             : x_width;
+                         ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
+                         : x_width;
 
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
@@ -97,37 +97,33 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helpe
 
 template<typename T, typename IDX>
 struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
-  static void Maxpool1dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 2>& index_helper,
+  static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
-    Maxpool1dForwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
-                               params_3d.padding()[2], params_3d.num_batch(),
-                               params_3d.num_channel(), params_3d.GetXShape5D().At(4),
-                               params_3d.pooling_size_3d()[2],
-                               params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
+    Maxpool1dForwardCompute<T, IDX>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
+        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool1dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<IDX, 2>& index_helper,
+  static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool1dBackwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
-                                params_3d.num_batch(), params_3d.num_channel(),
-                                params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
+                                     params_3d.num_batch(), params_3d.num_channel(),
+                                     params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(4));
   }
 
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 3>& index_helper,
-                                     const IDX elem_num, const T* src, T* dest,
-                                     int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                     const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                                     const MaxPoolingParams3D& params_3d) {
     Maxpool2dForwardComputeCFirst<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
-        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), 
-        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], 
-        params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
+        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1],
+        params_3d.stride_3d()[2], params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool2dBackwardCFirst(ep::Stream* stream,
@@ -135,16 +131,16 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
                                       const IDX elem_num, const T* src, T* dest,
                                       const int64_t* indice_ptr,
                                       const MaxPoolingParams3D& params_3d) {
-    Maxpool2dBackwardComputeCFirst<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
-                                      params_3d.num_batch(), params_3d.num_channel(),
-                                      params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-                                      params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+    Maxpool2dBackwardComputeCFirst<T, IDX>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
   }
 
   static void Maxpool2dForwardCLast(ep::Stream* stream,
                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
-                                    const IDX elem_num, const T* src, T* dest,
-                                    int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                    const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                                    const MaxPoolingParams3D& params_3d) {
     Maxpool2dForwardComputeCLast<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
@@ -159,36 +155,33 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
                                      const IDX elem_num, const T* src, T* dest,
                                      const int64_t* indice_ptr,
                                      const MaxPoolingParams3D& params_3d) {
-    Maxpool2dBackwardComputeCLast<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
-                                     params_3d.num_batch(), params_3d.num_channel(),
-                                     params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-                                     params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+    Maxpool2dBackwardComputeCLast<T, IDX>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
   }
 
-  static void Maxpool3dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 4>& index_helper,
+  static void Maxpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     Maxpool3dForwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
         params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
-        params_3d.num_channel(), 
-        params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), 
-        params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], 
-        params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2], 
-        params_3d.dilation_3d()[0],
+        params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[0],
+        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[0],
         params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool3dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<IDX, 4> index_helper,
+  static void Maxpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4> index_helper,
                                 const IDX elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     Maxpool3dBackwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
-                                params_3d.num_batch(), params_3d.num_channel(),
-                                params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
-                                params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
-                                params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
+                                     params_3d.num_batch(), params_3d.num_channel(),
+                                     params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3),
+                                     params_3d.GetYShape5D().At(4), params_3d.GetXShape5D().At(2),
+                                     params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
   }
 };
 
@@ -220,18 +213,18 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     DimVector y_vector(2);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1); 
-    y_vector.at(1) = y->shape().At(2); 
-    if(elem_num < GetMaxVal<int32_t>()){
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+    y_vector.at(1) = y->shape().At(2);
+    if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
-      PoolingKernelUtil<device_type, T, int32_t>::Maxpool1dForward(ctx->stream(), index_helper, elem_num, src,
-                                                        dest, indice_ptr, params_3d);
-    }else{
+      PoolingKernelUtil<device_type, T, int32_t>::Maxpool1dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    } else {
       NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
-      PoolingKernelUtil<device_type, T, int64_t>::Maxpool1dForward(ctx->stream(), index_helper, elem_num, src,
-                                                        dest, indice_ptr, params_3d);
-      }
+      PoolingKernelUtil<device_type, T, int64_t>::Maxpool1dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     }
+  }
 };
 
 template<DeviceType device_type, typename T>
@@ -261,21 +254,20 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
     DimVector dy_vector(2);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1); 
-    dy_vector.at(1) = dy->shape().At(2); 
+    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+    dy_vector.at(1) = dy->shape().At(2);
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    if(elem_num < GetMaxVal<int32_t>()){
+    if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
-      PoolingKernelUtil<device_type, T, int32_t>::Maxpool1dBackward(ctx->stream(), index_helper, elem_num, src,
-                                                         dest, indice_ptr, params_3d);
-    }else{
+      PoolingKernelUtil<device_type, T, int32_t>::Maxpool1dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    } else {
       NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
-      PoolingKernelUtil<device_type, T, int64_t>::Maxpool1dBackward(ctx->stream(), index_helper, elem_num, src,
-                                                         dest, indice_ptr, params_3d);
+      PoolingKernelUtil<device_type, T, int64_t>::Maxpool1dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     }
-
   };
 };
 
@@ -311,30 +303,29 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       DimVector y_vector(3);
-      y_vector.at(0) = y->shape().At(0) * y->shape().At(1); 
-      y_vector.at(1) = y->shape().At(2); 
-      y_vector.at(2) = y->shape().At(3); 
-      if(elem_num < GetMaxVal<int32_t>()){
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      y_vector.at(2) = y->shape().At(3);
+      if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
         PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      }
-      else{
+            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+      } else {
         NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
         PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCFirst(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
       }
     } else if (data_format == "channels_last") {
       DimVector y_vector;
       y->shape().ToDimVector(&y_vector);
-      if(elem_num < GetMaxVal<int32_t>()){
+      if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
         PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      }else{
+            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+      } else {
         NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
         PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCLast(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
       }
     } else {
       UNIMPLEMENTED() << "Unsupported data_format";
@@ -373,13 +364,13 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-      
+
     if (data_format == "channels_first") {
       DimVector dy_vector(3);
-      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1); 
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
       dy_vector.at(1) = dy->shape().At(2);
       dy_vector.at(2) = dy->shape().At(3);
-      if(elem_num < GetMaxVal<int32_t>()){
+      if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
         PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dBackwardCFirst(
             ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
@@ -391,14 +382,14 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     } else if (data_format == "channels_last") {
       DimVector dy_vector;
       dy->shape().ToDimVector(&dy_vector);
-      if(elem_num < GetMaxVal<int32_t>()){
+      if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
         PoolingKernelUtil<device_type, T, int32_t>::Maxpool2dBackwardCLast(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
       } else {
         NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
         PoolingKernelUtil<device_type, T, int64_t>::Maxpool2dBackwardCLast(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
       }
     } else {
       UNIMPLEMENTED() << "Unsupported data_format";
@@ -434,19 +425,19 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     DimVector y_vector(4);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1); 
-    y_vector.at(1) = y->shape().At(2); 
-    y_vector.at(2) = y->shape().At(3); 
-    y_vector.at(3) = y->shape().At(4); 
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+    y_vector.at(1) = y->shape().At(2);
+    y_vector.at(2) = y->shape().At(3);
+    y_vector.at(3) = y->shape().At(4);
 
-    if(elem_num < GetMaxVal<int32_t>()){
+    if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
-      PoolingKernelUtil<device_type, T, int32_t>::Maxpool3dForward(ctx->stream(), index_helper, elem_num, src,
-                                                        dest, indice_ptr, params_3d);
-    }else{
+      PoolingKernelUtil<device_type, T, int32_t>::Maxpool3dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    } else {
       NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-      PoolingKernelUtil<device_type, T, int64_t>::Maxpool3dForward(ctx->stream(), index_helper, elem_num, src,
-                                                        dest, indice_ptr, params_3d);
+      PoolingKernelUtil<device_type, T, int64_t>::Maxpool3dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     }
   };
 };
@@ -479,22 +470,22 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     T* dest = dx->mut_dptr<T>();
 
     DimVector dy_vector(4);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1); 
+    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
     dy_vector.at(1) = dy->shape().At(2);
-    dy_vector.at(2) = dy->shape().At(3); 
-    dy_vector.at(3) = dy->shape().At(4); 
+    dy_vector.at(2) = dy->shape().At(3);
+    dy_vector.at(3) = dy->shape().At(4);
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
-    if(elem_num < GetMaxVal<int32_t>()){
+    if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
-      PoolingKernelUtil<device_type, T, int32_t>::Maxpool3dBackward(ctx->stream(), index_helper, elem_num, src,
-                                                         dest, indice_ptr, params_3d);
-    }else {
+      PoolingKernelUtil<device_type, T, int32_t>::Maxpool3dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    } else {
       NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
-      PoolingKernelUtil<device_type, T, int64_t>::Maxpool3dBackward(ctx->stream(), index_helper, elem_num, src,
-                                                         dest, indice_ptr, params_3d);
+      PoolingKernelUtil<device_type, T, int64_t>::Maxpool3dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     }
   };
 };

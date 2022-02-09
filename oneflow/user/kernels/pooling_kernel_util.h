@@ -33,7 +33,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define POOLING_IDX_DATA_TYPE_SEQ                     \
+#define POOLING_IDX_DATA_TYPE_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
@@ -54,11 +54,9 @@ struct DeviceAdd {
   };
 };
 
-#ifdef WITH_CUDA 
- 
-OF_DEVICE_FUNC int32_t device_min(int32_t a, int32_t b) {
-  return a <= b ? a : b;
-}
+#ifdef WITH_CUDA
+
+OF_DEVICE_FUNC int32_t device_min(int32_t a, int32_t b) { return a <= b ? a : b; }
 
 #endif
 
@@ -102,20 +100,18 @@ class MaxPoolingParams3D {
 
 template<DeviceType device_type, typename T, typename IDX>
 struct PoolingKernelUtil {
-  static void Maxpool1dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 2>& index_helper,
+  static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d);
 
-  static void Maxpool1dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<IDX, 2>& index_helper,
+  static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 3>& index_helper,
-                                     const IDX elem_num, const T* src, T* dest,
-                                     int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
+                                     const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                                     const MaxPoolingParams3D& params_3d);
 
   static void Maxpool2dBackwardCFirst(ep::Stream* stream,
                                       const NdIndexOffsetHelper<IDX, 3>& index_helper,
@@ -125,8 +121,8 @@ struct PoolingKernelUtil {
 
   static void Maxpool2dForwardCLast(ep::Stream* stream,
                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
-                                    const IDX elem_num, const T* src, T* dest,
-                                    int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
+                                    const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                                    const MaxPoolingParams3D& params_3d);
 
   static void Maxpool2dBackwardCLast(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 4>& index_helper,
@@ -134,13 +130,11 @@ struct PoolingKernelUtil {
                                      const int64_t* indice_ptr,
                                      const MaxPoolingParams3D& params_3d);
 
-  static void Maxpool3dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 4>& index_helper,
+  static void Maxpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d);
 
-  static void Maxpool3dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<IDX, 4>& index_helper,
+  static void Maxpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
 };
@@ -150,7 +144,7 @@ OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> in
                                             IDX elem_num, const T* src, T* dest,
                                             int64_t* indice_ptr, const int32_t padding_l,
                                             const int32_t n_batch, const int32_t n_channel,
-                                            const int32_t x_length, const int32_t kernel_size_l, 
+                                            const int32_t x_length, const int32_t kernel_size_l,
                                             const int32_t stride_l, const int32_t dilation_l) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n_c, l;
@@ -158,8 +152,8 @@ OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> in
 
     IDX lstart = l * stride_l - padding_l;
     const IDX lend = (lstart + (kernel_size_l - 1) * dilation_l + 1) <= x_length
-                             ? (lstart + (kernel_size_l - 1) * dilation_l + 1)
-                             : x_length;
+                         ? (lstart + (kernel_size_l - 1) * dilation_l + 1)
+                         : x_length;
 
     while (lstart < 0) { lstart += dilation_l; }
 
@@ -208,20 +202,19 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     const NdIndexOffsetHelper<IDX, 3> index_helper, IDX elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int32_t n_batch,
     const int32_t n_channel, const int32_t x_height, const int32_t x_width,
-    const int32_t kernel_size_h, const int32_t kernel_size_w,
-    const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
-    const int32_t dilation_w) {
+    const int32_t kernel_size_h, const int32_t kernel_size_w, const int32_t stride_h,
+    const int32_t stride_w, const int32_t dilation_h, const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n_c, h, w;
     index_helper.OffsetToNdIndex(num, n_c, h, w);
     IDX hstart = h * stride_h - padding_h;
     IDX wstart = w * stride_w - padding_w;
     const IDX hend = (hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height
-                             ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
-                             : x_height;
+                         ? (hstart + (kernel_size_h - 1) * dilation_h + 1)
+                         : x_height;
     const IDX wend = (wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width
-                             ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
-                             : x_width;
+                         ? (wstart + (kernel_size_w - 1) * dilation_w + 1)
+                         : x_width;
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
     /* equal to -std::numeric_limits<T>::infinity(); */
@@ -232,7 +225,7 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
     for (IDX i = hstart; i < hend; i += dilation_h) {
       for (IDX j = wstart; j < wend; j += dilation_w) {
         const IDX window_idx = i * x_width + j;
-        T val = data[window_idx]; 
+        T val = data[window_idx];
         /* NOTE:
         std::isnan(val) only supports a few data types, see:
         https://en.cppreference.com/w/cpp/numeric/math/isnan and when use gcc/g++ 4.x to compile,
@@ -256,8 +249,8 @@ OF_DEVICE_FUNC void Maxpool2dForwardComputeCFirst(
 
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool2dBackwardComputeCFirst(
-    const NdIndexOffsetHelper<IDX, 3> index_helper, const IDX elem_num, const T* src,
-    T* dest, const int64_t* indice_ptr, const int32_t n_batch, const int32_t n_channel,
+    const NdIndexOffsetHelper<IDX, 3> index_helper, const IDX elem_num, const T* src, T* dest,
+    const int64_t* indice_ptr, const int32_t n_batch, const int32_t n_channel,
     const int32_t src_height, const int32_t src_width, const int32_t dst_height,
     const int32_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
@@ -277,11 +270,12 @@ OF_DEVICE_FUNC void Maxpool2dBackwardComputeCFirst(
 }
 
 template<typename T, typename IDX>
-OF_DEVICE_FUNC void Maxpool2dBackwardComputeCLast(
-    const NdIndexOffsetHelper<IDX, 4> index_helper, const IDX elem_num, const T* src,
-    T* dest, const int64_t* indice_ptr, const int32_t n_batch, const int32_t n_channel,
-    const int32_t src_height, const int32_t src_width, const int32_t dst_height,
-    const int32_t dst_width) {
+OF_DEVICE_FUNC void Maxpool2dBackwardComputeCLast(const NdIndexOffsetHelper<IDX, 4> index_helper,
+                                                  const IDX elem_num, const T* src, T* dest,
+                                                  const int64_t* indice_ptr, const int32_t n_batch,
+                                                  const int32_t n_channel, const int32_t src_height,
+                                                  const int32_t src_width, const int32_t dst_height,
+                                                  const int32_t dst_width) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n, c, h, w;
     index_helper.OffsetToNdIndex(num, n, c, h, w);
@@ -300,11 +294,11 @@ template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool3dForwardCompute(
     const NdIndexOffsetHelper<IDX, 4> index_helper, IDX elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_t, const int32_t padding_h, const int32_t padding_w,
-    const int32_t n_batch, const int32_t n_channel, 
-    const int32_t x_time, const int32_t x_height, const int32_t x_width, 
-    const int32_t kernel_size_t, const int32_t kernel_size_h, const int32_t kernel_size_w,
-    const int32_t stride_t, const int32_t stride_h, const int32_t stride_w,
-    const int32_t dilation_t, const int32_t dilation_h, const int32_t dilation_w) {
+    const int32_t n_batch, const int32_t n_channel, const int32_t x_time, const int32_t x_height,
+    const int32_t x_width, const int32_t kernel_size_t, const int32_t kernel_size_h,
+    const int32_t kernel_size_w, const int32_t stride_t, const int32_t stride_h,
+    const int32_t stride_w, const int32_t dilation_t, const int32_t dilation_h,
+    const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n_c, t, h, w;
     index_helper.OffsetToNdIndex(num, n_c, t, h, w);
@@ -368,7 +362,8 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<IDX, 4> i
 }
 
 #define INSTANTIATE_POOLING_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
-  template struct PoolingKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(index_dtype_pair)>;
+  template struct PoolingKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
+                                    OF_PP_PAIR_FIRST(index_dtype_pair)>;
 
 }  // namespace oneflow
 
