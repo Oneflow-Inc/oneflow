@@ -969,11 +969,7 @@ def consistent(f):
     return new_f
 
 
-<<<<<<< HEAD
-def random_pytorch_tensor(
-=======
 def random_tensor(
->>>>>>> cf2ce575d80f89642b71bee2248e69b09213007d
     ndim=None,
     dim0=1,
     dim1=None,
