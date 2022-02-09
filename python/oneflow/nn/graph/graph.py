@@ -355,7 +355,7 @@ class Graph(object):
                 additional_var_tensors.append(item)
                 self._additional_variable_tobe_loaded[name] = item
 
-        if len(additional_var_names):
+        if len(additional_var_names) > 0:
             self._c_nn_graph.register_additional_variable_names_and_tensors(
                 additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
             )
