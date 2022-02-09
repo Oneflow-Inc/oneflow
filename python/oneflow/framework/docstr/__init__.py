@@ -57,7 +57,7 @@ from .expand import *
 from .flip import *
 from .in_top_k import *
 from .index_select import *
-from .consistent_cast import *
+from .global_cast import *
 from .sort import *
 from .is_floating_point import *
 from .where import *
