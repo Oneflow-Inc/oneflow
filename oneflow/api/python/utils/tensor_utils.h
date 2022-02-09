@@ -38,6 +38,22 @@ limitations under the License.
 
 namespace py = pybind11;
 
+namespace pybind11 {
+// reference: https://github.com/pybind/pybind11/issues/1776
+template<>
+struct format_descriptor<oneflow::float16> {
+  static pybind11::dtype dtype() {
+    handle ptr = detail::npy_api::get().PyArray_DescrFromType_(NPY_FLOAT16);
+    return reinterpret_borrow<pybind11::dtype>(ptr);
+  }
+  static std::string format() {
+    // following: https://docs.python.org/3/library/struct.html#format-characters
+    return "e";
+  }
+  static constexpr auto name() { return detail::_("float16"); }
+};
+}  // namespace pybind11
+
 namespace oneflow {
 namespace one {
 
