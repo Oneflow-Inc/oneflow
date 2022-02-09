@@ -3365,7 +3365,7 @@ def _test_eager_consistent_with_0_size_data(
     in_placement = flow.placement(in_device_type, {0: in_device_list})
     out_placement = flow.placement(out_device_type, {0: out_device_list})
     x = flow.Tensor(*shape, placement=in_placement, sbp=in_sbp)
-    y = x.to_consistent(out_placement, out_sbp)
+    y = x.to_global(out_placement, out_sbp)
 
     test_case.assertEqual(y.placement, out_placement)
     test_case.assertEqual(y.sbp, out_sbp)
