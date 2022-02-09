@@ -33,9 +33,7 @@ def _test_boxing_with_random_data(test_case, ndim, placement, sbp_in, sbp_out):
     # We do not support B -> (S(0), S(1)) for lazy.
     # Thus, we transfer B to (B, B).
     # TODO: Support 1d to nd sbp transfer using middle nodes.
-    x = x.to_global(
-        placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
-    )
+    x = x.to_global(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
 
     # print("x sbp: ", x.sbp)
     # print("sbp in: ", sbp_in)

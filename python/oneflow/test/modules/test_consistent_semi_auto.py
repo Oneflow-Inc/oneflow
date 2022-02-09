@@ -30,17 +30,11 @@ def test_semi_auto_with_random_data(test_case, ndim, placement):
     # We do not support B -> (S(0), S(1)) for lazy.
     # Thus, we transfer B to (B, B).
     # TODO: Support 1d to nd sbp transfer using middle nodes.
-    x = x.to_global(
-        placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
-    )
+    x = x.to_global(placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast])
 
-    x1 = x.to_global(
-        placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
-    )
+    x1 = x.to_global(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)])
     # print("x1 sbp: ", x1.sbp)
-    x2 = x.to_global(
-        placement=placement, sbp=[flow.sbp.split(1), flow.sbp.split(0)]
-    )
+    x2 = x.to_global(placement=placement, sbp=[flow.sbp.split(1), flow.sbp.split(0)])
     # print("x2 sbp: ", x2.sbp)
 
     # There are at least two nodes between (S0, S1) and (S1, S0)
@@ -57,6 +51,8 @@ class TestGreaterConsistent(flow.unittest.TestCase):
         # random ndim in range [1,4]
         ndim = random(2, 3).to(int).value()
         for placement in all_placement():
+            # have bugs if remove "or min(placement.hierarchy) <= 1"
+            # if len(placement.hierarchy) != 2:
             if len(placement.hierarchy) != 2 or min(placement.hierarchy) <= 1:
                 continue
             test_semi_auto_with_random_data(test_case, ndim, placement)
