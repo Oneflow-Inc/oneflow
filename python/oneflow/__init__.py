@@ -82,6 +82,8 @@ from oneflow._C import greater
 from oneflow._C import greater as gt
 from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
+from oneflow._C import log
+from oneflow._C import log2
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
@@ -185,6 +187,9 @@ from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 
 from . import sbp
+
+sbp.sbp.__call__ = lambda self: self
+
 import atexit
 
 import oneflow.framework.c_api_util
