@@ -30,15 +30,15 @@ def test_greater_impl(test_case, ndim, placement):
     # We do not support B -> (S(0), S(1)) for lazy.
     # Thus, we transfer B to (B, B).
     # TODO: Support 1d to nd sbp transfer using middle nodes.
-    x = x.to_consistent(
+    x = x.to_global(
         placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
     )
 
-    x1 = x.to_consistent(
+    x1 = x.to_global(
         placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
     )
     # print("x1 sbp: ", x1.sbp)
-    x2 = x.to_consistent(
+    x2 = x.to_global(
         placement=placement, sbp=[flow.sbp.split(1), flow.sbp.split(0)]
     )
     # print("x2 sbp: ", x2.sbp)
@@ -49,7 +49,7 @@ def test_greater_impl(test_case, ndim, placement):
 
 
 class TestGreaterConsistent(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_greater(test_case):
         # random ndim in range [1,4]
         ndim = random(2, 3).to(int).value()

@@ -33,20 +33,20 @@ def _test_boxing_with_random_data(test_case, ndim, placement, sbp_in, sbp_out):
     # We do not support B -> (S(0), S(1)) for lazy.
     # Thus, we transfer B to (B, B).
     # TODO: Support 1d to nd sbp transfer using middle nodes.
-    x = x.to_consistent(
+    x = x.to_global(
         placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
     )
 
     # print("x sbp: ", x.sbp)
     # print("sbp in: ", sbp_in)
-    y = x.to_consistent(placement=placement, sbp=sbp_in)
+    y = x.to_global(placement=placement, sbp=sbp_in)
     # print("sbp out: ", sbp_out)
-    z = y.to_consistent(sbp=sbp_out)
+    z = y.to_global(sbp=sbp_out)
     return z
 
 
 class TestConsistentSplitModule(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_boxing_with_random_data(test_case):
         for ndim in range(2, 3):
             for placement in all_placement():
