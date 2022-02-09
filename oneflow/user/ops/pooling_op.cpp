@@ -70,7 +70,7 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
     const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const bool count_include_pad = ctx->Attr<bool>("count_include_pad");
-    const int64_t& divisor_override = ctx->Attr<int64_t>("divisor_override");
+    const int32_t& divisor_override = ctx->Attr<int32_t>("divisor_override");
 
     CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
     for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
@@ -180,7 +180,7 @@ GenBackwardOpConfFn AvgPoolMakeBackwardOpConfFn(const int32_t dim) {
               .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
               .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
               .Attr("count_include_pad", op.attr<bool>("count_include_pad"))
-              .Attr("divisor_override", op.attr<int64_t>("divisor_override"))
+              .Attr("divisor_override", op.attr<int32_t>("divisor_override"))
               .Build();
       op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
       AddOp(grad_op);
