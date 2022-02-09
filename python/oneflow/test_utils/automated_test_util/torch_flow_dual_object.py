@@ -36,11 +36,7 @@ except ImportError:
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
     )
 
-<<<<<<< HEAD
-from .generators import Nothing, generator, random_tensor
-=======
 from .generators import Nothing, generator, random_pytorch_tensor
->>>>>>> cf2ce575d80f89642b71bee2248e69b09213007d
 from .consistent_scope import *
 from .util import broadcast
 
