@@ -9049,9 +9049,10 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
+    OneFlow_DataType:$embeddings_dtype,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
-    StrAttr:$embedding_options
+    StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9140,7 +9141,7 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
     AnyType:$unique_embeddings
   );
   let attrs = (ins
-    StrAttr:$embedding_options
+    StrAttr:$embedding_name
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -20,9 +20,14 @@ import oneflow as flow
 import numpy as np
 import oneflow.nn as nn
 import os
+import shutil
 
 placement = flow.placement("cuda", {0: [0, 1]})
 batch_size = 65536
+shutil.rmtree("test/")
+os.mkdir("test")
+os.mkdir("test/0-2")
+os.mkdir("test/1-2")
 
 
 class SyntheticDataLoader(nn.Module):
@@ -117,9 +122,11 @@ class TrainGraph(flow.nn.Graph):
                 }
             )
         options = {
-            "dtype": flow.float,
+            "key_type": flow.int64,
+            "value_type": flow.float,
             "name": "my_embedding",
             "embedding_dim": 128,
+            "storage_dim":256,
             "cache": [
                 {
                     "policy": "lru",
@@ -132,27 +139,6 @@ class TrainGraph(flow.nn.Graph):
             },
             "default_initializer": {"type": "normal", "mean": 0, "std": 1},
             "columns": initializer_list,
-            "optimizer": {
-                "lr": {
-                    "base_lr": 24,
-                    "decay": {
-                        "type": "polynomial",
-                        "decay_batches": 27772,
-                        "end_lr": 0.0,
-                        "power": 2.0,
-                        "cycle": False,
-                    },
-                    "warmup": {
-                        "type": "linear",
-                        "warmup_batches": 2750,
-                        "start_multiplier": 0.0,
-                    },
-                },
-                "type": "sgd",
-                "momentum": 0.0,
-                "betas": [0.9, 0.999],
-                "eps": 1e-8,
-            },
         }
         self.embedding_lookup = flow.nn.OneEmbeddingLookup(options)
         self.dense1 = MatMul(3328, 1)
@@ -165,7 +151,9 @@ class TrainGraph(flow.nn.Graph):
 
     def build(self,):
         ids, slots = self.data_loader()
-        embedding = self.embedding_lookup(ids, slots)
+        print("ids", ids.placement)
+        print("slots", slots.placement)
+        embedding = self.embedding_lookup.forward(ids, slots)
         loss = embedding.reshape(batch_size, -1)
         print(loss.shape)
         loss = self.dense1(loss)
@@ -177,4 +165,4 @@ class TrainGraph(flow.nn.Graph):
 graph = TrainGraph()
 for i in range(20):
     loss = graph()
-print(loss)
+    print(loss)

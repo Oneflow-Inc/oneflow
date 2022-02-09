@@ -160,7 +160,8 @@ std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
-                          const int64_t line_size, const ParallelConf& parallel_conf,
+                          const int64_t line_size, const std::string& embedding_name,
+                          const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const user_op::UserOpConfWrapper& id_shuffle_op,
                           std::string* embedding_lbn, std::string* unique_values_lbn) {
@@ -198,14 +199,22 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
       .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
       .Attr<int64_t>("embedding_size", embedding_size)
       .Attr<int64_t>("line_size", line_size)
-      .Attr<std::string>("embedding_options", embedding_op.attr<std::string>("embedding_options"))
+      .Attr<std::string>("embedding_name", embedding_name)
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
-  if (line_size != embedding_size) { embedding_lookup_op_builder.Output("embeddings"); }
+  bool has_embeddings_output =
+      (line_size != embedding_size) || ctx->job_desc().enable_auto_mixed_precision();
+  if (has_embeddings_output) {
+    DataType embeddings_dtype = ctx->job_desc().enable_auto_mixed_precision()
+                                    ? DataType::kFloat16
+                                    : embedding_op.attr<DataType>("dtype");
+    embedding_lookup_op_builder.Output("embeddings")
+        .Attr<DataType>("embeddings_dtype", embeddings_dtype);
+  }
   user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
   OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
   embedding_lookup_new_op_conf.set_stream_name_hint("EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_lookup_new_op_conf});
-  if (line_size != embedding_size) {
+  if (has_embeddings_output) {
     *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
   } else {
     *embedding_lbn = embedding_lookup_op.output("unique_values", 0);
@@ -213,17 +222,17 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   *unique_values_lbn = embedding_lookup_op.output("unique_values", 0);
 
   // cast
-  if (ctx->job_desc().enable_auto_mixed_precision()) {
-    auto cast_op = user_op::UserOpConfWrapperBuilder(embedding_op.op_name() + "_cast_f2h")
-                       .Op("cast")
-                       .Input("in", *embedding_lbn)
-                       .Output("out")
-                       .Attr<DataType>("dtype", DataType::kFloat16)
-                       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-                       .Build();
-    *embedding_lbn = cast_op.output("out", 0);
-    job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
-  }
+  // if (ctx->job_desc().enable_auto_mixed_precision()) {
+  //  auto cast_op = user_op::UserOpConfWrapperBuilder(embedding_op.op_name() + "_cast_f2h")
+  //                     .Op("cast")
+  //                     .Input("in", *embedding_lbn)
+  //                     .Output("out")
+  //                     .Attr<DataType>("dtype", DataType::kFloat16)
+  //                     .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
+  //                     .Build();
+  //  *embedding_lbn = cast_op.output("out", 0);
+  //  job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+  //}
 }
 
 void BuildEmbeddingShuffle(JobBuilder* job_builder, const ParallelConf& parallel_conf,
@@ -363,7 +372,7 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
 
 void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                           const ParallelConf& parallel_conf, const int64_t embedding_size,
-                          const OptimizerConf& optimizer_conf,
+                          const std::string& embedding_name, const OptimizerConf& optimizer_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const user_op::UserOpConfWrapper& id_shuffle_op,
                           const std::string& unique_values_lbn,
@@ -445,8 +454,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
                  AddIdentityOp(id_shuffle_op.output("cur_rank_num_unique_ids", 0)))
           .Input("unique_ids", AddIdentityOp(id_shuffle_op.output("cur_rank_unique_ids", 0)))
           .Input("unique_embeddings", embedding_update_op.output("updated_unique_embeddings", 0))
-          .Attr<std::string>("embedding_options",
-                             embedding_op.attr<std::string>("embedding_options"))
+          .Attr<std::string>("embedding_name", embedding_name)
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   OperatorConf embedding_put_new_op_conf = embedding_put_op.op_conf();
@@ -511,8 +519,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, options.EmbeddingSize(), options.LineSize(),
-                         op_node->parallel_desc().parallel_conf(), embedding_op, id_shuffle_op,
-                         &embedding_lbn, &unique_values_lbn);
+                         options.Name(), op_node->parallel_desc().parallel_conf(), embedding_op,
+                         id_shuffle_op, &embedding_lbn, &unique_values_lbn);
 
     // embedding shuffle op
     BuildEmbeddingShuffle(job_builder, op_node->parallel_desc().parallel_conf(), embedding_op,
@@ -562,8 +570,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
-                             options.EmbeddingSize(), embedding_optimizer_conf, embedding_op,
-                             id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
+                             options.EmbeddingSize(), options.Name(), embedding_optimizer_conf,
+                             embedding_op, id_shuffle_op, unique_values_lbn, embedding_diff_lbn,
                              learning_rate_lbn);
       }
     }
