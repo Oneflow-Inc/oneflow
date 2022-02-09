@@ -32,6 +32,67 @@ namespace oneflow {
 
 namespace {
 
+template<typename K>
+struct TableEntry;
+
+template<>
+struct TableEntry<int64_t> {
+  int64_t key;
+  int32_t value;
+};
+
+template<>
+struct TableEntry<int32_t> {
+  int32_t key;
+  int32_t value;
+};
+
+template<typename K, typename IDX>
+__global__ void HashTableUnique(const uint32_t table_capacity, uint32_t* table_size,
+                                TableEntry<K>* table, const uint32_t num_ids, const K* ids,
+                                const IDX* column_ids, K* unique_ids, IDX* unique_column_ids,
+                                IDX* reverse_index) {
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_ids) {
+    IDX r_index_plus_one = 0;
+    const K key = ids[i];
+    uint32_t pos = XXH64()(key) % table_capacity;
+    const K key_hi = (key | 0x1);
+    const K key_lo = (key & 0x1);
+    uint32_t counter = 0;
+    while (r_index_plus_one == 0) {
+      bool prob_next = false;
+      K* key_ptr = &table[pos].key;
+      volatile int32_t* value_ptr = &table[pos].value;
+      const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
+      if (old_key == 0) {
+        IDX unique_pos = cuda::atomic::Add(table_size, 1);
+        r_index_plus_one = unique_pos + 1;
+        unique_ids[unique_pos] = key;
+        unique_column_ids[unique_pos] = column_ids[i];
+        *value_ptr = ((r_index_plus_one << 1U) | key_lo);
+      } else if (old_key == key_hi) {
+        const int32_t value = *value_ptr;
+        if ((value & 0x1) == key_lo) {
+          r_index_plus_one = (value >> 1U);
+        } else if (value == 0) {
+          // do nothing
+        } else {
+          prob_next = true;
+        }
+      } else {
+        prob_next = true;
+      }
+      if (prob_next) {
+        pos += 1;
+        counter += 1;
+        if (pos >= table_capacity) { pos -= table_capacity; }
+        if (counter >= table_capacity) { __trap(); }
+      }
+    }
+    reverse_index[i] = r_index_plus_one - 1;
+  }
+}
+
 void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, size_t data_size,
                 const void* ptr) {
   void* host_ptr;
@@ -333,6 +394,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
 
     CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.TotalBufferSize());
     int64_t hash_capacity = num_ids;
+
     UniqueKeys(ctx->stream(), num_ids, hash_capacity, ids->dptr<K>(), column_ids->dptr<IDX>(),
                num_unique_ids->mut_dptr<IDX>(), ids_reverse_idx->mut_dptr<IDX>(),
                buffer_manager.UniqueIdsPtr(), buffer_manager.UniqueColumnIdsPtr(),
