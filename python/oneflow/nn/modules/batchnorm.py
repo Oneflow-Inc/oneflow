@@ -113,7 +113,8 @@ class _BatchNorm(_NormBase):
         if self.training:
             is_training = True
         else:
-            is_training = (self.running_mean is None) and (self.running_var is None)
+            is_training = (self.running_mean is None) and (
+                self.running_var is None)
         # NOTE(lixiang): If it is training mode, pass running_mean and running_var directly to the functor layer.
         return flow._C.normalization(
             x,
@@ -121,7 +122,7 @@ class _BatchNorm(_NormBase):
             self.running_var,
             self.weight,
             self.bias,
-            axis=self.channel_axis,
+            axis=self.channel_axis if x.ndim == 4 else 1,
             epsilon=self.eps,
             momentum=self.momentum,
             is_training=is_training,
@@ -191,7 +192,7 @@ class BatchNorm1d(_BatchNorm):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.Tensor(np.random.randn(20, 100))
         >>> m = flow.nn.BatchNorm1d(100)
         >>> y = m(x)
@@ -268,7 +269,7 @@ class BatchNorm2d(_BatchNorm):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3))
         >>> m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
         >>> y = m(x)
@@ -277,7 +278,8 @@ class BatchNorm2d(_BatchNorm):
 
     def _check_input_dim(self, input):
         if input.ndim != 4:
-            raise ValueError("expected 4D input (got {}D input)".format(input.ndim))
+            raise ValueError(
+                "expected 4D input (got {}D input)".format(input.ndim))
 
 
 class BatchNorm3d(_BatchNorm):
@@ -354,7 +356,8 @@ class BatchNorm3d(_BatchNorm):
 
     def _check_input_dim(self, input):
         if input.ndim != 5:
-            raise ValueError("expected 5D input (got {}D input)".format(input.ndim))
+            raise ValueError(
+                "expected 5D input (got {}D input)".format(input.ndim))
 
 
 if __name__ == "__main__":
