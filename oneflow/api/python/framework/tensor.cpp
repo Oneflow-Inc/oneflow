@@ -206,7 +206,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &Tensor::is_lazy)
       .def_property_readonly("is_eager", &Tensor::is_eager)
-      .def_property_readonly("is_consistent", &Tensor::is_consistent)
+      .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
@@ -214,7 +214,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
-      .def("consistent_id",
+      .def("global_id",
            [](const one::Tensor& tensor) -> int64_t {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
