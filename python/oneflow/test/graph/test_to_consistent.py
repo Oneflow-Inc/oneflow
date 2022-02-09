@@ -478,5 +478,52 @@ class ToConsistent2DGraphTestCase(oneflow.unittest.TestCase):
         # print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
 
 
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
+    def test_lazy_1d_to_2d_sbp(test_case):
+        class Test1dTo2dModule(flow.nn.Module):
+            def forward(self, x):
+                x = x.to_consistent(
+                    placement=flow.placement(
+                        device_type="cuda",
+                        device_ids={0: [0, 1, 2, 3]},
+                        hierarchy=(2, 2),
+                    ),
+                    sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
+                )
+                return x
+
+        class Test1dTo2dGraph(flow.nn.Graph):
+            def __init__(self, model):
+                super().__init__()
+                self.model = model
+
+            def build(self, x):
+                x = self.model(x)
+                return x
+
+        model = Test1dTo2dModule()
+        graph = Test1dTo2dGraph(model)
+
+        x = flow.zeros(
+            4,
+            4,
+            4,
+            4,
+            sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
+            placement=flow.placement("cuda", {0: range(4)}, (2, 2)),
+        )
+        x = x.to_consistent(
+            placement=flow.placement(
+                device_type="cuda", device_ids={0: [0, 1, 2, 3]}, hierarchy=(4,)
+            ),
+            sbp=[flow.sbp.broadcast],
+        )
+        print(x.sbp)
+        y = graph(x)
+        print(y.sbp)
+
+
 if __name__ == "__main__":
     unittest.main()
