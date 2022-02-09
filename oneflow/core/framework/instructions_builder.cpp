@@ -539,10 +539,6 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
   const auto& CallbackWrapper = [spin_counter, Callback](uint64_t ofblob_ptr) {
     (*Callback)(ofblob_ptr);
-    CHECK_GT(Callback.use_count(), 1);
-    // What we want to do here is dereferencing the `Callback` in scheduler thread, because we don't
-    // want any python objects destructed in scheduler thread.
-    const_cast<std::shared_ptr<std::function<void(uint64_t)>>*>(&Callback)->reset();
     spin_counter->Decrease();
   };
   return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
