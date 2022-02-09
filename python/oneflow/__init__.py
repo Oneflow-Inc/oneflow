@@ -188,6 +188,9 @@ from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 
 from . import sbp
+
+sbp.sbp.__call__ = lambda self: self
+
 import atexit
 
 import oneflow.framework.c_api_util

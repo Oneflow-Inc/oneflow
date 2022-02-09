@@ -120,7 +120,10 @@ jobs:
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
-    runs-on: [self-hosted, scheduler]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build-and-test-wait-for-gpu-slot
+      cancel-in-progress: false
     needs: [build-oneflow]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     continue-on-error: true
@@ -138,7 +141,8 @@ jobs:
       - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 35
+        timeout-minutes: 45
+        continue-on-error: true
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
@@ -299,6 +303,23 @@ jobs:
           wheel-audit: false
           python-versions: |
             3.8
+      - name: Remove automerge
+        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed when running job: Build ${{ matrix.entry }}. PR label automerge has been removed'
+            })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@fix-oom
@@ -575,14 +596,14 @@ jobs:
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Module API test (distributed, 1st try)
-        timeout-minutes: 15
+        timeout-minutes: 30
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
         continue-on-error: true
         id: new_interface_distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.TEST_IMG_TAG }} --oneflow_wheel_path=${{ env.ONEFLOW_WHEEL_PATH }} --oneflow_wheel_python_version=3.7
       - name: Module API test (distributed, 2nd try)
-        timeout-minutes: 15
+        timeout-minutes: 30
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && steps.new_interface_distributed_try_1.outcome=='failure' }}
         continue-on-error: true
         id: new_interface_distributed_try_2

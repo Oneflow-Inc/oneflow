@@ -30,7 +30,7 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  const char* device_tag() const override { return "cpu"; }
+  const char* stream_tag() const override { return "control"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
