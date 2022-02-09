@@ -328,7 +328,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       if (load_tensor_iter == additional_variable_op_tobe_loaded_name2tensor_.end()) {
         // Create a additional variable tensor
         Scalar value;
-        VariableOpConf var_conf = op_attribute.op_conf().variable_conf();
+        const VariableOpConf& var_conf = op_attribute.op_conf().variable_conf();
         if (var_conf.initializer().has_constant_conf()) {
           value = var_conf.initializer().constant_conf().value();
         } else if (var_conf.initializer().has_constant_int_conf()) {

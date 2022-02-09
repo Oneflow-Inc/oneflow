@@ -169,6 +169,33 @@ class Graph(object):
         """
         raise NotImplementedError()
 
+    def __call__(self, *args, **kwargs):
+        r"""Call nn.Graph subclass instance to run your customized graph.
+
+        Call your customized graph after the instantiation:
+
+        .. code-block:: python
+
+            g = CustomGraph()
+            out_tensors = g(input_tensors)
+
+        The inputs of ``__call__`` method must match the inputs of ``build()``
+        method. And the ``__call__`` method will return outputs matching the
+        outputs of ``build()`` method.
+
+        Note that the first call takes longer than later calls, because nn.Graph
+        will do the computaion graph generation and optimization at the first call.
+
+        Donot override this function.
+        """
+        if not self._is_compiled:
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level
+            ):
+                self._compile(*args, **kwargs)
+
+        return self.__run(*args, **kwargs)
+
     def add_optimizer(
         self, optim: Optimizer, *, lr_sch: LRScheduler = None,
     ):
@@ -243,33 +270,6 @@ class Graph(object):
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
-    def __call__(self, *args, **kwargs):
-        r"""Call nn.Graph subclass instance to run your customized graph.
-
-        Call your customized graph after the instantiation:
-
-        .. code-block:: python
-
-            g = CustomGraph()
-            out_tensors = g(input_tensors)
-
-        The inputs of ``__call__`` method must match the inputs of ``build()``
-        method. And the ``__call__`` method will return outputs matching the
-        outputs of ``build()`` method.
-
-        Note that the first call takes longer than later calls, because nn.Graph
-        will do the computaion graph generation and optimization at the first call.
-
-        Donot override this function.
-        """
-        if not self._is_compiled:
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
-            ):
-                self._compile(*args, **kwargs)
-
-        return self.__run(*args, **kwargs)
-
     def state_dict(
         self, destination=None
     ) -> Dict[str, Union[Dict[str, Tensor], Tensor]]:
@@ -280,6 +280,8 @@ class Graph(object):
         Keys of modules' state dict are corresponding to their name in the graph.
         Values of modules' state dict are corresponding to their nn.Module's
         state dict.
+
+        Other keys and tensors are states of optimizers/lr schedulers/etc.
 
         Returns:
             dict: a dictionary containing the whole state of the graph.

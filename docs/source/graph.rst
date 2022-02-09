@@ -12,7 +12,6 @@ Base class for running neural networks in Static Graph Mode.
             state_dict,
             load_state_dict,
             name,
-            training,
             debug,
             __repr__,
     :member-order: bysource
