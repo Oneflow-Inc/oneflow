@@ -113,7 +113,7 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 
 class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit FusedMatmulBiasAddReluKernelCache() {
+  FusedMatmulBiasAddReluKernelCache() {
     // Just for init.
     OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
@@ -276,11 +276,11 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     OF_CUBLAS_CHECK(cublasLtMatmul(
-        ctx->stream()->As<ep::CudaStream>()->cublas_lt_handle(), matmul_cache->operation_desc,
-        &sp_alpha, cublas_a->dptr(), matmul_cache->cublas_a_desc, cublas_b->dptr(),
-        matmul_cache->cublas_b_desc, &sp_beta, out->mut_dptr(), matmul_cache->cublas_c_desc,
-        out->mut_dptr(), matmul_cache->cublas_c_desc, NULL, cuda_stream->cublas_workspace(),
-        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, cublas_a->dptr(),
+        matmul_cache->cublas_a_desc, cublas_b->dptr(), matmul_cache->cublas_b_desc, &sp_beta,
+        out->mut_dptr(), matmul_cache->cublas_c_desc, out->mut_dptr(), matmul_cache->cublas_c_desc,
+        NULL, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+        cuda_stream->cuda_stream()));
   }
 };
 
