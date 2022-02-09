@@ -1,6 +1,6 @@
 oneflow.nn.Graph
 ======================================================
-Base class for running neural networks in Graph Mode.
+Base class for running neural networks in Static Graph Mode.
 ------------------------------------------------------
 .. currentmodule:: oneflow.nn
 .. autoclass:: oneflow.nn.Graph
