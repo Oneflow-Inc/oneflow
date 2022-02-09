@@ -32,6 +32,84 @@ namespace oneflow {
 
 namespace {
 
+template<typename K>
+struct TableEntry;
+
+template<>
+struct __align__(16) TableEntry<int64_t> {
+  int64_t key;
+  int32_t value;
+};
+
+template<>
+struct __align__(8) TableEntry<int32_t> {
+  int32_t key;
+  int32_t value;
+};
+
+template<typename K, typename IDX>
+__global__ void HashTableUnique(const uint32_t table_capacity, uint32_t* table_size,
+                                TableEntry<K>* table, const uint32_t num_ids, const K* ids,
+                                const IDX* column_ids, K* unique_ids, IDX* unique_column_ids,
+                                IDX* reverse_index) {
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_ids) {
+    IDX value = 0;
+    const K key = ids[i];
+    uint32_t pos = XXH64()(key) % table_capacity;
+    const K kk = (key | 0x1);
+    uint32_t counter = 0;
+    while (true) {
+      const unsigned mask = __activemask();
+      if (__all_sync(mask, value != 0)) { break; }
+      if (value == 0) {
+        const TableEntry<K> entry = table[pos];
+        K* key_ptr = &table[pos].key;
+        volatile int32_t* value_ptr = &table[pos].value;
+        if (entry.key == kk) {
+          if (entry.value != 0) {
+            if ((entry.value & 0x1) == (key & 0x1)) { value = (entry.value >> 1U); }
+          } else {
+            // do nothing
+          }
+        } else if (entry.key != 0) {
+          pos += 1;
+          counter += 1;
+          if (pos >= table_capacity) { pos -= table_capacity; }
+          if (counter >= table_capacity) { __trap(); }
+        } else {  // entry.key == 0
+          const K old_key = cuda::atomic::CAS(key_ptr, 0, kk);
+          if (old_key == 0) {
+            IDX unique_pos = cuda::atomic::Add(table_size, 1);
+            value = unique_pos + 1;
+            unique_ids[unique_pos] = key;
+            unique_column_ids[unique_pos] = column_ids[i];
+            *value_ptr = (value << 1U);
+          } else if (old_key == kk) {
+            const int32_t value_read = *value_ptr;
+            if ((value_read & 0x1) == (key & 0x1)) {
+              value = (value_read >> 1U);
+            } else if (value_read == 0) {
+              // do nothing
+            } else {
+              pos += 1;
+              counter += 1;
+              if (pos >= table_capacity) { pos -= table_capacity; }
+              if (counter >= table_capacity) { __trap(); }
+            }
+          } else {
+            pos += 1;
+            counter += 1;
+            if (pos >= table_capacity) { pos -= table_capacity; }
+            if (counter >= table_capacity) { __trap(); }
+          }
+        }
+      }
+      __syncwarp(mask);
+    }
+    reverse_index[i] == value;
+  }
+}
+
 void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, size_t data_size,
                 const void* ptr) {
   void* host_ptr;
