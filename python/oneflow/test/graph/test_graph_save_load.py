@@ -131,7 +131,7 @@ class TestLinearGraphSaveLoad(oneflow.unittest.TestCase):
         _test_linear_graph_save_load(test_case, flow.device("cpu"))
 
 
-def _test_linear_graph_save_load_consistent(test_case, device):
+def _test_linear_graph_save_load_global(test_case, device):
     P = flow.placement("cuda", {0: [0, 1]})
     B = flow.sbp.broadcast
     S = flow.sbp.split(0)
@@ -141,7 +141,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
         flow.nn.init.constant_(linear.bias, 0.23)
-        linear.to_consistent(placement=P, sbp=B)
+        linear.to_global(placement=P, sbp=B)
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
 
         x = flow.tensor(
@@ -159,9 +159,9 @@ def _test_linear_graph_save_load_consistent(test_case, device):
             device=device,
             requires_grad=False,
         )
-        x = x.to_consistent(placement=P, sbp=S)
+        x = x.to_global(placement=P, sbp=S)
 
-        class LinearTrainGraphConsistent(flow.nn.Graph):
+        class LinearTrainGraphGlobal(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
@@ -173,16 +173,16 @@ def _test_linear_graph_save_load_consistent(test_case, device):
                 out.backward()
                 return out
 
-        linear_t_g = LinearTrainGraphConsistent()
+        linear_t_g = LinearTrainGraphGlobal()
         if call_cnt == 1:
-            state_dict = flow.load(state_dict_dir, consistent_src_rank=0)
+            state_dict = flow.load(state_dict_dir, global_src_rank=0)
             linear_t_g.load_state_dict(state_dict)
             # Check state in module has been loaded.
             # Tensors in state dict are save to rank 0, so they need to be broadcast to rank 0 and 1 before check.
             test_case.assertTrue(
                 np.array_equal(
                     state_dict["linear"]["weight"]
-                    .to_consistent(placement=P, sbp=B)
+                    .to_global(placement=P, sbp=B)
                     .to_local()
                     .numpy(),
                     linear.weight.to_local().numpy(),
@@ -191,7 +191,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
             test_case.assertTrue(
                 np.array_equal(
                     state_dict["linear"]["bias"]
-                    .to_consistent(placement=P, sbp=B)
+                    .to_global(placement=P, sbp=B)
                     .to_local()
                     .numpy(),
                     linear.bias.to_local().numpy(),
@@ -207,7 +207,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
             # TrainStep's placement is only on rank 0, so it needs to be broadcast to rank 0 and 1 before check.
             cur_train_step = (
                 iter0_state_dict["System-Train-TrainStep"]
-                .to_consistent(placement=P, sbp=B)
+                .to_global(placement=P, sbp=B)
                 .to_local()
                 .numpy()[0]
             )
@@ -215,7 +215,7 @@ def _test_linear_graph_save_load_consistent(test_case, device):
             test_case.assertTrue(
                 cur_train_step
                 == last_state_dict["System-Train-TrainStep"]
-                .to_consistent(placement=P, sbp=B)
+                .to_global(placement=P, sbp=B)
                 .to_local()
                 .numpy()[0]
             )
@@ -247,26 +247,26 @@ def _test_linear_graph_save_load_consistent(test_case, device):
         of_graph_out = linear_t_g(x)
         iter1_state_dict = linear_t_g.state_dict()
         if call_cnt == 0:
-            flow.save(iter1_state_dict, state_dict_dir, consistent_dst_rank=0)
+            flow.save(iter1_state_dict, state_dict_dir, global_dst_rank=0)
 
         if call_cnt == 0:
             of_graph_out = linear_t_g(x)
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(prefix="graph_save_load_consistent") as state_dict_dir:
+    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestLinearGraphSaveLoadConsistent(oneflow.unittest.TestCase):
+class TestLinearGraphSaveLoadGlobal(oneflow.unittest.TestCase):
     def test_linear_graph_save_load_gpu(test_case):
-        _test_linear_graph_save_load_consistent(test_case, flow.device("cuda"))
+        _test_linear_graph_save_load_global(test_case, flow.device("cuda"))
 
     def _test_linear_graph_save_load_cpu(test_case):
-        _test_linear_graph_save_load_consistent(test_case, flow.device("cpu"))
+        _test_linear_graph_save_load_global(test_case, flow.device("cpu"))
 
 
 if __name__ == "__main__":

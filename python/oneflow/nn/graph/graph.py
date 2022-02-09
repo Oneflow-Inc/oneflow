@@ -512,7 +512,7 @@ class Graph(object):
         for state_block in self._state():
             state_tensor = state_block.origin
             # If any state tensor is global tensor, graph is in global view.
-            if state_tensor.is_consistent:
+            if state_tensor.is_global:
                 self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
