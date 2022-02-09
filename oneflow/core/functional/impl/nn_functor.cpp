@@ -282,7 +282,7 @@ class FusedMatMulBiasAddReluFunctor {
     CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should == 2";
     CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should == 2";
 
-    int64_t m, n, k_a, k_b;  // tensor a (no trans): m*k, tensor b (no trans): k*n
+    int64_t m, n, k_a, k_b = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
 
     if (!transpose_a) {
       m = a->shape()->At(0);
