@@ -57,7 +57,7 @@ cublasComputeType_t GetComputeType(DataType data_type) {
     case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16: return CUBLAS_COMPUTE_32F;
 #if CUDA_VERSION >= 11000
-    case kBFloat16: return CUBLAS_COMPUTE_32F_FAST_16BF;
+    case kBFloat16: return CUBLAS_COMPUTE_32F;
 #endif  // CUDA_VERSION >= 11000
     default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
@@ -181,7 +181,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
 
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+    const DataType data_type = out->data_type();
 
     const auto GetCublasOperation = [](ep::primitive::BlasTransposeType transpose_type) {
       if (transpose_type == ep::primitive::BlasTransposeType::N) {
