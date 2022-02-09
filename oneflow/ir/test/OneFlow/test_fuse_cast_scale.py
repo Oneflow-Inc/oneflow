@@ -36,7 +36,6 @@ from collections import OrderedDict
 @unittest.skip("udpate to nngraph")
 @flow.unittest.skip_unless_1n1d()
 class TestMLIROptimizations(flow.unittest.TestCase):
-    # @unittest.skip("")
     def test_cpu(self):
         d = OrderedDict(
             {
@@ -50,7 +49,6 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             self.run_fuse_cast_scale_mlir(**arg)
 
     @unittest.skipIf(flow.sysconfig.with_mlir_cuda_codegen() == False, "")
-    # @unittest.skip("")
     def test_gpu(self):
         d = OrderedDict(
             {
