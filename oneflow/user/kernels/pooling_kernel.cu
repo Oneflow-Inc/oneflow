@@ -87,8 +87,8 @@ template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool1dForward(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                 IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                int32_t padding_l, int64_t n_batch, int64_t n_channel,
-                                int64_t x_length, int32_t kernel_size_l,
+                                int32_t padding_l, int32_t n_batch, int32_t n_channel,
+                                int32_t x_length, int32_t kernel_size_l,
                                 int32_t stride_l, int32_t dilation_l) {
   Maxpool1dForwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr, padding_l, n_batch,
                              n_channel, x_length, kernel_size_l, stride_l, dilation_l);
@@ -113,9 +113,9 @@ template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool2dForwardCLast(const NdIndexOffsetHelper<IDX, 4> index_helper,
                                      IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                     int32_t padding_h, int32_t padding_w, int64_t n_batch,
-                                     int64_t n_channel, int64_t x_height, int64_t x_width,
-                                     int64_t y_height, int64_t y_width, int32_t kernel_size_h,
+                                     int32_t padding_h, int32_t padding_w, int32_t n_batch,
+                                     int32_t n_channel, int32_t x_height, int32_t x_width,
+                                     int32_t y_height, int32_t y_width, int32_t kernel_size_h,
                                      int32_t kernel_size_w, int32_t stride_h, int32_t stride_w,
                                      int32_t dilation_h, int32_t dilation_w) {
   Maxpool2dForwardComputeCLast<T, IDX>(index_helper, elem_num, src, dest, indice_ptr, padding_h,
@@ -129,8 +129,8 @@ __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool3dForward(const NdIndexOffsetHelper<IDX, 4> index_helper,
                                 IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                 int32_t padding_t, int32_t padding_h, int32_t padding_w,
-                                int64_t n_batch, int64_t n_channel, int64_t x_time,
-                                int64_t x_height, int64_t x_width, 
+                                int32_t n_batch, int32_t n_channel, int32_t x_time,
+                                int32_t x_height, int32_t x_width, 
                                 int32_t kernel_size_t, int32_t kernel_size_h,
                                 int32_t kernel_size_w, int32_t stride_t, int32_t stride_h,
                                 int32_t stride_w, int32_t dilation_t, int32_t dilation_h,
@@ -143,23 +143,23 @@ __launch_bounds__(kBlockSize) __global__
 
 template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool1dBackward(const NdIndexOffsetHelper<IDX, 3> index_helper,
+  void DoCUDAMaxPool1dBackward(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                  const IDX elem_num, const T* src, T* dest,
-                                 const int64_t* indice_ptr, const int64_t n_batch,
-                                 const int64_t n_channel, const int64_t src_length,
-                                 const int64_t dst_length) {
+                                 const int64_t* indice_ptr, const int32_t n_batch,
+                                 const int32_t n_channel, const int32_t src_length,
+                                 const int32_t dst_length) {
   Maxpool1dBackwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr, n_batch, n_channel,
                               src_length, dst_length);
 };
 
 template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool2dBackwardCFirst(const NdIndexOffsetHelper<IDX, 4> index_helper,
+    void DoCUDAMaxPool2dBackwardCFirst(const NdIndexOffsetHelper<IDX, 3> index_helper,
                                        const IDX elem_num, const T* src, T* dest,
-                                       const int64_t* indice_ptr, const int64_t n_batch,
-                                       const int64_t n_channel, const int64_t src_height,
-                                       const int64_t src_width, const int64_t dst_height,
-                                       const int64_t dst_width) {
+                                       const int64_t* indice_ptr, const int32_t n_batch,
+                                       const int32_t n_channel, const int32_t src_height,
+                                       const int32_t src_width, const int32_t dst_height,
+                                       const int32_t dst_width) {
   Maxpool2dBackwardComputeCFirst<T, IDX>(index_helper, elem_num, src, dest, indice_ptr, n_batch,
                                     n_channel, src_height, src_width, dst_height, dst_width);
 };
@@ -168,23 +168,23 @@ template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxPool2dBackwardCLast(const NdIndexOffsetHelper<IDX, 4> index_helper,
                                       const IDX elem_num, const T* src, T* dest,
-                                      const int64_t* indice_ptr, const int64_t n_batch,
-                                      const int64_t n_channel, const int64_t src_height,
-                                      const int64_t src_width, const int64_t dst_height,
-                                      const int64_t dst_width) {
+                                      const int64_t* indice_ptr, const int32_t n_batch,
+                                      const int32_t n_channel, const int32_t src_height,
+                                      const int32_t src_width, const int32_t dst_height,
+                                      const int32_t dst_width) {
   Maxpool2dBackwardComputeCLast<T, IDX>(index_helper, elem_num, src, dest, indice_ptr, n_batch,
                                    n_channel, src_height, src_width, dst_height, dst_width);
 };
 
 template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool3dBackward(const NdIndexOffsetHelper<IDX, 5> index_helper,
+    void DoCUDAMaxPool3dBackward(const NdIndexOffsetHelper<IDX, 4> index_helper,
                                  const IDX elem_num, const T* src, T* dest,
-                                 const int64_t* indice_ptr, const int64_t n_batch,
-                                 const int64_t n_channel, const int64_t src_time,
-                                 const int64_t src_height, const int64_t src_width,
-                                 const int64_t dst_time, const int64_t dst_height,
-                                 const int64_t dst_width) {
+                                 const int64_t* indice_ptr, const int32_t n_batch,
+                                 const int32_t n_channel, const int32_t src_time,
+                                 const int32_t src_height, const int32_t src_width,
+                                 const int32_t dst_time, const int32_t dst_height,
+                                 const int32_t dst_width) {
   Maxpool3dBackwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr, n_batch, n_channel,
                               src_time, src_height, src_width, dst_time, dst_height, dst_width);
 };
@@ -204,7 +204,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   }
 
   static void Maxpool1dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                                const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     DoCUDAMaxPool1dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
@@ -228,7 +228,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   }
 
   static void Maxpool2dBackwardCFirst(ep::Stream* stream,
-                                      const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                                      const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                       const IDX elem_num, const T* src, T* dest,
                                       const int64_t* indice_ptr,
                                       const MaxPoolingParams3D& params_3d) {
@@ -283,7 +283,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   }
 
   static void Maxpool3dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<IDX, 5>& index_helper,
+                                const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
     DoCUDAMaxPool3dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
