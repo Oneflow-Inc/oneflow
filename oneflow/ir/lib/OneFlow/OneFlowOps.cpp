@@ -289,17 +289,17 @@ void Job::build(OpBuilder& builder, OperationState& state, StringRef name, Funct
 
 static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
   auto buildFuncType = [](Builder& builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
-                          function_like_impl::VariadicFlag,
+                          function_interface_impl::VariadicFlag,
                           std::string&) { return builder.getFunctionType(argTypes, results); };
 
-  return function_like_impl::parseFunctionLikeOp(parser, result, /*allowVariadic=*/false,
-                                                 buildFuncType);
+  return function_interface_impl::parseFunctionOp(parser, result, /*allowVariadic=*/false,
+                                                  buildFuncType);
 }
 
 static void print(Job op, OpAsmPrinter& p) {
   FunctionType fnType = op.getType();
-  function_like_impl::printFunctionLikeOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
-                                          fnType.getResults());
+  function_interface_impl::printFunctionOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
+                                           fnType.getResults());
 }
 
 static LogicalResult verify(Job op) {
