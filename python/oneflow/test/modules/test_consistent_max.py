@@ -37,7 +37,6 @@ def _test_max(test_case, placement, sbp):
 
 
 class TestMaxModule(flow.unittest.TestCase):
-    @unittest.skip("mask select has bug when running with two rank.")
     @consistent
     def test_max(test_case):
         for placement in all_placement():
