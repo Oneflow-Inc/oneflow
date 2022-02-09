@@ -543,7 +543,8 @@ jobs:
         with:
           repository: Oneflow-Inc/models
           # ref: 96a727f566534151bff2cad445d5661f0ceedf83
-          ref: 8e85bad2aa87b78860edb3e0b35425b09ca49ff1
+          # ref: 8e85bad2aa87b78860edb3e0b35425b09ca49ff1
+          ref: ef5feb452119e76d6d4398ea52f95811296984a1
           path: oneflow-models-resnet50
       - name: ResNet50 Graph DDP test
         id: models-resnet50
