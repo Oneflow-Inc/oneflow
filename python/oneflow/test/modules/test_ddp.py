@@ -64,39 +64,6 @@ class TestDDP(flow.unittest.TestCase):
         for dev_type in test_device:
             test_case._test_ddp_basic(dev_type)
 
-    def _test_ddp_two_iters(test_case, dev_type):
-        class Mul(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.w = flow.nn.Parameter(flow.Tensor([1, 1]))
-
-            def forward(self, x):
-                return x * self.w
-
-        rank = flow.env.get_rank()
-        if rank == 0:
-            x = flow.Tensor([1, 1])
-        elif rank == 1:
-            x = flow.Tensor([2, 2])
-        else:
-            raise ValueError()
-
-        x = x.to(dev_type)
-        m = Mul().to(dev_type)
-        m = ddp(m)
-
-        for _ in range(2):
-            y = m(x)
-            y.sum().backward()
-
-        test_case.assertTrue(
-            np_allclose_with_shape(m.w.grad.numpy(), np.array([4.5, 4.5]))
-        )
-
-    def test_ddp_two_iters(test_case):
-        for dev_type in test_device:
-            test_case._test_ddp_two_iters(dev_type)
-
     def _test_ddp_multiple_buckets(test_case, dev_type):
         class Mul(flow.nn.Module):
             def __init__(self):
@@ -162,10 +129,6 @@ class TestDDP(flow.unittest.TestCase):
         m = ddp(m, bucket_size=2)
         y = m(x)
         y.backward()
-
-        print(f'm.w.grad: {m.w.grad}')
-        print(f'm.used_only_in_rank0.grad: {m.used_only_in_rank0.grad}')
-        print(f'm.unused_in_all_ranks.grad: {m.unused_in_all_ranks.grad}')
 
         test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([2])))
         test_case.assertTrue(

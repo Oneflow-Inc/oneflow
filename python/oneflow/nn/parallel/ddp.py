@@ -111,8 +111,8 @@ def DistributedDataParallel(
         return None
 
     for param in module.parameters():
+        param.register_hook(grad_setting_fn(module, param))
         param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
-        param._register_post_grad_accumulation_hook(grad_setting_fn(module, param))
         param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
 
     def post_forward_hook(module, input, output):

@@ -108,8 +108,8 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-void ApiRegisterTensorPostHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
-  return RegisterTensorPostHook(self, hook).GetOrThrow();
+void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
+  return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
@@ -208,7 +208,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
-      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumutaionHook)
+      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumulationHook)
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
