@@ -46,7 +46,7 @@ def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
 
 @autotest(n=1, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_cuda(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16).to_consistent(placement, sbp)
+    x = random_tensor(2, 8, 16).to_consistent(placement, sbp)
     x = x.cuda()
     y = x.sum()
     return y
@@ -62,7 +62,7 @@ class TestConsistentCuda(flow.unittest.TestCase):
 
 @autotest(n=1, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_cpu(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16).to_consistent(placement, sbp)
+    x = random_tensor(2, 8, 16).to_consistent(placement, sbp)
     x = x.cpu()
     y = x.sum()
     return y
@@ -70,7 +70,7 @@ def _test_consistent_cpu(test_case, placement, sbp):
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_long(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16, requires_grad=False).to_consistent(
+    x = random_tensor(2, 8, 16, requires_grad=False).to_consistent(
         placement, sbp
     )
     y = x.long()
@@ -79,7 +79,7 @@ def _test_consistent_long(test_case, placement, sbp):
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_int(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16, requires_grad=False).to_consistent(
+    x = random_tensor(2, 8, 16, requires_grad=False).to_consistent(
         placement, sbp
     )
     y = x.int()
@@ -88,28 +88,28 @@ def _test_consistent_int(test_case, placement, sbp):
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_float(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16, dtype=int).to_consistent(placement, sbp)
+    x = random_tensor(2, 8, 16, dtype=int).to_consistent(placement, sbp)
     y = x.float()
     return y
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_double(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 16, dtype=int).to_consistent(placement, sbp)
+    x = random_tensor(2, 8, 16, dtype=int).to_consistent(placement, sbp)
     y = x.double()
     return y
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_item(test_case, placement, sbp):
-    x = random_pytorch_tensor(ndim=1, dim0=1, dtype=int).to_consistent(placement, sbp)
+    x = random_tensor(ndim=1, dim0=1, dtype=int).to_consistent(placement, sbp)
     y = torch.tensor(x.item())
     return y
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_tolist(test_case, placement, sbp):
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4, dim0=8, dim1=16, dim2=24, dim3=32, dtype=int
     ).to_consistent(placement, sbp)
     y = torch.tensor(x.tolist())

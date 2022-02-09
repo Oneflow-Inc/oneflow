@@ -58,6 +58,9 @@ class AutogradMeta final {
   bool retain_grad() const { return retain_grad_; }
   using Hook = std::function<std::shared_ptr<Tensor>(const std::shared_ptr<const Tensor>&)>;
   const std::vector<Hook>& hooks() const { return hooks_; }
+  const std::vector<Hook>& post_grad_accumulation_hooks() const {
+    return post_grad_accumulation_hooks_;
+  }
 
   // Setters
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
@@ -66,6 +69,9 @@ class AutogradMeta final {
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   void add_hook(const Hook& hook) { hooks_.emplace_back(hook); }
+  void add_post_grad_accumulation_hook(const Hook& hook) {
+    post_grad_accumulation_hooks_.emplace_back(hook);
+  }
 
  private:
   bool is_leaf_;
@@ -79,6 +85,7 @@ class AutogradMeta final {
   std::shared_ptr<Tensor> acc_grad_;
   std::shared_ptr<TensorArg> current_grad_;
   std::vector<Hook> hooks_;
+  std::vector<Hook> post_grad_accumulation_hooks_;
 };
 
 inline std::shared_ptr<AutogradMeta> NewAutogradMeta(bool requires_grad, bool is_leaf) {

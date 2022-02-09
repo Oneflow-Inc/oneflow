@@ -145,6 +145,37 @@ class TestDDP(flow.unittest.TestCase):
         for dev_type in test_device:
             test_case._test_out_of_order_execution(dev_type)
 
+    def _test_ddp_two_iters(test_case, dev_type):
+        class Mul(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.nn.Parameter(flow.Tensor([1, 1]))
+
+            def forward(self, x):
+                return x * self.w
+
+        rank = flow.env.get_rank()
+        if rank == 0:
+            x = flow.Tensor([1, 1])
+        elif rank == 1:
+            x = flow.Tensor([2, 2])
+        else:
+            raise ValueError()
+
+        x = x.to(dev_type)
+        m = Mul().to(dev_type)
+        m = ddp(m)
+
+        for _ in range(2):
+            y = m(x)
+            y.sum().backward()
+
+        test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([3, 3])))
+
+    def test_ddp_two_iters(test_case):
+        for dev_type in test_device:
+            test_case._test_ddp_two_iters(dev_type)
+
     def _test_broadcast_buffer(test_case, dev_type):
         rank = flow.env.get_rank()
 
