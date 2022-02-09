@@ -33,6 +33,7 @@ if flow.env.get_rank() == 0:
 
 flow._oneflow_internal.eager.multi_client.Sync()
 
+
 class SyntheticDataLoader(nn.Module):
     def __init__(self,):
         super(SyntheticDataLoader, self).__init__()
@@ -80,10 +81,9 @@ class MatMul(flow.nn.Module):
         return out
 
 
-class TrainGraph(flow.nn.Graph):
-    def __init__(self,):
+class OneEmbedding(nn.Module):
+    def __init__(self):
         super().__init__()
-        self.data_loader = SyntheticDataLoader()
         column_size_array = [
             227605432,
             39060,
@@ -129,7 +129,7 @@ class TrainGraph(flow.nn.Graph):
             "value_type": flow.float,
             "name": "my_embedding",
             "embedding_dim": 128,
-            "storage_dim":128,
+            "storage_dim": 128,
             "cache": [
                 {
                     "policy": "lru",
@@ -143,14 +143,23 @@ class TrainGraph(flow.nn.Graph):
             "default_initializer": {"type": "normal", "mean": 0, "std": 1},
             "columns": initializer_list,
         }
-        self.embedding_lookup = flow.nn.OneEmbeddingLookup(options)
+        self.embedding = flow.nn.OneEmbeddingLookup(options)
+        self.embedding = self.embedding.to_consistent(
+            placement=placement, sbp=flow.sbp.broadcast
+        )
+
+    def forward(self, ids, slots):
+        return self.embedding.forward(ids, slots)
+
+
+class TrainGraph(flow.nn.Graph):
+    def __init__(self,):
+        super().__init__()
+        self.data_loader = SyntheticDataLoader()
         self.dense1 = MatMul(3328, 1)
-        self.add_optimizer(
-            flow.optim.SGD(self.dense1.parameters(), lr=0.1)
-        )
-        self.add_optimizer(
-            flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1)
-        )
+        self.embedding_lookup = OneEmbedding()
+        self.add_optimizer(flow.optim.SGD(self.dense1.parameters(), lr=0.1))
+        self.add_optimizer(flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1))
 
     def build(self,):
         ids, slots = self.data_loader()
