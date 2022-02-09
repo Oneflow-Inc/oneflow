@@ -39,8 +39,6 @@ class TestStackModule(flow.unittest.TestCase):
     def test_stack_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                if flow.env.get_rank() == 0:
-                    print(placement, sbp)
                 _test_stack_with_random_data(test_case, placement, sbp)
 
 
