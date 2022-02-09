@@ -543,20 +543,13 @@ jobs:
         with:
           repository: Oneflow-Inc/models
           ref: ef5feb452119e76d6d4398ea52f95811296984a1
-          path: oneflow-models-resnet50
+          path: oneflow-models
       - name: ResNet50 Graph DDP test
         id: models-resnet50
         timeout-minutes: 20
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
-          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models-resnet50 ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
-      - name: Checkout Oneflow-Inc/models
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/models
-          ref: ef5feb452119e76d6d4398ea52f95811296984a1
-          path: oneflow-models
+          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
       - name: Speed test
         id: speed
         timeout-minutes: 20
