@@ -27,9 +27,7 @@ def _test_max(test_case, placement, sbp):
     dim = random(0, 4).to(int)
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1).to_consistent(
-        placement, sbp
-    )
+    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1).to_consistent(placement, sbp)
     y = torch.max(x, dim=dim, keepdim=keepdim)
     max_value = y[0]
     return max_value
