@@ -24,11 +24,14 @@ import shutil
 
 placement = flow.placement("cuda", {0: [0, 1]})
 batch_size = 65536
-shutil.rmtree("test/")
-os.mkdir("test")
-os.mkdir("test/0-2")
-os.mkdir("test/1-2")
 
+if flow.env.get_rank() == 0:
+    if os.path.exists("./test"):
+        os.system("rm -rf ./test")
+    os.system("mkdir ./test")
+
+
+flow._oneflow_internal.eager.multi_client.Sync()
 
 class SyntheticDataLoader(nn.Module):
     def __init__(self,):
@@ -126,11 +129,11 @@ class TrainGraph(flow.nn.Graph):
             "value_type": flow.float,
             "name": "my_embedding",
             "embedding_dim": 128,
-            "storage_dim":256,
+            "storage_dim":128,
             "cache": [
                 {
                     "policy": "lru",
-                    "cache_memory_budget_mb": 16384,
+                    "cache_memory_budget_mb": 8192,
                     "value_memory_kind": "device",
                 }
             ],
@@ -143,10 +146,10 @@ class TrainGraph(flow.nn.Graph):
         self.embedding_lookup = flow.nn.OneEmbeddingLookup(options)
         self.dense1 = MatMul(3328, 1)
         self.add_optimizer(
-            flow.optim.SGD(self.dense1.parameters(), lr=0.1, momentum=0.9)
+            flow.optim.SGD(self.dense1.parameters(), lr=0.1)
         )
         self.add_optimizer(
-            flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1, momentum=0.9)
+            flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1)
         )
 
     def build(self,):
