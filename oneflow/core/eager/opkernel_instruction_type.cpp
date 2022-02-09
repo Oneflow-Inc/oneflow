@@ -444,29 +444,41 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 }  // namespace
 
 struct LocalCallOpKernelUtil final {
-  static inline Maybe<void> Compute(vm::Instruction* instruction) {
-    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
+  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
+    OF_PROFILER_RANGE_PUSH("ResetPrior");
+    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
+      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
       JUST(ResetTempStorageBlob(operand));
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    if (operand->user_opkernel()->has_state_or_cache()) {
+      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
+      TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+      OF_PROFILER_RANGE_POP();
+    }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
+      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_POP();
     }
     return Maybe<void>::Ok();
   }
 
   static inline LocalCallOpKernelPhyInstrOperand* GetLocalCallOpKernelPhyInstrOperand(
-      vm::Instruction* instruction) {
-    auto* operand = CHECK_NOTNULL(instruction->instr_msg().phy_instr_operand().get());
+      const vm::InstructionMsg& instr_msg) {
+    auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
     return CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand));
   }
 
@@ -507,7 +519,6 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
-      CHECK_NOTNULL_OR_RETURN(blob_object);
       JUST(blob_object->TryInitBlob());
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
@@ -526,7 +537,9 @@ struct LocalCallOpKernelUtil final {
     auto* compute_ctx =
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
+    OF_PROFILER_RANGE_PUSH("Compute");
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
@@ -542,7 +555,11 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction));
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction->instr_msg()));
+}
+
+void LocalCallOpKernelInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(*instr_msg));
 }
 
 std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
@@ -556,7 +573,7 @@ std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
                                                     const CallOpKernelInstrOperand& args) const {
   auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = instruction->parallel_desc()->device_type();
   int64_t device_id = instruction->stream().device_id();
   const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
@@ -566,7 +583,8 @@ Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction
 void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   CHECK_OK(MaybeInfer(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_tag: " << instruction->parallel_desc()->device_tag()
+      << "\nmachine_id: " << instruction->stream().machine_id()
       << "\ndevice_id: " << instruction->stream().device_id()
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
@@ -582,7 +600,8 @@ Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instructi
 void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
   CHECK_OK(MaybeCompute(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
+      << "\ndevice_tag: " << instruction->parallel_desc()->device_tag()
+      << "\nmachine_id: " << instruction->stream().machine_id()
       << "\ndevice_id: " << instruction->stream().device_id()
       << "\n============ parallel_conf ============\n"
       << instruction->parallel_desc()->parallel_conf().DebugString();
@@ -597,7 +616,7 @@ Maybe<const OperatorConf&> GetOpConf(vm::Instruction* instruction,
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
     vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = instruction->parallel_desc()->device_type();
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
   const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
@@ -642,7 +661,7 @@ std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBl
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
     vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
+  DeviceType device_type = instruction->parallel_desc()->device_type();
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args));
   const auto& mem_case = GetOutBlobMemCase(device_type, device_id);

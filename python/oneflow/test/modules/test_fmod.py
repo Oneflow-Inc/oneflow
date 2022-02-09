@@ -34,15 +34,15 @@ class TestFmodModule(flow.unittest.TestCase):
         device = random_device()
         dim1 = random().to(int)
         dim2 = random().to(int)
-        input = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
-        other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        input = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        other = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         return torch.fmod(input, other)
 
     @autotest(auto_backward=False)
     def test_flow_fmod_element_with_0dim_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=0).to(device)
-        other = random_pytorch_tensor(ndim=0).to(device)
+        input = random_tensor(ndim=0).to(device)
+        other = random_tensor(ndim=0).to(device)
         return torch.fmod(input, other)
 
     @autotest(auto_backward=False)
@@ -50,8 +50,8 @@ class TestFmodModule(flow.unittest.TestCase):
         device = random_device()
         dim1 = random().to(int)
         dim2 = random().to(int)
-        input = random_pytorch_tensor(ndim=3, dim1=constant(1), dim2=dim2).to(device)
-        other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=constant(1)).to(device)
+        input = random_tensor(ndim=3, dim1=constant(1), dim2=dim2).to(device)
+        other = random_tensor(ndim=3, dim1=dim1, dim2=constant(1)).to(device)
         return torch.fmod(input, other)
 
     @autotest(auto_backward=True)
@@ -59,14 +59,14 @@ class TestFmodModule(flow.unittest.TestCase):
         device = random_device()
         dim1 = random().to(int)
         dim2 = random().to(int)
-        input = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        input = random_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         other = 3
         return torch.fmod(input, other)
 
     @autotest(auto_backward=False)
     def test_fmod_with_0_size_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        x = random_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.fmod(x, 2)
         return y
 
