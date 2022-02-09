@@ -279,7 +279,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
         cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, cublas_a->dptr(),
         matmul_cache->cublas_a_desc, cublas_b->dptr(), matmul_cache->cublas_b_desc, &sp_beta,
         out->mut_dptr(), matmul_cache->cublas_c_desc, out->mut_dptr(), matmul_cache->cublas_c_desc,
-        NULL, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+        nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
         cuda_stream->cuda_stream()));
   }
 };
