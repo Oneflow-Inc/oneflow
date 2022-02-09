@@ -542,7 +542,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: 96a727f566534151bff2cad445d5661f0ceedf83
+          # ref: 96a727f566534151bff2cad445d5661f0ceedf83
+          ref: 8e85bad2aa87b78860edb3e0b35425b09ca49ff1
           path: oneflow-models-resnet50
       - name: ResNet50 Graph DDP test
         id: models-resnet50
