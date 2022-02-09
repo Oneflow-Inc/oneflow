@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13.4)
 include(FetchContent)
 # prevent LLVM_DEFINITIONS has a TRUE in it
 unset(result CACHE)
-
+set(CMAKE_INSTALL_MESSAGE LAZY)
 if(POLICY CMP0068)
   cmake_policy(SET CMP0068 NEW)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
@@ -48,30 +48,30 @@ if(LLVM_PROVIDER STREQUAL "in-tree")
   add_subdirectory(${CMAKE_SOURCE_DIR}/tools/oneflow-tblgen ${PROJECT_BINARY_DIR}/oneflow-tblgen)
 endif()
 
-set_property(GLOBAL PROPERTY ALL_ONEFLOW_LIBS
-  -Wl,--no-as-needed oneflow -Wl,--as-needed
-  -Wl,--no-as-needed glog::glog -Wl,--as-needed
-  -Wl,--no-as-needed ${oneflow_third_party_libs} -Wl,--as-needed
-)
+function(update_rpath)
+  set_property(TARGET ${ARGV0} APPEND PROPERTY BUILD_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY BUILD_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
+  set_property(TARGET ${ARGV0} APPEND PROPERTY INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+endfunction(update_rpath)
 
 function(oneflow_add_mlir_library)
   add_mlir_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    BUILD_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  update_rpath(${ARGV0})
 endfunction()
 
 function(oneflow_add_mlir_dialect_library)
   add_mlir_dialect_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${LLVM_LIBRARY_DIR}")
-  set_property(TARGET ${ARGV0} APPEND PROPERTY
-    INSTALL_RPATH "${ONEFLOW_BUILD_ROOT_DIR}")
+  update_rpath(${ARGV0})
+endfunction()
+
+function(oneflow_add_llvm_tool)
+  add_llvm_tool(${ARGV})
+  llvm_update_compile_flags(oneflow-runner)
+  set_compile_options_to_oneflow_target(${ARGV0})
+  update_rpath(${ARGV0})
 endfunction()
 
 find_package(Threads REQUIRED)
@@ -80,11 +80,12 @@ set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${PROJECT_BINARY_DIR}/lib)
 if(WITH_MLIR)
-add_subdirectory(include)
-add_subdirectory(lib)
-add_subdirectory(test)
-add_subdirectory(oneflow-opt)
-add_subdirectory(oneflow-translate)
-add_subdirectory(oneflow-runtime)
-add_subdirectory(oneflow-extension)
+  add_subdirectory(include)
+  add_subdirectory(lib)
+  add_subdirectory(test)
+  add_subdirectory(oneflow-opt)
+  add_subdirectory(oneflow-translate)
+  add_subdirectory(oneflow-runtime)
+  add_subdirectory(oneflow-extension)
+  add_subdirectory(oneflow-runner)
 endif(WITH_MLIR)

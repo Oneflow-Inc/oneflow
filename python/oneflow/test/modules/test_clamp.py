@@ -111,21 +111,21 @@ class TestClampModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_clamp_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         y = torch.clamp(input, min=random().to(float), max=random().to(float))
         return y
 
     @autotest(check_graph=True)
     def test_clamp_min_none_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         y = torch.clamp(input, min=random().to(float), max=random().to(float))
         return y
 
     @autotest(check_graph=True)
     def test_clamp_max_none_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         y = torch.clamp(
             input, min=random().to(float), max=random().to(float) | nothing()
         )
@@ -134,21 +134,21 @@ class TestClampModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_clip_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         y = torch.clip(input, min=random().to(float), max=random().to(float))
         return y
 
     @autotest(check_graph=True)
     def test_clip_min_none_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         y = torch.clip(input, min=random().to(float), max=random().to(float))
         return y
 
     @autotest(check_graph=True)
     def test_clip_max_none_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor().to(device)
+        input = random_tensor().to(device)
         y = torch.clip(
             input, min=random().to(float), max=random().to(float) | nothing()
         )
@@ -157,7 +157,7 @@ class TestClampModule(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=True)
     def test_clamp_with_0_size_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        x = random_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.clamp(x, min=random().to(float), max=random().to(float))
         return y
 

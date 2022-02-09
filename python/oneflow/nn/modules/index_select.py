@@ -22,40 +22,6 @@ def _input_args_is_int(args):
 
 
 def index_select_op(input, dim, index):
-    r"""The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch-cn.readthedocs.io/zh/latest/package_references/torch/#torchindex_select
-
-    Select values along an axis specified by `dim`.
-
-    :attr:`index` must be an Int32 Tensor with 1-D.
-    :attr:`dim` must be in the range of input Dimensions.
-    value of :attr:`index` must be in the range of the dim-th of input.
-    Note that ``input`` and ``index`` do not broadcast against each other.  
-    
-    Args:
-        input (Tensor): the source tensor
-        dim (int): the axis along which to index
-        index (Tensor): the 1-D tensor containing the indices to index
-    
-    For example:
-
-    .. code-block:: python
-    
-        >>> import oneflow as flow
-        >>> input = flow.tensor([[1,2,3],[4,5,6]], dtype=flow.int32)
-        >>> input 
-        tensor([[1, 2, 3],
-                [4, 5, 6]], dtype=oneflow.int32)
-        >>> index = flow.tensor([0,1], dtype=flow.int32)
-        >>> output = flow.index_select(input, 1, index)
-        >>> output
-        tensor([[1, 2],
-                [4, 5]], dtype=oneflow.int32)
-        >>> output = input.index_select(1, index)
-        >>> output
-        tensor([[1, 2],
-                [4, 5]], dtype=oneflow.int32)
-    """
     assert len(index.shape) == 1, "Dimensions of index should be 1-D"
     assert (
         dim < len(input.shape) and dim >= 0
@@ -78,16 +44,6 @@ def index_select_op(input, dim, index):
             index_gather = flow.cat((index_gather, x), dim)
 
     return flow.gather(input, dim, index_gather)
-
-
-@register_tensor_op("index_select")
-def index_select_op_tensor(input, dim, index):
-    """
-    input.index_select(dim, index) -> Tensor
-    See :func:`oneflow.index_select`
-    """
-
-    return index_select_op(input, dim, index)
 
 
 if __name__ == "__main__":

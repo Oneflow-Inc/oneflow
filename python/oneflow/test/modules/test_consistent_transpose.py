@@ -82,7 +82,7 @@ def _test_consistent_transpose_backward_v2(test_case, placement, sbp):
 
 @autotest(check_graph=False)
 def _test_consistent_transpose_flow_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(4, 8, 16, 24, 8).to_consistent(placement, sbp)
+    x = random_tensor(4, 8, 16, 24, 8).to_consistent(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 
@@ -90,7 +90,7 @@ def _test_consistent_transpose_flow_with_random_data(test_case, placement, sbp):
 @autotest(auto_backward=False, check_graph=False)
 def _test_consistent_transpose_with_0_size_data(test_case, placement, sbp):
     device = random_device()
-    x = random_pytorch_tensor(4, 8, 16, 0, 8).to_consistent(placement, sbp)
+    x = random_tensor(4, 8, 16, 0, 8).to_consistent(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 

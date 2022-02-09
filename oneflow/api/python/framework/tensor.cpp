@@ -55,9 +55,10 @@ py::array ApiEagerTensorToNumpy(const py::handle& py_tensor) {
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
   case of_type: return EagerTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
-    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
+    case DataType::kFloat16: return EagerTensorToNumpy<float16>(py_tensor).GetOrThrow();
     default:
-      return Maybe<py::array>(Error::UnimplementedError() << "not support datatype").GetOrThrow();
+      return Maybe<py::array>(Error::UnimplementedError() << "Invalid datatype").GetOrThrow();
   }
 }
 
@@ -108,6 +109,11 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& self,
+                                              const AutogradMeta::Hook& hook) {
+  return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
+}
+
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
@@ -131,6 +137,11 @@ void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
 std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
                                            bool requires_grad) {
   return std::make_shared<Parameter>(data, requires_grad);
+}
+
+void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor,
+                                  const std::function<void()>& hook) {
+  CHECK_JUST(tensor->RegisterStorageDeleteHook(hook));
 }
 
 }  // namespace
@@ -199,6 +210,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
+      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumutaionHook)
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
@@ -214,11 +226,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
-          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
       .def("_get_copy_mirrored_tensor_to_numpy_func_name", &ApiGetCopyMirroredTensorToNumpyFuncName)
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
+      .def("_register_storage_delete_hook", &ApiRegisterStorageDeleteHook)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
       .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);

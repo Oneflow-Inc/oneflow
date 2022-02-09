@@ -33,9 +33,9 @@ def _test_consistent_triplet_marginloss_with_random_data(
     reduction = oneof("none", "sum", "mean", nothing())
     m = torch.nn.TripletMarginLoss(margin=margin, p=p, swap=swap, reduction=reduction)
     m.train(random())
-    anchor = random_pytorch_tensor(2, 8, 16).to_consistent(placement, anchor_sbp)
-    pos = random_pytorch_tensor(2, 8, 16).to_consistent(placement, pos_sbp)
-    neg = random_pytorch_tensor(2, 8, 16).to_consistent(placement, neg_sbp)
+    anchor = random_tensor(2, 8, 16).to_consistent(placement, anchor_sbp)
+    pos = random_tensor(2, 8, 16).to_consistent(placement, pos_sbp)
+    neg = random_tensor(2, 8, 16).to_consistent(placement, neg_sbp)
     y = m(anchor, pos, neg)
     return y
 

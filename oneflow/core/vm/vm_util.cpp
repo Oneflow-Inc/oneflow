@@ -42,17 +42,13 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 }
 
 Maybe<void> ClusterSync() {
-  Maybe<void> (*Run)(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) =
-      JUST(IsMultiClient()) ? &PhysicalRun : &LogicalRun;
   BlockingCounter bc(1);
-  JUST(Run([&bc](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
   return Maybe<void>::Ok();
 }
 
@@ -62,9 +58,7 @@ Maybe<void> CurrentRankSync() {
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
   return Maybe<void>::Ok();
 }
 

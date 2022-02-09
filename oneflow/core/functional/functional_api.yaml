@@ -33,7 +33,7 @@
 - name: "sub"
   signature:
     [
-      "Tensor (Tensor input, Tensor other) => Sub",
+      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Sub",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
       "Tensor (Scalar input, Tensor other) =>  ScalarSub",
     ]
@@ -62,6 +62,14 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+    ]
+  bind_python: true
+
+- name: "div_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceDiv",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarDiv",
     ]
   bind_python: true
 
@@ -287,6 +295,14 @@
       "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Transpose2dim",
     ]
   bind_python: True
+
+- name: "as_strided"
+  signature: "Tensor (Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStrided"
+  bind_python: True
+
+- name: "as_strided_grad"
+  signature: "Tensor (Tensor dy, Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStridedGrad"
+  bind_python: False
 
 - name: "swapaxes"
   signature:
@@ -748,6 +764,14 @@
   signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
   bind_python: False
 
+- name: "repeat"
+  signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
+  bind_python: True
+
+- name: "tile"
+  signature: "Tensor (Tensor input, Shape dims) => Tile"
+  bind_python: True
+
 - name: "roll"
   signature: "Tensor (Tensor x, Int32List[1] shifts, Int32List[1] dims=None) => Roll"
   bind_python: True
@@ -954,6 +978,27 @@
   ]
   bind_python: True
 
+- name: "tensor_split"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections, Int32 dim=0) => TensorSplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections, Int32 dim=0) => TensorSplitVec",
+  ]
+  bind_python: True
+
+- name: "hsplit"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections) => HsplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections) => HsplitVec",
+  ]
+  bind_python: True
+
+- name: "vsplit"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections) => VsplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections) => VsplitVec",
+  ]
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
@@ -989,13 +1034,6 @@
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
     String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
-  bind_python: True
-
-- name: "max_pool2d_nhwc"
-  signature:
-    'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
-    Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
   bind_python: True
 
 - name: "ctc_loss_grad"
@@ -1615,12 +1653,16 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
+- name: "stream_touch"
+  signature: "Void (TensorTuple x) => StreamTouch"
+  bind_python: True
+
 - name: "broadcast"
   signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
 
 - name: "local_all_reduce"
-  signature: "Tensor (Tensor x) => LocalAllReduce"
+  signature: "Tensor (Tensor x, Bool inplace=False) => LocalAllReduce"
   bind_python: True
 
 - name: "local_reduce"
@@ -1758,8 +1800,8 @@
 
 - name: "split"
   signature: [
-    "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
-    "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+    "TensorTuple (Tensor x, Int64 split_size_or_sections, Int64 dim=0) => Split",
+    "TensorTuple (Tensor x, Int64List split_size_or_sections, Int64 dim=0) => SplitWithSize",
   ]
   bind_python: True
 
@@ -1922,3 +1964,11 @@
 - name: "cumsum_grad"
   signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
   bind_python: False 
+
+- name: "cumprod"
+  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  bind_python: True
+
+- name: "cumprod_grad"
+  signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
+  bind_python: False

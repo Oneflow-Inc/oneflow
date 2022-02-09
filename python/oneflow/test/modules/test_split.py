@@ -31,7 +31,7 @@ class TestSplit(flow.unittest.TestCase):
         k2 = random(2, 6)
         rand_dim = random(0, 3).to(int)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, 2, dim=rand_dim)
         return torch.cat(res, rand_dim)
 
@@ -41,7 +41,7 @@ class TestSplit(flow.unittest.TestCase):
         k1 = 7
         k2 = random(2, 6)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, [1, 2, 3, 1], dim=1)
         return torch.cat(res, dim=1)
 
@@ -51,9 +51,22 @@ class TestSplit(flow.unittest.TestCase):
         k1 = 7
         k2 = random(2, 6)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, [1, 2, 3, 1], dim=-2)
         return torch.cat(res, dim=1)
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_flow_split_bool_with_random_data(test_case):
+        k0 = random(2, 6)
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        rand_dim = random(0, 3).to(int)
+        device = random_device()
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(
+            device=device, dtype=torch.bool
+        )
+        res = torch.split(x, split_size_or_sections=2, dim=rand_dim)
+        return torch.cat(res, rand_dim)
 
 
 if __name__ == "__main__":
