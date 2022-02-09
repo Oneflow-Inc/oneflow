@@ -27,6 +27,9 @@ namespace vm {
 class LocalCallOpKernelInstructionType : public vm::InstructionType {
  public:
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
+
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
   std::string DebugOpTypeName(const vm::InstructionMsg& instr_msg) const override;
 
@@ -36,7 +39,6 @@ class LocalCallOpKernelInstructionType : public vm::InstructionType {
 
  private:
   Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
-  virtual const char* device_tag() const = 0;
 };
 
 }  // namespace vm

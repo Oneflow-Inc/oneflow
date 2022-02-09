@@ -14,32 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
 
-
-@autotest(n=2, check_graph=False)
-def test_dot_impl(test_case, placement, sbp):
-    k = random(100, 1000) * 8
-    x = random_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
-    y = random_tensor(ndim=1, dim0=k).to_consistent(placement=placement, sbp=sbp)
-    z = torch.dot(x, y)
-    return z
-
-
-class TestDotConsistent(flow.unittest.TestCase):
-    @consistent
-    def test_dot(test_case):
-        for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=1):
-                test_dot_impl(test_case, placement, sbp)
+@flow.unittest.skip_unless_1n1d()
+class TestSBPSymbol(flow.unittest.TestCase):
+    def test_sbp_symbol(test_case):
+        test_case.assertTrue(flow.sbp.split(0) == flow.sbp.split(0)())
+        test_case.assertTrue(flow.sbp.split(1) == flow.sbp.split(1)())
+        test_case.assertTrue(flow.sbp.split(0) != flow.sbp.split(1))
+        test_case.assertTrue(flow.sbp.broadcast == flow.sbp.broadcast())
+        test_case.assertTrue(flow.sbp.partial_sum == flow.sbp.partial_sum())
 
 
 if __name__ == "__main__":

@@ -25,14 +25,23 @@ namespace vm {
 struct InstructionMsg;
 struct Instruction;
 
+enum InstructionFuseType {
+  kInvalidInstructionFuseType = 0,
+  kDisableInstructionFuse,
+  kEnableInstructionFuseAtAnyPosition,
+  kEnableInstructionFuseAsTailOnly,
+};
+
 class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
   bool IsSequential() const { return IsFrontSequential(); }
   virtual bool IsFrontSequential() const { return false; }
+  virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual void Compute(Instruction* instruction) const = 0;
 
+  virtual void ComputeInFuseMode(InstructionMsg* instr_msg) const { LOG(FATAL) << "UNIMPLEMENTED"; }
   void InitInstructionStatusIf(Instruction* instruction) const {
     InitInstructionStatus(instruction);
   }

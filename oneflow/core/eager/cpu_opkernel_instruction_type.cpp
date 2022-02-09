@@ -30,9 +30,6 @@ class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstru
   ~CpuLocalCallOpKernelInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
-
- private:
-  const char* device_tag() const override { return stream_type().device_tag(); }
 };
 COMMAND(vm::RegisterInstructionType<CpuLocalCallOpKernelInstructionType>("cpu.LocalCallOpKernel"));
 
