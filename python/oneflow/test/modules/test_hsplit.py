@@ -35,6 +35,7 @@ class TestHsplitVec(flow.unittest.TestCase):
         return z[0]
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestHsplitInt(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_hsplit_int(test_case):
