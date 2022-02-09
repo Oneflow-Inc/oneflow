@@ -139,7 +139,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  // std::cout << "view::Slice" << std::endl;
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
                                  << (input->is_lazy() ? "lazy" : "consistent");
