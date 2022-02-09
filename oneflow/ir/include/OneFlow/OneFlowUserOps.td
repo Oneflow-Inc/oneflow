@@ -8993,6 +8993,7 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
   let output = (outs
     AnyType:$embeddings
   );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9010,6 +9011,7 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
   let output = (outs
     AnyType:$cur_rank_unique_embedding_diff
   );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9077,6 +9079,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [Decla
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size
   );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9100,6 +9103,7 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<F32Attr, "0.9">:$beta
   );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9128,6 +9132,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Dec
     DefaultValuedAttr<F32Attr, "0.">:$epsilon,
     DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
   );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9143,6 +9148,7 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
   let attrs = (ins
     StrAttr:$embedding_name
   );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
