@@ -116,12 +116,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
       .Split(user_op::OpArg("bias", 0), 0)
       .Split(user_op::OpArg("out", 0), 1)
       .Build();
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("a", 0), k_a_axis)
-      .Split(user_op::OpArg("b", 0), k_b_axis)
-      .PartialSum(user_op::OpArg("bias", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 
