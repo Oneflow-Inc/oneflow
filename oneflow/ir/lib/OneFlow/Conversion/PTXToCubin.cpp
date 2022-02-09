@@ -82,8 +82,10 @@ SerializeToCubinPass::SerializeToCubinPass() {
   std::string arch = std::to_string(prop.major) + std::to_string(prop.minor);
   maybeSetOption(this->triple, "nvptx64-nvidia-cuda");
   maybeSetOption(this->chip, ("sm_" + arch).c_str());
-  if (arch == "75") { arch = "72"; }
-  maybeSetOption(this->features, ("+ptx" + arch).c_str());
+  std::string ptx_arch = arch;
+  // NOTE: doesn't support PTX75 for now
+  if (ptx_arch == "75") { ptx_arch = "72"; }
+  maybeSetOption(this->features, ("+ptx" + ptx_arch).c_str());
 }
 
 void SerializeToCubinPass::getDependentDialects(DialectRegistry& registry) const {
