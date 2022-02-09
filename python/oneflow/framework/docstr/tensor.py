@@ -161,6 +161,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.square,
+    """
+    See :func:`oneflow.square`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.
@@ -262,6 +269,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.cosh,
+    """
+    See :func:`oneflow.cosh`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.arccosh,
     """
     See :func:`oneflow.arccosh`
@@ -330,6 +344,20 @@ add_docstr(
     oneflow.Tensor.atanh,
     """
     See :func:`oneflow.atanh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.rsqrt,
+    """
+    See :func:`oneflow.rsqrt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sqrt,
+    """
+    See :func:`oneflow.sqrt`
     """,
 )
 
@@ -486,6 +514,13 @@ add_docstr(
     oneflow.Tensor.log1p,
     """
     See :func:`oneflow.log1p`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log,
+    """
+    See :func:`oneflow.log`
     """,
 )
 
