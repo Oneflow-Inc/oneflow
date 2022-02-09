@@ -350,6 +350,31 @@ class PoolingNDFunctor {
                                 const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
                                 const bool& ceil_mode, const std::string& data_format) const {
+    if (x->ndim() == 4 && data_format == "channels_last") {
+      if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
+        // legacy tf style maxpool2d , use cudnn implementation
+        // with high performance but do not support dilation/return_indices
+        MutableAttrMap attrs;
+        std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
+        std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
+
+        JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+        if (stride.has_value()) {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(stride)));
+        } else {
+          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", kernel_size));
+        }
+        JUST(attrs.SetAttr<std::string>("padding", "customized"));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+        JUST(attrs.SetAttr<std::string>("data_format", data_format));
+        JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+        TensorTuple output;
+        output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
+        return output;
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
@@ -368,19 +393,13 @@ class PoolingNDFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
 class TFAvgPool2DFunctor : public PoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
-  }
-};
-
-class TFMaxPool2DFunctor : public PoolNDFunctor {
- public:
-  TFMaxPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -395,6 +414,7 @@ class Maxpool2DFunctor : public PoolingNDFunctor {
  public:
   Maxpool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
+    tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
@@ -462,8 +482,9 @@ class MseLossFunctor : public LossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const std::string& reduction) const {
-    const auto out =
-        sequence_function(functional::Sub).then(functional::Square).call(input, target);
+    const auto out = sequence_function(functional::Sub)
+                         .then(functional::Square)
+                         .call(input, target, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -474,7 +495,9 @@ class L1LossFunctor : public LossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const std::string& reduction) const {
-    const auto out = sequence_function(functional::Sub).then(functional::Abs).call(input, target);
+    const auto out = sequence_function(functional::Sub)
+                         .then(functional::Abs)
+                         .call(input, target, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -529,7 +552,7 @@ class MarginRankingLossFunctor : public LossFunctorBase {
               return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
             })
             .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
-            .call(input_1, input_2);
+            .call(input_1, input_2, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -1126,19 +1149,22 @@ class TripletMarginLossFunctor {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
     }());
-    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)), /*alpha=*/1)), p,
-                                dim, /*keepdim=*/false, anchor->dtype()));
-    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)), /*alpha=*/1)), p,
-                                dim, /*keepdim=*/false, anchor->dtype()));
+    auto da_p = JUST(VectorNorm(
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        /*keepdim=*/false, anchor->dtype()));
+    auto da_n = JUST(VectorNorm(
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, negative, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        /*keepdim=*/false, anchor->dtype()));
     if (swap) {
-      auto distance_swap =
-          JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)), /*alpha=*/1)), p, dim,
-                          /*keepdim=*/false, positive->dtype()));
+      auto distance_swap = JUST(VectorNorm(
+          JUST(ScalarAdd(eps, JUST(Sub(positive, negative, /*inplace=*/false)), /*alpha=*/1)), p,
+          dim,
+          /*keepdim=*/false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
-    auto triplet_loss =
-        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, /*alpha=*/1, /*inplace=*/false)),
-                   /*min=*/0.0, NullOpt));
+    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n, /*inplace=*/false)), margin,
+                                                  /*alpha=*/1, /*inplace=*/false)),
+                                   /*min=*/0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
@@ -1450,9 +1476,9 @@ class DropoutFunctor {
                                         .Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& addend, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
+                           const bool& training, const Optional<one::Generator>& generator,
+                           const Optional<one::Tensor>& addend) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
@@ -2163,7 +2189,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
-  m.add_functor<impl::TFMaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");

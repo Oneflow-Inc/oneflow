@@ -35,6 +35,8 @@ class MaskedFillKernel final : public user_op::OpKernel {
       scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
     } else if (ctx->Attr<bool>("has_float_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else if (ctx->Attr<bool>("has_bool_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<bool>("bool_operand"));
     } else {
       UNIMPLEMENTED() << "The scalar in MaskedFill should be float or int.";
     }
@@ -54,10 +56,11 @@ class MaskedFillKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, (DeviceType::kCUDA),
-                                 FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+                                 FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #endif
 
 }  // namespace oneflow
