@@ -47,9 +47,9 @@ from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
-    r"""Base class for training or evaluating a neural network in graph mode.
+    r"""Base class for training or evaluating a neural network in static graph mode.
 
-    To use graph mode for model training or evaluation in OneFlow, you should:
+    To use static graph mode for model training or evaluation in OneFlow, you should:
 
     1. Define your customized graph as a subclass of ``nn.Graph``.
     2. Add ``super().__init__()`` in your subclass's ``__init__()``.
@@ -271,8 +271,22 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def state_dict(
-        self, destination=None, prefix="", keep_vars=False
-    ) -> Dict[str, Tensor]:
+        self, destination=None
+    ) -> Dict[str, Union[Dict[str, Tensor], Tensor]]:
+        r"""Returns a dictionary containing a whole state of the graph.
+
+        States of modules/optimizers/lr schedulers in a graph are included.
+
+        Keys of modules' state dict are corresponding to their name in the graph.
+        Values of modules' state dict are corresponding to their nn.Module's
+        state dict.
+
+        Returns:
+            dict: a dictionary containing the whole state of the graph.
+
+        """
+        # Sync to make sure states has been updated.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -284,9 +298,7 @@ class Graph(object):
             module = block.origin
             if module is not None:
                 module.state_dict(
-                    sub_destination,
-                    prefix + ("." if prefix else ""),
-                    keep_vars=keep_vars,
+                    sub_destination, "", keep_vars=False,
                 )
             destination[name] = sub_destination
         # Get additional states.
@@ -308,11 +320,27 @@ class Graph(object):
         return destination
 
     def load_state_dict(
-        self, state_dict: Dict[str, Dict[str, Tensor]], strict: bool = True,
+        self,
+        state_dict: Dict[str, Union[Dict[str, Tensor], Tensor]],
+        strict: bool = True,
     ):
+        r"""Copies module's states and other graph states from :attr:`state_dict`
+        into this graph. If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`nn.Graph.state_dict` function.
+
+        Args:
+            state_dict (dict): a dict containing module's states and other graph states.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this graph's
+                :meth:`nn.Graph.state_dict` function. Default: ``True``.
+
+        Note:
+            nn.Graph's state dict can only be loaded before the first call of a graph.
+        """
         assert (
             not self._is_compiled
-        ), "nn.Graph's state dict can only be load before the first call of graph."
+        ), "nn.Graph's state dict can only be loaded before the first call of a graph."
         # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
         additional_var_names = list()
         additional_var_tensors = list()
@@ -331,6 +359,8 @@ class Graph(object):
             self._c_nn_graph.register_additional_variable_names_and_tensors(
                 additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
             )
+        # Sync to make sure states has been loaded.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
 
     @property
     def name(self):

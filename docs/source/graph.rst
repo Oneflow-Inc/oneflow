@@ -9,6 +9,8 @@ Base class for running neural networks in Graph Mode.
             __call__,
             add_optimizer,
             set_grad_scaler,
+            state_dict,
+            load_state_dict,
             name,
             training,
             debug,

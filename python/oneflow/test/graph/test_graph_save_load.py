@@ -107,6 +107,7 @@ def _test_linear_graph_save_load(test_case, device):
             )
 
         of_graph_out = linear_t_g(x)
+        of_graph_out.numpy()
         iter1_state_dict = linear_t_g.state_dict()
         if call_cnt == 0:
             flow.save(iter1_state_dict, state_dict_dir)
@@ -114,6 +115,7 @@ def _test_linear_graph_save_load(test_case, device):
         if call_cnt == 0:
             of_graph_out = linear_t_g(x)
             iter2_state_dict = linear_t_g.state_dict()
+            of_graph_out.numpy()
             return iter2_state_dict
 
     with tempfile.TemporaryDirectory(prefix="graph_save_load_local") as state_dict_dir:
@@ -245,18 +247,18 @@ def _test_linear_graph_save_load_global(test_case, device):
             )
 
         of_graph_out = linear_t_g(x)
+        of_graph_out.numpy()
         iter1_state_dict = linear_t_g.state_dict()
         if call_cnt == 0:
             flow.save(iter1_state_dict, state_dict_dir, global_dst_rank=0)
 
         if call_cnt == 0:
             of_graph_out = linear_t_g(x)
+            of_graph_out.numpy()
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(
-        prefix="graph_save_load_global"
-    ) as state_dict_dir:
+    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
