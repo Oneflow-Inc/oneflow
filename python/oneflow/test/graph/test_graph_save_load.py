@@ -254,9 +254,7 @@ def _test_linear_graph_save_load_global(test_case, device):
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(
-        prefix="graph_save_load_global"
-    ) as state_dict_dir:
+    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
