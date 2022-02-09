@@ -24,4 +24,4 @@ set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld" CACHE STRING "")
 set(CPU_THREADING_RUNTIME SEQ CACHE STRING
                                     "when using lld with TBB enabled, there will be linkage error")
 set(BUILD_HWLOC OFF CACHE BOOL "")
-set(WITH_ONEDNN OFF CACHE STRING "")
+set(WITH_ONEDNN OFF CACHE BOOL "")
