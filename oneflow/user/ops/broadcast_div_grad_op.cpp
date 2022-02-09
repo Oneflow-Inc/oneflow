@@ -55,13 +55,13 @@ namespace oneflow {
       .Broadcast(user_op::OpArg("y", 0))
       .PartialSum(user_op::OpArg("z", 0))
       .Broadcast(user_op::OpArg("dz", 0))
-      .Broadcast(user_op::OpArg("dy", 0))
+      .PartialSum(user_op::OpArg("dy", 0))
       .Build();
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("y", 0))
       .Broadcast(user_op::OpArg("z", 0))
       .PartialSum(user_op::OpArg("dz", 0))
-      .Broadcast(user_op::OpArg("dy", 0))
+      .PartialSum(user_op::OpArg("dy", 0))
       .Build();
   return Maybe<void>::Ok();
 }

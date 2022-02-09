@@ -58,7 +58,7 @@ class TestErfinvModule(flow.unittest.TestCase):
     @autotest(check_graph=True, auto_backward=False)
     def test_flow_erfinv_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(requires_grad=False).to(device)
+        x = random_tensor(requires_grad=False).to(device)
         y = torch.erfinv(x)
         return y
 

@@ -19,11 +19,12 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMovedim(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_movedim_with_vector(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),
@@ -33,10 +34,10 @@ class TestMovedim(flow.unittest.TestCase):
         z = torch.movedim(x, (0, 1), (2, 3))
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_movedim_with_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),

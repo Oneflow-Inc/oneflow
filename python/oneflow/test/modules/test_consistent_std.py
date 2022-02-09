@@ -23,7 +23,7 @@ import oneflow.unittest
 @autotest(n=3, auto_backward=False, rtol=0.01, atol=0.01, check_graph=False)
 def _test_consistent_std_flow_with_random_data(test_case, placement, sbp):
     dim = random(low=0, high=4).to(int)
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4,
         dim0=random(2, 4) * 8,
         dim1=random(2, 4) * 8,
@@ -37,7 +37,7 @@ def _test_consistent_std_flow_with_random_data(test_case, placement, sbp):
 @autotest(n=3, auto_backward=False, rtol=0.01, atol=0.01, check_graph=False)
 def _test_consistent_std_tensor_with_random_data(test_case, placement, sbp):
     dim = random(low=0, high=4).to(int)
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4,
         dim0=random(2, 4) * 8,
         dim1=random(2, 4) * 8,

@@ -28,14 +28,14 @@ import oneflow.unittest
 
 @autotest(n=1, check_graph=False)
 def _test_consistent_sum_against_pytorch(test_case, placement, sbp):
-    x = random_pytorch_tensor(4, 8, 16, 8, 24).to_consistent(placement, sbp)
+    x = random_tensor(4, 8, 16, 8, 24).to_consistent(placement, sbp)
     y = torch.sum(x)
     return y
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_consistent_sum_with_0_size_tensor(test_case, placement, sbp):
-    x = random_pytorch_tensor(4, 8, 16, 0, 24).to_consistent(placement, sbp)
+    x = random_tensor(4, 8, 16, 0, 24).to_consistent(placement, sbp)
     y = torch.sum(x, dim=np.random.randint(0, 3))
     return y
 

@@ -28,8 +28,8 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_consistent_sub(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
-    y = random_pytorch_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
+    x = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
+    y = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
     out1 = x - y
     out2 = x - 2
     out3 = 2 - x
@@ -40,7 +40,7 @@ def _test_consistent_sub(test_case, placement, sbp):
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_consistent_sub_with_0_size_data(test_case, placement, sbp):
     device = random_device()
-    x = random_pytorch_tensor(2, 0, 8).to_consistent(placement=placement, sbp=sbp)
+    x = random_tensor(2, 0, 8).to_consistent(placement=placement, sbp=sbp)
     out1 = x - 2
     out2 = 2 - x
     return out1, out2

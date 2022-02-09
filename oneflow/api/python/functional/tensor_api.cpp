@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -247,8 +248,10 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Build TensorBuffer
     const auto& Free = [obj](char* dptr) {
-      py::gil_scoped_acquire gil;
-      Py_DECREF(obj);
+      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(obj);
+        return Maybe<void>::Ok();
+      }));
     };
     Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
@@ -267,7 +270,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(JUST(GetLocalDepObject4Device(*device))));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
     JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));

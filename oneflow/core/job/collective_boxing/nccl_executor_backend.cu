@@ -352,11 +352,13 @@ void LaunchAggregatedOps(const CommGroup& comm_group,
             OF_NCCL_CHECK(ncclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
                                         comm, stream_ctx->stream()));
           } else if (op_type == OpType::kOpTypeReduceScatter) {
+            CHECK_NE(op_desc.data_type(), kBool) << "Reduce by boolean is not supported in nccl";
             CHECK_EQ(elem_cnt % num_ranks, 0);
             OF_NCCL_CHECK(ncclReduceScatter(
                 send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
                 GetNcclReduceOp(op_desc.reduce_method()), comm, stream_ctx->stream()));
           } else if (op_type == OpType::kOpTypeReduce) {
+            CHECK_NE(op_desc.data_type(), kBool) << "Reduce by boolean is not supported in nccl";
             OF_NCCL_CHECK(ncclReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                      GetNcclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
                                      stream_ctx->stream()));

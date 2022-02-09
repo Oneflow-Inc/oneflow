@@ -120,9 +120,25 @@ class TestGather(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_gather_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
         dim = random(0, 4).to(int)
-        index = random_pytorch_tensor(
+        index = random_tensor(
+            ndim=4,
+            dim1=random(1, 3).to(int),
+            dim2=random(1, 4).to(int),
+            dim3=random(1, 5).to(int),
+            dtype=int,
+        ).to(device)
+        return torch.gather(input, dim, index)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_gather_bool_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(
+            device=device, dtype=torch.bool
+        )
+        dim = random(0, 4).to(int)
+        index = random_tensor(
             ndim=4,
             dim1=random(1, 3).to(int),
             dim2=random(1, 4).to(int),
