@@ -24,6 +24,21 @@ namespace oneflow {
 
 namespace {
 
+template<typename T>
+__device__ __forceinline__ bool IsZero(T v) {
+  return v == 0;
+}
+
+template<>
+__device__ __forceinline__ bool IsZero<half>(half v) {
+  return v == static_cast<half>(0);
+}
+
+template<>
+__device__ __forceinline__ bool IsZero<half2>(half2 v) {
+  return v.x == static_cast<half>(0) && v.y == static_cast<half>(0);
+}
+
 template<typename T, typename K, typename IDX, typename U>
 __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt,
                                       const NdIndexOffsetHelper<IDX, 3> in_helper,
@@ -32,7 +47,7 @@ __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt,
                                       const IDX segment_id_offset, T* out) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
-    if (val != static_cast<U>(0)) {
+    if (!IsZero(val)) {
       IDX outer_idx, segment_id_idx, inner_idx;
       in_helper.OffsetToNdIndex(i, outer_idx, segment_id_idx, inner_idx);
       const K origin_idx = segment_ids[segment_id_idx];
@@ -55,7 +70,7 @@ __global__ void UnsortedSegmentColSumGpu(const IDX data_elem_cnt,
                                          T* out) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
-    if (val != static_cast<U>(0)) {
+    if (!IsZero(val)) {
       IDX outer_idx, segment_id_idx;
       in_helper.OffsetToNdIndex(i, outer_idx, segment_id_idx);
       const K origin_idx = segment_ids[segment_id_idx];
@@ -78,7 +93,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
                                          T* out) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
-    if (val != static_cast<U>(0)) {
+    if (!IsZero(val)) {
       IDX segment_id_idx, inner_idx;
       in_helper.OffsetToNdIndex(i, segment_id_idx, inner_idx);
       const K origin_idx = segment_ids[segment_id_idx];
@@ -126,6 +141,24 @@ void UnsortedSegmentSumUtil(ep::Stream* stream, const K* segment_ids, const U* d
   }
 }
 
+template<typename T, typename K, typename IDX, typename U>
+void DispatchDataType(ep::Stream* stream, const K* segment_ids, const U* data,
+                      int64_t num_segment_ids, int64_t num_segments, int64_t outer_dim_size,
+                      int64_t inner_dim_size, int64_t segment_id_offset, T* out) {
+  auto* cuda_stream = stream->As<ep::CudaStream>();
+  if (std::is_same<T, half>::value && std::is_same<U, half>::value
+      && cuda_stream->device_properties().major >= 6
+      && reinterpret_cast<uintptr_t>(data) % sizeof(half2) == 0
+      && reinterpret_cast<uintptr_t>(out) % sizeof(half2) == 0 && inner_dim_size % 2 == 0) {
+    UnsortedSegmentSumUtil<half2, K, IDX, half2>(
+        stream, segment_ids, reinterpret_cast<const half2*>(data), num_segment_ids, num_segments,
+        outer_dim_size, inner_dim_size / 2, segment_id_offset, reinterpret_cast<half2*>(out));
+  } else {
+    UnsortedSegmentSumUtil<T, K, IDX, U>(stream, segment_ids, data, num_segment_ids, num_segments,
+                                         outer_dim_size, inner_dim_size, segment_id_offset, out);
+  }
+}
+
 }  // namespace
 
 template<typename T, typename K, typename U>
@@ -138,13 +171,11 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, K, U> final {
     const int64_t out_elem_cnt = outer_dim_size * num_segments * inner_dim_size;
 
     if (std::max(data_elem_cnt, out_elem_cnt) < GetMaxVal<int32_t>() / 2) {
-      UnsortedSegmentSumUtil<T, K, int32_t, U>(stream, segment_ids, data, num_segment_ids,
-                                               num_segments, outer_dim_size, inner_dim_size,
-                                               segment_id_offset, out);
+      DispatchDataType<T, K, int32_t, U>(stream, segment_ids, data, num_segment_ids, num_segments,
+                                         outer_dim_size, inner_dim_size, segment_id_offset, out);
     } else {
-      UnsortedSegmentSumUtil<T, K, int64_t, U>(stream, segment_ids, data, num_segment_ids,
-                                               num_segments, outer_dim_size, inner_dim_size,
-                                               segment_id_offset, out);
+      DispatchDataType<T, K, int64_t, U>(stream, segment_ids, data, num_segment_ids, num_segments,
+                                         outer_dim_size, inner_dim_size, segment_id_offset, out);
     }
   }
 };
@@ -180,5 +211,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA,
                                  FLOAT16_DATA_TYPE_SEQ);
 
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA
+
+template struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, half, int32_t, half>;
+template struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, half, int64_t, half>;
 
 }  // namespace oneflow

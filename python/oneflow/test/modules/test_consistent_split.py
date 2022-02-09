@@ -32,7 +32,7 @@ def _test_flow_split_with_random_data(test_case, placement, sbp):
     k1 = random(2, 6) * 8
     k2 = random(2, 6) * 8
     rand_dim = random(0, 3).to(int)
-    x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to_consistent(
+    x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to_consistent(
         placement=placement, sbp=sbp
     )
     res = torch.split(x, 2, dim=rand_dim)
@@ -44,7 +44,7 @@ def _test_flow_split_sizes_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = 16
     k2 = random(2, 6) * 8
-    x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to_consistent(
+    x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to_consistent(
         placement=placement, sbp=sbp
     )
     res = torch.split(x, [6, 3, 4, 3], dim=1)
@@ -56,7 +56,7 @@ def _test_flow_split_sizes_neg_dim_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = 16
     k2 = random(2, 6) * 8
-    x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to_consistent(
+    x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to_consistent(
         placement=placement, sbp=sbp
     )
     res = torch.split(x, [6, 3, 4, 3], dim=-2)

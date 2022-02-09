@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, auto_backward=False, check_graph=False, rtol=0.5, atol=0.5)
 def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4, dim0=8, dim1=32, dim2=40, dim3=64, requires_grad=False
     ).to_consistent(placement=placement, sbp=sbp)
     y = torch.linalg.norm(x)
@@ -37,7 +37,7 @@ def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
 
 @autotest(n=1, auto_backward=False, check_graph=False, rtol=0.5, atol=0.5)
 def _test_scalar_print_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(
+    x = random_tensor(
         ndim=4, dim0=8, dim1=24, dim2=16, dim3=40, requires_grad=False
     ).to_consistent(placement=placement, sbp=sbp)
     y = torch.linalg.norm(x)

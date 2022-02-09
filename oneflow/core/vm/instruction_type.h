@@ -27,6 +27,13 @@ struct InstructionMsg;
 struct Instruction;
 struct VirtualMachineEngine;
 
+enum InstructionFuseType {
+  kInvalidInstructionFuseType = 0,
+  kDisableInstructionFuse,
+  kEnableInstructionFuseAtAnyPosition,
+  kEnableInstructionFuseAsTailOnly,
+};
+
 class InstructionType {
  public:
   virtual ~InstructionType() = default;
@@ -34,6 +41,7 @@ class InstructionType {
   bool IsSequential() const { return IsFrontSequential(); }
   virtual bool IsFrontSequential() const { return false; }
   virtual bool ResettingIdToObjectMap() const { return false; }
+  virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const = 0;
 
@@ -42,6 +50,7 @@ class InstructionType {
   virtual void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
+  virtual void ComputeInFuseMode(InstructionMsg* instr_msg) const { LOG(FATAL) << "UNIMPLEMENTED"; }
   virtual void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
@@ -52,10 +61,7 @@ class InstructionType {
     DeleteInstructionStatus(instruction);
   }
 
-  virtual const std::string& DebugOpTypeName(Instruction* instruction) const {
-    static thread_local std::string empty("");
-    return empty;
-  }
+  virtual std::string DebugOpTypeName(const InstructionMsg&) const { return ""; }
 
  protected:
   InstructionType() = default;
