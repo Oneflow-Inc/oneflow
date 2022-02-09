@@ -98,7 +98,7 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helpe
 template<typename T, typename IDX>
 struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                               const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     Maxpool1dForwardCompute<T, IDX>(index_helper, elem_num, src, dest, indice_ptr,
@@ -166,7 +166,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T, IDX> {
   }
 
   static void Maxpool3dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 5>& index_helper,
+                               const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     Maxpool3dForwardCompute<T, IDX>(
@@ -219,15 +219,15 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
-
+    DimVector y_vector(2);
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1); 
+    y_vector.at(1) = y->shape().At(2); 
     if(elem_num < GetMaxVal<int32_t>()){
-      NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
+      NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
       PoolingKernelUtil<device_type, T, int32_t>::Maxpool1dForward(ctx->stream(), index_helper, elem_num, src,
                                                         dest, indice_ptr, params_3d);
     }else{
-      NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
+      NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
       PoolingKernelUtil<device_type, T, int64_t>::Maxpool1dForward(ctx->stream(), index_helper, elem_num, src,
                                                         dest, indice_ptr, params_3d);
       }
@@ -427,14 +427,18 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
+    DimVector y_vector(4);
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1); 
+    y_vector.at(1) = y->shape().At(2); 
+    y_vector.at(2) = y->shape().At(3); 
+    y_vector.at(3) = y->shape().At(4); 
+
     if(elem_num < GetMaxVal<int32_t>()){
-      NdIndexOffsetHelper<int32_t, 5> index_helper(y_vector.data());
+      NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
       PoolingKernelUtil<device_type, T, int32_t>::Maxpool3dForward(ctx->stream(), index_helper, elem_num, src,
                                                         dest, indice_ptr, params_3d);
     }else{
-      NdIndexOffsetHelper<int64_t, 5> index_helper(y_vector.data());
+      NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
       PoolingKernelUtil<device_type, T, int64_t>::Maxpool3dForward(ctx->stream(), index_helper, elem_num, src,
                                                         dest, indice_ptr, params_3d);
     }

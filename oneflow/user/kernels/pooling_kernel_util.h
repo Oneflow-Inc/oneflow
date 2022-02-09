@@ -103,7 +103,7 @@ class MaxPoolingParams3D {
 template<DeviceType device_type, typename T, typename IDX>
 struct PoolingKernelUtil {
   static void Maxpool1dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                               const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d);
 
@@ -135,7 +135,7 @@ struct PoolingKernelUtil {
                                      const MaxPoolingParams3D& params_3d);
 
   static void Maxpool3dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 5>& index_helper,
+                               const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d);
 
@@ -146,18 +146,17 @@ struct PoolingKernelUtil {
 };
 
 template<typename T, typename IDX>
-OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 3> index_helper,
+OF_DEVICE_FUNC void Maxpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                             IDX elem_num, const T* src, T* dest,
                                             int64_t* indice_ptr, const int32_t padding_l,
                                             const int32_t n_batch, const int32_t n_channel,
                                             const int32_t x_length, const int32_t kernel_size_l, 
                                             const int32_t stride_l, const int32_t dilation_l) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    IDX n, c, l;
-    index_helper.OffsetToNdIndex(num, n, c, l);
+    IDX n_c, l;
+    index_helper.OffsetToNdIndex(num, n_c, l);
 
-    // n, c, l->index = n*c*l + c* l
-    const IDX start_idx = (n * n_channel + c) * x_length;
+    const IDX start_idx = n_c * x_length;
     IDX lstart = l * stride_l - padding_l;
     const IDX lend = (lstart + (kernel_size_l - 1) * dilation_l + 1) <= x_length
                              ? (lstart + (kernel_size_l - 1) * dilation_l + 1)
@@ -302,7 +301,7 @@ OF_DEVICE_FUNC void Maxpool2dBackwardComputeCLast(
 
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Maxpool3dForwardCompute(
-    const NdIndexOffsetHelper<IDX, 5> index_helper, IDX elem_num, const T* src, T* dest,
+    const NdIndexOffsetHelper<IDX, 4> index_helper, IDX elem_num, const T* src, T* dest,
     int64_t* indice_ptr, const int32_t padding_t, const int32_t padding_h, const int32_t padding_w,
     const int32_t n_batch, const int32_t n_channel, 
     const int32_t x_time, const int32_t x_height, const int32_t x_width, 
@@ -310,11 +309,10 @@ OF_DEVICE_FUNC void Maxpool3dForwardCompute(
     const int32_t stride_t, const int32_t stride_h, const int32_t stride_w,
     const int32_t dilation_t, const int32_t dilation_h, const int32_t dilation_w) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    IDX n, c, t, h, w;
-    index_helper.OffsetToNdIndex(num, n, c, t, h, w);
+    IDX n_c, t, h, w;
+    index_helper.OffsetToNdIndex(num, n_c, t, h, w);
 
-    IDX xstart = n * n_channel * x_time * x_width * x_height;
-    IDX start_idx = xstart + c * x_time * x_width * x_height;
+    IDX start_idx = n_c * x_time * x_width * x_height;
     IDX tstart = t * stride_t - padding_t;
     IDX hstart = h * stride_h - padding_h;
     IDX wstart = w * stride_w - padding_w;

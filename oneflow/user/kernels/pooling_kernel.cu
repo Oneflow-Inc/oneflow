@@ -85,7 +85,7 @@ __device__ __inline__ void Maxpool2dForwardComputeCLast(
 
 template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool1dForward(const NdIndexOffsetHelper<IDX, 3> index_helper,
+    void DoCUDAMaxPool1dForward(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                 IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                 int32_t padding_l, int64_t n_batch, int64_t n_channel,
                                 int64_t x_length, int32_t kernel_size_l,
@@ -126,7 +126,7 @@ __launch_bounds__(kBlockSize) __global__
 
 template<typename T, typename IDX>
 __launch_bounds__(kBlockSize) __global__
-    void DoCUDAMaxPool3dForward(const NdIndexOffsetHelper<IDX, 5> index_helper,
+    void DoCUDAMaxPool3dForward(const NdIndexOffsetHelper<IDX, 4> index_helper,
                                 IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                 int32_t padding_t, int32_t padding_h, int32_t padding_w,
                                 int64_t n_batch, int64_t n_channel, int64_t x_time,
@@ -192,7 +192,7 @@ __launch_bounds__(kBlockSize) __global__
 template<typename T, typename IDX>
 struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                               const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     DoCUDAMaxPool1dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
@@ -266,7 +266,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   }
 
   static void Maxpool3dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<IDX, 5>& index_helper,
+                               const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolingParams3D& params_3d) {
     DoCUDAMaxPool3dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
