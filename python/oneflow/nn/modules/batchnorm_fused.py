@@ -104,7 +104,7 @@ class _FusedBatchNorm(_FusedNormBase):
             self.running_var if not self.training or self.track_running_stats else None,
             self.weight,
             self.bias,
-            axis=self.channel_axis,
+            axis=self.channel_axis if x.ndim == 4 else 1,
             epsilon=self.eps,
             momentum=self.momentum,
             is_training=is_training,

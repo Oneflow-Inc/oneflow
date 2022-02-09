@@ -121,7 +121,7 @@ class _BatchNorm(_NormBase):
             self.running_var,
             self.weight,
             self.bias,
-            axis=self.channel_axis,
+            axis=self.channel_axis if x.ndim == 4 else 1,
             epsilon=self.eps,
             momentum=self.momentum,
             is_training=is_training,
