@@ -49,6 +49,19 @@ const Symbol<DType>* GetTensorDType(const Tensor& tensor) {
   return &CHECK_JUST(DType::Get(tensor.dtype()->data_type()));
 }
 
+py::array ApiEagerTensorToNumpy(const py::handle& py_tensor) {
+  const std::shared_ptr<Tensor> tensor = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
+  DataType data_type = tensor->dtype()->data_type();
+  switch (data_type) {
+#define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
+  case of_type: return EagerTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
+    case DataType::kFloat16: return EagerTensorToNumpy<float16>(py_tensor).GetOrThrow();
+    default:
+      return Maybe<py::array>(Error::UnimplementedError() << "Invalid datatype").GetOrThrow();
+  }
+}
+
 void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
   return EagerMirroredTensorZeros(tensor).GetOrThrow();
 }
@@ -96,6 +109,11 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
+void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& self,
+                                              const AutogradMeta::Hook& hook) {
+  return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
+}
+
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
@@ -119,6 +137,11 @@ void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
 std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
                                            bool requires_grad) {
   return std::make_shared<Parameter>(data, requires_grad);
+}
+
+void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor,
+                                  const std::function<void()>& hook) {
+  CHECK_JUST(tensor->RegisterStorageDeleteHook(hook));
 }
 
 }  // namespace
@@ -183,14 +206,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &Tensor::is_lazy)
       .def_property_readonly("is_eager", &Tensor::is_eager)
-      .def_property_readonly("is_consistent", &Tensor::is_consistent)
+      .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
+      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumutaionHook)
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
-      .def("consistent_id",
+      .def("global_id",
            [](const one::Tensor& tensor) -> int64_t {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
@@ -198,14 +222,16 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<one::Tensor>& tensor) {
              return CheckMetaConsistency(tensor).GetOrThrow();
            })
+      .def("to_numpy", &ApiEagerTensorToNumpy, py::return_value_policy::move)
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)
-          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+          OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
       .def("_get_copy_mirrored_tensor_to_numpy_func_name", &ApiGetCopyMirroredTensorToNumpyFuncName)
       .def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName)
+      .def("_register_storage_delete_hook", &ApiRegisterStorageDeleteHook)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
       .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);

@@ -22,6 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.framework.dtype as dtype_util
 
 
 def constant_initializer(
@@ -1206,3 +1207,13 @@ def EmptyInitializerImpl(
     var_blob_shape: Sequence[int],
 ):
     return None
+
+
+def _elem_cnt(shape):
+    return np.prod(shape).astype(int).item()
+
+
+def generate_values_by_initializer(initializer, shape, dtype):
+    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    length = _elem_cnt(shape)
+    return np.array(initializer(length)).astype(np_dtype).reshape(shape)

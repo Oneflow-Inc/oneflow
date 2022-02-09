@@ -71,7 +71,7 @@ struct PlacementSymbolExportUtil {
     const auto parallel_conf =
         MakeParallelConf(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
     std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
       return Maybe<void>::Ok();
     }));
@@ -129,7 +129,7 @@ struct PlacementSymbolExportUtil {
     const auto parallel_conf =
         JUST(MakeParallelConf(device_tag, formated_machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
       return Maybe<void>::Ok();
     }));
@@ -242,6 +242,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              [](Symbol<ParallelDesc> p) {
                                std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
                                return device_type;
+                             })
+      .def_property_readonly("device_ids",
+                             [](Symbol<ParallelDesc> p) {
+                               std::map<int64_t, py::list> device_ids;
+                               for (int64_t machine_id : p->sorted_machine_ids()) {
+                                 int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
+                                 for (int64_t device_id : p->sorted_dev_phy_ids(machine_id)) {
+                                   device_ids[node_id].append(py::cast(device_id));
+                                 }
+                               }
+                               return device_ids;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)

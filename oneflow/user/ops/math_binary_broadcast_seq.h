@@ -42,6 +42,28 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_or", OR)    \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_xor", XOR)
 
+#define MATH_BINARY_BROADCAST_FUNC_SEQ_ODS            \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastAddOp, Add)           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastSubOp, Sub)           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMulOp, Mul)           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastDivOp, Div)           \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMinimumOp, Min)       \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastMaximumOp, Max)       \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastFloorModOp, FloorMod) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastFmodOp, FMod)         \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastPowOp, Pow)
+
+#define MATH_BINARY_BROADCAST_LOGICAL_FUNC_SEQ_ODS  \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastEqualOp, EQ)        \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastNotEqualOp, NE)     \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastGreaterOp, GT)      \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastGreaterEqualOp, GE) \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastLessOp, LT)         \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastLessEqualOp, LE)    \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastLogicalAndOp, AND)  \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastLogicalOrOp, OR)    \
+  OF_PP_MAKE_TUPLE_SEQ(BroadcastLogicalXorOp, XOR)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_MATH_BINARY_BROADCAST_SEQ_H_

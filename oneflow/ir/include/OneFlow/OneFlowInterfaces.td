@@ -28,6 +28,7 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
         return $_op.getODSResultIndexAndLength(index);
     }]>
   ];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
@@ -50,6 +51,7 @@ def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
         return &val;
     }]>,
   ];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 def ControlEdgeCompatibleInterface : OpInterface<"ControlEdgeCompatible"> {
@@ -71,6 +73,20 @@ def ControlEdgeCompatibleInterface : OpInterface<"ControlEdgeCompatible"> {
         "::mlir::Value", "ctrlOutputResult", (ins)
     >
   ];
+  let cppNamespace = "::mlir::oneflow";
 }
+
+def NoGrad : OpInterface<"NoGrad"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
+def CpuOnly : OpInterface<"CpuOnly"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

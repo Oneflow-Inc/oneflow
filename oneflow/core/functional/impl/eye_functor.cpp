@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -32,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/api/common/device.h"
 
 namespace oneflow {
 namespace one {
@@ -66,7 +66,7 @@ class EyeDeviceStrFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const std::string& device,
                            const bool& requires_grad) const {
-    const Symbol<Device>& dev = JUST(DeviceExportUtil::ParseAndNew(device));
+    const Symbol<Device>& dev = JUST(Device::ParseAndNew(device));
     return JUST(functional::Eye(rows, cols, dtype, dev, requires_grad));
   }
 };

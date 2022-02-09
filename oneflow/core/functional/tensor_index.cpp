@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -29,17 +30,6 @@ namespace one {
 namespace functional {
 
 namespace {
-
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
-}
 
 int64_t CountSpecifiedDims(const TensorIndex& index) {
   int64_t specified_ndims = 0;
@@ -270,7 +260,8 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
       auto indices = std::make_shared<TensorTuple>();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
+      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+          || tensor->dtype() == DType::Bool()) {
         for (int j = 0; j < tensor->ndim(); ++j) {
           if (tensor->shape()->At(j) != shape.At(dim + j)) {
             return Error::IndexError()
@@ -341,8 +332,11 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   if (transposed_input->is_consistent()) {
     const auto& placement = JUST(transposed_input->parallel_desc());
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+    int n = JUST(input->nd_sbp())->sbp_parallel_size();
     std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
-    packed_indices = JUST(ToConsistent(packed_indices, placement, {broadcast_sbp}, grad_sbp_tuple));
+    packed_indices =
+        JUST(ToConsistent(packed_indices, placement,
+                          std::vector<Symbol<cfg::SbpParallel>>(n, broadcast_sbp), grad_sbp_tuple));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {

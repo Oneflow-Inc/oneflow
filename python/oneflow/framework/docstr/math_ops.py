@@ -33,7 +33,7 @@ add_docstr(
         >>> x = flow.tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         >>> flow.abs(x)
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
-    
+
     """,
 )
 
@@ -51,7 +51,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         # element-wise add
         >>> x = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
         >>> y = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
@@ -86,7 +86,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        
+
     For example:
 
     .. code-block:: python
@@ -99,7 +99,7 @@ add_docstr(
         oneflow.Size([4])
         >>> output.numpy()
         array([-1.,  1.,  0.,  0.], dtype=float32)
-        
+
         >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
         >>> output1 = input1.floor()
         >>> output1.shape
@@ -112,24 +112,32 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.floor_,
+    r"""
+    In-place version of :func:`oneflow.floor`
+
+    """,
+)
+
+add_docstr(
     oneflow.div,
     r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
         out = \frac{input}{other}
-    
+
     Args:
         input (Union[int, float, oneflow.Tensor]): input.
         other (Union[int, float, oneflow.Tensor]): other.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         # element-wise divide
         >>> input = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
         >>> other = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
@@ -148,7 +156,7 @@ add_docstr(
         >>> input = flow.tensor(np.random.randn(1,1), dtype=flow.float32)
         >>> other = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
         >>> out = flow.div(input,other).numpy()
-        >>> out.shape 
+        >>> out.shape
         (2, 3)
 
     """,
@@ -157,19 +165,19 @@ add_docstr(
 add_docstr(
     oneflow.mul,
     r"""Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
-    
+
     The formula is:
 
     .. math::
         \text{out}_i = \text{input}_i \times \text{other}_i
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         # element-wise multiply
         >>> input = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
         >>> other = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
@@ -188,7 +196,7 @@ add_docstr(
         >>> input = flow.tensor(np.random.randn(1,1), dtype=flow.float32)
         >>> other = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
         >>> out = flow.mul(input,other).numpy()
-        >>> out.shape 
+        >>> out.shape
         (2, 3)
 
     """,
@@ -205,7 +213,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = flow.tensor(np.array([[1, 2, 3], [4, 5, 6]]), dtype=flow.float32)
         >>> out = flow.reciprocal(x)
         >>> out.numpy()
@@ -221,14 +229,14 @@ add_docstr(
 
     .. math::
         out = input - other
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         # element-wise subtract
         >>> input = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
         >>> other = flow.tensor(np.random.randn(2,3), dtype=flow.float32)
@@ -335,14 +343,14 @@ add_docstr(
     For example:
 
     .. code-block:: python
-    
+
         >>> import oneflow as flow
         >>> import numpy as np
         >>> input = flow.tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
         oneflow.Size([3])
-        
+
     """,
 )
 
@@ -351,24 +359,24 @@ add_docstr(
     r"""Returns a new tensor with the ceil of the elements of :attr:`input`,
     the smallest integer greater than or equal to each element.
 
-    The equation is: 
+    The equation is:
 
     .. math::
         \text{out}_{i} = \left\lceil \text{input}_{i} \right\rceil = \left\lfloor \text{input}_{i} \right\rfloor + 1
 
     Args:
         input (oneflow.Tensor): A Tensor.
-    
+
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow as flow
-        >>> import numpy as np   
+        >>> import numpy as np
         >>> x = flow.tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
@@ -399,27 +407,27 @@ add_docstr(
 add_docstr(
     oneflow.negative,
     r"""This operator computes the negative value of Tensor.
-    
+
     Args:
         input (oneflow.Tensor): A Tensor
-    
+
     Returns:
         oneflow.Tensor: The result Tensor
-    
+
     For example:
-    
+
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input = flow.tensor(
         ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
         ... )
         >>> out = flow.negative(input)
         >>> out
         tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
-    
+
     """,
 )
 
@@ -468,7 +476,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         >>> y = flow.exp(x)
         >>> y
@@ -591,13 +599,13 @@ add_docstr(
     r"""Returns a new tensor with the sine of the elements of :attr:`input`.
 
     sin(x: Tensor) -> Tensor
-    
+
     .. math::
         \text{y}_{i} = \sin(\text{x}_{i})
-    
+
     Args:
         x (Tensor): the input tensor.
-        
+
     For example:
     .. code-block:: python
 
@@ -607,12 +615,12 @@ add_docstr(
         >>> y1 = flow.sin(x1)
         >>> y1
         tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
-        
+
         >>> x2 = flow.tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32), device=flow.device('cuda'))
         >>> y2 = flow.sin(x2)
         >>> y2
         tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
-        
+
     """,
 )
 
@@ -681,60 +689,10 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.clamp,
-    r"""
-    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
-    a resulting tensor:
-
-    .. math::
-        y_i = \begin{cases}
-            \text{min} & \text{if } x_i < \text{min} \\
-            x_i & \text{if } \text{min} \leq x_i \leq \text{max} \\
-            \text{max} & \text{if } x_i > \text{max}
-        \\end{cases}
-
-    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
-    and :attr:`max` must be real numbers, otherwise they should be integers.
-
-    Args:
-        input (Tensor): the input tensor.
-        min (Number): lower-bound of the range to be clamped to. Defaults to None.
-        max (Number): upper-bound of the range to be clamped to. Defaults to None.
-        out (Tensor, optional): the output tensor.
-
-    For example:
-
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.clamp(input, min=-0.5, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.clamp(input, min=None, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.clamp(input, min=-0.5, max=None)
-        >>> output
-        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-    """,
-)
-
-add_docstr(
     oneflow.cos,
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
-    
+
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
 
@@ -771,7 +729,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
         >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cosh(input).numpy()
@@ -792,15 +750,15 @@ add_docstr(
         x (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor   
-               
+        oneflow.Tensor: The result Tensor
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
@@ -830,7 +788,7 @@ add_docstr(
 
 add_docstr(
     oneflow.erfc,
-    r"""Computes the complementary error function of each element of input. The complementary error 
+    r"""Computes the complementary error function of each element of input. The complementary error
     function is defined as follows:
 
     .. math::
@@ -848,7 +806,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
@@ -859,7 +817,7 @@ add_docstr(
         >>> out
         tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
                 [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
-        
+
     """,
 )
 
@@ -869,21 +827,21 @@ add_docstr(
     of :attr:`input`.
 
 
-    The equation is: 
+    The equation is:
 
     .. math::
         y_{i} = e^{x_{i}} - 1
 
     Args:
         input (oneflow.Tensor): A Tensor.
-    
+
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow as flow
         >>> import numpy as np
         >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32))
@@ -945,9 +903,36 @@ add_docstr(
     oneflow.log,
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
-    
+
     .. math::
         y_{i} = \log_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.random.randn(2, 3, 4, 5)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> output = flow.log(input)
+
+
+    """,
+)
+
+add_docstr(
+    oneflow.log2,
+    """
+    oneflow.log2(input) -> Tensor
+
+    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
+    
+    .. math::
+        y_{i} = \\log2_{e} (x_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -960,7 +945,7 @@ add_docstr(
         >>> import numpy as np
         >>> arr = np.random.randn(2, 3, 4, 5)
         >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.log(input)
+        >>> output = flow.log2(input)
 
 
     """,
@@ -1038,7 +1023,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]), dtype=flow.float32)
         >>> out = flow.pow(x, 2)
         >>> out
@@ -1049,7 +1034,7 @@ add_docstr(
         >>> out = flow.pow(x, y)
         >>> out
         tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
-        
+
     """,
 )
 
@@ -1070,7 +1055,7 @@ add_docstr(
 
             >>> import oneflow as flow
             >>> import numpy as np
-            
+
             >>> a = flow.tensor(np.array([1.0, 2.0, 3.0]), dtype=flow.float32)
             >>> out = flow.rsqrt(a).numpy()
             >>> out
@@ -1094,7 +1079,7 @@ add_docstr(
 
             >>> import oneflow as flow
             >>> import numpy as np
-            
+
             >>> arr = np.array([1.0, 2.0, 3.0])
             >>> input = flow.tensor(arr, dtype=flow.float32)
             >>> output = flow.sqrt(input).numpy()
@@ -1120,7 +1105,7 @@ add_docstr(
 
             >>> import oneflow as flow
             >>> import numpy as np
-            
+
             >>> arr = np.array([1.0, 2.0, 3.0])
             >>> input = flow.tensor(arr, dtype=flow.float32)
             >>> output = flow.square(input).numpy()
@@ -1190,8 +1175,8 @@ add_docstr(
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
     reduce over all of them.
 
-    If keepdim is True, the output tensor is of the same size as input except in 
-    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    If keepdim is True, the output tensor is of the same size as input except in
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed,
     resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
 
     If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
@@ -1209,7 +1194,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> arr = np.array([1.0, 2.0, 3.0])
         >>> input = flow.tensor(arr)
         >>> output = flow.std(input, dim=0).numpy()
@@ -1223,8 +1208,8 @@ add_docstr(
     oneflow.var,
     r"""Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
-    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
-    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim`
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output
     tensor having 1 (or `len(dim)`) fewer dimension(s).
 
     Args:
@@ -1242,7 +1227,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input = flow.tensor(np.random.randn(2, 3, 4, 5))
         >>> output = flow.var(input, 1, True)
 
@@ -1252,7 +1237,7 @@ add_docstr(
 add_docstr(
     oneflow.logical_not,
     r"""
-    Computes the element-wise logical NOT of the given input tensors. 
+    Computes the element-wise logical NOT of the given input tensors.
     Zeros are treated as False and nonzeros are treated as True.
     Args:
         input (oneflow.Tensor): The input Tensor
@@ -1272,20 +1257,20 @@ add_docstr(
         >>> out = flow.logical_not(input)
         >>> out
         tensor([0, 1, 0], dtype=oneflow.int8)
-        
+
     """,
 )
 
 add_docstr(
     oneflow.dot,
     r"""This operator computes the dot product of tensor input and other.
-    
+
     The equation is:
-    
-	$$		
-	​   \\sum_{i=1}^{n}(x[i] * y[i])
+
 	$$
-    
+        \\sum_{i=1}^{n}(x[i] * y[i])
+	$$
+
     Args:
         input (Tensor):  first tensor in the dot product.
         other (Tensor):  second tensor in the dot product.
@@ -1301,7 +1286,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
         tensor(7., dtype=oneflow.float32)
-        
+
     """,
 )
 
@@ -1315,16 +1300,16 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        source  (int or a list): Original positions of the dims to move. These must be unique. 
+        source  (int or a list): Original positions of the dims to move. These must be unique.
         destination (int or a list): Destination positions for each of the original dims. These must also be unique.
-    
+
     Returns:
         oneflow.Tensor: the output Tensor.
 
     For example:
 
     .. code-block:: python
-        
+
         >>> import oneflow as flow
         >>> import numpy as np
 
@@ -1339,24 +1324,53 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.as_strided,
+    r"""
+    Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
+
+    Args:
+        input (Tensor): the input tensor.
+        size (tuple or ints): the shape of the output tensor.
+        stride (tuple or ints): the stride of the output tensor.
+        storage_offset (int): the offset in the underlying storage of the output tensor
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(2,3,5)
+        >>> output = flow.as_strided(input, (2,3,3), (1,2,3), 1)
+        >>> output.size()
+        oneflow.Size([2, 3, 3])
+    """,
+)
+
+add_docstr(
     oneflow.eye,
     """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
-    
+
     This operator creates a 2-D Tensor with ones on the diagonal and zeros elsewhere.
 
     Args:
         n (int): the number of rows.
         m (int, optional): the number of colums with default being n. Defaults to None.
-    
+
     Keyword args:
         device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
         placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
-        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
-    
+        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a global tensor, specify the SBP of the tensor.
+
     Returns:
         oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
-    
+
     For example:
 
     .. code-block:: python
@@ -1372,5 +1386,188 @@ add_docstr(
         tensor([[1., 0., 0.],
                 [0., 1., 0.],
                 [0., 0., 1.]], device='cuda:0', dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.tensor_split,
+    r"""
+    Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
+    dim according to the indices or number of sections specified by indices_or_sections .
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.tensor_split.html#torch.tensor_split
+
+    Args:
+        input (Tensor): the input tensor.
+        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
+            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
+            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
+            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
+            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
+            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
+            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
+            one-dimensional long tensor on the CPU.
+        dim (int): dimension along which to split the tensor.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5)
+        >>> output = flow.tensor_split(input,(2,3),2)
+        >>> output[0].size()
+        oneflow.Size([3, 4, 2])
+        >>> output[1].size()
+        oneflow.Size([3, 4, 1])
+        >>> output[2].size()
+        oneflow.Size([3, 4, 2])
+    """,
+)
+
+add_docstr(
+    oneflow.hsplit,
+    r"""
+    Splits input, a tensor with one or more dimensions, into multiple tensors horizontally according to indices_or_sections.
+    Each split is a view of input.
+    If input is one dimensional this is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) 
+    (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
+    torch.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
+    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+
+    Args:
+        input (Tensor): the input tensor.
+        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
+            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
+            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
+            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
+            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
+            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
+            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
+            one-dimensional long tensor on the CPU.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5,6)
+        >>> output = flow.hsplit(input,(1,3))
+        >>> output[0].size()
+        oneflow.Size([3, 1, 5, 6])
+        >>> output[1].size()
+        oneflow.Size([3, 2, 5, 6])
+        >>> output[2].size()
+        oneflow.Size([3, 1, 5, 6])
+    """,
+)
+
+add_docstr(
+    oneflow.vsplit,
+    r"""
+    Splits input, a tensor with two or more dimensions, into multiple tensors vertically according to indices_or_sections.
+    Each split is a view of input.
+    This is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
+    except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+
+    Args:
+        input (Tensor): the input tensor.
+        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
+            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
+            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
+            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
+            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
+            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
+            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
+            one-dimensional long tensor on the CPU.
+
+    Returns:
+        oneflow.TensorTuple: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.rand(3,4,5,6)
+        >>> output = flow.vsplit(input,(1,3))
+        >>> output[0].size()
+        oneflow.Size([1, 4, 5, 6])
+        >>> output[1].size()
+        oneflow.Size([2, 4, 5, 6])
+        >>> output[2].size()
+        oneflow.Size([1, 4, 5, 6])
+    """,
+)
+
+add_docstr(
+    oneflow.cumsum,
+    r"""oneflow.cumsum(input, dim) -> Tensor
+    
+    This operator computes the cumulative sum of input elements in the given dimension.
+
+    The equation is:
+
+	$$
+        y_{i}=x_{0}+x_{1}+...+x_{i}
+	$$
+
+    Args:
+        input (Tensor):  the input ND tensor.
+        dim (int):  the dimension to do cumsum, valid range is [-N, N-1), N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cumsum result.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.ones(3, 3)
+        >>> dim = 1
+        >>> flow.cumsum(input, dim)
+        tensor([[1., 2., 3.],
+                [1., 2., 3.],
+                [1., 2., 3.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.cumprod,
+    """oneflow.cumprod(input, dim) -> Tensor
+
+    This operator computes the cumulative product of input elements in the given dimension.
+
+    The equation is:
+
+	$$
+        y_{i}=x_{0}*x_{1}*...*x_{i}
+	$$
+
+    Args:
+        input (Tensor):  the input tensor.
+        dim (int):  the dimension to do cumsum whose valid range is [-N, N-1), and the N is tensor's dimensions
+
+    Returns:
+        oneflow.Tensor: The result tensor with cumprod result.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input=flow.tensor([1, 2, 3])
+        >>> flow.cumprod(input, dim=0)
+        tensor([1, 2, 6], dtype=oneflow.int64)
     """,
 )

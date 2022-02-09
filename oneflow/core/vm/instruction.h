@@ -93,6 +93,8 @@ class InstructionMsg final : public intrusive::Base {
   void __Init__(const cfg::InstructionProto& proto);
   void __Init__(const InstructionMsg& instr_msg);
 
+  std::string DebugName() const;
+
   void ToProto(InstructionProto* proto) const;
   intrusive::shared_ptr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
   intrusive::shared_ptr<InstructionMsg> add_double_operand(double double_operand);
@@ -261,7 +263,7 @@ class Instruction final : public intrusive::Base {
   void clear_stream() { stream_ = nullptr; }
   Stream* mut_stream() { return stream_; }
   InstructionMsg* mut_instr_msg() {
-    if (!instr_msg_) { instr_msg_ = intrusive::make_shared<InstructionMsg>(); }
+    if (unlikely(!instr_msg_)) { instr_msg_ = intrusive::make_shared<InstructionMsg>(); }
     return instr_msg_.Mutable();
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }

@@ -34,7 +34,7 @@ class InferGraph(flow.nn.Graph):
         model = resnet50()
         if placement_arg is not None:
             if "placement" in placement_arg:
-                model.to_consistent(**placement_arg)
+                model.to_global(**placement_arg)
             else:
                 model.to(**placement_arg)
         self.model = model
@@ -62,6 +62,8 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         )
         graph._compile(image_placeholder)
         saved_path = os.path.join("saved_model", graph.name)
+        if not os.path.exists(saved_path):
+            os.makedirs(saved_path)
         flow.save(graph, saved_path)
 
         saved_ir_path = os.path.join(saved_path, "model.mlir")
@@ -87,12 +89,9 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         op_list_.sort(key=sort_by_op_name)
 
         for (op, op_) in zip(op_list, op_list_):
-            self.assertTrue(op == op_)
-            # if op != op_:
-            #     print(op)
-            #     print("-" * 20)
-            #     print(op_)
-            #     self.assertTrue(False)
+            # TODO: convert loc in MLIR
+            op_.ClearField("loc")
+            self.assertTrue(op == op_, {"op": op, "op_": op_})
 
 
 if __name__ == "__main__":

@@ -52,4 +52,14 @@ inline void SetIsMultiClient(bool is_multi_client) {
 
 inline size_t CudaGetDeviceCount() { return oneflow::CudaGetDeviceCount().GetOrThrow(); }
 
+inline void SetFLAGS_alsologtostderr(bool flag) {
+  return oneflow::SetFLAGS_alsologtostderr(flag).GetOrThrow();
+}
+
+inline bool GetFLAGS_alsologtostderr() { return oneflow::GetFLAGS_alsologtostderr().GetOrThrow(); }
+
+inline void SetFLAGS_v(int32_t v_level) { return oneflow::SetFLAGS_v(v_level).GetOrThrow(); }
+
+inline int32_t GetFLAGS_v() { return oneflow::GetFLAGS_v().GetOrThrow(); }
+
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

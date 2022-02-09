@@ -80,17 +80,27 @@ class TestPermute(flow.unittest.TestCase):
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(ndim=ndim, dim0=random().to(int)).to(device)
+        x = random_tensor(ndim=ndim, dim0=random().to(int)).to(device)
         y = torch.permute(x, dims=permute_list)
         return y
 
-    @autotest(check_graph=False)
+    @unittest.skip("pytorch 1.9.0 exist not torch.permute api")
+    @autotest()
+    def test_torch_permute4d_with_random_0dim_data(test_case):
+        device = random_device()
+        permute_list = [0, 1, 2, 3]
+        shuffle(permute_list)
+        x = random_tensor(ndim=0).to(device)
+        y = torch.permute(x, dims=permute_list)
+        return y
+
+    @autotest(check_graph=True)
     def test_permute5d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 5
         permute_list = [0, 1, 2, 3, 4]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 16).to(int),
             dim1=random(1, 33).to(int),
@@ -101,13 +111,13 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_permute4d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 4
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 32).to(int),
             dim1=random(1, 59).to(int),
@@ -117,19 +127,35 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_permute3d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 3
         permute_list = [0, 1, 2]
         shuffle(permute_list)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=ndim,
             dim0=random(1, 18).to(int),
             dim1=random(1, 78).to(int),
             dim2=random(1, 99).to(int),
             dim3=random(1, 98).to(int),
         ).to(device)
+        y = x.permute(permute_list)
+        return y
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_permute4d_tensor_bool_with_random_data(test_case):
+        device = random_device()
+        ndim = 4
+        permute_list = [0, 1, 2, 3]
+        shuffle(permute_list)
+        x = random_tensor(
+            ndim=ndim,
+            dim0=random(1, 32).to(int),
+            dim1=random(1, 59).to(int),
+            dim2=random(1, 65).to(int),
+            dim3=random(1, 127).to(int),
+        ).to(device=device, dtype=torch.bool)
         y = x.permute(permute_list)
         return y
 

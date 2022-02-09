@@ -51,7 +51,6 @@ T = TypeVar("T", bound="Module")
 class Module(object):
     def __init__(self):
         self.training = True
-        self._consistent = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -62,10 +61,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-
-    @property
-    def consistent(self):
-        return self._consistent
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -463,9 +458,14 @@ class Module(object):
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn):
+    def _apply(self, fn, applied_dict=None):
+        # A dict to store tensors that has already been applied.
+        # There is no need to apply multiple times on a same tensor.
+        if applied_dict is None:
+            applied_dict = dict()
+
         for module in self.children():
-            module._apply(fn)
+            module._apply(fn, applied_dict)
 
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
@@ -474,27 +474,47 @@ class Module(object):
             if param is None:
                 continue
 
-            assert isinstance(param, Parameter)
-            assert param.is_leaf
-            with flow.no_grad():
-                param_applied = fn(param)
-            param_applied.requires_grad = param.requires_grad
-
-            if param.grad is not None:
-                assert param.grad.is_leaf
+            need_apply = False
+            if param not in applied_dict:
+                need_apply = True
+                assert isinstance(param, Parameter)
+                assert param.is_leaf
                 with flow.no_grad():
-                    grad_applied = fn(param.grad)
-                grad_applied.requires_grad = param.grad.requires_grad
-                param_applied.grad = grad_applied
+                    param_applied = fn(param)
+                param_applied.requires_grad = param.requires_grad
+
+                if param.grad is not None:
+                    assert param.grad.is_leaf
+                    with flow.no_grad():
+                        grad_applied = fn(param.grad)
+                    grad_applied.requires_grad = param.grad.requires_grad
+                    param_applied.grad = grad_applied
+            else:
+                param_applied = applied_dict[param]
 
             if can_use_assign_copy(param_applied, param):
-                self._parameters[key].data = param_applied
+                if need_apply:
+                    self._parameters[key].data = param_applied
+                    applied_dict[param] = param_applied
+                else:
+                    # The parameter's data has already been set when it can use assign copy.
+                    pass
             else:
-                self._parameters[key] = Parameter(param_applied, param.requires_grad)
+                if need_apply:
+                    new_param = Parameter(param_applied, param.requires_grad)
+                    self._parameters[key] = new_param
+                    applied_dict[param] = new_param
+                else:
+                    self._parameters[key] = applied_dict[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                if buf not in applied_dict:
+                    buf_applied = fn(buf)
+                    self._buffers[key] = buf_applied
+                    applied_dict[buf] = buf_applied
+                else:
+                    self._buffers[key] = applied_dict[buf]
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
@@ -509,9 +529,9 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, placement=None, sbp=None):
+    def to_global(self, placement=None, sbp=None):
         def convert(t):
-            return t.to_consistent(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 

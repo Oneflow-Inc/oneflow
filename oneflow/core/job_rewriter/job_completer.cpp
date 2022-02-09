@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
+#include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 
 namespace oneflow {
 
@@ -129,6 +130,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
+  JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
@@ -137,6 +139,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalInputCriticalSections));
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalOutputCriticalSections));
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
+  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {

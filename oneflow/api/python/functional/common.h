@@ -26,10 +26,12 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace py = pybind11;
 
@@ -39,9 +41,11 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
-    py::gil_scoped_acquire acquire;
-    if (obj) { Py_DECREF(obj); }
-    obj = NULL;
+    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      if (obj) { Py_DECREF(obj); }
+      obj = NULL;
+      return Maybe<void>::Ok();
+    }));
   }
 };
 
@@ -105,7 +109,9 @@ inline Maybe<std::vector<T>> PyUnpackFloatSequence(PyObject* obj) {
 bool PyStringCheck(PyObject* obj);
 bool PyStringSequenceCheck(PyObject* obj);
 
-Maybe<const char*> PyStringAsString(PyObject* obj);
+Maybe<std::string> PyStringAsString(PyObject* str_obj);
+
+Maybe<std::string> PyObjectToReprStr(PyObject* obj);
 
 // Scalar
 bool PyScalarCheck(PyObject* obj);
@@ -126,6 +132,14 @@ Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
 // DType
 bool PyDTypeCheck(PyObject* obj);
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj);
+
+// DType list
+bool PyDTypeSequenceCheck(PyObject* obj);
+Maybe<std::vector<Symbol<DType>>> PyUnpackDTypeSequence(PyObject* obj);
+
+// Shape list
+bool PyShapeSequenceCheck(PyObject* obj);
+Maybe<std::vector<Shape>> PyUnpackShapeSequence(PyObject* obj);
 
 // Generator
 bool PyGeneratorCheck(PyObject* obj);
@@ -150,6 +164,10 @@ Maybe<std::vector<Symbol<cfg::SbpParallel>>> PyUnpackSbpParallelSequence(PyObjec
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj);
 Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj);
+
+// OpExpr
+bool PyOpExprCheck(PyObject* obj);
+Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj);
 
 }  // namespace functional
 }  // namespace one

@@ -15,7 +15,7 @@ limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler
+from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 
 
 class OptDict(object):
@@ -39,9 +39,9 @@ class OptDict(object):
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
-            if not isinstance(opt_dict["lr_sch"], LrScheduler):
+            if not isinstance(opt_dict["lr_sch"], LRScheduler):
                 raise ValueError(
-                    'opt_dict["lr_sch"] is not an instance of LrScheduler.'
+                    'opt_dict["lr_sch"] is not an instance of LRScheduler.'
                 )
 
             if opt_dict["lr_sch"]._optimizer is not self._optimizer:
@@ -53,8 +53,11 @@ class OptDict(object):
         train_conf = job_conf.mutable_train_conf()
 
         if self._optimizer is not None:
-            opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
+            # Check first
+            self._optimizer._check_variables_in_graph(vars_conf)
             self._optimizer._check_variables_optimizer_bound(vars_conf)
+
+            opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
 
             if self._is_sparse:
                 self._optimizer._generate_indexed_slices_optimizer_conf(
@@ -80,6 +83,10 @@ class VariableConfig(object):
     def l2(self):
         return self._l2
 
+    @l2.setter
+    def l2(self, l2: float = 0.0):
+        self._l2 = l2
+
     @property
     def bound_optimizer(self):
         return self._bound_opt
@@ -87,10 +94,6 @@ class VariableConfig(object):
     @bound_optimizer.setter
     def bound_optimizer(self, opt):
         self._bound_opt = opt
-
-    @l2.setter
-    def l2(self, l2: float = 0.0):
-        self._l2 = l2
 
     def __repr__(self):
         return "(variable name: " + self._name + "):(l2: " + str(self._l2) + ".)"

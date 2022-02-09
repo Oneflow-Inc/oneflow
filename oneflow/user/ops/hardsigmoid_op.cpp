@@ -14,63 +14,64 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/* static */ Maybe<void> HardsigmoidOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  *out_shape = in_shape;
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("hardsigmoid")
-    .Input("in")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      *out_shape = in_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> HardsigmoidOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-REGISTER_USER_OP("hardsigmoid_grad")
-    .Input("x")
-    .Input("dy")
-    .Output("dx")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& x_shape = ctx->InputShape("x", 0);
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK_OR_RETURN(dy_shape == x_shape);
-      *dx_shape = dy_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("x", 0), i)
-            .Split(user_op::OpArg("dy", 0), i)
-            .Split(user_op::OpArg("dx", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> HardsigmoidOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> HardsigmoidOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> HardsigmoidGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  CHECK_OR_RETURN(dy_shape == x_shape);
+  *dx_shape = dy_shape;
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> HardsigmoidGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> HardsigmoidGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> HardsigmoidGradOp::InferDataType(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("hardsigmoid")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
@@ -88,7 +89,5 @@ REGISTER_USER_OP_GRAD("hardsigmoid")
                                 });
       return Maybe<void>::Ok();
     });
-
-}  // namespace
 
 }  // namespace oneflow

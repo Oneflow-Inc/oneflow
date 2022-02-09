@@ -28,10 +28,14 @@ namespace oneflow {
 
 class ParallelDesc;
 class MemoryCase;
-class LocalDepObject;
 
-inline size_t GetInstructionHighWaterMark() { return 500; }
-inline size_t GetInstructionLowWaterMark() { return 200; }
+namespace vm {
+class MirroredObject;
+}
+using LocalDepObject = vm::MirroredObject;
+
+inline size_t GetInstructionHighWaterMark() { return 40000; }
+inline size_t GetInstructionLowWaterMark() { return 20000; }
 
 class Device final {
  public:
@@ -57,6 +61,7 @@ class Device final {
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type);
+  static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
 
   static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;

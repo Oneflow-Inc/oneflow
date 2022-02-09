@@ -338,9 +338,9 @@ class DeconvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  using user_op::OpKernel::InitOpKernelCache;
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     if (*cache_ptr != nullptr && (flag & user_op::OpKernelCache::kAttrNotChanged)) {
       auto deconv_cache = std::dynamic_pointer_cast<DeconvOpKernelCache<T>>(*cache_ptr);
       deconv_cache->Update(ctx->TensorDesc4ArgNameAndIndex("in", 0)->shape(),
