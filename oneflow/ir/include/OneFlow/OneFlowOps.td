@@ -183,7 +183,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
     bool isDeclaration() { return isExternal(); }
 
     /// Returns the type of this function.
-    /// FIXME: We should drive this via the ODS `type` param.
+    /// TODO: use the ODS `type`
     FunctionType getType() {
       return getTypeAttr().getValue().cast<FunctionType>();
     }
