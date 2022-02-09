@@ -160,15 +160,13 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
   FusedMatmulBiasAddReluKernel() = default;
   ~FusedMatmulBiasAddReluKernel() override = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  using user_op::OpKernel::InitOpKernelCache;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateFusedMatmulBiasAddReluKernelCache();
   }
 
-  using user_op::OpKernel::Compute;
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
@@ -294,6 +292,6 @@ REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(half, DataType::kFloat16);
 #if CUDA_VERSION >= 11000
-REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+// REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 #endif
 }  // namespace oneflow

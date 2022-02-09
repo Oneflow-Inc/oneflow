@@ -42,7 +42,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
 
-  int64_t m, n, k = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
+  int64_t m = 0, n = 0, k = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
     m = a.shape().At(num_axes - 2);
     k = a.shape().At(num_axes - 1);
@@ -87,14 +87,11 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FusedMatmulBiasAddReluOp::GetSbp(user_op::SbpContext* ctx) {
   // (m, k_a) * (k_b, n) where k_a == k_b
   int32_t m_axis = -1;
-  int32_t k_a_axis = -1;
   int32_t n_axis = -1;
   if (ctx->Attr<bool>("transpose_a")) {
     m_axis = 1;
-    k_a_axis = 0;
   } else {
     m_axis = 0;
-    k_a_axis = 1;
   }
   if (ctx->Attr<bool>("transpose_b")) {
     n_axis = 0;
