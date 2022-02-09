@@ -362,7 +362,7 @@ class Graph(object):
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
-        
+
         Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
@@ -751,7 +751,7 @@ class Graph(object):
             dtype = fake_eager_out.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                if fake_eager_out.is_consistent:
+                if fake_eager_out.is_global:
                     eager_out = oneflow.empty(
                         shape,
                         dtype=dtype,
@@ -897,6 +897,7 @@ class Graph(object):
                     node._value, None, io_type, name
                 )
                 build_arg = build_tensor_or_none(node._value, name, arg_repr)
+
                 return build_arg
             elif node._type == IONodeType.OPAQUE:
                 # Error
@@ -1006,7 +1007,7 @@ class Graph(object):
             dtype = t.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                if t.is_consistent:
+                if t.is_global:
                     eager_out = oneflow.empty(
                         shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
                     )
