@@ -51,7 +51,6 @@ T = TypeVar("T", bound="Module")
 class Module(object):
     def __init__(self):
         self.training = True
-        self._consistent = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -62,10 +61,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-
-    @property
-    def consistent(self):
-        return self._consistent
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -534,9 +529,9 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, placement=None, sbp=None):
+    def to_global(self, placement=None, sbp=None):
         def convert(t):
-            return t.to_consistent(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 
