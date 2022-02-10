@@ -76,7 +76,6 @@ class Device final {
     return transport_local_dep_object_;
   }
   LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
-  Maybe<size_t> instr_local_dep_object_pool_size() const;
 
   Maybe<bool> need_soft_sync_stream() const;
 

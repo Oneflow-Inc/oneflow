@@ -36,4 +36,9 @@ LocalDepObject* GetStaticLocalDepObject4Device(const Device& device) {
   return GetDep(device).Mutable();
 }
 
+LocalDepObject* GetStaticLocalDepObject4Stream(const Stream& stream) {
+  static constexpr auto* GetDep = DECORATE(&RawGetLocalDepObject4Device, StaticGlobalCopiable);
+  return GetDep(device).Mutable();
+}
+
 }  // namespace oneflow
