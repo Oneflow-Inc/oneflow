@@ -25,9 +25,12 @@ def grad_setting_fn(module, param):
             start = module._param_grad_offset_in_bucket[param]
             bucket_index = module._bucket_index[param]
             bucket_tensor = module._bucket_tensors[bucket_index]
-            param.grad = flow._C.slice_view_1d_contiguous(bucket_tensor, start, start + param.numel()).view(param.shape)
+            param.grad = flow._C.slice_view_1d_contiguous(
+                bucket_tensor, start, start + param.numel()
+            ).view(param.shape)
             param._is_grad_acc_inplace = True
         return grad
+
     return grad_setting
 
 
@@ -35,6 +38,7 @@ def allreduce_fn(module, param):
     ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
     buckets = module._buckets
     bucket_tensors = module._bucket_tensors
+
     def allreduce(grad):
         ddp_state_for_reversed_params[param][0] = True
         for index, bucket in enumerate(buckets):
@@ -50,7 +54,7 @@ def allreduce_fn(module, param):
             if all_params_in_bucket_ready:
                 for x in bucket:
                     ddp_state_for_reversed_params[x][1] = True
-                # NOTE(jianhao)(higher-order-grad): 
+                # NOTE(jianhao)(higher-order-grad):
                 # local allreduce doesn't have gradient function, higher-order grad may be unsupported
                 flow._C.local_all_reduce(bucket_tensors[index], inplace=True)
             else:
@@ -88,14 +92,21 @@ def DistributedDataParallel(
             module._param_grad_offset_in_bucket[param] = offset_in_bucket
             offset_in_bucket += param.numel()
 
-    module._bucket_index = {x: i // bucket_size for i, x in enumerate(reversed_param_list)}
-    module._buckets = [reversed_param_list[i : i + bucket_size] for i in range(0, len(reversed_param_list), bucket_size)]
+    module._bucket_index = {
+        x: i // bucket_size for i, x in enumerate(reversed_param_list)
+    }
+    module._buckets = [
+        reversed_param_list[i : i + bucket_size]
+        for i in range(0, len(reversed_param_list), bucket_size)
+    ]
 
     bucket_bytes = 0
     module._bucket_tensors = []
     for b in module._buckets:
         bucket_bytes = sum([x.numel() for x in b])
-        module._bucket_tensors.append(flow.zeros(bucket_bytes, dtype=flow.float32, device=device))
+        module._bucket_tensors.append(
+            flow.zeros(bucket_bytes, dtype=flow.float32, device=device)
+        )
 
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
@@ -188,4 +199,3 @@ def DistributedDataParallel(
         module.register_forward_pre_hook(pre_forward_hook)
 
     return module
-

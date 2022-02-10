@@ -108,7 +108,8 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
+void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
+                                               const AutogradMeta::Hook& hook) {
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
@@ -177,7 +178,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property(
           "_is_grad_acc_inplace",
           [](const Tensor& t) -> bool { return t.autograd_meta()->is_grad_acc_inplace(); },
-          [](Tensor& t, bool is_inplace) { t.mut_autograd_meta()->set_is_grad_acc_inplace(is_inplace); })
+          [](Tensor& t, bool is_inplace) {
+            t.mut_autograd_meta()->set_is_grad_acc_inplace(is_inplace);
+          })
       .def_property(
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
           [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })

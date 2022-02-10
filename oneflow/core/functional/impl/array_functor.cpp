@@ -1754,7 +1754,8 @@ class DiagonalGradFunctor {
 class SliceView1dContiguousFunctor {
  public:
   SliceView1dContiguousFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start, int64_t end) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
+                           int64_t end) const {
     return JUST(view::Slice(x, {start}, {end}, {1}));
   }
 };
