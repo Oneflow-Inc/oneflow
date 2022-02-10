@@ -51,17 +51,26 @@ cudaDataType_t GetCudaDataType(DataType data_type) {
   return cuda_data_type.value_or(CUDA_R_32F);
 }
 
+#if CUDA_VERSION >= 11000
 cublasComputeType_t GetComputeType(DataType data_type) {
   switch (data_type) {
     case kFloat: return CUBLAS_COMPUTE_32F;
     case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16: return CUBLAS_COMPUTE_32F;
-#if CUDA_VERSION >= 11000
     case kBFloat16: return CUBLAS_COMPUTE_32F;
-#endif  // CUDA_VERSION >= 11000
     default: UNIMPLEMENTED(); return CUBLAS_COMPUTE_32F;
   }
 }
+#else
+cudaDataType_t GetComputeType(DataType data_type) {
+  switch (data_type) {
+    case kFloat: return CUDA_R_32F;
+    case kDouble: return CUDA_R_64F;
+    case kFloat16: return CUDA_R_32F;
+    default: UNIMPLEMENTED(); return CUDA_R_32F;
+  }
+}
+#endif
 
 union CublasScalarParameter {
   double d;
@@ -114,8 +123,12 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
 class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
  public:
   FusedMatmulBiasAddReluKernelCache() {
-    // Just for init.
+// Just for init.
+#if CUDA_VERSION >= 11000
     OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
+#else
+    OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUDA_R_32F));
+#endif
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
@@ -210,7 +223,12 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const cublasOperation_t cublas_trans_a = GetCublasOperation(trans_b);
     const cublasOperation_t cublas_trans_b = GetCublasOperation(trans_a);
 
+#if CUDA_VERSION >= 11000
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
+#else
+    const cudaDataType_t cublas_compute_dtype = GetComputeType(data_type);
+#endif
+
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
 
     const double alpha = ctx->Attr<double>("alpha");
@@ -292,6 +310,7 @@ REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(half, DataType::kFloat16);
 #if CUDA_VERSION >= 11000
-// REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 #endif
+
 }  // namespace oneflow
