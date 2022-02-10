@@ -146,7 +146,7 @@ oneflow
             tensor, 
             tile, 
             to, 
-            to_consistent,
+            to_global,
             to_local,
             transpose,
             t,
