@@ -967,8 +967,14 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   }
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
   auto* producer_op = result.getDefiningOp();
-
-  auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
+  auto output_lbns =
+      producer_op->getAttrOfType<ArrayAttr>(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr());
+  if (!output_lbns || (output_lbns.size() <= result.getResultNumber())) {
+    producer_op->emitError("producer_op op doen't has output_lbns size > "
+                           + std::to_string(result.getResultNumber()));
+    return failure();
+  }
+  auto output_lbn = output_lbns[result.getResultNumber()];
   output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
