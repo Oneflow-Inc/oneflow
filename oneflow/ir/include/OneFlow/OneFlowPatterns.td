@@ -3,6 +3,8 @@
 #define ONEFLOW_PATTERNS
 
 include "OneFlow/OneFlowOps.td"
+include "mlir/Dialect/MemRef/IR/MemRefOps.td"
+include "mlir/Dialect/GPU/GPUOps.td"
 
 def IsNotNestedInJit: Constraint<CPred<"($0.getDefiningOp()->getParentOfType<::mlir::oneflow::Job>())">, "">;
 def OutlineMulCast : NativeCodeCall<"::mlir::oneflow::OutlineMulCast($_builder, $0, $1)">;
@@ -30,6 +32,28 @@ def MulCastPattern : Pat<
   (OutlineMulCast $mul_op, $cast_op),
   [
     (IsNotNestedInJit $mul_op)
+  ]
+>;
+
+def OutlineBatchMatMul : NativeCodeCall<"::mlir::oneflow::OutlineBatchMatMul($_builder, $0)">;
+def BatchMatmulPattern : Pat<
+  (
+    OneFlow_BatchMatmulOp : $batch_matmul_op
+    $a,
+    $b,
+    $_add_to_output,
+    $transpose_a,
+    $transpose_b,
+    $alpha,
+    $batch_matmul_op_name,
+    $matmul_device_tag,
+    $matmul_device_name,
+    $matmul_scope_symbol_id,
+    $matmul_hierarchy
+  ),
+  (OutlineBatchMatMul $batch_matmul_op),
+  [
+    (IsNotNestedInJit $batch_matmul_op)
   ]
 >;
 
@@ -223,6 +247,21 @@ def NormalizationAddReluPattern : Pattern<
   (replaceWithValue $fuse_results__0),
   ],
   [(IsTraingTrue $bn_training)]
+>;
+
+def IsArg: Constraint<CPred<"$0.dyn_cast<::mlir::BlockArgument>()">, "">;
+def getResultTypes : NativeCodeCall<"$0.getResultTypes()">;
+def CreateGPUMemcpyOpFromMemrefCopy : NativeCodeCall<"::mlir::oneflow::CreateGPUMemcpyOpFromMemrefCopy($_builder, $0)">;
+def ReplaceCopyWithGPUPattern : Pat<
+  (
+    CopyOp:$results
+    $src,
+    $dst
+  ),
+  (
+    CreateGPUMemcpyOpFromMemrefCopy $results
+  ),
+  [(IsArg $dst)]
 >;
 
 #endif // ONEFLOW_PATTERNS

@@ -90,7 +90,7 @@ class TestOneRecOpsModule(flow.unittest.TestCase):
         test_case.assertTrue(labels.shape == (10, 1))
         test_case.assertTrue(dense_fields.shape == (10, 13))
 
-    def test_consistent_one_rec(test_case):
+    def test_global_one_rec(test_case):
         batch_size = 10
         files = [ensure_dataset()]
         onerec_reader = flow.nn.OneRecReader(
