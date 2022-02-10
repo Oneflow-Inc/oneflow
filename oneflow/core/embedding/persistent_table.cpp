@@ -151,7 +151,7 @@ class KeyIteratorImpl : public PersistentTable::KeyIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyIteratorImpl);
   explicit KeyIteratorImpl(const robin_hood::unordered_flat_map<Key, uint64_t>& map)
-      : pos_(map.begin()), end_(map.end()) {}
+      : begin_(map.begin()), pos_(map.begin()), end_(map.end()) {}
   ~KeyIteratorImpl() override = default;
 
   void Next(uint32_t num_keys, uint32_t* return_keys, void* keys) override {
@@ -164,7 +164,10 @@ class KeyIteratorImpl : public PersistentTable::KeyIterator {
     *return_keys = count;
   }
 
+  void Reset() override { pos_ = begin_; }
+
  private:
+  typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator begin_;
   typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator pos_;
   typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator end_;
 };

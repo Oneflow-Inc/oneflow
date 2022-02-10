@@ -31,6 +31,7 @@ class KVBaseIterator {
 
   virtual void NextN(ep::Stream* stream, uint32_t n_request, uint32_t* n_result, void* keys,
                      void* values) = 0;
+  virtual void Reset() = 0;
 };
 
 class KVBase {

@@ -43,6 +43,7 @@ class PersistentTable {
     virtual ~KeyIterator() = default;
 
     virtual void Next(uint32_t num_keys, uint32_t* return_keys, void* keys) = 0;
+    virtual void Reset() = 0;
   };
 
   virtual uint32_t KeySize() const = 0;

@@ -57,6 +57,8 @@ class IteratorImpl : public KVBaseIterator {
     }
   }
 
+  void Reset() override { next_key_index_ = 0; }
+
  private:
   Cache* cache_;
   uint64_t next_key_index_;
