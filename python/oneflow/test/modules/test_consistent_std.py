@@ -20,29 +20,25 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=3, auto_backward=False, rtol=0.01, atol=0.01, check_graph=False)
+@autotest(n=3, auto_backward=True, rtol=0.03, atol=0.03, check_graph=False)
 def _test_consistent_std_flow_with_random_data(test_case, placement, sbp):
-    dim = random(low=0, high=4).to(int)
+    dim = random(low=0, high=2).to(int)
     x = random_tensor(
-        ndim=4,
+        ndim=2,
         dim0=random(2, 4) * 8,
         dim1=random(2, 4) * 8,
-        dim2=random(2, 4) * 8,
-        dim3=random(2, 4) * 8,
     ).to_consistent(placement, sbp)
     z = torch.std(x, dim=dim, unbiased=random().to(bool), keepdim=random().to(bool),)
     return z
 
 
-@autotest(n=3, auto_backward=False, rtol=0.01, atol=0.01, check_graph=False)
+@autotest(n=3, auto_backward=True, rtol=0.03, atol=0.03, check_graph=False)
 def _test_consistent_std_tensor_with_random_data(test_case, placement, sbp):
-    dim = random(low=0, high=4).to(int)
+    dim = random(low=0, high=2).to(int)
     x = random_tensor(
-        ndim=4,
+        ndim=2,
         dim0=random(2, 4) * 8,
         dim1=random(2, 4) * 8,
-        dim2=random(2, 4) * 8,
-        dim3=random(2, 4) * 8,
     ).to_consistent(placement, sbp)
     z = x.std(dim=dim, keepdim=random().to(bool),)
     return z
@@ -52,13 +48,13 @@ class TestConsistentStd(flow.unittest.TestCase):
     @consistent
     def test_consistent_std_flow_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_consistent_std_flow_with_random_data(test_case, placement, sbp)
 
     @consistent
     def test_consistent_std_tensor_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_consistent_std_tensor_with_random_data(test_case, placement, sbp)
 
 

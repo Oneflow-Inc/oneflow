@@ -53,12 +53,11 @@ class TestConsistentSubModule(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_consistent_sub(test_case, placement, sbp)
 
-    # TODO(): Support 0 size tensor for eager consistent
-    # @consistent
-    # def test_consistent_sub_with_0_size_data(test_case):
-    #     for placement in all_placement():
-    #         for sbp in all_sbp(placement, max_dim=2, valid_split_axis=1):
-    #             _test_consistent_sub_with_0_size_data(test_case, placement, sbp)
+    @consistent
+    def test_consistent_sub_with_0_size_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2, valid_split_axis=1):
+                _test_consistent_sub_with_0_size_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
