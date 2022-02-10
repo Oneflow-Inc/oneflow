@@ -196,8 +196,41 @@ struct PlacementSymbolExportUtil {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<ParallelDesc, std::shared_ptr<ParallelDesc>>(m, "PlacementSymbol")
+      .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
+        return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(symbol_id, symbol_conf);
+      }))
+      .def(py::init([](const std::string& device_tag,
+                       const std::vector<std::string>& machine_device_ids,
+                       const std::shared_ptr<Shape>& hierarchy) {
+        return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_tag, machine_device_ids,
+                                                                   hierarchy);
+      }))
+      .def_property_readonly("symbol_id",
+                             [](const ParallelDesc& x) {
+                               if (!x.symbol_id().has_value()) {
+                                 THROW(RuntimeError) << "symbol_id not initialized";
+                               }
+                               return CHECK_JUST(x.symbol_id());
+                             })
+      .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
+      .def_property_readonly("parallel_num", &ParallelDesc::parallel_num)
+      .def_property_readonly("device_tag", &ParallelDesc::device_tag)
+      .def_property_readonly("machine_id2device_id_list",
+                             &PlacementSymbolExportUtil::MachineId2DeviceIdList)
+      .def_property_readonly("hierarchy", &ParallelDesc::hierarchy)
+      .def("Containing", &ParallelDesc::Bigger)
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
+
   py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement",
                                                                           py::dynamic_attr())
+      .def(py::init([](const std::string& device_type, const py::iterable& device_ids,
+                       const std::shared_ptr<Shape>& hierarchy) {
+             return PlacementSymbolExportUtil::ApiCreatePlacementSymbol(device_type, device_ids,
+                                                                        hierarchy);
+           }),
+           py::arg("device_type"), py::arg("device_ids"), py::arg("hierarchy"))
       .def(py::init([](const std::string& device_type, const py::iterable& device_ids,
                        const py::tuple& hierarchy) {
              std::shared_ptr<Shape> hierarchy_shape = MakeShape(hierarchy).GetPtrOrThrow();
