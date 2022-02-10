@@ -1033,9 +1033,13 @@ class SliceBaseFunctor {
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
     if (x->is_local() && !(LazyMode::is_enabled())) {
-      // TODO(luyang): view is not tesed with 0-d and 0-size tensor,
-      // so disable it here
-      if (!(x->shape()->NumAxes() == 0 || x->shape()->elem_cnt() == 0)) {
+      // NOTE(jianhao): view doesn't change the size of tensor, so there is 
+      // no visible difference between view-semantic slicing and copy-semantic 
+      // slicing on 0-size tensor. To avoid unexpected corner case, we perform 
+      // the good old copy-semantic slicing for 0-size tensor
+      // NOTE(jianhao): slicing on 0-d tensor is illegal and will be refused before
+      // running into SliceBaseFunctor, so no more check here
+      if (x->shape()->elem_cnt() > 0) {
         return view::Slice(x, start, stop, step);
       }
     }
