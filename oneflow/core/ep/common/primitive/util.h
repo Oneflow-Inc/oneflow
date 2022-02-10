@@ -89,6 +89,52 @@ inline void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size
   }
 }
 
+
+inline void Broadcast(size_t num_src0_dims, const int64_t* src0_dims, const int64_t* src0_strides,
+                      size_t num_src1_dims, const int64_t* src1_dims, const int64_t* src1_strides,
+                      int64_t* broadcast_ndims, 
+                      int64_t* broadcast_src0_dims, int64_t* broadcast_src0_strides,
+                      int64_t* broadcast_src1_dims, int64_t* broadcast_src1_strides) {
+  const size_t num_dst_dims = std::max(num_src0_dims, num_src1_dims);
+  // TODO: assume input are valid
+  *broadcast_ndims = num_dst_dims;
+  // align the num_dims
+  const int64_t num_src0_padding_dims = num_dst_dims - num_src0_dims;
+  const int64_t num_src1_padding_dims = num_dst_dims - num_src1_dims;
+  for (int64_t i = 0; i < num_dst_dims; ++i) {
+    if(i < num_src0_padding_dims) {
+      broadcast_src0_dims[i] = 1;
+      broadcast_src0_strides[i] = 0;
+    } else {
+      broadcast_src0_dims[i] = src0_dims[i-num_src0_padding_dims];
+      broadcast_src0_strides[i] = src0_strides[i-num_src0_padding_dims];
+    }
+    if(i < num_src1_padding_dims) {
+      broadcast_src1_dims[i] = 1;
+      broadcast_src1_strides[i] = 0;
+    } else {
+      broadcast_src1_dims[i] = src1_dims[i-num_src1_padding_dims];
+      broadcast_src1_strides[i] = src1_strides[i-num_src1_padding_dims];
+    }
+  }
+
+  // broadcast
+  for (int64_t i=0; i<num_dst_dims; i++) {
+    const int64_t src0_dim = broadcast_src0_dims[i];
+    const int64_t src1_dim = broadcast_src1_dims[i];
+
+    if(src0_dim == 1) {
+      broadcast_src0_dims[i] = broadcast_src1_dims[i];
+      broadcast_src0_strides = 0;
+    }
+
+    if(src1_dim == 1) {
+      broadcast_src1_dims[i] = broadcast_src0_dims[i];
+      broadcast_src1_strides = 0;
+    }
+  }
+}
+
 template<size_t max_num_dims>
 inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims,
                                   size_t num_src1_dims, const int64_t* src1_dims,
@@ -106,9 +152,9 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
   int64_t dst_dims[max_num_dims];
   int64_t broadcast_dims[max_num_dims];
   const size_t num_dst_dims = std::max(num_src0_dims, num_src1_dims);
+  const int64_t num_src0_padding_dims = num_dst_dims - num_src0_dims;
+  const int64_t num_src1_padding_dims = num_dst_dims - num_src1_dims;
   for (int64_t i = 0; i < num_dst_dims; ++i) {
-    const int64_t num_src0_padding_dims = num_dst_dims - num_src0_dims;
-    const int64_t num_src1_padding_dims = num_dst_dims - num_src1_dims;
     size_t src0_dim = i < num_src0_padding_dims ? 1 : src0_dims[i - num_src0_padding_dims];
     size_t src1_dim = i < num_src1_padding_dims ? 1 : src1_dims[i - num_src1_padding_dims];
     dst_dims[i] = std::max(src0_dim, src1_dim);

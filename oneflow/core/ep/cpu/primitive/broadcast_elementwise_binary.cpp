@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/common/nd_index_offset_with_stride_helper.h"
 
 namespace oneflow {
 
@@ -63,6 +64,56 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     binary_func(stream, XpuVarNdarray<Dst>(Shape({elem_cnt}), reinterpret_cast<Dst*>(dst), 1),
                 XpuVarNdarray<const Src>(Shape({elem_cnt}), reinterpret_cast<const Src*>(src0), 1),
                 XpuVarNdarray<const Src>(Shape({1}), &src1_val, 1));
+  }
+  void Launch(Stream* stream, 
+              size_t num_src0_dims, const int64_t* src0_dims, const int64_t* src0_strides, const void* src0,
+              size_t num_src1_dims, const int64_t* src1_dims, const int64_t* src1_strides, const void* src1,
+              size_t num_dst_dims, const int64_t* dst_dims, const int64_t* dst_strides, void* dst) override {
+    
+    int64_t broadcast_src0_dims[kMaxNumDims];
+    int64_t broadcast_src0_strides[kMaxNumDims];
+
+    int64_t broadcast_src1_dims[kMaxNumDims];
+    int64_t broadcast_src1_strides[kMaxNumDims];
+    int64_t broadcast_ndims;
+    
+    Broadcast(num_src0_dims, src0_dims, src0_strides,
+              num_src1_dims, src1_dims, src1_strides,
+                      &broadcast_ndims, 
+                      broadcast_src0_dims, broadcast_src0_strides,
+                      broadcast_src1_dims, broadcast_src1_strides);
+    // TODO: check 
+    // if src0, src1, dst dims match
+    // if element_cnt match
+    int64_t elem_cnt = GetElementCount(broadcast_ndims, broadcast_src0_dims);
+
+    auto src0_index_helper = NdIndexOffsetWithStrideHelper<int64_t, kMaxNumDims>(broadcast_src0_strides, broadcast_ndims);
+    auto src1_index_helper = NdIndexOffsetWithStrideHelper<int64_t, kMaxNumDims>(broadcast_src1_strides, broadcast_ndims);
+    auto dst_index_helper = NdIndexOffsetWithStrideHelper<int64_t, kMaxNumDims>(dst_strides, broadcast_ndims);
+    
+    const Src* src0_data_ptr = reinterpret_cast<const Src*>(src0);
+    const Src* src1_data_ptr = reinterpret_cast<const Src*>(src1);
+    Dst* dst_data_ptr = reinterpret_cast<Dst*>(dst);
+
+    auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>();
+    // TODO: add omp for parallel?
+    int64_t ndIndex[broadcast_ndims] = {0};
+    for(int64_t i=0; i<elem_cnt; i++) {
+      auto src0_offset = src0_index_helper.NdIndexToOffset(ndIndex, broadcast_ndims);
+      auto src1_offset = src1_index_helper.NdIndexToOffset(ndIndex, broadcast_ndims);
+      auto dst_offset = dst_index_helper.NdIndexToOffset(ndIndex, broadcast_ndims);
+
+      dst_data_ptr[dst_offset] = functor(src0_data_ptr[src0_offset], src1_data_ptr[src1_offset]);  
+
+      int64_t idx = broadcast_ndims-1;
+      ndIndex[idx]++;
+      // update ndIndx
+      while(ndIndex[idx] >= broadcast_src0_dims[idx]) {
+        ndIndex[idx] = 0;
+        idx--;
+        ndIndex[idx]++;
+      }
+    }
   }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,

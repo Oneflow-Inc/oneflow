@@ -31,6 +31,9 @@ class BroadcastElementwiseBinary : public Primitive {
   BroadcastElementwiseBinary() = default;
   ~BroadcastElementwiseBinary() override = default;
 
+  virtual void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const int64_t* src0_strides,
+                      const void* src0, size_t num_src1_dims, const int64_t* src1_dims, const int64_t* src1_strides,
+                      const void* src1, size_t num_dst_dims, const int64_t* dst_dims, const int64_t* dst_strides, void* dst) = 0;
   virtual void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims,
                       const void* src0, size_t num_src1_dims, const int64_t* src1_dims,
                       const void* src1, void* dst) = 0;

@@ -33,12 +33,55 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
   }
 };
 
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFMod, Src, Dst> {
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return std::fmod(src0, src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFMod, half, half> {
+  OF_DEVICE_FUNC half operator()(half src0, half src1) const {
+    return static_cast<half>(std::fmod(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, Src, Dst> {
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { 
+    const float trunc_mod = std::fmod(src0, src1);
+    return (trunc_mod != 0) && ((src1 < 0) != (trunc_mod < 0)) ? trunc_mod + src1 : trunc_mod;
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, half, half> {
+  OF_DEVICE_FUNC half operator()(half src0, half src1) const {
+    const float trunc_mod = std::fmod(static_cast<float>(src0), static_cast<float>(src1));
+    return (trunc_mod != float(0)) && ((static_cast<float>(src1) < float(0)) != (trunc_mod < float(0))) ? static_cast<half>(trunc_mod + static_cast<float>(src1)) : static_cast<half>(trunc_mod);
+  }
+};
+
 #if CUDA_VERSION >= 11000
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16> {
   OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
     return static_cast<nv_bfloat16>(pow(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFMod, nv_bfloat16, nv_bfloat16> {
+  OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
+    return static_cast<nv_bfloat16>(std::fmod(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorMod, nv_bfloat16, nv_bfloat16> {
+  OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
+    const nv_bfloat16 trunc_mod = std::fmod(static_cast<float>(src0), static_cast<float>(src1));
+    return (trunc_mod != float(0)) && ((src1 < float(0)) != (trunc_mod < float(0)) ? static_cast<nv_bfloat16>(trunc_mod + src1) : static_cast<nv_bfloat16>(trunc_mod);
   }
 };
 

@@ -360,6 +360,14 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         stream, num_src0_dims, src0_dims, reinterpret_cast<const Src*>(src0), num_src1_dims,
         src1_dims, reinterpret_cast<const Src*>(src1), reinterpret_cast<Dst*>(dst));
   }
+
+
+  void Launch(Stream* stream, 
+              size_t num_src0_dims, const int64_t* src0_dims, const int64_t* src0_strides, const void* src0,
+              size_t num_src1_dims, const int64_t* src1_dims, const int64_t* src1_strides, const void* src1,
+              size_t num_dst_dims, const int64_t* dst_dims, const int64_t* dst_strides, void* dst) override {
+                return;
+              }
 };
 
 }  // namespace

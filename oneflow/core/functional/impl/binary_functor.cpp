@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -130,13 +131,26 @@ class MulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+
+    // TODO: why handle mul and broadcast_mul differently?
+    // if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
+
+    MutableAttrMap attrs;
+    if (!(x->is_local() && y->is_local() && !(LazyMode::is_enabled()))) {
+      // TODO: make tensor_processor(cast) can deal with view op
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
              .AddInputs({x->contiguous(), y->contiguous()})
              .Apply());
+    } else {
+      tensor_processor.AddInputs({x->contiguous(), y->contiguous()});
+    }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
-
-    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
-    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec);
+    const auto& x_stride = JUST(x->stride())->StrideVec();
+    const auto& y_stride = JUST(y->stride())->StrideVec();
+    JUST(attrs.SetAttr<std::vector<int64_t>>("x_stride", {x_stride.begin(), x_stride.end()}));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("y_stride", {y_stride.begin(), y_stride.end()}));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("z_stride", {}));
+    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec, attrs);
   }
 
  private:
