@@ -77,6 +77,7 @@ union CublasScalarParameter {
   float s;
 };
 
+#if CUDA_VERSION >= 11000
 CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_t compute_type) {
   CublasScalarParameter sp{};
   if (compute_type == CUBLAS_COMPUTE_64F) {
@@ -88,6 +89,19 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   }
   return sp;
 }
+#else
+CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cudaDataType_t compute_type) {
+  CublasScalarParameter sp{};
+  if (compute_type == CUDA_R_64F) {
+    sp.d = scalar.Value<double>();
+  } else if (compute_type == CUDA_R_32F) {
+    sp.s = scalar.Value<float>();
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sp;
+}
+#endif
 
 void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const ShapeView& c_shape,
                     ep::primitive::BlasTransposeType transpose_a,
