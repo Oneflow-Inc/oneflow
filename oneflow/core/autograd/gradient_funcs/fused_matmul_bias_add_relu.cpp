@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 
@@ -59,9 +60,9 @@ Maybe<void> FusedMatmulBiasAddRelu::Init(const OpExpr& op) {
 Maybe<void> FusedMatmulBiasAddRelu::Capture(FusedMatmulBiasAddReluCaptureState* ctx,
                                             const TensorTuple& inputs, const TensorTuple& outputs,
                                             const AttrMap& attrs) const {
-  ctx->requires_grad_a = inputs.at(0)->requires_grad();
-  ctx->requires_grad_b = inputs.at(1)->requires_grad();
-  ctx->requires_grad_bias = inputs.at(2)->requires_grad();
+  ctx->requires_grad_a = JUST(VectorAt(inputs, 0))->requires_grad();
+  ctx->requires_grad_b = JUST(VectorAt(inputs, 1))->requires_grad();
+  ctx->requires_grad_bias = JUST(VectorAt(inputs, 2))->requires_grad();
   if (!ctx->requires_grad_a && !ctx->requires_grad_b && !ctx->requires_grad_bias) {
     return Maybe<void>::Ok();
   }
@@ -72,12 +73,12 @@ Maybe<void> FusedMatmulBiasAddRelu::Capture(FusedMatmulBiasAddReluCaptureState* 
   ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
 
   if (ctx->requires_grad_a) {
-    ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
+    ctx->b_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // input b
   }
   if (ctx->requires_grad_b) {
-    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
+    ctx->a_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));  // input a
   }
-  ctx->out_index = ctx->SaveTensorForBackward(outputs.at(0));  // output
+  ctx->out_index = ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));  // output
   return Maybe<void>::Ok();
 }
 
@@ -85,33 +86,33 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
                                           const TensorTuple& out_grads,
                                           TensorTuple* in_grads) const {
   in_grads->resize(3);
-  std::shared_ptr<one::Tensor> relu_grad =
-      JUST(functional::ReluGrad(out_grads.at(0), ctx->SavedTensors().at(ctx->out_index)));
+  std::shared_ptr<one::Tensor> relu_grad = JUST(functional::ReluGrad(
+      JUST(VectorAt(out_grads, 0)), JUST(VectorAt(ctx->SavedTensors(), ctx->out_index))));
   if (ctx->requires_grad_bias) {
     // TODO: Currently Only support 2d fused_matmul.
     // so here we hard encode bias reduce axis as 0.
     std::vector<int32_t> reduce_axes_vec{0};
-    in_grads->at(2) = JUST(functional::ReduceSum(relu_grad, reduce_axes_vec, false));
+    *JUST(VectorAt(in_grads, 2)) = JUST(functional::ReduceSum(relu_grad, reduce_axes_vec, false));
   }
 
   if (ctx->requires_grad_a) {
-    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
+    const auto& input_b = JUST(VectorAt(ctx->SavedTensors(), ctx->b_index));
     if (ctx->transpose_a) {
-      in_grads->at(0) =
+      *JUST(VectorAt(in_grads, 0)) =
           JUST(functional::MatMul(input_b, relu_grad, ctx->transpose_b, true, ctx->alpha));
     } else {
-      in_grads->at(0) =
+      *JUST(VectorAt(in_grads, 0)) =
           JUST(functional::MatMul(relu_grad, input_b, false, !(ctx->transpose_b), ctx->alpha));
     }
   }
 
   if (ctx->requires_grad_b) {
-    const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
+    const auto& input_a = JUST(VectorAt(ctx->SavedTensors(), ctx->a_index));
     if (ctx->transpose_b) {
-      in_grads->at(1) =
+      *JUST(VectorAt(in_grads, 1)) =
           JUST(functional::MatMul(relu_grad, input_a, true, ctx->transpose_a, ctx->alpha));
     } else {
-      in_grads->at(1) =
+      *JUST(VectorAt(in_grads, 1)) =
           JUST(functional::MatMul(input_a, relu_grad, !(ctx->transpose_a), false, ctx->alpha));
     }
   }
