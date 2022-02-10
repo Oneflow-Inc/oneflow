@@ -69,6 +69,46 @@ class IteratorImpl : public KVBaseIterator {
   uint32_t* host_num_buffer_;
 };
 
+class TableIteratorImpl : public KVBaseIterator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(TableIteratorImpl);
+  TableIteratorImpl(PersistentTable::Iterator* base_iter, uint32_t max_query_length,
+                    void* host_keys_buffer, void* host_values_buffer, uint32_t* host_num_buffer)
+      : base_iter_(base_iter),
+        max_query_length_(max_query_length),
+        host_keys_buffer_(host_keys_buffer),
+        host_values_buffer_(host_values_buffer),
+        host_num_buffer_(host_num_buffer) {}
+  ~TableIteratorImpl() override = default;
+
+  void NextN(ep::Stream* stream, uint32_t n_request, uint32_t* n_result, void* keys,
+             void* values) override {
+    CHECK_LE(n_request, max_query_length_);
+    auto cuda_stream = stream->As<ep::CudaStream>();
+    CHECK_JUST(cuda_stream->Sync());
+    base_iter_->Next(n_request, host_num_buffer_, host_keys_buffer_, host_values_buffer_);
+    OF_CUDA_CHECK(cudaMemcpyAsync(n_result, host_num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
+                                  cuda_stream->cuda_stream()));
+    const uint32_t num_keys = *host_num_buffer_;
+    if (num_keys != 0) {
+      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, num_keys * table_->KeySize(),
+                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
+      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_, num_keys * table_->ValueSize(),
+                                    cudaMemcpyDefault, cuda_stream->cuda_stream()));
+    }
+  }
+
+  void Reset() override { base_iter_->Reset(); }
+
+ private:
+  PersistentTable* table_;
+  PersistentTable::Iterator* base_iter_;
+  uint32_t max_query_length_;
+  void* host_keys_buffer_;
+  void* host_values_buffer_;
+  uint32_t* host_num_buffer_;
+};
+
 template<typename Key>
 class KeyValueStoreImpl : public KeyValueStore {
  public:
@@ -131,9 +171,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void LoadSnapshot(const std::string& name,
-                    const std::function<void(KVBaseIterator* iter)>& Hook) override {
-    UNIMPLEMENTED();
-  }
+                    const std::function<void(KVBaseIterator* iter)>& Hook) override;
   void SaveSnapshot(const std::string& name) override;
 
  private:
@@ -210,7 +248,22 @@ bool KeyValueStoreImpl<Key>::SnapshotExists(const std::string& name) {
 template<typename Key>
 void KeyValueStoreImpl<Key>::LoadSnapshot(const std::string& name) {
   CudaCurrentDeviceGuard guard(device_index_);
-  table_->LoadSnapshot(name);
+  LoadSnapshot(name, nullptr);
+}
+
+template<typename Key>
+void KeyValueStoreImpl<Key>::LoadSnapshot(const std::string& name,
+                                          const std::function<void(KVBaseIterator* iter)>& Hook) {
+  CudaCurrentDeviceGuard guard(device_index_);
+  if (Hook) {
+    table_->LoadSnapshot(name, [&](PersistentTable::Iterator* chunk_iterator) {
+      TableIteratorImpl iterator(chunk_iterator, max_query_length_, host_query_keys_,
+                                 host_query_values_, host_n_missing_);
+      Hook(&iterator);
+    });
+  } else {
+    table_->LoadSnapshot(name);
+  }
 }
 
 template<typename Key>
