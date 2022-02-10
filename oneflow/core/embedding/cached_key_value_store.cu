@@ -215,8 +215,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(const std::string& name) {
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
-    const std::string& name,
-    const std::function<void(const std::function<void(KVBaseIterator*)> GetChunkIterator)>& Hook) {
+    const std::string& name, const std::function<void(KVBaseIterator* iter)>& Hook) {
   CudaCurrentDeviceGuard guard(device_index_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   cache_->Clear();
