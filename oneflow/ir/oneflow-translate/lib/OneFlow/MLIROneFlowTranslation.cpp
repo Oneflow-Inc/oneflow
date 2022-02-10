@@ -571,14 +571,14 @@ LogicalResult JobImporter::ProcessJob() {
 template<typename OpType, typename AdaptorType>
 void UpdatePlacement(OpType* op, AdaptorType& adaptor, ::oneflow::Job& job) {
   auto* pg = job.mutable_placement()->add_placement_group();
-  pg->mutable_op_set()->add_op_name(adaptor.op_name().getValue().str());
-  pg->mutable_parallel_conf()->set_device_tag(adaptor.device_tag().getValue().str());
+  pg->mutable_op_set()->add_op_name(adaptor.op_name().str());
+  pg->mutable_parallel_conf()->set_device_tag(adaptor.device_tag().str());
   for (auto p : adaptor.device_name()) {
     pg->mutable_parallel_conf()->add_device_name(
         p.template dyn_cast<StringAttr>().getValue().str());
   }
-  if (adaptor.hierarchy()) {
-    for (auto dim : adaptor.hierarchy()) {
+  if (::llvm::Optional<ArrayAttr> hierarchy = adaptor.hierarchy()) {
+    for (auto dim : hierarchy->getValue()) {
       pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
           dim.template dyn_cast<IntegerAttr>().getInt());
     }
@@ -684,7 +684,7 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
 LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, system_op_adaptor, job);
-  auto op_name = system_op_adaptor.op_name().getValue().str();
+  auto op_name = system_op_adaptor.op_name().str();
   ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
   for (const auto& ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
     auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
@@ -728,7 +728,7 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
 }
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
-                                     MLIRContext* context, OwningModuleRef& module) {
+                                     MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
@@ -751,13 +751,13 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   return success();
 }
 
-OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
+OwningOpRef<ModuleOp> TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   context->loadDialect<oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
 }
@@ -770,7 +770,7 @@ void RoundTripOneFlowJob(
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
 
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   JobImporter imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
@@ -797,7 +797,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
 
-  OwningModuleRef module(
+  OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   JobImporter imp(job_wrapper, &context, module.get());
   if (succeeded(imp.ProcessJob())) {
@@ -830,7 +830,7 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
-  OwningModuleRef module = parseSourceFile<ModuleOp>(path, &context);
+  OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
   JobImporter imp(job_wrapper, &context, module.get());
   std::cout << "load ir begin" << std::endl;
   if (failed(imp.TryToUpdateJob())) {

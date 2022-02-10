@@ -37,13 +37,11 @@ oneflow_add_mlir_dialect_library(
   PUBLIC
   ${dialect_libs}
   MLIRTosaToLinalg
-  MLIRSCFToStandard
   MLIRMemRefToLLVM
   MLIRLinalgToLLVM
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR
-  ${oneflow_third_party_libs}
   oneflow)
 
 if(WITH_MLIR_CUDA_CODEGEN)

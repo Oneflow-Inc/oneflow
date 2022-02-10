@@ -73,7 +73,7 @@ class TestArgsort(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_argsort_bool_with_random_data(test_case):
         x = random_tensor(ndim=4).to("cpu", torch.bool)
         y = torch.argsort(
