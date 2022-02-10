@@ -56,8 +56,9 @@ py::array ApiEagerTensorToNumpy(const py::handle& py_tensor) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
   case of_type: return EagerTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
+    case DataType::kFloat16: return EagerTensorToNumpy<float16>(py_tensor).GetOrThrow();
     default:
-      return Maybe<py::array>(Error::UnimplementedError() << "not support datatype").GetOrThrow();
+      return Maybe<py::array>(Error::UnimplementedError() << "Invalid datatype").GetOrThrow();
   }
 }
 
@@ -205,7 +206,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &Tensor::is_lazy)
       .def_property_readonly("is_eager", &Tensor::is_eager)
-      .def_property_readonly("is_consistent", &Tensor::is_consistent)
+      .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
@@ -213,7 +214,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
-      .def("consistent_id",
+      .def("global_id",
            [](const one::Tensor& tensor) -> int64_t {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
