@@ -68,6 +68,8 @@ def _test_consistent_cpu(test_case, placement, sbp):
     return y
 
 
+# PyTorch error if open auto_backward:
+# element 0 of tensors does not require grad and does not have a grad_fn
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
 def _test_consistent_long(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=False).to_consistent(
