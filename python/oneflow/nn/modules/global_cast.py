@@ -18,7 +18,7 @@ from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
 
 
-class ToConsistent(Module):
+class ToGlobal(Module):
     def __init__(self, placement, sbp):
         super().__init__()
         self.placement = placement
@@ -31,10 +31,10 @@ class ToConsistent(Module):
         self.sbp = sbp
 
     def forward(self, x, sbp, placement):
-        return flow._C.to_consistent(x, placement=placement, sbp=sbp)
+        return flow._C.to_global(x, placement=placement, sbp=sbp)
 
 
-def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
+def to_global_op(input, placement=None, sbp=None, grad_sbp=None):
     assert isinstance(input, Tensor)
 
     def _check_sbp(sbp):
@@ -54,8 +54,8 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
 
     sbp = _check_sbp(sbp)
 
-    if input.is_consistent:
-        # convert consistent tensor to another consistent tensor with different placement or sbp
+    if input.is_global:
+        # convert global tensor to another global tensor with different placement or sbp
         if placement is None:
             placement = input.placement
 
@@ -65,10 +65,10 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
         grad_sbp = _check_sbp(grad_sbp)
 
     else:
-        # local tensor to consistent tensor
+        # local tensor to global tensor
         if placement is None or sbp is None:
             raise ValueError(
-                "Converting a local tensor to consistent tensor must have placement and sbp parameters."
+                "Converting a local tensor to global tensor must have placement and sbp parameters."
             )
 
         if not isinstance(placement, flow.placement):
@@ -76,7 +76,7 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
 
     if grad_sbp is None:
         grad_sbp = tuple()
-    return flow._C.to_consistent(input, placement, sbp, grad_sbp)
+    return flow._C.to_global(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):
@@ -88,5 +88,5 @@ class ToLocal(Module):
 
 
 def to_local_op(input):
-    assert input.is_consistent, "input must be a consistent tensor!"
+    assert input.is_global, "input must be a global tensor!"
     return flow._C.to_local(input)

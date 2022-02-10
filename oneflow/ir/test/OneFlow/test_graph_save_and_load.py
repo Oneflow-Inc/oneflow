@@ -34,7 +34,7 @@ class InferGraph(flow.nn.Graph):
         model = resnet50()
         if placement_arg is not None:
             if "placement" in placement_arg:
-                model.to_consistent(**placement_arg)
+                model.to_global(**placement_arg)
             else:
                 model.to(**placement_arg)
         self.model = model
