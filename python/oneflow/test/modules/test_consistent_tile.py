@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(check_graph=False)
+@autotest(n=3, check_graph=False)
 def _test_consistent_flow_tile_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
     reps = (
@@ -33,7 +33,7 @@ def _test_consistent_flow_tile_with_random_data(test_case, placement, sbp):
     return z
 
 
-@autotest(check_graph=False)
+@autotest(n=3, check_graph=False)
 def _test_consistent_flow_tensor_tile_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
     reps = (
@@ -45,8 +45,7 @@ def _test_consistent_flow_tensor_tile_with_random_data(test_case, placement, sbp
     return y
 
 
-# ndsbp infer ger error when world_size != 1
-@flow.unittest.skip_unless_1n1d()
+# Reshape op ndsbp infer error: Check failed: matched_sbp_signature != nullptr
 class TestConsistentTile(flow.unittest.TestCase):
     @consistent
     def test_consistent_flow_tile_with_random_data(test_case):
