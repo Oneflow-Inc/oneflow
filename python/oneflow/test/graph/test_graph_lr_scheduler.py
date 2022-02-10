@@ -111,7 +111,7 @@ def _compare_graph_lr_scheduler_with_eager(test_case, **kwargs):
             ret = graph(_rand_input())
             ret.numpy()  # sync for graph finishing
 
-    lr_log_file = glob.glob("log/**/train_step2lr.csv", recursive=True)[0]
+    lr_log_file = glob.glob("log/*/train_step2lr.csv")[0]
     lrs = _get_graph_lrs_from_log(lr_log_file)
     lrs = lrs[:iters]
 
