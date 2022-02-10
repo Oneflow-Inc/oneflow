@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
@@ -32,9 +33,9 @@ extern Maybe<Symbol<Stream>> (*GetCpuTransportDevice)();
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx);
 
-template<
-    Maybe<bool> (*GetIsAsyncLaunched)(user_op::DeviceAndStreamInferContext*),
-    Maybe<Symbol<Device>> (*GetOutputDeivce)(user_op::DeviceAndStreamInferContext*) = DefaultGetOutputDeivce>
+template<Maybe<bool> (*GetIsAsyncLaunched)(user_op::DeviceAndStreamInferContext*),
+         Maybe<Symbol<Device>> (*GetOutputDeivce)(user_op::DeviceAndStreamInferContext*) =
+             DefaultGetOutputDeivce>
 Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContext* ctx) {
   Symbol<Device> output_device = JUST(GetOutputDeivce(ctx));
   if (ctx->outputs().size() > 0) {

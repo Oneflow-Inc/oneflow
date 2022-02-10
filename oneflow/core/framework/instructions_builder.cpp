@@ -42,6 +42,11 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
+#include "oneflow/core/framework/stream_need_soft_sync.h"
+#include "oneflow/core/framework/stream_get_call_instruction_name.h"
+#include "oneflow/core/framework/stream_get_release_instruction_name.h"
+#include "oneflow/core/framework/stream_is_transport.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
@@ -51,7 +56,9 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Stream>> RawGetCriticalSectionDevice() { return Device::New("critical_section"); }
+Maybe<Symbol<Stream>> RawGetCriticalSectionDevice() {
+  return Stream::New(JUST(Device::New("cpu")), StreamRole::kCriticalSection);
+}
 
 static constexpr auto* GetCriticalSectionDevice =
     DECORATE(&RawGetCriticalSectionDevice, ThreadLocal);
@@ -343,21 +350,21 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
-  const auto& parallel_desc_sym = JUST(Placement4Device(stream)).shared_from_symbol();
+  const auto& parallel_desc_sym = JUST(Placement4Device(stream->device())).shared_from_symbol();
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode()));
+  auto instruction_name =
+      JUST(SRSwitch<GetCallInstructionName>(stream->stream_role(), stream->device()->enum_type()));
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), JUST(stream->local_call_instruction_name()),
-      parallel_desc_sym, phy_instr_operand);
+      Global<VirtualMachine>::Get()->mut_vm(), *instruction_name, parallel_desc_sym,
+      phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
-    if (!output->producer_stream().has_value()) {
-      JUST(output->init_producer_stream(stream));
-    }
-    output->set_last_used_device(stream);
+    if (!output->producer_stream().has_value()) { JUST(output->init_producer_stream(stream)); }
+    output->set_last_used_stream(stream);
   }
   return Maybe<void>::Ok();
 }
@@ -369,56 +376,57 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       && parallel_desc->device_type() != DeviceType::kCPU) {
     return Maybe<void>::Ok();
   }
-  const auto& last_used_device = JUST(eager_blob_object->last_used_device());
+  const auto& last_used_stream = JUST(eager_blob_object->last_used_stream());
   const auto& producer_stream = JUST(eager_blob_object->producer_stream());
-  if (last_used_device != producer_stream) {
+  if (last_used_stream != producer_stream) {
     JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, "mut",
-                        last_used_device));
+                        last_used_stream));
   }
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (last_used_device->type() == "async_launched_nccl"
-             && (producer_stream->type() == "cuda" || producer_stream->type() == "gpu")) {
-    // Disable inter-device instruction sequential for tensor used by nccl stream.
+  } else if (SRSwitch<StreamIsTransport>(last_used_stream->stream_role())) {
+    // Disable inter-device instruction sequential for tensor used by communicative stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (producer_stream->type() == "async_launched_nccl") {
-    // Disable inter-device instruction sequential for tensor produced by nccl stream.
+  } else if (SRSwitch<StreamIsTransport>(producer_stream->stream_role())) {
+    // Disable inter-device instruction sequential for tensor produced by communicative stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
     stream = producer_stream;
   }
   const auto& phy_instr_operand =
       std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, stream);
+  DeviceType device_type = producer_stream->device()->enum_type();
+  auto instruction_name =
+      JUST(SRSwitch<GetReleaseInstructionName>(producer_stream->stream_role(), device_type));
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), producer_stream->type() + ".ReleaseTensor",
-      parallel_desc, phy_instr_operand);
+      Global<VirtualMachine>::Get()->mut_vm(), *instruction_name, parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
     const one::EagerBlobObjectListPtr& eager_blob_objects, Symbol<Stream> stream) {
-  SmallSet<Symbol<Stream>> last_used_devices;
+  SmallSet<Symbol<Stream>> last_used_streams;
   for (const auto& eager_blob_object : *eager_blob_objects) {
-    const auto& opt_last_used_device = eager_blob_object->last_used_device();
-    if (unlikely(!opt_last_used_device.has_value())) { continue; }
-    const auto& last_used_device = JUST(opt_last_used_device);
-    if (last_used_device != stream) { SmallSetInsert(&last_used_devices, last_used_device); }
+    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
+    if (unlikely(!opt_last_used_stream.has_value())) { continue; }
+    const auto& last_used_stream = JUST(opt_last_used_stream);
+    if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
   }
-  for (const auto& last_used_device : last_used_devices) {
+  for (const auto& last_used_stream : last_used_streams) {
     std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
     dep_objects.reserve(eager_blob_objects->size());
     for (const auto& eager_blob_object : *eager_blob_objects) {
-      const auto& opt_last_used_device = eager_blob_object->last_used_device();
-      if (unlikely(!opt_last_used_device.has_value())) { continue; }
-      if (JUST(opt_last_used_device) == last_used_device) {
+      const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
+      if (unlikely(!opt_last_used_stream.has_value())) { continue; }
+      if (JUST(opt_last_used_stream) == last_used_stream) {
         dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
       }
-      eager_blob_object->set_last_used_device(stream);
+      eager_blob_object->set_last_used_stream(stream);
     }
-    JUST(SoftSyncStream(std::move(dep_objects), "mut", last_used_device));
+    JUST(SoftSyncStream(std::move(dep_objects), "mut", last_used_stream));
   }
   return Maybe<void>::Ok();
 }
@@ -426,7 +434,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 Maybe<void> InstructionsBuilder::SoftSyncStream(
     std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     const std::string& modifier, Symbol<Stream> stream) {
-  if (!JUST(stream->need_soft_sync_stream())) { return Maybe<void>::Ok(); }
+  DeviceType device_type = stream->device()->enum_type();
+  if (!SRSwitch<NeedSoftSync>(stream->stream_role(), device_type)) { return Maybe<void>::Ok(); }
   OF_PROFILER_RANGE_PUSH("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
@@ -470,7 +479,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   // init view blob (with empty data pointer)
   JUST(view_eager_blob_object->TryInitBlob());
   view_eager_blob_object->set_is_shape_synced(true);
-  view_eager_blob_object->set_last_used_device(JUST(input_tensor->device()));
+  view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
   // prepare instruction operand
   const auto& phy_instr_operand =
       std::make_shared<vm::TensorViewOperand>(eager_blob_object, view_eager_blob_object);

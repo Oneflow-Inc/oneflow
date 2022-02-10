@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_GET_CALL_INSTRUCTION_NAME_H_
-#define ONEFLOW_CORE_FRAMEWORK_STREAM_GET_CALL_INSTRUCTION_NAME_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_GET_RELEASE_INSTRUCTION_NAME_H_
+#define ONEFLOW_CORE_FRAMEWORK_STREAM_GET_RELEASE_INSTRUCTION_NAME_H_
 
 #include <glog/logging.h>
 #include <string>
@@ -25,30 +25,30 @@ limitations under the License.
 
 namespace oneflow {
 
-struct GetCallInstructionName {
+struct GetReleaseInstructionName {
   static Maybe<std::string> Case(SR<StreamRole::kInvalid>, DeviceType device_type) {  // NOLINT
     UNIMPLEMENTED_THEN_RETURN();
   }
   static Maybe<std::string> Case(SR<StreamRole::kCompute>, DeviceType device_type) {
-    return *JUST(DeviceTag4DeviceType(device_type)) + ".LocalCallOpKernel";
+    return *JUST(DeviceTag4DeviceType(device_type)) + ".ReleaseTensor";
   }
   static Maybe<std::string> Case(SR<StreamRole::kHost2Device>, DeviceType device_type) {
     CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("cuda_h2d.LocalCallOpKernel");
+    return std::string("cuda_h2d.ReleaseTensor");
   }
   static Maybe<std::string> Case(SR<StreamRole::kDevice2Host>, DeviceType device_type) {
     CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("cuda_d2h.LocalCallOpKernel");
+    return std::string("cuda_d2h.ReleaseTensor");
   }
   static Maybe<std::string> Case(SR<StreamRole::kSyncedLaunchedCC>, DeviceType device_type) {
-    if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+    if (device_type == kCPU) { return std::string("comm_net.ReleaseTensor"); }
     CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("gpu.LocalCallOpKernel");
+    return std::string("sync_launched_nccl.ReleaseTensor");
   }
   static Maybe<std::string> Case(SR<StreamRole::kAsyncedLaunchedCC>, DeviceType device_type) {
-    if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+    if (device_type == kCPU) { return std::string("comm_net.ReleaseTensor"); }
     CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("async.gpu.LocalCallOpKernel");
+    return std::string("async_launched_nccl.ReleaseTensor");
   }
   static Maybe<std::string> Case(SR<StreamRole::kCriticalSection>, DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
@@ -57,4 +57,4 @@ struct GetCallInstructionName {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_GET_CALL_INSTRUCTION_NAME_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_GET_RELEASE_INSTRUCTION_NAME_H_

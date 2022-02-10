@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -271,7 +272,8 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
-    JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
+    const auto& stream = GetDefaultStreamByDevice(device);
+    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));

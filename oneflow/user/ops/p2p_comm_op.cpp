@@ -31,7 +31,8 @@ namespace oneflow {
   // Do nothing.
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<Symbol<Stream>> SendOp::InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx) {
+/*static*/ Maybe<Symbol<Stream>> SendOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
@@ -57,7 +58,8 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* 
   *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx) {
+/*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
 }
 

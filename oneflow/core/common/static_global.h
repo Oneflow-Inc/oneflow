@@ -58,7 +58,7 @@ struct StaticGlobalCopiable<RetT, Arg0> {
   static_assert(!StaticAny<IsOutArg, Arg0>::value, "");
 };
 
-template<typename RetT, typename Arg0, typename Arg1 typename... Args>
+template<typename RetT, typename Arg0, typename Arg1, typename... Args>
 struct StaticGlobalCopiable<RetT, Arg0, Arg1, Args...> {
   template<RetT (*func)(Arg0, Arg1, Args...)>
   static RetT Call(Arg0 arg0, Arg1 arg1, Args... args) {

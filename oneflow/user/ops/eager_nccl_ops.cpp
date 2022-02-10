@@ -89,7 +89,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclTouchOp::InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx) {
+/* static */ Maybe<Symbol<Stream>> EagerNcclTouchOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
 }
 
@@ -264,7 +265,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclS2sOp::InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx) {
+/* static */ Maybe<Symbol<Stream>> EagerNcclS2sOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 

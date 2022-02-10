@@ -60,7 +60,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerBToSOp::InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx) {
+/* static */ Maybe<Symbol<Stream>> EagerBToSOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 

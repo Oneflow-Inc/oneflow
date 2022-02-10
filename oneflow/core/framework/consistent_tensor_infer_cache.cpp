@@ -181,7 +181,7 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
 class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStreamInferContext {
  public:
   UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr,
-                                 const ConsistentTensorMetaInferArgs* infer_args)
+                                        const ConsistentTensorMetaInferArgs* infer_args)
       : user_op_expr_(user_op_expr),
         composed_attrs_(infer_args->attrs(), user_op_expr->base_attrs()),
         in_tensor_devices_(user_op_expr_->input_size()),
@@ -237,7 +237,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   if (!user_op_expr.device_and_stream_infer_fn()) {
     Symbol<ParallelDesc> parallel_desc =
         infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
-    return GetTensorDevice(parallel_desc);
+    return GetDefaultStreamByPlacement(parallel_desc);
   } else {
     UserOpExprDeviceAndStreamInferContext device_and_stream_ctx(&user_op_expr, &infer_args);
     return TRY(user_op_expr.device_and_stream_infer_fn()(&device_and_stream_ctx));
@@ -334,7 +334,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
-  result->set_stream(JUST(GetTensorDevice(parallel_desc)));
+  result->set_stream(JUST(GetDefaultStreamByPlacement(parallel_desc)));
   return std::shared_ptr<const ConsistentTensorInferResult>(std::move(result));
 }
 

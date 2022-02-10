@@ -202,7 +202,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>>
+_ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }

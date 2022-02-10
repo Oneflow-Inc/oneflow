@@ -200,7 +200,7 @@ class ConsistentTensorInferResult final {
   }
 
   const Symbol<Stream>& stream() const { return stream_; }
-  void set_stream(const Symbol<Device>& stream) { stream_ = stream; }
+  void set_stream(const Symbol<Stream>& stream) { stream_ = stream; }
 
  private:
   std::vector<Symbol<ConsistentTensorMeta>> input_tensor_metas_;
@@ -226,8 +226,8 @@ class ConsistentTensorInferCache final {
       const UserOpExpr& user_op_expr, const SrcOpConsistentTensorMetaInferArgs& infer_args);
 
  private:
-  static Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
-                                             const ConsistentTensorMetaInferArgs& infer_args);
+  static Maybe<Symbol<Stream>> InferDeviceAndStream(
+      const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args);
 
   std::weak_ptr<const UserOpExpr> user_op_expr_;
   HashMap<ConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> cache_;
