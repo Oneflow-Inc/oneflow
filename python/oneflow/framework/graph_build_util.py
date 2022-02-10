@@ -141,7 +141,7 @@ def make_new_block_scope(prev_scope, block):
         new_scope = builder.BuildScopeByProtoSetter(prev_scope, scope_proto_setter)
         assert new_scope is not None
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(build_scope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
     oneflow._oneflow_internal.eager.multi_client.Sync()
     return new_scope
 

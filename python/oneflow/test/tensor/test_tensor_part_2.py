@@ -391,6 +391,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.floor()
         return y
 
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_tesnor_var_all_dim_with_random_data(test_case):
         device = random_device()
@@ -867,40 +868,40 @@ class TestTensorNumpy(flow.unittest.TestCase):
     def test_1d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor([1, 2, 3, 4]) + flow.env.get_rank()
         placement = flow.env.all_device_placement("cpu")
-        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
-        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
 
-        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
 
         placement = flow.env.all_device_placement("cuda")
-        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4, 2, 3, 4, 5]))
 
-        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
         test_case.assertTrue(np.allclose(x.numpy(), [1, 2, 3, 4]))
 
-        x = ori_x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        x = ori_x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         test_case.assertTrue(np.allclose(x.numpy(), [3, 5, 7, 9]))
 
     @flow.unittest.skip_unless_1n2d()
     def test_2d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
         placement = flow.placement("cuda", {0: range(2)}, hierarchy=(2, 1))
-        x = ori_x.to_consistent(
+        x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )
         test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1], [2, 2], [2, 2]]))
 
-        x = ori_x.to_consistent(
+        x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(0)]
         )
         test_case.assertTrue(np.allclose(x.numpy(), [[1, 1], [1, 1]]))
 
-        x = ori_x.to_consistent(
+        x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.partial_sum, flow.sbp.broadcast]
         )
         test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3]]))
@@ -910,7 +911,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
         placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
 
-        x = ori_x.to_consistent(
+        x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )
         test_case.assertTrue(
@@ -919,13 +920,13 @@ class TestTensorNumpy(flow.unittest.TestCase):
             )
         )
 
-        x = ori_x.to_consistent(
+        x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.partial_sum]
         )
         test_case.assertTrue(np.allclose(x.numpy(), [[3, 3], [3, 3], [7, 7], [7, 7]]))
 
         # TODO: (s0, b) has bug
-        # x = ori_x.to_consistent(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
+        # x = ori_x.to_global(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
