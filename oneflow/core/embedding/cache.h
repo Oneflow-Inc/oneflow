@@ -62,8 +62,6 @@ class Cache : public KVBase {
   virtual void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                     uint32_t* n_dumped, void* keys, void* values) = 0;
   virtual void Clear() = 0;
-
-  void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
 };
 
 std::unique_ptr<Cache> NewCache(const CacheOptions& options);
