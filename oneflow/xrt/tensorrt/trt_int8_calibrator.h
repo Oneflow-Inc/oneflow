@@ -43,10 +43,10 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
 
   ~TRTInt8Calibrator();
 
-  int getBatchSize() const override;
+  int getBatchSize() const noexcept override;
 
   bool getBatch(void* bindings[], const char* names[],  // NOLINT
-                int num_bindings) override;
+                int num_bindings) noexcept override;
 
   void setBatchSize(const int batch_size);
 
@@ -68,9 +68,9 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
   void ReleaseDevBuffers();
 
   // If not null, calibration is skipped.
-  const void* readCalibrationCache(std::size_t& length) override;
+  const void* readCalibrationCache(std::size_t& length) noexcept override;
 
-  void writeCalibrationCache(const void* ptr, std::size_t length) override;
+  void writeCalibrationCache(const void* ptr, std::size_t length) noexcept override;
 
   const std::string& getCalibrationTableAsString() {  // NOLINT
     return calibration_table_;

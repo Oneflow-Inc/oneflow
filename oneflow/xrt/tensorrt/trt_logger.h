@@ -31,7 +31,7 @@ class Logger : public nvinfer1::ILogger {
 
   Logger(const std::string& name) : name_(name) {}
 
-  void log(nvinfer1::ILogger::Severity severity, const char* msg) override;
+  void log(nvinfer1::ILogger::Severity severity, const char* msg) noexcept override;
 
  private:
   std::string name_ = "TensorRT Logging";
