@@ -118,7 +118,7 @@ class TestSqueeze(flow.unittest.TestCase):
         y = torch.squeeze(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_squeeze_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device=device, dtype=torch.bool)
