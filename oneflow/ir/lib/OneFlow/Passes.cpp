@@ -46,6 +46,7 @@ limitations under the License.
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
 #include "llvm/ADT/STLExtras.h"
@@ -263,10 +264,11 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
+  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());      // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());            // -reconcile-unrealized-casts
   return pm.run(module);
 }
 
