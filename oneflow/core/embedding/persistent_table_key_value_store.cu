@@ -72,9 +72,12 @@ class IteratorImpl : public KVBaseIterator {
 class TableIteratorImpl : public KVBaseIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TableIteratorImpl);
-  TableIteratorImpl(PersistentTable::Iterator* base_iter, uint32_t max_query_length,
-                    void* host_keys_buffer, void* host_values_buffer, uint32_t* host_num_buffer)
+  TableIteratorImpl(PersistentTable::Iterator* base_iter, uint32_t key_size, uint32_t value_size,
+                    uint32_t max_query_length, void* host_keys_buffer, void* host_values_buffer,
+                    uint32_t* host_num_buffer)
       : base_iter_(base_iter),
+        key_size_(key_size),
+        value_size_(value_size),
         max_query_length_(max_query_length),
         host_keys_buffer_(host_keys_buffer),
         host_values_buffer_(host_values_buffer),
@@ -91,9 +94,9 @@ class TableIteratorImpl : public KVBaseIterator {
                                   cuda_stream->cuda_stream()));
     const uint32_t num_keys = *host_num_buffer_;
     if (num_keys != 0) {
-      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, num_keys * table_->KeySize(),
+      OF_CUDA_CHECK(cudaMemcpyAsync(keys, host_keys_buffer_, num_keys * key_size_,
                                     cudaMemcpyDefault, cuda_stream->cuda_stream()));
-      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_, num_keys * table_->ValueSize(),
+      OF_CUDA_CHECK(cudaMemcpyAsync(values, host_values_buffer_, num_keys * value_size_,
                                     cudaMemcpyDefault, cuda_stream->cuda_stream()));
     }
   }
@@ -101,8 +104,9 @@ class TableIteratorImpl : public KVBaseIterator {
   void Reset() override { base_iter_->Reset(); }
 
  private:
-  PersistentTable* table_;
   PersistentTable::Iterator* base_iter_;
+  uint32_t key_size_;
+  uint32_t value_size_;
   uint32_t max_query_length_;
   void* host_keys_buffer_;
   void* host_values_buffer_;
@@ -257,8 +261,8 @@ void KeyValueStoreImpl<Key>::LoadSnapshot(const std::string& name,
   CudaCurrentDeviceGuard guard(device_index_);
   if (Hook) {
     table_->LoadSnapshot(name, [&](PersistentTable::Iterator* chunk_iterator) {
-      TableIteratorImpl iterator(chunk_iterator, max_query_length_, host_query_keys_,
-                                 host_query_values_, host_n_missing_);
+      TableIteratorImpl iterator(chunk_iterator, KeySize(), ValueSize(), max_query_length_,
+                                 host_query_keys_, host_query_values_, host_n_missing_);
       Hook(&iterator);
     });
   } else {
