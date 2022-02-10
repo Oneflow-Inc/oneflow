@@ -66,7 +66,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(int)
         return input.masked_fill(mask > 0, value)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_masked_fill_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
