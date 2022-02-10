@@ -40,6 +40,13 @@ struct AttrFromContext<user_op::KernelInitContext, AttrT> {
   }
 };
 
+template<typename AttrT>
+struct AttrFromContext<user_op::InferContext, AttrT> {
+  const AttrT& operator()(user_op::InferContext* ctx, const std::string& attr_name) {
+    return ctx->Attr<AttrT>(attr_name);
+  }
+};
+
 template<typename ContextT>
 struct OpTypeNameFromContext {
   const std::string& operator()(ContextT*);
@@ -55,6 +62,11 @@ struct OpTypeNameFromContext<user_op::InferNdSbpFnContext> {
 template<>
 struct OpTypeNameFromContext<user_op::KernelInitContext> {
   const std::string& operator()(user_op::KernelInitContext* ctx) { return ctx->op_type_name(); }
+};
+
+template<>
+struct OpTypeNameFromContext<user_op::InferContext> {
+  const std::string& operator()(user_op::InferContext* ctx) { return ctx->op_type_name(); }
 };
 
 template<typename ContextT>
