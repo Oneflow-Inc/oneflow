@@ -395,6 +395,7 @@ class TestTensor(flow.unittest.TestCase):
         "TODO: probably fail, skip for now and fix it in future."
         "ref to: https://github.com/Oneflow-Inc/OneTeam/issues/1006#issuecomment-1022768858"
     )
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_tesnor_var_all_dim_with_random_data(test_case):
         device = random_device()
