@@ -391,6 +391,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.floor()
         return y
 
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_tesnor_var_all_dim_with_random_data(test_case):
         device = random_device()
