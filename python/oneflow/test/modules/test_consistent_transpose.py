@@ -80,14 +80,14 @@ def _test_consistent_transpose_backward_v2(test_case, placement, sbp):
     )
 
 
-@autotest(check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_consistent_transpose_flow_with_random_data(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 24, 8).to_consistent(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 
 
-@autotest(auto_backward=False, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_consistent_transpose_with_0_size_data(test_case, placement, sbp):
     device = random_device()
     x = random_tensor(4, 8, 16, 0, 8).to_consistent(placement, sbp)
@@ -119,15 +119,13 @@ class TestConsistentTranspose(flow.unittest.TestCase):
                     test_case, placement, sbp
                 )
 
-    # TODO(): Support 0 size tensor for eager consistent, which will
-    # be solved in https://github.com/Oneflow-Inc/oneflow/pull/7326
-    # @consistent
-    # def test_consistent_transpose_with_0_size_data(
-    #     test_case, valid_split_axis=[0, 1, 3]
-    # ):
-    #     for placement in all_placement():
-    #         for sbp in all_sbp(placement, max_dim=4):
-    #             _test_consistent_transpose_with_0_size_data(test_case, placement, sbp)
+    @consistent
+    def test_consistent_transpose_with_0_size_data(
+        test_case, valid_split_axis=[0, 1, 3]
+    ):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=4):
+                _test_consistent_transpose_with_0_size_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
