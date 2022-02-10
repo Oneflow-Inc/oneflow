@@ -21,9 +21,46 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<void> GetNcclLogicalNdSbpFromAttr(user_op::InferNdSbpFnContext* ctx,
-                                               const std::string& attr_name, cfg::NdSbp* nd_sbp) {
-  const auto& sbp_str_list = ctx->user_op_conf().attr<std::vector<std::string>>(attr_name);
+template<typename ContextT, typename AttrT>
+struct AttrFromContext {
+  const AttrT& operator()(ContextT*, const std::string&);
+};
+
+template<typename AttrT>
+struct AttrFromContext<user_op::InferNdSbpFnContext, AttrT> {
+  const AttrT& operator()(user_op::InferNdSbpFnContext* ctx, const std::string& attr_name) {
+    return ctx->user_op_conf().template attr<AttrT>(attr_name);
+  }
+};
+
+template<typename AttrT>
+struct AttrFromContext<user_op::KernelInitContext, AttrT> {
+  const AttrT& operator()(user_op::KernelInitContext* ctx, const std::string& attr_name) {
+    return ctx->Attr<AttrT>(attr_name);
+  }
+};
+
+template<typename ContextT>
+struct OpTypeNameFromContext {
+  const std::string& operator()(ContextT*);
+};
+
+template<>
+struct OpTypeNameFromContext<user_op::InferNdSbpFnContext> {
+  const std::string& operator()(user_op::InferNdSbpFnContext* ctx) {
+    return ctx->user_op_conf().op_type_name();
+  }
+};
+
+template<>
+struct OpTypeNameFromContext<user_op::KernelInitContext> {
+  const std::string& operator()(user_op::KernelInitContext* ctx) { return ctx->op_type_name(); }
+};
+
+template<typename ContextT>
+Maybe<void> GetNcclLogicalNdSbpFromAttr(ContextT* ctx, const std::string& attr_name,
+                                        cfg::NdSbp* nd_sbp) {
+  const auto& sbp_str_list = AttrFromContext<ContextT, std::vector<std::string>>()(ctx, attr_name);
 
   if (!ParseNdSbpFromStringList(sbp_str_list, nd_sbp)) {
     std::ostringstream err;
@@ -36,7 +73,7 @@ inline Maybe<void> GetNcclLogicalNdSbpFromAttr(user_op::InferNdSbpFnContext* ctx
         err << ", " << sbp_str;
       }
     }
-    err << "] for " << ctx->user_op_conf().op_type_name();
+    err << "] for " << OpTypeNameFromContext<ContextT>()(ctx);
     return Error::RuntimeError() << err.str();
   }
 

@@ -4839,8 +4839,6 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis,
-    DefaultValuedAttr<SI64Attr, "-1">:$out_dim1_split_axis,
     StrArrayAttr:$src_reduced_nd_sbp,
     StrArrayAttr:$dst_reduced_nd_sbp
   );
@@ -4877,7 +4875,6 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis,
     StrArrayAttr:$src_reduced_nd_sbp,
     StrArrayAttr:$dst_reduced_nd_sbp
   );
@@ -4950,7 +4947,6 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
     StrArrayAttr:$src_reduced_nd_sbp,
     StrArrayAttr:$dst_reduced_nd_sbp
   );
@@ -5005,8 +5001,6 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
-    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis,
     StrArrayAttr:$src_reduced_nd_sbp,
     StrArrayAttr:$dst_reduced_nd_sbp
   );

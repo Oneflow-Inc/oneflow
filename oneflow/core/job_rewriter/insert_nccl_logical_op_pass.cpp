@@ -198,7 +198,6 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
                .Op("_nccl_logical_all_gather_noncontinuous")
                .Input("in", lbn)
                .Output("out")
-               .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
@@ -213,8 +212,6 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
                .Op("_nccl_logical_s2s")
                .Input("in", lbn)
                .Output("out")
-               .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
-               .Attr<int64_t>("out_split_axis", dst_sbp.split_parallel().axis())
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
@@ -225,7 +222,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
 
 bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
                                        const cfg::NdSbp& dst_nd_sbp,
-                                       const std::shared_ptr<Shape> hierarchy,
+                                       const std::shared_ptr<Shape>& hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
@@ -275,7 +272,6 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
             .Input("in", lbn)
             .Output("out")
-            .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -290,8 +286,6 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim0_all2all")
             .Input("in", lbn)
             .Output("out")
-            .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
-            .Attr<int64_t>("out_dim1_split_axis", dst_dim1_sbp.split_parallel().axis())
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -302,7 +296,7 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
 
 bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
                                        const cfg::NdSbp& dst_nd_sbp,
-                                       const std::shared_ptr<Shape> hierarchy,
+                                       const std::shared_ptr<Shape>& hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
@@ -357,8 +351,8 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                          dst_reduced_nd_sbp);
 
   CHECK_EQ(src_reduced_parallel_desc->parallel_num(), dst_reduced_parallel_desc->parallel_num());
-  auto src_reduced_hierarchy = src_reduced_parallel_desc->hierarchy();
-  auto dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
+  std::shared_ptr<Shape> src_reduced_hierarchy = src_reduced_parallel_desc->hierarchy();
+  std::shared_ptr<Shape> dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
 
   if ((*src_reduced_hierarchy) == (*dst_reduced_hierarchy)
       && src_reduced_nd_sbp == dst_reduced_nd_sbp) {
