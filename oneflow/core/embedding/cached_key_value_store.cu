@@ -97,6 +97,10 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
+  void LoadSnapshot(const std::string& name,
+                    const std::function<void(KVBaseIterator*)>& Hook) override {
+    UNIMPLEMENTED();
+  }
 
  private:
   void SyncCacheToStore();
