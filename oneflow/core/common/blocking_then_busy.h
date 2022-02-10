@@ -24,6 +24,9 @@ namespace oneflow {
 
 class BlockingThenBusy final {
  public:
+  BlockingThenBusy(const BlockingThenBusy&) = delete;
+  BlockingThenBusy(BlockingThenBusy&&) = delete;
+  BlockingThenBusy() = delete;
   explicit BlockingThenBusy(int cnt) : blocking_counter_(cnt), spin_counter_(cnt) {}
 
   BlockingCounter* mut_blocking_counter() { return &blocking_counter_; }
