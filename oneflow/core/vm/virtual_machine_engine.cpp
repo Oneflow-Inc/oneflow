@@ -84,8 +84,8 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
 }
 
 // Handle pending instructions, and try schedule them to ready list.
-void VirtualMachineEngine::HandlePending() {
-  OF_PROFILER_RANGE_PUSH("HandlePending");
+void VirtualMachineEngine::HandleLocalPending() {
+  OF_PROFILER_RANGE_PUSH("HandleLocalPending");
   InstructionMsgList pending_instr_msgs;
   constexpr static int kPendingHandleWindow = 10;
   GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instr_msgs);
@@ -192,6 +192,10 @@ void VirtualMachineEngine::InsertProbe(
 
 void VirtualMachineEngine::HandleProbe() {
   if (unlikely(probe_list_.thread_unsafe_size())) { probe_list_.MoveTo(&local_probe_list_); }
+  HandleLocalProbe();
+}
+
+void VirtualMachineEngine::HandleLocalProbe() {
   if (unlikely(local_probe_list_.size())) {
     INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
       if (probe->probe(this)) { local_probe_list_.Erase(probe); }
@@ -829,17 +833,21 @@ void VirtualMachineEngine::Schedule() {
   //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
   if (unlikely(local_pending_msg_list().size())) {
-    HandlePending();
+    HandleLocalPending();
   } else if (unlikely(pending_msg_list().thread_unsafe_size())) {
     // MoveTo is under a lock.
     mut_pending_msg_list()->MoveTo(mut_local_pending_msg_list());
-    HandlePending();
+    HandleLocalPending();
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
   // handle probes
-  if (unlikely(probe_list_.thread_unsafe_size())) { HandleProbe(); }
-  if (unlikely(local_probe_list_.size())) { HandleProbe(); }
+  if (unlikely(probe_list_.thread_unsafe_size())) {
+    probe_list_.MoveTo(&local_probe_list_);
+    HandleLocalProbe();
+  } else if (unlikely(local_probe_list_.size())) {
+    HandleLocalProbe();
+  }
 }
 
 void VirtualMachineEngine::Callback() {

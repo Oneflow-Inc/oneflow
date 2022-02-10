@@ -145,7 +145,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void ReleaseFinishedInstructions();
   void MoveInstructionMsgToGarbageMsgList(intrusive::shared_ptr<InstructionMsg>&& instr_msg);
   void MoveToGarbageMsgListAndNotifyGC();
-  void HandlePending();
+  void HandleLocalPending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionMsgList* /*out*/ pending_instr_msgs);
   void MakeAndAppendFusedInstruction(InstructionMsgList&& fused_instr_msg_list,
@@ -204,6 +204,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void LivelyInstructionListPushBack(Instruction* instruction);
   intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction);
   void HandleProbe();
+  void HandleLocalProbe();
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }

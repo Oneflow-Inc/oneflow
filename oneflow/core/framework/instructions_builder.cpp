@@ -538,6 +538,38 @@ template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
     const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
+  // We want balance the cpu overhead and notification latency.
+  //
+  // balanced timeline here:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //
+  //   main thread:  |<-------------------- B -------------------->|<- W ->|<- S  ->|
+  //
+  // bad timeline with more notification latency:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //
+  //   main thread:  |<---------------------------- B ----------------------------->|<- W ->|
+  //
+  // bad timeline with more cpu overhead:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //                 |                                             |                |
+  //   main thread:  |<---------------------------- S ----------------------------->|
+
   const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
     btb->mut_blocking_counter()->Decrease();
     Callback(ofblob_ptr);
