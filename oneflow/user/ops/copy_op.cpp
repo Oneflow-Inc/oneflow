@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
+Maybe<Symbol<Stream>> MakeOpDevice(const Symbol<Device>& in_device,
                                    const Symbol<Device>& out_device) {
   if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
     return Device::New("cuda_d2h", in_device->device_id());
@@ -61,7 +61,7 @@ Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> CopyOp::InferDevice(user_op::DeviceInferContext* ctx) {
+/* static */ Maybe<Symbol<Stream>> CopyOp::InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx) {
   Symbol<Device> out_device =
       JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;

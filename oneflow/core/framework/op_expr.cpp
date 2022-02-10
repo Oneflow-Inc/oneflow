@@ -356,9 +356,9 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
   ParallelContext parallel_ctx_;
 };
 
-class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
+class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStreamInferContext {
  public:
-  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
+  UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
                                const TensorTuple& input_tensors, TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
@@ -416,7 +416,7 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
-  if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  if (registry->device_and_stream_infer_fn) { device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn; }
   consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
   return Maybe<void>::Ok();
 }
@@ -454,12 +454,12 @@ Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
   return Maybe<void>::Ok();
 }
 
-Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
+Maybe<Symbol<Stream>> UserOpExpr::InferDevices(const AttrMap& attrs,
                                                const TensorTuple& input_tensors,
                                                TensorTuple* output_tensors) const {
-  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
-  return TRY(device_infer_fn_(&device_infer_ctx));
+  CHECK_OR_RETURN(static_cast<bool>(device_and_stream_infer_fn_));
+  UserOpExprDeviceAndStreamInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
+  return TRY(device_and_stream_infer_fn_(&device_infer_ctx));
 }
 
 ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(

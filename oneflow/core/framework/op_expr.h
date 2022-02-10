@@ -137,8 +137,8 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   Maybe<StatefulLocalOpKernel> MutKernel4Device(Symbol<Device> device) const;
 
-  bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
-  const user_op::DeviceInferFn& device_infer_fn() const { return device_infer_fn_; }
+  bool has_device_and_stream_infer_fn() const { return static_cast<bool>(device_and_stream_infer_fn_); }
+  const user_op::DeviceAndStreamInferFn& device_and_stream_infer_fn() const { return device_and_stream_infer_fn_; }
 
   Maybe<void> InferPhysicalShapeAndDType(
       const AttrMap& attrs, const std::string& device_tag,
@@ -149,7 +149,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
-  Maybe<Symbol<Device>> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
+  Maybe<Symbol<Stream>> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
                                      TensorTuple* outputs) const;
   ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
     return consistent_tensor_infer_cache_.get();
@@ -163,7 +163,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   AttrMap base_attrs_;
   user_op::TensorDescInferFn shape_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
-  user_op::DeviceInferFn device_infer_fn_;
+  user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Device>, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };

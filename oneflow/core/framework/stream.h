@@ -4,9 +4,15 @@
 #include <hash>
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
+
+namespace vm {
+class MirroredObject;
+}
+using LocalDepObject = vm::MirroredObject;
 
 class Stream final {
  public:
@@ -19,18 +25,24 @@ class Stream final {
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
-  Stream(Symbol<Device> device, StreamRole stream_role)
-      : device_(device), stream_role_(stream_role) {}
+  Stream(Symbol<Device> device, StreamRole stream_role);
 
   static Symbol<Stream> (*New)(Symbol<Device> device, StreamRole stream_role);
 
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
 
- private:
+  LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
+  const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
+    return transport_local_dep_object_;
+  }
 
+ private:
   Symbol<Device> device_;
   StreamRole stream_role_;
+
+  LocalDepObject* schedule_local_dep_object_;
+  Optional<LocalDepObject*> transport_local_dep_object_;
 };
 
 }

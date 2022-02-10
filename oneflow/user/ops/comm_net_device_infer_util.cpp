@@ -17,19 +17,19 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<bool> SyncLaunched(user_op::DeviceInferContext* ctx) { return false; }
+Maybe<bool> SyncLaunched(user_op::DeviceAndStreamInferContext* ctx) { return false; }
 
-Maybe<bool> IsAsyncLaunched(user_op::DeviceInferContext* ctx) {
+Maybe<bool> IsAsyncLaunched(user_op::DeviceAndStreamInferContext* ctx) {
   return ctx->Attr<bool>("async_launch");
 }
 
 namespace {
 
-Maybe<Symbol<Device>> RawGetNcclDevice(bool is_async_launced) {
+Maybe<Symbol<Stream>> RawGetNcclDevice(bool is_async_launced) {
   return Device::New(is_async_launced ? "async_launched_nccl" : "sync_launched_nccl");
 }
 
-Maybe<Symbol<Device>> RawGetCpuTransportDevice() { return Device::New("comm_net"); }
+Maybe<Symbol<Stream>> RawGetCpuTransportDevice() { return Device::New("comm_net"); }
 
 }  // namespace
 
@@ -37,7 +37,7 @@ decltype(GetNcclDevice) GetNcclDevice = DECORATE(&RawGetNcclDevice, ThreadLocal)
 decltype(GetCpuTransportDevice) GetCpuTransportDevice =
     DECORATE(&RawGetCpuTransportDevice, ThreadLocal);
 
-Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceInferContext* ctx) {
+Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx) {
   CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);
   return ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
 }

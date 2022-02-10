@@ -7,15 +7,15 @@
 namespace oneflow {
 
 struct StreamIsTransport {
-  static bool Call(SRCase<StreamRole::kInvalid>) {  // NOLINT
+  static bool Case(SR<StreamRole::kInvalid>) {  // NOLINT
     LOG(FATAL);
   }
-  static bool Call(SRCase<StreamRole::kCompute>) { return false; }
-  static bool Call(SRCase<StreamRole::kHost2Device>) { return false; }
-  static bool Call(SRCase<StreamRole::kDevice2Host>) { return false; }
-  static bool Call(SRCase<StreamRole::kSyncedLaunchedCC>) { return true; }
-  static bool Call(SRCase<StreamRole::kAsyncedLaunchedCC>) { return true; }
-  static bool Call(SRCase<StreamRole::kCriticalSection>) { return false; }
+  static bool Case(SR<StreamRole::kCompute>) { return false; }
+  static bool Case(SR<StreamRole::kHost2Device>) { return false; }
+  static bool Case(SR<StreamRole::kDevice2Host>) { return false; }
+  static bool Case(SR<StreamRole::kSyncedLaunchedCC>) { return true; }
+  static bool Case(SR<StreamRole::kAsyncedLaunchedCC>) { return true; }
+  static bool Case(SR<StreamRole::kCriticalSection>) { return false; }
 };
 
 }
