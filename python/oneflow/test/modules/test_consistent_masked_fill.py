@@ -30,6 +30,23 @@ def _test_masked_fill(test_case, placement, sbp):
     value = random().to(float)
     return input.masked_fill(mask > 0.5, value)
 
+@autotest(check_graph=False)
+def _test_masked_fill_with_0dim_data(test_case, placement, sbp):
+    input = random_tensor(ndim=0).to_consistent(placement, sbp)
+    mask = random_tensor(ndim=0).to_consistent(placement, sbp)
+    value = random().to(float)
+    return input.masked_fill(mask > 0.5, value)
+
+@autotest(check_graph=False)
+def _test_masked_fill_with_broadcast_way(test_case, placement, sbp):
+    k1 = random().to(int).value() * 8
+    k2 = random().to(int).value() * 8
+    device = random_device()
+    input = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_consistent(placement, sbp)
+    mask = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=k1, dim3=1).to_consistent(placement, sbp)
+    value = random().to(float)
+    return input.masked_fill(mask > 0.5, value)
+
 
 class TestMaskedFill(flow.unittest.TestCase):
     @consistent
@@ -37,6 +54,9 @@ class TestMaskedFill(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_masked_fill(test_case, placement, sbp)
+                # TODO() : fail at tensor slice
+                # _test_masked_fill_with_0dim_data(test_case, placement, sbp)
+                _test_masked_fill_with_broadcast_way(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

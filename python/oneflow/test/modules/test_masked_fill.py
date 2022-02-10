@@ -38,8 +38,6 @@ class TestMaskedFill(flow.unittest.TestCase):
 
     @autotest(check_graph=True)
     def test_flow_masked_fill_with_0dim_data(test_case):
-        k1 = random(2, 6)
-        k2 = random(2, 6)
         device = random_device()
         input = random_tensor(ndim=0).to(device)
         mask = random_tensor(ndim=0).to(device)
