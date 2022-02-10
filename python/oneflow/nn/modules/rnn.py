@@ -206,8 +206,11 @@ class RNN(Module):
             h_t = flow.zeros(
                 (D * num_layers, batch_size, self.hidden_size),
                 dtype=input.dtype,
-                device=input.device,
             )
+            if input.is_consistent:
+                h_t = h_t.to_consistent(input.placement, input.sbp)
+            else:
+                h_t = h_t.to(input.device)
         else:
             h_t = h_0
 
@@ -532,6 +535,10 @@ class GRU(Module):
                 dtype=input.dtype,
                 device=input.device,
             )
+            if input.is_consistent:
+                h_t = h_t.to_consistent(input.placement, input.sbp)
+            else:
+                h_t = h_t.to(input.device)
         else:
             h_t = h_0
 
@@ -917,11 +924,20 @@ class LSTM(nn.Module):
                 dtype=input.dtype,
                 device=input.device,
             )
+            if input.is_consistent:
+                h_t = h_t.to_consistent(input.placement, input.sbp)
+            else:
+                h_t = h_t.to(input.device)
+
             c_t = flow.zeros(
                 (D * num_layers, batch_size, self.hidden_size),
                 dtype=input.dtype,
                 device=input.device,
             )
+            if input.is_consistent:
+                c_t = c_t.to_consistent(input.placement, input.sbp)
+            else:
+                c_t = c_t.to(input.device)
             h_0 = (h_t, c_t)
         else:
             h_t, c_t = h_0

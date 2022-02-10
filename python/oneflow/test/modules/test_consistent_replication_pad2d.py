@@ -46,5 +46,6 @@ class TestReplicationPad2dConsistent(flow.unittest.TestCase):
                 for pad in padding:
                     test_replication_pad2d_impl(test_case, pad, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
