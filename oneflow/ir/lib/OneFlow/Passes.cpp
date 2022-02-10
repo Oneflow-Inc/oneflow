@@ -138,9 +138,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   // TODO: use functions in oneflow to genearated bn
   attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
                  op_to_replace_adaptor.scope_symbol_idAttr());
-  auto output_lbns =
-      rewriter.getStrArrayAttr(std::vector<llvm::StringRef>({op_name.str() + "/out_0"}));
-  attributes.set(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns);
   return attributes;
 }
 
@@ -225,6 +222,13 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
       ->getResults();
 }
 
+bool IsScalarTensor(Value value) {
+  if (auto tensor = value.getType().dyn_cast<RankedTensorType>()) {
+    return tensor.getNumElements() == 1;
+  }
+  return false;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -234,6 +238,10 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
 namespace mlir {
 
 namespace oneflow {
+
+void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
+  results.insert<BroadcastMulToScalarMulPattern>(context);
+}
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
@@ -289,7 +297,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
-  patterns.add<MulCastPattern2>(patterns.getContext());
   patterns.add<BatchMatmulPattern>(patterns.getContext());
 }
 
