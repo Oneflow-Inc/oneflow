@@ -36,27 +36,34 @@ class CastModule(flow.nn.Module):
         return x.to(dtype=flow.float32) * scale
 
 
+def do_relu_graph(test_case, data):
+    x = flow.tensor(data, dtype=flow.int64)
+    scale = flow.tensor([7.7], dtype=flow.float32)
+
+    module_to_run = CastModule()
+    y_eager = module_to_run(x, scale)
+
+    class GraphToRun(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.fw = module_to_run
+
+        def build(self, x, scale):
+            return self.fw(x, scale)
+
+    graph_to_run = GraphToRun()
+    y_lazy = graph_to_run(x, scale)
+    test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestFuseCastScale(oneflow.unittest.TestCase):
     def test_relu_graph(test_case):
-        data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
-        x = flow.tensor(data, dtype=flow.int64)
-        scale = flow.tensor([7.7], dtype=flow.float32)
-
-        module_to_run = CastModule()
-        y_eager = module_to_run(x, scale)
-
-        class GraphToRun(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.fw = module_to_run
-
-            def build(self, x, scale):
-                return self.fw(x, scale)
-
-        graph_to_run = GraphToRun()
-        y_lazy = graph_to_run(x, scale)
-        test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
+        do_relu_graph(test_case, np.array([2.0, 1.0, 0.0, -1.0, -2.0]))
+        do_relu_graph(
+            test_case,
+            np.array([[2.0, 1.0, 0.0, -1.0, -2.0], [2.0, 1.0, 0.0, -1.0, -2.0]]),
+        )
 
 
 if __name__ == "__main__":
