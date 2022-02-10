@@ -83,9 +83,9 @@ def _getitem(self, key):
 
 
 def _setitem(self, key, value):
-    if self.is_consistent:
+    if self.is_global:
         if isinstance(value, (int, float)):
-            value = flow._C.consistent_constant(
+            value = flow._C.global_constant(
                 [1],
                 value,
                 dtype=self.dtype,
@@ -93,17 +93,15 @@ def _setitem(self, key, value):
                 sbp=flow.sbp.broadcast,
             )
         else:
-            if value.is_consistent:
-                value = value.to_consistent(sbp=flow.sbp.broadcast)
+            if value.is_global:
+                value = value.to_global(sbp=flow.sbp.broadcast)
                 # TODO: remove these lines after asymmetric boxing is ready
                 local_tensor = value.to_local()
                 if local_tensor.nelement() == 0:
                     local_tensor = flow.zeros(*value.shape)
-                value = local_tensor.to_consistent(
-                    self.placement, sbp=flow.sbp.broadcast
-                )
+                value = local_tensor.to_global(self.placement, sbp=flow.sbp.broadcast)
             else:
-                value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
+                value = value.to_global(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
             value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
@@ -153,6 +151,18 @@ def _xor(self, other):
 def _contiguous(self):
     # TODO: support stride mechanism
     return self
+
+
+def _cpu(self):
+    return self.to(device="cpu")
+
+
+def _cuda(self, device: Union[int, str, flow.device] = None):
+    if device is None:
+        device = "cuda"
+    elif device is isinstance(int):
+        device = "cuda:" + str(device)
+    return self.to(device=device)
 
 
 def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
@@ -232,6 +242,10 @@ def _rmul(self, other):
 
 def _add(self, other):
     return flow._C.add(self, other)
+
+
+def _addmm(self, mat1, mat2, alpha=1, beta=1):
+    return flow.addmm(self, mat1, mat2, alpha, beta)
 
 
 def _add_inplace(self, other):
@@ -340,6 +354,14 @@ def _sign(self):
 
 def _sinh(self):
     return flow.sinh(self)
+
+
+def _sin(self):
+    return flow.sin(self)
+
+
+def _sin_inplace(self):
+    return flow._C.sin_(self)
 
 
 def _tan(self):
@@ -480,6 +502,11 @@ def _fmod(self, other):
 
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
     return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
+
+
+def _item(self):
+    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return self.numpy().item()
 
 
 def _log(self):
@@ -729,9 +756,9 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     np_arr = initializer_util.generate_values_by_initializer(
         initializer, shape, tensor.dtype
     )
-    if tensor.is_consistent:
+    if tensor.is_global:
         src_tensor = flow.tensor(np_arr)
-        src_tensor = src_tensor.to_consistent(
+        src_tensor = src_tensor.to_global(
             placement=tensor.placement,
             sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
         )
@@ -744,15 +771,15 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    if self.is_consistent:
+    if self.is_global:
         if not isinstance(other, Tensor):
             assert isinstance(other, np.ndarray)
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
             )
         else:
-            assert other.is_consistent
-            other = other.to_consistent(placement=self.placement, sbp=self.sbp)
+            assert other.is_global
+            other = other.to_global(placement=self.placement, sbp=self.sbp)
         flow._C.assign_local_tensor(self.to_local(), other.to_local())
     else:
         if not isinstance(other, (Tensor)):
@@ -790,12 +817,18 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *args, **kwargs)
 
 
-def _to_consistent(self, placement=None, sbp=None, grad_sbp=None):
-    return flow.to_consistent(self, placement, sbp, grad_sbp)
+def _to_global(self, placement=None, sbp=None, grad_sbp=None):
+    return flow.to_global(self, placement, sbp, grad_sbp)
 
 
 def _to_local(self):
     return flow.to_local(self)
+
+
+def _tolist(self):
+    if self.numel() == 1 and self.ndim == 0:
+        return self.item()
+    return self.numpy().tolist()
 
 
 def _gather(self, dim, index):
@@ -908,6 +941,10 @@ def _double(self):
     return self.to(dtype=flow.float64)
 
 
+def _where(self, x=None, y=None):
+    return flow.where(self, x, y)
+
+
 def _is_floating_point(self):
     return flow.is_floating_point(self)
 
@@ -920,13 +957,22 @@ def _numpy(self):
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
-    if self.is_consistent:
-        sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
-        self = self.to_consistent(placement=self.placement, sbp=sbp_list).to_local()
+    if self.is_global:
+        self = self.to_global(
+            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+        ).to_local()
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
     return self.to_numpy()
+
+
+def _is_consistent(self):
+    raise RuntimeError("is_consistent is removed. Please use is_global instead")
+
+
+def _to_consistent(self):
+    raise RuntimeError("to_consistent is removed. Please use to_global instead")
 
 
 def RegisterMethods():
@@ -963,6 +1009,7 @@ def RegisterMethods():
     Tensor.__add__ = _add
     Tensor.__iadd__ = _iadd
     Tensor.__radd__ = _radd
+    Tensor.addmm = _addmm
     Tensor.__sub__ = _sub
     Tensor.__rsub__ = _rsub
     Tensor.__truediv__ = _truediv
@@ -1040,6 +1087,8 @@ def RegisterMethods():
     Tensor.clip_ = _clip_
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.cpu = _cpu
+    Tensor.cuda = _cuda
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     Tensor.erf = _erf
@@ -1067,12 +1116,13 @@ def RegisterMethods():
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
+    Tensor.where = _where
     Tensor.contiguous = _contiguous
     Tensor.norm = _norm
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
-    Tensor.to_consistent = _to_consistent
+    Tensor.to_global = _to_global
     Tensor.relu = _relu
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
@@ -1102,6 +1152,7 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.ne = _ne
+    Tensor.item = _item
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
@@ -1109,6 +1160,7 @@ def RegisterMethods():
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as
+    Tensor.tolist = _tolist
     Tensor.int = _int
     Tensor.long = _long
     Tensor.float = _float
@@ -1122,6 +1174,10 @@ def RegisterMethods():
     Tensor.sum = _sum
     Tensor.mean = _mean
     Tensor.prod = _prod
+    Tensor.sin = _sin
+    Tensor.sin_ = _sin_inplace
+    Tensor.is_consistent = _is_consistent
+    Tensor.to_consistent = _to_consistent
 
 
 def register_tensor_op(op_name):

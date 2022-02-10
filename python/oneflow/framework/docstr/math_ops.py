@@ -925,6 +925,33 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.log2,
+    """
+    oneflow.log2(input) -> Tensor
+
+    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
+    
+    .. math::
+        y_{i} = \\log2_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> arr = np.random.randn(2, 3, 4, 5)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
+        >>> output = flow.log2(input)
+
+
+    """,
+)
+
+add_docstr(
     oneflow.minimum,
     r"""Computes the element-wise minimum of x and y.
 
@@ -1339,7 +1366,7 @@ add_docstr(
         device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
         placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
-        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
+        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a global tensor, specify the SBP of the tensor.
 
     Returns:
         oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.

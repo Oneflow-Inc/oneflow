@@ -19,9 +19,9 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.tensor,
     r"""
-    Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
-       otherwise return a local tensor. 
-       
+    Constructs a tensor with data, return a global tensor if placement and sbp are in kwargs,
+       otherwise return a local tensor.
+
     Arguments:
         data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar or tensor.
     Keyword Arguments:
@@ -35,7 +35,6 @@ add_docstr(
 
     Note:
         The Keyword Argument device is mutually exclusive with placement and sbp.
-        Consistent tensor only can be constructed from tensor.
 
 
     For example:
@@ -43,7 +42,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        
+
         >>> x = flow.tensor([1,2,3])
         >>> x
         tensor([1, 2, 3], dtype=oneflow.int64)
@@ -168,11 +167,11 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.to_consistent,
+    oneflow.Tensor.to_global,
     """
-    Tensor.to_consistent() -> Tensor
+    Tensor.to_global() -> Tensor
 
-    See :func:`oneflow.to_consistent`
+    See :func:`oneflow.to_global`
     """,
 )
 
@@ -487,6 +486,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.erf,
+    """
+    Tensor.erf() -> Tensor
+
+    See :func:`oneflow.erf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfc,
+    """
+    Tensor.erfc() -> Tensor
+
+    See :func:`oneflow.erfc`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erfinv,
     """
     See :func:`oneflow.erfinv`
@@ -558,7 +575,7 @@ add_docstr(
 
     For CUDA tensors, this function returns the device ordinal of the GPU on which the tensor resides. For CPU tensors, an error is thrown.
 
-  
+
     """,
 )
 
@@ -684,6 +701,78 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.reciprocal,
+    """
+    See :func:`oneflow.reciprocal`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add,
+    """
+    See :func:`oneflow.add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add_,
+    """
+    In-place version of :func:`oneflow.Tensor.add`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.asin,
+    """
+    See :func:`oneflow.asin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsin,
+    """
+    See :func:`oneflow.arcsin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsinh,
+    """
+    See :func:`oneflow.arcsinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sin,
+    """
+    sin() -> Tensor
+
+    See :func:`oneflow.sin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cos,
+    """
+    See :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atan,
+    """
+    See :func:`oneflow.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctan,
+    """
+    See :func:`oneflow.arctan`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`
@@ -722,13 +811,13 @@ add_docstr(
     oneflow.Tensor.size,
     """
     The interface is consistent with PyTorch.
-    
+
     Returns the size of the self tensor. If dim is not specified, the returned value is a oneflow.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
 
     Args:
         idx (int, optional): The dimension for which to retrieve the size.
 
-  
+
     """,
 )
 
@@ -783,7 +872,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.to_local,
-    """Returns the local tensor of a consistent tensor.
+    """Returns the local tensor of a global tensor.
 
 
     Args:
@@ -798,8 +887,8 @@ add_docstr(
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.tensor(np_arr, dtype=flow.float32)
         >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
-        >>> consistent_tensor.to_local()
+        >>> global_tensor = input.to_global(placement, [flow.sbp.split(0)])
+        >>> global_tensor.to_local()
         tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
     """,
 )
@@ -813,7 +902,7 @@ add_docstr(
 
     .. math::
         P(x)=1/(to-from)
-    
+
     """,
 )
 
@@ -883,30 +972,70 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.clamp,
     """
-    See :func:`oneflow.clamp`. 
+    See :func:`oneflow.clamp`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clamp_,
     """
-    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    Inplace version of :func:`oneflow.Tensor.clamp`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clip,
     """
-    Alias for :func:`oneflow.Tensor.clamp`. 
+    Alias for :func:`oneflow.Tensor.clamp`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clip_,
     """
-    Alias for :func:`oneflow.Tensor.clamp_`. 
+    Alias for :func:`oneflow.Tensor.clamp_`.
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.cpu,
+    r"""Returns a copy of this object in CPU memory.
+    If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
+        >>> output = input.cpu()
+        >>> output.device
+        device(type='cpu', index=0)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cuda,
+    r"""Returns a copy of this object in CUDA memory.
+    If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
+
+    Args:
+        device  (flow.device): The destination GPU device. Defaults to the current CUDA device.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.Tensor([1, 2, 3, 4, 5])
+        >>> output = input.cuda()
+        >>> output.device
+        device(type='cuda', index=0)
+    """,
+)
+
 
 add_docstr(
     oneflow.Tensor.repeat,
@@ -939,8 +1068,18 @@ add_docstr(
     oneflow.Tensor.T,
     """
     Is this Tensor with its dimensions reversed.
- 
+
     If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.fmod,
+    """
+    Tensor.fmod(other) -> Tensor
+
+    See :func:`oneflow.fmod`
+
     """,
 )
 
@@ -1000,6 +1139,7 @@ add_docstr(
     oneflow.Tensor.div,
     """
     See :func:`oneflow.div`
+
     """,
 )
 
@@ -1130,7 +1270,7 @@ add_docstr(
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = np.array(
         ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ... ).astype(np.float32)
@@ -1164,7 +1304,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> target = flow.tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
         >>> input = input.type_as(target)
@@ -1186,7 +1326,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.int()
         >>> input.dtype
@@ -1207,7 +1347,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.long()
         >>> input.dtype
@@ -1228,7 +1368,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
         >>> input = input.float()
         >>> input.dtype
@@ -1249,7 +1389,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
         >>> input = input.double()
         >>> input.dtype
@@ -1261,5 +1401,54 @@ add_docstr(
     oneflow.Tensor.is_floating_point,
     """
     See :func:`oneflow.is_floating_point`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.item,
+    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
+    For other cases, see tolist().
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1.0])
+        >>> x.item()
+        1.0
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.tolist,
+    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned,
+    just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.tensor([[1,2,3], [4,5,6]])
+        >>> input.tolist()
+        [[1, 2, 3], [4, 5, 6]]
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.where,
+    """
+    See :func:`oneflow.where`
     """,
 )

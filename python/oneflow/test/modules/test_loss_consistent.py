@@ -60,9 +60,12 @@ def generate_necessity_default(dim: int, device: str, placement, sbp):
     shape = shapes[dim]
     x_np = np.random.uniform(0, 1, shape)
     y_np = np.random.uniform(0, 1, shape)
-    f = lambda x, requires_grad: flow.tensor(
-        x, device=device, requires_grad=requires_grad
-    ).to_consistent(placement=placement, sbp=[sbp])
+
+    def f(x, requires_grad):
+        return flow.tensor(x, device=device, requires_grad=requires_grad).to_global(
+            placement=placement, sbp=[sbp]
+        )
+
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
@@ -73,9 +76,12 @@ def generate_necessity_for_cross_entropy_or_nll_loss(
     y_shape = (shape[0],) if dim == 2 else (shape[0], *shape[2:])
     x_np = np.random.uniform(0, 1, shape)
     y_np = np.random.randint(0, shape[1], y_shape)
-    f = lambda x, requires_grad: flow.tensor(
-        x, device=device, requires_grad=requires_grad
-    ).to_consistent(placement=placement, sbp=[sbp])
+
+    def f(x, requires_grad):
+        return flow.tensor(x, device=device, requires_grad=requires_grad).to_global(
+            placement=placement, sbp=[sbp]
+        )
+
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
