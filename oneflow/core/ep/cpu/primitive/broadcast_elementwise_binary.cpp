@@ -38,28 +38,8 @@ T GetValue(Scalar value) {
 }
 
 template<>
-int8_t GetValue<int8_t>(Scalar value) {
-  return static_cast<int8_t>(GetValue<int64_t>(value));
-}
-
-template<>
-int32_t GetValue<int32_t>(Scalar value) {
-  return static_cast<int32_t>(GetValue<int64_t>(value));
-}
-
-template<>
-uint8_t GetValue<uint8_t>(Scalar value) {
-  return static_cast<uint8_t>(GetValue<uint64_t>(value));
-}
-
-template<>
 float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<double>(value));
-}
-
-template<>
-float GetValue<float>(Scalar value) {
-  return static_cast<float>(GetValue<double>(value));
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst,
@@ -90,7 +70,6 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-
     DimVector src0_dim_vec;
     DimVector src1_dim_vec;
     DimVector dst_dim_vec;
@@ -210,6 +189,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     const void* mm_src0 = nullptr;
     const void* mm_src1 = nullptr;
 
+    // OneDNN inplace operations only support src_0
     if (src1 == dst) {
       mm_src0 = src1;
       mm_src1 = src0;
@@ -221,6 +201,9 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
       OneDnnBroadcastDims(src_0_dims, num_src0_dims, src0_dims, src_1_dims, num_src1_dims,
                           src1_dims, dst_dims);
     }
+
+    CheckInplace(num_dims, src_0_dims.data(), mm_src0, src_1_dims.data(), mm_src1, dst_dims.data(),
+                 dst);
 
     auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn,
                                        static_cast<dnnl::memory::format_tag>(num_dims + 1));
@@ -247,7 +230,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                                   \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::s8, DataType::kInt8, int8_t)   \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool)   \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool)     \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kUInt8, uint8_t) \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)  \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f16, DataType::kFloat16, float16)
