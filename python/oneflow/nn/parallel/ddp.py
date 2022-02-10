@@ -25,7 +25,7 @@ def grad_setting_fn(module, param):
             start = module._param_grad_offset_in_bucket[param]
             bucket_index = module._bucket_index[param]
             bucket_tensor = module._bucket_tensors[bucket_index]
-            param.grad = bucket_tensor[start : start + param.numel()].view(param.shape)
+            param.grad = flow._C.slice_view_1d_contiguous(bucket_tensor, start, start + param.numel()).view(param.shape)
             param._is_grad_acc_inplace = True
         return grad
     return grad_setting

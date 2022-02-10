@@ -1032,17 +1032,6 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      // NOTE(jianhao): view doesn't change the size of tensor, so there is 
-      // no visible difference between view-semantic slicing and copy-semantic 
-      // slicing on 0-size tensor. To avoid unexpected corner case, we perform 
-      // the good old copy-semantic slicing for 0-size tensor
-      // NOTE(jianhao): slicing on 0-d tensor is illegal and will be refused before
-      // running into SliceBaseFunctor, so no more check here
-      if (x->shape()->elem_cnt() > 0) {
-        return view::Slice(x, start, stop, step);
-      }
-    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
@@ -1761,6 +1750,15 @@ class DiagonalGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+// Only for ddp gradient grouping
+class SliceView1dContiguousFunctor {
+ public:
+  SliceView1dContiguousFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start, int64_t end) const {
+    return JUST(view::Slice(x, {start}, {end}, {1}));
+  }
+};
+
 class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
@@ -1788,8 +1786,8 @@ class TensorGetItemFunctor {
       end[i] = slice.end();
       step[i] = slice.step();
     }
-    
-    std::shared_ptr<one::Tensor> result = JUST(Slice(expand_input, start, end, step));;
+
+    std::shared_ptr<one::Tensor> result = JUST(Slice(expand_input, start, end, step));
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
@@ -2696,6 +2694,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
+  m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");
