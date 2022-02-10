@@ -25,15 +25,15 @@ from oneflow.test_utils.automated_test_util import *
 def _test_masked_fill(test_case, placement, sbp):
     k1 = random().to(int).value() * 8
     k2 = random().to(int).value() * 8
-    input = random_tensor(ndim=2, dim0=k1, dim1=k2).to_consistent(placement, sbp)
-    mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to_consistent(placement, sbp)
+    input = random_tensor(ndim=2, dim0=k1, dim1=k2).to_global(placement, sbp)
+    mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to_global(placement, sbp)
     value = random().to(float)
     return input.masked_fill(mask > 0.5, value)
 
 @autotest(check_graph=False)
 def _test_masked_fill_with_0dim_data(test_case, placement, sbp):
-    input = random_tensor(ndim=0).to_consistent(placement, sbp)
-    mask = random_tensor(ndim=0).to_consistent(placement, sbp)
+    input = random_tensor(ndim=0).to_global(placement, sbp)
+    mask = random_tensor(ndim=0).to_global(placement, sbp)
     value = random().to(float)
     return input.masked_fill(mask > 0.5, value)
 
@@ -42,14 +42,14 @@ def _test_masked_fill_with_broadcast_way(test_case, placement, sbp):
     k1 = random().to(int).value() * 8
     k2 = random().to(int).value() * 8
     device = random_device()
-    input = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_consistent(placement, sbp)
-    mask = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=k1, dim3=1).to_consistent(placement, sbp)
+    input = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(placement, sbp)
+    mask = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=k1, dim3=1).to_global(placement, sbp)
     value = random().to(float)
     return input.masked_fill(mask > 0.5, value)
 
 
 class TestMaskedFill(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_masked_fill(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
