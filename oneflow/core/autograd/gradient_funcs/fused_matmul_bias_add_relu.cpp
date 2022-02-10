@@ -26,16 +26,16 @@ namespace oneflow {
 namespace one {
 
 struct FusedMatmulBiasAddReluCaptureState : public AutoGradCaptureState {
-  bool transpose_a;
-  bool transpose_b;
-  double alpha;
-  bool requires_grad_a;
-  bool requires_grad_b;
-  bool requires_grad_bias;
-  size_t a_index;
-  size_t b_index;
-  size_t bias_index;
-  size_t out_index;
+  bool transpose_a = false;
+  bool transpose_b = false;
+  double alpha = 1.0;
+  bool requires_grad_a = true;
+  bool requires_grad_b = true;
+  bool requires_grad_bias = true;
+  size_t a_index = 0;
+  size_t b_index = 0;
+  size_t bias_index = 0;
+  size_t out_index = 0;
 };
 
 class FusedMatmulBiasAddRelu : public OpExprGradFunction<FusedMatmulBiasAddReluCaptureState> {
