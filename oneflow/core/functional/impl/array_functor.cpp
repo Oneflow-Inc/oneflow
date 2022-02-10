@@ -1033,8 +1033,9 @@ class SliceBaseFunctor {
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
     if (x->is_local() && !(LazyMode::is_enabled())) {
-      // TODO: view support 0-dim tensor
-      if (!(x->shape()->NumAxes() < 1 || x->shape()->elem_cnt() < 1)) {
+      // TODO(luyang): view is not tesed with 0-d and 0-size tensor,
+      // so disable it here
+      if (!(x->shape()->NumAxes() == 0 || x->shape()->elem_cnt() == 0)) {
         return view::Slice(x, start, stop, step);
       }
     }
