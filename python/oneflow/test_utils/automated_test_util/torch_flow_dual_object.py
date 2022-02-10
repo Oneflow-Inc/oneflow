@@ -19,7 +19,6 @@ import inspect
 import copy
 import os
 import warnings
-import copy
 
 import numpy as np
 import oneflow as flow
