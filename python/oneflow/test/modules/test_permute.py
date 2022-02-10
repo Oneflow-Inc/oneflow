@@ -143,7 +143,7 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_permute4d_tensor_bool_with_random_data(test_case):
         device = random_device()
         ndim = 4
