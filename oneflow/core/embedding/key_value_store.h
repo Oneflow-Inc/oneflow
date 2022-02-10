@@ -40,8 +40,10 @@ class KeyValueStore : public KVBase {
   virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) = 0;
   virtual bool SnapshotExists(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
-  virtual void LoadSnapshot(const std::string& name,
-                            const std::function<void(KVBaseIterator*)>& Hook) = 0;
+  virtual void LoadSnapshot(
+      const std::string& name,
+      const std::function<void(const std::function<void(KVBaseIterator*)> GetChunkIterator)>&
+          Hook) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
 };
 

@@ -128,8 +128,10 @@ class KeyValueStoreImpl : public KeyValueStore {
   void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
-  void LoadSnapshot(const std::string& name,
-                    const std::function<void(KVBaseIterator*)>& Hook) override {
+  void LoadSnapshot(
+      const std::string& name,
+      const std::function<void(const std::function<void(KVBaseIterator*)> GetChunkIterator)>& Hook)
+      override {
     UNIMPLEMENTED();
   }
   void SaveSnapshot(const std::string& name) override;
