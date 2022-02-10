@@ -13,18 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/job/job.pb.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
-#include "oneflow/core/framework/nd_sbp.h"
-
-#ifdef WITH_CUDA
 
 namespace oneflow {
 
@@ -324,28 +325,43 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const cfg::NdSbp& src_
   return false;
 }
 
+Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
+                                                 const ParallelDesc& parallel_desc) {
+  auto* scope_storage = Global<symbol::Storage<Scope>>::Get();
+  CHECK_OR_RETURN(scope_storage->Has(old_scope_symbol_id));
+  auto old_scope = scope_storage->GetPtr(old_scope_symbol_id);
+  std::shared_ptr<Scope> new_scope;
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    new_scope =
+        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.cfg_parallel_conf()));
+    return Maybe<void>::Ok();
+  }));
+  // NOTE(chengcheng): need sync vm for get scope right now
+  JUST(vm::CurrentRankSync());
+  CHECK_OR_RETURN(new_scope);
+  return JUST(new_scope->symbol_id());
+}
+
 bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
-                               const LogicalBlobId& lbi) {
+                               const LogicalBlobId& lbi, ParallelDesc* src_reduced_parallel_desc,
+                               ParallelDesc* dst_reduced_parallel_desc,
+                               cfg::NdSbp* src_reduced_nd_sbp, cfg::NdSbp* dst_reduced_nd_sbp) {
   if (!src_node->op().op_conf().has_scope_symbol_id()) { return false; /* device_tick */ }
-  const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
   const std::string lbn = GenLogicalBlobName(lbi);
   const BlobDesc& logical_blob_desc = src_node->LogicalBlobDesc4Lbi(lbi);
 
   // reduce hierarchy
-  ParallelDesc src_parallel_desc = src_node->parallel_desc();
-  ParallelDesc dst_parallel_desc = dst_node->parallel_desc();
-  cfg::NdSbp src_nd_sbp;
-  cfg::NdSbp dst_nd_sbp;
   InOutParallelDimReduce(src_node->parallel_desc(), dst_node->parallel_desc(),
-                         src_node->NdSbp4Lbi(lbi), dst_node->NdSbp4Lbi(lbi), &src_parallel_desc,
-                         &dst_parallel_desc, &src_nd_sbp, &dst_nd_sbp);
+                         src_node->NdSbp4Lbi(lbi), dst_node->NdSbp4Lbi(lbi),
+                         src_reduced_parallel_desc, dst_reduced_parallel_desc, src_reduced_nd_sbp,
+                         dst_reduced_nd_sbp);
 
-  const int64_t parallel_num = src_parallel_desc.parallel_num();
-  CHECK_EQ(parallel_num, dst_parallel_desc.parallel_num());
-  const std::shared_ptr<Shape> src_hierarchy = src_parallel_desc.hierarchy();
-  const std::shared_ptr<Shape> dst_hierarchy = dst_parallel_desc.hierarchy();
+  CHECK_EQ(src_reduced_parallel_desc->parallel_num(), dst_reduced_parallel_desc->parallel_num());
+  auto src_reduced_hierarchy = src_reduced_parallel_desc->hierarchy();
+  auto dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
 
-  if ((*src_hierarchy) == (*dst_hierarchy) && src_nd_sbp == dst_nd_sbp) {
+  if ((*src_reduced_hierarchy) == (*dst_reduced_hierarchy)
+      && src_reduced_nd_sbp == dst_reduced_nd_sbp) {
     // one to one
     return false;
   }
@@ -354,17 +370,25 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   if (logical_blob_desc.is_dynamic()) { return false; }
   CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
 
-  if (src_hierarchy->NumAxes() == 1 && dst_hierarchy->NumAxes() == 1) {
-    return TryBuildNcclBy1DHierarchy(ret, src_nd_sbp.sbp_parallel(0), dst_nd_sbp.sbp_parallel(0),
-                                     lbn, scope_symbol_id, logical_blob_desc, parallel_num);
-  } else if (src_hierarchy->NumAxes() == 2 && (*src_hierarchy == *dst_hierarchy)) {
-    if (src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0)) {
-      return TryBuildNcclBy2DHierarchySameDim0(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
-                                               scope_symbol_id, logical_blob_desc);
-    } else if (src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1)) {
-      if (!(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))) {
-        return TryBuildNcclBy2DHierarchySameDim1(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
-                                                 scope_symbol_id, logical_blob_desc);
+  int64_t scope_symbol_id = CHECK_JUST(BuildScopeWithReducedParallelDesc(
+      src_node->op().op_conf().scope_symbol_id(), *src_reduced_parallel_desc));
+
+  if (src_reduced_hierarchy->NumAxes() == 1 && dst_reduced_hierarchy->NumAxes() == 1) {
+    return TryBuildNcclBy1DHierarchy(ret, src_reduced_nd_sbp->sbp_parallel(0),
+                                     dst_reduced_nd_sbp->sbp_parallel(0), lbn, scope_symbol_id,
+                                     logical_blob_desc, src_reduced_parallel_desc->parallel_num());
+  } else if (src_reduced_hierarchy->NumAxes() == 2
+             && (*src_reduced_hierarchy == *dst_reduced_hierarchy)) {
+    if (src_reduced_nd_sbp->sbp_parallel(0) == dst_reduced_nd_sbp->sbp_parallel(0)) {
+      return TryBuildNcclBy2DHierarchySameDim0(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
+                                               src_reduced_hierarchy, lbn, scope_symbol_id,
+                                               logical_blob_desc);
+    } else if (src_reduced_nd_sbp->sbp_parallel(1) == dst_reduced_nd_sbp->sbp_parallel(1)) {
+      if (!(NdSbpAllSameSplitParallel(*src_reduced_nd_sbp)
+            || NdSbpAllSameSplitParallel(*dst_reduced_nd_sbp))) {
+        return TryBuildNcclBy2DHierarchySameDim1(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
+                                                 src_reduced_hierarchy, lbn, scope_symbol_id,
+                                                 logical_blob_desc);
       }
     }
   }
@@ -392,7 +416,15 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
       }
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
         OperatorConf nccl_op;
-        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
+        ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
+        ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
+        cfg::NdSbp src_reduced_nd_sbp;
+        cfg::NdSbp dst_reduced_nd_sbp;
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
+                                       &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
+                                       &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
+          continue;
+        }
         mut_op_names->insert(dst_op_name);
         // insert nccl op
         user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
@@ -426,7 +458,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
                     << next_op_name << "](order=" << src_order + 1 << ")\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
-        nccl_op_parallel_confs->emplace_back(src_node->parallel_desc().parallel_conf());
+        nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
       }
     }
   }
@@ -449,8 +481,15 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
       }
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
         OperatorConf nccl_op;
-        // builde nccl op
-        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
+        ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
+        ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
+        cfg::NdSbp src_reduced_nd_sbp;
+        cfg::NdSbp dst_reduced_nd_sbp;
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
+                                       &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
+                                       &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
+          continue;
+        }
         mut_op_names->insert(dst_op_name);
         // insert nccl op
         user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
@@ -486,7 +525,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         nccl_op_confs->emplace_back(nccl_op);
         // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
         //   failed in complier.
-        nccl_op_parallel_confs->emplace_back(src_node->parallel_desc().parallel_conf());
+        nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
       }
     }
   }
@@ -538,7 +577,13 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
 
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
         OperatorConf nccl_op;
-        if (!TryBuildNcclLogicalOpConf(&nccl_op, op_edge->src_node(), op_edge->dst_node(), lbi)) {
+        ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
+        ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
+        cfg::NdSbp src_reduced_nd_sbp;
+        cfg::NdSbp dst_reduced_nd_sbp;
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, op_edge->src_node(), op_edge->dst_node(), lbi,
+                                       &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
+                                       &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
           continue;
         }
         const OpNode* src_node = op_edge->src_node();
@@ -560,7 +605,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
 
         InsertedNcclInfo nccl_op_info;
         nccl_op_info.nccl_op_conf = nccl_op;
-        nccl_op_info.nccl_parallel_conf = src_node->parallel_desc().parallel_conf();
+        nccl_op_info.nccl_parallel_conf = src_reduced_parallel_desc.parallel_conf();
         nccl_op_info.order = op_node2global_order.at(src_node);
         nccl_op_info.debug_str =
             (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("

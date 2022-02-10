@@ -179,6 +179,13 @@ bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sb
   return success;
 }
 
+bool ParseNdSbpFromStringList(const std::vector<std::string>& sbp_str_list, cfg::NdSbp* nd_sbp) {
+  for (const auto& sbp_str : sbp_str_list) {
+    if (!ParseSbpParallelFromString(sbp_str, nd_sbp->add_sbp_parallel())) { return false; }
+  }
+  return true;
+}
+
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return SbpToString(sbp_parallel);
 }
