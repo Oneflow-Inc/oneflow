@@ -256,7 +256,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                 const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(!x->is_lazy())
-      << "local_tensor.to_consistent() is not supported within nn.Graph for now";
+      << "local_tensor.to_global() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
