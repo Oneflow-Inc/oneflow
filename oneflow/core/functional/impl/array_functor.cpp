@@ -1786,8 +1786,21 @@ class TensorGetItemFunctor {
       end[i] = slice.end();
       step[i] = slice.step();
     }
-
-    std::shared_ptr<one::Tensor> result = JUST(Slice(expand_input, start, end, step));
+    bool is_identity = [&]() {
+      if (target_shape.NumAxes() == 0) { return false; }
+      for (int i = 0; i < ndims; ++i) {
+        if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+          return false;
+        }
+      }
+      return true;
+    }();
+    std::shared_ptr<one::Tensor> result;
+    if (is_identity) {
+      result = expand_input;
+    } else {
+      result = JUST(Slice(expand_input, start, end, step));
+    }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
