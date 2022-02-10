@@ -842,10 +842,10 @@ void VirtualMachineEngine::Schedule() {
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
   // handle probes
-  if (unlikely(probe_list_.thread_unsafe_size())) {
-    probe_list_.MoveTo(&local_probe_list_);
+  if (unlikely(local_probe_list_.size())) {
     HandleLocalProbe();
-  } else if (unlikely(local_probe_list_.size())) {
+  } else if (unlikely(probe_list_.thread_unsafe_size())) {
+    probe_list_.MoveTo(&local_probe_list_);
     HandleLocalProbe();
   }
 }
