@@ -138,6 +138,9 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   // TODO: use functions in oneflow to genearated bn
   attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
                  op_to_replace_adaptor.scope_symbol_idAttr());
+  auto output_lbns =
+      rewriter.getStrArrayAttr(std::vector<llvm::StringRef>({op_name.str() + "/out_0"}));
+  attributes.set(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns);
   return attributes;
 }
 
@@ -166,28 +169,46 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
 ::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
                                                      mlir::OpResult mul_res,
                                                      mlir::OpResult cast_res) {
-  if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
-    if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
-      // TODO: extract a function to generate op name for jit op from ops being fused
-      SmallString<64> op_name_storage;
-      auto op_name =
-          (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
-      SmallVector<::mlir::Value, 2> operands;
-      operands.push_back(cast_op.in());
-      operands.push_back(mul_op.scalar());
-      SmallVector<::mlir::Value, 1> results;
-      results.push_back(mul_op.y());
-      NamedAttrList attributes =
-          GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
-      SmallVector<Operation*, 4> ops = {cast_op, mul_op};
-      auto function =
-          GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
-      auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(), function, attributes, operands);
-      if (failed(DumpAssembly(rewriter, created))) { exit(1); }
-      cast_op->dropAllUses();
-      cast_op.erase();
-      return created->getResults();
-    }
+  auto mul_op = mul_res.getDefiningOp();
+  auto scale = mlir::Value();
+  auto output = mlir::Value();
+  if (auto scalar_mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_op)) {
+    scale = scalar_mul_op.scalar();
+    output = scalar_mul_op.y();
+  } else if (auto broadcast_mul_op = llvm::dyn_cast<BroadcastMulOp>(mul_op)) {
+    scale = broadcast_mul_op.y();
+    output = broadcast_mul_op.z();
+  } else {
+    mul_res.getDefiningOp()->emitError("pattern mul(cast(x), scalar) doesn't support this op");
+    exit(1);
+  }
+  if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    mul_res.getDefiningOp()->emitError("not OpConf compatible");
+    exit(1);
+  }
+  if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
+    // TODO: extract a function to generate op name for jit op from ops being fused
+    SmallString<64> op_name_storage;
+    auto op_name =
+        (cast_op.op_name() + "__FUSE__"
+         + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+               .getValue()
+               .str())
+            .toStringRef(op_name_storage);
+    SmallVector<::mlir::Value, 2> operands;
+    operands.push_back(cast_op.in());
+    operands.push_back(scale);
+    SmallVector<::mlir::Value, 1> results;
+    results.push_back(output);
+    NamedAttrList attributes =
+        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
+    SmallVector<Operation*, 4> ops = {cast_op, mul_op};
+    auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
+    auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
+    if (failed(DumpAssembly(rewriter, created))) { exit(1); }
+    cast_op->dropAllUses();
+    cast_op.erase();
+    return created->getResults();
   }
   return {};
 }
@@ -268,6 +289,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
+  patterns.add<MulCastPattern2>(patterns.getContext());
   patterns.add<BatchMatmulPattern>(patterns.getContext());
 }
 
