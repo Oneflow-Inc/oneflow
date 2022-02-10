@@ -262,9 +262,9 @@ endif()
 
 include(third_party)
 
-set(ROBIN_HOOD_HASHING_URL https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.4.tar.gz)
+set(ROBIN_HOOD_HASHING_URL https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
-set(ROBIN_HOOD_HASHING_MD5 2d0c37e2d3abb5690fb5561f3d9421cc)
+set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
 add_subdirectory(external)
 
