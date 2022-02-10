@@ -28,7 +28,7 @@ def _test_masked_fill(test_case, placement, sbp):
     input = random_tensor(ndim=2, dim0=k1, dim1=k2).to_consistent(placement, sbp)
     mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to_consistent(placement, sbp)
     value = random().to(float)
-    return input.masked_fill(mask > 0, value)
+    return input.masked_fill(mask > 0.5, value)
 
 
 class TestMaskedFill(flow.unittest.TestCase):

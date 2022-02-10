@@ -34,7 +34,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         input = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         value = random().to(float)
-        return input.masked_fill(mask > 0, value)
+        return input.masked_fill(mask > 0.5, value)
 
     @autotest(check_graph=True)
     def test_flow_masked_fill_with_0dim_data(test_case):
@@ -54,7 +54,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         input = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
         mask = random_tensor(ndim=2, dim0=k1, dim1=1).to(device)
         value = random().to(float)
-        return input.masked_fill(mask > 0, value)
+        return input.masked_fill(mask > 0.5, value)
 
     @autotest(check_graph=True)
     def test_flow_masked_fill_int_with_random_data(test_case):
@@ -64,7 +64,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         input = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         value = random().to(int)
-        return input.masked_fill(mask > 0, value)
+        return input.masked_fill(mask > 0.5, value)
 
     @autotest(auto_backward=False, check_graph=False)
     def test_flow_masked_fill_bool_with_random_data(test_case):
@@ -76,7 +76,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         )
         mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         value = random().to(bool)
-        return input.masked_fill(mask > 0, value)
+        return input.masked_fill(mask > 0.5, value)
 
 
 if __name__ == "__main__":
