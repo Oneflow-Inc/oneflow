@@ -219,33 +219,33 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
   CudaCurrentDeviceGuard guard(device_index_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   cache_->Clear();
-  store_->LoadSnapshot(name, [&](const std::function<void(KVBaseIterator*)>& GetChunkIterator) {
+  store_->LoadSnapshot(name, [&](KVBaseIterator* iter) {
     if (cache_->Policy() == CacheOptions::Policy::kFull) {
       auto device =
           Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
       CHECK(device);
       auto* stream = device->CreateStream();
       auto* cuda_stream = stream->As<ep::CudaStream>();
-      GetChunkIterator([&](KVBaseIterator* iter) {
-        while (true) {
-          iter->NextN(stream, max_query_length_, num_buffer_, keys_buffer_, values_buffer_);
-          OF_CUDA_CHECK(cudaDeviceSynchronize());
-          OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
-                                        cudaMemcpyDefault, cuda_stream->cuda_stream()));
-          CHECK_JUST(stream->Sync());
-          if (*host_num_buffer_ == 0) { return; }
-          cache_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, num_buffer_, nullptr,
-                      nullptr);
-          OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
-                                        cudaMemcpyDefault, cuda_stream->cuda_stream()));
-          CHECK_JUST(stream->Sync());
-          CHECK_EQ(*host_num_buffer_, 0);
-        }
-      });
+      while (true) {
+        iter->NextN(stream, max_query_length_, num_buffer_, keys_buffer_, values_buffer_);
+        OF_CUDA_CHECK(cudaDeviceSynchronize());
+        OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
+                                      cudaMemcpyDefault, cuda_stream->cuda_stream()));
+        CHECK_JUST(stream->Sync());
+        if (*host_num_buffer_ == 0) { return; }
+        cache_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, num_buffer_, nullptr,
+                    nullptr);
+        OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
+                                      cudaMemcpyDefault, cuda_stream->cuda_stream()));
+        CHECK_JUST(stream->Sync());
+        CHECK_EQ(*host_num_buffer_, 0);
+      }
       device->DestroyStream(stream);
     }
-
-    if (Hook) { Hook(GetChunkIterator); }
+    if (Hook) {
+      iter->Reset();
+      Hook(iter);
+    }
   });
   store_->LoadSnapshot(name);
 }
