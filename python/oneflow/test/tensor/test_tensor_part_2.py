@@ -368,7 +368,7 @@ class TestTensor(flow.unittest.TestCase):
         "ref to: https://github.com/Oneflow-Inc/OneTeam/issues/1006#issuecomment-1022768858"
     )
     @autotest(check_graph=True)
-    def test_tesnor_var_all_dim_with_random_data(test_case):
+    def test_tensor_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = x.var()
@@ -377,7 +377,7 @@ class TestTensor(flow.unittest.TestCase):
     # TODO(): 'var backward' is composed of several other ops,
     # reducemean doesn't support 0-shape for now
     @autotest(auto_backward=False, check_graph=True)
-    def test_tesnor_var_one_dim_with_random_data(test_case):
+    def test_tensor_var_one_dim_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = x.var(
