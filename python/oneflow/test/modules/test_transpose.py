@@ -110,7 +110,7 @@ class TestTranspose(flow.unittest.TestCase):
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_transpose_flow_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device=device, dtype=torch.bool)
