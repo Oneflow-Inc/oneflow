@@ -172,6 +172,58 @@ class KeyIteratorImpl : public PersistentTable::KeyIterator {
   typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator end_;
 };
 
+template<typename Key>
+class ChunkIteratorImpl : public PersistentTable::Iterator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ChunkIteratorImpl);
+  ChunkIteratorImpl(uint32_t value_size, uint32_t logical_block_size, uint32_t num_values_per_block,
+                    uint64_t num_values_per_chunk, uint64_t chunk_id, uint64_t n,
+                    const Key* chunk_keys, const uint64_t* chunk_indices, const void* chunk_values)
+      : pos_(0),
+        value_size_(value_size),
+        logical_block_size_(logical_block_size),
+        num_values_per_block_(num_values_per_block),
+        num_values_per_chunk_(num_values_per_chunk),
+        n_(n),
+        chunk_keys_(chunk_keys),
+        chunk_indices_(chunk_indices),
+        chunk_values_(chunk_values) {
+    chunk_index_offset_ = chunk_id * num_values_per_chunk_;
+  }
+  ~ChunkIteratorImpl() override = default;
+
+  void Next(uint32_t num_keys, uint32_t* return_keys, void* keys, void* values) override {
+    uint32_t count = 0;
+    while (count < num_keys && pos_ != n_) {
+      const uint64_t index_in_chunk = chunk_indices_[pos_] - chunk_index_offset_;
+      static_cast<Key*>(keys)[count] = chunk_keys_[index_in_chunk];
+      const uint64_t block_in_chunk = index_in_chunk / num_values_per_block_;
+      const uint32_t index_in_block = index_in_chunk - block_in_chunk * num_values_per_block_;
+      const uint32_t value_offset =
+          block_in_chunk * logical_block_size_ + index_in_block * value_size_;
+      std::memcpy(static_cast<char*>(values) + count * value_size_,
+                  static_cast<const char*>(chunk_values_) + value_offset, value_size_);
+      count++;
+      pos_++;
+    }
+    *return_keys = count;
+  }
+
+  void Reset() override { pos_ = 0; }
+
+ private:
+  uint64_t pos_;
+  uint32_t value_size_;
+  uint32_t logical_block_size_;
+  uint32_t num_values_per_block_;
+  uint64_t num_values_per_chunk_;
+  uint64_t n_;
+  const Key* chunk_keys_;
+  const uint64_t* chunk_indices_;
+  const void* chunk_values_;
+  uint64_t chunk_index_offset_;
+};
+
 #ifdef WITH_LIBURING
 
 class RingEngine final {
@@ -345,6 +397,8 @@ class PersistentTableImpl : public PersistentTable {
   void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
+  void LoadSnapshot(const std::string& name,
+                    const std::function<void(Iterator* iter)>& Hook) override;
   void SaveSnapshot(const std::string& name) override;
 
  private:
@@ -682,6 +736,43 @@ bool PersistentTableImpl<Key, Engine>::SnapshotExists(const std::string& name) {
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::LoadSnapshot(const std::string& name) {
   LoadSnapshotImpl(name);
+}
+
+template<typename Key, typename Engine>
+void PersistentTableImpl<Key, Engine>::LoadSnapshot(
+    const std::string& name, const std::function<void(Iterator* iter)>& Hook) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  const std::string snapshot_base = SnapshotDirPath(name);
+  const std::string snapshot_list = SnapshotListFilePath(name);
+  row_id_mapping_.clear();
+  std::ifstream list_if(snapshot_list);
+  std::string index_filename;
+  while (std::getline(list_if, index_filename)) {
+    const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
+    PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
+    const size_t index_file_size = index_file.Size();
+    CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+    if (index_file_size == 0) { return; }
+    const size_t n_entries = index_file_size / sizeof(uint64_t);
+    PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ);
+    PosixFile key_file(KeyFilePath(chunk_id), O_RDONLY, 0644);
+    PosixMappedFile mapped_key(std::move(key_file), key_file.Size(), PROT_READ);
+    const uint64_t* indices = static_cast<const uint64_t*>(mapped_index.ptr());
+    const Key* keys = static_cast<const Key*>(mapped_key.ptr());
+    const uint64_t chunk_start_index = chunk_id * num_values_per_chunk_;
+    row_id_mapping_.reserve(row_id_mapping_.size() + n_entries);
+    for (size_t i = 0; i < n_entries; ++i) {
+      CHECK(row_id_mapping_.emplace(keys[indices[i] - chunk_start_index], indices[i]).second);
+    }
+    if (Hook) {
+      PosixFile value_file(ValueFilePath(chunk_id), O_RDONLY, 0644);
+      PosixMappedFile mapped_value(std::move(value_file), value_file.Size(), PROT_READ);
+      ChunkIteratorImpl<Key> chunk_iterator(value_size_, logical_block_size_, num_values_per_block_,
+                                            num_values_per_chunk_, chunk_id, n_entries, keys,
+                                            indices, mapped_value.ptr());
+      Hook(&chunk_iterator);
+    }
+  }
 }
 
 template<typename Key, typename Engine>
