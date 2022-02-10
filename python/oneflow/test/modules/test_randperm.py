@@ -127,7 +127,7 @@ def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
 
 
 def _test_consistent_randperm_graph(test_case, N, placement, sbp, dtype):
-    class ConsistentRandGraph(flow.nn.Graph):
+    class ConsistentRandpermGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -135,7 +135,7 @@ def _test_consistent_randperm_graph(test_case, N, placement, sbp, dtype):
             x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
             return x
 
-    c_randperm_g = ConsistentRandGraph()
+    c_randperm_g = ConsistentRandpermGraph()
     x = c_randperm_g()
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.sbp, sbp)
@@ -151,7 +151,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
             _test_consistent_randperm,
             _test_consistent_randperm_graph,
         ]
-        arg_dict["N"] = [i for i in range(10, 100, 10)]
+        arg_dict["N"] = [i for i in range(10, 100, 5)]
         arg_dict["placement"] = [
             flow.placement("cpu", {0: [0, 1]}),
             flow.placement("cuda", {0: [0, 1]}),

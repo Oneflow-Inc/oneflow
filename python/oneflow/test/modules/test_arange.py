@@ -102,7 +102,7 @@ def _test_consistent_arange(test_case, start, end, step, placement, sbp):
 
 
 def _test_consistent_arange_graph(test_case, start, end, step, placement, sbp):
-    class ConsistentRandGraph(flow.nn.Graph):
+    class ConsistentArangeGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -110,7 +110,7 @@ def _test_consistent_arange_graph(test_case, start, end, step, placement, sbp):
             x = flow.arange(start, end, step, placement=placement, sbp=sbp)
             return x
 
-    c_arange_g = ConsistentRandGraph()
+    c_arange_g = ConsistentArangeGraph()
     x = c_arange_g()
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
@@ -118,17 +118,13 @@ def _test_consistent_arange_graph(test_case, start, end, step, placement, sbp):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestRandpermConsistent(flow.unittest.TestCase):
-    def test_randperm_consistent(test_case):
+class TestArangeConsistent(flow.unittest.TestCase):
+    def test_arange_consistent(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_consistent_arange, _test_consistent_arange_graph]
-        start = np.random.randint(0,10)
-        end = start + np.random.randint(10,100)
-        step = np.random.randint(1,10)
-        print("start: ",start,"end: ",end,"step: ",step)
-        arg_dict["start"] = [start]
-        arg_dict["end"]   = [end]
-        arg_dict["step"]  = [step]
+        arg_dict["start"] = [i for i in range(1,5,1)]
+        arg_dict["end"]   = [i for i in range(10,50,10)]
+        arg_dict["step"]  = [i for i in range(1,5,1)]
         arg_dict["placement"] = [
             flow.placement("cpu", {0: [0, 1]}),
             flow.placement("cuda", {0: [0, 1]}),
