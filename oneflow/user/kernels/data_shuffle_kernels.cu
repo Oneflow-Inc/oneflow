@@ -48,7 +48,7 @@ struct TableEntry<int32_t> {
 };
 
 template<typename K, typename IDX>
-__global__ void HashTableUnique(const uint32_t table_capacity, uint32_t* table_size,
+__global__ void HashTableUnique(const uint32_t table_capacity, int32_t* table_size,
                                 TableEntry<K>* table, const uint32_t num_ids, const K* ids,
                                 const IDX* column_ids, K* unique_ids, IDX* unique_column_ids,
                                 IDX* reverse_index) {
@@ -224,8 +224,7 @@ class IdShuffleTmpBufferManager final {
   IdShuffleTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num)
       : ptr_(ptr) {
     int64_t unique_workspace_bytes = 0;
-    workspace_bytes_ =
-        GetUniqueKeysWorkspace<K, IDX>(parallel_num * num_ids, parallel_num * num_ids);
+    workspace_bytes_ = GetCudaAlignedSize(parallel_num * num_ids * sizeof(TableEntry<int64_t>));
     const size_t unique_ids_bytes = GetCudaAlignedSize(num_ids * sizeof(K));
     const size_t partitioned_unique_ids_bytes =
         GetCudaAlignedSize(parallel_num * num_ids * sizeof(K));
@@ -395,10 +394,15 @@ class IdShuffleKernel final : public user_op::OpKernel {
     CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.TotalBufferSize());
     int64_t hash_capacity = num_ids;
 
-    UniqueKeys(ctx->stream(), num_ids, hash_capacity, ids->dptr<K>(), column_ids->dptr<IDX>(),
-               num_unique_ids->mut_dptr<IDX>(), ids_reverse_idx->mut_dptr<IDX>(),
-               buffer_manager.UniqueIdsPtr(), buffer_manager.UniqueColumnIdsPtr(),
-               reinterpret_cast<char*>(workspace_ptr), buffer_manager.WorkspaceBytes());
+    cudaMemsetAsync(workspace_ptr, 0, buffer_manager.WorkspaceBytes(), cuda_stream);
+    cudaMemsetAsync(num_unique_ids->mut_dptr<IDX>(), 0, sizeof(IDX), cuda_stream);
+    HashTableUnique<K, IDX>
+        <<<BlocksNum4ThreadsNum(hash_capacity), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+            hash_capacity, num_unique_ids->mut_dptr<IDX>(),
+            reinterpret_cast<TableEntry<K>*>(workspace_ptr), num_ids, ids->dptr<K>(),
+            column_ids->dptr<IDX>(), buffer_manager.UniqueIdsPtr(),
+            buffer_manager.UniqueColumnIdsPtr(), ids_reverse_idx->mut_dptr<IDX>());
+
     // partition
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_ids, num_unique_ids->mut_dptr(), sizeof(IDX),
                                   cudaMemcpyDefault, cuda_stream));
@@ -465,10 +469,15 @@ class IdShuffleKernel final : public user_op::OpKernel {
     OF_NCCL_CHECK(ncclGroupEnd());
 
     hash_capacity = num_ids * parallel_num;
-    UniqueKeys(ctx->stream(), recv_offset, hash_capacity, received_unique_ids, received_column_ids,
-               cur_rank_num_unique_ids->mut_dptr<IDX>(), cur_rank_reverse_idx->mut_dptr<IDX>(),
-               cur_rank_unique_ids->mut_dptr<K>(), cur_rank_column_ids->mut_dptr<IDX>(),
-               reinterpret_cast<char*>(workspace_ptr), buffer_manager.WorkspaceBytes());
+    cudaMemsetAsync(workspace_ptr, 0, buffer_manager.WorkspaceBytes(), cuda_stream);
+    cudaMemsetAsync(cur_rank_num_unique_ids->mut_dptr<IDX>(), 0, sizeof(IDX), cuda_stream);
+    HashTableUnique<K, IDX>
+        <<<BlocksNum4ThreadsNum(hash_capacity), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+            hash_capacity, cur_rank_num_unique_ids->mut_dptr<IDX>(),
+            reinterpret_cast<TableEntry<K>*>(workspace_ptr), recv_offset, received_unique_ids,
+            received_column_ids, cur_rank_unique_ids->mut_dptr<K>(),
+            cur_rank_column_ids->mut_dptr<IDX>(), cur_rank_reverse_idx->mut_dptr<IDX>());
+
     if (ParseBooleanFromEnv("DEBUG_SHUFFLE", false)) { DebugIdShuffle<K, IDX>(ctx); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
