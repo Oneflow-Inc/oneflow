@@ -959,8 +959,9 @@ def _numpy(self):
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
     if self.is_global:
-        sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
-        self = self.to_global(placement=self.placement, sbp=sbp_list).to_local()
+        self = self.to_global(
+            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+        ).to_local()
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
