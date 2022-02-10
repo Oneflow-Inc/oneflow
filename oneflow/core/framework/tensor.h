@@ -101,7 +101,6 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
-  virtual bool has_autograd_meta() const = 0;
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
@@ -219,10 +218,6 @@ class StaticZerosTensor final : public Tensor {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
-  }
-  bool has_autograd_meta() const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -352,7 +347,6 @@ class Parameter final : public TensorIf<Parameter> {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     return tensor_->mut_autograd_meta();
   }
-  bool has_autograd_meta() const override { return tensor_->has_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     return tensor_->set_autograd_meta(autograd_meta);
   }
@@ -440,7 +434,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -551,7 +544,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
