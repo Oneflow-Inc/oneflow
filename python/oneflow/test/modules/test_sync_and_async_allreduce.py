@@ -22,7 +22,7 @@ import oneflow.unittest
 
 
 def sync_allreduce(x):
-    return x.to_consistent(sbp=flow.sbp.broadcast)
+    return x.to_global(sbp=flow.sbp.broadcast)
 
 
 def async_allreduce(x):

@@ -66,6 +66,10 @@ class TestTensor(flow.unittest.TestCase):
         tensor = flow.tensor(np_arr, dtype=flow.int32)
         test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
         test_case.assertEqual(np.int32, tensor.numpy().dtype)
+        np_arr = np.array([4, 6], dtype=np.float16)
+        tensor = flow.tensor(np_arr, dtype=flow.float16)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
+        test_case.assertEqual(np.float16, tensor.numpy().dtype)
 
     @flow.unittest.skip_unless_1n1d()
     def test_inplace_copy_from_contiguous_numpy(test_case):
@@ -182,7 +186,7 @@ class TestTensor(flow.unittest.TestCase):
                 sbp=flow.sbp.broadcast,
                 placement=flow.placement("cuda", {0: range(2)})
             ),
-            lambda x: x.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
         )
 
     @flow.unittest.skip_unless_1n1d()
@@ -233,7 +237,7 @@ class TestTensor(flow.unittest.TestCase):
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
         ):
-            x.consistent_id()
+            x.global_id()
 
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
