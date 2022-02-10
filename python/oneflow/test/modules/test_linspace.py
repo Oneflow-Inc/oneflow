@@ -48,7 +48,7 @@ class TestLinspace(flow.unittest.TestCase):
         x.to(device)
         return x
 
-    def test_consistent_naive(test_case):
+    def test_global_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
         x = flow.linspace(start=0, end=10, steps=2, placement=placement, sbp=sbp)
