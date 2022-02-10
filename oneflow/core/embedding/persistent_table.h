@@ -36,16 +36,6 @@ class PersistentTable {
   PersistentTable() = default;
   virtual ~PersistentTable() = default;
 
-  class KeyIterator {
-   public:
-    OF_DISALLOW_COPY_AND_MOVE(KeyIterator);
-    KeyIterator() = default;
-    virtual ~KeyIterator() = default;
-
-    virtual void Next(uint32_t num_keys, uint32_t* return_keys, void* keys) = 0;
-    virtual void Reset() = 0;
-  };
-
   class Iterator {
    public:
     OF_DISALLOW_COPY_AND_MOVE(Iterator);
@@ -64,7 +54,6 @@ class PersistentTable {
                    uint32_t* missing_indices) = 0;
   virtual void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) = 0;
   virtual void Put(uint32_t num_keys, const void* keys, const void* values) = 0;
-  virtual void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) = 0;
   virtual bool SnapshotExists(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name,

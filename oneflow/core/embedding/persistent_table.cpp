@@ -147,32 +147,6 @@ class AlignedBuffer final {
 };
 
 template<typename Key>
-class KeyIteratorImpl : public PersistentTable::KeyIterator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KeyIteratorImpl);
-  explicit KeyIteratorImpl(const robin_hood::unordered_flat_map<Key, uint64_t>& map)
-      : begin_(map.begin()), pos_(map.begin()), end_(map.end()) {}
-  ~KeyIteratorImpl() override = default;
-
-  void Next(uint32_t num_keys, uint32_t* return_keys, void* keys) override {
-    uint32_t count = 0;
-    while (count < num_keys && pos_ != end_) {
-      static_cast<Key*>(keys)[count] = pos_->first;
-      count++;
-      pos_++;
-    }
-    *return_keys = count;
-  }
-
-  void Reset() override { pos_ = begin_; }
-
- private:
-  typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator begin_;
-  typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator pos_;
-  typename robin_hood::unordered_flat_map<Key, uint64_t>::const_iterator end_;
-};
-
-template<typename Key>
 class ChunkIteratorImpl : public PersistentTable::Iterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChunkIteratorImpl);
@@ -394,7 +368,6 @@ class PersistentTableImpl : public PersistentTable {
            uint32_t* missing_indices) override;
   void PutBlocks(uint32_t num_keys, const void* keys, const void* blocks) override;
   void Put(uint32_t num_keys, const void* keys, const void* values) override;
-  void WithKeyIterator(const std::function<void(KeyIterator* iter)>& fn) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void LoadSnapshot(const std::string& name,
@@ -628,14 +601,6 @@ void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
   }
   PutBlocks(num_keys, keys, blocks_ptr);
   OF_PROFILER_RANGE_POP();
-}
-
-template<typename Key, typename Engine>
-void PersistentTableImpl<Key, Engine>::WithKeyIterator(
-    const std::function<void(KeyIterator* iter)>& fn) {
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-  KeyIteratorImpl<Key> iter(row_id_mapping_);
-  fn(&iter);
 }
 
 template<typename Key, typename Engine>
