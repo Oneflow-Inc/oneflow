@@ -16,7 +16,16 @@ limitations under the License.
 import oneflow as flow
 
 
-__all__ = ["HalfTensor", "FloatTensor", "DoubleTensor", "BoolTensor", "ByteTensor", "CharTensor", "IntTensor", "LongTensor"]
+__all__ = [
+    "HalfTensor",
+    "FloatTensor",
+    "DoubleTensor",
+    "BoolTensor",
+    "ByteTensor",
+    "CharTensor",
+    "IntTensor",
+    "LongTensor",
+]
 
 
 def HalfTensor(*args, **kwargs):
@@ -45,32 +54,31 @@ def BoolTensor(*args, **kwargs):
     Creates a Tensor with the dtype of bool and it has the same parameters as oneflow.Tensor.
     """
     return flow.Tensor(*args, **kwargs).to(flow.bool)
-    
+
 
 def ByteTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of uint8 and it has the same parameters as oneflow.Tensor.
     """
     return flow.Tensor(*args, **kwargs).to(flow.uint8)
-    
+
 
 def CharTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of int8 and it has the same parameters as oneflow.Tensor.
     """
     return flow.Tensor(*args, **kwargs).to(flow.int8)
-    
+
 
 def IntTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of int32 and it has the same parameters as oneflow.Tensor.
     """
     return flow.Tensor(*args, **kwargs).to(flow.int32)
-    
+
 
 def LongTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of int64 and it has the same parameters as oneflow.Tensor.
     """
     return flow.Tensor(*args, **kwargs).to(flow.int64)
-    

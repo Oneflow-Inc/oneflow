@@ -24,17 +24,50 @@ import oneflow.unittest
 
 
 type_tensor_all = [
-    {"cpu_interface": flow.HalfTensor, "cuda_interface": flow.cuda.HalfTensor, "dtype": flow.float16},
-    {"cpu_interface": flow.FloatTensor, "cuda_interface": flow.cuda.FloatTensor, "dtype": flow.float32},
-    {"cpu_interface": flow.DoubleTensor, "cuda_interface": flow.cuda.DoubleTensor, "dtype": flow.float64},
-    {"cpu_interface": flow.BoolTensor, "cuda_interface": flow.cuda.BoolTensor, "dtype": flow.bool},
-    {"cpu_interface": flow.ByteTensor, "cuda_interface": flow.cuda.ByteTensor, "dtype": flow.uint8},
-    {"cpu_interface": flow.CharTensor, "cuda_interface": flow.cuda.CharTensor, "dtype": flow.int8},
-    {"cpu_interface": flow.IntTensor, "cuda_interface": flow.cuda.IntTensor, "dtype": flow.int32},
-    {"cpu_interface": flow.LongTensor, "cuda_interface": flow.cuda.LongTensor, "dtype": flow.int64},  
+    {
+        "cpu_interface": flow.HalfTensor,
+        "cuda_interface": flow.cuda.HalfTensor,
+        "dtype": flow.float16,
+    },
+    {
+        "cpu_interface": flow.FloatTensor,
+        "cuda_interface": flow.cuda.FloatTensor,
+        "dtype": flow.float32,
+    },
+    {
+        "cpu_interface": flow.DoubleTensor,
+        "cuda_interface": flow.cuda.DoubleTensor,
+        "dtype": flow.float64,
+    },
+    {
+        "cpu_interface": flow.BoolTensor,
+        "cuda_interface": flow.cuda.BoolTensor,
+        "dtype": flow.bool,
+    },
+    {
+        "cpu_interface": flow.ByteTensor,
+        "cuda_interface": flow.cuda.ByteTensor,
+        "dtype": flow.uint8,
+    },
+    {
+        "cpu_interface": flow.CharTensor,
+        "cuda_interface": flow.cuda.CharTensor,
+        "dtype": flow.int8,
+    },
+    {
+        "cpu_interface": flow.IntTensor,
+        "cuda_interface": flow.cuda.IntTensor,
+        "dtype": flow.int32,
+    },
+    {
+        "cpu_interface": flow.LongTensor,
+        "cuda_interface": flow.cuda.LongTensor,
+        "dtype": flow.int64,
+    },
     # TODO: flow.BFloat16Tensor fails to creat Tensor.
     # {"cpu_interface": flow.BFloat16Tensor, "cuda_interface": flow.cuda.BFloat16Tensor, "dtype": flow.bfloat16},
 ]
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTypeTensor(flow.unittest.TestCase):
