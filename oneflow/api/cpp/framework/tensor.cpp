@@ -112,7 +112,7 @@ void Tensor::copy_to(T* buffer) const {
   CHECK_JUST(of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
   }));
-  TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
+  TRY(btb->WaitUntilCntEqualZero(of::VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
       .GetOrThrow();
 }
 
