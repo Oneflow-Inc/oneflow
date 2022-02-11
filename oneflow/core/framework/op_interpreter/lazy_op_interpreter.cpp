@@ -843,7 +843,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   // NOTE(chengcheng): Handle special UserOp such as:
   //     1. [Source UserOp] : OFRecordReader, CoinFlip
-  //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_consistent/parallel_cast
+  //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_global/parallel_cast
   //     3. [Multi-Inputs & Different ParallelDesc for each input UserOp] : like there are 2 inputs,
   //             one from CPU and the other from GPU.
   //     ..., etc.
@@ -885,7 +885,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor))
         << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
         << " has different device type in module/op_name: " << new_op_name
-        << ". Please use tensor.to() or tensor.to_consistent() to make all input with same device.";
+        << ". Please use tensor.to() or tensor.to_global() to make all input with same device.";
     CHECK_OR_RETURN(
         parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
@@ -998,7 +998,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(!(*outputs)[0]);
 
   if (!op_expr.grad_nd_sbp().has_value() && sbp_sym == JUST(input_tensor->nd_sbp())) {
-    // NOTE(chengcheng):  if to_consistent ONLY change placement (nd_sbp and grad_nd_sbp is same),
+    // NOTE(chengcheng):  if to_global ONLY change placement (nd_sbp and grad_nd_sbp is same),
     //    there is no need to build hierarchical_parallel_cast op.
     if (input_proxy) {
       (*outputs)[0] = input_proxy;
