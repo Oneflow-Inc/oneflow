@@ -100,13 +100,9 @@ class _BatchNorm(_NormBase):
         affine=True,
         track_running_stats=True,
     ):
-        super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.data_format = "NHWC"
-            self.channel_axis = 3
-        else:
-            self.data_format = "NCHW"
-            self.channel_axis = 1
+        super().__init__(num_features, eps, momentum, affine, track_running_stats) 
+        self.data_format = "NCHW"
+        self.channel_axis = 1
 
     def forward(self, x):
         self._check_input_dim(x)
@@ -121,7 +117,7 @@ class _BatchNorm(_NormBase):
             self.running_var,
             self.weight,
             self.bias,
-            axis=self.channel_axis if x.ndim == 4 else 1,
+            axis=self.channel_axis,
             epsilon=self.eps,
             momentum=self.momentum,
             is_training=is_training,
@@ -274,6 +270,18 @@ class BatchNorm2d(_BatchNorm):
         >>> y = m(x)
 
     """
+    def __init__(
+        self,
+        num_features,
+        eps=1e-05,
+        momentum=0.1,
+        affine=True,
+        track_running_stats=True,
+    ):
+        super().__init__(num_features, eps, momentum, affine, track_running_stats)
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.data_format = "NHWC"
+            self.channel_axis = 3
 
     def _check_input_dim(self, input):
         if input.ndim != 4:
