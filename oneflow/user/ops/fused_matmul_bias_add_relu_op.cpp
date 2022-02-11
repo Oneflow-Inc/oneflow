@@ -22,11 +22,6 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
-  // todo: add bias add check.
-
-  // bool transpose_a = ctx->Attr<bool>("transpose_a"); // false
-  // bool transpose_b = ctx->Attr<bool>("transpose_b"); // true
-
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
   const user_op::TensorDesc& bias1 = ctx->InputTensorDesc("bias1", 0);
@@ -42,30 +37,33 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(bias2.shape().NumAxes(), 1) << "Bias2 num axes size should be 1.";
   // Currently only support 2d matmul. 
   CHECK_EQ_OR_RETURN(a.shape().NumAxes(), 2);
-  size_t num_axes = a.shape().NumAxes();
+  size_t a_num_axes = a.shape().NumAxes();
+  size_t b_num_axes = b.shape().NumAxes();
+  size_t c_num_axes = c.shape().NumAxes();
 
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
   *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
 
-  // （m, k) 
-  //  (n, k) need transpose
-  //  (j, n)need transpose
+  /*
+  A: (m, k)
+  B: (n, k) need transpose
+  C: (j, n) need transpose
+  */
   int64_t m = 0, n = 0, k = 0, j = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
-  m = a.shape().At(num_axes - 2);
-  k = a.shape().At(num_axes - 1);
-  CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 1));
-  n = b.shape().At(num_axes - 2);
+  m = a.shape().At(a_num_axes - 2);
+  k = a.shape().At(a_num_axes - 1);
+  CHECK_EQ_OR_RETURN(k, b.shape().At(b_num_axes - 1));
+  n = b.shape().At(b_num_axes - 2);
   CHECK_EQ_OR_RETURN(bias1.shape().At(0), n)
       << "Bias1 shape cannot be added (" << bias1.shape().At(0) << ") and (" << n << ")";
-  CHECK_EQ_OR_RETURN(n, c.shape().At(num_axes - 1));
-  j = c.shape().At(num_axes - 2);
+  CHECK_EQ_OR_RETURN(n, c.shape().At(c_num_axes - 1));
+  j = c.shape().At(c_num_axes - 2);
   CHECK_EQ_OR_RETURN(bias2.shape().At(0), j)  
       << "Bias2 shape cannot be added (" << bias2.shape().At(0) << ") and (" << j << ")";
-
-  out->mut_shape()->Set(num_axes - 2, m);
-  out->mut_shape()->Set(num_axes - 1, j);
+  out->mut_shape()->Set(a_num_axes - 2, m);
+  out->mut_shape()->Set(a_num_axes - 1, j);
   return Maybe<void>::Ok();
 }
 
@@ -92,32 +90,52 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluOp::GetSbp(user_op::SbpContext* ctx) {
-  // (m, k_a) * (k_b, n) where k_a == k_b
-  // TODO
-  // int32_t m_axis = -1;
-  // int32_t n_axis = -1;
-  // if (ctx->Attr<bool>("transpose_a")) {
-  //   m_axis = 1;
-  // } else {
-  //   m_axis = 0;
-  // }
-  // if (ctx->Attr<bool>("transpose_b")) {
-  //   n_axis = 0;
-  // } else {
-  //   n_axis = 1;
-  // }
-  // ctx->NewBuilder()
-  //     .Split(user_op::OpArg("a", 0), m_axis)
-  //     .Broadcast(user_op::OpArg("b", 0))
-  //     .Broadcast(user_op::OpArg("bias", 0))
-  //     .Split(user_op::OpArg("out", 0), 0)
-  //     .Build();
-  // ctx->NewBuilder()
-  //     .Broadcast(user_op::OpArg("a", 0))
-  //     .Split(user_op::OpArg("b", 0), n_axis)
-  //     .Split(user_op::OpArg("bias", 0), 0)
-  //     .Split(user_op::OpArg("out", 0), 1)
-  //     .Build();
+  /*
+  A: (m, k)
+  B: (n, k) need transpose
+  C: (j, n) need transpose
+
+  (m, k) * (k, n)
+  */ 
+  int32_t m_axis = -1;
+  int32_t n_axis = -1;
+  m_axis = 0;
+  n_axis = 0;
+  /*
+  For matmul+bias, its sbp are: 
+  S0, B, B, S0
+  B, S1, S0, S1
+  S1, S0, P, P
+  P, B, P, P
+  B, P, P, P
+
+  For matmul+bias+relu, its sbp are: 
+  S0, B, B, S0
+  B, S1, S0, S1
+  */
+  ctx->NewBuilder()
+      // S0, B, B, S0
+      .Split(user_op::OpArg("a", 0), m_axis)
+      .Broadcast(user_op::OpArg("b", 0))
+      .Broadcast(user_op::OpArg("bias1", 0))
+      // .Split(user_op::OpArg("tmp_out", 0), 0)
+      // S0, B, B, S0
+      .Broadcast(user_op::OpArg("c", 0))
+      .Broadcast(user_op::OpArg("bias2", 0))
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+
+  ctx->NewBuilder()
+      // B, S1, S0, S1
+      .Broadcast(user_op::OpArg("a", 0))
+      .Split(user_op::OpArg("b", 0), n_axis)
+      .Split(user_op::OpArg("bias", 0), 0)
+      // .Split(user_op::OpArg("tmp_out", 0), 1)
+      // S1, S0, P, P
+      .Split(user_op::OpArg("c", 0), 0)
+      .PartialSum(user_op::OpArg("bias2", 0))
+      .Split(user_op::OpArg("out", 0), 1)
+      .Build();
   return Maybe<void>::Ok();
 }
 
