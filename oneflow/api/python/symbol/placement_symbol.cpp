@@ -50,7 +50,9 @@ namespace {
 
 class Py11Placement {
  public:
-  Py11Placement(const std::string& device_type)
+  Py11Placement() = delete;
+  ~Py11Placement() = default;
+  explicit Py11Placement(const std::string& device_type)
       : device_type_(device_type), device_tag_(device_type) {
     CHECK(device_type_ == "cpu" || device_type_ == "cuda") << "Only support cpu or cuda device!";
     if (device_type_ == "cuda") device_tag_ = "gpu";
