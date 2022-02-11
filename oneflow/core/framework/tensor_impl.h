@@ -83,6 +83,7 @@ class TensorImpl {
   Maybe<void> set_requires_grad(bool requires_grad);
   Maybe<void> set_retain_grad(bool retain_grad);
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const { return autograd_meta_; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
     autograd_meta_ = autograd_meta;

@@ -19,19 +19,44 @@ import oneflow as flow
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
-def allreduce_fn(ddp_state_for_reversed_params, param):
+def grad_setting_fn(module, param):
+    def grad_setting(grad):
+        if param.grad is None:
+            start = module._param_grad_offset_in_bucket[param]
+            bucket_index = module._bucket_index[param]
+            bucket_tensor = module._bucket_tensors[bucket_index]
+            param.grad = flow._C.slice_view_1d_contiguous(
+                bucket_tensor, start, start + param.numel()
+            ).view(param.shape)
+            param._is_grad_acc_inplace = True
+        return grad
+
+    return grad_setting
+
+
+def allreduce_fn(module, param):
+    ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
+    buckets = module._buckets
+    bucket_tensors = module._bucket_tensors
+
     def allreduce(grad):
         ddp_state_for_reversed_params[param][0] = True
-        for cur_param, (ready, deleted) in ddp_state_for_reversed_params.items():
+        for index, bucket in enumerate(buckets):
+            deleted = all(ddp_state_for_reversed_params[x][1] for x in bucket)
             if deleted:
                 continue
-            if ready:
-                ddp_state_for_reversed_params[cur_param][1] = True
-                # NOTE(jianhao)(higher-order-grad): local allreduce doesn't have gradient function, higher-order grad may be unsupported
-                if cur_param is param:
-                    flow._C.local_all_reduce(grad, True)
-                else:
-                    flow._C.local_all_reduce(cur_param.grad, True)
+
+            assert not any(ddp_state_for_reversed_params[x][1] for x in bucket)
+
+            all_params_in_bucket_ready = all(
+                ddp_state_for_reversed_params[x][0] for x in bucket
+            )
+            if all_params_in_bucket_ready:
+                for x in bucket:
+                    ddp_state_for_reversed_params[x][1] = True
+                # NOTE(jianhao)(higher-order-grad):
+                # local allreduce doesn't have gradient function, higher-order grad may be unsupported
+                flow._C.local_all_reduce(bucket_tensors[index], inplace=True)
             else:
                 break
 
@@ -39,8 +64,10 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
 
 
 def DistributedDataParallel(
-    module: "flow.nn.Module", *, broadcast_buffers: bool = True
+    module: "flow.nn.Module", *, broadcast_buffers: bool = True, bucket_size: int = 10
 ):
+    assert all(x.dtype == flow.float32 for x in module.parameters())
+
     world_size = flow.env.get_world_size()
     with flow.no_grad():
         for x in module.parameters():
@@ -49,6 +76,37 @@ def DistributedDataParallel(
             # TODO: fix the bug that x's requires_grad is discarded
             # after flow._C.broadcast
             x.requires_grad_(requires_grad)
+
+    all_grad_size = sum([x.numel() for x in module.parameters()])
+    if all_grad_size > 0:
+        device = list(module.parameters())[0].device
+        assert all(x.device == device for x in module.parameters())
+    reversed_param_list = list(reversed(list(module.parameters())))
+    module._param_grad_offset_in_bucket = {}
+    offset_in_bucket = 0
+    with flow.no_grad():
+        for i, param in enumerate(reversed_param_list):
+            assert param.is_leaf
+            if i % bucket_size == 0:
+                offset_in_bucket = 0
+            module._param_grad_offset_in_bucket[param] = offset_in_bucket
+            offset_in_bucket += param.numel()
+
+    module._bucket_index = {
+        x: i // bucket_size for i, x in enumerate(reversed_param_list)
+    }
+    module._buckets = [
+        reversed_param_list[i : i + bucket_size]
+        for i in range(0, len(reversed_param_list), bucket_size)
+    ]
+
+    bucket_bytes = 0
+    module._bucket_tensors = []
+    for b in module._buckets:
+        bucket_bytes = sum([x.numel() for x in b])
+        module._bucket_tensors.append(
+            flow.zeros(bucket_bytes, dtype=flow.float32, device=device)
+        )
 
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters() if x.requires_grad])
@@ -67,10 +125,9 @@ def DistributedDataParallel(
         return None
 
     for param in module.parameters():
+        param.register_hook(grad_setting_fn(module, param))
         param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
-        param._register_post_grad_accumulation_hook(
-            allreduce_fn(ddp_state_for_reversed_params, param)
-        )
+        param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
