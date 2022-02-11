@@ -34,6 +34,7 @@ class TestTensorSplitVec(flow.unittest.TestCase):
         z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
 
+
 class TestTensorSplitInt(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_tensor_split_int(test_case):

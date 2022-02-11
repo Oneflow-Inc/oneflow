@@ -41,13 +41,9 @@ class TestHsplitInt(flow.unittest.TestCase):
     def test_flow_hsplit_int(test_case):
         device = random_device()
         x = random_tensor(
-            ndim=4,
-            dim0=random(3, 6),
-            dim1=12,
-            dim2=random(3, 6),
-            dim3=random(3, 6),
+            ndim=4, dim0=random(3, 6), dim1=12, dim2=random(3, 6), dim3=random(3, 6),
         ).to(device)
-        split = oneof(2,4,6)
+        split = oneof(2, 4, 6)
         z = torch.hsplit(x, split)
         return z[0]
 
