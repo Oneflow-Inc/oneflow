@@ -33,7 +33,7 @@ type_tensor_all = [
     {"cpu_interface": flow.IntTensor, "cuda_interface": flow.cuda.IntTensor, "dtype": flow.int32},
     {"cpu_interface": flow.LongTensor, "cuda_interface": flow.cuda.LongTensor, "dtype": flow.int64},  
     # TODO: flow.BFloat16Tensor fails to creat Tensor.
-    # {"specific tensor": flow.BFloat16Tensor, "dtype": flow.bfloat16},  
+    # {"cpu_interface": flow.BFloat16Tensor, "cuda_interface": flow.cuda.BFloat16Tensor, "dtype": flow.bfloat16},
 ]
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -56,4 +56,3 @@ class TestTypeTensor(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
