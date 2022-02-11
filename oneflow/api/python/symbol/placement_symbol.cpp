@@ -99,8 +99,8 @@ class Py11Placement {
   std::string ToString(const Symbol<ParallelDesc>& para_desc) {
     std::ostringstream oss;
 
-    oss << "oneflow.placement(type = " << device_type_ << ", ";
-    oss << "ranks = " << device_type_;
+    oss << "oneflow.placement(type=\"" << device_type_ << "\", ";
+    oss << "ranks=";
 
     auto hierarchy = para_desc->hierarchy();
     auto rank_ids = GetSortedRankIds(para_desc);
