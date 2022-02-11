@@ -19,11 +19,12 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTorchSplitVec(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_split_vec(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),
@@ -35,11 +36,12 @@ class TestTorchSplitVec(flow.unittest.TestCase):
         return z[0]
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTorchSplitInt(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_split_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim1=random(3, 6),
             dim2=random(3, 6),

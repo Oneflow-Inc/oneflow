@@ -48,7 +48,7 @@ def arange_op(
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
         assert len(sbp) == len(placement.hierarchy)
-        res = flow._C.consistent_arange(
+        res = flow._C.global_arange(
             start, end, step, dtype=dtype, placement=placement, sbp=sbp
         )
 

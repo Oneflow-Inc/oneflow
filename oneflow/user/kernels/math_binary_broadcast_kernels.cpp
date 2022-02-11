@@ -133,9 +133,9 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                           \
                        && (user_op::HobDataType("z", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
-                                 MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_MATH_BINARY_BROADCAST_KERNEL, MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, DEVICE_TYPE_SEQ,
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 // gpu half
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,

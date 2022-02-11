@@ -23,8 +23,8 @@ struct PoolingOpKernelCache final : public user_op::OpKernelCache {
   const MaxPoolingParams3D& GetParams3D() const { return params_3d; }
 };
 
-std::shared_ptr<PoolingOpKernelCache> CreateOpKernelCache(user_op::KernelCacheContext* ctx,
-                                                          const int32_t& dim) {
+std::shared_ptr<PoolingOpKernelCache> CreatePoolingOpKernelCache(user_op::KernelCacheContext* ctx,
+                                                                 const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
@@ -198,13 +198,13 @@ class MaxPool1dKernel final : public user_op::OpKernel {
   MaxPool1dKernel() = default;
   ~MaxPool1dKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 1);
+    return CreatePoolingOpKernelCache(ctx, 1);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -234,13 +234,13 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
   MaxPool1dGradKernel() = default;
   ~MaxPool1dGradKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 1);
+    return CreatePoolingOpKernelCache(ctx, 1);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -272,13 +272,13 @@ class MaxPool2dKernel final : public user_op::OpKernel {
   MaxPool2dKernel() = default;
   ~MaxPool2dKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 2);
+    return CreatePoolingOpKernelCache(ctx, 2);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -315,13 +315,13 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
   MaxPool2dGradKernel() = default;
   ~MaxPool2dGradKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 2);
+    return CreatePoolingOpKernelCache(ctx, 2);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -361,13 +361,13 @@ class MaxPool3dKernel final : public user_op::OpKernel {
   MaxPool3dKernel() = default;
   ~MaxPool3dKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 3);
+    return CreatePoolingOpKernelCache(ctx, 3);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -397,13 +397,13 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
   MaxPool3dGradKernel() = default;
   ~MaxPool3dGradKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateOpKernelCache(ctx, 3);
+    return CreatePoolingOpKernelCache(ctx, 3);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
