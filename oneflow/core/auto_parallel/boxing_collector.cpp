@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
+#include <string>
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
@@ -92,9 +94,11 @@ void BoxingCollector::GenerateNdSbpList() {
 Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   // other parameters
   // NOTE: The performance of this function are all the same with different hierarchy
-  Shape hierarchy44({4, 4});
+  int32_t kWorldSize = GlobalProcessCtx::WorldSize();
+  Shape hierarchy44({4 * kWorldSize, 4 * kWorldSize});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
-  auto in_parallel_desc = JUST(ParallelDesc::New("cpu", {"0:0-15"}, in_hierarchy));
+  auto in_parallel_desc = JUST(ParallelDesc::New(
+      "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, in_hierarchy));
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Store the origin transfer cost information
   int32_t n = nd_sbp_lists_.size();
