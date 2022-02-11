@@ -55,7 +55,7 @@ Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
     auto status = TRY(WaitUntilCntEqualZero(EnvInteger<ONEFLOW_TIMEOUT_SECONDS>()));
     if (status.IsOk()) { return status; }
     if (!status.error()->has_timeout_error()) { return status; }
-    if (JUST(StopWaitingAfterTimeout())) { return Maybe<void>::Ok(); }
+    if (JUST(StopWaitingAfterTimeout())) { return status; }
   }
   UNIMPLEMENTED_THEN_RETURN();
 }
