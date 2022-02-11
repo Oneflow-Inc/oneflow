@@ -213,13 +213,6 @@ Maybe<Shape> MakeShape(const py::tuple& py_shape) {
 }
 
 struct PlacementSymbolExportUtil {
-  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
-      int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
-    ParallelConf symbol_pb;
-    symbol_conf->ToProto(&symbol_pb);
-    return ParallelDesc::New(symbol_id, symbol_pb).GetPtrOrThrow();
-  }
-
   static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(
       const std::string& device_type, const py::iterable& device_ids,
       const std::shared_ptr<Shape>& hierarchy) {
