@@ -31,7 +31,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
     @autotest(n=1, check_graph=True)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_add_with_alpha(test_case):
-        old_timeout_seconds = os.environ["ONEFLOW_TIMEOUT_SECONDS"]
+        default_timeout_seconds = "300"
         try:
             os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "10"
             data = flow.rand(2, dtype=flow.float32)
@@ -47,7 +47,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
             err_msg = "Maybe executing different code in different ranks, please check if the code is branched and operates on the global tensor"
             assert err_msg in str(e)
         finally:
-            os.environ["ONEFLOW_TIMEOUT_SECONDS"] = old_timeout_seconds
+            os.environ["ONEFLOW_TIMEOUT_SECONDS"] = default_timeout_seconds
 
 
 if __name__ == "__main__":
