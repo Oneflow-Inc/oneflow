@@ -384,9 +384,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         else:
             raise ValueError
 
-        c_x = x.to_global(
-            placement=flow.placement("cpu", [0]), sbp=flow.sbp.broadcast
-        )
+        c_x = x.to_global(placement=flow.placement("cpu", [0]), sbp=flow.sbp.broadcast)
         # print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
 
         p1 = flow.placement("cpu", [0, 1])
@@ -463,7 +461,7 @@ class MyModule5(flow.nn.Module):
 @flow.unittest.skip_unless_1n4d()
 class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
     def test_matmul(test_case):
-        placement = flow.placement("cuda", [[0,1],[2,3]])
+        placement = flow.placement("cuda", [[0, 1], [2, 3]])
         x = flow.ones(
             (4, 6), placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )

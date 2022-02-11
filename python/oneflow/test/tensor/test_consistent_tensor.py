@@ -159,7 +159,7 @@ class TestTensor(flow.unittest.TestCase):
         H = 4
         S = 6
 
-        P = flow.placement("cuda", [[0,1],[2,3]])
+        P = flow.placement("cuda", [[0, 1], [2, 3]])
 
         wte = flow.nn.Parameter(
             flow.empty(

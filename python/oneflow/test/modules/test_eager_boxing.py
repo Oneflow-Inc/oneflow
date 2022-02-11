@@ -3204,7 +3204,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
 class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
     def test_eager_global_cast_with_same_placement_and_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
-        placement = flow.placement("cuda", [0,1])
+        placement = flow.placement("cuda", [0, 1])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -3221,8 +3221,8 @@ class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
 class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_1d_to_2d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
-        placement1 = flow.placement("cuda", [0,1,2,3])
-        placement2 = flow.placement("cuda", [[0,1],[2,3]])
+        placement1 = flow.placement("cuda", [0, 1, 2, 3])
+        placement2 = flow.placement("cuda", [[0, 1], [2, 3]])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -3244,8 +3244,8 @@ class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
 class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_2d_to_1d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
-        placement1 = flow.placement("cuda", [0,1,2,3])
-        placement2 = flow.placement("cuda", [[0,1],[2,3]])
+        placement1 = flow.placement("cuda", [0, 1, 2, 3])
+        placement2 = flow.placement("cuda", [[0, 1], [2, 3]])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -3322,7 +3322,7 @@ def _test_eager_global_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
     np.random.seed(10)
     np_arr = np.random.uniform(-1e-05, 1e-05, (16, 32))
     placement0 = flow.placement(device_type, [0])
-    placement1 = flow.placement(device_type, [[0,1],[2,3]])
+    placement1 = flow.placement(device_type, [[0, 1], [2, 3]])
 
     # oneflow.placement(type="cuda", ranks=[[0]])
     # (src_sbp, src_sbp)
