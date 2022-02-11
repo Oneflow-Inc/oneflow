@@ -267,14 +267,19 @@ class FusedMatMulBiasAddReluFunctor {
     fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
                                .Input("a")
                                .Input("b")
-                               .Input("bias")
+                               .Input("bias1")
+                               .Input("c")
+                               .Input("bias2")
                                .Output("out")
                                .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& bias, const bool& transpose_a,
-                           const bool& transpose_b, const double& alpha) const {
+                           const std::shared_ptr<one::Tensor>& bias1, 
+                           const std::shared_ptr<one::Tensor>& c,
+                           const std::shared_ptr<one::Tensor>& bias2,
+                           const double& alpha1, 
+                           const double& alpha2) const {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
 
@@ -282,35 +287,36 @@ class FusedMatMulBiasAddReluFunctor {
     CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should == 2";
     CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should == 2";
 
-    int64_t m = 0, n = 0, k_a = 0, k_b = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
+    // int64_t m = 0, n = 0, k_a = 0, k_b = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
 
-    if (!transpose_a) {
-      m = a->shape()->At(0);
-      k_a = a->shape()->At(1);
-    } else {
-      m = a->shape()->At(1);
-      k_a = a->shape()->At(0);
-    }
+    // if (!transpose_a) {
+    //   m = a->shape()->At(0);
+    //   k_a = a->shape()->At(1);
+    // } else {
+    //   m = a->shape()->At(1);
+    //   k_a = a->shape()->At(0);
+    // }
 
-    if (!transpose_b) {
-      k_b = b->shape()->At(0);
-      n = b->shape()->At(1);
-    } else {
-      k_b = b->shape()->At(1);
-      n = b->shape()->At(0);
-    }
+    // if (!transpose_b) {
+    //   k_b = b->shape()->At(0);
+    //   n = b->shape()->At(1);
+    // } else {
+    //   k_b = b->shape()->At(1);
+    //   n = b->shape()->At(0);
+    // }
 
-    CHECK_EQ_OR_RETURN(k_a, k_b) << "RuntimeError: mat1 and mat2 shapes cannot be multiplied "
-                                 << "(" << m << "x" << k_a << ") and (" << k_b << "x" << n << ")";
-    CHECK_EQ_OR_RETURN(bias->shape()->NumAxes(), 1) << "Bias num axes size should be 1.";
-    CHECK_EQ_OR_RETURN(bias->shape()->At(0), n)
-        << "Bias shape cannot be added (" << bias->shape()->At(0) << ") and (" << n << ")";
+    // CHECK_EQ_OR_RETURN(k_a, k_b) << "RuntimeError: mat1 and mat2 shapes cannot be multiplied "
+    //                              << "(" << m << "x" << k_a << ") and (" << k_b << "x" << n << ")";
+    // CHECK_EQ_OR_RETURN(bias->shape()->NumAxes(), 1) << "Bias num axes size should be 1.";
+    // CHECK_EQ_OR_RETURN(bias->shape()->At(0), n)
+    //     << "Bias shape cannot be added (" << bias->shape()->At(0) << ") and (" << n << ")";
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
-    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {a, b, bias}, attrs);
+    // JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+    // JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+    JUST(attrs.SetAttr<double>("alpha1", alpha1));
+    JUST(attrs.SetAttr<double>("alpha2", alpha2));
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {a, b, bias1, c, bias2}, attrs);
   }
 
  private:

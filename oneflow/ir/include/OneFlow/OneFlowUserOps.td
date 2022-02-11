@@ -4255,15 +4255,18 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
-    OneFlow_Tensor:$bias
+    OneFlow_Tensor:$bias1, 
+    OneFlow_Tensor:$c,
+    OneFlow_Tensor:$bias2
   );
   let output = (outs
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
-    DefaultValuedAttr<BoolAttr, "false">:$transpose_b, 
-    DefaultValuedAttr<F64Attr, "1.">:$alpha
+    // DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+    // DefaultValuedAttr<BoolAttr, "false">:$transpose_b, 
+    DefaultValuedAttr<F64Attr, "1.">:$alpha1, 
+    DefaultValuedAttr<F64Attr, "1.">:$alpha2
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
