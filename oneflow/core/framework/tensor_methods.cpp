@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/stride.h"
@@ -156,10 +157,10 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   StrideVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   for (int i = 0; i < ndim; ++i) {
-    int64_t step = std::min(steps.at(i), shape->At(i));
+    int64_t step = std::min(steps[i], shape->At(i));
     CHECK_OR_RETURN(step >= 0) << Error::RuntimeError() << "Step must be greater than zero.";
-    int64_t start = std::min(starts.at(i), shape->At(i));
-    int64_t end = std::min(ends.at(i), shape->At(i));
+    int64_t start = std::min(starts[i], shape->At(i));
+    int64_t end = std::min(ends[i], shape->At(i));
     if (start < 0) { start += shape->At(i); }
     if (start < 0) start = 0;
     if (end < 0) { end += shape->At(i); }
@@ -179,8 +180,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::SliceGrad(
-                  out_grads.at(0), Shape(input->shape()->dim_vec()), starts, ends, steps));
+              (*in_grads)[0] = JUST(functional::SliceGrad(
+                  JUST(VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec()), starts, ends, steps));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
