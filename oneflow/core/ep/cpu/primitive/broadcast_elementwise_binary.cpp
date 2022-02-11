@@ -202,8 +202,8 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
                           src1_dims, dst_dims);
     }
 
-    CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1, dst_dims.data(),
-                 dst);
+    CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
+                 dst_dims.data(), dst);
 
     auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn,
                                        static_cast<dnnl::memory::format_tag>(num_dims + 1));
