@@ -190,6 +190,14 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return SbpToString(sbp_parallel);
 }
 
+std::vector<std::string> NdSbpToStringList(const cfg::NdSbp& nd_sbp) {
+  std::vector<std::string> sbp_str_list(nd_sbp.sbp_parallel_size());
+  for (size_t i = 0; i < sbp_str_list.size(); ++i) {
+    sbp_str_list[i] = SbpToString(nd_sbp.sbp_parallel(i));
+  }
+  return sbp_str_list;
+}
+
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                                   cfg::NdSbpSignature* nd_sbp_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {

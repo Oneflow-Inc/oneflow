@@ -54,6 +54,7 @@ bool IsValidSbpParallelString(const std::string& sbp_str);
 bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
 bool ParseNdSbpFromStringList(const std::vector<std::string>& sbp_str_list, cfg::NdSbp* nd_sbp);
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
+std::vector<std::string> NdSbpToStringList(const cfg::NdSbp& nd_sbp);
 
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                                   cfg::NdSbpSignature* nd_sbp_signature);

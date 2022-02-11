@@ -155,17 +155,23 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
                                const cfg::SbpParallel& dst_sbp, const std::string& lbn,
                                const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
                                const int64_t parallel_num) {
+  auto CanSplitAtDim = [&](int64_t dim) -> bool {
+    if (logical_blob_desc.shape().NumAxes() <= dim) { return false; }
+    return logical_blob_desc.shape().At(dim) % parallel_num == 0;
+  };
   if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
     // P->B : AllReduce
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
                .Op("_nccl_logical_all_reduce")
                .Input("in", lbn)
                .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
     return true;
-  } else if ((logical_blob_desc.shape().At(0) % parallel_num == 0)
+  } else if (CanSplitAtDim(0)
              && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
              && (dst_sbp.split_parallel().axis() == 0)) {
     // P->S(0) : ReduceScatter
@@ -173,45 +179,50 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
                .Op("_nccl_logical_reduce_scatter")
                .Input("in", lbn)
                .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
     return true;
-  } else if ((logical_blob_desc.shape().At(0) % parallel_num == 0)
-             && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
+  } else if (CanSplitAtDim(0) && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
              && (src_sbp.split_parallel().axis() == 0)) {
     // S(0)->B : AllGather
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
                .Op("_nccl_logical_all_gather")
                .Input("in", lbn)
                .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
     return true;
-  } else if ((src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
-             && (src_sbp.split_parallel().axis() > 0)
-             && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis()) % parallel_num
-                 == 0)) {
+  } else if (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel()
+             && src_sbp.split_parallel().axis() > 0
+             && CanSplitAtDim(src_sbp.split_parallel().axis())) {
     // S(1)->B : AllGather Noncontinuous
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
                .Op("_nccl_logical_all_gather_noncontinuous")
                .Input("in", lbn)
                .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
     return true;
-  } else if ((src_sbp.has_split_parallel() && dst_sbp.has_split_parallel())
-             && (src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis())
-             && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis()) % parallel_num == 0)
-             && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis()) % parallel_num
-                 == 0)) {
+  } else if (src_sbp.has_split_parallel() && dst_sbp.has_split_parallel()
+             && src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis()
+             && CanSplitAtDim(src_sbp.split_parallel().axis())
+             && CanSplitAtDim(dst_sbp.split_parallel().axis())) {
     // S(in)->S(out) : All2All
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
                .Op("_nccl_logical_s2s")
                .Input("in", lbn)
                .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
                .ScopeSymbolId(scope_symbol_id)
                .Build()
                .op_conf();
@@ -246,6 +257,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim0_all_reduce")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
+            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -259,6 +272,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim0_all_gather")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
+            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -272,6 +287,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
+            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -286,6 +303,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim0_all2all")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
+            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -311,6 +330,8 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const cfg::NdSbp& src_
             .Op("_nccl_logical_2D_same_dim1_all_reduce")
             .Input("in", lbn)
             .Output("out")
+            .Attr<std::vector<std::string>>("src_reduced_nd_sbp", NdSbpToStringList(src_nd_sbp))
+            .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", NdSbpToStringList(dst_nd_sbp))
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
