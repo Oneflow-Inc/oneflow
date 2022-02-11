@@ -26,11 +26,6 @@ from test_util import GenArgList
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 
-def unpack_indices(dual_object):
-    length = dual_object.__len__().pytorch
-    return [dual_object[i] for i in range(length)]
-
-
 def _test_maxpool2d_channel_last(
     test_case, device, shape, kernel_size, stride, padding, dilation, ceil_mode
 ):
@@ -63,7 +58,7 @@ def _test_maxpool2d_channel_last(
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=True, check_graph=True)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool1d(
@@ -79,12 +74,15 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor(ndim=3, dim2=random(20, 22)).to(device)
         y = m(x)
-        if return_indices:
-            return unpack_indices(y)
-        else:
-            return y, y.sum().backward()
 
-    @autotest(auto_backward=False, check_graph=False)
+        # NOTE(lixiang): When return_indices=False, maxpool1d will return the max indices along with the outputs,
+        #   y[1] tensor has no grad_fn and cannot be backward, so only y[0] is verified here.
+        if return_indices:
+            return y[0]
+        else:
+            return y
+
+    @autotest(auto_backward=True, check_graph=True)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool2d(
@@ -101,12 +99,14 @@ class TestMaxPooling(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = m(x)
 
+        # NOTE(lixiang): When return_indices=False, maxpool2d will return the max indices along with the outputs,
+        #   y[1] tensor has no grad_fn and cannot be backward, so only y[0] is verified here.
         if return_indices:
-            return unpack_indices(y)
+            return y[0]
         else:
-            return y, y.sum().backward()
+            return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=True, check_graph=True)
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool3d(
@@ -125,10 +125,12 @@ class TestMaxPooling(flow.unittest.TestCase):
         ).to(device)
         y = m(x)
 
+        # NOTE(lixiang): When return_indices=False, maxpool3d will return the max indices along with the outputs,
+        #   y[1] tensor has no grad_fn and cannot be backward, so only y[0] is verified here.
         if return_indices:
-            return unpack_indices(y)
+            return y[0]
         else:
-            return y, y.sum().backward()
+            return y
 
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
@@ -146,7 +148,7 @@ class TestMaxPooling(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPoolingFunctional(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=True, check_graph=True)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
@@ -161,12 +163,14 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
             return_indices=return_indices,
         )
 
+        # NOTE(lixiang): When return_indices=False, maxpool1d will return the max indices along with the outputs,
+        #   y[1] tensor has no grad_fn and cannot be backward, so only y[0] is verified here.
         if return_indices:
-            return unpack_indices(y)
+            return y[0]
         else:
-            return y, y.sum().backward()
+            return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=True, check_graph=True)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
@@ -181,12 +185,14 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
             return_indices=return_indices,
         )
 
+        # NOTE(lixiang): When return_indices=False, maxpool2d will return the max indices along with the outputs,
+        #   y[1] tensor has no grad_fn and cannot be backward, so only y[0] is verified here.
         if return_indices:
-            return unpack_indices(y)
+            return y[0]
         else:
-            return y, y.sum().backward()
+            return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=True, check_graph=True)
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
@@ -203,10 +209,12 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
             return_indices=return_indices,
         )
 
+        # NOTE(lixiang): When return_indices=False, maxpool3d will return the max indices along with the outputs,
+        #   y[1] tensor has no grad_fn and cannot be backward, so only y[0] is verified here.
         if return_indices:
-            return unpack_indices(y)
+            return y[0]
         else:
-            return y, y.sum().backward()
+            return y
 
 
 if __name__ == "__main__":
