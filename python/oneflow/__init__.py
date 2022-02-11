@@ -187,6 +187,9 @@ from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 
 from . import sbp
+
+sbp.sbp.__call__ = lambda self: self
+
 import atexit
 
 import oneflow.framework.c_api_util
@@ -357,8 +360,8 @@ from oneflow.nn.modules.tensor_buffer import (
 )
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
-from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
-from oneflow.nn.modules.consistent_cast import to_local_op as to_local
+from oneflow.nn.modules.global_cast import to_global_op as to_global
+from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op

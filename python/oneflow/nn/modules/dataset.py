@@ -955,7 +955,7 @@ class OneRecReader(Module):
         shuffle_after_epoch (bool): if shuffle after each epoch
         verify_example (bool): if verify example, defaults to True
         placement (Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the output tensor is stored on.
-        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a consistent tensor, specify the SBP of the output tensor.
+        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a global tensor, specify the SBP of the output tensor.
 
     For example:
 

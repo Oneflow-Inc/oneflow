@@ -123,6 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency:
       group: build-and-test-wait-for-gpu-slot
+      cancel-in-progress: false
     needs: [build-oneflow]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     continue-on-error: true
@@ -140,7 +141,8 @@ jobs:
       - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 35
+        timeout-minutes: 45
+        continue-on-error: true
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
@@ -301,6 +303,23 @@ jobs:
           wheel-audit: false
           python-versions: |
             3.8
+      - name: Remove automerge
+        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed when running job: Build ${{ matrix.entry }}. PR label automerge has been removed'
+            })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@fix-oom
@@ -523,21 +542,14 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: 96a727f566534151bff2cad445d5661f0ceedf83
-          path: oneflow-models-resnet50
+          ref: 61583470b8bdbff75baa3f2c5368789b8a797d33
+          path: oneflow-models
       - name: ResNet50 Graph DDP test
         id: models-resnet50
         timeout-minutes: 20
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
-          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models-resnet50 ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
-      - name: Checkout Oneflow-Inc/models
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/models
-          ref: 7a6845f7d7133c02a01a75b9ca525e6c40e99639
-          path: oneflow-models
+          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
       - name: Speed test
         id: speed
         timeout-minutes: 20
