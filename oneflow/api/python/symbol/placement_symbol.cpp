@@ -206,16 +206,6 @@ class Py11Placement {
   int64_t device_num_;
 };
 
-int64_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
-}
-
 Maybe<Shape> MakeShape(const py::tuple& py_shape) {
   DimVector shape_dims{};
   for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
@@ -228,25 +218,6 @@ struct PlacementSymbolExportUtil {
     ParallelConf symbol_pb;
     symbol_conf->ToProto(&symbol_pb);
     return ParallelDesc::New(symbol_id, symbol_pb).GetPtrOrThrow();
-  }
-
-  static Maybe<ParallelDesc> CreatePlacementSymbol(
-      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy) {
-    const auto parallel_conf =
-        MakeParallelConf(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
-    std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-      return Maybe<void>::Ok();
-    }));
-    return parallel_desc;
-  }
-
-  static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
-      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy) {
-    return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
   }
 
   static Maybe<Symbol<ParallelDesc>> CreatePlacementSymbol(
