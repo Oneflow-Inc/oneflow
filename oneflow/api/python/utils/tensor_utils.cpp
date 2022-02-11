@@ -237,7 +237,6 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
     dtype_ = DType::Float();
   }
   if (dtype_) { local_tensor = JUST(functional::Cast(local_tensor, dtype_)); }
-  JUST(local_tensor->set_requires_grad(requires_grad));
 
   size_t sbp_dims = sbp_tuple.size();
   Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
@@ -246,7 +245,10 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
       local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
 
   std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
-  return JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));
+  auto consistent_tensor =
+      JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));
+  JUST(consistent_tensor->set_requires_grad(requires_grad));
+  return consistent_tensor;
 }
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
