@@ -14,26 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <algorithm>
-#include <cstdint>
-#include <memory>
 #include <sstream>
 
 #include <Python.h>
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include <pybind11/operators.h>
-#include <pybind11/functional.h>
-#include <pybind11/numpy.h>
 
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/extension/python/numpy.h"
-#include "oneflow/core/common/error.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
