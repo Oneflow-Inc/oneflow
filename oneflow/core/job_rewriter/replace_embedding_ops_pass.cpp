@@ -431,8 +431,8 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
     const auto& dynamic_loss_scale_state =
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     embedding_update_op_builder.Input("skip_if", dynamic_loss_scale_state.count_not_finite_lbn());
-    std::string down_scale_factor_lbn = dynamic_loss_scale_state.loss_scale_val_lbn();
-    embedding_update_op_builder.Input("scale_by_tensor", down_scale_factor_lbn);
+    embedding_update_op_builder.Input("scale_by_tensor",
+                                      dynamic_loss_scale_state.loss_scale_val_lbn());
   } else if (train_conf.has_loss_scale_factor()) {
     double down_scale_factor = 1.0f / train_conf.loss_scale_factor();
     scale *= down_scale_factor;
