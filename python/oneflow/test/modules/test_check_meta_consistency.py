@@ -33,7 +33,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         else:
             x = flow.zeros((1,), device=flow.device("cuda"), dtype=flow.float)
-        placement = flow.placement("cuda", {0: [0]})
+        placement = flow.placement("cuda", [0])
         sbp = (flow.sbp.broadcast,)
         y = x.to_global(placement=placement, sbp=sbp)
         y.check_meta_consistency()

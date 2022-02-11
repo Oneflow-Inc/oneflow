@@ -78,7 +78,7 @@ def _test_with_generator(test_case, device, shape):
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
     def test_global_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
+        placement = flow.placement("cpu", [0])
         sbp = (flow.sbp.broadcast,)
         x = flow.rand(16, 16, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
@@ -137,8 +137,8 @@ class TestRandConsistent(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_consistent_rand, _test_consistent_rand_graph]
         arg_dict["shape"] = [(2, 3, 4), (2, 5, 2)]
         arg_dict["placement"] = [
-            flow.placement("cpu", {0: [0, 1]}),
-            flow.placement("cuda", {0: [0, 1]}),
+            flow.placement("cpu", [0, 1]),
+            flow.placement("cuda", [0, 1]),
         ]
         arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
         for arg in GenArgList(arg_dict):

@@ -56,7 +56,7 @@ def empty_op(
         oneflow.Size([4, 5])
         >>> y.is_global
         False
-        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> placement = flow.placement("cpu", [0])
         >>> y = flow.empty(4, 5, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent empty tensor
         >>> y.is_global
         True

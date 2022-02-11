@@ -134,7 +134,7 @@ class TestLinearGraphSaveLoad(oneflow.unittest.TestCase):
 
 
 def _test_linear_graph_save_load_global(test_case, device):
-    P = flow.placement("cuda", {0: [0, 1]})
+    P = flow.placement("cuda", [0, 1])
     B = flow.sbp.broadcast
     S = flow.sbp.split(0)
 

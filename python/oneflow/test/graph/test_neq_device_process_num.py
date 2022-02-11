@@ -36,8 +36,8 @@ class TestGraphNeqDeviceProcessNum(flow.unittest.TestCase):
 
         BATCH_SIZE = 64
         BROADCAST = [flow.sbp.broadcast]
-        P0 = flow.placement("cpu", {0: [0, 1, 2, 3]})
-        P1 = flow.placement("cpu", {0: [4, 5, 6, 7]})
+        P0 = flow.placement("cpu", [0, 1, 2, 3])
+        P1 = flow.placement("cpu", [4, 5, 6, 7])
 
         class Stage0Module(flow.nn.Module):
             def __init__(self):

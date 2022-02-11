@@ -82,7 +82,7 @@ def _test_0rank(test_case, device, shape, low, high):
 @flow.unittest.skip_unless_1n1d()
 class TestRandint(flow.unittest.TestCase):
     def test_global_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
+        placement = flow.placement("cpu", [0])
         sbp = (flow.sbp.broadcast,)
         x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
@@ -96,7 +96,7 @@ class TestRandint(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]:
-            placement = flow.placement("cpu", {0: [0]})
+            placement = flow.placement("cpu", [0])
             sbp = (flow.sbp.broadcast,)
             x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)
@@ -181,8 +181,8 @@ class TestRandintConsistent(flow.unittest.TestCase):
         arg_dict["high"] = [1000 + np.random.randint(1, 10) for i in range(2)]
         arg_dict["shape"] = [(2, 3, 4), (2, 5, 2)]
         arg_dict["placement"] = [
-            flow.placement("cpu", {0: [0, 1]}),
-            flow.placement("cuda", {0: [0, 1]}),
+            flow.placement("cpu", [0, 1]),
+            flow.placement("cuda", [0, 1]),
         ]
         arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
         for arg in GenArgList(arg_dict):

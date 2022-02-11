@@ -26,8 +26,8 @@ import oneflow.unittest
 class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
     def test_global_asymmetric_graph_gpu(test_case):
         Broadcast = [flow.sbp.broadcast]
-        Placement_rank_0 = flow.placement("cuda", {0: [0]})
-        Placement_rank_1 = flow.placement("cuda", {0: [1]})
+        Placement_rank_0 = flow.placement("cuda", [0])
+        Placement_rank_1 = flow.placement("cuda", [1])
 
         class MyConsistentAsymmetricModule(flow.nn.Module):
             def __init__(self):
@@ -67,7 +67,7 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
         np_y = np.ones(3)
         local_x = flow.tensor(np_x, dtype=flow.float32)
         global_x = local_x.to_global(
-            placement=flow.placement("cuda", {0: [0, 1]}), sbp=Broadcast
+            placement=flow.placement("cuda",  [0, 1]), sbp=Broadcast
         )
         local_x = global_x.to_local().to("cpu")
         local_y = flow.tensor(np_y, dtype=flow.float32)
