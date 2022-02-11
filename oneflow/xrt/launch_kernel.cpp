@@ -118,7 +118,7 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
     executable = compilation_cache_->GetRecord(signature);
   }
 
-  return std::move(executable);
+  return executable;
 }
 
 template<DeviceType device_type>
