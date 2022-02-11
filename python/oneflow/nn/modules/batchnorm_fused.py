@@ -81,7 +81,6 @@ class _FusedBatchNorm(_FusedNormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        self.data_format = "NCHW"
         self.channel_axis = 1
 
     def forward(self, x, addend=None):
@@ -269,7 +268,6 @@ class FusedBatchNorm2d(_FusedBatchNorm):
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
         if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
-            self.data_format = "NHWC"
             self.channel_axis = 3
 
     def _check_input_dim(self, input):
