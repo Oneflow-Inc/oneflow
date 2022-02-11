@@ -305,8 +305,8 @@ class TestTensorIndexing(flow.unittest.TestCase):
         test_mask_setitem(test_case, numpy_x)
     
     def test_advanced_indexing_with_scalar_index(test_case):
-        index = oneflow.tensor([0, 2])
-        x = oneflow.randn( 5)
+        index = flow.tensor([0, 2])
+        x = flow.randn( 5)
         x[index[0]] = 1
         test_case.assertTrue(np.allclose(x[0].numpy(), 1))
 
