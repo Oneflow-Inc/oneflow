@@ -16,6 +16,7 @@ limitations under the License.
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <sstream>
 
 #include <Python.h>
 #include <pybind11/pybind11.h>
@@ -93,6 +94,38 @@ class Py11Placement {
 
     auto symbol = CreateParallelDesc(machine_device_ids, hierarchy_shape).GetOrThrow();
     return SymbolOf(symbol);
+  }
+
+  std::string ToString(const Symbol<ParallelDesc>& para_desc) {
+    std::ostringstream oss;
+
+    oss << "oneflow.placement(type = " << device_type_ << ", ";
+    oss << "ranks = " << device_type_;
+
+    auto hierarchy = para_desc->hierarchy();
+    auto rank_ids = GetSortedRankIds(para_desc);
+    if (hierarchy->NumAxes() == 1) {
+      oss << "[";
+      for (auto i = 0; i < rank_ids.size(); i++) {
+        oss << rank_ids[i];
+        if (i != rank_ids.size() - 1) oss << ", ";
+      }
+      oss << "]";
+    } else if (hierarchy->NumAxes() == 2) {
+      oss << "[";
+      for (auto i = 0; i < hierarchy->At(0); i++) {
+        oss << "[";
+        for (auto j = 0; j < hierarchy->At(1); j++) {
+          oss << rank_ids[i * hierarchy->At(1) + j];
+          if (j != hierarchy->At(1) - 1) oss << ",";
+        }
+        oss << "]";
+        if (i != hierarchy->At(0) - 1) oss << ", ";
+      }
+      oss << "]";
+    }
+    oss << ")";
+    return oss.str();
   }
 
  private:
@@ -323,8 +356,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                return device_ids;
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
-      .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
-      .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String)
+      .def("__str__",
+           [](Symbol<ParallelDesc> p) {
+             std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
+             auto t = std::make_unique<Py11Placement>(device_type);
+             return t->ToString(p);
+           })
+      .def("__repr__",
+           [](Symbol<ParallelDesc> p) {
+             std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
+             auto t = std::make_unique<Py11Placement>(device_type);
+             return t->ToString(p);
+           })
       .def(py::self == py::self)
       .def(py::hash(py::self));
   m.def("AllDevicePlacement", [](const std::string& device_type) {
