@@ -28,8 +28,8 @@ Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> paral
       std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
   parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
   std::shared_ptr<ParallelDesc> out_parallel_desc;
-  JUST(
-      LogicalRun([&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun(
+      [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
         out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
         return Maybe<void>::Ok();
       }));

@@ -23,7 +23,7 @@ class TestTensorSplitVec(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_tensor_split_vec(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(3, 6),
             dim1=random(3, 6),
@@ -34,12 +34,11 @@ class TestTensorSplitVec(flow.unittest.TestCase):
         z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
 
-
 class TestTensorSplitInt(flow.unittest.TestCase):
     @autotest(check_graph=False)
     def test_flow_tensor_split_int(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(3, 6),
             dim1=random(3, 6),
