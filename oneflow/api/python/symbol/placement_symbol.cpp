@@ -290,10 +290,6 @@ struct PlacementSymbolExportUtil {
                                                        const std::shared_ptr<Shape>& hierarchy) {
     return CreatePlacementSymbol(device_type, device_ids, hierarchy).GetOrThrow();
   }
-
-  static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
-    return *PlacementToString(placement).GetPtrOrThrow();
-  }
 };
 
 }  // namespace
