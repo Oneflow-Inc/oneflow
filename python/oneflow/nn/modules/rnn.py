@@ -204,11 +204,10 @@ class RNN(Module):
 
         if h_0 is None:
             h_t = flow.zeros(
-                (D * num_layers, batch_size, self.hidden_size),
-                dtype=input.dtype,
+                (D * num_layers, batch_size, self.hidden_size), dtype=input.dtype,
             )
-            if input.is_consistent:
-                h_t = h_t.to_consistent(input.placement, input.sbp)
+            if input.is_global:
+                h_t = h_t.to_global(input.placement, [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))])
             else:
                 h_t = h_t.to(input.device)
         else:
@@ -535,8 +534,8 @@ class GRU(Module):
                 dtype=input.dtype,
                 device=input.device,
             )
-            if input.is_consistent:
-                h_t = h_t.to_consistent(input.placement, input.sbp)
+            if input.is_global:
+                h_t = h_t.to_global(input.placement, [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))])
             else:
                 h_t = h_t.to(input.device)
         else:
@@ -924,8 +923,8 @@ class LSTM(nn.Module):
                 dtype=input.dtype,
                 device=input.device,
             )
-            if input.is_consistent:
-                h_t = h_t.to_consistent(input.placement, input.sbp)
+            if input.is_global:
+                h_t = h_t.to_global(input.placement, [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))])
             else:
                 h_t = h_t.to(input.device)
 
@@ -934,8 +933,8 @@ class LSTM(nn.Module):
                 dtype=input.dtype,
                 device=input.device,
             )
-            if input.is_consistent:
-                c_t = c_t.to_consistent(input.placement, input.sbp)
+            if input.is_global:
+                c_t = c_t.to_global(input.placement, [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))])
             else:
                 c_t = c_t.to(input.device)
             h_0 = (h_t, c_t)

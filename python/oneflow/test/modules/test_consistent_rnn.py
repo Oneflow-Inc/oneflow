@@ -22,13 +22,25 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import consistent
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import global_view
 from oneflow.test_utils.automated_test_util.generators import *
 from test_util import GenArgDict
 
 
-def test_rnn_impl(test_case, placement, sbp, input_size, hidden_size, num_layers, nonlinearity,
-                  bias, batch_first, dropout, bidirectional):
+def test_rnn_impl(
+    test_case,
+    placement,
+    module_sbp,
+    in_sbp,
+    input_size,
+    hidden_size,
+    num_layers,
+    nonlinearity,
+    bias,
+    batch_first,
+    dropout,
+    bidirectional,
+):
     rnn_torch = torch.nn.RNN(
         input_size=input_size,
         hidden_size=hidden_size,
@@ -61,35 +73,76 @@ def test_rnn_impl(test_case, placement, sbp, input_size, hidden_size, num_layers
     for i, w in enumerate(rnn_flow.parameters()):
         w_torch = weights_torch[i]
         w.copy_(flow.tensor(w_torch))
-    rnn_flow = rnn_flow.to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast).to_consistent(placement=placement, sbp=sbp)
+    rnn_flow = rnn_flow.to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    ).to_global(placement=placement, sbp=[module_sbp for _ in range(len(placement.hierarchy))])
 
-    x = np.arange(32*12*input_size).reshape(32, 12, input_size).astype(np.float32)
+    x = np.random.rand(32, 16, input_size).astype(np.float32)
     x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True)
-    x_flow = flow.tensor(x, dtype=flow.float32, requires_grad=True).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast).to_consistent(placement=placement, sbp=sbp)
+    x_flow = (
+        flow.tensor(x, dtype=flow.float32, requires_grad=True)
+        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(placement=placement, sbp=in_sbp)
+    )
 
     out_torch, hid_torch = rnn_torch(x_torch)
     out_flow, hid_flow = rnn_flow(x_flow)
 
-    # TODO: compare result
+    # check forward
+    local_output = out_flow.to_global(placement=placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]).to_local()
+    if flow.env.get_rank() == 0:
+        test_case.assertTrue(
+            np.allclose(
+                out_torch.cpu().detach().numpy(),
+                local_output.numpy(),
+                rtol=1e-05,
+                atol=1e-05,
+            )
+        )
+
+    # check backward
+    out_torch.sum().backward()
+    out_flow.sum().backward()
+    local_x_grad = x_flow.to_global(placement=placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]).to_local()
+    if flow.env.get_rank() == 0:
+        test_case.assertTrue(
+            np.allclose(
+                x_torch.cpu().detach().numpy(),
+                local_x_grad.numpy(),
+                rtol=1e-05,
+                atol=1e-05,
+            )
+        )
 
 
 class TestRNNConsistent(oneflow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_rnn(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_size"] = [80, ]
-        arg_dict["hidden_size"] = [80, ]
+        arg_dict["input_size"] = [
+            80,
+        ]
+        arg_dict["hidden_size"] = [
+            80,
+        ]
         arg_dict["num_layers"] = [1, 3]
         arg_dict["nonlinearity"] = ["tanh", "relu"]
         arg_dict["bias"] = [True, False]
         arg_dict["batch_first"] = [True, False]
-        arg_dict["dropout"] = [0, ]
+        arg_dict["dropout"] = [
+            0,
+        ]
         arg_dict["bidirectional"] = [True, False]
 
+        # TODO: rnn module only support broadcast now
+        module_sbp = flow.sbp.broadcast
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=3):
-                    test_rnn_impl(test_case, placement, sbp, **args)
+                for in_sbp in all_sbp(placement, max_dim=3):
+                    # TODO: https://github.com/Oneflow-Inc/OneTeam/issues/1060
+                    if flow.sbp.partial_sum in in_sbp:
+                        continue
+                    test_rnn_impl(test_case, placement, module_sbp, in_sbp, **args)
 
 
 if __name__ == "__main__":
