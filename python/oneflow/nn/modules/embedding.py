@@ -54,7 +54,6 @@ def _check_cache(cache):
 class OneEmbeddingLookup(Module):
     def __init__(self, embedding_options):
         super().__init__()
-        # self.dtype = embedding_options["dtype"]
         assert embedding_options.__contains__("name")
         self.emb_name = embedding_options["name"]
         assert embedding_options.__contains__("embedding_dim")
