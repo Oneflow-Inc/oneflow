@@ -462,7 +462,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
-  std::shared_ptr<const AutogradMeta> autograd_meta() const override { return impl_->autograd_meta(); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return impl_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
@@ -574,7 +576,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->set_retain_grad(retain_grad);
   }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
-  std::shared_ptr<const AutogradMeta> autograd_meta() const override { return impl_->autograd_meta(); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return impl_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);

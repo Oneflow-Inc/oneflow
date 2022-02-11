@@ -69,7 +69,9 @@ class TestDDP(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 for i in range(10):
-                    self.register_parameter(f"w{i}", flow.nn.Parameter(flow.Tensor([i % 2 + 1, i % 2 + 1])))
+                    self.register_parameter(
+                        f"w{i}", flow.nn.Parameter(flow.Tensor([i % 2 + 1, i % 2 + 1]))
+                    )
 
             def forward(self, x):
                 for i in range(10):
@@ -93,10 +95,11 @@ class TestDDP(flow.unittest.TestCase):
 
         for i in range(10):
             test_case.assertTrue(
-                np_allclose_with_shape(getattr(m, f'w{i}').grad.numpy(), 
-                    np.array([48, 48]) if i % 2 == 0 else np.array([24, 24]))
+                np_allclose_with_shape(
+                    getattr(m, f"w{i}").grad.numpy(),
+                    np.array([48, 48]) if i % 2 == 0 else np.array([24, 24]),
+                )
             )
-
 
     def test_ddp_multiple_buckets(test_case):
         for dev_type in test_device:
