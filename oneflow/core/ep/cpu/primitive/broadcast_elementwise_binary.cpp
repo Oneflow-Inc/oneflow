@@ -135,19 +135,19 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
 
 #ifdef WITH_ONEDNN
 
-inline void OneDnnBroadcastDims(dnnl::memory::dims& src0, size_t num_src0_dims,
-                                const int64_t* src0_dims, dnnl::memory::dims& src1,
+inline void OneDnnBroadcastDims(dnnl::memory::dims* src0, size_t num_src0_dims,
+                                const int64_t* src0_dims, dnnl::memory::dims* src1,
                                 size_t num_src1_dims, const int64_t* src1_dims,
                                 dnnl::memory::dims& dst) {
   const int64_t num_dims = dst.size();
   const int64_t num_src0_padding_dims = num_dims - num_src0_dims;
   const int64_t num_src1_padding_dims = num_dims - num_src1_dims;
   for (int64_t i = 0; i < num_dims; i++) {
-    size_t src0_dim = i < num_src0_padding_dims ? 1 : src0_dims[i - num_src0_padding_dims];
-    size_t src1_dim = i < num_src1_padding_dims ? 1 : src1_dims[i - num_src1_padding_dims];
+    int64_t src0_dim = i < num_src0_padding_dims ? 1 : src0_dims[i - num_src0_padding_dims];
+    int64_t src1_dim = i < num_src1_padding_dims ? 1 : src1_dims[i - num_src1_padding_dims];
     CHECK((src0_dim == src1_dim || src0_dim == 1 || src1_dim == 1));
-    src0[i] = src0_dim;
-    src1[i] = src1_dim;
+    (*src0)[i] = src0_dim;
+    (*src1)[i] = src1_dim;
     dst[i] = std::max(src0_dim, src1_dim);
   }
 }
@@ -176,7 +176,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
     CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = dynamic_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
     CpuNumThreadsGuard guard(num_threads);
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
@@ -186,23 +186,23 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     dnnl::memory::dims src_1_dims(num_dims);
     dnnl::memory::dims dst_dims(num_dims);
 
-    const void* mm_src0 = nullptr;
-    const void* mm_src1 = nullptr;
+    const void* onednn_src0 = nullptr;
+    const void* onednn_src1 = nullptr;
 
     // OneDNN inplace operations only support src_0
     if (src1 == dst) {
-      mm_src0 = src1;
-      mm_src1 = src0;
-      OneDnnBroadcastDims(src_0_dims, num_src1_dims, src1_dims, src_1_dims, num_src0_dims,
+      onednn_src0 = src1;
+      onednn_src1 = src0;
+      OneDnnBroadcastDims(&src_0_dims, num_src1_dims, src1_dims, &src_1_dims, num_src0_dims,
                           src0_dims, dst_dims);
     } else {
-      mm_src0 = src0;
-      mm_src1 = src1;
-      OneDnnBroadcastDims(src_0_dims, num_src0_dims, src0_dims, src_1_dims, num_src1_dims,
+      onednn_src0 = src0;
+      onednn_src1 = src1;
+      OneDnnBroadcastDims(&src_0_dims, num_src0_dims, src0_dims, &src_1_dims, num_src1_dims,
                           src1_dims, dst_dims);
     }
 
-    CheckInplace(num_dims, src_0_dims.data(), mm_src0, src_1_dims.data(), mm_src1, dst_dims.data(),
+    CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1, dst_dims.data(),
                  dst);
 
     auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn,
@@ -212,8 +212,8 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     auto dst_md = dnnl::memory::desc(dst_dims, dst_onednn,
                                      static_cast<dnnl::memory::format_tag>(num_dims + 1));
 
-    auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)mm_src0);
-    auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)mm_src1);
+    auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
+    auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
 
     auto binary_d = dnnl::binary::desc(algorithm, src_0_md, src_1_md, dst_md);
