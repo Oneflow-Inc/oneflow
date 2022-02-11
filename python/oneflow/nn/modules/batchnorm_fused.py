@@ -272,7 +272,6 @@ class FusedBatchNorm2d(_FusedBatchNorm):
             self.data_format = "NHWC"
             self.channel_axis = 3
 
-
     def _check_input_dim(self, input):
         if input.ndim != 4:
             raise ValueError("expected 4D input (got {}D input)".format(input.ndim))
