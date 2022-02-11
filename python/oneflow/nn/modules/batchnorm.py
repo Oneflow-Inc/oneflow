@@ -100,7 +100,7 @@ class _BatchNorm(_NormBase):
         affine=True,
         track_running_stats=True,
     ):
-        super().__init__(num_features, eps, momentum, affine, track_running_stats) 
+        super().__init__(num_features, eps, momentum, affine, track_running_stats)
         self.channel_axis = 1
 
     def forward(self, x):
@@ -269,6 +269,7 @@ class BatchNorm2d(_BatchNorm):
         >>> y = m(x)
 
     """
+
     def __init__(
         self,
         num_features,
@@ -278,7 +279,7 @@ class BatchNorm2d(_BatchNorm):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":            
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
             self.channel_axis = 3
 
     def _check_input_dim(self, input):

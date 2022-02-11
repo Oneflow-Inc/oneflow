@@ -258,6 +258,7 @@ class FusedBatchNorm2d(_FusedBatchNorm):
         >>> y = m(x, addend=None)
 
     """
+
     def __init__(
         self,
         num_features,
