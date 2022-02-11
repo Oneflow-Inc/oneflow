@@ -39,7 +39,7 @@ T GetValue(Scalar value) {
 
 template<>
 float16 GetValue<float16>(Scalar value) {
-  return static_cast<float16>(GetValue<double>(value));
+  return static_cast<float16>(GetValue<float>(value));
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst,
