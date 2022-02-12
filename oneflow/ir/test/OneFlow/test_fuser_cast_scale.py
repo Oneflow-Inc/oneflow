@@ -37,10 +37,10 @@ class CastModule(flow.nn.Module):
         return x.to(dtype=flow.float32) * scale
 
 
-def do_relu_graph(test_case, data, with_cude):
+def do_relu_graph(test_case, data, with_cuda):
     x = flow.tensor(data, dtype=flow.int64)
     scale = flow.tensor([7.7], dtype=flow.float32)
-    if with_cude:
+    if with_cuda:
         x = x.cuda()
         scale = scale.cuda()
     module_to_run = CastModule()
