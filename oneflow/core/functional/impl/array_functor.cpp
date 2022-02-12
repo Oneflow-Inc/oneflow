@@ -1851,7 +1851,11 @@ class TensorSetItemFunctor {
                              << target_shape.ToString()
                              << ", value sizes: " << value_shape->ToString();
     std::shared_ptr<one::Tensor> value_tensor(value);
-
+    // TODO: replace reshape by unsqueeze with view mechanism.
+    // after here, each scalar tensor will be one with one dimension.
+    for (auto& tensor : tensor_indices) {
+      if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
+    }
     if (tensor_indices.size() == ndims) {  // advance indexing
       std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
       if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
