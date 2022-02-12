@@ -213,7 +213,7 @@ class Py11Placement {
       cudaGetDeviceCount(&gpu_device_num);
 #endif
       CHECK_NE(gpu_device_num, 0)
-          << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
+          << "Can\'t construct placement with \"cuda\" type because there is no CUDA device!";
       if (device_num > gpu_device_num) device_num = gpu_device_num;
     }
     return device_num;
