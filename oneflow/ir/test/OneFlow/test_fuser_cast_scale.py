@@ -37,10 +37,12 @@ class CastModule(flow.nn.Module):
         return x.to(dtype=flow.float32) * scale
 
 
-def do_relu_graph(test_case, data):
+def do_relu_graph(test_case, data, with_cude):
     x = flow.tensor(data, dtype=flow.int64)
     scale = flow.tensor([7.7], dtype=flow.float32)
-
+    if with_cude:
+        x = x.cuda()
+        scale = scale.cuda()
     module_to_run = CastModule()
     y_eager = module_to_run(x, scale)
 
@@ -60,10 +62,11 @@ def do_relu_graph(test_case, data):
 @flow.unittest.skip_unless_1n1d()
 class TestFuseCastScale(oneflow.unittest.TestCase):
     def test_relu_graph(test_case):
-        do_relu_graph(test_case, np.array([2.0, 1.0, 0.0, -1.0, -2.0]))
+        do_relu_graph(test_case, np.array([2.0, 1.0, 0.0, -1.0, -2.0]), True)
         do_relu_graph(
             test_case,
             np.array([[2.0, 1.0, 0.0, -1.0, -2.0], [2.0, 1.0, 0.0, -1.0, -2.0]]),
+            False,
         )
 
 
