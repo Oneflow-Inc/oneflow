@@ -19,13 +19,13 @@ limitations under the License.
 import unittest
 import numpy as np
 
-import oneflow as flow
-import oneflow.unittest
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+
+import oneflow as flow
+import oneflow.unittest
 
 
 class CastModule(flow.nn.Module):
