@@ -321,7 +321,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());            // -reconcile-unrealized-casts
+  pm.addPass(createReconcileUnrealizedCastsPass());            // reconcile-unrealized-casts
   return pm.run(module);
 }
 
