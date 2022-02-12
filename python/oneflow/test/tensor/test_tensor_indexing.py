@@ -304,6 +304,12 @@ class TestTensorIndexing(flow.unittest.TestCase):
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_mask_setitem(test_case, numpy_x)
 
+    def test_advanced_indexing_with_scalar_index(test_case):
+        index = flow.tensor([0, 2])
+        x = flow.randn(5)
+        x[index[0]] = 1
+        test_case.assertTrue(np.allclose(x[0].numpy(), 1))
+
 
 if __name__ == "__main__":
     unittest.main()
