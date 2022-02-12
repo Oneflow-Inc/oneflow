@@ -260,14 +260,20 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
 
 ::llvm::SmallVector<::mlir::Value, 4> CreateGPUMemcpyOpFromMemrefCopy(
     ::mlir::PatternRewriter& rewriter, ::mlir::memref::CopyOp copyOp) {
-  ::mlir::ValueRange asyncDependencies{};
-  return rewriter
-      .create<gpu::MemcpyOp>(copyOp->getLoc(),
-                             /*optional asyncToken*/ llvm::None,
-                             /*asyncDependencies*/ asyncDependencies,
-                             /*dst*/ copyOp.target(),
-                             /*src*/ copyOp.source())
-      ->getResults();
+  // NOTE: to get lowered to LLVM, it has to be async
+  ::mlir::ValueRange empty_async_dependencies{};
+  auto token = rewriter.getType<gpu::AsyncTokenType>();
+  auto t0 =
+      rewriter.create<gpu::WaitOp>(copyOp->getLoc(), token, empty_async_dependencies).asyncToken();
+  auto t2 = rewriter
+                .create<gpu::MemcpyOp>(copyOp->getLoc(),
+                                       /*optional asyncToken*/ token,
+                                       /*asyncDependencies*/ llvm::SmallVector<Value, 1>({t0}),
+                                       /*dst*/ copyOp.target(),
+                                       /*src*/ copyOp.source())
+                .getResults();
+  rewriter.create<gpu::WaitOp>(copyOp->getLoc(), llvm::None, t2);
+  return {};
 }
 
 bool IsScalarTensor(Value value) {
