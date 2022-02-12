@@ -146,7 +146,7 @@ class Py11Placement {
 
   Maybe<ParallelDesc> CreateParallelDesc(
       const std::vector<std::string>& formated_machine_device_ids,
-      std::shared_ptr<Shape> hierarchy_shape) {
+      const std::shared_ptr<Shape>& hierarchy_shape) {
     auto parallel_conf =
         JUST(MakeParallelConf(device_tag_, formated_machine_device_ids, hierarchy_shape));
     std::shared_ptr<ParallelDesc> parallel_desc;
