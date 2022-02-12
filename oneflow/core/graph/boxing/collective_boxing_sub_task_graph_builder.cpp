@@ -136,7 +136,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
     if (out_parallel_desc.Equals(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && out_parallel_desc.device_type() == DeviceType::kCUDA
-        && out_parallel_desc.parallel_num() > 1
+        && out_parallel_desc.parallel_num() > 1 && logical_blob_desc.shape().NumAxes() > 0
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
         && out_sbp_parallel.split_parallel().axis() == 0) {
@@ -171,14 +171,15 @@ class NcclCollectiveBoxingP2SNoncontinuousSubTskGphBuilder final : public SubTsk
       const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
+    const Shape& shape = logical_blob_desc.shape();
+    const int64_t out_split_axis = out_sbp_parallel.split_parallel().axis();
     if (out_parallel_desc.Equals(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
-        && logical_blob_desc.shape().At(out_sbp_parallel.split_parallel().axis())
-                   % out_parallel_desc.parallel_num()
-               == 0
+        && shape.NumAxes() > out_split_axis
+        && shape.At(out_split_axis) % out_parallel_desc.parallel_num() == 0
         && out_sbp_parallel.split_parallel().axis() != 0) {
       const std::string op_name =
           "System-Boxing-NcclCollectiveBoxingP2SNoncontinuous-" + NewUniqueId();
@@ -233,7 +234,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && SubTskGphBuilderUtil::IsDeviceTypeCPUOrCUDA(in_parallel_desc)
         && out_parallel_desc.device_type() == DeviceType::kCUDA
-        && out_parallel_desc.parallel_num() > 1
+        && out_parallel_desc.parallel_num() > 1 && logical_blob_desc.shape().NumAxes() > 0
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
         && in_sbp_parallel.split_parallel().axis() == 0) {
@@ -268,16 +269,16 @@ class NcclCollectiveBoxingS2BNoncontinuousSubTskGphBuilder final : public SubTsk
       const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
+    const Shape& shape = logical_blob_desc.shape();
+    const int64_t in_split_axis = in_sbp_parallel.split_parallel().axis();
     if (out_parallel_desc.EqualsIgnoringDeviceType(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && SubTskGphBuilderUtil::IsDeviceTypeCPUOrCUDA(in_parallel_desc)
         && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
         && SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
-        && logical_blob_desc.shape().At(in_sbp_parallel.split_parallel().axis())
-                   % out_parallel_desc.parallel_num()
-               == 0
-        && in_sbp_parallel.split_parallel().axis() != 0) {
+        && shape.NumAxes() > in_split_axis && in_split_axis > 0
+        && shape.At(in_split_axis) % out_parallel_desc.parallel_num() == 0) {
       const std::string op_name =
           "System-Boxing-NcclCollectiveBoxingS2BNoncontinuous-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
@@ -376,6 +377,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         && logical_blob_desc.shape().elem_cnt() >= 1024
         && out_sbp_parallel.has_broadcast_parallel()
         // a potential optimization: flat the blob and then relax this requirement
+        && logical_blob_desc.shape().NumAxes() > 0
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0) {
       const TensorSliceView in_slice = GetBroadcastTensorSliceView(logical_blob_desc);
       cfg::SbpParallel split_sbp_parallel;
@@ -487,17 +489,17 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
       const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const override {
+    const Shape& shape = logical_blob_desc.shape();
+    const int64_t in_split_axis = in_sbp_parallel.split_parallel().axis();
+    const int64_t out_split_axis = out_sbp_parallel.split_parallel().axis();
     if (out_parallel_desc.EqualsIgnoringDeviceType(in_parallel_desc)
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && in_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.device_type() == DeviceType::kCUDA
         && out_parallel_desc.parallel_num() > 1
-        && logical_blob_desc.shape().At(in_sbp_parallel.split_parallel().axis())
-                   % in_parallel_desc.parallel_num()
-               == 0
-        && logical_blob_desc.shape().At(out_sbp_parallel.split_parallel().axis())
-                   % out_parallel_desc.parallel_num()
-               == 0
+        && shape.NumAxes() > std::max(in_split_axis, out_split_axis)
+        && shape.At(in_split_axis) % in_parallel_desc.parallel_num() == 0
+        && shape.At(out_split_axis) % out_parallel_desc.parallel_num() == 0
         && in_sbp_parallel.split_parallel().axis() != out_sbp_parallel.split_parallel().axis()
         && SubTskGphBuilderUtil::IsBoxingS2S(in_sbp_parallel, out_sbp_parallel)) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
