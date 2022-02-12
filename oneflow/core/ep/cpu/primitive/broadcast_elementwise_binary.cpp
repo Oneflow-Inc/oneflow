@@ -295,7 +295,7 @@ std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary(
 #define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(         \
     binary_op_pair, src_data_type_pair, dst_data_type_pair)                                 \
   {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(src_data_type_pair), \
-                   OF_PP_PAIR_SECOND(src_data_type_pair)),                                  \
+                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                                  \
    NewOneDnnBroadcastElementwiseBinary<                                                     \
        OF_PP_PAIR_THIRD(src_data_type_pair), OF_PP_PAIR_SECOND(binary_op_pair),             \
        OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>},
