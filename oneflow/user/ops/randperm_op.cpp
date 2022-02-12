@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -32,7 +33,22 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RandpermOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  const Shape& shape = ctx->Attr<Shape>("shape");
+  DimVector dim_vec{shape.dim_vec()};
+
+  const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  if (out_sbp_para.has_split_parallel()) {
+    const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
+    if (parallel_num > 1) {
+      const int64_t& split_axis = out_sbp_para.split_parallel().axis();
+      CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
+      BalancedSplitter bs(shape.At(split_axis), parallel_num);
+      dim_vec[split_axis] = bs.At(ctx->parallel_ctx().parallel_id()).size();
+    }
+  }
+
+  *ctx->OutputShape("out", 0) = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RandpermOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = DataType::kInt32;
