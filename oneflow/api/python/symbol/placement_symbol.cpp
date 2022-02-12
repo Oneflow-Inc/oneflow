@@ -225,12 +225,6 @@ class Py11Placement {
   int64_t node_size_;
   int64_t device_num_;
 };
-
-Maybe<Shape> MakeShape(const py::tuple& py_shape) {
-  DimVector shape_dims{};
-  for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
-  return std::make_shared<Shape>(shape_dims);
-}
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
