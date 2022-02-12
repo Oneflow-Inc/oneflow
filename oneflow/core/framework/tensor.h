@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
@@ -100,6 +99,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
+  virtual std::shared_ptr<const AutogradMeta> autograd_meta() const = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
   virtual bool has_autograd_meta() const = 0;
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
@@ -216,6 +216,9 @@ class StaticZerosTensor final : public Tensor {
   }
   Maybe<Tensor> mut_acc_grad() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_is_leaf(bool is_leaf) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
@@ -349,6 +352,9 @@ class Parameter final : public TensorIf<Parameter> {
   }
   Maybe<Tensor> mut_acc_grad() override { return tensor_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { return tensor_->set_is_leaf(is_leaf); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return tensor_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     return tensor_->mut_autograd_meta();
   }
@@ -456,6 +462,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return impl_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
@@ -567,6 +576,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->set_retain_grad(retain_grad);
   }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return impl_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
