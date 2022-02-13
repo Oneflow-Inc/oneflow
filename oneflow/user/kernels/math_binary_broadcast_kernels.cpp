@@ -52,10 +52,25 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
 
     const int64_t x_elem_cnt = x->shape().elem_cnt();
     const int64_t y_elem_cnt = y->shape().elem_cnt();
+    size_t num_src0_dims = x->shape().NumAxes();
+    size_t num_src1_dims = y->shape().NumAxes();
+
+    int64_t zero_dim = 1;
+    int64_t* src0_dims = const_cast<int64_t*>(x->shape().ptr());
+    int64_t* src1_dims = const_cast<int64_t*>(y->shape().ptr());
 
     if (x_elem_cnt != 0 && y_elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), x->shape().NumAxes(), x->shape().ptr(), x->dptr(),
-                        y->shape().NumAxes(), y->shape().ptr(), y->dptr(), z->mut_dptr());
+      if (num_src0_dims == 0) {
+        num_src0_dims = 1;
+        src0_dims = &zero_dim;
+      }
+      if (num_src1_dims == 0) {
+        num_src1_dims = 1;
+        src1_dims = &zero_dim;
+      }
+
+      primitive->Launch(ctx->stream(), num_src0_dims, src0_dims, x->dptr(), num_src1_dims,
+                        src1_dims, y->dptr(), z->mut_dptr());
     } else {
       // For 0-d Tensor
       return;
