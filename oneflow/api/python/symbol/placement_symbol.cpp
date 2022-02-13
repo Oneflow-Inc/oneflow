@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <pybind11/numpy.h>
 #include <pybind11/operators.h>
 
 #include "oneflow/extension/python/numpy.h"
@@ -34,121 +35,34 @@ namespace oneflow {
 
 namespace {
 
-class Py11Placement {
- public:
-  Py11Placement() = delete;
-  ~Py11Placement() = default;
-  explicit Py11Placement(const std::string& device_type)
-      : device_type_(device_type), device_tag_(device_type) {
-    CHECK(device_type_ == "cpu" || device_type_ == "cuda") << "Only support cpu or cuda device!";
-    if (device_type_ == "cuda") device_tag_ = "gpu";
-    node_size_ = GlobalProcessCtx::NodeSize();
-    device_num_ = GetDeviceNum(device_type);
-  }
+int64_t GetGpuDeviceNum() {
+#ifndef WITH_CUDA
+  return 0;
+#else
+  int device_count = 0;
+  cudaGetDeviceCount(&device_count);
+  return device_count;
+#endif
+}
 
-  Symbol<ParallelDesc> ApiCreateParallelDescSymbol(const py::object& ranks) {
-    return CreateParallelDescSymbol(ranks).GetOrThrow();
-  }
-
-  py::list GetRankList(const Symbol<ParallelDesc>& para_desc) const {
-    py::list py11_rank_list;
-    auto hierarchy = para_desc->hierarchy();
-    auto rank_ids = GetSortedRankIds(para_desc);
-    if (hierarchy->NumAxes() == 1) {
-      for (auto id : rank_ids) { py11_rank_list.append(id); }
-    } else if (hierarchy->NumAxes() == 2) {
-      for (auto i = 0; i < hierarchy->At(0); i++) {
-        py::list tmp;
-        for (auto j = 0; j < hierarchy->At(1); j++) {
-          tmp.append(rank_ids[i * hierarchy->At(1) + j]);
-        }
-        py11_rank_list.append(tmp);
-      }
+struct PlacementSymbolExportUtil {
+  static Maybe<std::string> GetDeviceTag(const std::string& type) {
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
+    const auto& it = type2device_tag.find(type);
+    if (it == type2device_tag.end()) {
+      return Error::RuntimeError() << "placement type should only be cpu or cuda, but got " << type;
     }
-    return py11_rank_list;
+    return it->second;
   }
 
-  Symbol<ParallelDesc> GetAllDevicePlacement() {
-    CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
-    auto hierarchy_shape = std::make_shared<Shape>();
-    std::vector<std::string> machine_device_ids;
-    for (auto node_id = 0; node_id < node_size_; node_id++) {
-      std::string device_name = std::to_string(node_id) + ":0-" + std::to_string(device_num_ - 1);
-      machine_device_ids.emplace_back(device_name);
-    }
-
-    auto symbol = CreateParallelDesc(machine_device_ids, hierarchy_shape).GetOrThrow();
-    return SymbolOf(symbol);
-  }
-
-  std::string ToString(const Symbol<ParallelDesc>& para_desc) {
-    std::ostringstream oss;
-
-    oss << "oneflow.placement(type=\"" << device_type_ << "\", ";
-    oss << "ranks=";
-
-    auto hierarchy = para_desc->hierarchy();
-    auto rank_ids = GetSortedRankIds(para_desc);
-    if (hierarchy->NumAxes() == 1) {
-      oss << "[";
-      for (auto i = 0; i < rank_ids.size(); i++) {
-        oss << rank_ids[i];
-        if (i != rank_ids.size() - 1) oss << ", ";
-      }
-      oss << "]";
-    } else if (hierarchy->NumAxes() == 2) {
-      oss << "[";
-      for (auto i = 0; i < hierarchy->At(0); i++) {
-        oss << "[";
-        for (auto j = 0; j < hierarchy->At(1); j++) {
-          oss << rank_ids[i * hierarchy->At(1) + j];
-          if (j != hierarchy->At(1) - 1) oss << ",";
-        }
-        oss << "]";
-        if (i != hierarchy->At(0) - 1) oss << ", ";
-      }
-      oss << "]";
-    }
-    oss << ")";
-    return oss.str();
-  }
-
- private:
-  // get all rank ids through sorted_machine_ids interface in ParallelDesc,
-  // in the end sort all the rank ids to 0,1,2,3.... and return
-  std::vector<int64_t> GetSortedRankIds(const Symbol<ParallelDesc>& para_desc) const {
-    std::vector<int64_t> rank_ids;
-    for (auto process_id : para_desc->sorted_machine_ids()) {
-      int64_t node_id = GlobalProcessCtx::NodeId(process_id);
-      for (auto device_id : para_desc->sorted_dev_phy_ids(process_id)) {
-        rank_ids.push_back(node_id * device_num_ + device_id);
-      }
-    }
-    std::sort(rank_ids.begin(), rank_ids.end());
-    return rank_ids;
-  }
-
-  // create Symbol<ParallelDesc> object through given device_type and ranks parameters
-  Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const py::object& ranks) {
-    auto* obj = reinterpret_cast<PyArrayObject*>(PyArray_FromAny(
-        ranks.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr));
-    if (!obj) { return Error::RuntimeError() << "ranks parameter error!"; }
-
-    auto hierarchy_shape = JUST(GetHierarchyShape(obj));
-    auto rank_num = hierarchy_shape->elem_cnt();
-    auto* rank_ids = static_cast<int64_t*>(PyArray_DATA(obj));
-    JUST(CheckNoRepeat(rank_ids, rank_num));
-    auto formated_machine_device_ids = JUST(GetFormatDevInfo(rank_ids, rank_num));
-
-    auto parallel_desc = JUST(CreateParallelDesc(*formated_machine_device_ids, hierarchy_shape));
-    return SymbolOf(*parallel_desc);
-  }
-
-  Maybe<ParallelDesc> CreateParallelDesc(
-      const std::vector<std::string>& formated_machine_device_ids,
+  static Maybe<ParallelDesc> CreateParallelDesc(
+      const std::string& type, const std::vector<std::string>& formated_machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy_shape) {
+    CHECK_OR_RETURN(type == "cpu" || type == "cuda")
+        << "placement type must be \"cpu\" or \"cuda\".";
+    const auto& device_tag = JUST(GetDeviceTag(type));
     auto parallel_conf =
-        JUST(MakeParallelConf(device_tag_, formated_machine_device_ids, hierarchy_shape));
+        JUST(MakeParallelConf(*device_tag, formated_machine_device_ids, hierarchy_shape));
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
@@ -158,111 +72,111 @@ class Py11Placement {
     return parallel_desc;
   }
 
-  // parse hierarchy shape out from PyArrayObject
-  Maybe<Shape> GetHierarchyShape(PyArrayObject* py_arr) {
-    CHECK_OR_RETURN(py_arr != nullptr && PyArray_NDIM(py_arr) <= 2)
-        << "ranks parameter error! hierarchy dimension is " << PyArray_NDIM(py_arr);
-
-    auto* dims_ptr = PyArray_SHAPE(py_arr);
-    return std::make_shared<Shape>(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(py_arr)));
+  static Maybe<Shape> GetRanksShape(PyArrayObject* ranks) {
+    auto* shape = PyArray_SHAPE(ranks);
+    return std::make_shared<Shape>(DimVector(shape, shape + PyArray_NDIM(ranks)));
   }
 
-  // check whether given rank_ids have repeated rank_id value
-  Maybe<bool> CheckNoRepeat(const int64_t* rank_ids, int64_t rank_num) {
-    std::unordered_set<int64_t> tmp;
-    for (auto i = 0; i < rank_num; i++) {
-      auto rank_id = rank_ids[i];
-      CHECK_OR_RETURN(tmp.count(rank_id) == 0)
-          << "ranks parameter error! giving multi rank id " << rank_id;
-      tmp.insert(rank_id);
-    }
-    return true;
-  }
+  // Parse and format ranks to string "machine_id:local_rank"
+  static Maybe<std::vector<std::string>> ParseAndFormatRanks(PyArrayObject* ranks) {
+    size_t size = PyArray_SIZE(ranks);
+    CHECK_EQ_OR_RETURN(PyArray_TYPE(ranks), NPY_INT64)
+        << "placement ranks shoule be array of int64.";
+    int64_t* rank_data = static_cast<int64_t*>(PyArray_DATA(ranks));
 
-  // transform integral rank_ids to following string format:
-  // 0:0
-  // 0:1
-  // 1:0
-  // 1:1
-  // ...
-  Maybe<std::vector<std::string>> GetFormatDevInfo(const int64_t* rank_ids, int64_t rank_num) {
     std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
-    for (int i = 0; i < rank_num; ++i) {
-      auto rank_id = rank_ids[i];
-      auto machine_id = rank_id / device_num_;
-      CHECK_OR_RETURN(machine_id < node_size_)
-          << "Error: node size " << node_size_ << ", device number " << device_num_ << ", rank id "
-          << rank_id << ", machine id " << machine_id;
-      auto device_id = rank_id % device_num_;
+    for (int i = 0; i < size; ++i) {
+      int64_t rank = rank_data[i];
+      if (rank >= GlobalProcessCtx::WorldSize()) {
+        return Error::RuntimeError() << "rank " << rank << " is invalid since the world size is "
+                                     << GlobalProcessCtx::WorldSize();
+      }
+      int64_t machine_id = GlobalProcessCtx::NodeId(rank);
+      int64_t device_id = GlobalProcessCtx::LocalRank(rank);
       machine_device_id_vec.emplace_back(machine_id, device_id);
     }
 
-    std::vector<std::string> formated_machine_device_ids;
+    auto formated_machine_device_ids = std::make_shared<std::vector<std::string>>();
     for (const auto& pair : machine_device_id_vec) {
       auto device_name = std::to_string(pair.first) + ":" + std::to_string(pair.second);
-      formated_machine_device_ids.emplace_back(device_name);
+      formated_machine_device_ids->emplace_back(device_name);
     }
     return formated_machine_device_ids;
   }
 
-  int64_t GetDeviceNum(const std::string& device) const {
-    auto device_num = GlobalProcessCtx::NumOfProcessPerNode();
-    if (device == "gpu" || device == "cuda") {
-      int gpu_device_num = 0;
-#ifdef WITH_CUDA
-      cudaGetDeviceCount(&gpu_device_num);
-#endif
-      CHECK_NE(gpu_device_num, 0)
-          << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
-      if (device_num > gpu_device_num) device_num = gpu_device_num;
-    }
-    return device_num;
+  // create Symbol<ParallelDesc> object through given device_type and ranks parameters
+  static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const std::string& type,
+                                                              const py::object& ranks) {
+    auto* obj = reinterpret_cast<PyArrayObject*>(PyArray_FromAny(
+        ranks.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr));
+    if (!obj) { return Error::RuntimeError() << "placement ranks must be int64 array."; }
+
+    const auto& shape = JUST(GetRanksShape(obj));
+    const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(obj));
+    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, shape)));
   }
 
- private:
-  std::string device_type_;
-  std::string device_tag_;
-  int64_t node_size_;
-  int64_t device_num_;
+  static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
+    static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
+    CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
+    const auto& device_tag = JUST(GetDeviceTag(type));
+    auto it = device_tag2placement.find(*device_tag);
+    if (it == device_tag2placement.end()) {
+      int64_t node_size = GlobalProcessCtx::NodeSize();
+      int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+      if (*device_tag == "gpu") {
+        const int64_t gpu_device_num = GetGpuDeviceNum();
+        CHECK_NE_OR_RETURN(gpu_device_num, 0)
+            << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
+        device_num = std::min(device_num, gpu_device_num);
+      }
+      std::vector<std::string> machine_device_ids;
+      for (int64_t node_id = 0; node_id < node_size; ++node_id) {
+        std::string device_name = std::to_string(node_id) + ":0-" + std::to_string(device_num - 1);
+        machine_device_ids.emplace_back(device_name);
+      }
+      Symbol<ParallelDesc> placement =
+          SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>())));
+      it = device_tag2placement.emplace(*device_tag, placement).first;
+    }
+    return it->second;
+  }
+
+  static Maybe<py::array> GetPlacementRanks(const Symbol<ParallelDesc>& placement) {
+    py::list ranks;
+    for (int64_t machine_id : placement->sorted_machine_ids()) {
+      int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
+      for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
+        ranks.append(py::cast(node_id * GlobalProcessCtx::NumOfProcessPerNode() + device_id));
+      }
+    }
+    auto array_ranks = py::cast<py::array>(ranks);
+    array_ranks.resize(placement->hierarchy()->dim_vec());
+    return array_ranks;
+  }
 };
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement",
                                                                           py::dynamic_attr())
-      .def(py::init([](const std::string& device_type, const py::object& ranks) {
-             auto t = std::make_unique<Py11Placement>(device_type);
-             return t->ApiCreateParallelDescSymbol(ranks);
+      .def(py::init([](const std::string& type, const py::object& ranks) {
+             return PlacementSymbolExportUtil::CreateParallelDescSymbol(type, ranks).GetOrThrow();
            }),
            py::arg("type"), py::arg("ranks"))
-      .def_property_readonly("type",
-                             [](Symbol<ParallelDesc> p) {
-                               std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
-                               return device_type;
-                             })
+      .def_property_readonly(
+          "type", [](Symbol<ParallelDesc> p) { return p->device_tag() == "gpu" ? "cuda" : "cpu"; })
       .def_property_readonly("ranks",
                              [](Symbol<ParallelDesc> p) {
-                               std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
-                               auto t = std::make_unique<Py11Placement>(device_type);
-                               return t->GetRankList(p);
+                               return PlacementSymbolExportUtil::GetPlacementRanks(p).GetOrThrow();
                              })
-      .def("__str__",
-           [](Symbol<ParallelDesc> p) {
-             std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
-             auto t = std::make_unique<Py11Placement>(device_type);
-             return t->ToString(p);
-           })
-      .def("__repr__",
-           [](Symbol<ParallelDesc> p) {
-             std::string device_type = p->device_tag() == "gpu" ? "cuda" : "cpu";
-             auto t = std::make_unique<Py11Placement>(device_type);
-             return t->ToString(p);
-           })
+      .def("__str__", [](Symbol<ParallelDesc> p) { return PlacementToString(p).GetOrThrow(); })
+      .def("__repr__", [](Symbol<ParallelDesc> p) { return PlacementToString(p).GetOrThrow(); })
       .def(py::self == py::self)
       .def(py::hash(py::self));
-  m.def("AllDevicePlacement", [](const std::string& device_type) {
-    auto t = std::make_unique<Py11Placement>(device_type);
-    return t->GetAllDevicePlacement();
+  m.def("AllDevicePlacement", [](const std::string& type) {
+    return PlacementSymbolExportUtil::AllDevicePlacement(type).GetOrThrow();
   });
 }
 

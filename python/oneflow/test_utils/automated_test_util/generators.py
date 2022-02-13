@@ -420,9 +420,7 @@ class all_placement(generator):
             (self.node_size, self.num_rank_for_each_node),
         ]
         return [
-            flow.placement(
-                device, np.array(range(self.world_size)).reshape(hierarchy) 
-            )
+            flow.placement(device, np.array(range(self.world_size)).reshape(hierarchy))
             for device, hierarchy in list(product(all_device, all_hierarchy))
         ]
 
