@@ -883,7 +883,9 @@ def autotest(
             while successful_runs_needed > 0:
                 clear_note_fake_program()
                 if current_run > loop_limit:
-                    raise ValueError("autotest stuck in an endless loop!")
+                    raise ValueError(
+                        "autotest stuck in an endless loop, usually it is caused by invalid code in the test case"
+                    )
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
                 global global_check_allclose, global_rtol, global_atol, global_backward

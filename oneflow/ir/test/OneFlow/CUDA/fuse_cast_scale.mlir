@@ -1,7 +1,7 @@
 // RUN: oneflow-opt %s -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-greedy-parallel-loop-mapping \
 // RUN: -convert-parallel-loops-to-gpu -gpu-kernel-outlining -buffer-host-register -canonicalize \
 // RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
-// RUN: --func-bufferize -buffer-results-to-out-params \
+// RUN: --func-bufferize -buffer-results-to-out-params -gpu-copy-arg \
 // RUN: --finalizing-bufferize \
 // RUN: --convert-memref-to-llvm --convert-std-to-llvm \
 // RUN: -gpu-to-llvm --reconcile-unrealized-casts --print-ir-after-all \

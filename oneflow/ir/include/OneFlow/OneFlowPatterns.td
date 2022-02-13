@@ -7,6 +7,7 @@ include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 include "mlir/Dialect/GPU/GPUOps.td"
 
 def IsNotNestedInJit: Constraint<CPred<"($0.getDefiningOp()->getParentOfType<::mlir::oneflow::Job>())">, "">;
+def IsScalarTensor: Constraint<CPred<"::mlir::oneflow::IsScalarTensor($0)">, "">;
 def OutlineMulCast : NativeCodeCall<"::mlir::oneflow::OutlineMulCast($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
 def MulCastPattern : Pat<
@@ -32,6 +33,32 @@ def MulCastPattern : Pat<
   (OutlineMulCast $mul_op, $cast_op),
   [
     (IsNotNestedInJit $mul_op)
+  ]
+>;
+
+def BroadcastMulToScalarMulPattern : Pat<
+  (
+    OneFlow_BroadcastMulOp
+    $x,
+    $y,
+    $mul_op_name,
+    $mul_device_tag,
+    $mul_device_name,
+    $mul_scope_symbol_id,
+    $mul_hierarchy
+  ),
+  (
+    OneFlow_ScalarMulByTensorOp
+    $x,
+    $y,
+    $mul_op_name,
+    $mul_device_tag,
+    $mul_device_name,
+    $mul_scope_symbol_id,
+    $mul_hierarchy
+  ),
+  [
+    (IsScalarTensor $y)
   ]
 >;
 
