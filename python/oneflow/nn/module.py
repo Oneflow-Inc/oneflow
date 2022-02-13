@@ -368,7 +368,13 @@ class Module(object):
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter "{}", an exception occurred : \n\n{}.'.format(
-                            key, ''.join(map(lambda line: '\t' + line, traceback.format_exc().splitlines(True)))
+                            key,
+                            "".join(
+                                map(
+                                    lambda line: "\t" + line,
+                                    traceback.format_exc().splitlines(True),
+                                )
+                            ),
                         )
                     )
             elif strict:
