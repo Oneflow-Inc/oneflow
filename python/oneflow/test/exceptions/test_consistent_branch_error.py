@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import os
 import numpy as np
-
+import time
 import oneflow as flow
 import oneflow.unittest
 
@@ -32,7 +32,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_add_with_alpha(test_case):
         try:
-            os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "1"
+            os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "2"
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
