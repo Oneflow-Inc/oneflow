@@ -75,7 +75,7 @@ class TestEye(flow.unittest.TestCase):
         x = torch.eye(n=n, m=m, device=random_device())
         return x
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_eye_bool_with_random_data(test_case):
         n = random().to(int)
         m = random().to(int)
