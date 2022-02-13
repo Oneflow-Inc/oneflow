@@ -26,10 +26,10 @@ class TestHsplitVec(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(
             ndim=4,
+            dim0=random(3, 6),
             dim1=random(3, 6),
             dim2=random(3, 6),
             dim3=random(3, 6),
-            dim4=random(3, 6),
         ).to(device)
         z = torch.hsplit(x, (1, 2))
         return z[0]
@@ -41,13 +41,9 @@ class TestHsplitInt(flow.unittest.TestCase):
     def test_flow_hsplit_int(test_case):
         device = random_device()
         x = random_tensor(
-            ndim=4,
-            dim1=random(3, 6),
-            dim2=random(3, 6),
-            dim3=random(3, 6),
-            dim4=random(3, 6),
+            ndim=4, dim0=random(3, 6), dim1=12, dim2=random(3, 6), dim3=random(3, 6),
         ).to(device)
-        split = random(1, 3).to(int)
+        split = oneof(2, 4, 6)
         z = torch.hsplit(x, split)
         return z[0]
 
