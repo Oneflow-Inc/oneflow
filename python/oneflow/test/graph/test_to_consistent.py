@@ -492,7 +492,7 @@ class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
 
         class Test1dTo2dModule(flow.nn.Module):
             def forward(self, x):
-                return x.to_consistent(placement=P_2d, sbp=[B, B])
+                return x.to_global(placement=P_2d, sbp=[B, B])
 
         class Test1dTo2dGraph(flow.nn.Graph):
             def __init__(self, model):
@@ -504,7 +504,7 @@ class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
 
         class Test2dTo1dModule(flow.nn.Module):
             def forward(self, x):
-                return x.to_consistent(placement=P_1d, sbp=[B])
+                return x.to_global(placement=P_1d, sbp=[B])
 
         class Test2dTo1dGraph(flow.nn.Graph):
             def __init__(self, model):
@@ -518,7 +518,7 @@ class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
         graph_1d_to_2d = Test1dTo2dGraph(model_1d_to_2d)
 
         x = flow.zeros(4, 4, 4, 4, sbp=[B, B], placement=P_2d)
-        x = x.to_consistent(placement=P_1d, sbp=[B])
+        x = x.to_global(placement=P_1d, sbp=[B])
         test_case.assertTrue(x.sbp == (B,))
         test_case.assertTrue(x.placement == P_1d)
         y = graph_1d_to_2d(x)
