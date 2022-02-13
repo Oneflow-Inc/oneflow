@@ -98,7 +98,7 @@ class TestOneRecOpsModule(flow.unittest.TestCase):
             batch_size=batch_size,
             shuffle=True,
             shuffle_mode="batch",
-            placement=flow.placement("cpu", [0]),
+            placement=flow.placement("cpu", ranks=[0]),
             sbp=[flow.sbp.split(0)],
         )
         record_reader = onerec_reader()

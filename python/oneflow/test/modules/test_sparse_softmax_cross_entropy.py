@@ -124,7 +124,7 @@ def compare_eager_2d_global_with_torch(
         torch_output.sum().backward()
 
     # 2D sbp
-    placement = flow.placement("cuda", [[0, 1], [2, 3]])
+    placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
     of_logits = flow.tensor(
         np_logits, device=device_type, dtype=data_type, requires_grad=True
     )

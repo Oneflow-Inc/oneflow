@@ -38,7 +38,7 @@ def _test_local_empty(test_case, shape, dtype, device, requires_grad):
 
 
 def _test_global_empty(test_case, shape, dtype, placement, sbp, requires_grad):
-    placement = flow.placement(placement, [0])
+    placement = flow.placement(placement, ranks=[0])
     x = flow.empty(
         shape,
         dtype=dtype,

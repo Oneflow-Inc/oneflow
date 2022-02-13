@@ -29,7 +29,7 @@ import oneflow.unittest
 class TestGraphResueVar(flow.unittest.TestCase):
     def test_graph_reuse_var(test_case):
         rank = flow.env.get_rank()
-        P = flow.placement("cuda", [0, 1])
+        P = flow.placement("cuda", ranks=[0, 1])
         B = flow.sbp.broadcast
 
         class ReuseVarModule(flow.nn.Module):

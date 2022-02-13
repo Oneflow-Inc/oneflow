@@ -74,7 +74,7 @@ class Test2DeviceGlobalTensorTo(flow.unittest.TestCase):
 class TestTo(flow.unittest.TestCase):
     def test_global_tensor_clone(test_case):
         x = flow.ones(
-            (4,), placement=flow.placement("cuda", [0]), sbp=flow.sbp.broadcast
+            (4,), placement=flow.placement("cuda", ranks=[0]), sbp=flow.sbp.broadcast
         )
         cloned = x.detach().clone()
         test_case.assertEqual(x.placement, cloned.placement)
@@ -86,7 +86,7 @@ class TestTo(flow.unittest.TestCase):
 
     def test_global_tensor_to(test_case):
         x = flow.ones(
-            (4,), placement=flow.placement("cuda", [0]), sbp=flow.sbp.broadcast
+            (4,), placement=flow.placement("cuda", ranks=[0]), sbp=flow.sbp.broadcast
         )
         cloned = x.to(copy=True)
         test_case.assertEqual(x.placement, cloned.placement)
@@ -98,7 +98,7 @@ class TestTo(flow.unittest.TestCase):
 
     def test_empty_global_tensor_to(test_case):
         x = flow.ones(
-            (0,), placement=flow.placement("cuda", [0]), sbp=flow.sbp.broadcast
+            (0,), placement=flow.placement("cuda", ranks=[0]), sbp=flow.sbp.broadcast
         )
         cloned = x.to(copy=True)
         test_case.assertEqual(x.placement, cloned.placement)

@@ -59,7 +59,7 @@ class _ConstantBase(Module):
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(self.sbp) == len(placement.hierarchy)
+            assert len(self.sbp) == len(placement.ranks.shape)
         else:
             assert sbp is None, "sbp: %s" % sbp
         self.shape = size
@@ -142,7 +142,7 @@ def ones_op(
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.]], dtype=oneflow.float32)
-        >>> placement = flow.placement("cpu", [0])
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> y = flow.ones(4, 5, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
         >>> y.is_global
         True
@@ -253,7 +253,7 @@ def full_op(
         >>> y
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
-        >>> placement = flow.placement("cpu", [0])
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
         >>> y.is_global
         True

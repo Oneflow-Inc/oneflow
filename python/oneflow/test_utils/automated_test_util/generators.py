@@ -466,9 +466,9 @@ class all_sbp(generator):
         super().__init__([])
         if placement is not None:
             if isinstance(placement, random_placement):
-                self.dim = len(np.array(placement.value().ranks).shape)
+                self.dim = len(placement.value().ranks.shape)
             elif isinstance(placement, flow.placement):
-                self.dim = len(np.array(placement.ranks).shape)
+                self.dim = len(placement.ranks.shape)
             else:
                 raise RuntimeError(
                     f"placement should be instance of random_placement or oneflow.placement"

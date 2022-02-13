@@ -27,10 +27,10 @@ oneflow.placement.__doc__ = r"""
 
         >>> import oneflow as flow
         
-        >>> p = flow.placement("cuda", [0, 1, 2, 3])
+        >>> p = flow.placement("cuda", ranks=[0, 1, 2, 3])
         >>> p
         oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
-        >>> p = flow.placement("cuda", [[0, 1], [2, 3]])
+        >>> p = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         >>> p
         oneflow.placement(type="cuda", ranks=[[0, 1], [2, 3]])
         

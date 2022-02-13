@@ -150,7 +150,7 @@ def _test_global_tensor_str_2d(test_case, device):
     # test_case.assertTrue("..." in tensor_str)
 
     x = flow.ones(
-        (10, 10), placement=flow.placement(device, [0]), sbp=[flow.sbp.broadcast]
+        (10, 10), placement=flow.placement(device, ranks=[0]), sbp=[flow.sbp.broadcast]
     )
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)

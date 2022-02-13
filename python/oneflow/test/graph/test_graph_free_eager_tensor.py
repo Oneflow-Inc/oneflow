@@ -184,7 +184,7 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
 class ConsistentFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
     def test_global_eager_tensor_to(test_case):
         rank = flow.env.get_rank()
-        placement = flow.placement("cpu", [0, 1])
+        placement = flow.placement("cpu", ranks=[0, 1])
         t_l = flow.tensor([1.0, 2.0], dtype=flow.float32)
         t = t_l.to_global(placement=placement, sbp=flow.sbp.broadcast)
 

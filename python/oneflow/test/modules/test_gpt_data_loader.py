@@ -76,7 +76,7 @@ class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
 
         global_gpt_loader = GPTDataLoader(
             batch_size=8,
-            placement=flow.placement("cpu", [0, 1]),
+            placement=flow.placement("cpu", ranks=[0, 1]),
             sbp=[flow.sbp.split(0)],
         )
         gpt_loader_graph = DataLoaderGraph(global_gpt_loader)

@@ -117,7 +117,7 @@ def rand_op(
         oneflow.Size([3, 3])
         >>> x.is_global
         False
-        >>> placement = flow.placement("cpu", [0])
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> sbp = flow.sbp.broadcast
         >>> x = flow.rand(3, 3, placement=placement, sbp=sbp) # construct global tensor
         >>> x.is_global
@@ -231,7 +231,7 @@ def randn_op(
         oneflow.Size([3, 3])
         >>> x.is_global
         False
-        >>> placement = flow.placement("cpu", [0])
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> sbp = flow.sbp.broadcast
         >>> x = flow.randn(3,3,placement=placement,sbp=sbp) # construct global tensor
         >>> x.is_global
@@ -359,7 +359,7 @@ def randint_op(
                 [2, 4, 2]], dtype=oneflow.int64)
         >>> y.is_global
         False
-        >>> placement = flow.placement("cpu", [0])
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> y = flow.randint(0, 5, (3,3), generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
         >>> y.is_global
         True
@@ -479,7 +479,7 @@ def randperm_op(
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
         >>> y.is_global
         False
-        >>> placement = flow.placement("cpu", [0])
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> y = flow.randperm(5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
         >>> y.is_global
         True

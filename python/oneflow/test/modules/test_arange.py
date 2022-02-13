@@ -88,7 +88,7 @@ class TestArange(flow.unittest.TestCase):
         return x
 
     def test_global_naive(test_case):
-        placement = flow.placement("cpu", [0])
+        placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
         x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
