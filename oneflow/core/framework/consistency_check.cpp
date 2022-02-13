@@ -173,7 +173,7 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
       });
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx.WaitDone());
   CHECK_OR_RETURN(std::memcmp(buffer_ptr, reinterpret_cast<const void*>(recv_ptr), buffer_size)
                   == 0)
       << "Each rank must have same input sequence or numpy array";
@@ -192,7 +192,7 @@ Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
       transport_token, placement, nd_sbp, grad_nd_sbp);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx->WaitDone());
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }

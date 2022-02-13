@@ -23,7 +23,6 @@ limitations under the License.
 #include <pybind11/numpy.h>
 
 #include "oneflow/extension/python/numpy.h"
-#include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -32,6 +31,8 @@ limitations under the License.
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 
@@ -75,24 +76,14 @@ inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
                                                    tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
-  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t ofblob_ptr) {
+  const auto& Callback = [&](uint64_t ofblob_ptr) {
     data_ptr = reinterpret_cast<OfBlob*>(ofblob_ptr)->mut_blob()->mut_dptr<T>();
-  });
-  bool is_printed = false;
-  SpinCounter::SpinWait(
-      1,
-      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, "mut");
-        });
-      },
-      [&is_printed]() {
-        if (!is_printed) {
-          blocking::StackInfoCallback();
-          is_printed = true;
-        }
-      });
-
+  };
+  auto btb = std::make_shared<BlockingThenBusy>(1);
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "mut");
+  }));
+  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return py::array(
       py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim, shape, stride),
       handle);
@@ -123,22 +114,14 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
 
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
-    const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
-        [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); });
-    bool is_printed = false;
-    JUST(SpinCounter::SpinWait(
-        1,
-        [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-          return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-            return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
-          });
-        },
-        [&is_printed]() {
-          if (!is_printed) {
-            blocking::StackInfoCallback();
-            is_printed = true;
-          }
-        }));
+    const auto& Callback = [array_ptr, Copy](uint64_t ofblob_ptr) {
+      CHECK_JUST(Copy(ofblob_ptr, array_ptr));
+    };
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, modifier);
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {

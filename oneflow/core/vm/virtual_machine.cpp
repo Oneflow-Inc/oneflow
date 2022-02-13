@@ -23,11 +23,13 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -151,12 +153,11 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
 }  // namespace
 
 void VirtualMachine::ControlSync() {
-  BlockingCounter bc(1);
+  auto bc = std::make_shared<BlockingCounter>(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
+  MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
-  CHECK_JUST(
-      bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
+  CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -168,7 +169,7 @@ VirtualMachine::~VirtualMachine() {
   callback_thread_.join();
 }
 
-std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions() {
+std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
   auto* vm = Global<VirtualMachine>::Get();
   if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
@@ -191,7 +192,7 @@ bool VirtualMachine::NoMoreErasedLivelyInstructions(
 }
 
 std::string VirtualMachine::GetBlockingDebugString() {
-  size_t limit = ThreadLocalEnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
+  size_t limit = EnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
   return vm_->GetLivelyInstructionListDebugString(limit);
 }
 
@@ -210,6 +211,21 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     vm::InstructionMsgList garbage_msg_list;
     vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
+    const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+    if (vm_->flying_instruction_cnt() > kHighWaterMark) {
+      JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+        auto bc = std::make_shared<BlockingCounter>(1);
+        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
+          const int64_t kLowWaterMark = GetInstructionLowWaterMark();
+          if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
+          bc->Decrease();
+          return true;
+        });
+        pending_notifier_.Notify();
+        JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+        return Maybe<void>::Ok();
+      }));
+    }
     if (JUST(vm_->Receive(instr_list))) {
       // old pending_instruction_list is empty.
       pending_notifier_.Notify();
