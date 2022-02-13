@@ -385,14 +385,14 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
             raise ValueError
 
         c_x = x.to_global(placement=flow.placement("cpu", [0]), sbp=flow.sbp.broadcast)
-        # print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
+        # print(f"c_x shape: {c_x.shape}, placement: {c_x.placement}, sbp: {c_x.sbp}")
 
         p1 = flow.placement("cpu", [0, 1])
         m1 = ToPlacementModule(p1)
         g1 = MyGraph(m1)
         y1 = g1(c_x)
 
-        # print(f"y1 shape: {y1.shape}, placment: {y1.placement}, sbp: {y1.sbp}")
+        # print(f"y1 shape: {y1.shape}, placement: {y1.placement}, sbp: {y1.sbp}")
         test_case.assertTrue(y1.placement == p1)
         test_case.assertTrue(y1.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y1.to_local().numpy().mean() == 1.0)
@@ -402,7 +402,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         g2 = MyGraph(m2)
         y2 = g2(y1)
 
-        # print(f"y2 shape: {y2.shape}, placment: {y2.placement}, sbp: {y2.sbp}")
+        # print(f"y2 shape: {y2.shape}, placement: {y2.placement}, sbp: {y2.sbp}")
         test_case.assertTrue(y2.placement == p2)
         test_case.assertTrue(y2.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y2.to_local().numpy().mean() == 1.0)
@@ -469,11 +469,11 @@ class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
             (4, 6), placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(1)]
         )
         z = flow._C.matmul(x, y, transpose_b=True)
-        print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+        print(f"z shape: {z.shape}, placement: {z.placement}, sbp: {z.sbp}")
 
         # m = MyModule5(transpose_b=True, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
         # z = m(x, y)
-        # print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+        # print(f"z shape: {z.shape}, placement: {z.placement}, sbp: {z.sbp}")
 
 
 if __name__ == "__main__":
