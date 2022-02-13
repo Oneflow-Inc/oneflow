@@ -260,7 +260,6 @@ include_directories(${PROJECT_BINARY_DIR})
 # cc obj lib
 oneflow_add_library(oneflow ${of_all_obj_cc})
 
-add_dependencies(oneflow install-tbb)
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
 add_dependencies(oneflow of_functional_obj)
@@ -280,10 +279,10 @@ set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
     CACHE STRING "dir to put binary for debugging and development")
 
 set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip"
+    "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "9bda804e5cc61899085fb0f0dce1089f" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "f2f17229cf21049663b8ef4f2b6b8062" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)

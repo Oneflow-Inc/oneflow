@@ -24,8 +24,8 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
-    def test_asymmetric_consistent_tensor_clone(test_case):
+class Test2DeviceGlobalTensorTo(flow.unittest.TestCase):
+    def test_asymmetric_global_tensor_clone(test_case):
         placement = flow.placement("cuda", {0: range(1)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.detach().clone()
@@ -37,7 +37,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
             test_case.assertEqual(cloned_local[0].numpy().item(), 0)
             test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_consistent_tensor_clone(test_case):
+    def test_global_tensor_clone(test_case):
         placement = flow.placement("cuda", {0: range(2)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.detach().clone()
@@ -48,7 +48,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_consistent_tensor_to(test_case):
+    def test_global_tensor_to(test_case):
         placement = flow.placement("cuda", {0: range(2)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.to(copy=True)
@@ -72,7 +72,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTo(flow.unittest.TestCase):
-    def test_consistent_tensor_clone(test_case):
+    def test_global_tensor_clone(test_case):
         x = flow.ones(
             (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
         )
@@ -84,7 +84,7 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_consistent_tensor_to(test_case):
+    def test_global_tensor_to(test_case):
         x = flow.ones(
             (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
         )
@@ -96,7 +96,7 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
-    def test_empty_consistent_tensor_to(test_case):
+    def test_empty_global_tensor_to(test_case):
         x = flow.ones(
             (0,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
         )

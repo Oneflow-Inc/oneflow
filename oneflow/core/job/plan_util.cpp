@@ -925,7 +925,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     int64_t rank_id = pair.first.first;
     int64_t device_id = pair.first.second;
     double mem_size = pair.second * 1.0 / 1000000.0;
-    LOG(INFO) << " Plan: " << plan_name << " needs to allocate [ " << mem_size
+    LOG(INFO) << plan_name << " needs to allocate [ " << mem_size
               << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << "\n";
   }
 }
