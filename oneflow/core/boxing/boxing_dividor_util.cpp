@@ -234,7 +234,7 @@ Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> place
   parallel_conf->add_device_name(std::string("@") + std::to_string(machine_id) + ":"
                                  + std::to_string(device_id));
   std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
     parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
     return Maybe<void>::Ok();
   }));

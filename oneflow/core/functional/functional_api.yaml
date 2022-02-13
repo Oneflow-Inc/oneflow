@@ -588,7 +588,7 @@
     ]
   bind_python: True
 
-- name: "consistent_arange"
+- name: "global_arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Placement placement, SbpList sbp) => ConsistentArange",
@@ -627,7 +627,7 @@
     ]
   bind_python: True
 
-- name: "consistent_constant"
+- name: "global_constant"
   signature:
     [
       "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentConstant",
@@ -639,7 +639,7 @@
     ["Tensor (Shape shape, *, DataType dtype, Device device=None) => Empty"]
   bind_python: True
 
-- name: "consistent_empty"
+- name: "global_empty"
   signature:
     [
       "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentEmpty",
@@ -1107,6 +1107,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True
 
+- name: "slice_view_1d_contiguous"
+  signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
+  bind_python: True
+
 - name: "slice"
   signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
   bind_python: True
@@ -1147,7 +1151,7 @@
 
 - name: "to"
   signature: [
-    # type of device must be string for consistent tensor to perform argument validation
+    # type of device must be string for global tensor to perform argument validation
     "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
@@ -1641,11 +1645,11 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackGrad"
   bind_python: False
 
-- name: "local_to_consistent"
+- name: "local_to_global"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
   bind_python: False
 
-- name: "to_consistent"
+- name: "to_global"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
   bind_python: True
 
@@ -1693,19 +1697,19 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerSToP"
   bind_python: False
 
-- name: "consistent_all_reduce"
+- name: "global_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False
 
-- name: "consistent_reduce_scatter"
+- name: "global_reduce_scatter"
   signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
   bind_python: False
 
-- name: "consistent_all_gather"
+- name: "global_all_gather"
   signature: "Tensor (Tensor x) => ConsistentAllGather"
   bind_python: False
 
-- name: "consistent_s2s"
+- name: "global_s2s"
   signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
   bind_python: False
 

@@ -57,7 +57,6 @@ Maybe<TensorArg> TensorImpl::current_grad() const {
 }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   return autograd_meta_->set_acc_grad(grad);
 }
 
@@ -126,7 +125,6 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
         mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
-  eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
   return Maybe<void>::Ok();
 }
 
@@ -260,7 +258,10 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
   std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
-  if (parallel_id.has_value()) {
+  // If the `'parallel_desc` doesn't cover current ProcessCtx or the tensor has 0-size shape, there
+  // is no need to compute through the corresponding opkernel, and can be obtained directly through
+  // empty op.
+  if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
         std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
     auto cur_rank_phy_tensor_impl =

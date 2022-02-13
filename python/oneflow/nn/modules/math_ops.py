@@ -26,75 +26,6 @@ from oneflow.ops.transpose_util import (
 )
 
 
-@register_tensor_op("reciprocal")
-def _reciprocal(x):
-    """Computes the safe reciprocal of x. If x is zero, the reciprocal will
-    be also set to zero.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-        >>> out = flow.reciprocal(x)
-        >>> out.numpy()
-        array([[1.        , 0.5       , 0.33333334],
-               [0.25      , 0.2       , 0.16666667]], dtype=float32)
-    """
-    return flow._C.reciprocal_no_nan(x)
-
-
-@register_tensor_op("add")
-def _add(input, other):
-    """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
-
-    .. math::
-        out = input + other
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        # element-wise add
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # scalar add
-        >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
-        >>> out.shape
-        (2, 3)
-
-        # broadcast add
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
-        >>> out = flow.add(x, y).numpy()
-        >>> out.shape
-        (2, 3)
-
-    """
-    return flow._C.add(input, other)
-
-
-@register_tensor_op("add_")
-def _add_inplace(x, y):
-    """
-    In-place version of :func:`oneflow.Tensor.add`.
-    """
-    return flow._C.add(x, y, inplace=True)
-
-
 def asin_op(input):
     """
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
@@ -128,28 +59,10 @@ def asin_op(input):
     return flow._C.asin(input)
 
 
-@register_tensor_op("asin")
-def asin_op_tensor(input):
-    """
-
-    See :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
 def arcsin_op(input):
     """
   
     Alias for :func:`oneflow.asin`
-    """
-    return flow._C.asin(input)
-
-
-@register_tensor_op("arcsin")
-def arcsin_op_tensor(input):
-    """
-
-    See :func:`oneflow.asin`
     """
     return flow._C.asin(input)
 
@@ -206,27 +119,6 @@ def asinh_op_tensor(input):
     return flow._C.asinh(input)
 
 
-@register_tensor_op("arcsinh")
-def arcsinh_op_tensor(input):
-    """
-
-    See :func:`oneflow.asinh`
-    """
-    return flow._C.asinh(input)
-
-
-@register_tensor_op("sin")
-def sin_op_tensor(input):
-    """
-
-    sin() -> Tensor
-
-    See :func:`oneflow.sin`
-    
-    """
-    return flow._C.sin(input)
-
-
 @register_tensor_op("sin_")
 def inplace_sin_op_tensor(input):
     """
@@ -234,31 +126,6 @@ def inplace_sin_op_tensor(input):
     
     """
     return flow._C.sin_(input)
-
-
-@register_tensor_op("cos")
-def cos_op(input):
-    """
-    Returns a new tensor with the cosine  of the elements of :attr:`input`.
-    
-    .. math::
-        \\text{out}_{i} = \\cos(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.cos(input).numpy()
-
-    """
-    return flow._C.cos(input)
 
 
 def atan_op(input):
@@ -286,29 +153,9 @@ def atan_op(input):
     return flow._C.atan(input)
 
 
-@register_tensor_op("atan")
-def atan_op_tensor(input):
-    """
-
-    See :func:`oneflow.atan`
-    
-    """
-    return flow._C.atan(input)
-
-
 def arctan_op(input):
     """
     Alias for :func:`oneflow.atan`
-    
-    """
-    return flow._C.atan(input)
-
-
-@register_tensor_op("arctan")
-def arctan_op_tensor(input):
-    """
-
-    See :func:`oneflow.arctan`
     
     """
     return flow._C.atan(input)
@@ -345,146 +192,6 @@ def fmod_op(input, other):
 
     """
     return flow._C.fmod(input, other)
-
-
-@register_tensor_op("fmod")
-def fmod_op_tensor(input, other):
-    """
-
-    See :func:`oneflow.fmod`
-    
-    """
-    return fmod_op(input, other)
-
-
-@register_tensor_op("log")
-def log_op(input):
-    """
-    Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
-    
-    .. math::
-        y_{i} = \\log_{e} (x_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.random.randn(2, 3, 4, 5)
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.log(input)
-
-
-    """
-    return flow._C.log(input)
-
-
-@register_tensor_op("log2")
-def log2_op(input):
-    """
-    Returns a new tensor with the natural logarithm to the base 2 of the elements of :attr:`input`.
-    
-    .. math::
-        y_{i} = \\log2_{e} (x_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.random.randn(2, 3, 4, 5)
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.log2(input)
-
-
-    """
-    return flow._C.log2(input)
-
-
-@register_tensor_op("rsqrt")
-def rsqrt_op(input):
-    """Returns a new tensor with the reciprocal of the square-root of each of
-        the elements of :attr:`input`.
-
-        .. math::
-            \\text{out}_{i} = \\frac{1}{\\sqrt{\\text{input}_{i}}}
-
-        Args:
-            input (Tensor): the input tensor.
-
-         For example:
-
-        .. code-block:: python
-
-            >>> import oneflow as flow
-            >>> import numpy as np
-            
-            >>> a = flow.Tensor(np.array([1.0, 2.0, 3.0]))
-            >>> out = flow.rsqrt(a).numpy()
-            >>> out
-            array([1.        , 0.70710677, 0.57735026], dtype=float32)
-    """
-    return flow._C.rsqrt(input)
-
-
-@register_tensor_op("sqrt")
-def sqrt_op(input):
-    """Returns a new tensor with the square-root of the elements of :attr:`input`.
-
-        .. math::
-            \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
-
-        Args:
-            input (Tensor): the input tensor.
-
-         For example:
-
-        .. code-block:: python
-
-            >>> import oneflow as flow
-            >>> import numpy as np
-            
-            >>> arr = np.array([1.0, 2.0, 3.0])
-            >>> input = flow.Tensor(arr)
-            >>> output = flow.sqrt(input).numpy()
-            >>> output
-            array([1.       , 1.4142135, 1.7320508], dtype=float32)
-        """
-    return flow._C.sqrt(input)
-
-
-@register_tensor_op("square")
-def square_op(input):
-    """Returns a new tensor with the square of the elements of :attr:`input`.
-
-        .. math::
-            \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
-
-        Args:
-            input (Tensor): the input tensor.
-
-         For example:
-
-        .. code-block:: python
-
-            >>> import oneflow as flow
-            >>> import numpy as np
-            
-            >>> arr = np.array([1.0, 2.0, 3.0])
-            >>> input = flow.Tensor(arr)
-            >>> output = flow.square(input).numpy()
-            >>> output
-            array([1., 4., 9.], dtype=float32)
-        """
-    return flow._C.square(input)
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):
@@ -548,142 +255,6 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         oneflow.Size([3, 3])
     """
     return addmm(input, mat1, mat2, alpha, beta)
-
-
-@register_tensor_op("addmm")
-def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
-    """
-    See :func:`oneflow.addmm`
-    """
-    return addmm(input, mat1, mat2, alpha, beta)
-
-
-@register_tensor_op("cosh")
-def cosh_op(input):
-    """
-    Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
-
-    .. math::
-        \\text{out}_{i} = \\cosh(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.cosh(input).numpy()
-        >>> output
-        array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
-
-    """
-    return flow._C.cosh(input)
-
-
-@register_tensor_op("erf")
-def erf_op(input):
-    """Computes the error function of each element. The error function is defined as follows:
-
-    .. math::
-            \\operatorname{erf}(x)=\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
-
-    Args:
-        x (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: The result Tensor   
-               
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
-        >>> out = flow.erf(x)
-        >>> out.shape
-        oneflow.Size([3])
-        >>> out.numpy()
-        array([ 0.       , -0.8427008,  1.       ], dtype=float32)
-
-        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
-        >>> out = flow.erf(x)
-        >>> out.shape
-        oneflow.Size([2, 3])
-        >>> out.numpy()
-        array([[ 0.        , -0.8427008 ,  1.        ],
-               [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
-
-        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
-        >>> out = x.erf()
-        >>> out.shape
-        oneflow.Size([3, 3])
-        >>> out.numpy()
-        array([[ 0.        , -0.8427008 ,  1.        ],
-               [ 1.        ,  1.        ,  0.74210095],
-               [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
-
-    """
-    return flow._C.erf(input)
-
-
-@register_tensor_op("erf")
-def erf_op_tensor(input):
-    """
-    See :func:`oneflow.erf`
-    """
-    return flow._C.erf(input)
-
-
-@register_tensor_op("erfc")
-def erfc_op(input):
-    """Computes the complementary error function of each element of input. The complementary error 
-    function is defined as follows:
-
-    .. math::
-            \\operatorname{erfc}(x)=1-\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
-
-    Args:
-        x (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
-        >>> out = flow.erfc(x)
-        >>> out
-        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
-
-        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
-        >>> out = flow.erfc(x)
-        >>> out
-        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
-                [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
-        
-    """
-    return flow._C.erfc(input)
-
-
-@register_tensor_op("erfc")
-def erfc_op_tensor(input):
-    """
-    See :func:`oneflow.erfc`
-    """
-    return flow._C.erfc(input)
 
 
 class Topk(Module):
