@@ -286,7 +286,7 @@ def _tensor_str(self, indent):
         self = self.float()
 
     # TODO: not support nd sbp tensor for now
-    if self.is_global and len(self.placement.hierarchy) > 1:
+    if self.is_global and len(self.placement.ranks.shape) > 1:
         return "[...]"
 
     with flow.no_grad():
