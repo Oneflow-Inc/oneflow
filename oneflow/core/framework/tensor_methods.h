@@ -43,8 +43,8 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
 
 Maybe<Tensor> ExpandDims(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
 
-Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& start,
-                    const std::vector<int64_t>& end, const std::vector<int64_t>& step);
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
+                    const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
 
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length);
@@ -55,6 +55,7 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
 
 Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const std::shared_ptr<Tensor>& dx,
                        const int32_t offset, const int32_t dim1, const int32_t dim2);
+
 
 }  // namespace view
 }  // namespace one

@@ -147,7 +147,6 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
-  int64_t storage_offset_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 };
 

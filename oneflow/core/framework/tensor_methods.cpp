@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/stride.h"
@@ -256,29 +257,30 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  if (!(input->is_eager() && input->is_local())) {
-    return Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-                                 << (input->is_lazy() ? "lazy" : "consistent");
-  }
+  
+  CHECK_OR_RETURN(input->is_eager() && input->is_local())
+      << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
+      << (input->is_lazy() ? "lazy" : "consistent");
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = starts.size();
-  if (ndim != shape->NumAxes()) {
-    return Error::RuntimeError() << "view::Slice(): starts size is expected " << shape->NumAxes()
-                                 << ", but got " << ndim;
-  }
-  if (ends.size() != ndim || steps.size() != ndim) {
-    return Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
-                                 << " size is not equal to start.";
-  }
+
+  CHECK_OR_RETURN(ndim == shape->NumAxes())
+      << Error::RuntimeError() << "view::Slice(): starts size is expected " << shape->NumAxes()
+      << ", but got " << ndim;
+
+  CHECK_OR_RETURN(ends.size() == ndim && steps.size() == ndim)
+      << Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
+      << " size is not equal to start.";
+    
   DimVector target_dims(ndim);
   StrideVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   for (int i = 0; i < ndim; ++i) {
-    int64_t step = std::min(steps.at(i), shape->At(i));
-    if (step < 0) { return Error::RuntimeError() << "Step must be greater than zero."; }
-    int64_t start = std::min(starts.at(i), shape->At(i));
-    int64_t end = std::min(ends.at(i), shape->At(i));
+    int64_t step = std::min(steps[i], shape->At(i));
+    CHECK_OR_RETURN(step >= 0) << Error::RuntimeError() << "Step must be greater than zero.";
+    int64_t start = std::min(starts[i], shape->At(i));
+    int64_t end = std::min(ends[i], shape->At(i));
     if (start < 0) { start += shape->At(i); }
     if (start < 0) start = 0;
     if (end < 0) { end += shape->At(i); }
@@ -298,8 +300,9 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::SliceGrad(
-                  out_grads.at(0), Shape(input->shape()->dim_vec()), starts, ends, steps));
+              (*in_grads)[0] = JUST(functional::SliceGrad(JUST(VectorAt(out_grads, 0)),
+                                                          Shape(input->shape()->dim_vec()), starts,
+                                                          ends, steps));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
