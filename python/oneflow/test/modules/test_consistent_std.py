@@ -20,25 +20,25 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=3, auto_backward=True, rtol=0.03, atol=0.03, check_graph=False)
+@autotest(n=3, auto_backward=True, rtol=0.03, atol=0.03, check_graph=True)
 def _test_global_std_flow_with_random_data(test_case, placement, sbp):
     dim = random(low=0, high=2).to(int)
     x = random_tensor(
         ndim=2,
-        dim0=random(2, 4) * 8,
-        dim1=random(2, 4) * 8,
+        dim0=random(1, 4) * 8,
+        dim1=random(1, 4) * 8,
     ).to_global(placement, sbp)
     z = torch.std(x, dim=dim, unbiased=random().to(bool), keepdim=random().to(bool),)
     return z
 
 
-@autotest(n=3, auto_backward=True, rtol=0.03, atol=0.03, check_graph=False)
+@autotest(n=3, auto_backward=True, rtol=0.03, atol=0.03, check_graph=True)
 def _test_global_std_tensor_with_random_data(test_case, placement, sbp):
     dim = random(low=0, high=2).to(int)
     x = random_tensor(
         ndim=2,
-        dim0=random(2, 4) * 8,
-        dim1=random(2, 4) * 8,
+        dim0=random(1, 4) * 8,
+        dim1=random(1, 4) * 8,
     ).to_global(placement, sbp)
     z = x.std(dim=dim, keepdim=random().to(bool),)
     return z
