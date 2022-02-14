@@ -32,7 +32,7 @@ from oneflow.test_utils.automated_test_util import *
 def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=4, dim0=8, dim1=32, dim2=40, dim3=64, requires_grad=False
-    ).to_consistent(placement=placement, sbp=sbp)
+    ).to_global(placement=placement, sbp=sbp)
     y = torch.linalg.norm(x)
     return y
 
@@ -48,13 +48,13 @@ def _test_scalar_print_random_data(test_case, placement, sbp):
 
 
 class TestConsistentLinalgVectorNorm2D(flow.unittest.TestCase):
-    @consistent
+    global_view
     def test_sqrt_sum_with_cpu_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp)
 
-    @consistent
+    global_view
     def test_scalar_print_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
