@@ -55,7 +55,7 @@ def _test_masked_fill_with_broadcast_way(test_case, placement, sbp):
 
 
 class TestMaskedFill(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_masked_fill(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
