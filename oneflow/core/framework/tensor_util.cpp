@@ -15,21 +15,23 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor_util.h"
 
-#include "oneflow/core/common/spin_counter.h"
+#include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 namespace one {
 
-Maybe<void> SyncAccessTensorWithTimeOut(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<std::function<void(uint64_t)>>& callback, const std::string& modifier) {
-  return SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
-                                               modifier);
-    });
-  });
+Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
+                                        const std::function<void(uint64_t)>& Callback,
+                                        const std::string& modifier) {
+  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto local_tensor = JUST(tensor->AsMirroredTensor());
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
+  }));
+  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one
