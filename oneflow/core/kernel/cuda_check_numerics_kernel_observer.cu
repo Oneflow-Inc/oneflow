@@ -26,12 +26,15 @@ __device__ bool IsNotFinite(T x) {
   return !isfinite(x);
 }
 
-#if __CUDA_ARCH__ >= 530
 template<>
 __device__ bool IsNotFinite<half>(half x) {
+#if __CUDA_ARCH__ >= 530
   return (__hisinf(x) || __hisnan(x));
-}
+#else
+  __trap();
+  return true;
 #endif
+}
 
 template<typename T>
 __global__ void HasNotFiniteGpuKernel(const int64_t n, const T* x, volatile bool* has_not_finite) {
@@ -60,6 +63,7 @@ bool HasNotFinite(ep::Stream* stream, const int64_t elem_cnt, const T* data_ptr,
 
 bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_host,
                      bool* has_not_finite_device) {
+  auto* cuda_stream = stream->As<ep::CudaStream>();
   const DataType dtype = blob->data_type();
   const int64_t elem_cnt = blob->shape().elem_cnt();
   if (dtype == kFloat) {
@@ -69,15 +73,32 @@ bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_
     return HasNotFinite<double>(stream, elem_cnt, blob->dptr<double>(), has_not_finite_host,
                                 has_not_finite_device);
   } else if (dtype == kFloat16) {
-#if __CUDA_ARCH__ >= 530
-    return HasNotFinite<half>(stream, elem_cnt, blob->dptr<half>(), has_not_finite_host,
-                              has_not_finite_device);
-#else
-    LOG(FATAL) << "use half need nvcc arch >= 530";
-    return true;
-#endif
-  } else {
-    return false;
+    if (cuda_stream->device_properties().major >= 6
+        || (cuda_stream->device_properties().major == 5
+            && cuda_stream->device_properties().minor >= 3)) {
+      return HasNotFinite<half>(stream, elem_cnt, blob->dptr<half>(), has_not_finite_host,
+                                has_not_finite_device);
+    } else {
+      LOG(FATAL) << "use half need nvcc arch >= 530";
+      return true;
+    }
+  }
+}
+
+void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
+  for (const auto& obn : kernel->op_attribute().output_bns()) {
+    Blob* blob = ctx->BnInOp2Blob(obn);
+    if (blob != nullptr) {
+      std::ofstream ofs(obn);
+      ofs.write(blob->dptr<const char>(), blob->ByteSizeOfBlobBody());
+    }
+  }
+  for (const auto& ibn : kernel->op_attribute().input_bns()) {
+    Blob* blob = ctx->BnInOp2Blob(ibn);
+    if (blob != nullptr) {
+      std::ofstream ofs(ibn);
+      ofs.write(blob->dptr<const char>(), blob->ByteSizeOfBlobBody());
+    }
   }
 }
 
@@ -103,6 +124,7 @@ void CudaCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,
     if (blob != nullptr) {
       bool has_not_finite =
           HasNotFiniteGpu(ctx->stream(), blob, has_not_finite_host_, has_not_finite_device_);
+      if (has_not_finite) { DumpBlobs(ctx, kernel); }
       CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }
