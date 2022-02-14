@@ -22,8 +22,8 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=3, check_graph=False)
-def _test_consistent_flow_tile_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
+def _test_global_flow_tile_with_random_data(test_case, placement, sbp):
+    x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     reps = (
         random(1, 5).to(int) * 8,
         random(1, 5).to(int) * 8,
@@ -34,8 +34,8 @@ def _test_consistent_flow_tile_with_random_data(test_case, placement, sbp):
 
 
 @autotest(n=3, check_graph=False)
-def _test_consistent_flow_tensor_tile_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=16).to_consistent(placement, sbp)
+def _test_global_flow_tensor_tile_with_random_data(test_case, placement, sbp):
+    x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
     reps = (
         random(1, 5).to(int) * 8,
         random(1, 5).to(int) * 8,
@@ -47,17 +47,17 @@ def _test_consistent_flow_tensor_tile_with_random_data(test_case, placement, sbp
 
 # Reshape op ndsbp infer error: Check failed: matched_sbp_signature != nullptr
 # class TestConsistentTile(flow.unittest.TestCase):
-#     @consistent
-#     def test_consistent_flow_tile_with_random_data(test_case):
+#     @global_view
+#     def test_global_flow_tile_with_random_data(test_case):
 #         for placement in all_placement():
 #             for sbp in all_sbp(placement, max_dim=2):
-#                 _test_consistent_flow_tile_with_random_data(test_case, placement, sbp)
+#                 _test_global_flow_tile_with_random_data(test_case, placement, sbp)
 
-#     @consistent
-#     def test_consistent_flow_tensor_tile_with_random_data(test_case):
+#     @global_view
+#     def test_global_flow_tensor_tile_with_random_data(test_case):
 #         for placement in all_placement():
 #             for sbp in all_sbp(placement, max_dim=2):
-#                 _test_consistent_flow_tensor_tile_with_random_data(
+#                 _test_global_flow_tensor_tile_with_random_data(
 #                     test_case, placement, sbp
 #                 )
 

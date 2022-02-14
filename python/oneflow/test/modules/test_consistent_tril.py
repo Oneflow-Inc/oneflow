@@ -21,14 +21,14 @@ import oneflow.unittest
 
 
 @autotest(n=3, check_graph=False)
-def _test_consistent_tril_without_diag(test_case, placement, sbp):
+def _test_global_tril_without_diag(test_case, placement, sbp):
     x = random_tensor(
         ndim=4,
         dim0=random(1, 5).to(int) * 8,
         dim1=random(1, 5).to(int) * 8,
         dim2=random(1, 5).to(int) * 8,
         dim3=random(1, 5).to(int) * 8,
-    ).to_consistent(placement, sbp)
+    ).to_global(placement, sbp)
     y = torch.tril(x)
     y = torch.exp(y)
 
@@ -36,7 +36,7 @@ def _test_consistent_tril_without_diag(test_case, placement, sbp):
 
 
 @autotest(n=3, check_graph=False)
-def _test_consistent_tril_with_diag(test_case, placement, sbp):
+def _test_global_tril_with_diag(test_case, placement, sbp):
     diagonal = random(-3, 3).to(int)
     x = random_tensor(
         ndim=4,
@@ -44,7 +44,7 @@ def _test_consistent_tril_with_diag(test_case, placement, sbp):
         dim1=random(1, 5).to(int) * 8,
         dim2=random(1, 5).to(int) * 8,
         dim3=random(1, 5).to(int) * 8,
-    ).to_consistent(placement, sbp)
+    ).to_global(placement, sbp)
     y = torch.tril(x, diagonal)
     y = torch.exp(y)
 
@@ -52,17 +52,17 @@ def _test_consistent_tril_with_diag(test_case, placement, sbp):
 
 
 class TestConsistentTril(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_tril_without_diag(test_case):
+    @global_view
+    def test_global_tril_without_diag(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_consistent_tril_without_diag(test_case, placement, sbp)
+                _test_global_tril_without_diag(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_tril_with_diag(test_case):
+    @global_view
+    def test_global_tril_with_diag(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_consistent_tril_with_diag(test_case, placement, sbp)
+                _test_global_tril_with_diag(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
