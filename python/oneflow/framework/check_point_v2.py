@@ -223,14 +223,13 @@ def tensor_setstate(self, pickle_dict):
 
 def placement_getstate(self):
     return {
-        "device_type": self.device_type,
-        "device_ids": self.device_ids,
-        "hierarchy": self.hierarchy,
+        "type": self.type,
+        "ranks": self.ranks,
     }
 
 
 def placement_setstate(self, state):
-    return self.__init__(state["device_type"], state["device_ids"], state["hierarchy"])
+    return self.__init__(state["type"], state["ranks"])
 
 
 def RegisterMethods():
