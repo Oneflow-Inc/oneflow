@@ -27,31 +27,31 @@ import oneflow.unittest
 
 
 @autotest(n=1, check_graph=False)
-def _test_consistent_sum_against_pytorch(test_case, placement, sbp):
-    x = random_tensor(4, 8, 16, 8, 24).to_consistent(placement, sbp)
+def _test_global_sum_against_pytorch(test_case, placement, sbp):
+    x = random_tensor(4, 8, 16, 8, 24).to_global(placement, sbp)
     y = torch.sum(x)
     return y
 
 
 @autotest(n=3, check_graph=False)
-def _test_consistent_sum_with_0_size_tensor(test_case, placement, sbp):
-    x = random_tensor(4, 8, 16, 0, 24).to_consistent(placement, sbp)
+def _test_global_sum_with_0_size_tensor(test_case, placement, sbp):
+    x = random_tensor(4, 8, 16, 0, 24).to_global(placement, sbp)
     y = torch.sum(x, dim=random(0, 3).to(int))
     return y
 
 
 class TestConsistentSumModule(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_sum_against_pytorch(test_case):
+    @global_view
+    def test_global_sum_against_pytorch(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_consistent_sum_against_pytorch(test_case, placement, sbp)
+                _test_global_sum_against_pytorch(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_sum_with_0_size_tensor(test_case):
+    @global_view
+    def test_global_sum_with_0_size_tensor(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4, valid_split_axis=[0, 1, 3]):
-                _test_consistent_sum_with_0_size_tensor(test_case, placement, sbp)
+                _test_global_sum_with_0_size_tensor(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

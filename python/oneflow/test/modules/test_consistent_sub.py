@@ -27,9 +27,9 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def _test_consistent_sub(test_case, placement, sbp):
-    x = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
-    y = random_tensor(2, 8, 8).to_consistent(placement=placement, sbp=sbp)
+def _test_global_sub(test_case, placement, sbp):
+    x = random_tensor(2, 8, 8).to_global(placement=placement, sbp=sbp)
+    y = random_tensor(2, 8, 8).to_global(placement=placement, sbp=sbp)
     out1 = x - y
     out2 = x - 2
     out3 = 2 - x
@@ -38,26 +38,26 @@ def _test_consistent_sub(test_case, placement, sbp):
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def _test_consistent_sub_with_0_size_data(test_case, placement, sbp):
+def _test_global_sub_with_0_size_data(test_case, placement, sbp):
     device = random_device()
-    x = random_tensor(2, 0, 8).to_consistent(placement=placement, sbp=sbp)
+    x = random_tensor(2, 0, 8).to_global(placement=placement, sbp=sbp)
     out1 = x - 2
     out2 = 2 - x
     return out1, out2
 
 
 class TestConsistentSubModule(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_sub(test_case):
+    @global_view
+    def test_global_sub(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_sub(test_case, placement, sbp)
+                _test_global_sub(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_sub_with_0_size_data(test_case):
+    @global_view
+    def test_global_sub_with_0_size_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2, valid_split_axis=1):
-                _test_consistent_sub_with_0_size_data(test_case, placement, sbp)
+                _test_global_sub_with_0_size_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
