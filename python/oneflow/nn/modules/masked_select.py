@@ -47,7 +47,7 @@ def masked_select_op(input, mask):
     ), f"The dim of masked_select module's inputs can not match, please check!"
     assert (
         input.is_global == mask.is_global
-    ), f"tensor type of input is different from mask."
+    ), f"input tensor is %s tensor, but mask is %s tensor" % ("global" if input.is_global else "local", "global" if mask.is_global else "local")
     res = flow._C.mul(input, mask)
 
     indices = flow.argwhere(res)
