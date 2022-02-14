@@ -972,12 +972,8 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   }
   std::cout << "666" << std::endl;
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
-  std::cout << "777" << std::endl;
-  auto* producer_op = result.getDefiningOp();
-  auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
-  std::cout << "999" << std::endl;
-  output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
-  std::cout << "101010" << std::endl;
+  auto output_lbn = GetOutputLbn(result).getValue();
+  output_op_conf->set_in(output_lbn);
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
         op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
