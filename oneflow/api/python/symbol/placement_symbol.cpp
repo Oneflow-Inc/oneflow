@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <map>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
@@ -118,10 +117,11 @@ struct PlacementSymbolExportUtil {
     std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
     for (int i = 0; i < size; ++i) {
       int64_t rank = rank_data[i];
-      if (rank >= GlobalProcessCtx::WorldSize()) {
-        return Error::RuntimeError() << "rank " << rank << " is invalid since the world size is "
-                                     << GlobalProcessCtx::WorldSize();
-      }
+      // TODO(): Prevent users from creating illegal placement
+      // if (rank >= GlobalProcessCtx::WorldSize()) {
+      //   return Error::RuntimeError() << "rank " << rank << " is invalid since the world size is "
+      //                                << GlobalProcessCtx::WorldSize();
+      // }
       int64_t machine_id = GlobalProcessCtx::NodeId(rank);
       int64_t device_id = GlobalProcessCtx::LocalRank(rank);
       machine_device_id_vec.emplace_back(machine_id, device_id);
