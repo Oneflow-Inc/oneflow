@@ -271,6 +271,7 @@ class FusedMatMulBiasAddReluFunctor {
                                .Input("c")
                                .Input("bias2")
                                .Output("out")
+                               .Output("aux")
                                .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,

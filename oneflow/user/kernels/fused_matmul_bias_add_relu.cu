@@ -150,11 +150,40 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
                                                    &cublas_ld, sizeof(cublas_ld)));
 }
 
+void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
+                       cublasLtEpilogue_t epilogue, 
+                       const void* bias_ptr, 
+                       const void* aux_ptr){
+  // if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
+  //   // Set bias ptr
+  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
+  //     CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+  //     sizeof(bias_ptr)));
+  // }
+  if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS){
+    // Set epilogue
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+      matmul_cache->operation_desc1, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+    // Set bias ptr
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
+      CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+      sizeof(bias_ptr)));
+  }
+  // // TODO: GELU_AUX_BIAS
+  // if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
+  //   // Set aux ptr for backward. 
+  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
+  //     CUBLASLT_MATMUL_DESC_AUX_POINTER, &aux_ptr,
+  //     sizeof(aux_ptr)));
+  // }
+}
+
 void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
                    const cublasComputeType_t cublas_compute_dtype, 
                    const cudaDataType_t cuda_data_type, 
                    cublasLtEpilogue_t epilogue, 
                    const void* bias_ptr, 
+                   const void* aux_ptr, 
                    size_t cublas_m, 
                    size_t cublas_n, 
                    size_t cublas_k, 
@@ -184,13 +213,14 @@ void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
                                                 sizeof(cublas_trans_b)));
   
   // Set epilogue
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_cache->operation_desc1, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+  // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+  //     matmul_cache->operation_desc1, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+  SetCublasEpilogue(matmul_cache, epilogue, bias_ptr, aux_ptr);
 
-  // Set bias ptr
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
-                                                 CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
-                                                 sizeof(bias_ptr)));
+  // // Set bias ptr
+  // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
+  //                                                CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+  //                                                sizeof(bias_ptr)));
   
   // Set matrix layout
   SetCublasMatrixLayout(matmul_cache->cublas_a1_desc, cuda_data_type, cublas_trans_a, cublas_m,
@@ -238,6 +268,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* bias1 = ctx->Tensor4ArgNameAndIndex("bias1", 0);
     const user_op::Tensor* bias2 = ctx->Tensor4ArgNameAndIndex("bias2", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
     
     const DataType data_type = out->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
@@ -257,12 +288,14 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const double beta1 = 0.0;
     const auto sp_beta1 = GetCublasScalarParameter(beta1, cublas_compute_dtype);
     // First matmul + bias + relu. 
+    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
     SetCublasAttr(matmul_cache, 
                   cublas_compute_dtype, 
                   cuda_data_type, 
                   epilogue, 
                   bias1->dptr(), 
+                  aux->dptr(), 
                   cublas_m, 
                   cublas_n, 
                   cublas_k, 
@@ -296,7 +329,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
                   cublas_compute_dtype, 
                   cuda_data_type, 
                   epilogue, 
-                  bias2->dptr(), 
+                  bias2->dptr(),
+                  nullptr,  
                   cublas_m, 
                   cublas_n, 
                   cublas_k, 

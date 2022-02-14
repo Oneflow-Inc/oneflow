@@ -4260,7 +4260,8 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
     OneFlow_Tensor:$bias2
   );
   let output = (outs
-    OneFlow_Tensor:$out
+    OneFlow_Tensor:$out, 
+    OneFlow_Tensor:$aux
   );
   let attrs = (ins
     // DefaultValuedAttr<BoolAttr, "false">:$transpose_a,

@@ -42,10 +42,12 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   size_t c_num_axes = c.shape().NumAxes();
 
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* aux = ctx->OutputTensorDesc("aux", 0);
 
   *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
-
+  *ctx->OutputShape("aux", 0) = ctx->InputShape("a", 0);
+  *ctx->OutputIsDynamic("aux", 0) = ctx->InputIsDynamic("a", 0);
   /*
   A: (m, k)
   B: (n, k) need transpose
@@ -58,6 +60,8 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   n = b.shape().At(b_num_axes - 2);
   CHECK_EQ_OR_RETURN(bias1.shape().At(0), n)
       << "Bias1 shape cannot be added (" << bias1.shape().At(0) << ") and (" << n << ")";
+  aux->mut_shape()->Set(a_num_axes - 2, m);
+  aux->mut_shape()->Set(a_num_axes - 1, n);
   CHECK_EQ_OR_RETURN(n, c.shape().At(c_num_axes - 1));
   j = c.shape().At(c_num_axes - 2);
   CHECK_EQ_OR_RETURN(bias2.shape().At(0), j)  
@@ -74,6 +78,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("c", 0), dtype);
   CHECK_EQ_OR_RETURN(ctx->InputDType("bias2", 0), dtype);
   *ctx->OutputDType("out", 0) = dtype;
+  *ctx->OutputDType("aux", 0) = dtype;
   return Maybe<void>::Ok();
 }
 
