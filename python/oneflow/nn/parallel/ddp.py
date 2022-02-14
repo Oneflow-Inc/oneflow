@@ -83,6 +83,17 @@ def DistributedDataParallel(
         assert all(x.device == device for x in module.parameters())
     reversed_param_list = list(reversed(list(module.parameters())))
     module._param_grad_offset_in_bucket = {}
+
+    def numel_in_bucket(tensor: flow.Tensor):
+        def align(x: int, unit_size: int):
+            return (x + (unit_size - 1)) // unit_size * unit_size
+
+        # tensor memory should be align to 512 bytes for cuda operations,
+        # 4 is the bytes of a float number
+        # TODO(jianhao): expose the `kCudaMemAllocAlignSize` from C++ to
+        # avoid this hardcoded "512"
+        return align(tensor.numel(), 512 // 4)
+
     offset_in_bucket = 0
     with flow.no_grad():
         for i, param in enumerate(reversed_param_list):
@@ -90,7 +101,7 @@ def DistributedDataParallel(
             if i % bucket_size == 0:
                 offset_in_bucket = 0
             module._param_grad_offset_in_bucket[param] = offset_in_bucket
-            offset_in_bucket += param.numel()
+            offset_in_bucket += numel_in_bucket(param)
 
     module._bucket_index = {
         x: i // bucket_size for i, x in enumerate(reversed_param_list)
@@ -100,12 +111,12 @@ def DistributedDataParallel(
         for i in range(0, len(reversed_param_list), bucket_size)
     ]
 
-    bucket_bytes = 0
+    bucket_elems = 0
     module._bucket_tensors = []
     for b in module._buckets:
-        bucket_bytes = sum([x.numel() for x in b])
+        bucket_elems = sum([numel_in_bucket(x) for x in b])
         module._bucket_tensors.append(
-            flow.zeros(bucket_bytes, dtype=flow.float32, device=device)
+            flow.zeros(bucket_elems, dtype=flow.float32, device=device)
         )
 
     ddp_state_for_reversed_params = OrderedDict(
