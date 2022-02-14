@@ -69,8 +69,8 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   }
   static Maybe<FlatTensorConsistency> New(
       Symbol<one::ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<NdSbp>> consumer_nd_sbp_constraint,
-                                          const TransportToken& tensor_transport_token) {
+      const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
+      const TransportToken& tensor_transport_token) {
     const auto& consistency = std::make_shared<FlatTensorConsistency>();
     consistency->clear();
     JUST(consistency->Init(tensor_meta, consumer_nd_sbp_constraint, tensor_transport_token));
