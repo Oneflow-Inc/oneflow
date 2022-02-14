@@ -35,10 +35,10 @@ def _test_expand_new_dims_broadcast(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_global(
+    global_of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_out = of_input.expand(*expand_dim)
+    of_out = global_of_input.expand(*expand_dim)
     of_out.sum().backward()
 
     if flow.env.get_rank() == 0:
@@ -62,11 +62,11 @@ def _test_expand_same_dim_broadcast(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_global(
+    global_of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
 
-    of_out = of_input.expand(*expand_dim)
+    of_out = global_of_input.expand(*expand_dim)
     loss = of_out.sum()
     loss.backward()
 
@@ -91,11 +91,11 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_global(
+    global_of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
 
-    of_out = of_input.expand(*expand_dim)
+    of_out = global_of_input.expand(*expand_dim)
     loss = of_out.sum()
     loss.backward()
 
@@ -120,12 +120,12 @@ def _test_expand_new_dims_split(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_global(
+    global_of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_input = of_input.to_global(sbp=flow.sbp.split(0))
+    global_of_input = global_of_input.to_global(sbp=flow.sbp.split(0))
 
-    of_out = of_input.expand(*expand_dim)
+    of_out = global_of_input.expand(*expand_dim)
     loss = of_out.sum()
     loss.backward()
 
@@ -154,10 +154,10 @@ def _test_expand_same_dim_split(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_global(
+    global_of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_input = of_input.to_global(sbp=flow.sbp.split(0))
+    global_of_input = global_of_input.to_global(sbp=flow.sbp.split(0))
 
     of_out = of_input.expand(*expand_dim)
     loss = of_out.sum()
@@ -188,12 +188,12 @@ def _test_expand_same_dim_negative_split(test_case, device):
     torch_out.sum().backward()
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    of_input = of_input.to_global(
+    global_of_input = of_input.to_global(
         placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
     )
-    of_input = of_input.to_global(sbp=flow.sbp.split(2))
+    global_of_input = global_of_input.to_global(sbp=flow.sbp.split(2))
 
-    of_out = of_input.expand(*expand_dim)
+    of_out = global_of_input.expand(*expand_dim)
     loss = of_out.sum()
     loss.backward()
 
