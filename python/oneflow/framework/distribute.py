@@ -31,7 +31,7 @@ def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
     Example::
         array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
         t1 = flow.tensor(array)
-        ct2 = t1.to_global(sbp=flow.sbp.split(0), placement=("cuda", {0: [0, 1, 2, 3]}))
+        ct2 = t1.to_global(sbp=flow.sbp.split(0), placement=("cuda", ranks=[0, 1, 2, 3]))
 
     """
     assert type(axis) is int
