@@ -206,10 +206,11 @@ class InplaceScalarMulFunctor : public ScalarMathBaseFunctor {
   }
 };
 
-class ScalarDivFunctor {
+class ScalarDivFunctor : public ScalarMathBaseFunctor {
  public:
+  ScalarDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_div") {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarMul(x, Scalar(1.0) / scalar, /*inplace=*/false);
+    return ScalarMathBaseFunctor::operator()(x, scalar, false);
   }
 };
 
