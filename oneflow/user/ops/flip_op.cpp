@@ -36,7 +36,14 @@ namespace oneflow {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-    if (std::none_of(dims.begin(), dims.end(), [](int x) { return x == i; })) {
+    bool flag = true;
+    for (auto x : dims) {
+      if (x == i) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
       ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
     }
   }

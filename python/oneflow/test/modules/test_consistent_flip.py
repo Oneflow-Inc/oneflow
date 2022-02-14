@@ -24,6 +24,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 def check_equality(x):
     equality_res = np.allclose(
         x.pytorch.detach().cpu().numpy(),
@@ -38,12 +39,14 @@ def check_equality(x):
         print("Oneflow: ", x.oneflow.numpy())
     return equality_res
 
+
 def test_flip_impl(test_case, ndim, placement, sbp):
     dims = [4, 4]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
     z = torch.flip(y, [0])
     assert check_equality(z), "z is not equal"
+
 
 class TestFlipConsistent(flow.unittest.TestCase):
     @global_view
@@ -52,6 +55,7 @@ class TestFlipConsistent(flow.unittest.TestCase):
         placement = flow.env.all_device_placement("cpu")
         sbp = (flow.sbp.split(axis=0),)
         test_flip_impl(test_case, ndim, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
