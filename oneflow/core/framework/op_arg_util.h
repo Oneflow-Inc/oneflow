@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/register/logical_blob_id.cfg.h"
 #include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/common/protobuf.h"
@@ -64,9 +63,6 @@ class OpArgBlobAttribute {
 
   void DumpToInterfaceBlobConf(std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const;
 
-  void DumpToOpNodeSignature(std::string bn_in_op,
-                             std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const;
-
  private:
   std::shared_ptr<cfg::BlobDescProto> blob_desc_;
   std::string logical_blob_name_;
@@ -100,9 +96,6 @@ class OpArgParallelAttribute {
   void Assign(const std::shared_ptr<OpArgParallelAttribute>& other);
 
   void DumpToInterfaceBlobConf(std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const;
-
-  void DumpToOpNodeSignature(std::string bn_in_op,
-                             std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const;
 
   std::string ToString() const;
 

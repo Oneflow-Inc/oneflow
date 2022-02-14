@@ -62,14 +62,6 @@ void OpArgBlobAttribute::DumpToInterfaceBlobConf(
   interface_blob_conf->set_is_dynamic(is_dynamic());
 }
 
-void OpArgBlobAttribute::DumpToOpNodeSignature(
-    std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto* blob_sig =
-      op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
-  CHECK(blob_sig->find(bn_in_op) == blob_sig->end());
-  (*blob_sig)[bn_in_op].CopyFrom(*blob_desc_);
-}
-
 OpArgParallelAttribute::OpArgParallelAttribute(
     const std::shared_ptr<ParallelDesc>& parallel_desc,
     const std::shared_ptr<cfg::SbpParallel>& sbp_parallel,
@@ -119,23 +111,6 @@ void OpArgParallelAttribute::DumpToInterfaceBlobConf(
   } else {
     interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel()->mutable_broadcast_parallel();
   }
-}
-
-void OpArgParallelAttribute::DumpToOpNodeSignature(
-    std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto* sbp_sig = op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-  CHECK(sbp_sig->find(bn_in_op) == sbp_sig->end());
-  (*sbp_sig)[bn_in_op].CopyFrom(*sbp_parallel_);
-
-  auto* mirrored_sig =
-      op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
-  CHECK(mirrored_sig->find(bn_in_op) == mirrored_sig->end());
-  (*mirrored_sig)[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
-
-  auto* parallel_sig =
-      op_node_signature->mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
-  CHECK(parallel_sig->find(bn_in_op) == parallel_sig->end());
-  (*parallel_sig)[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
 }
 
 std::string OpArgParallelAttribute::ToString() const {
