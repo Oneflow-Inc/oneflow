@@ -4278,6 +4278,9 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
   //   DefaultValuedAttr<F64Attr, "1.">:$alpha1, 
   //   DefaultValuedAttr<F64Attr, "1.">:$alpha2
   // );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$skip_final_activation
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;

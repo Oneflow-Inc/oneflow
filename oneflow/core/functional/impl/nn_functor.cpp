@@ -294,7 +294,8 @@ class FusedMatMulBiasAddReluFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const TensorTuple& weights,
-                           const TensorTuple& biases) const {
+                           const TensorTuple& biases, 
+                           bool skip_final_activation) const {
     // const auto& a_shape = a->shape();
     // const auto& b_shape = b->shape();
 
@@ -327,6 +328,7 @@ class FusedMatMulBiasAddReluFunctor {
     //     << "Bias shape cannot be added (" << bias->shape()->At(0) << ") and (" << n << ")";
 
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
     const int64_t ninput = weights.size();
     printf("N is %ld \n", ninput);
     TensorTuple input(2*ninput+1);

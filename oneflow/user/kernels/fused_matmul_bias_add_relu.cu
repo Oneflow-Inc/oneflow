@@ -193,12 +193,6 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
                        cublasLtEpilogue_t epilogue, 
                        const void* bias_ptr, 
                        const void* aux_ptr){
-  // if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
-  //   // Set bias ptr
-  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
-  //     CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
-  //     sizeof(bias_ptr)));
-  // }
   if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS){
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
@@ -252,15 +246,8 @@ void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
                                                 sizeof(cublas_trans_b)));
   
   // Set epilogue
-  // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-  //     matmul_cache->operation_desc1, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
   SetCublasEpilogue(matmul_cache, epilogue, bias_ptr, aux_ptr);
 
-  // // Set bias ptr
-  // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc1,
-  //                                                CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
-  //                                                sizeof(bias_ptr)));
-  
   // Set matrix layout
   SetCublasMatrixLayout(matmul_cache->cublas_a1_desc, cuda_data_type, cublas_trans_a, cublas_m,
                         cublas_k, cublas_lda);
@@ -307,6 +294,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0); 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    bool skip_final_activation = ctx->Attr<bool>("skip_final_activation"); 
     printf("221 \n"); 
 
     const DataType data_type = out->data_type();
@@ -353,6 +341,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       out_feature = weight->shape().At(0); 
       weight->shape().ToDimVector(&weight_shape); 
+      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
+      
       if(idx == 0){
         x_ptr = x->mut_dptr();
         InferMatmulCublasMNK(x_shape, weight_shape, 
@@ -372,11 +362,13 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
       if(idx == weight_size-1){
         printf("here??? \n"); 
         y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
+        if(skip_final_activation){
+          epilogue = CUBLASLT_EPILOGUE_BIAS;
+        }
       }else{
         y_ptr = tmp_y_buffer; 
       }
 
-      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
       SetCublasAttr(matmul_cache, 
                     cublas_compute_dtype, 
                     cuda_data_type, 
@@ -401,7 +393,6 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
       tmp_y_buffer += batch_size * out_feature; 
       // tmp_shape.Set(1, out_feature); 
       tmp_shape.at(1) = out_feature; 
-
     }
   }
 };
