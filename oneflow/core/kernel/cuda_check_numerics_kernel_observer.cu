@@ -91,15 +91,23 @@ void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
   for (const auto& obn : kernel->op_attribute().output_bns()) {
     Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {
+      std::vector<char> buffer(blob->ByteSizeOfBlobBody());
+      OF_CUDA_CHECK(
+          cudaMemcpy(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), cudaMemcpyDefault));
+      OF_CUDA_CHECK(cudaDeviceSynchronize());
       std::ofstream ofs(obn);
-      ofs.write(static_cast<const char*>(blob->dptr()), blob->ByteSizeOfBlobBody());
+      ofs.write(buffer.data(), blob->ByteSizeOfBlobBody());
     }
   }
   for (const auto& ibn : kernel->op_attribute().input_bns()) {
     Blob* blob = ctx->BnInOp2Blob(ibn);
     if (blob != nullptr) {
+      std::vector<char> buffer(blob->ByteSizeOfBlobBody());
+      OF_CUDA_CHECK(
+          cudaMemcpy(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), cudaMemcpyDefault));
+      OF_CUDA_CHECK(cudaDeviceSynchronize());
       std::ofstream ofs(ibn);
-      ofs.write(static_cast<const char*>(blob->dptr()), blob->ByteSizeOfBlobBody());
+      ofs.write(static_cast<const char*>(buffer.data()), blob->ByteSizeOfBlobBody());
     }
   }
 }
