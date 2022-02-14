@@ -914,7 +914,13 @@ def _reshape(self, *shape):
 
 
 def _view(self, *shape):
-    return flow.view(self, *shape)
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
+    else:
+        new_shape = shape
+    return flow._C.view(self, new_shape)
 
 
 def _sort(self, dim: int = -1, descending: bool = False):

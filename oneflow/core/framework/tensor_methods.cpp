@@ -64,7 +64,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
-  storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
@@ -86,38 +85,14 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   return output;
 }
 
-Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy" : "consistent");
   }
-  int need_infer_axis = -1;
-  size_t count = 1;
-  for (int i = 0; i < shape.NumAxes(); ++i) {
-    if (shape.At(i) < -1) {
-      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-    } else if (shape.At(i) == -1) {
-      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-          << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-      need_infer_axis = i;
-    } else {
-      count *= shape.At(i);
-    }
-  }
 
-  std::shared_ptr<Tensor> output;
-  size_t x_count = input->shape()->Count(0);
-  if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
-    output = JUST(BasicView(input, shape, 0));
-  } else {
-    Shape infered_shape = shape;
-    infered_shape.Set(need_infer_axis, x_count / count);
-    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << "Shape " << shape.ToString() << " is invalid for input of shape "
-        << input->shape()->ToString();
-    output = JUST(BasicView(input, infered_shape, 0));
-  }
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  std::shared_ptr<Tensor> output = JUST(BasicView(input, target_shape, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     Shape input_shape(input->shape()->dim_vec());

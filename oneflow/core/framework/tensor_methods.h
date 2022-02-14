@@ -29,7 +29,10 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 namespace view {
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        const Stride& target_strides, int64_t storage_offset);
+                        int64_t storage_offset);
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset);
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
 

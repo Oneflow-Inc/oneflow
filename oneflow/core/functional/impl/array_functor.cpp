@@ -982,14 +982,46 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
+bool checkViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
+                    const DimVector& target_shape) {
+  if (elem_count == 0) { return false; }
+
+  int64_t view_d = target_shape.size() - 1;
+  int64_t chunk_base_stride = stride.back();
+  std::vector<int64_t> newstride(target_shape.size());
+  // stride for each subspace in the chunk
+  // numel in current chunk
+  int64_t tensor_numel = 1;
+  int64_t view_numel = 1;
+  for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
+    tensor_numel *= shape[tensor_d];
+    // if end of tensor size chunk, check view
+    if ((tensor_d == 0)
+        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
+      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
+        newstride[view_d] = view_numel * chunk_base_stride;
+        view_numel *= target_shape[view_d];
+        view_d--;
+      }
+      if (view_numel != tensor_numel) { return false; }
+      if (tensor_d > 0) {
+        chunk_base_stride = stride[tensor_d - 1];
+        tensor_numel = 1;
+        view_numel = 1;
+      }
+    }
+  }
+  if (view_d != -1) { return false; }
+  return true;
+}
+
 class ReshapeFunctor {
  public:
   ReshapeFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    // if input tensor is eager local, than return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) { return view::Reshape(x, shape); }
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -1005,25 +1037,93 @@ class ReshapeFunctor {
     }
     size_t x_count = x->shape()->Count(0);
     MutableAttrMap attrs;
+    Shape infered_shape = shape;
     if (need_infer_axis == -1) {
       CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", shape));
     } else {
-      Shape infered_shape = shape;
       infered_shape.Set(need_infer_axis, x_count / count);
       CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
           << "\n Shape " << shape.ToString() << " is invalid for input shape "
           << x->shape()->ToString();
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
+
+    // if input tensor is eager local, then try return tensor's view
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        // in some case, view operate is not allowed, so need to check it's validation,
+        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+        bool is_view_valid =
+            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        if (is_view_valid) { return view::Reshape(x, infered_shape); }
+      }
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
+class ViewFunctor {
+ public:
+  ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) < -1) {
+        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+      } else if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
+    }
+    size_t x_count = x->shape()->Count(0);
+    MutableAttrMap attrs;
+    Shape infered_shape = shape;
+    if (need_infer_axis == -1) {
+      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+          << "\n Shape " << infered_shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
+      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+    } else {
+      infered_shape.Set(need_infer_axis, x_count / count);
+      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
+      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+    }
+
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        // in some case, view operate is not allowed, so need to check it's validation,
+        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+        bool is_view_valid =
+            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+        CHECK_OR_RETURN(is_view_valid)
+            << " >> view size is not compatible with input tensor's size and stride (at least one "
+               "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+        return view::Reshape(x, infered_shape);
+      }
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 
 class SliceBaseFunctor {
  public:
@@ -2705,6 +2805,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
+  m.add_functor<impl::ViewFunctor>("View");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");
