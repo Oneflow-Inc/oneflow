@@ -13,12 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <map>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 #include <pybind11/operators.h>
 
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -72,6 +76,33 @@ struct PlacementSymbolExportUtil {
     return parallel_desc;
   }
 
+  static Maybe<std::vector<std::string>> ParseAndFormatRanks(const py::dict& device_ids) {
+    std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
+    for (const auto& pair : device_ids) {
+      CHECK_OR_RETURN(py::isinstance<py::int_>(pair.first))
+          << "The key (node id) of placement device_ids must be int64.";
+      int64_t machine_id = pair.first.cast<int64_t>();
+      if (py::isinstance<py::int_>(pair.second)) {
+        machine_device_id_vec.emplace_back(machine_id, pair.second.cast<int64_t>());
+      } else {
+        CHECK_OR_RETURN(py::isinstance<py::iterable>(pair.second))
+            << "Value of device_ids dict must be int, list or range";
+        for (const auto& device_id : pair.second) {
+          CHECK_OR_RETURN(py::isinstance<py::int_>(device_id))
+              << "Value of device_ids dict must be int, list or range of int.";
+          machine_device_id_vec.emplace_back(machine_id, device_id.cast<int64_t>());
+        }
+      }
+    }
+    auto formated_machine_device_ids = std::make_shared<std::vector<std::string>>();
+    for (const auto& pair : machine_device_id_vec) {
+      const std::string& device_name =
+          std::to_string(pair.first) + ":" + std::to_string(pair.second);
+      formated_machine_device_ids->emplace_back(device_name);
+    }
+    return formated_machine_device_ids;
+  }
+
   static Maybe<Shape> GetRanksShape(PyArrayObject* ranks) {
     auto* shape = PyArray_SHAPE(ranks);
     return std::make_shared<Shape>(DimVector(shape, shape + PyArray_NDIM(ranks)));
@@ -102,6 +133,13 @@ struct PlacementSymbolExportUtil {
       formated_machine_device_ids->emplace_back(device_name);
     }
     return formated_machine_device_ids;
+  }
+
+  static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(
+      const std::string& type, const py::dict& device_ids,
+      const std::shared_ptr<Shape>& hierarchy) {
+    const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(device_ids));
+    return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, hierarchy)));
   }
 
   // create Symbol<ParallelDesc> object through given device_type and ranks parameters
@@ -161,12 +199,55 @@ struct PlacementSymbolExportUtil {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement",
                                                                           py::dynamic_attr())
+      .def(py::init([](const std::string& device_type, py::dict device_ids,
+                       const std::shared_ptr<Shape>& hierarchy) {
+             PyErr_WarnEx(
+                 PyExc_UserWarning,
+                 "The way to construct placement is deprecated, and it will be removed in next "
+                 "versions. Please use oneflow.placement(type=str, ranks=int array) instead",
+                 1);
+             return PlacementSymbolExportUtil::CreateParallelDescSymbol(device_type, device_ids,
+                                                                        hierarchy)
+                 .GetOrThrow();
+           }),
+           py::arg("device_type"), py::arg("device_ids"), py::arg("hierarchy"))
+      .def(py::init([](const std::string& device_type, const py::dict& device_ids,
+                       const py::tuple& hierarchy) {
+             PyErr_WarnEx(
+                 PyExc_UserWarning,
+                 "The way to construct placement is deprecated, and it will be removed in next "
+                 "versions. Please use oneflow.placement(type=str, ranks=int array) instead",
+                 1);
+             DimVector shape_dims{};
+             for (const auto& dim : hierarchy) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+             return PlacementSymbolExportUtil::CreateParallelDescSymbol(
+                        device_type, device_ids, std::make_shared<Shape>(shape_dims))
+                 .GetOrThrow();
+           }),
+           py::arg("device_type"), py::arg("device_ids"), py::arg("hierarchy") = py::tuple())
       .def(py::init([](const std::string& type, const py::object& ranks) {
              return PlacementSymbolExportUtil::CreateParallelDescSymbol(type, ranks).GetOrThrow();
            }),
            py::arg("type"), py::arg("ranks"))
       .def_property_readonly(
+          "device_type",
+          [](Symbol<ParallelDesc> p) {
+            PyErr_WarnEx(
+                PyExc_UserWarning,
+                "The property .device_type of placement is deprecated, please use .type instead",
+                1);
+            return p->device_tag() == "gpu" ? "cuda" : "cpu";
+          })
+      .def_property_readonly(
           "type", [](Symbol<ParallelDesc> p) { return p->device_tag() == "gpu" ? "cuda" : "cpu"; })
+      .def_property_readonly("hierarchy",
+                             [](Symbol<ParallelDesc> p) {
+                               PyErr_WarnEx(PyExc_UserWarning,
+                                            "The property .hierarchy of placement is deprecated, "
+                                            "please use .ranks.shape instead",
+                                            1);
+                               return p->hierarchy();
+                             })
       .def_property_readonly("ranks",
                              [](Symbol<ParallelDesc> p) {
                                return PlacementSymbolExportUtil::GetPlacementRanks(p).GetOrThrow();
