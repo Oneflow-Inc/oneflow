@@ -55,7 +55,7 @@ def _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp):
 
 
 class TestReshapeConsistent(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_reshape(test_case):
         shape_pairs = [
             ((8, 16), (8 * 16,)),
