@@ -135,6 +135,9 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
 
 #ifdef WITH_ONEDNN
 
+uint32_t OnednnFormatTagMap[kMaxNumDims] = {dnnl_a,     dnnl_ab,     dnnl_abc,     dnnl_abcd,
+                                            dnnl_abcde, dnnl_abcdef, dnnl_abcdefg, dnnl_abcdefgh};
+
 inline void OneDnnBroadcastDims(dnnl::memory::dims* src0, size_t num_src0_dims,
                                 const int64_t* src0_dims, dnnl::memory::dims* src1,
                                 size_t num_src1_dims, const int64_t* src1_dims,
@@ -185,7 +188,6 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     dnnl::memory::dims src_0_dims(num_dims);
     dnnl::memory::dims src_1_dims(num_dims);
     dnnl::memory::dims dst_dims(num_dims);
-
     const void* onednn_src0 = nullptr;
     const void* onednn_src1 = nullptr;
 
@@ -205,12 +207,14 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
                  dst_dims.data(), dst);
 
-    auto src_0_md = dnnl::memory::desc(src_0_dims, src_onednn,
-                                       static_cast<dnnl::memory::format_tag>(num_dims + 1));
-    auto src_1_md = dnnl::memory::desc(src_1_dims, src_onednn,
-                                       static_cast<dnnl::memory::format_tag>(num_dims + 1));
-    auto dst_md = dnnl::memory::desc(dst_dims, dst_onednn,
-                                     static_cast<dnnl::memory::format_tag>(num_dims + 1));
+    auto src_0_md =
+        dnnl::memory::desc(src_0_dims, src_onednn,
+                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims-1]));
+    auto src_1_md =
+        dnnl::memory::desc(src_1_dims, src_onednn,
+                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims-1]));
+    auto dst_md = dnnl::memory::desc(
+        dst_dims, dst_onednn, static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims-1]));
 
     auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
     auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
