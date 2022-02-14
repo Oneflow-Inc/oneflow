@@ -841,7 +841,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", ranks=[0, 1])
         global_tensor = tensor.to_global(placement, flow.sbp.broadcast)
-        new_placement = flow.placement("cuda", ranks=[0, 1])
+        new_placement = flow.placement("cuda", ranks=[0, 1, 2])
         broadcast_tensor = global_tensor.to_global(new_placement, flow.sbp.broadcast)
         test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() != 3:
