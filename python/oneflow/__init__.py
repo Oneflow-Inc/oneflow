@@ -303,6 +303,7 @@ from oneflow.framework.generator import (
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow.framework.type_tensor import *
 
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,

@@ -171,5 +171,13 @@ oneflow
             topk,
             nms,
             cumprod,
+            HalfTensor,
+            FloatTensor,
+            DoubleTensor,
+            BoolTensor,
+            ByteTensor,
+            CharTensor,
+            IntTensor,
+            LongTensor,
 
 .. autofunction:: oneflow.relu
