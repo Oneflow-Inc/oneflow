@@ -26,41 +26,41 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_consistent_transpose(test_case, placement, sbp):
+def _test_global_transpose(test_case, placement, sbp):
     input = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    input = input.to_consistent(placement, sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    input = input.to_global(placement, sbp)
     of_out = flow.transpose(input, 0, 1)
     np_out = input.numpy().transpose((1, 0, 2, 3))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_consistent_tensor_transpose(test_case, placement, sbp):
+def _test_global_tensor_transpose(test_case, placement, sbp):
     input = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    input = input.to_consistent(placement, sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    input = input.to_global(placement, sbp)
     of_out = input.transpose(0, 1)
     np_out = input.numpy().transpose((1, 0, 2, 3))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_consistent_tranpose_negative_dim(test_case, placement, sbp):
+def _test_global_tranpose_negative_dim(test_case, placement, sbp):
     input = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    input = input.to_consistent(placement, sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    input = input.to_global(placement, sbp)
     of_out = flow.transpose(input, -4, -3)
     np_out = input.numpy().transpose((1, 0, 2, 3))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_consistent_transpose_backward(test_case, placement, sbp):
+def _test_global_transpose_backward(test_case, placement, sbp):
     x = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    x = x.to_consistent(placement, sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    x = x.to_global(placement, sbp)
     y = flow.transpose(x, 0, 1).sum()
     y.backward()
     test_case.assertTrue(
@@ -68,11 +68,11 @@ def _test_consistent_transpose_backward(test_case, placement, sbp):
     )
 
 
-def _test_consistent_transpose_backward_v2(test_case, placement, sbp):
+def _test_global_transpose_backward_v2(test_case, placement, sbp):
     x = flow.tensor(
         np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    x = x.to_consistent(placement, sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    x = x.to_global(placement, sbp)
     y = flow.transpose(x, 3, 1).sum()
     y.backward()
     test_case.assertTrue(
@@ -81,51 +81,51 @@ def _test_consistent_transpose_backward_v2(test_case, placement, sbp):
 
 
 @autotest(n=1, check_graph=False)
-def _test_consistent_transpose_flow_with_random_data(test_case, placement, sbp):
-    x = random_tensor(4, 8, 16, 24, 8).to_consistent(placement, sbp)
+def _test_global_transpose_flow_with_random_data(test_case, placement, sbp):
+    x = random_tensor(4, 8, 16, 24, 8).to_global(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 
 
 @autotest(n=1, check_graph=False)
-def _test_consistent_transpose_with_0_size_data(test_case, placement, sbp):
+def _test_global_transpose_with_0_size_data(test_case, placement, sbp):
     device = random_device()
-    x = random_tensor(4, 8, 16, 0, 8).to_consistent(placement, sbp)
+    x = random_tensor(4, 8, 16, 0, 8).to_global(placement, sbp)
     y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
     return y
 
 
 class TestConsistentTranspose(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_transpose(test_case):
+    @global_view
+    def test_global_transpose(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
-            _test_consistent_transpose,
-            _test_consistent_tensor_transpose,
-            _test_consistent_tranpose_negative_dim,
-            _test_consistent_transpose_backward,
-            _test_consistent_transpose_backward_v2,
+            _test_global_transpose,
+            _test_global_tensor_transpose,
+            _test_global_tranpose_negative_dim,
+            _test_global_transpose_backward,
+            _test_global_transpose_backward_v2,
         ]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=4):
                     arg[0](test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_transpose_flow_with_random_data(test_case):
+    @global_view
+    def test_global_transpose_flow_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_consistent_transpose_flow_with_random_data(
+                _test_global_transpose_flow_with_random_data(
                     test_case, placement, sbp
                 )
 
-    @consistent
-    def test_consistent_transpose_with_0_size_data(
+    @global_view
+    def test_global_transpose_with_0_size_data(
         test_case, valid_split_axis=[0, 1, 3]
     ):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_consistent_transpose_with_0_size_data(test_case, placement, sbp)
+                _test_global_transpose_with_0_size_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
