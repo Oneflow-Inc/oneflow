@@ -27,9 +27,9 @@ import oneflow.unittest
 
 
 def _test_global_transpose(test_case, placement, sbp):
-    input = flow.tensor(
-        np.random.randn(8, 16, 8, 16), dtype=flow.float32
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    input = flow.tensor(np.random.randn(8, 16, 8, 16), dtype=flow.float32).to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    )
     input = input.to_global(placement, sbp)
     of_out = flow.transpose(input, 0, 1)
     np_out = input.numpy().transpose((1, 0, 2, 3))
@@ -37,9 +37,9 @@ def _test_global_transpose(test_case, placement, sbp):
 
 
 def _test_global_tensor_transpose(test_case, placement, sbp):
-    input = flow.tensor(
-        np.random.randn(8, 16, 8, 16), dtype=flow.float32
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    input = flow.tensor(np.random.randn(8, 16, 8, 16), dtype=flow.float32).to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    )
     input = input.to_global(placement, sbp)
     of_out = input.transpose(0, 1)
     np_out = input.numpy().transpose((1, 0, 2, 3))
@@ -47,9 +47,9 @@ def _test_global_tensor_transpose(test_case, placement, sbp):
 
 
 def _test_global_tranpose_negative_dim(test_case, placement, sbp):
-    input = flow.tensor(
-        np.random.randn(8, 16, 8, 16), dtype=flow.float32
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    input = flow.tensor(np.random.randn(8, 16, 8, 16), dtype=flow.float32).to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    )
     input = input.to_global(placement, sbp)
     of_out = flow.transpose(input, -4, -3)
     np_out = input.numpy().transpose((1, 0, 2, 3))
@@ -115,14 +115,10 @@ class TestConsistentTranspose(flow.unittest.TestCase):
     def test_global_transpose_flow_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_global_transpose_flow_with_random_data(
-                    test_case, placement, sbp
-                )
+                _test_global_transpose_flow_with_random_data(test_case, placement, sbp)
 
     @global_view
-    def test_global_transpose_with_0_size_data(
-        test_case, valid_split_axis=[0, 1, 3]
-    ):
+    def test_global_transpose_with_0_size_data(test_case, valid_split_axis=[0, 1, 3]):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_global_transpose_with_0_size_data(test_case, placement, sbp)
