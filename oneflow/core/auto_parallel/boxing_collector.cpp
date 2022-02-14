@@ -52,7 +52,8 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
   GenerateNdSbpList();
-  JUST(GenerateCombination(2));
+  JUST(GenerateCombination4SamePlacement(3));
+  JUST(GenerateCombination4DiffPlacement(3));
   return Maybe<void>::Ok();
 }
 
@@ -90,8 +91,8 @@ void BoxingCollector::GenerateNdSbpList() {
   DfsSetNdSbp(id2SbpParallel_, 0, hierarchy_num, nd_sbp, nd_sbp_lists_, NdSbpUniverse_);
 }
 
-// Generate the transfer rule for different combinations and hierarchies
-Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
+// Generate the transfer rule for different combinations with the same hierarchie
+Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middle_node_num) {
   // other parameters
   // NOTE: The performance of this function are all the same with different hierarchy
   int32_t kWorldSize = GlobalProcessCtx::WorldSize();
@@ -183,6 +184,103 @@ Maybe<void> BoxingCollector::GenerateCombination(int32_t max_middle_node_num) {
   return Maybe<void>::Ok();
 }
 
+// Generate the transfer rule for different combinations with the different hierarchies
+Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middle_node_num) {
+  // Other parameters
+  int32_t kWorldSize = GlobalProcessCtx::WorldSize();
+  BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
+  // Virtual placements before transfer
+  Shape in_hierarchy44({4 * kWorldSize + 1, 4 * kWorldSize});
+  std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
+  auto in_parallel_desc = JUST(ParallelDesc::New(
+      "cpu", {"0:0-" + std::to_string(in_hierarchy44.elem_cnt() - 1)}, in_hierarchy));
+  // Virtual placements after transfer
+  Shape out_hierarchy44({4 * kWorldSize, 4 * kWorldSize});
+  std::shared_ptr<Shape> out_hierarchy = std::make_shared<Shape>(out_hierarchy44);
+  auto out_parallel_desc = JUST(ParallelDesc::New(
+      "cpu", {"0:0-" + std::to_string(out_hierarchy44.elem_cnt() - 1)}, out_hierarchy));
+
+  // Generate the id Map from 1d sbp to 2d sbp
+  int32_t hierarchy_num = 2;
+  cfg::NdSbp nd_sbp;
+  for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
+  for (int32_t id_1d = 0; id_1d < id2SbpParallel_.size(); id_1d++) {
+    for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) {
+      *nd_sbp.mutable_sbp_parallel(dim_sbp) = id2SbpParallel_[id_1d];
+    }
+    // NOTE: The 2d sbp might be filtered out already.
+    const auto& it_ = NdSbpUniverse_.find(nd_sbp);
+    if (it_ != NdSbpUniverse_.end()) {
+      id_1d_2_2d_[id_1d] = NdSbpUniverse_[nd_sbp];
+    } else {
+      id_1d_2_2d_[id_1d] = -1;
+    }
+  }
+  // Number of 1d sbp
+  int32_t m = id_1d_2_2d_.size();
+
+  // Compute the cost while transferring between different placements
+  // Compute the cost while transferring a 1D sbp between different placements
+  cost_4_diff_placement_.resize(m, GetMaxVal<float>());
+  for (int32_t id_1d = 0; id_1d < m; id_1d++) {
+    int32_t id_2d = id_1d_2_2d_[id_1d];
+    if (id_2d < 0) { continue; }
+
+    cost_4_diff_placement_[id_1d] =
+        JUST(ComputeLazyCopyCostBetweenNdSbp(nd_sbp_lists_[id_2d], nd_sbp_lists_[id_2d], blob_desc,
+                                             *in_parallel_desc, *out_parallel_desc, false));
+  }
+
+  // Search the path that contains one of the diagonal sbp
+  int32_t n = nd_sbp_lists_.size();
+  diag_middle_nodes_.resize(n);
+  for (int32_t i = 0; i < n; i++) {
+    diag_middle_nodes_[i].resize(n);
+    for (int32_t j = 0; j < n; j++) {
+      // minimum number of node
+      int32_t min_middle_node_num = 100;
+      // minimum cost
+      double min_cost = GetMaxVal<float>();
+
+      for (int32_t id_1d = 0; id_1d < m; id_1d++) {
+        int32_t id_2d = id_1d_2_2d_[id_1d];
+        if (id_2d < 0) { continue; }
+        // Find the path with minimum number of nodes
+        int32_t curr_middle_node_num = 0;
+        // Transfer from i to id_2d
+        if (middle_nodes_[i][id_2d].size() > 0) {
+          curr_middle_node_num += middle_nodes_[i][id_2d][0].size();
+        }
+        // Transfer from id_2d to j
+        if (middle_nodes_[id_2d][j].size() > 0) {
+          curr_middle_node_num += middle_nodes_[id_2d][j][0].size();
+        }
+        // Pick the path with minimum copy cost
+        if (curr_middle_node_num <= min_middle_node_num) {
+          // TODO: Need experiment to decide whether we should use the cost for the diagonal node
+          // double curr_cost = minimum_copy_cost_[i][id_2d] + cost_4_diff_placement_[id_2d] +
+          // minimum_copy_cost_[id_2d][j];
+          double curr_cost = minimum_copy_cost_[i][id_2d] + minimum_copy_cost_[id_2d][j];
+
+          min_middle_node_num = curr_middle_node_num;
+          // Find a candidate with small cost
+          if (curr_cost < min_cost * 1.0000001) {
+            // Find a smaller cost, clear the previous path.
+            if (curr_cost < min_cost * 0.9999999) {
+              min_cost = curr_cost;
+              diag_middle_nodes_[i][j].clear();
+            }
+            // Add the current diagonal node
+            diag_middle_nodes_[i][j].push_back(id_2d);
+          }
+        }
+      }
+    }
+  }
+
+  return Maybe<void>::Ok();
+}
+
 // Print the cost and middle nodes
 void BoxingCollector::PrintBoxingTables() {
   if (GlobalProcessCtx::Rank() == 0) {
@@ -260,6 +358,11 @@ Maybe<void> BoxingCollector::AskSbpCombination(
   // TODO: support [2, 3] -> [3, 2]
   // Middle nodes does not support transfer for different machines or devices or hierarchy
   if (producer_parallel_desc != consumer_parallel_desc) {
+    CHECK_OR_RETURN(cost_4_diff_placement_.size() > 0)
+        << "Have not initialzie the combination table for different placement yet! "
+           "Please run GenerateCombination4DiffPlacement(6) before Asking sbp combination "
+           "for different parallel description.";
+    // Deal with different placement
     CHECK_OR_RETURN(compute_cost
                     || JUST(ComputeLazyCopyCostBetweenNdSbp(
                            sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
@@ -269,16 +372,19 @@ Maybe<void> BoxingCollector::AskSbpCombination(
         << NdSbpToString(sbp_consumer) << " for two different placement ";
     return Maybe<void>::Ok();
   }
+  // Transfer for the same machines, devices and hierarchy.
   const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
   // Dealing with 1D sbp
   if (parallel_hierarchy->NumAxes() == 1) {
-    CHECK_OR_RETURN(compute_cost
-                    || JUST(ComputeLazyCopyCostBetweenNdSbp(
-                           sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
-                           consumer_parallel_desc, false))
-                           < GetValidMaxCopyCost())
-        << "Boxing does not support " << NdSbpToString(sbp_producer) << " -> "
-        << NdSbpToString(sbp_consumer) << " for 1D sbp";
+    if (sbp_producer.sbp_parallel(0).has_split_parallel()
+        && sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
+      NdSbp broadcast_1d;
+      // S -> B -> P (Large cost!)
+      // TODO: Please implement S -> P directly.
+      broadcast_1d.add_sbp_parallel();
+      broadcast_1d.mutable_sbp_parallel(0)->mutable_broadcast_parallel();
+      middle_sbps.emplace_back(broadcast_1d);
+    }
     return Maybe<void>::Ok();
   }
   // Dealing with nD sbp, n>2
@@ -344,7 +450,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(
   // Filter out unsuitable middle nodes before computing minimum cost.
   JUST(customized_boxing_collector.FilterNdSbpList4LogicalShape(logical_blob_desc,
                                                                 *parallel_hierarchy));
-  JUST(customized_boxing_collector.GenerateCombination(5));
+  JUST(customized_boxing_collector.GenerateCombination4SamePlacement(5));
   JUST(customized_boxing_collector.AskSbpCombination(sbp_producer, sbp_consumer, logical_blob_desc,
                                                      producer_parallel_desc, consumer_parallel_desc,
                                                      false, middle_sbps, compute_cost));
