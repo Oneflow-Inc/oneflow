@@ -42,6 +42,9 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
 
+  Maybe<void> RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
+      const std::vector<std::string>& additional_var_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors);
   Maybe<void> RegisterInputOpNamesAndTensors(
       const std::vector<std::string>& inputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);
@@ -51,6 +54,8 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> RegisterVariableOpNamesAndTensors(
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
+  Maybe<std::vector<std::string>> GetAdditionalVarOpNames() const;
+  Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
 
@@ -70,6 +75,13 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::string> inputs_tensor_meta_str_;
   std::vector<std::string> outputs_tensor_meta_str_;
   HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name2tensor_;
+  // Additional variables are variable other than model states, such as states in
+  // optimizers/lr schedulers or free eager tensors.
+  HashSet<std::string> additional_variable_op_name_;
+  // Additional states tensor loaded from state dict,
+  // they will be load into job after plan is generated.
+  HashMap<std::string, std::shared_ptr<one::Tensor>>
+      additional_variable_op_tobe_loaded_name2tensor_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
   HashSet<std::string> variable_op_names_;
   Job job_;
