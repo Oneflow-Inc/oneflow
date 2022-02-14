@@ -209,12 +209,13 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
 
     auto src_0_md =
         dnnl::memory::desc(src_0_dims, src_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims-1]));
+                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
     auto src_1_md =
         dnnl::memory::desc(src_1_dims, src_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims-1]));
-    auto dst_md = dnnl::memory::desc(
-        dst_dims, dst_onednn, static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims-1]));
+                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+    auto dst_md =
+        dnnl::memory::desc(dst_dims, dst_onednn,
+                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
 
     auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
     auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
