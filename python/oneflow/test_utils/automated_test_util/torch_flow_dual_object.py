@@ -960,7 +960,7 @@ def autotest(
     return deco
 
 
-def global_view(f):
+def globaltest(f):
     @functools.wraps(f)
     def new_f(*args, **kwargs):
         with GlobalScope() as scope:
@@ -1005,4 +1005,4 @@ def random_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "global_view", "random_tensor"]
+__all__ = ["autotest", "globaltest", "random_tensor"]
