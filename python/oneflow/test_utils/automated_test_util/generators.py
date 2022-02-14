@@ -26,7 +26,7 @@ import torch
 
 import oneflow as flow
 
-from .consistent_scope import *
+from .global_scope import *
 from .util import broadcast
 
 py_tuple = tuple
@@ -101,7 +101,7 @@ class generator:
     def value(self):
         if not self._has_value:
             self._value = self._calc_value()
-            if is_consistent():
+            if is_global():
                 self._value = broadcast(self._value)
             self._has_value = True
         return self._value
