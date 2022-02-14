@@ -35,13 +35,14 @@ def _test_masked_select_broadcast(test_case, placement, sbp):
     k1 = random().to(int).value() * 8
     k2 = random().to(int).value() * 8
     device = random_device()
-    input = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(
+    input = random_tensor(ndim=4, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(
         placement, sbp
     )
-    mask = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=k1, dim3=1).to_global(
+    mask = random_tensor(ndim=4, dim0=k1, dim1=k2, dim2=k1, dim3=1).to_global(
         placement, sbp
     )
     return torch.masked_select(input, mask > 0.5)
+
 
 class TestMaskedSelect(flow.unittest.TestCase):
     @global_view
