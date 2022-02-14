@@ -3321,7 +3321,7 @@ class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
 def _test_eager_global_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
     np.random.seed(10)
     np_arr = np.random.uniform(-1e-05, 1e-05, (16, 32))
-    placement0 = flow.placement(device_type, ranks=[0])
+    placement0 = flow.placement(device_type, ranks=[[0]])
     placement1 = flow.placement(device_type, ranks=[[0, 1], [2, 3]])
 
     # oneflow.placement(type="cuda", ranks=[[0]])
