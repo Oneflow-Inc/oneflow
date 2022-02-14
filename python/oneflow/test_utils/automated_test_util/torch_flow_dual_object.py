@@ -554,19 +554,27 @@ def GetDualObject(name, pytorch, oneflow):
                                     tensor_graph_kwargs[key] = copy.deepcopy(value)
                         if verbose:
                             print(
-                                "Before running tensor eager tensor method: ",
+                                "Before running eager tensor method: ",
                                 repr(oneflow_method),
+                            )
+                        graph_tensor_oneflow = copy.deepcopy(oneflow_method)
+                        # TODO: deepcopy will cause the device of tensor to be changed to cpu, waiting for repair.
+                        if "__self__" in dir(graph_tensor_oneflow) and flow.is_tensor(
+                            oneflow_method.__self__
+                        ):
+                            graph_tensor_oneflow.__self__.data = (
+                                oneflow_method.__self__.detach().clone()
                             )
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if verbose:
                             print(
-                                "The result after running tensor eager tensor method: ",
+                                "The result after running eager tensor method: ",
                                 oneflow_res,
                             )
                         if testing_graph:
                             if verbose:
                                 print(
-                                    "After running tensor eager tensor method: ",
+                                    "After running eager tensor method: ",
                                     repr(oneflow_method),
                                 )
 
@@ -575,7 +583,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     super().__init__()
 
                                 def build(self):
-                                    return oneflow_method(
+                                    return graph_tensor_oneflow(
                                         *tensor_graph_args, **tensor_graph_kwargs
                                     )
 
@@ -587,7 +595,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 test_g_res = test_g()
                                 if verbose:
                                     print(
-                                        "The result after running tensor graph tensor method: ",
+                                        "The result after running graph tensor method: ",
                                         test_g_res,
                                     )
                             except Exception as e:
@@ -875,7 +883,9 @@ def autotest(
             while successful_runs_needed > 0:
                 clear_note_fake_program()
                 if current_run > loop_limit:
-                    raise ValueError("autotest stuck in an endless loop!")
+                    raise ValueError(
+                        "autotest stuck in an endless loop, usually it is caused by invalid code in the test case"
+                    )
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
                 global global_check_allclose, global_rtol, global_atol, global_backward
