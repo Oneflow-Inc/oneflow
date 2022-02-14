@@ -32,53 +32,53 @@ def HalfTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of float16 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.float16).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.float16)
 
 
 def FloatTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of float32 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.float32).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.float32)
 
 
 def DoubleTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of float64 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.float64).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.float64)
 
 
 def BoolTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of bool and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.bool).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.bool)
 
 
 def ByteTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of uint8 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.uint8).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.uint8)
 
 
 def CharTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of int8 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.int8).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.int8)
 
 
 def IntTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of int32 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.int32).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.int32)
 
 
 def LongTensor(*args, **kwargs):
     r"""
     Creates a Tensor with the dtype of int64 and it has the same parameters as oneflow.Tensor.
     """
-    return flow.Tensor(*args, **kwargs).to(flow.int64).to("cuda")
+    return flow.Tensor(*args, **kwargs).to(flow.int64)
