@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"

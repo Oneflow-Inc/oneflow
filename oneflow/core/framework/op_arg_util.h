@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_ARG_UTIL_H_
 
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/shape.h"
@@ -61,8 +61,6 @@ class OpArgBlobAttribute {
                                                                int64_t parallel_num,
                                                                int64_t parallel_id) const;
 
-  void DumpToInterfaceBlobConf(std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const;
-
  private:
   std::shared_ptr<cfg::BlobDescProto> blob_desc_;
   std::string logical_blob_name_;
@@ -72,7 +70,7 @@ class OpArgBlobAttribute {
 class OpArgParallelAttribute {
  public:
   OpArgParallelAttribute(const std::shared_ptr<ParallelDesc>& parallel_desc,
-                         const std::shared_ptr<cfg::SbpParallel>& sbp_parallel,
+                         const std::shared_ptr<SbpParallel>& sbp_parallel,
                          const std::shared_ptr<cfg::OptMirroredParallel>& opt_mirrored_parallel);
 
   OpArgParallelAttribute(const OpArgParallelAttribute& op_arg_para_attr) = default;
@@ -83,7 +81,7 @@ class OpArgParallelAttribute {
 
   std::shared_ptr<ParallelDesc> parallel_desc_symbol() const;
 
-  std::shared_ptr<cfg::SbpParallel> sbp_parallel() const;
+  std::shared_ptr<SbpParallel> sbp_parallel() const;
 
   std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel() const;
 
@@ -95,15 +93,13 @@ class OpArgParallelAttribute {
 
   void Assign(const std::shared_ptr<OpArgParallelAttribute>& other);
 
-  void DumpToInterfaceBlobConf(std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const;
-
   std::string ToString() const;
 
  protected:
   std::size_t Hash() const {
     std::size_t sbp_hash = 0;
     if (!opt_mirrored_parallel_->has_mirrored_parallel()) {
-      sbp_hash ^= std::hash<cfg::SbpParallel>()(*sbp_parallel_);
+      sbp_hash ^= std::hash<SbpParallel>()(*sbp_parallel_);
     }
     return sbp_hash ^ (std::hash<ParallelDesc>()(*parallel_desc_))
            ^ (std::hash<cfg::OptMirroredParallel>()(*opt_mirrored_parallel_));
@@ -111,7 +107,7 @@ class OpArgParallelAttribute {
 
  private:
   std::shared_ptr<ParallelDesc> parallel_desc_;
-  std::shared_ptr<cfg::SbpParallel> sbp_parallel_;
+  std::shared_ptr<SbpParallel> sbp_parallel_;
   std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel_;
   std::size_t hash_;
 };
