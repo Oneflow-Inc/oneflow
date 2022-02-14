@@ -28,15 +28,15 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
     np_input = np.random.rand(*shape)
-    input = flow.tensor(np_input, dtype=src_dtype).to_consistent(placement, sbp)
-    target = flow.tensor(np_input, dtype=tgt_dtype).to_consistent(placement, sbp)
+    input = flow.tensor(np_input, dtype=src_dtype).to_global(placement, sbp)
+    target = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
     input = input.type_as(target)
     test_case.assertEqual(input.dtype, target.dtype)
 
 
 def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
     np_input = np.random.rand(*shape)
-    input = flow.tensor(np_input, dtype=dtype).to_consistent(placement, sbp)
+    input = flow.tensor(np_input, dtype=dtype).to_global(placement, sbp)
     output = input.is_floating_point()
     if input.dtype in (flow.float, flow.float16, flow.float32, flow.double):
         test_case.assertEqual(output, True)
@@ -45,24 +45,24 @@ def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
 
 
 @autotest(n=1, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_cuda(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16).to_consistent(placement, sbp)
+def _test_global_cuda(test_case, placement, sbp):
+    x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cuda()
     y = x.sum()
     return y
 
 
 class TestConsistentCuda(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_cuda(test_case):
+    @global_view
+    def test_global_cuda(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_cuda(test_case, placement, sbp)
+                _test_global_cuda(test_case, placement, sbp)
 
 
 @autotest(n=1, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_cpu(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16).to_consistent(placement, sbp)
+def _test_global_cpu(test_case, placement, sbp):
+    x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cpu()
     y = x.sum()
     return y
@@ -71,8 +71,8 @@ def _test_consistent_cpu(test_case, placement, sbp):
 # PyTorch error if open auto_backward:
 # element 0 of tensors does not require grad and does not have a grad_fn
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_long(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16, requires_grad=False).to_consistent(
+def _test_global_long(test_case, placement, sbp):
+    x = random_tensor(2, 8, 16, requires_grad=False).to_global(
         placement, sbp
     )
     y = x.long()
@@ -80,8 +80,8 @@ def _test_consistent_long(test_case, placement, sbp):
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_int(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16, requires_grad=False).to_consistent(
+def _test_global_int(test_case, placement, sbp):
+    x = random_tensor(2, 8, 16, requires_grad=False).to_global(
         placement, sbp
     )
     y = x.int()
@@ -89,79 +89,79 @@ def _test_consistent_int(test_case, placement, sbp):
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_float(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16, dtype=int).to_consistent(placement, sbp)
+def _test_global_float(test_case, placement, sbp):
+    x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.float()
     return y
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_double(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16, dtype=int).to_consistent(placement, sbp)
+def _test_global_double(test_case, placement, sbp):
+    x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.double()
     return y
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_item(test_case, placement, sbp):
-    x = random_tensor(ndim=1, dim0=1, dtype=int).to_consistent(placement, sbp)
+def _test_global_item(test_case, placement, sbp):
+    x = random_tensor(ndim=1, dim0=1, dtype=int).to_global(placement, sbp)
     y = torch.tensor(x.item())
     return y
 
 
 @autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
-def _test_consistent_tolist(test_case, placement, sbp):
+def _test_global_tolist(test_case, placement, sbp):
     x = random_tensor(
         ndim=4, dim0=8, dim1=16, dim2=24, dim3=32, dtype=int
-    ).to_consistent(placement, sbp)
+    ).to_global(placement, sbp)
     y = torch.tensor(x.tolist())
     return y
 
 
 class TestConsistentTensorOps(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_cpu(test_case):
+    @global_view
+    def test_global_cpu(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_cpu(test_case, placement, sbp)
+                _test_global_cpu(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_long(test_case):
+    @global_view
+    def test_global_long(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_long(test_case, placement, sbp)
+                _test_global_long(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_int(test_case):
+    @global_view
+    def test_global_int(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_int(test_case, placement, sbp)
+                _test_global_int(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_float(test_case):
+    @global_view
+    def test_global_float(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_float(test_case, placement, sbp)
+                _test_global_float(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_double(test_case):
+    @global_view
+    def test_global_double(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_double(test_case, placement, sbp)
+                _test_global_double(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_item(test_case):
+    @global_view
+    def test_global_item(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1, except_split=True):
-                _test_consistent_item(test_case, placement, sbp)
+                _test_global_item(test_case, placement, sbp)
 
-    @consistent
-    def test_consistent_tolist(test_case):
+    @global_view
+    def test_global_tolist(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_consistent_tolist(test_case, placement, sbp)
+                _test_global_tolist(test_case, placement, sbp)
 
-    @consistent
+    @global_view
     def test_type_as(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(8, 16), (8, 16, 24), (8, 16, 24, 32)]
@@ -172,7 +172,7 @@ class TestConsistentTensorOps(flow.unittest.TestCase):
                 for sbp in all_sbp(placement, max_dim=len(arg[0])):
                     _test_type_as(test_case, *arg, placement, sbp)
 
-    @consistent
+    @global_view
     def test_is_floating_point(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(8, 16), (8, 16, 24), (8, 16, 24, 32)]
