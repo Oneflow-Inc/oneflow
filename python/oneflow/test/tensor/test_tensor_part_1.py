@@ -184,7 +184,7 @@ class TestTensor(flow.unittest.TestCase):
                 *args,
                 **kwargs,
                 sbp=flow.sbp.broadcast,
-                placement=flow.placement("cuda", {0: range(2)})
+                placement=flow.placement("cuda", range(2))
             ),
             lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
         )

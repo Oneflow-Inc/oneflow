@@ -50,14 +50,14 @@ class InferGraph(flow.nn.Graph):
 class GraphSaveTestCase(flow.unittest.TestCase):
     def test_save_and_load(self):
         placement_arg = {
-            "placement": flow.placement("cuda", {0: [0]}),
+            "placement": flow.placement("cuda", ranks=[0]),
             "sbp": flow.sbp.broadcast,
         }
         graph = InferGraph(placement_arg)
         image_placeholder = flow.empty(
             (1, 3, 224, 224),
             dtype=flow.float32,
-            placement=flow.placement("cpu", {0: [0]}),
+            placement=flow.placement("cpu", ranks=[0]),
             sbp=flow.sbp.broadcast,
         )
         graph._compile(image_placeholder)
