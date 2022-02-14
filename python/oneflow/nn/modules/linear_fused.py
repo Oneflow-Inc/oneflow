@@ -71,8 +71,8 @@ class FusedMLP(Module):
         self.weights = []
         self.biases = []
         self.hidden_layer_num = len(hidden_features_lists)
-        assert (self.hidden_layer_num + 1) % 2 == 0, "Currently only support even times Dense Layers. "
-        self.fuse_layer_num = (self.hidden_layer_num + 1) // 2
+        # assert (self.hidden_layer_num + 1) % 2 == 0, "Currently only support even times Dense Layers. "
+        # self.fuse_layer_num = (self.hidden_layer_num + 1) // 2
         """
         in = 128
         hidden = [64, 32, 16, 32, 16]
@@ -110,38 +110,18 @@ class FusedMLP(Module):
 
 
     def forward(self, x):
-        # First Layer. 
-        res = flow._C.relu(flow._C.fused_matmul_bias_add_relu(
-            x, 
-            self.weights[0], self.biases[0], 
-            self.weights[1], self.biases[1], 
-            alpha1=1.0, alpha2=1.0
-        ))
-        for idx in range(1, (self.fuse_layer_num)//2 - 1, 1): 
-        # for idx in range(1, (self.hidden_layer_num), 1): 
-            print(idx)
-            res = flow._C.relu(flow._C.fused_matmul_bias_add_relu(
-                res, 
-                self.weights[idx*2], self.biases[idx*2], 
-                self.weights[idx*2+1], self.biases[idx*2+1], 
-                alpha1=1.0, alpha2=1.0
-            ))
-        # Last Layer. 
         res = flow._C.fused_matmul_bias_add_relu(
                 res, 
-                self.weights[self.hidden_layer_num-1], self.biases[self.hidden_layer_num-1], 
-                self.weights[self.hidden_layer_num], self.biases[self.hidden_layer_num], 
-                alpha1=1.0, alpha2=1.0
+                self.weights, 
+                self.biases
             )
-        if not self.skip_last_activation: 
-            flow._C.relu(res)
         return res
 
     def extra_repr(self) -> str:
         return "in_features={}, hidden_features_lists={}, bias={}".format(
             self.in_features, self.hidden_features_lists, self.bias is not None
         )
-    
+
 
 if __name__ == "__main__":
     import doctest

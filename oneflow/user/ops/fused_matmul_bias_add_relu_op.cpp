@@ -79,7 +79,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_bias_desc = ctx->InputTensorDesc("biases", 0);
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
   int32_t weight_size = ctx->input_size("weights"); 
-  int32_t bias_size = ctx->input_size("weights"); 
+  int32_t bias_size = ctx->input_size("biases"); 
   CHECK_EQ_OR_RETURN(weight_size, bias_size); 
   /*
   A: (m, k)
@@ -124,7 +124,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
 // }
 
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
-  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
+  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("x", 0);
   
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
@@ -133,7 +133,10 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
   }
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  // user_op::TensorDesc* aux_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();
+  // *aux_desc->mut_data_type() = first_in_desc.data_type();
+
   return Maybe<void>::Ok(); 
 }
 
@@ -210,9 +213,9 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
   for(int i =0; i<ctx->user_op_conf().input_size("biases"); ++i) {
     builder.Broadcast(user_op::OpArg("biases", i));
   }
-  for(int i =0; i<ctx->user_op_conf().output_size("aux"); ++i) {
-    builder.Split(user_op::OpArg("aux", i), 0);
-  }
+  // for(int i =0; i<ctx->user_op_conf().output_size("aux"); ++i) {
+  //   builder.Split(user_op::OpArg("aux", i), 0);
+  // }
   builder.Split(user_op::OpArg("out", 0), 0); 
   builder.Build();
   return Maybe<void>::Ok();

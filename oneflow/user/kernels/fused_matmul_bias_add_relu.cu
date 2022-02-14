@@ -70,43 +70,82 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   return sp;
 }
 
-void InferMatmulCublasMNK(const ShapeView& a_shape, const ShapeView& b_shape, 
+// void InferMatmulCublasMNK(const MutShapeView* a_shape, const ShapeView& b_shape, 
+//                           ep::primitive::BlasTransposeType transpose_a,
+//                           ep::primitive::BlasTransposeType transpose_b, 
+//                           size_t* cublas_m, size_t* cublas_n, size_t* cublas_k, 
+//                           int64_t* cublas_lda, int64_t* cublas_ldb, int64_t* cublas_ldc) {
+//   const int64_t num_a_axes = a_shape->NumAxes();
+//   CHECK_GE(num_a_axes, 2);
+//   const int64_t num_b_axes = b_shape.NumAxes();
+//   CHECK_GE(num_b_axes, 2);
+//   size_t m = 0, n = 0, k = 0; 
+//   if (transpose_a == ep::primitive::BlasTransposeType::N) {
+//     m = a_shape->At(num_a_axes - 2);
+//     k = a_shape->At(num_a_axes - 1);
+//     *cublas_ldb = k;
+//   } else if (transpose_a == ep::primitive::BlasTransposeType::T) {
+//     m = a_shape->At(num_a_axes - 1);
+//     k = a_shape->At(num_a_axes - 2);
+//     *cublas_ldb = m;
+//   } else {
+//     UNIMPLEMENTED();
+//   }
+//   if (transpose_b == ep::primitive::BlasTransposeType::N) {
+//     CHECK_EQ(b_shape.At(num_b_axes - 2), k);
+//     n = b_shape.At(num_b_axes - 1);
+//     *cublas_lda = n;
+//   } else if (transpose_b == ep::primitive::BlasTransposeType::T) {
+//     CHECK_EQ(b_shape.At(num_b_axes - 1), k);
+//     n = b_shape.At(num_b_axes - 2);
+//     *cublas_lda = k;
+//   } else {
+//     UNIMPLEMENTED();
+//   }
+//   *cublas_m = n; 
+//   *cublas_n = m; 
+//   *cublas_k = k; 
+//   *cublas_ldc = n;
+// }
+void InferMatmulCublasMNK(const DimVector& a_shape, const DimVector& b_shape, 
                           ep::primitive::BlasTransposeType transpose_a,
                           ep::primitive::BlasTransposeType transpose_b, 
                           size_t* cublas_m, size_t* cublas_n, size_t* cublas_k, 
                           int64_t* cublas_lda, int64_t* cublas_ldb, int64_t* cublas_ldc) {
-  const int64_t num_a_axes = a_shape.NumAxes();
-  CHECK_GE(num_a_axes, 2);
-  const int64_t num_b_axes = b_shape.NumAxes();
-  CHECK_GE(num_b_axes, 2);
-  size_t m = 0, n = 0, k = 0; 
-  if (transpose_a == ep::primitive::BlasTransposeType::N) {
-    m = a_shape.At(num_a_axes - 2);
-    k = a_shape.At(num_a_axes - 1);
-    *cublas_ldb = k;
-  } else if (transpose_a == ep::primitive::BlasTransposeType::T) {
-    m = a_shape.At(num_a_axes - 1);
-    k = a_shape.At(num_a_axes - 2);
-    *cublas_ldb = m;
-  } else {
-    UNIMPLEMENTED();
+    const int64_t num_a_axes = 2;
+    // CHECK_GE(num_a_axes, 2);
+    const int64_t num_b_axes = 2;
+    // CHECK_GE(num_b_axes, 2);
+    size_t m = 0, n = 0, k = 0; 
+    if (transpose_a == ep::primitive::BlasTransposeType::N) {
+      m = a_shape.at(num_a_axes - 2);
+      k = a_shape.at(num_a_axes - 1);
+      *cublas_ldb = k;
+    } else if (transpose_a == ep::primitive::BlasTransposeType::T) {
+      m = a_shape.at(num_a_axes - 1);
+      k = a_shape.at(num_a_axes - 2);
+      *cublas_ldb = m;
+    } else {
+      UNIMPLEMENTED();
+    }
+    if (transpose_b == ep::primitive::BlasTransposeType::N) {
+      CHECK_EQ(b_shape.at(num_b_axes - 2), k);
+      n = b_shape.at(num_b_axes - 1);
+      *cublas_lda = n;
+    } else if (transpose_b == ep::primitive::BlasTransposeType::T) {
+      CHECK_EQ(b_shape.at(num_b_axes - 1), k);
+      n = b_shape.at(num_b_axes - 2);
+      *cublas_lda = k;
+    } else {
+      UNIMPLEMENTED();
+    }
+    *cublas_m = n; 
+    *cublas_n = m; 
+    *cublas_k = k; 
+    *cublas_ldc = n;
   }
-  if (transpose_b == ep::primitive::BlasTransposeType::N) {
-    CHECK_EQ(b_shape.At(num_b_axes - 2), k);
-    n = b_shape.At(num_b_axes - 1);
-    *cublas_lda = n;
-  } else if (transpose_b == ep::primitive::BlasTransposeType::T) {
-    CHECK_EQ(b_shape.At(num_b_axes - 1), k);
-    n = b_shape.At(num_b_axes - 2);
-    *cublas_lda = k;
-  } else {
-    UNIMPLEMENTED();
-  }
-  *cublas_m = n; 
-  *cublas_n = m; 
-  *cublas_k = k; 
-  *cublas_ldc = n;
-}
+
+
 
 class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
  public:
@@ -248,6 +287,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    printf("Enter here \n"); 
     /*
     Fused Dense+Activation+Dense Layer. 
     A: (m, k)
@@ -256,93 +296,113 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     tmp: A matmul B(transpose), its shape is (m, n)
     out: tmp matmul C(transpose), its shape is (m, j)
     */
-    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
-    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    const user_op::Tensor* c = ctx->Tensor4ArgNameAndIndex("c", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    
+    const int32_t weight_size = ctx->input_size("weights"); 
+    const int32_t bias_size = ctx->input_size("biases"); 
+    CHECK_EQ(weight_size, bias_size) << "The number of weight and bias is not equal!. "; 
+    printf("weight size is: %d \n", weight_size); 
+    printf("111 \n"); 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     const auto* matmul_cache =
         CHECK_NOTNULL(dynamic_cast<const FusedMatmulBiasAddReluKernelCache*>(cache));
-
-    const user_op::Tensor* bias1 = ctx->Tensor4ArgNameAndIndex("bias1", 0);
-    const user_op::Tensor* bias2 = ctx->Tensor4ArgNameAndIndex("bias2", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
     
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0); 
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    printf("221 \n"); 
+
     const DataType data_type = out->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
-    
-    const user_op::Tensor* cublas_a = b;
-    const user_op::Tensor* cublas_b = a;
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0; 
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0; 
-    InferMatmulCublasMNK(a->shape(), b->shape(), 
-                         /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
-                         /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
-                         &cublas_m, &cublas_n, &cublas_k, 
-                         &cublas_lda, &cublas_ldb, &cublas_ldc); 
-    const double alpha1 = ctx->Attr<double>("alpha1");
+    printf("1133331 \n"); 
+     
+
+    const double alpha1 = 1.0;
     const auto sp_alpha1 = GetCublasScalarParameter(alpha1, cublas_compute_dtype);
     const double beta1 = 0.0;
     const auto sp_beta1 = GetCublasScalarParameter(beta1, cublas_compute_dtype);
-    // First matmul + bias + relu. 
-    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
-    SetCublasAttr(matmul_cache, 
-                  cublas_compute_dtype, 
-                  cuda_data_type, 
-                  epilogue, 
-                  bias1->dptr(), 
-                  aux->dptr(), 
-                  cublas_m, 
-                  cublas_n, 
-                  cublas_k, 
-                  cublas_lda, 
-                  cublas_ldb, 
-                  cublas_ldc); 
-    OF_CUBLAS_CHECK(cublasLtMatmul(
-        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc1, &sp_alpha1, cublas_a->dptr(),
-        matmul_cache->cublas_a1_desc, cublas_b->dptr(), matmul_cache->cublas_b1_desc, &sp_beta1,
-        tmp_buffer->mut_dptr(), matmul_cache->cublas_c1_desc, tmp_buffer->mut_dptr(), matmul_cache->cublas_c1_desc,
-        nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-        cuda_stream->cuda_stream()));
-    
-    // A shape is (m, k), B shape is (n, k) which need transpose, so the tmp_out shape is (m, n)
-    const ShapeView tmp_shape({a->shape().At(a->shape().NumAxes()-2), b->shape().At(b->shape().NumAxes()-2)}); 
-    InferMatmulCublasMNK(tmp_shape, c->shape(), 
-                         /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
-                         /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
-                         &cublas_m, &cublas_n, &cublas_k, 
-                         &cublas_lda, &cublas_ldb, &cublas_ldc); 
+    printf("1114444 \n"); 
 
-    cublas_a = c;
-    cublas_b = tmp_buffer;
-    const double alpha2 = ctx->Attr<double>("alpha2");
-    const auto sp_alpha2 = GetCublasScalarParameter(alpha2, cublas_compute_dtype);
-    const double beta2 = 0.0;
-    const auto sp_beta2 = GetCublasScalarParameter(beta2, cublas_compute_dtype);
-    // Second matmul + bias
-    epilogue = CUBLASLT_EPILOGUE_BIAS;
-    SetCublasAttr(matmul_cache, 
-                  cublas_compute_dtype, 
-                  cuda_data_type, 
-                  epilogue, 
-                  bias2->dptr(),
-                  nullptr,  
-                  cublas_m, 
-                  cublas_n, 
-                  cublas_k, 
-                  cublas_lda, 
-                  cublas_ldb, 
-                  cublas_ldc); 
-    OF_CUBLAS_CHECK(cublasLtMatmul(
-        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc1, &sp_alpha2, cublas_a->dptr(),
-        matmul_cache->cublas_a1_desc, cublas_b->dptr(), matmul_cache->cublas_b1_desc, &sp_beta2,
-        out->mut_dptr(), matmul_cache->cublas_c1_desc, out->mut_dptr(), matmul_cache->cublas_c1_desc,
-        nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-        cuda_stream->cuda_stream()));
+    const int64_t batch_size = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(0); 
+    int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1); 
+    printf("1114443123213123 \n"); 
+    
+    // MutShapeView* x_shape = x->mut_shape(); 
+    // MutShapeView tmp_shape(*x_shape);
+    DimVector x_shape(2); 
+    x->shape().ToDimVector(&x_shape); 
+    // MutShapeView tmp_shape(*x_shape);
+    DimVector tmp_shape(2); 
+    tmp_shape.at(0) = x_shape.at(0); 
+    printf("111000000000"); 
+    DimVector weight_shape(2); 
+    
+    int64_t out_feature = 0; 
+    // user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    printf("1118889999999"); 
+    void* tmp_x_buffer = nullptr;
+    T* tmp_y_buffer = tmp_buffer->mut_dptr<T>();
+    printf("11188888"); 
+    void* x_ptr = nullptr; 
+    void* y_ptr = nullptr; 
+    printf("1117777 \n"); 
+
+    for(int idx = 0; idx < weight_size; idx++){
+      const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
+      const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
+      out_feature = weight->shape().At(0); 
+      weight->shape().ToDimVector(&weight_shape); 
+      if(idx == 0){
+        x_ptr = x->mut_dptr();
+        InferMatmulCublasMNK(x_shape, weight_shape, 
+                            /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
+                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
+                            &cublas_m, &cublas_n, &cublas_k, 
+                            &cublas_lda, &cublas_ldb, &cublas_ldc);
+      }else{
+        // can be remove. 
+        x_ptr = tmp_x_buffer; 
+        InferMatmulCublasMNK(tmp_shape, weight_shape, 
+                            /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
+                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
+                            &cublas_m, &cublas_n, &cublas_k, 
+                            &cublas_lda, &cublas_ldb, &cublas_ldc);
+      }
+      if(idx == weight_size-1){
+        printf("here??? \n"); 
+        y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
+      }else{
+        y_ptr = tmp_y_buffer; 
+      }
+
+      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
+      SetCublasAttr(matmul_cache, 
+                    cublas_compute_dtype, 
+                    cuda_data_type, 
+                    epilogue, 
+                    bias->dptr(), 
+                    nullptr, 
+                    cublas_m, 
+                    cublas_n, 
+                    cublas_k, 
+                    cublas_lda, 
+                    cublas_ldb, 
+                    cublas_ldc); 
+
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc1, &sp_alpha1, weight->dptr(),
+          matmul_cache->cublas_a1_desc, x_ptr, matmul_cache->cublas_b1_desc, &sp_beta1,
+          y_ptr, matmul_cache->cublas_c1_desc, y_ptr, matmul_cache->cublas_c1_desc,
+          nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+          cuda_stream->cuda_stream()));
+      
+      tmp_x_buffer = tmp_y_buffer; 
+      tmp_y_buffer += batch_size * out_feature; 
+      // tmp_shape.Set(1, out_feature); 
+      tmp_shape.at(1) = out_feature; 
+
+    }
   }
 };
 
@@ -352,20 +412,23 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == data_type)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-      const Shape& a_shape = ctx->InputShape("a", 0);                                \
-      const int64_t a_num_axes = a_shape.NumAxes();                                 \
-      const Shape& b_shape = ctx->InputShape("b", 0);                                 \
-      const int64_t b_num_axes = b_shape.NumAxes();                                 \
-      const int64_t tmp_buffer_size =                                                 \
-        GetCudaAlignedSize(a_shape.Count(0, a_num_axes-1)* b_shape.At(b_num_axes-2) * sizeof(cpp_type));\
-      return tmp_buffer_size;                                                         \
+        int64_t tmp_size = 0; \
+        const Shape& x_shape = ctx->InputShape("x", 0); \
+        int64_t batch_size = x_shape.At(0); \
+        int32_t weight_size = ctx->input_size("weights"); \
+        for(int i = 0; i < weight_size; i++){ \
+          tmp_size += batch_size * ctx->InputShape("weights", i).At(0); \
+        }          \
+        printf("Tmp size is: %ld \n", tmp_size); \
+        const int64_t tmp_buffer_size = GetCudaAlignedSize(tmp_size);    \
+        return tmp_buffer_size;                                          \
     });
 
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(half, DataType::kFloat16);
 #if CUDA_VERSION >= 11000
-REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+// REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 #endif
 
 }  // namespace oneflow

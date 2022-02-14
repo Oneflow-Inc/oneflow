@@ -828,8 +828,7 @@
 
 - name: "fused_matmul_bias_add_relu"
   signature:
-    "Tensor (Tensor a, Tensor b, Tensor bias1, Tensor c, Tensor bias2, 
-             Double alpha1=1.0, Double alpha2=1.0) => FusedMatmulBiasAddRelu"
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases) => FusedMatmulBiasAddRelu"
   bind_python: True
 
 - name: "broadcast_matmul_grad_b"

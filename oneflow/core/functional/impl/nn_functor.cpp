@@ -273,13 +273,24 @@ class FusedMatMulBiasAddReluFunctor {
     //                            .Output("out")
     //                            .Output("aux")
     //                            .Build());
-    fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
+    // fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
+    //                            .Input("x")
+    //                            .Input("weights", 128)
+    //                            .Input("biases", 128)
+    //                            .Output("out")
+    //                           //  .Output("aux", 128)
+    //                            .Build());
+
+    fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < fused_op_.size(); ++n) {
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
                                .Input("x")
-                               .Input("weight", 128)
-                               .Input("bias", 128)
+                               .Input("weights", n)
+                               .Input("biases", n)
                                .Output("out")
-                               .Output("aux", 128)
+                              //  .Output("aux", 128)
                                .Build());
+    }
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const TensorTuple& weights,
@@ -316,20 +327,18 @@ class FusedMatMulBiasAddReluFunctor {
     //     << "Bias shape cannot be added (" << bias->shape()->At(0) << ") and (" << n << ")";
 
     MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
-    // JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    // JUST(attrs.SetAttr<double>("alpha1", alpha1));
-    // JUST(attrs.SetAttr<double>("alpha2", alpha2));
-    // return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {a, b, bias1, c, bias2}, attrs);
-    TensorTuple input; 
-    input.push_back(x); 
-    std::copy(weights.begin(), weights.end(), input.end()); 
-    std::copy(biases.begin(), biases.end(), input.end()); 
-    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, input, attrs);
+    const int64_t ninput = weights.size();
+    printf("N is %ld \n", ninput);
+    TensorTuple input(2*ninput+1);
+    input[0] = x; 
+    std::copy(weights.begin(), weights.end(), input.begin()+1); 
+    std::copy(biases.begin(), biases.end(), input.begin()+1+ninput); 
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_[ninput], input, attrs);
+
   }
 
  private:
-  std::shared_ptr<OpExpr> fused_op_;
+  std::vector<std::shared_ptr<OpExpr>> fused_op_;
 };
 
 class LayerNormFunctor {
