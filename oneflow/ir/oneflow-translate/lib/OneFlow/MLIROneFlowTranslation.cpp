@@ -654,14 +654,12 @@ LogicalResult JobImporter::TryToUpdateJob() {
       if (failed(ConvertInputOp(owner, new_job))) { return failure(); }
     }
   }
-  std::cout << "debug begin" << std::endl;
   // add output op
   for (auto output : outputs) {
     Operation* owner = output.getDefiningOp();
     if (!dyn_cast<oneflow::OutputOp>(owner)) { return failure(); }
     if (failed(ConvertOutputOp(owner, new_job))) { return failure(); }
   }
-  std::cout << "debug end" << std::endl;
 
   job_wrapper_.UpdateJob(&new_job);
   return success();
@@ -832,12 +830,10 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   context.loadDialect<StandardOpsDialect>();
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
   JobImporter imp(job_wrapper, &context, module.get());
-  std::cout << "load ir begin" << std::endl;
   if (failed(imp.TryToUpdateJob())) {
     llvm::errs() << "fail to load job from IR";
     exit(EXIT_FAILURE);
   }
-  std::cout << "load ir end" << std::endl;
 }
 
 void registerFromOneFlowJobTranslation() {

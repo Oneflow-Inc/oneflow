@@ -933,13 +933,11 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
   auto* output_op_conf = op_conf->mutable_output_conf();
   output_op_conf->set_out("out");
 
-  std::cout << "111" << std::endl;
   if (auto shape_attr =
           op->getAttrOfType<ArrayAttr>(OpTrait::TensorSource<void>::getShapeAttrName())) {
     WriteAttrToShape(shape_attr, output_op_conf->mutable_blob_conf()->mutable_shape());
   }
 
-  std::cout << "222" << std::endl;
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = adaptor.data_type()) {
@@ -948,12 +946,10 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
     output_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
-  std::cout << "333" << std::endl;
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
     output_op_conf->mutable_blob_conf()->set_is_dynamic(adaptor.is_dynamic().getValue());
   }
 
-  std::cout << "444" << std::endl;
   if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
     if (failed(ParseNdSbpFromAttr(adaptor.nd_sbp()->getValue(),
                                   output_op_conf->mutable_blob_conf()->mutable_nd_sbp()))) {
@@ -961,7 +957,6 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
     }
   }
 
-  std::cout << "555" << std::endl;
   if (op->hasAttr("job_name")) {
     output_op_conf->set_job_name(adaptor.job_name().getValue().str());
   }
@@ -970,7 +965,6 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
     op->emitError("output op has at least one input.");
     return failure();
   }
-  std::cout << "666" << std::endl;
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
   auto output_lbn = GetOutputLbn(result).getValue();
   output_op_conf->set_in(output_lbn);

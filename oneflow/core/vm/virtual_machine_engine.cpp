@@ -105,7 +105,6 @@ void VirtualMachineEngine::HandleLocalPending() {
     }
   }
   OF_PROFILER_RANGE_POP();
-  OF_PROFILER_RANGE_POP();
 }
 
 namespace {
