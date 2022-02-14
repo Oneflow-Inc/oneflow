@@ -88,7 +88,7 @@ Maybe<void> SyncSymbolConsistentTensorMeta(
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx.WaitDone());
   JUST(recv_buffer->Check(symbol_id, consistent_tensor_meta));
   return Maybe<void>::Ok();
 }

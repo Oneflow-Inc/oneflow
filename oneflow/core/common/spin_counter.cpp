@@ -20,57 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> SpinCounter::SpinWait(
-    int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback,
-    const std::function<void()>& HeartbeatCallback) {
-  const auto& spin_counter = std::make_shared<SpinCounter>(cnt);
-  JUST(Callback(spin_counter));
-  JUST(spin_counter->WaitUntilCntEqualZero(HeartbeatCallback));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> SpinCounter::SpinWait(
-    int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback) {
-  return SpinWait(cnt, Callback, [] {});
-}
-
-Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
-                                 const std::function<void()>& HeartbeatCallback,
-                                 int64_t heartbeat_interval_seconds) {
+Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
   return Global<ForeignLockHelper>::Get()->WithScopedRelease([&]() -> Maybe<void> {
-    const auto& start = std::chrono::steady_clock::now();
-    auto time_last_heartbeat = std::chrono::steady_clock::now();
-    while (NeedSpin()) {
-      auto end = std::chrono::steady_clock::now();
-      if (std::chrono::duration<double>(end - time_last_heartbeat).count()
-          >= heartbeat_interval_seconds) {
-        HeartbeatCallback();
-        time_last_heartbeat = end;
-      }
-      std::chrono::duration<double> elapsed_seconds = end - start;
-      CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-          << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
-    }
+    while (cnt_val_ > 0) {};
     return Maybe<void>::Ok();
   });
-}
-
-Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds) {
-  return SpinWaitUntilTimeout(
-      NeedSpin, seconds, [] {}, seconds);
-}
-
-Maybe<void> SpinCounter::WaitUntilCntEqualZero(
-    const std::function<void()>& HeartbeatCallback) const {
-  return Global<ForeignLockHelper>::Get()->WithScopedRelease(
-      [this, HeartbeatCallback]() -> Maybe<void> {
-        return SpinWaitUntilTimeout([&] { return cnt_val_ > 0; }, TimeoutSeconds(),
-                                    HeartbeatCallback, HearbeatIntervalSeconds());
-      });
-}
-
-Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
-  return WaitUntilCntEqualZero([] {});
 }
 
 }  // namespace oneflow
