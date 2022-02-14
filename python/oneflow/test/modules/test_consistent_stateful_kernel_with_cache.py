@@ -54,7 +54,10 @@ def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, s
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
     @global_view
     def test_global_stateful_kernel_with_inpersistent_state(test_case):
-        for placement in all_placement(enable_2d_hierarchy=False):
+        for placement in all_placement():
+            # logical_slice only support 1d sbp
+            if len(placement.hierarchy) != 1:
+                continue
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_stateful_kernel_with_inpersistent_state(
                     test_case, placement, sbp
