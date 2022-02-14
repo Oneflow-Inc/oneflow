@@ -478,5 +478,59 @@ class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
         # print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
 
 
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
+    def test_lazy_1d_to_2d_sbp(test_case):
+        P_1d = flow.placement(
+            device_type="cuda", device_ids={0: range(4)}, hierarchy=(4,)
+        )
+        P_2d = flow.placement(
+            device_type="cuda", device_ids={0: range(4)}, hierarchy=(2, 2)
+        )
+        B = flow.sbp.broadcast
+
+        class Test1dTo2dModule(flow.nn.Module):
+            def forward(self, x):
+                return x.to_global(placement=P_2d, sbp=[B, B])
+
+        class Test1dTo2dGraph(flow.nn.Graph):
+            def __init__(self, model):
+                super().__init__()
+                self.model = model
+
+            def build(self, x):
+                return self.model(x)
+
+        class Test2dTo1dModule(flow.nn.Module):
+            def forward(self, x):
+                return x.to_global(placement=P_1d, sbp=[B])
+
+        class Test2dTo1dGraph(flow.nn.Graph):
+            def __init__(self, model):
+                super().__init__()
+                self.model = model
+
+            def build(self, x):
+                return self.model(x)
+
+        model_1d_to_2d = Test1dTo2dModule()
+        graph_1d_to_2d = Test1dTo2dGraph(model_1d_to_2d)
+
+        x = flow.zeros(4, 4, 4, 4, sbp=[B, B], placement=P_2d)
+        x = x.to_global(placement=P_1d, sbp=[B])
+        test_case.assertTrue(x.sbp == (B,))
+        test_case.assertTrue(x.placement == P_1d)
+        y = graph_1d_to_2d(x)
+        test_case.assertTrue(y.sbp == (B, B))
+        test_case.assertTrue(y.placement == P_2d)
+
+        model_2d_to_1d = Test2dTo1dModule()
+        graph_2d_to_1d = Test2dTo1dGraph(model_2d_to_1d)
+        z = graph_2d_to_1d(y)
+        test_case.assertTrue(z.sbp == x.sbp)
+        test_case.assertTrue(z.placement == x.placement)
+
+
 if __name__ == "__main__":
     unittest.main()
