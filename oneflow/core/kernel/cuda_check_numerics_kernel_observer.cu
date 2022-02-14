@@ -90,14 +90,14 @@ void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
     Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {
       std::ofstream ofs(obn);
-      ofs.write(blob->dptr<const char>(), blob->ByteSizeOfBlobBody());
+      ofs.write(static_cast<const char*>(blob->dptr()), blob->ByteSizeOfBlobBody());
     }
   }
   for (const auto& ibn : kernel->op_attribute().input_bns()) {
     Blob* blob = ctx->BnInOp2Blob(ibn);
     if (blob != nullptr) {
       std::ofstream ofs(ibn);
-      ofs.write(blob->dptr<const char>(), blob->ByteSizeOfBlobBody());
+      ofs.write(static_cast<const char*>(blob->dptr()), blob->ByteSizeOfBlobBody());
     }
   }
 }
