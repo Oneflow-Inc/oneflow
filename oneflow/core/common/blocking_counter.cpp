@@ -21,6 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 
+int64_t BlockingCounter::Increase() {
+  std::unique_lock<std::mutex> lck(mtx_);
+  CHECK_GT(cnt_val_, 0);
+  cnt_val_ += 1;
+  return cnt_val_;
+}
+
 int64_t BlockingCounter::Decrease() {
   std::unique_lock<std::mutex> lck(mtx_);
   cnt_val_ -= 1;
@@ -45,10 +52,10 @@ void BlockingCounter::WaitForeverUntilCntEqualZero() {
 Maybe<void> BlockingCounter::WaitUntilCntEqualZero(
     const std::function<Maybe<bool>()>& StopWaitingAfterTimeout) {
   while (true) {
-    auto status = TRY(WaitUntilCntEqualZero(ThreadLocalEnvInteger<ONEFLOW_TIMEOUT_SECONDS>()));
+    auto status = TRY(WaitUntilCntEqualZero(EnvInteger<ONEFLOW_TIMEOUT_SECONDS>()));
     if (status.IsOk()) { return status; }
     if (!status.error()->has_timeout_error()) { return status; }
-    if (JUST(StopWaitingAfterTimeout())) { return Maybe<void>::Ok(); }
+    if (JUST(StopWaitingAfterTimeout())) { return status; }
   }
   UNIMPLEMENTED_THEN_RETURN();
 }
