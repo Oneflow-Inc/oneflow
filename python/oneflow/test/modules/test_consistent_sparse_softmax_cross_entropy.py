@@ -43,9 +43,9 @@ def _compare_eager_global_with_torch(
         )
         torch_output.sum().backward()
 
-    of_logits = flow.tensor(
-        np_logits, dtype=data_type, requires_grad=True
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    of_logits = flow.tensor(np_logits, dtype=data_type, requires_grad=True).to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    )
     of_logits = of_logits.to_global(placement, logits_sbp)
 
     of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
@@ -100,9 +100,9 @@ def _compare_lazy_global_with_torch(
             )
             return output
 
-    of_logits = flow.tensor(
-        np_logits, dtype=data_type, requires_grad=True
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    of_logits = flow.tensor(np_logits, dtype=data_type, requires_grad=True).to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    )
     of_logits = of_logits.to_global(placement, logits_sbp)
 
     of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
@@ -111,7 +111,9 @@ def _compare_lazy_global_with_torch(
     of_labels = of_labels.to_global(placement, labels_sbp)
     graph = MyModule()
     of_output = graph(of_logits, of_labels)
-    of_output = of_output.to_global(placement=placement, sbp=[flow.sbp.broadcast])
+    of_output = of_output.to_global(
+        placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast]
+    )
     of_output = of_output.to_local()
 
     flow._oneflow_internal.eager.multi_client.Sync()
@@ -146,7 +148,7 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
         arg_dict["batch_size"] = [64]
         arg_dict["num_classes"] = [1024]
         for arg in GenArgList(arg_dict):
-            for placement in all_placement(enable_2d_hierarchy=False):
+            for placement in all_placement():
                 for logits_sbp in all_sbp(placement, max_dim=2):
                     for labels_sbp in all_sbp(placement, max_dim=1):
                         _compare_lazy_global_with_torch(
