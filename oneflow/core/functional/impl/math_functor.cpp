@@ -1156,9 +1156,9 @@ class MatrixNormFunctor {
     std::vector<int32_t> dim_tmp(axis);
     for (int i = 0; i < axis; ++i) {
       if (input_dim[i] >= 0) {
-        dim_tmp.emplace_back(input_dim[i]);
+        dim_tmp[i] = input_dim[i];
       } else {
-        dim_tmp.emplace_back(input_dim[i] + num_dims);
+        dim_tmp[i] = input_dim[i] + num_dims;
       }
     }
     if (ord == "nuc") {
