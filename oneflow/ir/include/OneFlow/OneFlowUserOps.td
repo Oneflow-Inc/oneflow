@@ -4252,23 +4252,32 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
 }
 
 def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  // let input = (ins
+  //   OneFlow_Tensor:$a,
+  //   OneFlow_Tensor:$b,
+  //   OneFlow_Tensor:$bias1, 
+  //   OneFlow_Tensor:$c,
+  //   OneFlow_Tensor:$bias2
+  // );
   let input = (ins
-    OneFlow_Tensor:$a,
-    OneFlow_Tensor:$b,
-    OneFlow_Tensor:$bias1, 
-    OneFlow_Tensor:$c,
-    OneFlow_Tensor:$bias2
+    OneFlow_Tensor:$x,
+    Variadic<OneFlow_Tensor>:$weights, 
+    Variadic<OneFlow_Tensor>:$biases
   );
-  let output = (outs
+  // let output = (outs
+  //   OneFlow_Tensor:$out, 
+  //   OneFlow_Tensor:$aux
+  // );
+  let input = (ins
     OneFlow_Tensor:$out, 
-    OneFlow_Tensor:$aux
+    Variadic<OneFlow_Tensor>:$aux
   );
-  let attrs = (ins
-    // DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
-    // DefaultValuedAttr<BoolAttr, "false">:$transpose_b, 
-    DefaultValuedAttr<F64Attr, "1.">:$alpha1, 
-    DefaultValuedAttr<F64Attr, "1.">:$alpha2
-  );
+  // let attrs = (ins
+  //   // DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
+  //   // DefaultValuedAttr<BoolAttr, "false">:$transpose_b, 
+  //   DefaultValuedAttr<F64Attr, "1.">:$alpha1, 
+  //   DefaultValuedAttr<F64Attr, "1.">:$alpha2
+  // );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
