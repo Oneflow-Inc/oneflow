@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -37,7 +38,7 @@ class ScalarDiv : public OpExprGradFunction<ScalarDivCaptureState> {
   Maybe<void> Capture(ScalarDivCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     bool has_float_operand = JUST(composed_attrs.GetAttr<bool>("has_float_operand"));
@@ -54,7 +55,7 @@ class ScalarDiv : public OpExprGradFunction<ScalarDivCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::ScalarDiv(out_grads.at(0), ctx->operand));
+      *JUST(VectorAt(in_grads, 0)) = JUST(functional::ScalarDiv(JUST(VectorAt(out_grads, 0)), ctx->operand));
     }
     return Maybe<void>::Ok();
   }
