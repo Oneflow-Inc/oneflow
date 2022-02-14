@@ -139,7 +139,7 @@ jobs:
             --index_key=${{ env.OSS_DIR }}/index.html \
             --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu' && contains(env.compute_platforms, matrix.entry)
+        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu'
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
