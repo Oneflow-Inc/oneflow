@@ -24,7 +24,7 @@ import oneflow as flow
 
 
 @autotest(n=1, check_graph=False)
-def _test_consistent_triplet_marginloss_with_random_data(
+def _test_global_triplet_marginloss_with_random_data(
     test_case, placement, anchor_sbp, pos_sbp, neg_sbp
 ):
     margin = random().to(float)
@@ -33,21 +33,21 @@ def _test_consistent_triplet_marginloss_with_random_data(
     reduction = oneof("none", "sum", "mean", nothing())
     m = torch.nn.TripletMarginLoss(margin=margin, p=p, swap=swap, reduction=reduction)
     m.train(random())
-    anchor = random_tensor(2, 8, 16).to_consistent(placement, anchor_sbp)
-    pos = random_tensor(2, 8, 16).to_consistent(placement, pos_sbp)
-    neg = random_tensor(2, 8, 16).to_consistent(placement, neg_sbp)
+    anchor = random_tensor(2, 8, 16).to_global(placement, anchor_sbp)
+    pos = random_tensor(2, 8, 16).to_global(placement, pos_sbp)
+    neg = random_tensor(2, 8, 16).to_global(placement, neg_sbp)
     y = m(anchor, pos, neg)
     return y
 
 
 class TestConsistentTripletMarginLoss(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_triplet_marginloss_with_random_data(test_case):
+    @global_view
+    def test_global_triplet_marginloss_with_random_data(test_case):
         for placement in all_placement():
             for anchor_sbp in all_sbp(placement, max_dim=2):
                 for pos_sbp in all_sbp(placement, max_dim=2):
                     for neg_sbp in all_sbp(placement, max_dim=2):
-                        _test_consistent_triplet_marginloss_with_random_data(
+                        _test_global_triplet_marginloss_with_random_data(
                             test_case, placement, anchor_sbp, pos_sbp, neg_sbp
                         )
 
