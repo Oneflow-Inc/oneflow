@@ -33,21 +33,21 @@ class TensorScatterNdUpdate(flow.nn.Graph):
         return flow.tensor_scatter_nd_update(origin, indices, update)
 
 
-def _test_consistent_tensor_scatter_nd_update(
+def _test_global_tensor_scatter_nd_update(
     test_case, placement, sbp, check_graph=False
 ):
-    origin = flow.tensor(np.arange(16), dtype=flow.float).to_consistent(
+    origin = flow.tensor(np.arange(16), dtype=flow.float).to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
-    origin = origin.to_consistent(placement, sbp)
+    origin = origin.to_global(placement, sbp)
     indices = flow.tensor(
         np.array([[1], [6], [4], [3], [8], [10], [5], [7]]), dtype=flow.int
-    ).to_consistent(
+    ).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
     )
     update = flow.tensor(
         np.array([10.2, 5.1, 12.7, 5.4, 9.2, 3.1, 4.2, 5.2]), dtype=flow.float
-    ).to_consistent(
+    ).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
     )
     np_out = np.array(
@@ -79,19 +79,19 @@ def _test_consistent_tensor_scatter_nd_update(
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
 
 
-def _test_consistent_tensor_scatter_nd_update_t(
+def _test_global_tensor_scatter_nd_update_t(
     test_case, placement, sbp, check_graph=False
 ):
-    origin = flow.tensor(np.arange(32).reshape(8, 4), dtype=flow.float).to_consistent(
+    origin = flow.tensor(np.arange(32).reshape(8, 4), dtype=flow.float).to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
-    origin = origin.to_consistent(placement, sbp)
-    indices = flow.tensor(np.array([[0], [4], [2]]), dtype=flow.int).to_consistent(
+    origin = origin.to_global(placement, sbp)
+    indices = flow.tensor(np.array([[0], [4], [2]]), dtype=flow.int).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
     )
     update = flow.tensor(
         np.array([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]), dtype=flow.float,
-    ).to_consistent(
+    ).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
     )
     np_out = np.array(
@@ -114,15 +114,15 @@ def _test_consistent_tensor_scatter_nd_update_t(
     test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
 
 
-def _test_eager_consistent_tensor_scatter_nd_update_backward(test_case, placement, sbp):
+def _test_eager_global_tensor_scatter_nd_update_backward(test_case, placement, sbp):
     origin = flow.tensor(
         np.arange(16), dtype=flow.float, requires_grad=True,
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    origin = origin.to_consistent(placement, sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    origin = origin.to_global(placement, sbp)
 
     indices = flow.tensor(
         np.array([[1], [6], [4], [3], [8], [10], [5], [7]]), dtype=flow.int
-    ).to_consistent(
+    ).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
     )
 
@@ -130,7 +130,7 @@ def _test_eager_consistent_tensor_scatter_nd_update_backward(test_case, placemen
         np.array([10.2, 5.1, 12.7, 5.4, 9.2, 3.1, 4.2, 5.2]),
         requires_grad=True,
         dtype=flow.float,
-    ).to_consistent(
+    ).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
     )
     np_out = np.array(
@@ -166,33 +166,33 @@ def _test_eager_consistent_tensor_scatter_nd_update_backward(test_case, placemen
 
 
 class TestTensorScatterNdUpdate(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_tensor_scatter_nd_update(test_case):
+    @global_view
+    def test_global_tensor_scatter_nd_update(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _test_consistent_tensor_scatter_nd_update(
+                _test_global_tensor_scatter_nd_update(
                     test_case, placement, sbp, False
-                )  # eager consistent
-                _test_consistent_tensor_scatter_nd_update(
+                )  # eager global
+                _test_global_tensor_scatter_nd_update(
                     test_case, placement, sbp, True
                 )  # nn graph
 
-    @consistent
-    def test_consistent_tensor_scatter_nd_update_t(test_case):
+    @global_view
+    def test_global_tensor_scatter_nd_update_t(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _test_consistent_tensor_scatter_nd_update_t(
+                _test_global_tensor_scatter_nd_update_t(
                     test_case, placement, sbp, False
-                )  # eager consistent
-                _test_consistent_tensor_scatter_nd_update_t(
+                )  # eager global
+                _test_global_tensor_scatter_nd_update_t(
                     test_case, placement, sbp, True
                 )  # nn graph
 
-    @consistent
-    def test_consistent_tensor_scatter_nd_update_backward(test_case):
+    @global_view
+    def test_global_tensor_scatter_nd_update_backward(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _test_eager_consistent_tensor_scatter_nd_update_backward(
+                _test_eager_global_tensor_scatter_nd_update_backward(
                     test_case, placement, sbp
                 )
 
