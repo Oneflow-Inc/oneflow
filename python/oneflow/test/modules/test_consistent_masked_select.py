@@ -34,7 +34,6 @@ def _test_masked_select(test_case, placement, sbp):
 def _test_masked_select_broadcast(test_case, placement, sbp):
     k1 = random().to(int).value() * 8
     k2 = random().to(int).value() * 8
-    device = random_device()
     input = random_tensor(ndim=4, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(
         placement, sbp
     )
