@@ -24,10 +24,10 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_stack_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=8).to_consistent(
+    x = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=8).to_global(
         placement, sbp
     )
-    y = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=8).to_consistent(
+    y = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=8).to_global(
         placement, sbp
     )
     out = torch.stack((x, y), dim=random(low=-5, high=5).to(int))
@@ -35,7 +35,7 @@ def _test_stack_with_random_data(test_case, placement, sbp):
 
 
 class TestStackModule(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_stack_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):

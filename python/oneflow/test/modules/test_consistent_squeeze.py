@@ -29,39 +29,39 @@ import oneflow.unittest
 # ReshapeLike op matched_sbp_signature check failed if open auto_backward
 @autotest(n=3, auto_backward=False, check_graph=False)
 def _test_squeeze_1d_input(test_case, placement, sbp):
-    x = random_tensor(1, 10, dtype=float).to_consistent(placement, sbp)
+    x = random_tensor(1, 10, dtype=float).to_global(placement, sbp)
     y = torch.squeeze(x)
     return y
 
 
 @autotest(n=3, auto_backward=False, check_graph=False)
 def _test_flow_squeeze_with_random_data(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16).to_consistent(placement, sbp)
+    x = random_tensor(2, 8, 16).to_global(placement, sbp)
     y = torch.squeeze(x, random(1, 3).to(int))
     return y
 
 
 @autotest(n=3, auto_backward=False, check_graph=False)
 def _test_squeeze_with_0_size_data(test_case, placement, sbp):
-    x = random_tensor(3, 8, 16, 0).to_consistent(placement, sbp)
+    x = random_tensor(3, 8, 16, 0).to_global(placement, sbp)
     y = torch.squeeze(x)
     return y
 
 
 class TestConsistentSqueeze(flow.unittest.TestCase):
-    @consistent
+    @global_view
     def test_squeeze_1d_input(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
                 _test_squeeze_1d_input(test_case, placement, sbp)
 
-    @consistent
+    @global_view
     def test_flow_squeeze_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_flow_squeeze_with_random_data(test_case, placement, sbp)
 
-    @consistent
+    @global_view
     def test_squeeze_with_0_size_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):

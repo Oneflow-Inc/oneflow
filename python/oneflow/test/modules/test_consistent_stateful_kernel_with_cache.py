@@ -22,28 +22,28 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_consistent_stateful_kernel_with_inpersistent_state(test_case, placement, sbp):
+def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, sbp):
     x = (
         flow.arange(64)
         .reshape(8, 8)
-        .to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+        .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     )
-    x = x.to_consistent(placement, sbp)
+    x = x.to_global(placement, sbp)
     y = flow._C.logical_slice(x, [0, 0], [3, 1], [1, 1])
     y_np = np.array([[0], [8], [16]])
     test_case.assertTrue(
         np.array_equal(
-            y.to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+            y.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
             .to_local()
             .numpy(),
             y_np,
         )
     )
-    x = x.to_consistent(sbp=flow.sbp.split(1))
+    x = x.to_global(sbp=flow.sbp.split(1))
     y = flow._C.logical_slice(x, [0, 0], [3, 1], [1, 1])
     test_case.assertTrue(
         np.array_equal(
-            y.to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+            y.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
             .to_local()
             .numpy(),
             y_np,
@@ -52,11 +52,11 @@ def _test_consistent_stateful_kernel_with_inpersistent_state(test_case, placemen
 
 
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
-    @consistent
-    def test_consistent_stateful_kernel_with_inpersistent_state(test_case):
+    @global_view
+    def test_global_stateful_kernel_with_inpersistent_state(test_case):
         for placement in all_placement(enable_2d_hierarchy=False):
             for sbp in all_sbp(placement, max_dim=2):
-                _test_consistent_stateful_kernel_with_inpersistent_state(
+                _test_global_stateful_kernel_with_inpersistent_state(
                     test_case, placement, sbp
                 )
 
