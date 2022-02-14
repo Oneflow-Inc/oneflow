@@ -542,21 +542,14 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: 96a727f566534151bff2cad445d5661f0ceedf83
-          path: oneflow-models-resnet50
+          ref: 61583470b8bdbff75baa3f2c5368789b8a797d33
+          path: oneflow-models
       - name: ResNet50 Graph DDP test
         id: models-resnet50
         timeout-minutes: 20
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
-          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models-resnet50 ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
-      - name: Checkout Oneflow-Inc/models
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/models
-          ref: 7a6845f7d7133c02a01a75b9ca525e6c40e99639
-          path: oneflow-models
+          docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_resnet50_graph_ddp.sh
       - name: Speed test
         id: speed
         timeout-minutes: 20
@@ -714,9 +707,9 @@ jobs:
       - name: Download OneFlow custom clang-tidy
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
-          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-b836e4d-x86_64.AppImage
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-13.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
-          chmod +x clang-tidy-b836e4d-x86_64.AppImage clang-tidy-diff.py
+          chmod +x clang-tidy-13.AppImage clang-tidy-diff.py
       - name: Cache third party dir
         uses: actions/cache@v2
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
@@ -757,7 +750,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-b836e4d-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-13.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
       - name: Remove automerge
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
