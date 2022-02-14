@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import os
 import numpy as np
-
+import time
 import oneflow as flow
 import oneflow.unittest
 
@@ -28,23 +28,26 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentBranchError(flow.unittest.TestCase):
-    @autotest(n=1, check_graph=False)
+    @autotest(n=1, check_graph=True)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_add_with_alpha(test_case):
         try:
-            flow._oneflow_internal.global_view.set_sync_timeout(10)
+            os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "2"
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
-            consistent_data = data.to_consistent(placement=placement, sbp=sbp)
-
+            global_data = data.to_global(placement=placement, sbp=sbp)
             if flow.env.get_rank() == 0:
                 print(data.mean())
-                print(consistent_data.mean())
+                print(global_data.mean())
+            else:
+                time.sleep(2)
 
         except Exception as e:
             err_msg = "Maybe executing different code in different ranks, please check if the code is branched and operates on the global tensor"
             assert err_msg in str(e)
+        finally:
+            os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "300"
 
 
 if __name__ == "__main__":

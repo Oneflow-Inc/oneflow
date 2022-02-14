@@ -107,12 +107,13 @@ def _compare_graph_lr_scheduler_with_eager(test_case, **kwargs):
     graph = MyGraph(module, optimizer, lr_scheduler)
 
     with _DebugMode():
-        for _ in range(iters):
+        for _ in range(iters + 1):
             ret = graph(_rand_input())
             ret.numpy()  # sync for graph finishing
 
-    lr_log_file = glob.glob("log/**/train_step2lr.csv", recursive=True)[0]
+    lr_log_file = glob.glob("log/*/train_step2lr.csv")[0]
     lrs = _get_graph_lrs_from_log(lr_log_file)
+    lrs = lrs[:iters]
 
     eager_lrs = [lr_scheduler.get_last_lr()[0]]
     for _ in range(iters):
@@ -122,7 +123,7 @@ def _compare_graph_lr_scheduler_with_eager(test_case, **kwargs):
         lr_scheduler.step()
         eager_lrs.append(lr_scheduler.get_last_lr()[0])
 
-    eager_lrs = eager_lrs[:-1]
+    eager_lrs = eager_lrs[:iters]
 
     test_case.assertTrue(
         np.allclose(lrs, eager_lrs, rtol=rtol, atol=atol),

@@ -77,7 +77,7 @@ def _test_with_generator(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
+    def test_global_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
         x = flow.rand(16, 16, placement=placement, sbp=sbp)
