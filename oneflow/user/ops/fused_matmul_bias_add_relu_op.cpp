@@ -151,53 +151,70 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
 }
 
 // TODO(zzk): I don't know how to write. 
+// /* static */ Maybe<void> FusedMatmulBiasAddReluOp::GetSbp(user_op::SbpContext* ctx) {
+//   /*
+//   A: (m, k)
+//   B: (n, k) need transpose
+//   C: (j, n) need transpose
+
+//   (m, k) * (k, n)
+//   */ 
+//   int32_t m_axis = -1;
+//   int32_t n_axis = -1;
+//   m_axis = 0;
+//   n_axis = 0;
+//   /*
+//   For matmul+bias, its sbp are: 
+//   S0, B, B, S0
+//   B, S1, S0, S1
+//   S1, S0, P, P
+//   P, B, P, P
+//   B, P, P, P
+
+//   For matmul+bias+relu, its sbp are: 
+//   S0, B, B, S0
+//   B, S1, S0, S1
+//   */
+//   ctx->NewBuilder()
+//       // S0, B, B, S0
+//       .Split(user_op::OpArg("a", 0), m_axis)
+//       .Broadcast(user_op::OpArg("b", 0))
+//       .Broadcast(user_op::OpArg("bias1", 0))
+//       // .Split(user_op::OpArg("tmp_out", 0), 0)
+//       // S0, B, B, S0
+//       .Broadcast(user_op::OpArg("c", 0))
+//       .Broadcast(user_op::OpArg("bias2", 0))
+//       .Split(user_op::OpArg("out", 0), 0)
+//       .Build();
+
+//   ctx->NewBuilder()
+//       // B, S1, S0, S1
+//       .Broadcast(user_op::OpArg("a", 0))
+//       .Split(user_op::OpArg("b", 0), n_axis)
+//       .Split(user_op::OpArg("bias", 0), 0)
+//       // .Split(user_op::OpArg("tmp_out", 0), 1)
+//       // S1, S0, P, P
+//       .Split(user_op::OpArg("c", 0), 0)
+//       .PartialSum(user_op::OpArg("bias2", 0))
+//       .Split(user_op::OpArg("out", 0), 1)
+//       .Build();
+//   return Maybe<void>::Ok();
+// }
+
 /* static */ Maybe<void> FusedMatmulBiasAddReluOp::GetSbp(user_op::SbpContext* ctx) {
-  /*
-  A: (m, k)
-  B: (n, k) need transpose
-  C: (j, n) need transpose
-
-  (m, k) * (k, n)
-  */ 
-  int32_t m_axis = -1;
-  int32_t n_axis = -1;
-  m_axis = 0;
-  n_axis = 0;
-  /*
-  For matmul+bias, its sbp are: 
-  S0, B, B, S0
-  B, S1, S0, S1
-  S1, S0, P, P
-  P, B, P, P
-  B, P, P, P
-
-  For matmul+bias+relu, its sbp are: 
-  S0, B, B, S0
-  B, S1, S0, S1
-  */
-  ctx->NewBuilder()
-      // S0, B, B, S0
-      .Split(user_op::OpArg("a", 0), m_axis)
-      .Broadcast(user_op::OpArg("b", 0))
-      .Broadcast(user_op::OpArg("bias1", 0))
-      // .Split(user_op::OpArg("tmp_out", 0), 0)
-      // S0, B, B, S0
-      .Broadcast(user_op::OpArg("c", 0))
-      .Broadcast(user_op::OpArg("bias2", 0))
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
-
-  ctx->NewBuilder()
-      // B, S1, S0, S1
-      .Broadcast(user_op::OpArg("a", 0))
-      .Split(user_op::OpArg("b", 0), n_axis)
-      .Split(user_op::OpArg("bias", 0), 0)
-      // .Split(user_op::OpArg("tmp_out", 0), 1)
-      // S1, S0, P, P
-      .Split(user_op::OpArg("c", 0), 0)
-      .PartialSum(user_op::OpArg("bias2", 0))
-      .Split(user_op::OpArg("out", 0), 1)
-      .Build();
+  // Currently Only support S0 B B B B ... S0
+  auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0); 
+  for(int i =0; i<ctx->user_op_conf().input_size("weights"); ++i) {
+    builder.Broadcast(user_op::OpArg("weights", i)); 
+  }
+  for(int i =0; i<ctx->user_op_conf().input_size("biases"); ++i) {
+    builder.Broadcast(user_op::OpArg("biases", i));
+  }
+  for(int i =0; i<ctx->user_op_conf().output_size("aux"); ++i) {
+    builder.Split(user_op::OpArg("aux", i), 0);
+  }
+  builder.Split(user_op::OpArg("out", 0), 0); 
+  builder.Build();
   return Maybe<void>::Ok();
 }
 

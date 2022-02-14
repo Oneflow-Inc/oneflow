@@ -4268,7 +4268,7 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
   //   OneFlow_Tensor:$out, 
   //   OneFlow_Tensor:$aux
   // );
-  let input = (ins
+  let output = (outs
     OneFlow_Tensor:$out, 
     Variadic<OneFlow_Tensor>:$aux
   );
