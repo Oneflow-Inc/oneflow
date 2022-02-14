@@ -21,7 +21,7 @@ namespace oneflow {
 namespace one {
 
 struct ScalarDivCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = true;
   Scalar operand;
 };
 
