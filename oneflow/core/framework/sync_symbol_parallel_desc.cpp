@@ -89,7 +89,7 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx.WaitDone());
   JUST(recv_buffer->Check(symbol_id, parallel_desc));
   return Maybe<void>::Ok();
 }
