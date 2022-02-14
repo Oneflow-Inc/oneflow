@@ -20,7 +20,7 @@ import oneflow.unittest
 
 
 class TestTensorSplitVec(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_split_vec(test_case):
         device = random_device()
         x = random_tensor(
@@ -36,7 +36,7 @@ class TestTensorSplitVec(flow.unittest.TestCase):
 
 
 class TestTensorSplitInt(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_split_int(test_case):
         device = random_device()
         x = random_tensor(

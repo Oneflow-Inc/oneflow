@@ -182,10 +182,10 @@ def tensor_getstate(self):
         # methods other than flow.save/load, for example, copy.deepcopy
         if self.is_local:
             if self.is_cuda:
-                device="cuda"
+                device = "cuda"
             else:
-                device="cpu"
-            return {"data": self.numpy(), "dtype": self.dtype,"device":device}
+                device = "cpu"
+            return {"data": self.numpy(), "dtype": self.dtype, "device": device}
         else:
             return {
                 "data": self.numpy(),
@@ -213,7 +213,11 @@ def tensor_setstate(self, pickle_dict):
             )
         else:
             return self.__init__(
-                flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"],device=pickle_dict["device"])
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    device=pickle_dict["device"],
+                )
             )
 
 
