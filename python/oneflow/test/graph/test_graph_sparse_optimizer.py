@@ -52,7 +52,7 @@ def _rand_input(placement=None, sbp=None):
 @flow.unittest.skip_unless_1n1d()
 class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
     def test(test_case):
-        PLC = flow.placement("cuda", {0: [0]})
+        PLC = flow.placement("cuda", ranks=[0])
         SBP = flow.sbp.broadcast
         m = MyModule(PLC, SBP)
         graph = MyGraph(m)

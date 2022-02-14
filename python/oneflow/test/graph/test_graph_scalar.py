@@ -167,10 +167,10 @@ class TestScalarGraph(oneflow.unittest.TestCase):
         _test_scalar_train_graph(test_case, flow.device("cpu"))
 
     def test_scalar_global_train_graph_gpu(test_case):
-        _test_scalar_global_train_graph(test_case, flow.placement("cuda", {0: [0]}))
+        _test_scalar_global_train_graph(test_case, flow.placement("cuda", ranks=[0]))
 
     def test_scalar_global_train_graph_cpu(test_case):
-        _test_scalar_global_train_graph(test_case, flow.placement("cpu", {0: [0]}))
+        _test_scalar_global_train_graph(test_case, flow.placement("cpu", ranks=[0]))
 
 
 if __name__ == "__main__":

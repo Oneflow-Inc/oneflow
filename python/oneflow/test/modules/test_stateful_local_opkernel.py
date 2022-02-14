@@ -38,10 +38,10 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
         rank = int(os.getenv("RANK"))
 
         x = flow.tensor(np.array([1, 2]) * (rank + 1)).to("cuda")
-        x = x.to_global(flow.placement("cuda", {0: range(2)}), flow.sbp.split(0))
+        x = x.to_global(flow.placement("cuda", range(2)), flow.sbp.split(0))
 
         y = flow.tensor([3, 4, 5]).to("cuda")
-        y = y.to_global(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        y = y.to_global(flow.placement("cuda", range(2)), flow.sbp.broadcast)
 
         # logical slice assign op needs sbp and logical shape from stateful local opkernel
         x[:3] = y

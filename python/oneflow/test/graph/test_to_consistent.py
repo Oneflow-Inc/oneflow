@@ -213,7 +213,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         # print(f"z shape: {z.shape}, device: {z.device}")
         # print(z.numpy())
 
-        placement = flow.placement("cuda", {0: [0, 1]})
+        placement = flow.placement("cuda", ranks=[0, 1])
         sbp = flow.sbp.split(1)
         c_x = local_x.to_global(placement=placement, sbp=sbp)
         c_y = local_y.to_global(placement=placement, sbp=sbp)
@@ -246,7 +246,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         z = flow._C.relu(z)
         z = z.sum()
 
-        placement = flow.placement("cuda", {0: [0, 1]})
+        placement = flow.placement("cuda", ranks=[0, 1])
         c_x = local_x.to_global(placement=placement, sbp=flow.sbp.split(0))
         c_y = local_y.to_global(placement=placement, sbp=flow.sbp.broadcast)
 
@@ -285,7 +285,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
-        placement = flow.placement("cuda", {0: [0, 1]})
+        placement = flow.placement("cuda", ranks=[0, 1])
         x1 = local_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
         y1 = local_y.to_global(placement=placement, sbp=flow.sbp.broadcast)
         # B * B -> B -> B
@@ -330,7 +330,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
     # @unittest.skipIf(True, "")
     def test_global_to(test_case):
         c_x = flow.ones(
-            (4, 3), placement=flow.placement("cpu", {0: [0, 1]}), sbp=flow.sbp.split(0)
+            (4, 3), placement=flow.placement("cpu", ranks=[0, 1]), sbp=flow.sbp.split(0)
         )
 
         global_to = ConsistentToModule("cuda")
@@ -351,7 +351,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
     # @unittest.skipIf(True, "")
     def test_free_tensor_to_global(test_case):
         local_x = flow.tensor(x, dtype=flow.float32, device="cpu")
-        placement = flow.placement("cuda", {0: [0, 1]})
+        placement = flow.placement("cuda", ranks=[0, 1])
         c_x = local_x.to_global(placement, flow.sbp.split(0))
 
         m = FreeTensorModule((3, 10), placement, flow.sbp.broadcast)
@@ -385,26 +385,26 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
             raise ValueError
 
         c_x = x.to_global(
-            placement=flow.placement("cpu", {0: [0]}), sbp=flow.sbp.broadcast
+            placement=flow.placement("cpu", ranks=[0]), sbp=flow.sbp.broadcast
         )
-        # print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
+        # print(f"c_x shape: {c_x.shape}, placement: {c_x.placement}, sbp: {c_x.sbp}")
 
-        p1 = flow.placement("cpu", {0: [0, 1]})
+        p1 = flow.placement("cpu", ranks=[0, 1])
         m1 = ToPlacementModule(p1)
         g1 = MyGraph(m1)
         y1 = g1(c_x)
 
-        # print(f"y1 shape: {y1.shape}, placment: {y1.placement}, sbp: {y1.sbp}")
+        # print(f"y1 shape: {y1.shape}, placement: {y1.placement}, sbp: {y1.sbp}")
         test_case.assertTrue(y1.placement == p1)
         test_case.assertTrue(y1.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y1.to_local().numpy().mean() == 1.0)
 
-        p2 = flow.placement("cuda", {0: [0, 1]})
+        p2 = flow.placement("cuda", ranks=[0, 1])
         m2 = ToPlacementModule(p2)
         g2 = MyGraph(m2)
         y2 = g2(y1)
 
-        # print(f"y2 shape: {y2.shape}, placment: {y2.placement}, sbp: {y2.sbp}")
+        # print(f"y2 shape: {y2.shape}, placement: {y2.placement}, sbp: {y2.sbp}")
         test_case.assertTrue(y2.placement == p2)
         test_case.assertTrue(y2.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y2.to_local().numpy().mean() == 1.0)
@@ -413,7 +413,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
     def test_to_dtype(test_case):
         x = flow.ones((2, 3), dtype=flow.int32, device="cpu")
 
-        placement = flow.placement("cpu", {0: [0, 1]})
+        placement = flow.placement("cpu", ranks=[0, 1])
         c_x = flow.ones(
             (2, 3), dtype=flow.int32, placement=placement, sbp=flow.sbp.broadcast
         )
@@ -463,7 +463,7 @@ class MyModule5(flow.nn.Module):
 @flow.unittest.skip_unless_1n4d()
 class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
     def test_matmul(test_case):
-        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         x = flow.ones(
             (4, 6), placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )
@@ -471,11 +471,11 @@ class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
             (4, 6), placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(1)]
         )
         z = flow._C.matmul(x, y, transpose_b=True)
-        print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+        print(f"z shape: {z.shape}, placement: {z.placement}, sbp: {z.sbp}")
 
         # m = MyModule5(transpose_b=True, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
         # z = m(x, y)
-        # print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+        # print(f"z shape: {z.shape}, placement: {z.placement}, sbp: {z.sbp}")
 
 
 @flow.unittest.skip_unless_1n4d()

@@ -65,7 +65,7 @@ def compare_eager_global_with_torch(
     label_type = type_name_to_flow_type[label_type]
     np_labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(np.int32)
     np_logits = np.random.random((batch_size, num_classes)).astype(np.float32)
-    placement = flow.placement(device_type, {0: range(4)})
+    placement = flow.placement(device_type, range(4))
     rank = flow.env.get_rank()
     if rank == 0:
         torch_logits = torch.tensor(np_logits, dtype=torch.float32, requires_grad=True)
@@ -124,7 +124,7 @@ def compare_eager_2d_global_with_torch(
         torch_output.sum().backward()
 
     # 2D sbp
-    placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+    placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
     of_logits = flow.tensor(
         np_logits, device=device_type, dtype=data_type, requires_grad=True
     )
@@ -173,7 +173,7 @@ def compare_lazy_global_with_torch(
     label_type = type_name_to_flow_type[label_type]
     np_labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(np.int32)
     np_logits = np.random.random((batch_size, num_classes)).astype(np.float32)
-    placement = flow.placement(device_type, {0: range(4)})
+    placement = flow.placement(device_type, range(4))
     rank = flow.env.get_rank()
 
     if rank == 0:

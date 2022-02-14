@@ -79,7 +79,7 @@ class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
 
         lazy_global_loader = OFRecordDataLoader(
             batch_size=4,
-            placement=flow.placement("cpu", {0: [0, 1]}),
+            placement=flow.placement("cpu", ranks=[0, 1]),
             sbp=[flow.sbp.split(0)],
         )
         loader_graph = DataLoaderGraph(lazy_global_loader)
