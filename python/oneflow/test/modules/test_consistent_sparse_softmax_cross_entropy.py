@@ -25,10 +25,10 @@ import oneflow.unittest
 from test_util import GenArgList, type_name_to_flow_type
 
 from oneflow.test_utils.automated_test_util.generators import *
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import consistent
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import global_view
 
 
-def _compare_eager_consistent_with_torch(
+def _compare_eager_global_with_torch(
     placement, logits_sbp, labels_sbp, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -45,23 +45,23 @@ def _compare_eager_consistent_with_torch(
 
     of_logits = flow.tensor(
         np_logits, dtype=data_type, requires_grad=True
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    of_logits = of_logits.to_consistent(placement, logits_sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    of_logits = of_logits.to_global(placement, logits_sbp)
 
-    of_labels = flow.tensor(np_labels, dtype=label_type).to_consistent(
+    of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
-    of_labels = of_labels.to_consistent(placement, labels_sbp)
+    of_labels = of_labels.to_global(placement, labels_sbp)
 
     of_output = flow.nn.functional.sparse_softmax_cross_entropy(
         labels=of_labels, logits=of_logits
     )
     of_output.sum().backward()
-    of_logits_grad = of_logits.grad.to_consistent(
+    of_logits_grad = of_logits.grad.to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
     of_logits_grad = of_logits_grad.to_local()
-    of_output = of_output.to_consistent(
+    of_output = of_output.to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
     of_output = of_output.to_local()
@@ -75,7 +75,7 @@ def _compare_eager_consistent_with_torch(
         )
 
 
-def _compare_lazy_consistent_with_torch(
+def _compare_lazy_global_with_torch(
     placement, logits_sbp, labels_sbp, data_type, label_type, batch_size, num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
@@ -102,16 +102,16 @@ def _compare_lazy_consistent_with_torch(
 
     of_logits = flow.tensor(
         np_logits, dtype=data_type, requires_grad=True
-    ).to_consistent(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    of_logits = of_logits.to_consistent(placement, logits_sbp)
+    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
+    of_logits = of_logits.to_global(placement, logits_sbp)
 
-    of_labels = flow.tensor(np_labels, dtype=label_type).to_consistent(
+    of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
-    of_labels = of_labels.to_consistent(placement, labels_sbp)
+    of_labels = of_labels.to_global(placement, labels_sbp)
     graph = MyModule()
     of_output = graph(of_logits, of_labels)
-    of_output = of_output.to_consistent(placement=placement, sbp=[flow.sbp.broadcast])
+    of_output = of_output.to_global(placement=placement, sbp=[flow.sbp.broadcast])
     of_output = of_output.to_local()
 
     flow._oneflow_internal.eager.multi_client.Sync()
@@ -123,8 +123,8 @@ def _compare_lazy_consistent_with_torch(
 
 
 class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
-    @consistent
-    def test_eager_consistent_sparse_softmax_cross_entropy(test_case):
+    @global_view
+    def test_eager_global_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()
         arg_dict["data_type"] = ["float32", "double"]
         arg_dict["label_type"] = ["int32", "int64"]
@@ -134,12 +134,12 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
             for placement in all_placement():
                 for logits_sbp in all_sbp(placement, max_dim=2):
                     for labels_sbp in all_sbp(placement, max_dim=1):
-                        _compare_eager_consistent_with_torch(
+                        _compare_eager_global_with_torch(
                             placement, logits_sbp, labels_sbp, *arg
                         )
 
-    @consistent
-    def test_lazy_consistent_sparse_softmax_cross_entropy(test_case):
+    @global_view
+    def test_lazy_global_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()
         arg_dict["data_type"] = ["float32", "double"]
         arg_dict["label_type"] = ["int32", "int64"]
@@ -149,7 +149,7 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
             for placement in all_placement(enable_2d_hierarchy=False):
                 for logits_sbp in all_sbp(placement, max_dim=2):
                     for labels_sbp in all_sbp(placement, max_dim=1):
-                        _compare_lazy_consistent_with_torch(
+                        _compare_lazy_global_with_torch(
                             placement, logits_sbp, labels_sbp, *arg
                         )
 
