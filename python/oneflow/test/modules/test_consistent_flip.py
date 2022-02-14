@@ -24,38 +24,22 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-
-def check_equality(x):
-    equality_res = np.allclose(
-        x.pytorch.detach().cpu().numpy(),
-        x.oneflow.numpy(),
-        rtol=0.0001,
-        atol=1e-05,
-        equal_nan=True,
-    )
-    if not equality_res:
-        print(x.oneflow.sbp)
-        print("Pytorch: ", x.pytorch.detach().cpu().numpy())
-        print("Oneflow: ", x.oneflow.numpy())
-    return equality_res
-
-
+@autotest(n=10, check_graph=False)
 def test_flip_impl(test_case, ndim, placement, sbp):
-    dims = [4, 4]
+    dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    z = torch.flip(y, [0])
-    assert check_equality(z), "z is not equal"
-
+    z = torch.flip(y, constant([i for i in range(ndim)]))
+    return z
 
 class TestFlipConsistent(flow.unittest.TestCase):
     @global_view
     def test_flip(test_case):
-        ndim = 2
-        placement = flow.env.all_device_placement("cpu")
-        sbp = (flow.sbp.split(axis=0),)
-        test_flip_impl(test_case, ndim, placement, sbp)
-
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=ndim):
+                test_flip_impl(test_case, ndim, placement, sbp)
 
 if __name__ == "__main__":
     unittest.main()
