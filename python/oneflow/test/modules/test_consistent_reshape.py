@@ -31,28 +31,27 @@ def _test_reshape_impl(test_case, pair, placement, sbp):
     z = y.reshape(to_shape)
     return z
 
+
 def _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp):
     shape, to_shape = pair
-    
+
     nd_arr = np.random.rand(*shape)
     np_out = nd_arr.reshape(to_shape)
 
     x = flow.tensor(nd_arr)
     like = flow.empty(to_shape)
-    y = (
-        x.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-        .to_global(placement=placement, sbp=in_sbp)
+    y = x.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast).to_global(
+        placement=placement, sbp=in_sbp
     )
-    like = (
-        like.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-        .to_global(placement=placement, sbp=like_sbp)
-    )
+    like = like.to_global(
+        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
+    ).to_global(placement=placement, sbp=like_sbp)
     z = flow._C.reshape_like(y, like)
-    local_z = z.to_global(placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]).to_local()
+    local_z = z.to_global(
+        placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+    ).to_local()
     if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(np_out, local_z.numpy())
-        )
+        test_case.assertTrue(np.array_equal(np_out, local_z.numpy()))
 
 
 class TestReshapeConsistent(flow.unittest.TestCase):
@@ -81,7 +80,9 @@ class TestReshapeConsistent(flow.unittest.TestCase):
             for placement in all_placement():
                 for in_sbp in all_sbp(placement, max_dim=len(pair[0])):
                     for like_sbp in all_sbp(placement, max_dim=len(pair[1])):
-                        _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp)
+                        _test_reshape_like_impl(
+                            test_case, pair, placement, in_sbp, like_sbp
+                        )
 
 
 if __name__ == "__main__":
