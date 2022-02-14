@@ -26,9 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-# Check failed in hierarchical_parallel_cast_op if open check_graph:
-# (conf.size()) == (parallel_hierarchy.NumAxes()) (2 vs 1)
-@autotest(n=3, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_flow_split_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = random(2, 6) * 8
@@ -41,7 +39,7 @@ def _test_flow_split_with_random_data(test_case, placement, sbp):
     return torch.cat(res, rand_dim)
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_flow_split_sizes_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = 16
@@ -53,7 +51,7 @@ def _test_flow_split_sizes_with_random_data(test_case, placement, sbp):
     return torch.cat(res, dim=1)
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_flow_split_sizes_neg_dim_with_random_data(test_case, placement, sbp):
     k0 = random(2, 6) * 8
     k1 = 16
