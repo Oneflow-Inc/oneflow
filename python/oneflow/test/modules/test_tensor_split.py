@@ -19,6 +19,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTensorSplitVec(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_tensor_split_vec(test_case):
