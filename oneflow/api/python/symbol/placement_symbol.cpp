@@ -117,7 +117,7 @@ struct PlacementSymbolExportUtil {
     std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
     for (int i = 0; i < size; ++i) {
       int64_t rank = rank_data[i];
-      // TODO(): Prevent users from creating illegal placement
+      // TODO(hjchen2): Prevent users from creating illegal placement
       // if (rank >= GlobalProcessCtx::WorldSize()) {
       //   return Error::RuntimeError() << "rank " << rank << " is invalid since the world size is "
       //                                << GlobalProcessCtx::WorldSize();
