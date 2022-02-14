@@ -48,13 +48,13 @@ def _test_scalar_print_random_data(test_case, placement, sbp):
 
 
 class TestConsistentLinalgVectorNorm2D(flow.unittest.TestCase):
-    global_view
+    @global_view
     def test_sqrt_sum_with_cpu_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp)
 
-    global_view
+    @global_view
     def test_scalar_print_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
