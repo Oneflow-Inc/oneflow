@@ -42,13 +42,17 @@ __global__ void SGDUpdateKernel(const int64_t embedding_size, T scale, const IDX
                                 const float* learning_rate, const T* scale_by_ptr,
                                 const int64_t* skip_if, const G* model_diff, const T* model,
                                 T* updated_model) {
-  if (skip_if != nullptr && *skip_if != 0) { return; }
-  if (scale_by_ptr != nullptr) { scale /= *scale_by_ptr; }
-  float learning_rate_val = *learning_rate;
-  const int64_t n = *num_unique_ids * embedding_size;
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    const T model_val = model[i];
-    updated_model[i] = model_val - learning_rate_val * (scale * static_cast<T>(model_diff[i]));
+  if (skip_if != nullptr && *skip_if != 0) {
+    const int64_t n = *num_unique_ids * embedding_size;
+    CUDA_1D_KERNEL_LOOP(i, n) { updated_model[i] = model[i]; }
+  } else {
+    if (scale_by_ptr != nullptr) { scale /= *scale_by_ptr; }
+    float learning_rate_val = *learning_rate;
+    const int64_t n = *num_unique_ids * embedding_size;
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      const T model_val = model[i];
+      updated_model[i] = model_val - learning_rate_val * (scale * static_cast<T>(model_diff[i]));
+    }
   }
 }
 
