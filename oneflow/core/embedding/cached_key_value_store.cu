@@ -89,14 +89,14 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
     max_query_length_ = query_length;
   }
 
-  void WithIterator(const std::function<void(KVBaseIterator* iter)>& fn) override;
-
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
+  void LoadSnapshot(const std::string& name,
+                    const std::function<void(KVBaseIterator* iter)>& Hook) override;
 
  private:
   void SyncCacheToStore();
@@ -116,18 +116,6 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   std::recursive_mutex mutex_;
   bool synced_;
 };
-
-template<typename Key, typename Elem>
-void CacheKeyValueStoreImpl<Key, Elem>::WithIterator(
-    const std::function<void(KVBaseIterator* iter)>& fn) {
-  CudaCurrentDeviceGuard guard(device_index_);
-  if (cache_->Policy() == CacheOptions::Policy::kFull) {
-    cache_->WithIterator(fn);
-  } else {
-    SyncCacheToStore();
-    store_->WithIterator(fn);
-  }
-}
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
@@ -181,17 +169,22 @@ bool CacheKeyValueStoreImpl<Key, Elem>::SnapshotExists(const std::string& name) 
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(const std::string& name) {
+  LoadSnapshot(name, nullptr);
+}
+
+template<typename Key, typename Elem>
+void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
+    const std::string& name, const std::function<void(KVBaseIterator* iter)>& Hook) {
   CudaCurrentDeviceGuard guard(device_index_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  store_->LoadSnapshot(name);
   cache_->Clear();
-  if (cache_->Policy() == CacheOptions::Policy::kFull) {
-    auto device =
-        Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
-    CHECK(device);
-    auto* stream = device->CreateStream();
-    auto* cuda_stream = stream->As<ep::CudaStream>();
-    store_->WithIterator([&](KVBaseIterator* iter) {
+  store_->LoadSnapshot(name, [&](KVBaseIterator* iter) {
+    if (cache_->Policy() == CacheOptions::Policy::kFull) {
+      auto device =
+          Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      CHECK(device);
+      auto* stream = device->CreateStream();
+      auto* cuda_stream = stream->As<ep::CudaStream>();
       while (true) {
         iter->NextN(stream, max_query_length_, num_buffer_, keys_buffer_, values_buffer_);
         OF_CUDA_CHECK(cudaDeviceSynchronize());
@@ -206,9 +199,14 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(const std::string& name) {
         CHECK_JUST(stream->Sync());
         CHECK_EQ(*host_num_buffer_, 0);
       }
-    });
-    device->DestroyStream(stream);
-  }
+      device->DestroyStream(stream);
+    }
+    if (Hook) {
+      iter->Reset();
+      Hook(iter);
+    }
+  });
+  store_->LoadSnapshot(name);
 }
 
 template<typename Key, typename Elem>
