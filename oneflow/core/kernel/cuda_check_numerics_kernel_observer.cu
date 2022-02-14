@@ -82,6 +82,8 @@ bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_
       LOG(FATAL) << "use half need nvcc arch >= 530";
       return true;
     }
+  } else {
+    return false;
   }
 }
 
