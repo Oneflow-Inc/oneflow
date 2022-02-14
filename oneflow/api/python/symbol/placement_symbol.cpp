@@ -199,7 +199,7 @@ struct PlacementSymbolExportUtil {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "placement",
                                                                           py::dynamic_attr())
-      .def(py::init([](const std::string& device_type, py::dict device_ids,
+      .def(py::init([](const std::string& device_type, const py::dict& device_ids,
                        const std::shared_ptr<Shape>& hierarchy) {
              PyErr_WarnEx(
                  PyExc_UserWarning,
