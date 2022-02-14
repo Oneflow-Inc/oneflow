@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
@@ -468,7 +469,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   // init view blob (with empty data pointer)
-  JUST(view_eager_blob_object->TryInitBlob());
+  JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
   view_eager_blob_object->set_is_shape_synced(true);
   view_eager_blob_object->set_last_used_device(JUST(input_tensor->device()));
   // prepare instruction operand
@@ -489,23 +490,55 @@ template Maybe<void> InstructionsBuilder::TensorView(
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const T tensor, const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
-  const auto& CallbackWrapper = [spin_counter, Callback](uint64_t ofblob_ptr) {
-    (*Callback)(ofblob_ptr);
-    spin_counter->Decrease();
+    const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
+  // We want balance the cpu overhead and notification latency.
+  //
+  // balanced timeline here:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //
+  //   main thread:  |<-------------------- B -------------------->|<- W ->|<- S  ->|
+  //
+  // bad timeline with more notification latency:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //
+  //   main thread:  |<---------------------------- B ----------------------------->|<- W ->|
+  //
+  // bad timeline with more cpu overhead:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //                 |                                             |                |
+  //   main thread:  |<---------------------------- S ----------------------------->|
+
+  const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
+    btb->mut_blocking_counter()->Decrease();
+    Callback(ofblob_ptr);
+    btb->mut_spin_counter()->Decrease();
   };
   return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
 }
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const std::shared_ptr<one::MirroredTensor> tensor,
-    const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+    const std::shared_ptr<one::MirroredTensor> tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
