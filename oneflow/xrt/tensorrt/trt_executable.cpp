@@ -99,7 +99,7 @@ std::string TrtExecutable::LoadCalibrationTable(  // NOLINT
                        << calib_restore_path;
   std::stringstream buffer;
   buffer << infile.rdbuf();
-  return std::move(buffer.str());
+  return buffer.str();
 }
 
 bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
