@@ -264,29 +264,32 @@ class BatchMatMulFunctor {
 class FusedMatMulBiasAddReluFunctor {
  public:
   FusedMatMulBiasAddReluFunctor() {
+    // fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
+    //                            .Input("a")
+    //                            .Input("b")
+    //                            .Input("bias1")
+    //                            .Input("c")
+    //                            .Input("bias2")
+    //                            .Output("out")
+    //                            .Output("aux")
+    //                            .Build());
     fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
-                               .Input("a")
-                               .Input("b")
-                               .Input("bias1")
-                               .Input("c")
-                               .Input("bias2")
+                               .Input("x")
+                               .Input("weight", 128)
+                               .Input("bias", 128)
                                .Output("out")
-                               .Output("aux")
+                               .Output("aux", 128)
                                .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
-                           const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& bias1, 
-                           const std::shared_ptr<one::Tensor>& c,
-                           const std::shared_ptr<one::Tensor>& bias2,
-                           const double& alpha1, 
-                           const double& alpha2) const {
-    const auto& a_shape = a->shape();
-    const auto& b_shape = b->shape();
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const TensorTuple& weights,
+                           const TensorTuple& biases) const {
+    // const auto& a_shape = a->shape();
+    // const auto& b_shape = b->shape();
 
-    // TODO(): Support Fused batch/broadcast matmul.
-    CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should == 2";
-    CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should == 2";
+    // // TODO(): Support Fused batch/broadcast matmul.
+    // CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should == 2";
+    // CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should == 2";
 
     // int64_t m = 0, n = 0, k_a = 0, k_b = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
 
@@ -315,9 +318,14 @@ class FusedMatMulBiasAddReluFunctor {
     MutableAttrMap attrs;
     // JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     // JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    JUST(attrs.SetAttr<double>("alpha1", alpha1));
-    JUST(attrs.SetAttr<double>("alpha2", alpha2));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {a, b, bias1, c, bias2}, attrs);
+    // JUST(attrs.SetAttr<double>("alpha1", alpha1));
+    // JUST(attrs.SetAttr<double>("alpha2", alpha2));
+    // return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {a, b, bias1, c, bias2}, attrs);
+    TensorTuple input; 
+    input.push_back(x); 
+    std::copy(weights.begin(), weights.end(), input.end()); 
+    std::copy(biases.begin(), biases.end(), input.end()); 
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_, input, attrs);
   }
 
  private:
