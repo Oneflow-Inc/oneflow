@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/infer_stream_type.h"
@@ -22,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -86,8 +84,8 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
 }
 
 // Handle pending instructions, and try schedule them to ready list.
-void VirtualMachineEngine::HandlePending() {
-  OF_PROFILER_RANGE_PUSH("HandlePending");
+void VirtualMachineEngine::HandleLocalPending() {
+  OF_PROFILER_RANGE_PUSH("HandleLocalPending");
   InstructionMsgList pending_instr_msgs;
   constexpr static int kPendingHandleWindow = 10;
   GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instr_msgs);
@@ -187,10 +185,31 @@ void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instructio
   mut_lively_instruction_list()->PushBack(instruction);
 }
 
+void VirtualMachineEngine::InsertProbe(
+    const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
+  probe_list_.EmplaceBack(intrusive::make_shared<Probe>(ProbeFunction));
+}
+
+void VirtualMachineEngine::HandleProbe() {
+  if (unlikely(probe_list_.thread_unsafe_size())) { probe_list_.MoveTo(&local_probe_list_); }
+  HandleLocalProbe();
+}
+
+void VirtualMachineEngine::HandleLocalProbe() {
+  if (unlikely(local_probe_list_.size())) {
+    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
+      if (probe->probe(this)) { local_probe_list_.Erase(probe); }
+    }
+  }
+}
+
 intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
     Instruction* instruction) {
   ++total_erased_lively_instruction_cnt_;
-  return mut_lively_instruction_list()->Erase(instruction);
+  auto ret = mut_lively_instruction_list()->Erase(instruction);
+  static constexpr int kProbeInterval = 20;
+  if (unlikely(total_erased_lively_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
+  return ret;
 }
 
 // Collect ready instructions onto ready_instruction_list_
@@ -681,22 +700,6 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
-  const int64_t kHighWaterMark = GetInstructionHighWaterMark();
-  const int64_t kLowWaterMark = GetInstructionLowWaterMark();
-  if (flying_instruction_cnt() > kHighWaterMark) {
-    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
-      const auto& NeedSpin = [&] { return flying_instruction_cnt() > kLowWaterMark; };
-      while (true) {
-        int64_t last_cnt = flying_instruction_cnt();
-        const auto& ret = TRY(SpinWaitUntilTimeout(NeedSpin, InstructionMaxRunningSeconds()));
-        if (ret.IsOk()) { break; }
-        CHECK_NE_OR_RETURN(last_cnt, flying_instruction_cnt())
-            << Error::UnimplementedError() << "The virtual machine don't respond in "
-            << InstructionMaxRunningSeconds() << " seconds.";
-      }
-      return Maybe<void>::Ok();
-    }));
-  }
   bool old_list_empty = mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
   OF_PROFILER_RANGE_POP();
   return old_list_empty;
@@ -830,14 +833,21 @@ void VirtualMachineEngine::Schedule() {
   //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
   if (unlikely(local_pending_msg_list().size())) {
-    HandlePending();
+    HandleLocalPending();
   } else if (unlikely(pending_msg_list().thread_unsafe_size())) {
     // MoveTo is under a lock.
     mut_pending_msg_list()->MoveTo(mut_local_pending_msg_list());
-    HandlePending();
+    HandleLocalPending();
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) { DispatchAndPrescheduleInstructions(); }
+  // handle probes
+  if (unlikely(local_probe_list_.size())) {
+    HandleLocalProbe();
+  } else if (unlikely(probe_list_.thread_unsafe_size())) {
+    probe_list_.MoveTo(&local_probe_list_);
+    HandleLocalProbe();
+  }
 }
 
 void VirtualMachineEngine::Callback() {
