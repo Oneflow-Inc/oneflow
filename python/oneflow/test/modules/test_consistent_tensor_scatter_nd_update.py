@@ -33,9 +33,7 @@ class TensorScatterNdUpdate(flow.nn.Graph):
         return flow.tensor_scatter_nd_update(origin, indices, update)
 
 
-def _test_global_tensor_scatter_nd_update(
-    test_case, placement, sbp, check_graph=False
-):
+def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph=False):
     origin = flow.tensor(np.arange(16), dtype=flow.float).to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
