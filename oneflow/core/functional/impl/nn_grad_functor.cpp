@@ -919,6 +919,60 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedDotFeatureInteractionGradFunctor {
+ public:
+  FusedDotFeatureInteractionGradFunctor() {
+    ops_has_output_concat_grad_.resize(kMaxInputCount);
+    ops_no_output_concat_grad_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_has_output_concat_grad_.size(); ++n) {
+      ops_has_output_concat_grad_[n] =
+          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
+                         .Input("dy")
+                         .Input("padded_concated_features")
+                         .Input("features_grad_like", n + 1)
+                         .Output("features_grad", n + 1)
+                         .Output("output_concat_grad")
+                         .Build());
+    }
+    for (int n = 0; n < ops_no_output_concat_grad_.size(); ++n) {
+      ops_no_output_concat_grad_[n] =
+          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
+                         .Input("dy")
+                         .Input("padded_concated_features")
+                         .Input("features_grad_like", n + 1)
+                         .Output("features_grad", n + 1)
+                         .Build());
+    }
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& padded_concated_features,
+                                const TensorTuple& features_grad_like,
+                                const bool& has_output_concat, const bool& self_interaction,
+                                const int32_t& output_concat_grad_dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+    JUST(attrs.SetAttr<int32_t>("output_concat_grad_dim", output_concat_grad_dim));
+    const int64_t n_features_grad = features_grad_like.size();
+    CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount);
+    TensorTuple inputs(n_features_grad + 2);
+    inputs[0] = dy;
+    inputs[1] = padded_concated_features;
+    for (int32_t i = 0; i < n_features_grad; ++i) { inputs[i + 2] = features_grad_like[i]; }
+    if (has_output_concat) {
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *ops_has_output_concat_grad_.at(n_features_grad - 1), inputs, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *ops_no_output_concat_grad_.at(n_features_grad - 1), inputs, attrs);
+    }
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_grad_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_grad_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -953,6 +1007,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
+  m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
 };
 
 }  // namespace functional

@@ -2169,6 +2169,52 @@ class RoiAlignGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedDotFeatureInteractionFunctor {
+ public:
+  FusedDotFeatureInteractionFunctor() {
+    ops_has_output_concat_.resize(kMaxInputCount);
+    ops_no_output_concat_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_has_output_concat_.size(); ++n) {
+      ops_has_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                 .Input("features", n + 1)
+                                                 .Input("output_concat")
+                                                 .Output("out")
+                                                 .Output("padded_concated_features")
+                                                 .Build());
+    }
+    for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
+      ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                .Input("features", n + 1)
+                                                .Output("out")
+                                                .Output("padded_concated_features")
+                                                .Build());
+    }
+  }
+
+  Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
+                           const bool& self_interaction, const int32_t& output_padding) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+    JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    const int64_t ninput = features.size();
+    CHECK_LE_OR_RETURN(ninput, kMaxInputCount);
+    if (output_concat) {
+      JUST(attrs.SetAttr<bool>("has_output_concat", true));
+      TensorTuple inputs(ninput + 1);
+      for (int64_t i = 0; i < ninput; ++i) { inputs[i] = features.at(i); }
+      inputs[ninput] = JUST(output_concat);
+      return OpInterpUtil::Dispatch<Tensor>(*ops_has_output_concat_.at(ninput - 1), inputs, attrs);
+    } else {
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      return OpInterpUtil::Dispatch<Tensor>(*ops_no_output_concat_.at(ninput - 1), features, attrs);
+    }
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2238,6 +2284,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
+  m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
 };
 
 }  // namespace functional
