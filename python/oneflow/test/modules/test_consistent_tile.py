@@ -46,13 +46,13 @@ def _test_global_flow_tensor_tile_with_random_data(test_case, placement, sbp):
 
 
 class TestConsistentTile(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_flow_tile_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_flow_tile_with_random_data(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_global_flow_tensor_tile_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):

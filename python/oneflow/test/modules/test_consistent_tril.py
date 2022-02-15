@@ -52,13 +52,13 @@ def _test_global_tril_with_diag(test_case, placement, sbp):
 
 
 class TestConsistentTril(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_tril_without_diag(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_global_tril_without_diag(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_global_tril_with_diag(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
