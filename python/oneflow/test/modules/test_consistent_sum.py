@@ -41,13 +41,13 @@ def _test_global_sum_with_0_size_tensor(test_case, placement, sbp):
 
 
 class TestConsistentSumModule(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_sum_against_pytorch(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_global_sum_against_pytorch(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_global_sum_with_0_size_tensor(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4, valid_split_axis=[0, 1, 3]):

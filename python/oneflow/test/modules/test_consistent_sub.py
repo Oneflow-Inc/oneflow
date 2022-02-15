@@ -47,13 +47,13 @@ def _test_global_sub_with_0_size_data(test_case, placement, sbp):
 
 
 class TestConsistentSubModule(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_sub(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_sub(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_global_sub_with_0_size_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2, valid_split_axis=1):
