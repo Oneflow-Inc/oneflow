@@ -36,6 +36,7 @@ class TestTensorSplitVec(flow.unittest.TestCase):
         return z[0]
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestTensorSplitInt(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_tensor_split_int(test_case):
