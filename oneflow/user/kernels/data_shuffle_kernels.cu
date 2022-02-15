@@ -736,6 +736,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     }
     OF_NCCL_CHECK(ncclGroupEnd());
 
+    //temporary change
+    cudaMemsetAsync(cur_rank_unique_embedding_diff->mut_dptr<T>(), 0,
+                    cur_rank_unique_embedding_diff->shape().elem_cnt() * sizeof(T), cuda_stream);
     UnsortedSegmentSum<T, IDX>(ctx->stream(), cur_rank_reverse_idx->dptr<IDX>(),
                                recv_embeddings_diff, cur_rank_num_ids, embedding_size,
                                cur_rank_unique_embedding_diff->mut_dptr<T>(),
