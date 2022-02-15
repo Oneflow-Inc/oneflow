@@ -66,7 +66,7 @@ struct DTRTensorPool {
   void update_after_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
   int update_after_pesudo_compute(vm::DTREagerBlobObject* dtr_blob_object);
-  Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object);
+  Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object, const char* start_id, const char* end_id);
 
   std::set<vm::DTRInstrOperand*> operand_visited_;
   std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;

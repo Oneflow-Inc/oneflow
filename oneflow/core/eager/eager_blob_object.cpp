@@ -522,12 +522,12 @@ bool DTREagerBlobObject::is_evictable() const {
 void DTREagerBlobObject::reset_pesudo_node() { node->reset_pesudo_node(); }
 
 void DisjNode::reset_pesudo_node() {
-  pesudo_node_->set_compute_time(compute_time_);
+  auto pesudo_node_ = std::make_shared<DisjNode>(compute_time_);
   if (parent_ != nullptr) {
+    LOG(INFO) << "Parent of node is not nullptr while reseting the pesudo node!!!";
     auto&& p = parent_->pesudo_node();
     pesudo_node_->set_parent(p);
   }
-  pesudo_node_->set_cnt(1);
 }
 
 }  // namespace vm

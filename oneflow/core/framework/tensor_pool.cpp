@@ -56,7 +56,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   double min_cost = -1;
   vm::DTREagerBlobObject* best(nullptr);
   int evict_object_id = -1;
-  if (oneflow::DTRDebugEnabled()) { std::cout << "Finding best tensor to evict..." << std::endl; }
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "Finding best tensor to evict..."; }
   int id = 0;
   double tensor_pool_mem = 0.;
   for (const auto& object : candidates_) {
@@ -73,7 +73,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
       }
       if (static_cast<bool>(shared_object->compute_op())) {
         if (oneflow::DTRDebugLevel() >= 2) {
-          std::cout << "id " << id << ", ";
+          LOG(INFO) << "id " << id << ", ";
           printInfo(shared_object);
         }
       }
@@ -89,22 +89,22 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
       }
     } else {
       JUST(display());
-      std::cout << "Unable to lock candidates in tensor pool: " << id
-                << ", is_expired: " << object.expired() << std::endl;
+      LOG(INFO) << "Unable to lock candidates in tensor pool: " << id
+                << ", is_expired: " << object.expired();
     }
     id++;
   }
   if (oneflow::DTRDebugEnabled()) {
-    std::cout << "pool mem is " << tensor_pool_mem << "MB" << std::endl;
+    LOG(INFO) << "pool mem is " << tensor_pool_mem << "MB";
     if (best != nullptr) {
-      std::cout << "Evict " << evict_object_id << "th object , cost is " << min_cost
+      LOG(INFO) << "Evict " << evict_object_id << "th object , cost is " << min_cost
                 << ", compute op is "
                 << (best ? best->compute_op()->shared_opkernel()->op_type_name() : "null")
                 << ", addr is " << best << ", memory is "
-                << best->BlobBodyBytes() * 1. / 1024 / 1024 << std::endl;
+                << best->BlobBodyBytes() * 1. / 1024 / 1024;
       // const auto pd = best->parent_depth();
       // const auto cd = best->child_depth();
-      // std::cout << "depth is " << pd << "+" << cd << "=" << (pd + cd) << std::endl;
+      // LOG(INFO) << "depth is " << pd << "+" << cd << "=" << (pd + cd);
     }
   }
   num_eviction_++;
@@ -149,7 +149,7 @@ Maybe<void> DTRTensorPool::clear() {
   while (object != candidates_.end()) {
     if (object->lock().get() == nullptr) {
       if (oneflow::DTRDebugEnabled()) {
-        // std::cout << "Erase nullptr candidates from tensor_pool." << std::endl;
+        // LOG(INFO) << "Erase nullptr candidates from tensor_pool.";
       }
       candidates_.erase(object);
       num_destruction_++;
@@ -259,9 +259,22 @@ int DTRTensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
   // split start_tensor from the chain
   auto&& pesudo_node = obj->node->pesudo_node();
   auto&& fa = find_father(pesudo_node);
-  fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
-  fa->reduce_cnt();
+  if (fa == pesudo_node) {
+    LOG(INFO) << "pesudo compute father";
+  }
+  if (fa->cnt() > 1) {
+    fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
+    LOG(INFO) << "fa original cnt: " << fa->cnt();
+    fa->reduce_cnt();
+    LOG(INFO) << "fa current cnt: " << fa->cnt();
+  }
   obj->reset_pesudo_node();
+  auto&& pesudo_node_new = obj->node->pesudo_node();
+  auto&& fa_new = find_father(pesudo_node_new);
+  if (fa_new != pesudo_node_new) {
+    LOG(INFO) << "PESUDO NODE NEW != ITSELF, ERROR!";
+  }
+  LOG(INFO) << "new fa current cnt: " << fa_new->cnt() << "new pesudo node cnt: " << pesudo_node_new->cnt() << ", fa == pesudo_node? " << (fa_new == pesudo_node_new);
   return fa->cnt();
 }
 
@@ -287,7 +300,7 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj) {
+Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, const char* start_id, const char* end_id) {
   // include new end_tensor in the chain
   auto* operand = obj->compute_op();
   const auto& inputs = operand->inputs();
@@ -296,7 +309,7 @@ Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) { pesudo_merge(dtr_blob_object->node, obj->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->blob().dptr() > start_id && obj->blob().dptr() < end_id) { pesudo_merge(dtr_blob_object->node, obj->node); }
     }
   }
 
@@ -304,7 +317,7 @@ Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory()) { pesudo_merge(obj->node, dtr_blob_object->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->blob().dptr() > start_id && obj->blob().dptr() < end_id) { pesudo_merge(obj->node, dtr_blob_object->node); }
     }
   }
   return Maybe<void>::Ok();

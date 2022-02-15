@@ -100,6 +100,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
+  std::vector<bool> inplace_flag(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       if (oneflow::DTREnabled()) {
