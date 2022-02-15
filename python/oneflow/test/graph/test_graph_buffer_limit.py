@@ -39,9 +39,9 @@ def _test_graph_buffer_limit(test_case):
             out1 = self.linear2(out0)
             return out1
 
-    P0 = flow.placement("cuda", {0: [0]})
-    P1 = flow.placement("cuda", {0: [1]})
-    PT = flow.placement("cuda", {0: [0, 1]})
+    P0 = flow.placement("cuda", ranks=[0])
+    P1 = flow.placement("cuda", ranks=[1])
+    PT = flow.placement("cuda", ranks=[0, 1])
     B = flow.sbp.broadcast
 
     class PipelineModule(flow.nn.Module):
