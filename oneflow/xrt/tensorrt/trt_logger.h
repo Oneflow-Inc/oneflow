@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include "NvInfer.h"
+#include "oneflow/xrt/tensorrt/common.h"
 
 namespace oneflow {
 namespace xrt {
@@ -31,7 +32,7 @@ class Logger : public nvinfer1::ILogger {
 
   Logger(const std::string& name) : name_(name) {}
 
-  void log(nvinfer1::ILogger::Severity severity, const char* msg) override;
+  void log(nvinfer1::ILogger::Severity severity, const char* msg) TRT_OPTIONAL_NOEXCEPT override;
 
  private:
   std::string name_ = "TensorRT Logging";
