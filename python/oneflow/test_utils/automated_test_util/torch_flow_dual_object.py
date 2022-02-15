@@ -43,11 +43,12 @@ from .generators import Nothing, generator, random_pytorch_tensor
 postulate = [".rand", ".Tensor"]
 
 testing = False
-testing_graph = False
+testing_graph_mlir = False
 global_check_allclose = True
 global_atol = 1e-5
 global_rtol = 1e-5
 global_backward = True
+global_check_mlir = False
 
 
 def torch_tensor_to_flow(x):
@@ -215,7 +216,7 @@ counter = 0
 align_exception = os.getenv("ONEFLOW_TEST_ALIGN_EXCEPTION") is not None
 
 
-def check_eager_graph_tensor(eager_res, graph_res):
+def check_eager_graph_mlir_tensor(eager_res, graph_res):
     if (
         global_check_allclose
         and isinstance(eager_res, flow.Tensor)
@@ -230,9 +231,14 @@ def check_eager_graph_tensor(eager_res, graph_res):
         )
         if equality_res == False:
             print_note_fake_program()
-            print("===================Wrong nn.Graph Tensor Shape=================")
-            print(eager_res.shape)
-            print(graph_res.shape)
+            if global_check_mlir:
+                print("===================Wrong MLIR Tensor Shape=====================")
+                print(eager_res.shape)
+                print(graph_res.shape)
+            else:
+                print("===================Wrong nn.Graph Tensor Shape=================")
+                print(eager_res.shape)
+                print(graph_res.shape)
         assert (
             equality_res
         ), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
@@ -322,7 +328,7 @@ def GetDualObject(name, pytorch, oneflow):
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
-                            if testing_graph:
+                            if testing_graph_mlir:
                                 graph_args = []
                                 for arg in oneflow_args:
                                     if flow.is_tensor(arg):
@@ -337,7 +343,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
 
-                            if testing_graph:
+                            if testing_graph_mlir:
                                 if isinstance(oneflow, flow.nn.Module):
                                     graph_train_oneflow = copy.deepcopy(oneflow)
                                     if not is_global():
@@ -364,7 +370,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     "The result after running eager module or functional: ",
                                     oneflow_res,
                                 )
-                            if testing_graph:
+                            if testing_graph_mlir:
                                 if verbose:
                                     print(
                                         "After running eager module or functional: ",
@@ -493,9 +499,9 @@ def GetDualObject(name, pytorch, oneflow):
                                 if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
                                         for _, g_res in enumerate(test_g_res):
-                                            check_eager_graph_tensor(oneflow_res, g_res)
+                                            check_eager_graph_mlir_tensor(oneflow_res, g_res)
                                     else:
-                                        check_eager_graph_tensor(
+                                        check_eager_graph_mlir_tensor(
                                             oneflow_res, test_g_res
                                         )
 
@@ -531,7 +537,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 )
                             raise PyTorchDoesNotSupportError(e)
 
-                        if testing_graph:
+                        if testing_graph_mlir:
                             tensor_graph_args = []
                             for arg in oneflow_args:
                                 if flow.is_tensor(arg):
@@ -557,7 +563,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 "The result after running eager tensor method: ",
                                 oneflow_res,
                             )
-                        if testing_graph:
+                        if testing_graph_mlir:
                             if verbose:
                                 print(
                                     "After running eager tensor method: ",
@@ -589,9 +595,9 @@ def GetDualObject(name, pytorch, oneflow):
                                 raise OneFlowGraphBuildOrRunError(e)
                             if isinstance(test_g_res, tuple):
                                 for _, g_res in enumerate(test_g_res):
-                                    check_eager_graph_tensor(oneflow_res, g_res)
+                                    check_eager_graph_mlir_tensor(oneflow_res, g_res)
                             else:
-                                check_eager_graph_tensor(oneflow_res, test_g_res)
+                                check_eager_graph_mlir_tensor(oneflow_res, test_g_res)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
@@ -852,6 +858,7 @@ def autotest(
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
+    check_mlir=True,
     check_allclose=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
@@ -859,6 +866,13 @@ def autotest(
     if check_graph == "ValidatedFlase":
         # check graph is intentionally closed and threre is a validated reason.
         check_graph = False
+    
+    if check_mlir:
+        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+        os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+    
+    if check_mlir and verbose:
+        os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 
     def deco(f):
         @functools.wraps(f)
@@ -874,22 +888,24 @@ def autotest(
                     )
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
-                global global_check_allclose, global_rtol, global_atol, global_backward
+                global global_check_allclose, global_rtol, global_atol, global_backward, global_check_mlir
                 global_check_allclose = check_allclose
                 global_rtol = rtol
                 global_atol = atol
                 global_backward = auto_backward
+                global_check_mlir = check_mlir
 
                 try:
-                    global testing_graph
+                    # nn.Graph and MLIR share same test process
+                    global testing_graph_mlir
                     # for generate fake program input tensor
                     global testing
                     testing = True
                     if check_graph:
-                        testing_graph = True
+                        testing_graph_mlir = True
                     res = f(test_case, *args, **kwargs)
                     testing = False
-                    testing_graph = False
+                    testing_graph_mlir = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
@@ -947,6 +963,9 @@ def autotest(
 
                 if verbose and check_graph:
                     print(f"{f.__name__} test graph passed.")
+                
+                if verbose and check_mlir:
+                    print(f"{f.__name__} test mlir passed.")
 
                 successful_runs_needed -= 1
                 current_run += 1
