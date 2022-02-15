@@ -150,15 +150,17 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> linear = flow.nn.Linear(3, 8, False)
             >>> class MyGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
-            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...         self.model = linear
             ...     def build(self, x):
-            ...         return self.linear(x)
+            ...         return self.model(x)
 
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
+            >>> model.eval() # make linear module executing in evaluation mode
             >>> y = linear_graph(x) # The build() method is called implicitly
 
         Note:
@@ -217,8 +219,8 @@ class Graph(object):
         * learn rate scheduler's ``step()``.
 
         Also note that only scalar tensor are allowed to call ``backward()``
-        in ``nn.Graph.build()`` for the moment. So you may call ``Tensor.sum()``
-        or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
+        in ``nn.Graph.build()`` for the moment. So you may call
+        ``Tensor.mean()`` to make the loss tensor a scalar tensor.
 
         .. code-block:: python
 
@@ -243,6 +245,7 @@ class Graph(object):
             >>> linear_graph = LinearTrainGraph()
             >>> x = flow.randn(10, 3)
             >>> y = flow.randn(10)
+            >>> model.train() # make model executing in training mode
             >>> for t in range(3):
             ...     loss = linear_graph(x, y)
 
