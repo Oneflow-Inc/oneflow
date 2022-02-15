@@ -25,7 +25,7 @@ import oneflow.unittest
 from test_util import GenArgList, type_name_to_flow_type
 
 from oneflow.test_utils.automated_test_util.generators import *
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import global_view
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import globaltest
 
 
 def _compare_eager_global_with_torch(
@@ -125,7 +125,7 @@ def _compare_lazy_global_with_torch(
 
 
 class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_eager_global_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()
         arg_dict["data_type"] = ["float32", "double"]
@@ -140,7 +140,7 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
                             placement, logits_sbp, labels_sbp, *arg
                         )
 
-    @global_view
+    @globaltest
     def test_lazy_global_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()
         arg_dict["data_type"] = ["float32", "double"]
