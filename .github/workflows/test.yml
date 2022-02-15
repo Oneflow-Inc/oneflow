@@ -434,6 +434,10 @@ jobs:
         if: ${{ !fromJSON(matrix.is-single-client) }}
         run: |
           echo "TEST_IMG_TAG=${TEST_WITH_TORCH_IMG_TAG}" >> $GITHUB_ENV
+      - name: Enable ONEFLOW_TEST_VERBOSE
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
+        run: |
+          echo "ONEFLOW_TEST_VERBOSE=1" >> $GITHUB_ENV
       - name: Set environment variables
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -443,12 +447,13 @@ jobs:
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
           fi
+          extra_docker_args+=" --e ONEFLOW_TEST_VERBOSE"
           echo "EXTRA_DOCKER_ARGS=${extra_docker_args}" >> $GITHUB_ENV
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
           echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
-      - name: Set environment variables (environmental flags)
+      - name: Set environment variables (experimental flags)
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && fromJson(matrix.is-experimental) }}
         run: |
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1"
